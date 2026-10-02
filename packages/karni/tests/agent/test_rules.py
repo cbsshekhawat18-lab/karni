@@ -82,6 +82,8 @@ def test_every_backend_and_eslint_rule_has_a_code() -> None:
         "opt-out-reason",
         "viewset-access",
         "access-override",
+        "unpaginated-action",
+        "query-scaling",
     }
     assert documented <= set(ENFORCEMENT_CODES)
     assert _eslint_rule_ids() <= set(ENFORCEMENT_CODES)

@@ -1,6 +1,8 @@
 # mypy: ignore-errors
 # Known-good fixture for `karni rules --check`: Karni-style code, zero findings.
 from django.db import models
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from karni.api import Access, Authenticated, BaseViewSet, Owned
 from karni.models import BaseModel, TimestampedModel, UUIDModel
@@ -26,6 +28,16 @@ class InvoiceViewSet(BaseViewSet):
     model = Invoice
     access = Access(read=Owned("created_by"), write=Authenticated())
     search_fields = ["number"]
+
+    @action(detail=False)
+    def unpaid(self, request):
+        return self.paginated_response(self.get_queryset().filter(paid=False))
+
+    @action(detail=False, methods=["post"])
+    def bulk(self, request):
+        serializer = self.get_serializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response({"created": len(serializer.save())})
 
 
 class ArchivedInvoiceViewSet(InvoiceViewSet):

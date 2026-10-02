@@ -172,6 +172,51 @@ def viewsets_section() -> str | None:
     return "VIEWSETS: " + " ".join(names) if names else None
 
 
+def _routed_viewsets() -> list[type]:
+    from django.utils.module_loading import import_string
+
+    factory = import_string(
+        getattr(settings, "KARNI_API_ROUTER", "karni.api.routers.get_default_router")
+    )
+    seen: dict[type, None] = {}
+    for _, viewset, _ in factory().registry:
+        seen.setdefault(viewset, None)
+    return list(seen)
+
+
+def performance_section() -> str | None:
+    """Declared performance exceptions (ADR 0001 §3.4), so an agent sees them first.
+
+    Relaxed query budgets, unpaginated viewsets, cache opt-outs and
+    ``optimize = False`` — each with its reason. Omitted when there are none
+    (or the router cannot be built).
+    """
+    from karni.api.caching import Uncached
+    from karni.pagination import UnpaginatedPagination
+
+    try:
+        viewsets = _routed_viewsets()
+    except Exception:  # noqa: BLE001 - inventory must degrade, never crash
+        return None
+    parts: list[str] = []
+    for viewset in sorted(viewsets, key=lambda cls: cls.__name__):
+        notes: list[str] = []
+        budget = getattr(viewset, "query_budget", None)
+        if budget is not None:
+            notes.append(f"budget({budget.describe()}: {budget.reason})")
+        paginator = getattr(viewset, "pagination_class", None)
+        if isinstance(paginator, type) and issubclass(paginator, UnpaginatedPagination):
+            notes.append(f"unpaginated({paginator.max_rows}: {paginator.reason})")
+        cache = getattr(viewset, "cache", None)
+        if isinstance(cache, Uncached):
+            notes.append(f"uncached({cache.reason})")
+        if getattr(viewset, "optimize", True) is False:
+            notes.append("optimize=False")
+        if notes:
+            parts.append(f"{viewset.__name__} " + " ".join(notes))
+    return "PERF: " + "; ".join(parts) if parts else None
+
+
 def modules_section() -> str | None:
     """Installed optional Karni modules (apps named ``karni_<x>`` at top level)."""
     found: list[str] = []
@@ -195,6 +240,7 @@ def build_context() -> str:
         models_section(),
         scopes_section(),
         viewsets_section(),
+        performance_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),
     ]

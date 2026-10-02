@@ -34,7 +34,15 @@ dependencies = [
     "django-cors-headers>=4.4",
     "structlog>=24.1",
     "django-structlog>=8.0",
+    # karni.testing.factories (test data, the N+1 scaling check, seeding).
+    # Imported only by tests and seed commands, never by the web process.
+    "factory-boy>=3.3",
 ]
+
+# Karni's pytest plugin: KARNI_QUERY_BUDGET_MODE = "raise" for the test session
+# and the `query_budget` fixture (karni.testing.pytest_plugin).
+[project.entry-points.pytest11]
+karni = "karni.testing.pytest_plugin"
 
 [project.entry-points."karni.checks"]
 architecture = "karni.testing.architecture:run_checks"

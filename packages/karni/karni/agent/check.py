@@ -178,6 +178,65 @@ def access_override_defs(tree: ast.AST) -> list[tuple[int, list[int]]]:
     return sorted(hits)
 
 
+#: Calls that mean "this action paginates" (DRF's hooks and BaseViewSet's helper).
+PAGINATING_CALLS: frozenset[str] = frozenset(
+    {"paginate_queryset", "paginated_response", "get_paginated_response"}
+)
+
+
+def _is_action(func: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for decorator in func.decorator_list:
+        target = decorator.func if isinstance(decorator, ast.Call) else decorator
+        if _dotted(target).rsplit(".", 1)[-1] == "action":
+            return True
+    return False
+
+
+def _is_view_class(cls: ast.ClassDef) -> bool:
+    return any(_dotted(base).endswith(("ViewSet", "View")) for base in cls.bases)
+
+
+def _many_true(call: ast.Call) -> bool:
+    keywords = {keyword.arg: keyword.value for keyword in call.keywords}
+    many = keywords.get("many")
+    return (
+        isinstance(many, ast.Constant)
+        and many.value is True
+        and "data" not in keywords  # many=True input validation is not a list response
+    )
+
+
+def unpaginated_action_calls(tree: ast.AST) -> list[tuple[int, list[int]]]:
+    """``(line, opt-out marker lines)`` per unpaginated ``many=True`` serialisation in an action.
+
+    Shared by the ``unpaginated-action`` architecture rule and ``karni rules
+    --check``. An action is an ``@action``-decorated method (or ``list`` on a
+    view class); it is flagged when it builds a serializer with ``many=True``
+    (no ``data=``) and never calls ``paginate_queryset`` /
+    ``paginated_response`` / ``get_paginated_response``. Markers count on the
+    call line, the line above it, the ``def`` line, the line above it, or the
+    line above the first decorator.
+    """
+    hits: list[tuple[int, list[int]]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for stmt in node.body:
+            if not isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+            if not (_is_action(stmt) or (stmt.name == "list" and _is_view_class(node))):
+                continue
+            calls = [call for call in ast.walk(stmt) if isinstance(call, ast.Call)]
+            if any(_dotted(call.func).rsplit(".", 1)[-1] in PAGINATING_CALLS for call in calls):
+                continue
+            first = min([stmt.lineno, *(d.lineno for d in stmt.decorator_list)])
+            for call in calls:
+                if _many_true(call):
+                    lines = {call.lineno, call.lineno - 1, stmt.lineno, stmt.lineno - 1, first - 1}
+                    hits.append((call.lineno, sorted(lines)))
+    return sorted(hits)
+
+
 def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
     tree = ast.parse(text, filename=path)
     model_names = {"models.Model", "django.db.models.Model"}
@@ -265,6 +324,18 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                     "access-override",
                     lineno,
                     "filter_queryset_for_user overridden — express row rules in `access`",
+                ),
+                candidates,
+            )
+        )
+
+    for lineno, candidates in unpaginated_action_calls(tree):
+        found.append(
+            (
+                _finding(
+                    "unpaginated-action",
+                    lineno,
+                    "list-returning action serialises many=True without pagination",
                 ),
                 candidates,
             )

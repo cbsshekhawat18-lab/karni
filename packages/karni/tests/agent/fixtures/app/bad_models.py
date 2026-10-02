@@ -7,6 +7,8 @@ from django.contrib import admin
 from django.db import connection, models
 from karni.api import BaseViewSet
 from rest_framework import serializers, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 
 class Invoice(models.Model):  # K101
@@ -35,6 +37,11 @@ class ReceiptViewSet(BaseViewSet):  # K109
 
     def filter_queryset_for_user(self, queryset):  # K110
         return queryset
+
+    @action(detail=False)
+    def recent(self, request):
+        rows = self.get_queryset()[:500]
+        return Response(InvoiceSerializer(rows, many=True).data)  # K111
 
 
 def totals() -> list[object]:

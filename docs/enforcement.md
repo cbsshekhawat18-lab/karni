@@ -15,7 +15,9 @@ Run in CI as `pytest --pyargs karni.testing.architecture`, and on every
 `karni check` via the `karni.checks` entry points (`architecture`,
 `duplication`). Only project code is scanned — apps whose source lives under
 `BASE_DIR`; installed packages (including Karni modules) are never scanned
-and must pass these rules in their own CI.
+and must pass these rules in their own CI. `query-scaling` needs a database,
+so it runs only under pytest (the architecture suite carries it; `pytest
+--pyargs karni.testing.performance` runs it alone), never in `karni check`.
 
 | Rule id | Fails when | Fix |
 |---|---|---|
@@ -23,6 +25,8 @@ and must pass these rules in their own CI.
 | `viewset-base` | a GenericViewSet subclass bypasses `BaseViewSet` | inherit `karni.api.BaseViewSet` |
 | `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` — inherited declarations and an overridden `get_access()` count | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
+| `unpaginated-action` | an `@action` (or a view's `list`) serialises `many=True` (without `data=`) and never calls `paginate_queryset` / `paginated_response` / `get_paginated_response` | `return self.paginated_response(queryset)` |
+| `query-scaling` | a routed project `BaseViewSet`'s `list` or `retrieve` runs more queries with 12 rows than with 2 (an N+1) — needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
 | `admin-convention` | a registered admin for a project model isn't a `KarniModelAdmin` | use `AdminMeta` on the model, or subclass `KarniModelAdmin` |
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
@@ -54,6 +58,37 @@ denies every request, and opting out of the rule does not change that.
 the access-scoped queryset, and only replacing it can widen it. An
 overridden `get_queryset` needs no marker — it is wrapped, so the read scope
 still applies to whatever it returns.
+
+The two performance rules guard ADR 0001 Decision 3. `unpaginated-action` is
+static (AST): a list-returning action must go through pagination, and
+`self.paginated_response(qs)` is the one-line way. `many=True` with `data=` is
+bulk *input* validation and is not flagged.
+
+```python
+@action(detail=False)
+def recent(self, request):
+    # karni: allow(unpaginated-action): at most 12 fixed rows, the UI needs one call
+    return Response(BadgeSerializer(Badge.objects.featured()[:12], many=True).data)
+```
+
+`query-scaling` is the N+1 detector: for every routed project viewset it
+seeds 2 then 12 rows with the automatic factories (an explicit
+`<app>/factories.py` factory wins), as a requester holding every role and
+owning every `Owned` path of the `read` predicate, and requires the same
+query count — see [testing](testing.md#3-the-scaling-check). Its opt-out goes
+above the viewset class, like the other class rules:
+
+```python
+# karni: allow(query-scaling): one signed S3 URL per row, measured and bounded by the page
+class AttachmentViewSet(BaseViewSet):
+    ...
+```
+
+A viewset whose seeded rows the generated requester cannot see (a `Where`
+rule, a traversal `Owned` path) is skipped with that reason, not passed —
+give the model an explicit factory that produces readable rows. Absolute
+per-action query budgets (`raise` in tests) are not an architecture rule;
+see [api](api.md#query-budgets).
 
 Configuration — `KARNI_ARCHITECTURE` in settings (all keys optional):
 

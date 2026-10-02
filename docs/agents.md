@@ -26,10 +26,10 @@ follow what they return.
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
 enforcement (AST for Python: model-base, viewset-base, viewset-access (direct
-`BaseViewSet` subclasses only), access-override, admin-convention, raw-sql,
-http-client, redundant-serializer, opt-out reasons; a comment- and
-string-aware scan for TS/JS: raw elements, the page cap, deep imports, direct
-HTTP, eslint-disable reasons). `karni check` and the `@karni/ui` ESLint preset
+`BaseViewSet` subclasses only), access-override, unpaginated-action,
+admin-convention, raw-sql, http-client, redundant-serializer, opt-out reasons;
+a comment- and string-aware scan for TS/JS: raw elements, the page cap, deep
+imports, direct HTTP, eslint-disable reasons). `karni check` and the `@karni/ui` ESLint preset
 stay authoritative; cross-file rules (duplicates) are not checked per file.
 Path allowances use the documented defaults (`*/sql/*`, `*/services/*`,
 `src/api/`), matched relative to the project root.
@@ -56,7 +56,8 @@ Stable; a code is never reused for a different rule.
 
 Severity `error` (shown as `K101!`) means enforced: the rule maps onto an
 enforcement id (`model-base`, `viewset-base`, `viewset-access`,
-`access-override`, `admin-convention`, `raw-sql`, `http-client`,
+`access-override`, `unpaginated-action`, `query-scaling`,
+`admin-convention`, `raw-sql`, `http-client`,
 `redundant-serializer`, `duplicate`, `opt-out-reason`,
 `karni/no-raw-elements`, `karni/max-page-lines`, `karni/no-deep-imports`,
 `karni/no-direct-http`, `jscpd`) and fails the build. `must` is a mandatory

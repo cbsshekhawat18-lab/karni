@@ -271,6 +271,56 @@ def test_plain_functions_named_like_the_hook_are_ignored(tmp_path: Path, as_proj
     assert architecture.check_access_override() == []
 
 
+# --- unpaginated-action ---------------------------------------------------------
+
+ACTIONS = """
+class EventViewSet(BaseViewSet):
+    model = Event
+
+    @action(detail=False)
+    def recent(self, request):
+        return Response(EventSerializer(self.get_queryset()[:50], many=True).data)
+
+    @action(detail=False)
+    def upcoming(self, request):
+        return self.paginated_response(self.get_queryset().filter(upcoming=True))
+
+    @action(detail=False, methods=["post"])
+    def bulk(self, request):
+        serializer = self.get_serializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(status=201)
+"""
+
+
+def test_unpaginated_action_detected(tmp_path: Path, as_project) -> None:
+    as_project(fake_app(tmp_path, {"viewsets.py": ACTIONS}))
+    violations = architecture.check_unpaginated_action()
+    assert [v.rule for v in violations] == ["unpaginated-action"]
+    assert violations[0].location.endswith("viewsets.py:7")
+    assert "paginated_response" in violations[0].hint
+
+
+def test_unpaginated_action_optout(tmp_path: Path, as_project) -> None:
+    content = ACTIONS.replace(
+        "    @action(detail=False)\n    def recent",
+        "    # karni: allow(unpaginated-action): capped at 50 by the slice, UI needs one call\n"
+        "    @action(detail=False)\n    def recent",
+    )
+    as_project(fake_app(tmp_path, {"viewsets.py": content}))
+    assert architecture.check_unpaginated_action() == []
+
+
+def test_unpaginated_action_optout_needs_a_reason(tmp_path: Path, as_project) -> None:
+    content = ACTIONS.replace(
+        "many=True).data)",
+        "many=True).data)  # karni: allow(unpaginated-action):",
+    )
+    as_project(fake_app(tmp_path, {"viewsets.py": content}))
+    rules = [v.rule for v in architecture.check_unpaginated_action()]
+    assert rules == ["opt-out-reason", "unpaginated-action"]
+
+
 # --- entry points -------------------------------------------------------------
 
 

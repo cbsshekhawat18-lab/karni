@@ -170,7 +170,7 @@ RULES: tuple[Rule, ...] = (
         code="K007",
         category="workflow",
         severity="should",
-        summary="Commands: make up/migrate, karni types/check/context.",
+        summary="Commands: make up/migrate, karni types/check.",
         rule=(
             "Use the project commands: `make up` starts the stack; `make migrate` runs "
             "makemigrations + migrate; `karni types` regenerates TS types + typed hooks "
@@ -200,7 +200,7 @@ RULES: tuple[Rule, ...] = (
         code="K301",
         category="architecture",
         severity="must",
-        summary="Domain code only; extend Karni, never reinvent.",
+        summary="Domain code only; extend Karni.",
         rule=(
             "Karni already implements everything generic; you write only domain code. "
             "Extending Karni is always cheaper than reinventing it."
@@ -317,7 +317,7 @@ RULES: tuple[Rule, ...] = (
         code="K108",
         category="backend",
         severity="must",
-        summary="Off-request writes: use current_user(u) for audit stamps.",
+        summary="Off-request writes: wrap in current_user(u).",
         rule=(
             "`AuditedModel` stamps `created_by`/`updated_by` from the current request. "
             "Outside a request (Celery tasks, management commands) nothing is stamped "
@@ -333,7 +333,7 @@ RULES: tuple[Rule, ...] = (
         code="K102",
         category="backend",
         severity="error",
-        summary="Viewsets inherit BaseViewSet (model = X).",
+        summary="Viewsets inherit BaseViewSet.",
         rule=(
             "Viewsets inherit `karni.api.BaseViewSet` — usually just `model = X` plus its "
             "`access` declaration (K109) (+ `search_fields`); the auto-router registers it."
@@ -379,6 +379,29 @@ RULES: tuple[Rule, ...] = (
         ),
         fix="Move the condition into access (Where(lambda request: Q(...))), or add the marker.",
         enforced_by=("access-override",),
+    ),
+    Rule(
+        code="K111",
+        category="backend",
+        severity="error",
+        summary="Paginate lists; no N+1.",
+        rule=(
+            "Lists stay bounded and flat. A list-returning `@action` returns "
+            "`self.paginated_response(queryset)`, never `Serializer(qs, many=True).data`; "
+            "`pagination_class = None` needs `pagination = Unpaginated(max_rows=N, "
+            "reason=...)`. Query counts must not grow with rows: BaseViewSet derives "
+            "select_related/prefetch_related from the serializer, so hint only what it cannot "
+            "see (SerializerMethodField, properties) with `select_related = [...]` / "
+            "`prefetch_related = [...]` on the viewset. Raise a budget only with "
+            "`query_budget = Budget(list=N, reason=...)`."
+        ),
+        rationale=(
+            "An unpaginated list or an N+1 passes with test data and falls over with real "
+            "data; the scaling check (2 vs 12 rows) and per-action query budgets catch both "
+            "in CI."
+        ),
+        fix="Return self.paginated_response(qs); hint opaque fields with prefetch_related.",
+        enforced_by=("unpaginated-action", "query-scaling"),
     ),
     Rule(
         code="K103",

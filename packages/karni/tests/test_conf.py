@@ -311,8 +311,99 @@ def test_validate_accepts_django_lazy_settings() -> None:
 
 def test_pagination_defaults() -> None:
     assert KarniPageNumberPagination.page_size_query_param == "page_size"
-    assert KarniPageNumberPagination.max_page_size == 500
+    assert KarniPageNumberPagination().get_max_page_size() == BASE["KARNI_MAX_PAGE_SIZE"] == 100
+    assert BASE["KARNI_MAX_PAGE_SIZE_FLOOR"] == 25
     assert (
         BASE["REST_FRAMEWORK"]["DEFAULT_PAGINATION_CLASS"]
         == "karni.pagination.KarniPageNumberPagination"
     )
+
+
+# ---------------------------------------------------------------------------
+# Performance settings (ADR 0001 Decision 3)
+# ---------------------------------------------------------------------------
+
+
+def test_validate_refuses_page_size_none(make_settings) -> None:
+    ns = make_settings("dev", DEBUG=True)
+    ns["REST_FRAMEWORK"]["PAGE_SIZE"] = None
+    with pytest.raises(ImproperlyConfigured, match=r"PAGE_SIZE'\] is None"):
+        validate_settings(ns)
+    del ns["REST_FRAMEWORK"]["PAGE_SIZE"]
+    with pytest.raises(ImproperlyConfigured, match="switches pagination off"):
+        validate_settings(ns)
+
+
+@pytest.mark.parametrize(
+    ("dotted", "message"),
+    [
+        (None, "DEFAULT_PAGINATION_CLASS'] is None"),
+        ("rest_framework.pagination.PageNumberPagination", "not a karni.pagination"),
+        ("nowhere.Missing", "cannot be imported"),
+    ],
+)
+def test_validate_refuses_non_karni_pagination(make_settings, dotted, message) -> None:
+    ns = make_settings("dev", DEBUG=True)
+    ns["REST_FRAMEWORK"]["DEFAULT_PAGINATION_CLASS"] = dotted
+    with pytest.raises(ImproperlyConfigured, match=message):
+        validate_settings(ns)
+
+
+def test_validate_accepts_any_karni_paginator(make_settings) -> None:
+    ns = make_settings("dev", DEBUG=True)
+    ns["REST_FRAMEWORK"]["DEFAULT_PAGINATION_CLASS"] = "karni.pagination.KarniCursorPagination"
+    validate_settings(ns)  # must not raise
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"KARNI_MAX_PAGE_SIZE": 10}, "KARNI_MAX_PAGE_SIZE = 10 must be an integer >= "),
+        ({"KARNI_MAX_PAGE_SIZE": None}, "switches DRF's page-size cap off"),
+        ({"KARNI_MAX_PAGE_SIZE": 0}, "KARNI_MAX_PAGE_SIZE = 0"),
+        ({"KARNI_MAX_PAGE_SIZE_FLOOR": 0}, "KARNI_MAX_PAGE_SIZE_FLOOR = 0"),
+        ({"KARNI_MAX_PAGE_SIZE": 40}, r"PAGE_SIZE'\] = 50 exceeds KARNI_MAX_PAGE_SIZE \(40\)"),
+    ],
+)
+def test_validate_page_size_cap_and_floor(make_settings, overrides, message) -> None:
+    ns = make_settings("dev", DEBUG=True, **overrides)
+    with pytest.raises(ImproperlyConfigured, match=message):
+        validate_settings(ns)
+
+
+def test_a_lower_floor_is_an_explicit_choice(make_settings) -> None:
+    ns = make_settings("dev", DEBUG=True, KARNI_MAX_PAGE_SIZE=10, KARNI_MAX_PAGE_SIZE_FLOOR=5)
+    ns["REST_FRAMEWORK"]["PAGE_SIZE"] = 10
+    validate_settings(ns)  # must not raise
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"KARNI_QUERY_BUDGET_MODE": "loud"}, "KARNI_QUERY_BUDGET_MODE 'loud' is invalid"),
+        ({"KARNI_QUERY_BUDGET": {"list": 0}}, r"KARNI_QUERY_BUDGET\['list'\] = 0"),
+        ({"KARNI_QUERY_BUDGET": 8}, "must be a dict"),
+        ({"KARNI_API_CACHE_TTL": 0}, "KARNI_API_CACHE_TTL = 0"),
+        ({"KARNI_API_CACHE": True, "KARNI_API_CACHE_ALIAS": "nope"}, "is not a CACHES alias"),
+    ],
+)
+def test_validate_budget_and_cache_settings(make_settings, overrides, message) -> None:
+    ns = make_settings("dev", DEBUG=True, **overrides)
+    with pytest.raises(ImproperlyConfigured, match=message):
+        validate_settings(ns)
+
+
+def test_performance_defaults(make_settings) -> None:
+    ns = make_settings("prod", **PROD_OK)
+    assert ns["KARNI_MAX_PAGE_SIZE"] == 100 and ns["KARNI_MAX_PAGE_SIZE_FLOOR"] == 25
+    assert ns["KARNI_QUERY_BUDGET"] == {
+        "list": 8,
+        "retrieve": 8,
+        "create": 12,
+        "update": 12,
+        "partial_update": 12,
+        "destroy": 10,
+        "*": 15,
+    }
+    assert ns["KARNI_API_CACHE"] is False and ns["KARNI_API_CACHE_TTL"] == 300
+    validate_settings(ns)

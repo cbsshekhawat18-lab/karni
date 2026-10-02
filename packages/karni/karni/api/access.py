@@ -77,6 +77,7 @@ __all__ = [
     "apply_rows",
     "describe_access",
     "missing_access_message",
+    "owner_paths_models",
     "readable",
     "target_read_scope",
 ]
@@ -744,6 +745,31 @@ def owner_fields(declaration: Access | Unscoped | None, model: type[Model]) -> t
         ):
             names.append(predicate.path)
     return tuple(names)
+
+
+def owner_paths_models(
+    declaration: Access | Unscoped | None, model: type[Model]
+) -> set[type[Model]]:
+    """Models crossed by the ``read`` predicate's ``Owned`` paths (cache invalidation).
+
+    A write to any of them can change which rows a requester sees.
+    """
+    if not isinstance(declaration, Access):
+        return set()
+    found: set[type[Model]] = set()
+    for predicate in declaration.read.owned():
+        current = model
+        for segment in predicate.path.split(LOOKUP_SEP):
+            try:
+                relation = current._meta.get_field(segment)
+            except FieldDoesNotExist:
+                break
+            target = getattr(relation, "related_model", None)
+            if target is None:
+                break
+            found.add(target)
+            current = target
+    return found
 
 
 # --- the request gate -------------------------------------------------------------------

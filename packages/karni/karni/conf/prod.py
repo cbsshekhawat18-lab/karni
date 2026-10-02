@@ -28,6 +28,8 @@ PROD: dict[str, Any] = {
     "DEBUG": env.bool("DEBUG", default=False),
     "ALLOWED_HOSTS": env.list("ALLOWED_HOSTS", default=[]),
     "KARNI_JSON_LOGS": True,
+    # Query budgets cost a wrapper per request; production does not count.
+    "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="off"),
     # TLS terminates at the reverse proxy (Caddy in the Karni stack); trust
     # its X-Forwarded-Proto header and redirect any plain-HTTP request.
     "SECURE_PROXY_SSL_HEADER": ("HTTP_X_FORWARDED_PROTO", "https"),

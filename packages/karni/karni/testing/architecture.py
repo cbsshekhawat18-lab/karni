@@ -18,7 +18,12 @@ from importlib import import_module
 from django.apps import AppConfig
 from django.utils.module_loading import module_has_submodule
 
-from karni.agent.check import SqlVisitor, access_override_defs, http_client_imports
+from karni.agent.check import (
+    SqlVisitor,
+    access_override_defs,
+    http_client_imports,
+    unpaginated_action_calls,
+)
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -28,6 +33,14 @@ from karni.testing._source import (
     project_app_configs,
     project_sources,
     relative,
+)
+
+# The N+1 scaling check needs a database, so it lives in karni.testing.performance;
+# importing it here puts it in the suite every Karni project already runs in CI
+# (`pytest --pyargs karni.testing.architecture`). Collected by pytest only.
+from karni.testing.performance import (  # noqa: F401
+    pytest_generate_tests,
+    test_list_and_retrieve_queries_do_not_grow_with_rows,
 )
 
 VIEWSET_MODULES = ("viewsets", "api", "serializers")
@@ -184,6 +197,38 @@ def check_access_override() -> list[Violation]:
                         message="filter_queryset_for_user is overridden",
                         hint="express the row rule in access (Where(...)), or add an "
                         "allow marker with the reason",
+                    ),
+                )
+    return violations
+
+
+# --- unpaginated-action -------------------------------------------------------
+
+
+def check_unpaginated_action() -> list[Violation]:
+    """List-returning actions must paginate (ADR 0001 Q3.6).
+
+    An ``@action`` (or ``list`` override) serialising ``many=True`` without
+    ``paginate_queryset`` / ``paginated_response`` returns a whole table.
+    """
+    violations: list[Violation] = []
+    for cfg in project_app_configs():
+        for path in project_sources(cfg):
+            try:
+                tree = ast.parse(path.read_text())
+            except (OSError, SyntaxError):
+                continue
+            for lineno, candidates in unpaginated_action_calls(tree):
+                violations += check_optout(
+                    path,
+                    "unpaginated-action",
+                    candidates,
+                    Violation(
+                        rule="unpaginated-action",
+                        location=f"{relative(path)}:{lineno}",
+                        message="list-returning action serialises many=True without pagination",
+                        hint="return self.paginated_response(queryset), or add an allow "
+                        "marker with the reason",
                     ),
                 )
     return violations
@@ -346,6 +391,7 @@ ALL_CHECKS = (
     check_viewset_base,
     check_viewset_access,
     check_access_override,
+    check_unpaginated_action,
     check_admin_convention,
     check_raw_sql,
     check_http_client,
@@ -379,6 +425,10 @@ def test_viewsets_declare_access() -> None:
 
 def test_access_overrides_state_a_reason() -> None:
     _assert_clean(check_access_override())
+
+
+def test_list_actions_are_paginated() -> None:
+    _assert_clean(check_unpaginated_action())
 
 
 def test_admins_follow_the_override_convention() -> None:

@@ -88,6 +88,32 @@ def test_viewsets_section_lists_registered() -> None:
     assert "EventViewSet" in sections.get("VIEWSETS", "")
 
 
+def test_performance_section_lists_declared_exceptions(monkeypatch) -> None:
+    from karni import introspect
+    from karni.api import Access, BaseViewSet, Budget, Public, Uncached, Unpaginated
+    from tests.testapp.models import Venue
+
+    class Report(BaseViewSet):
+        model = Venue
+        access = Access(read=Public(), write=Public())
+        query_budget = Budget(list=25, reason="signed URLs")
+        pagination = Unpaginated(max_rows=2000, reason="CSV export")
+        cache = Uncached(reason="live")
+        optimize = False
+        auto_register = False
+
+    monkeypatch.setattr(introspect, "_routed_viewsets", lambda: [Report])
+    assert introspect.performance_section() == (
+        "PERF: Report budget(list=25: signed URLs) unpaginated(2000: CSV export) "
+        "uncached(live) optimize=False"
+    )
+
+
+@pytest.mark.django_db
+def test_performance_section_is_omitted_when_nothing_is_relaxed() -> None:
+    assert "PERF:" not in build_context()
+
+
 @pytest.mark.django_db
 def test_skip_apps_setting_override(settings) -> None:
     settings.KARNI_CONTEXT_SKIP_APPS = ["testapp", "adminapp"] + list(

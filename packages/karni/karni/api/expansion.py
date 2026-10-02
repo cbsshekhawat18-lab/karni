@@ -6,9 +6,10 @@ parameter: a comma-separated list of relation names, nested with dots
 may be repeated; all values are merged. Expansion drives two things:
 
 * nested read-only serializers (:func:`karni.api.serializers.build_serializer`),
-* automatic ``select_related`` / ``prefetch_related`` on the queryset
-  (:meth:`karni.api.viewsets.BaseViewSet.get_queryset` via
-  :func:`scoped_related_lookups`).
+* and, because the query optimiser walks whatever serializer renders the
+  response (:mod:`karni.api.optimizer`, ADR 0001 Q3.1), the matching
+  ``select_related`` / ``prefetch_related`` — expansion is just one more
+  nested serializer to it.
 
 Expansion only embeds rows the requester can read (ADR 0001 Q2.5): every
 expanded level goes through the **target** model's read scope — the
@@ -18,6 +19,9 @@ expanded level goes through the **target** model's read scope — the
 when the scope keeps every row, and becomes a scoped ``Prefetch`` otherwise,
 so an unreadable target renders as ``null``. A target model with no routed
 viewset has no row policy and is embedded from its default manager.
+
+:func:`related_lookups` and :func:`scoped_related_lookups` are deprecated
+(removed in 1.0): the optimiser derives the same lookups from the serializer.
 
 Override / escape hatch: a viewset restricts or aliases what may be expanded
 with ``expandable_fields`` (a mapping of client-facing expand key to model
@@ -36,6 +40,8 @@ from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Field, ForeignKey, ManyToManyField, Model, Prefetch, QuerySet
 from rest_framework.exceptions import ValidationError
+
+from karni.deprecation import warn_deprecated
 
 __all__ = [
     "auto_expandable_fields",
@@ -130,8 +136,7 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
     against the automatic expands of the model reached so far.
 
     Returns the validated paths with each top-level alias resolved to its
-    model relation name, ready for serializer generation and
-    :func:`related_lookups`.
+    model relation name, ready for serializer generation.
 
     :raises rest_framework.exceptions.ValidationError: (HTTP 400) for an
         unknown key — the message lists the allowed keys at the failing
@@ -195,6 +200,10 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
 def related_lookups(model: type[Model], expand: Iterable[str]) -> tuple[list[str], list[str]]:
     """Split validated expand paths into query-optimisation lookups.
 
+    .. deprecated:: 0.2
+        Use :func:`karni.api.optimizer.optimize` with the expanded
+        serializer; removed in 1.0.
+
     Returns ``(select_related_paths, prefetch_related_paths)`` for ``model``:
     a path whose every segment is a forward ``ForeignKey``/``OneToOneField``
     goes to ``select_related``; a path containing any many-to-many or reverse
@@ -203,6 +212,7 @@ def related_lookups(model: type[Model], expand: Iterable[str]) -> tuple[list[str
     do not resolve to relations are skipped silently, so this never raises
     for input that :func:`validate_expand` accepted.
     """
+    _warn_subsumed("related_lookups()")
     select: list[str] = []
     prefetch: list[str] = []
     for path in sorted(expand):
@@ -232,6 +242,10 @@ def scoped_related_lookups(
 ) -> tuple[list[str], list[Prefetch]]:
     """Like :func:`related_lookups`, but every level obeys its target's read scope.
 
+    .. deprecated:: 0.2
+        Use :func:`karni.api.optimizer.optimize` with a ``scope`` callback;
+        removed in 1.0.
+
     ``scope(target)`` returns ``(queryset, filtered)``: the target's rows the
     requester may read and whether that narrowed anything. Per level of each
     validated path:
@@ -247,6 +261,7 @@ def scoped_related_lookups(
     Returns ``(select_related_paths, prefetch_objects)`` with parents before
     children. Paths that do not resolve are skipped silently.
     """
+    _warn_subsumed("scoped_related_lookups()")
     select: list[str] = []
     prefetch: dict[str, Prefetch] = {}
     for path in sorted(expand):
@@ -270,6 +285,16 @@ def scoped_related_lookups(
                     prefetch[lookup] = Prefetch(lookup, queryset=queryset)
             current = target
     return select, list(prefetch.values())
+
+
+def _warn_subsumed(name: str) -> None:
+    warn_deprecated(
+        f"karni.api.expansion.{name}",
+        "karni.api.optimizer.optimize(queryset, serializer, scope=...)",
+        removed_in="1.0",
+        doc_anchor="api.md#query-optimisation",
+        stacklevel=3,
+    )
 
 
 def _split_values(values: Iterable[str | None]) -> tuple[str, ...]:

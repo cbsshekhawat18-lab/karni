@@ -16,6 +16,10 @@ Behaviour is steered by an inner ``class APIMeta:`` on the model:
 ``schema_name``
     Replaces the ``{CamelAppLabel}{Model}`` stem used for generated class
     (and therefore OpenAPI component) names.
+``select`` / ``prefetch``
+    Query hints for what the optimiser cannot see (a property listed in
+    ``fields``): ``select_related`` / ``prefetch_related`` lookups applied
+    wherever the model is rendered — see :mod:`karni.api.optimizer`.
 
 Sensitive-field policy: a field named ``password`` is never exposed by the
 automatic default, and for ``AbstractBaseUser`` / ``PermissionsMixin``

@@ -125,6 +125,32 @@ def test_access_rules() -> None:
     assert [(f.code, f.line) for f in check_source("./app/viewsets.py", override)] == [("K110", 5)]
 
 
+def test_unpaginated_action_rule() -> None:
+    source = (
+        "class V(BaseViewSet):\n"
+        "    @action(detail=False)\n"
+        "    def recent(self, request):\n"
+        "        return Response(S(self.get_queryset(), many=True).data)\n"
+        "    @action(detail=True)\n"
+        "    def members(self, request, pk=None):\n"
+        "        return self.paginated_response(self.get_object().members.all())\n"
+        "    @action(detail=False, methods=['post'])\n"
+        "    def bulk(self, request):\n"
+        "        return Response(S(data=request.data, many=True).data)\n"
+        "    @action(detail=False)\n"
+        "    def legacy(self, request):\n"
+        "        # karni: allow(unpaginated-action): at most 12 fixed rows\n"
+        "        return Response(S(FIXED, many=True).data)\n"
+        "    def list(self, request):\n"
+        "        return Response(S(self.get_queryset(), many=True).data)\n"
+        "class Helper:\n"
+        "    def list(self):\n"
+        "        return S(ROWS, many=True).data\n"
+    )
+    found = [(f.code, f.line) for f in check_source("./app/viewsets.py", source)]
+    assert found == [("K111", 4), ("K111", 16)]
+
+
 def test_mixins_and_abstract_models_pass() -> None:
     source = (
         "from django.db import models\n"

@@ -40,23 +40,43 @@ usual):
 * ``auto_register`` / ``route`` — steer (or opt out of) router autodiscovery.
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
+
+Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
+silence:
+
+* ``select_related`` / ``prefetch_related`` — hints merged into the lookups
+  the optimiser derives from the serializer (:mod:`karni.api.optimizer`);
+  ``optimize = False`` keeps only the hints; ``optimize_queryset()`` may be
+  overridden.
+* ``query_budget = Budget(list=25, reason="...")`` — raise (or lift with
+  ``None``) the per-action query budget (:mod:`karni.performance`).
+* ``pagination = Unpaginated(max_rows=N, reason="...")`` — the only way to
+  switch pagination off (:mod:`karni.pagination`); list-returning custom
+  actions use ``self.paginated_response(queryset)``.
+* ``cache = Uncached(reason="...")`` / ``Cache(ttl=..., depends_on=[...])`` —
+  opt out of / tune response caching when ``KARNI_API_CACHE`` is on
+  (:mod:`karni.api.caching`).
 """
 
 from __future__ import annotations
 
 import functools
+import logging
 import weakref
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Model, QuerySet
+from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
-from django.http import Http404
+from django.http import Http404, HttpRequest
 from rest_framework.exceptions import NotFound
 from rest_framework.filters import OrderingFilter
+from rest_framework.pagination import BasePagination
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
@@ -73,12 +93,34 @@ from karni.api.access import (
     target_read_scope,
     validate_access,
 )
-from karni.api.expansion import collect_expand_param, scoped_related_lookups, validate_expand
+from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
+from karni.api.expansion import collect_expand_param, validate_expand
 from karni.api.filters import KarniFilterBackend, KarniSearchFilter
+from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
+from karni.pagination import Unpaginated, check_pagination_class
+from karni.performance import (
+    Budget,
+    QueryBudgetExceeded,
+    QueryRecorder,
+    budget_failure,
+    budget_mode,
+    record_queries,
+    resolve_budget,
+)
 
 __all__ = ["BaseViewSet"]
+
+logger = logging.getLogger("karni.performance")
+
+#: Actions whose queryset the optimiser shapes from the serializer.
+OPTIMIZED_ACTIONS: Final = frozenset({"list", "retrieve"})
+
+#: Standard actions a ``Budget`` may name (plus the viewset's ``@action`` names).
+_STANDARD_ACTIONS: Final = frozenset(
+    {"list", "retrieve", "create", "update", "partial_update", "destroy", "metadata", "*"}
+)
 
 _SCOPED_MARK = "_karni_scoped_queryset"
 _DEPTH_ATTR = "_karni_queryset_depth"
@@ -135,15 +177,30 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     * ``search_fields`` — fields searched by ``?search=`` through the
       configured search provider.
 
+    * ``select_related`` / ``prefetch_related`` — query hints merged into
+      the optimiser's derived lookups; ``optimize = False`` keeps only them.
+    * ``query_budget`` — ``Budget(list=25, reason=...)``; ``None`` uses
+      ``KARNI_QUERY_BUDGET``.
+    * ``pagination`` — ``Unpaginated(max_rows=N, reason=...)`` to return
+      plain (still bounded) lists; ``None`` keeps ``pagination_class``.
+    * ``cache`` — ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;
+      ``None`` follows ``KARNI_API_CACHE``.
+
     The read pipeline is fixed (ADR 0001 §4): the model's default manager
     (model-level scopes such as soft delete) → ``queryset`` / an overridden
     ``get_queryset`` → the ``access.read`` row filter →
-    ``filter_queryset_for_user`` → expansion lookups → filter backends →
-    pagination. No access predicate can lift a model-level scope.
+    ``filter_queryset_for_user`` → the optimiser (``list``/``retrieve``:
+    lookups derived from the serializer, each prefetch through its target's
+    read scope) → filter backends → pagination. No access predicate can lift
+    a model-level scope.
 
-    Pagination and throttling come from the DRF defaults that ``karni.conf``
-    configures. ``REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`` does **not**
-    apply to a viewset with an ``Access`` declaration — the declaration is
+    Pagination always applies (a :class:`karni.pagination.KarniPagination`;
+    ``pagination_class = None`` without ``Unpaginated`` is a class-definition
+    error), and every request is counted against its query budget unless
+    ``KARNI_QUERY_BUDGET_MODE`` is ``"off"``. Throttling comes from the DRF
+    defaults that ``karni.conf`` configures.
+    ``REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`` does **not** apply to a
+    viewset with an ``Access`` declaration — the declaration is
     the gate; only ``Unscoped`` viewsets fall back to it. The filter backends
     are pinned on the class so they keep working even when a project
     replaces the DRF defaults.
@@ -158,6 +215,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     auto_register: ClassVar[bool] = True
     route: ClassVar[str | None] = None
     search_fields: Sequence[str] = ()
+    optimize: ClassVar[bool] = True
+    select_related: ClassVar[Sequence[str]] = ()
+    prefetch_related: ClassVar[Sequence[str | Prefetch]] = ()
+    query_budget: ClassVar[Budget | None] = None
+    pagination: ClassVar[Unpaginated | None] = None
+    cache: ClassVar[Cache | Uncached | None] = None
 
     # The access declaration is the gate; DRF's project-wide default does
     # not apply. Classes listed here (or via @action) are ANDed after it.
@@ -171,11 +234,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     ordering_fields = "__all__"
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Wrap ``get_queryset`` (Q2.7) and validate the ``access`` declaration."""
+        """Wrap ``get_queryset`` (Q2.7); validate access and the performance declarations."""
         super().__init_subclass__(**kwargs)
         resolved = cls.get_queryset
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
+        _validate_performance(cls)
         if "object_permission_classes" in cls.__dict__ and cls.object_permission_classes:
             # Still honoured (checked after the access object check) until removal.
             warn_deprecated(
@@ -291,8 +355,8 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
         Whatever this returns — here or in any override, with or without
         ``super()`` — is passed through :meth:`scope_queryset` (the access
-        read scope, ``filter_queryset_for_user`` and expansion lookups)
-        exactly once.
+        read scope, ``filter_queryset_for_user`` and, for ``list`` /
+        ``retrieve``, the optimiser) exactly once.
         """
         if self.queryset is not None:
             return self.queryset.all()
@@ -300,27 +364,60 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return queryset
 
     def scope_queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
-        """Steps 3–4 of the read pipeline: :meth:`read_scope`, then expansion.
+        """Steps 3–4 of the read pipeline: :meth:`read_scope`, then the optimiser.
 
+        The optimiser runs for ``list`` and ``retrieve`` (custom actions opt
+        in through :meth:`paginated_response` or :meth:`optimize_queryset`).
         Schema generation (drf-spectacular's fake views) gets an empty
         queryset of the right model without evaluating any predicate.
         """
         if getattr(self, "swagger_fake_view", False):
             return queryset.none()
         queryset, _filtered = self.read_scope(queryset)
-        expand = self.get_validated_expand()
-        if expand:
-            request = getattr(self, "request", None)
-            select, prefetch = scoped_related_lookups(
-                queryset.model,
-                expand,
-                lambda target: target_read_scope(target._default_manager.all(), request),
-            )
-            if select:
-                queryset = queryset.select_related(*select)
-            if prefetch:
-                queryset = queryset.prefetch_related(*prefetch)
+        if getattr(self, "action", None) in OPTIMIZED_ACTIONS:
+            queryset = self.optimize_queryset(queryset)
         return queryset
+
+    def target_scope(self) -> TargetScope:
+        """``scope(model) -> (readable rows, filtered)`` for prefetches (ADR 0001 R3)."""
+        request = getattr(self, "request", None)
+
+        def scope(target: type[Model]) -> tuple[QuerySet[Any], bool]:
+            return target_read_scope(target._default_manager.all(), request)
+
+        return scope
+
+    def optimize_queryset(
+        self,
+        queryset: QuerySet[Any],
+        serializer_class: type[BaseSerializer[Any]] | None = None,
+    ) -> QuerySet[Any]:
+        """Add the lookups rendering with ``serializer_class`` needs, plus the hints.
+
+        ``serializer_class`` defaults to :meth:`get_serializer_class` (so
+        ``?expand=`` is covered). ``optimize = False`` applies only
+        ``select_related`` / ``prefetch_related`` (and ``APIMeta`` hints).
+        Calling it twice is harmless: lookups already present win.
+
+        Override / escape hatch: override this method for a hand-built
+        strategy.
+        """
+        serializer = None
+        if self.optimize:
+            serializer = serializer_class or self.get_serializer_class()
+        context = {
+            "request": getattr(self, "request", None),
+            "format": getattr(self, "format_kwarg", None),
+            "view": self,
+        }
+        return optimize(
+            queryset,
+            serializer,
+            scope=self.target_scope(),
+            select=self.select_related,
+            prefetch=self.prefetch_related,
+            context=context,
+        )
 
     def read_scope(self, queryset: QuerySet[Any]) -> tuple[QuerySet[Any], bool]:
         """Narrow ``queryset`` by ``access.read`` and ``filter_queryset_for_user``.
@@ -392,6 +489,174 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             max_depth=self.expand_depth or None,
             read_only=self.get_owner_fields(),
         )
+
+    # --- pagination ---------------------------------------------------------------------
+
+    @property
+    def paginator(self) -> BasePagination:
+        """The paginator instance; a viewset without one is a configuration error.
+
+        ``REST_FRAMEWORK["DEFAULT_PAGINATION_CLASS"]`` missing (``None``)
+        would silently return whole tables; boot validation refuses it, and
+        this is the backstop when validation is off.
+        """
+        if self.pagination_class is None:
+            raise ImproperlyConfigured(
+                f"{type(self).__name__} has no pagination_class (REST_FRAMEWORK"
+                "['DEFAULT_PAGINATION_CLASS'] is None?). Keep "
+                "'karni.pagination.KarniPageNumberPagination', or declare "
+                "pagination = Unpaginated(max_rows=N, reason='...')."
+            )
+        paginator: BasePagination = super().paginator
+        return paginator
+
+    def paginated_response(
+        self,
+        queryset: QuerySet[Any],
+        serializer_class: type[BaseSerializer[Any]] | None = None,
+    ) -> Response:
+        """Paginate, optimise and serialise ``queryset`` — the list-returning ``@action`` path.
+
+        ``return self.paginated_response(self.get_queryset().filter(...))``
+        gives the same envelope, page-size cap and query optimisation as
+        ``list``. An unordered queryset gets the viewset's default
+        ``ordering`` (stable pages). Pass ``self.filter_queryset(qs)`` to
+        apply the request's filters and ``?ordering=`` too.
+        ``serializer_class`` defaults to :meth:`get_serializer_class`.
+        """
+        serializer_class = serializer_class or self.get_serializer_class()
+        if not queryset.ordered:
+            queryset = queryset.order_by(*self.ordering)
+        page = self.paginate_queryset(self.optimize_queryset(queryset, serializer_class))
+        serializer = serializer_class(page, many=True, context=self.get_serializer_context())
+        response: Response = self.get_paginated_response(serializer.data)
+        return response
+
+    # --- query budget -------------------------------------------------------------------
+
+    def get_query_budget(self) -> int | None:
+        """The query budget of the current action (``None`` = unchecked).
+
+        ``query_budget`` on the class first, then ``KARNI_QUERY_BUDGET``.
+        """
+        return resolve_budget(type(self).query_budget, getattr(self, "action", None))
+
+    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
+        """DRF's dispatch, counted against the action's query budget.
+
+        ``KARNI_QUERY_BUDGET_MODE``: ``"off"`` → no counting; ``"warn"`` →
+        an over-budget request logs the grouped duplicate report; ``"raise"``
+        → it raises :class:`karni.performance.QueryBudgetExceeded`. Both
+        counting modes set ``X-Karni-Queries`` (and ``X-Karni-Query-Budget``).
+        """
+        mode = budget_mode()
+        if mode == "off":
+            return super().dispatch(request, *args, **kwargs)
+        with record_queries() as recorder:
+            response = super().dispatch(request, *args, **kwargs)
+        self.check_query_budget(recorder, response, mode)
+        return response
+
+    def check_query_budget(self, recorder: QueryRecorder, response: Any, mode: str) -> None:
+        """Compare ``recorder`` with :meth:`get_query_budget`; warn or raise per ``mode``."""
+        limit = self.get_query_budget()
+        response["X-Karni-Queries"] = str(recorder.count)
+        if limit is None:
+            return
+        response["X-Karni-Query-Budget"] = str(limit)
+        if recorder.count <= limit:
+            return
+        action = getattr(self, "action", None) or "*"
+        name = type(self).__name__
+        message = budget_failure(
+            f"{name}.{action}",
+            recorder.report(),
+            limit,
+            "Fix the repeated query (the optimiser derives select_related/prefetch_related "
+            "from the serializer; hint opaque fields with select_related/prefetch_related "
+            f"on {name}), or declare query_budget = Budget({action}=N, reason=...).",
+        )
+        if mode == "raise":
+            raise QueryBudgetExceeded(message)
+        logger.warning(message)
+
+    # --- response cache -----------------------------------------------------------------
+
+    def get_response_cache(self) -> ResponseCache | None:
+        """The cache entry for this request, or ``None`` when it is not cached.
+
+        Cached: ``GET`` ``list``/``retrieve`` while ``KARNI_API_CACHE`` is on
+        and ``cache`` is not ``Uncached`` (see :mod:`karni.api.caching`).
+        Override / escape hatch: return ``None`` to skip caching per request.
+        """
+        return response_cache(self)
+
+    # list/retrieve: DRF's, served from the response cache when it is enabled.
+    # No docstrings on purpose — drf-spectacular would publish them as every
+    # operation's description in place of the viewset's own docstring.
+
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        cache = self.get_response_cache()
+        if cache is not None and (hit := cache.get()) is not None:
+            return hit
+        response: Response = super().list(request, *args, **kwargs)
+        if cache is not None:
+            cache.store(response)
+        return response
+
+    def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        cache = self.get_response_cache()
+        if cache is not None and (hit := cache.get()) is not None:
+            return hit
+        response: Response = super().retrieve(request, *args, **kwargs)
+        if cache is not None:
+            cache.store(response)
+        return response
+
+
+def _validate_performance(cls: type[BaseViewSet]) -> None:
+    """Class-definition checks for the Decision 3 declarations (ADR 0001 Q3.5)."""
+    name = cls.__name__
+    declared = cls.__dict__.get("pagination")
+    if declared is not None:
+        if not isinstance(declared, Unpaginated):
+            raise ImproperlyConfigured(
+                f"{name}.pagination must be Unpaginated(max_rows=N, reason='...'), got "
+                f"{declared!r}; to change the paginator set pagination_class instead."
+            )
+        own = cls.__dict__.get("pagination_class")
+        if own is not None:
+            raise ImproperlyConfigured(
+                f"{name} declares both pagination = Unpaginated(...) and pagination_class; "
+                "keep one."
+            )
+        cls.pagination_class = declared.paginator_class()
+    elif "pagination_class" in cls.__dict__:
+        check_pagination_class(name, cls.__dict__["pagination_class"])
+    budget = cls.__dict__.get("query_budget")
+    if budget is not None:
+        if not isinstance(budget, Budget):
+            raise ImproperlyConfigured(
+                f"{name}.query_budget must be a Budget, e.g. "
+                f"query_budget = Budget(list={budget!r}, reason='...'), got {budget!r}."
+            )
+        known = _STANDARD_ACTIONS | {extra.__name__ for extra in cls.get_extra_actions()}
+        unknown = sorted(set(budget.limits) - known)
+        if unknown:
+            raise ImproperlyConfigured(
+                f"{name}.query_budget names unknown action(s) {', '.join(unknown)}; "
+                f"known: {', '.join(sorted(known - {'*'}))} (default= for the rest)."
+            )
+    cache = cls.__dict__.get("cache")
+    if cache is not None and not isinstance(cache, Cache | Uncached):
+        raise ImproperlyConfigured(
+            f"{name}.cache must be Cache(...) or Uncached(reason='...'), got {cache!r}."
+        )
+    for hint in ("select_related", "prefetch_related"):
+        if hint in cls.__dict__:
+            validate_hints(name, hint, cls.__dict__[hint])
+    if not isinstance(cls.optimize, bool):
+        raise ImproperlyConfigured(f"{name}.optimize must be True or False.")
 
 
 _VALIDATED: weakref.WeakSet[type[Any]] = weakref.WeakSet()

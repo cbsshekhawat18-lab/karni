@@ -149,6 +149,9 @@ BASE: dict[str, Any] = {
         "karni.admin",
     ],
     "MIDDLEWARE": [
+        # Outermost so it counts every query of the request; a no-op (removed
+        # from the chain at startup) unless KARNI_QUERY_LOG is on (dev profile).
+        "karni.middleware.QueryLogMiddleware",
         "django.middleware.security.SecurityMiddleware",
         "corsheaders.middleware.CorsMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
@@ -322,6 +325,30 @@ BASE: dict[str, Any] = {
     # Zero-argument factory returning the router karni.api.urls exposes;
     # consumed at first URLconf import (overriding it later is a no-op).
     "KARNI_API_ROUTER": env("KARNI_API_ROUTER", default="karni.api.routers.get_default_router"),
+    # --- Performance (ADR 0001 Decision 3) ----------------------------------
+    # Hard cap on ?page_size= for every Karni paginator; it may not be set
+    # below the floor (25 = @karni/ui ResourceTable's page size; never < 1).
+    "KARNI_MAX_PAGE_SIZE": env.int("KARNI_MAX_PAGE_SIZE", default=100),
+    "KARNI_MAX_PAGE_SIZE_FLOOR": env.int("KARNI_MAX_PAGE_SIZE_FLOOR", default=25),
+    # Queries allowed per BaseViewSet action ("*" = any other action); a
+    # partial dict is merged over these. Per viewset: query_budget = Budget(...).
+    "KARNI_QUERY_BUDGET": {
+        "list": 8,
+        "retrieve": 8,
+        "create": 12,
+        "update": 12,
+        "partial_update": 12,
+        "destroy": 10,
+        "*": 15,
+    },
+    # raise (tests: set by the karni pytest plugin) | warn (dev) | off (prod).
+    "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="off"),
+    # Per-request query count / duplicates / time log (QueryLogMiddleware).
+    "KARNI_QUERY_LOG": env.bool("KARNI_QUERY_LOG", default=False),
+    # Response caching for BaseViewSet list/retrieve (karni.api.caching).
+    "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
+    "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),
+    "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
     # --- Admin (karni.admin + django-unfold) --------------------------------
     "UNFOLD": {
         "SITE_TITLE": _ADMIN_TITLE,

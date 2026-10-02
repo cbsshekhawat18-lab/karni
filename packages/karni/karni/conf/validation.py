@@ -2,7 +2,8 @@
 
 A Pydantic v2 model checks the values that most often break deployments
 (secret key, hosts, database, Redis URLs, storage selection, throttle rates,
-auth mode and social/2FA extras, API knobs, admin app ordering, health-check
+pagination that cannot be switched off, query budgets and API caching, auth
+mode and social/2FA extras, API knobs, admin app ordering, health-check
 configuration) and :func:`validate_settings` turns any problem
 into a single ``ImproperlyConfigured`` error listing *every* failure, so a
 bad container config dies loudly at startup instead of at 3 a.m.
@@ -28,6 +29,11 @@ _REDIS_SCHEMES = frozenset({"redis", "rediss", "unix"})
 _VALID_STORAGES = frozenset({"local", "s3"})
 _VALID_AUTH_MODES = frozenset({"jwt", "session"})
 _FRONTEND_SCHEMES = frozenset({"http", "https"})
+_BUDGET_MODES = ("raise", "warn", "off")  # karni.performance.BUDGET_MODES (import-light here)
+
+
+def _positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
 def _importable(module: str) -> bool:
@@ -71,6 +77,13 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"
     KARNI_API_ROUTER: str = "karni.api.routers.get_default_router"
+    KARNI_MAX_PAGE_SIZE: Any = 100
+    KARNI_MAX_PAGE_SIZE_FLOOR: Any = 25
+    KARNI_QUERY_BUDGET: Any = Field(default_factory=dict)
+    KARNI_QUERY_BUDGET_MODE: Any = "off"
+    KARNI_API_CACHE: bool = False
+    KARNI_API_CACHE_TTL: Any = 300
+    KARNI_API_CACHE_ALIAS: Any = "default"
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
@@ -99,6 +112,8 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_celery_broker())
         errors.extend(self._check_storage())
         errors.extend(self._check_rest_framework())
+        errors.extend(self._check_pagination())
+        errors.extend(self._check_performance())
         errors.extend(self._check_accounts())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
@@ -184,13 +199,105 @@ class KarniSettingsModel(BaseModel):
                         "is not a valid throttle rate (expected '<number>/<period>', "
                         "e.g. '100/min'); check THROTTLE_ANON / THROTTLE_USER"
                     )
+        return errors
+
+    def _check_pagination(self) -> list[str]:
+        """Pagination cannot be switched off by configuration (ADR 0001 Q3.4, Q3.5)."""
+        errors: list[str] = []
+        floor, cap = self.KARNI_MAX_PAGE_SIZE_FLOOR, self.KARNI_MAX_PAGE_SIZE
+        if not _positive_int(floor):
+            errors.append(
+                f"KARNI_MAX_PAGE_SIZE_FLOOR = {floor!r} must be a positive integer (it is the "
+                "lowest KARNI_MAX_PAGE_SIZE allowed)"
+            )
+            floor = 1
+        if not _positive_int(cap) or cap < floor:
+            errors.append(
+                f"KARNI_MAX_PAGE_SIZE = {cap!r} must be an integer >= KARNI_MAX_PAGE_SIZE_FLOOR "
+                f"({floor}): a cap of 0/None switches DRF's page-size cap off, and one below "
+                "@karni/ui's ResourceTable page size hides rows. Lower "
+                "KARNI_MAX_PAGE_SIZE_FLOOR explicitly if this project needs a smaller cap"
+            )
+            cap = None
+        if not self.REST_FRAMEWORK:
+            return errors  # DRF not configured here (plain mapping under test)
         page_size = self.REST_FRAMEWORK.get("PAGE_SIZE")
-        if page_size is not None and (
-            isinstance(page_size, bool) or not isinstance(page_size, int) or page_size <= 0
-        ):
+        if page_size is None:
+            errors.append(
+                "REST_FRAMEWORK['PAGE_SIZE'] is None (or missing), which switches pagination "
+                "off for every list; set a positive integer (KARNI_PAGE_SIZE, default 50). A "
+                "viewset that must return plain lists declares pagination = "
+                "Unpaginated(max_rows=N, reason='...')"
+            )
+        elif not _positive_int(page_size):
             errors.append(
                 f"REST_FRAMEWORK['PAGE_SIZE'] = {page_size!r} must be a positive "
                 "integer; check KARNI_PAGE_SIZE"
+            )
+        elif cap is not None and page_size > cap:
+            errors.append(
+                f"REST_FRAMEWORK['PAGE_SIZE'] = {page_size} exceeds KARNI_MAX_PAGE_SIZE "
+                f"({cap}); lower KARNI_PAGE_SIZE or raise KARNI_MAX_PAGE_SIZE"
+            )
+        errors.extend(self._check_pagination_class())
+        return errors
+
+    def _check_pagination_class(self) -> list[str]:
+        dotted = self.REST_FRAMEWORK.get("DEFAULT_PAGINATION_CLASS")
+        fix = "use 'karni.pagination.KarniPageNumberPagination' (or a subclass)"
+        if dotted is None:
+            return [
+                "REST_FRAMEWORK['DEFAULT_PAGINATION_CLASS'] is None (or missing), which "
+                f"switches pagination off for every list; {fix}"
+            ]
+        from django.utils.module_loading import import_string
+
+        from karni.pagination import KarniPagination
+
+        try:
+            klass = import_string(dotted) if isinstance(dotted, str) else dotted
+        except ImportError as exc:
+            return [
+                f"REST_FRAMEWORK['DEFAULT_PAGINATION_CLASS'] {dotted!r} cannot be imported: {exc}"
+            ]
+        if not (isinstance(klass, type) and issubclass(klass, KarniPagination)):
+            return [
+                f"REST_FRAMEWORK['DEFAULT_PAGINATION_CLASS'] = {dotted!r} is not a "
+                f"karni.pagination.KarniPagination subclass (it would skip KARNI_MAX_PAGE_SIZE); "
+                f"{fix}"
+            ]
+        return []
+
+    def _check_performance(self) -> list[str]:
+        """Query budgets and API response caching."""
+        errors: list[str] = []
+        if self.KARNI_QUERY_BUDGET_MODE not in _BUDGET_MODES:
+            errors.append(
+                f"KARNI_QUERY_BUDGET_MODE {self.KARNI_QUERY_BUDGET_MODE!r} is invalid; expected "
+                "'raise', 'warn' or 'off'"
+            )
+        budget = self.KARNI_QUERY_BUDGET
+        if not isinstance(budget, Mapping):
+            errors.append(
+                f"KARNI_QUERY_BUDGET = {budget!r} must be a dict of action name -> query "
+                "count (e.g. {'list': 10})"
+            )
+        else:
+            for action, limit in budget.items():
+                if not isinstance(action, str) or not _positive_int(limit):
+                    errors.append(
+                        f"KARNI_QUERY_BUDGET[{action!r}] = {limit!r} must be a positive "
+                        "integer keyed by an action name"
+                    )
+        if not _positive_int(self.KARNI_API_CACHE_TTL):
+            errors.append(
+                f"KARNI_API_CACHE_TTL = {self.KARNI_API_CACHE_TTL!r} must be a positive integer "
+                "(seconds)"
+            )
+        if self.KARNI_API_CACHE and self.CACHES and self.KARNI_API_CACHE_ALIAS not in self.CACHES:
+            errors.append(
+                f"KARNI_API_CACHE_ALIAS {self.KARNI_API_CACHE_ALIAS!r} is not a CACHES alias "
+                f"(known: {', '.join(sorted(self.CACHES))})"
             )
         return errors
 
