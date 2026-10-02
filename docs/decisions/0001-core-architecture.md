@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Proposed.** Waiting on the author's rulings in the four "Questions for the author" boxes. Nothing here is implemented. |
+| Status | **Accepted 2026-10-02.** The author accepted all recommendations; the binding rulings are in §7. |
 | Date | 2026-10-02 |
 | Scope | The query layer (`karni.managers`, `karni.models`), `BaseViewSet`, the generated serializers, pagination, and the testing/enforcement surface |
 | Evidence | `.learning/PATTERNS.md` (P6, P19, P24, P25, P36, P37, weak practices 2, 8, 9), `.learning/GAPS.md` (§3 karni-tenancy, §4.2, §4.3, §4.7, §5.1), and the current source (cited as `path:line`) |
@@ -601,3 +601,37 @@ Paths are repository-relative. Only files that exist today are listed. New files
 **Decision 2 (permissions):** Q2.1 default posture (GAPS §4.2) · Q2.2 Groups vs `area:action` grants (GAPS §4.3) · Q2.3 layered and queryset-authoritative via one `access` declaration · Q2.4 404 vs 403 · Q2.5 relation-field and expansion scoping · Q2.6 `Owned()` defaulting to `created_by` · Q2.7 auto-wrap `get_queryset` vs rule-only · Q2.8 closed predicate vocabulary.
 
 **Decision 3 (performance):** Q3.1 serializer-walking optimizer (and if `?expand=` goes) · Q3.2 factories vs auto-fill for the scaling check · Q3.3 budget numbers and prod mode · Q3.4 `max_page_size` 500 → 100 · Q3.5 `pagination_class = None` as an error and refusing `PAGE_SIZE=None` · Q3.6 `unpaginated-action` rule vs helper only.
+
+---
+
+## 7. Rulings (accepted 2026-10-02)
+
+The author accepted all recommendations. Where a question carried no bolded pick, the ruling
+follows this document's own analysis; those are marked *(from analysis)*.
+
+| Q | Ruling |
+|---|---|
+| 1.1 | v1 single-tenant. Later in-process tenancy = (a) shared schema via a `karni-tenancy` module; (c) only as deployment-per-tenant, documented; (b) declined. |
+| 1.2 | Tenant filter lives at the **model level**: a named scope in the default-manager pipeline, failing closed; GAPS §3's isolation-test helper is kept. |
+| 1.3 | A scoped model queried with no tenant bound **raises**. |
+| 1.4 | **Yes, now.** Named-scope removal `objects.without("soft_delete", reason=...)` replaces `all_objects` and the `super()`-based `all_with_deleted()` / `deleted_only()`; the old names go through a deprecation cycle (warn in 0.2, remove in 1.0). |
+| 1.5 | *(from analysis)* Shared users + `Membership(user, tenant, role)`; roles become per-tenant. Module-time decision, no v1 code. |
+| 1.6 | With the module installed, every project `BaseModel` is scoped unless `ScopeMeta.tenant = "shared"`. |
+| 1.7 | Accepted: global unique constraints on scoped models are a one-time change when tenancy is adopted. |
+| 1.8 | *(from analysis)* Postgres RLS ships in the module as optional hardening (`KARNI_TENANCY_RLS`, off by default). Module-time. |
+| 2.1 | **(b)** Every `BaseViewSet` must declare `access`. Missing it fails the build (`viewset-access` architecture rule) and denies everything at runtime. |
+| 2.2 | *(from analysis)* `HasRole(...)` over Django Groups now. The `Can("area:action")` slot is reserved for a later DB-grants tier; declarations written against `HasRole` keep working. |
+| 2.3 | Layered, queryset authoritative, compiled from one `access` declaration. |
+| 2.4 | Out of scope → **404**. Readable but not writable → 403. |
+| 2.5 | Yes: relation-field PK validation and `?expand=` respect the target viewset's read scope. |
+| 2.6 | *(from analysis)* The owner field must be named. `Owned()` without an argument is a class-definition error whose message names the fix; `created_by` is allowed only when written explicitly (`Owned("created_by")`). |
+| 2.7 | *(from analysis)* `BaseViewSet.__init_subclass__` auto-wraps an overridden `get_queryset` so the scope always applies; overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <reason>`. |
+| 2.8 | Closed vocabulary: `Owned`, `HasRole` (+ reserved `Can`), `Authenticated`, `Public`, `Where`, `Unscoped`, `|`, `&`. |
+| 3.1 | Serializer-walking optimizer replaces expansion-only lookups. `?expand=` stays for now (GAPS §5.1 removal is a separate question). |
+| 3.2 | *(from analysis, aligned with Phase 13)* Automatic factories from `karni.testing`; an explicit `<app>/factories.py` factory overrides. No project code required. |
+| 3.3 | Budgets list/retrieve 8, create/update 12, destroy 10, other 15. Modes: raise in tests, warn in dev, off in prod. |
+| 3.4 | `max_page_size` 500 → 100 (`KARNI_MAX_PAGE_SIZE`). |
+| 3.5 | `pagination_class = None` is a class-definition error (hatch: `Unpaginated(max_rows, reason)`); boot refuses `PAGE_SIZE = None`. |
+| 3.6 | *(from analysis)* Both: the build-failing `unpaginated-action` rule and the `paginated_response()` helper. |
+| — | Soft delete stays in `BaseModel` (the author's prompt sequence); GAPS §4.7 is closed in its favour. |
+
