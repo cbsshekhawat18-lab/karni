@@ -1,14 +1,16 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import type { ResourceItemParams } from "../../../hooks/types";
 import { useResourceItem } from "../../../hooks/useResourceItem";
+import type { FieldDef, ResourceSchema } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import type { UseSchemaResult } from "../../../schema/useSchema";
+import { AUDIT_FIELDS } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
-import { eventRecord, eventSchema } from "../form/fixtures";
+import { eventFields, eventRecord, eventSchema } from "../form/fixtures";
 import { ResourceDetail } from "./ResourceDetail";
 
 vi.mock("../../../schema/useSchema", () => ({ useSchema: vi.fn() }));
@@ -34,6 +36,68 @@ const detailRecord: Row = {
   capacity: null,
   venue: { id: 7, name: "Berlin Arena", city: "Berlin" },
 };
+
+/**
+ * The event schema as a real BaseModel resource emits it: the five audit
+ * fields lead the declaration order (created_by/updated_by are relations).
+ */
+function auditField(
+  name: string,
+  label: string,
+  kind: FieldDef["kind"],
+  order: number,
+  relation?: FieldDef["relation"],
+): FieldDef {
+  return {
+    name,
+    label,
+    kind,
+    order,
+    required: false,
+    readOnly: true,
+    writeOnly: false,
+    nullable: relation !== undefined,
+    ...(relation !== undefined ? { relation } : {}),
+  };
+}
+
+const auditedSchema: ResourceSchema = {
+  ...eventSchema,
+  fields: [
+    auditField("id", "Id", "integer", 0),
+    auditField("created_at", "Created at", "datetime", 1),
+    auditField("updated_at", "Updated at", "datetime", 2),
+    auditField("created_by", "Created by", "relation", 3, { resource: "users", many: false }),
+    auditField("updated_by", "Updated by", "relation", 4, { resource: "users", many: false }),
+    ...eventFields
+      .filter((def) => !AUDIT_FIELDS.includes(def.name))
+      .map((def, index) => ({ ...def, order: 5 + index })),
+  ],
+};
+
+const auditedRecord: Row = {
+  ...detailRecord,
+  updated_at: "2026-02-10T12:00:00+00:00",
+  created_by: 3,
+  updated_by: null,
+};
+
+const DOMAIN_LABELS = [
+  "Title",
+  "Description",
+  "Starts at",
+  "Capacity",
+  "Status",
+  "Is public",
+  "Venue",
+  "Tags",
+  "Image",
+  "Metadata",
+];
+
+function termsOf(list: Element): Array<string | null> {
+  return Array.from(list.querySelectorAll("dt")).map((term) => term.textContent);
+}
 
 function queryResult<T>(
   data: T | undefined,
@@ -82,6 +146,73 @@ describe("ResourceDetail", () => {
     // writeOnly and unknown fields are skipped
     expect(screen.queryByText("Internal note")).not.toBeInTheDocument();
     expect(screen.queryByText("Mystery")).not.toBeInTheDocument();
+  });
+
+  it("renders domain fields first and the audit fields last in a muted Record group", () => {
+    mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
+    mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));
+    const { container } = render(<ResourceDetail resource="events" id={1} />);
+
+    // The leading list holds only domain fields, in schema order.
+    const [domainList] = Array.from(container.querySelectorAll("dl"));
+    expect(domainList).toBeDefined();
+    if (domainList === undefined) return;
+    expect(termsOf(domainList)).toEqual(DOMAIN_LABELS);
+
+    // The audit fields trail it, labelled "Record", in AUDIT_FIELDS order.
+    const record = screen.getByRole("region", { name: "Record" });
+    expect(termsOf(record)).toEqual(["Id", "Created at", "Updated at", "Created by", "Updated by"]);
+    expect(domainList.compareDocumentPosition(record) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+
+    // Values render with the stock formatting...
+    expect(
+      within(record).getByText(new Date(String(auditedRecord["updated_at"])).toLocaleString()),
+    ).toBeInTheDocument();
+    expect(within(record).getByText("3", { selector: "code" })).toBeInTheDocument();
+    // ...but visually muted (labels and values), unlike the domain values.
+    for (const value of Array.from(record.querySelectorAll("dd"))) {
+      expect(value).toHaveClass("text-muted-foreground");
+    }
+    for (const value of Array.from(domainList.querySelectorAll("dd"))) {
+      expect(value).toHaveClass("text-foreground");
+    }
+  });
+
+  it("keeps audit fields overridable through the fields map", () => {
+    mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
+    mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));
+    render(
+      <ResourceDetail
+        resource="events"
+        id={1}
+        fields={{
+          id: { hidden: true },
+          created_at: { label: "Added" },
+          created_by: {
+            render: (value) => <span data-testid="author">user {String(value)}</span>,
+          },
+        }}
+      />,
+    );
+    const record = screen.getByRole("region", { name: "Record" });
+    expect(termsOf(record)).toEqual(["Added", "Updated at", "Created by", "Updated by"]);
+    expect(within(record).getByTestId("author")).toHaveTextContent("user 3");
+  });
+
+  it("omits the Record group when no audit field is visible", () => {
+    mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
+    mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));
+    render(
+      <ResourceDetail
+        resource="events"
+        id={1}
+        fields={Object.fromEntries(AUDIT_FIELDS.map((name) => [name, { hidden: true }]))}
+      />,
+    );
+    expect(screen.queryByRole("region", { name: "Record" })).not.toBeInTheDocument();
+    expect(screen.getByText("Launch party")).toBeInTheDocument();
   });
 
   it("forwards the expand param to useResourceItem", () => {

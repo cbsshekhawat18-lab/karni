@@ -6,6 +6,7 @@ import type { FieldDef } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { Button } from "../../primitives/button";
 import { Skeleton } from "../../primitives/skeleton";
+import { partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { humanizeValue } from "../form/prepare";
 import { registerComponentRole } from "../../../lib/roles";
@@ -160,15 +161,46 @@ function DetailError({
   );
 }
 
+function DetailRow(props: {
+  field: FieldDef;
+  item: Record<string, unknown>;
+  override: ResourceDetailFieldOverride | undefined;
+  muted: boolean;
+}): React.ReactElement {
+  const { field, item, override, muted } = props;
+  const value = item[field.name];
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-4",
+        muted ? "py-2 text-xs" : "py-3 text-sm",
+      )}
+    >
+      <dt className="font-medium text-muted-foreground">{override?.label ?? field.label}</dt>
+      <dd className={cn("sm:col-span-2", muted ? "text-muted-foreground" : "text-foreground")}>
+        {override?.render !== undefined ? (
+          override.render(value, item)
+        ) : (
+          <DefaultValue field={field} value={value} />
+        )}
+      </dd>
+    </div>
+  );
+}
+
 /**
  * Schema-driven read view (contract "ResourceDetail"): a definition list of
- * every non-writeOnly field. Relations render through displayLabel when the
- * object is expanded (the field is in `expand`), else as the raw id in
- * <code>. Escape hatches: per-field `fields` overrides (label/hidden/render),
- * appended `sections`, and the title/actions header slots.
+ * every non-writeOnly field — domain fields first (schema order), then the
+ * audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
+ * updated_by) in a visually muted "Record" group. Relations render through
+ * displayLabel when the object is expanded (the field is in `expand`), else
+ * as the raw id in <code>. Escape hatches: per-field `fields` overrides
+ * (label/hidden/render — audit fields included), appended `sections`, and the
+ * title/actions header slots.
  */
 export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   const { resource, id, fields, sections, expand, title, actions, className } = props;
+  const recordHeadingId = React.useId();
   const schemaResult = useSchema(resource);
   const params: ResourceItemParams | undefined = React.useMemo(
     () => (expand !== undefined && expand.length > 0 ? { expand } : undefined),
@@ -197,6 +229,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     (field) =>
       !field.writeOnly && field.kind !== "unknown" && fields?.[field.name]?.hidden !== true,
   );
+  const { domain, audit } = partitionAuditFields(visibleFields);
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -211,25 +244,40 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
         </div>
       ) : null}
       <dl className="divide-y divide-border">
-        {visibleFields.map((field) => {
-          const override = fields?.[field.name];
-          const value = item[field.name];
-          return (
-            <div key={field.name} className="grid grid-cols-1 gap-1 py-3 sm:grid-cols-3 sm:gap-4">
-              <dt className="text-sm font-medium text-muted-foreground">
-                {override?.label ?? field.label}
-              </dt>
-              <dd className="text-sm text-foreground sm:col-span-2">
-                {override?.render !== undefined ? (
-                  override.render(value, item)
-                ) : (
-                  <DefaultValue field={field} value={value} />
-                )}
-              </dd>
-            </div>
-          );
-        })}
+        {domain.map((field) => (
+          <DetailRow
+            key={field.name}
+            field={field}
+            item={item}
+            override={fields?.[field.name]}
+            muted={false}
+          />
+        ))}
       </dl>
+      {audit.length > 0 ? (
+        <section
+          aria-labelledby={recordHeadingId}
+          className="rounded-md border border-border bg-muted/40 px-4 py-2"
+        >
+          <h3
+            id={recordHeadingId}
+            className="py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            Record
+          </h3>
+          <dl className="divide-y divide-border">
+            {audit.map((field) => (
+              <DetailRow
+                key={field.name}
+                field={field}
+                item={item}
+                override={fields?.[field.name]}
+                muted
+              />
+            ))}
+          </dl>
+        </section>
+      ) : null}
       {sections !== undefined && sections.length > 0 ? (
         <div className="space-y-6">
           {sections.map((section, index) => (

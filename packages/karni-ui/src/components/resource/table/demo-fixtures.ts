@@ -10,7 +10,12 @@
 import { http, HttpResponse, type RequestHandler } from "msw";
 
 export interface DemoEvent {
+  // BaseModel audit fields lead the payload, as on a real Karni backend.
   id: number;
+  created_at: string;
+  updated_at: string;
+  created_by: number | null;
+  updated_by: number | null;
   title: string;
   starts_at: string;
   capacity: number | null;
@@ -39,8 +44,13 @@ function pad2(value: number): string {
 export function makeDemoEvents(count = DEMO_EVENT_COUNT): DemoEvent[] {
   return Array.from({ length: count }, (_, index) => {
     const id = index + 1;
+    const created = new Date(Date.UTC(2025, 11, 1, 9, 0, id)).toISOString();
     return {
       id,
+      created_at: created,
+      updated_at: created,
+      created_by: 1,
+      updated_by: null,
       title: `Event ${pad2(count + 1 - id)}`,
       starts_at: new Date(Date.UTC(2026, 0, 1 + id, 18, 0, 0)).toISOString(),
       capacity: id % 5 === 0 ? null : id * 10,
@@ -77,6 +87,8 @@ export const eventsOpenApi: Record<string, unknown> = {
               items: { type: "string", enum: ["organizer", "venue", "tags"] },
             },
           },
+          // Declared like any BaseModel filter; derived filters must skip it.
+          { name: "created_by", in: "query", schema: { type: "integer" } },
           { name: "is_public", in: "query", schema: { type: "boolean" } },
           { name: "ordering", in: "query", schema: { type: "string" } },
           { name: "page", in: "query", schema: { type: "integer" } },
@@ -149,7 +161,22 @@ export const eventsOpenApi: Record<string, unknown> = {
       Event: {
         type: "object",
         properties: {
+          // BaseModel audit fields come first, exactly as the backend emits them.
           id: { type: "integer", readOnly: true },
+          created_at: { type: "string", format: "date-time", readOnly: true },
+          updated_at: { type: "string", format: "date-time", readOnly: true },
+          created_by: {
+            type: "integer",
+            nullable: true,
+            readOnly: true,
+            ...relationExt("users", false),
+          },
+          updated_by: {
+            type: "integer",
+            nullable: true,
+            readOnly: true,
+            ...relationExt("users", false),
+          },
           title: { type: "string", maxLength: 200 },
           starts_at: { type: "string", format: "date-time" },
           capacity: { type: "integer", nullable: true },
@@ -159,7 +186,15 @@ export const eventsOpenApi: Record<string, unknown> = {
           venue: { type: "integer", nullable: true, ...relationExt("venues", false) },
           tags: { type: "array", items: { type: "integer" }, ...relationExt("tags", true) },
         },
-        required: ["id", "title", "starts_at"],
+        required: [
+          "id",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by",
+          "title",
+          "starts_at",
+        ],
       },
       EventRequest: {
         type: "object",

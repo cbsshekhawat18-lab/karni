@@ -16,6 +16,7 @@ import { useResourceList } from "../../../hooks/useResourceList";
 import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import type { FieldDef, ResourceSchema } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
+import { AUDIT_FIELDS } from "../audit-fields";
 import { ResourceTable } from "./ResourceTable";
 
 vi.mock("../../../schema/useSchema", () => ({ useSchema: vi.fn() }));
@@ -89,48 +90,95 @@ const eventsSchema: ResourceSchema = {
         "organizer",
         "venue",
         "tags",
+        // BaseModel audit relations are declared filters on a real backend.
+        "created_by",
+        "updated_by",
       ],
       expandEnum: ["organizer", "venue", "tags"],
       hasSearch: true,
     },
   },
+  // BaseModel audit fields lead the declaration order, as the backend emits.
   fields: [
     field({ name: "id", kind: "integer", readOnly: true, order: 0 }),
-    field({ name: "title", kind: "string", required: true, maxLength: 200, order: 1 }),
-    field({ name: "starts_at", kind: "datetime", order: 2 }),
-    field({ name: "capacity", kind: "integer", nullable: true, order: 3 }),
+    field({ name: "created_at", kind: "datetime", readOnly: true, order: 1 }),
+    field({ name: "updated_at", kind: "datetime", readOnly: true, order: 2 }),
+    field({
+      name: "created_by",
+      kind: "relation",
+      readOnly: true,
+      nullable: true,
+      relation: { resource: "users", many: false },
+      order: 3,
+    }),
+    field({
+      name: "updated_by",
+      kind: "relation",
+      readOnly: true,
+      nullable: true,
+      relation: { resource: "users", many: false },
+      order: 4,
+    }),
+    field({ name: "title", kind: "string", required: true, maxLength: 200, order: 5 }),
+    field({ name: "starts_at", kind: "datetime", order: 6 }),
+    field({ name: "capacity", kind: "integer", nullable: true, order: 7 }),
     field({
       name: "status",
       kind: "enum",
       readOnly: true,
       enumValues: ["DRAFT", "PUBLISHED"],
-      order: 4,
+      order: 8,
     }),
-    field({ name: "is_public", kind: "boolean", order: 5 }),
+    field({ name: "is_public", kind: "boolean", order: 9 }),
     field({
       name: "organizer",
       kind: "relation",
       nullable: true,
       relation: { resource: "users", many: false },
-      order: 6,
+      order: 10,
     }),
     field({
       name: "venue",
       kind: "relation",
       nullable: true,
       relation: { resource: "venues", many: false },
-      order: 7,
+      order: 11,
     }),
-    field({ name: "tags", kind: "relation", relation: { resource: "tags", many: true }, order: 8 }),
-    field({ name: "metadata", kind: "json", order: 9 }),
-    field({ name: "internal_note", kind: "string", writeOnly: true, order: 10 }),
-    field({ name: "mystery", kind: "unknown", order: 11 }),
+    field({
+      name: "tags",
+      kind: "relation",
+      relation: { resource: "tags", many: true },
+      order: 12,
+    }),
+    field({ name: "metadata", kind: "json", order: 13 }),
+    field({ name: "internal_note", kind: "string", writeOnly: true, order: 14 }),
+    field({ name: "mystery", kind: "unknown", order: 15 }),
   ],
+};
+
+const DOMAIN_HEADERS = [
+  "Title",
+  "Starts at",
+  "Capacity",
+  "Status",
+  "Is public",
+  "Organizer",
+  "Venue",
+  "Tags",
+];
+const AUDIT_HEADERS = ["Id", "Created at", "Updated at", "Created by", "Updated by"];
+
+const audit = {
+  created_at: "2026-01-02T08:00:00Z",
+  updated_at: "2026-01-03T08:00:00Z",
+  created_by: 7,
+  updated_by: null,
 };
 
 const page1Rows: Row[] = [
   {
     id: 1,
+    ...audit,
     title: "Spring Gala",
     starts_at: "2026-05-04T18:30:00Z",
     capacity: 150,
@@ -142,6 +190,7 @@ const page1Rows: Row[] = [
   },
   {
     id: 2,
+    ...audit,
     title: "Autumn Fair",
     starts_at: "2026-09-12T10:00:00Z",
     capacity: null,
@@ -153,6 +202,7 @@ const page1Rows: Row[] = [
   },
   {
     id: 3,
+    ...audit,
     title: "Winter Ball",
     starts_at: "2026-12-20T20:00:00Z",
     capacity: 80,
@@ -209,6 +259,10 @@ function lastListParams(): ResourceListParams | undefined {
   return call?.[1] as ResourceListParams | undefined;
 }
 
+function headerTexts(): Array<string | null> {
+  return screen.getAllByRole("columnheader").map((th) => th.textContent);
+}
+
 function renderTable(ui: React.ReactElement): ReturnType<typeof render> {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
@@ -231,20 +285,9 @@ afterEach(() => {
 // --- derived columns ---------------------------------------------------------
 
 describe("derived columns", () => {
-  it("renders schema fields in declaration order, skipping writeOnly/json/unknown", () => {
+  it("renders domain fields in declaration order, skipping writeOnly/json/unknown/audit", () => {
     renderTable(<ResourceTable resource="events" />);
-    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
-    expect(headers).toEqual([
-      "Id",
-      "Title",
-      "Starts at",
-      "Capacity",
-      "Status",
-      "Is public",
-      "Organizer",
-      "Venue",
-      "Tags",
-    ]);
+    expect(headerTexts()).toEqual(DOMAIN_HEADERS);
   });
 
   it("formats cells per kind: relation labels/ids, enum labels, booleans, dates, null dash", () => {
@@ -310,11 +353,11 @@ describe("escape hatches", () => {
       <ResourceTable
         resource="events"
         extraColumns={[{ id: "custom", header: "Custom", cell: () => "X" }]}
-        columnsOverride={(derived) => derived.filter((column) => column.id !== "id")}
+        columnsOverride={(derived) => derived.filter((column) => column.id !== "capacity")}
       />,
     );
     expect(screen.getByRole("columnheader", { name: "Custom" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Id" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Capacity" })).not.toBeInTheDocument();
   });
 
   it("columns naming undeclared fields become plain appended columns", () => {
@@ -331,6 +374,168 @@ describe("escape hatches", () => {
     );
     expect(screen.getByRole("button", { name: "New event" })).toBeInTheDocument();
     expect(screen.getByText("Foot")).toBeInTheDocument();
+  });
+});
+
+// --- audit fields (BaseModel) -----------------------------------------------
+
+describe("audit fields (BaseModel)", () => {
+  it("AUDIT_FIELDS lists the five BaseModel fields in display order", () => {
+    expect(AUDIT_FIELDS).toEqual(["id", "created_at", "updated_at", "created_by", "updated_by"]);
+  });
+
+  it("hides the five audit columns by default and keeps domain declaration order", () => {
+    renderTable(<ResourceTable resource="events" />);
+    expect(headerTexts()).toEqual(DOMAIN_HEADERS);
+    for (const header of AUDIT_HEADERS) {
+      expect(screen.queryByRole("columnheader", { name: header })).not.toBeInTheDocument();
+    }
+  });
+
+  it("a columns entry re-shows one audit column after the domain columns", () => {
+    const { unmount } = renderTable(
+      <ResourceTable resource="events" columns={[{ field: "created_at" }]} />,
+    );
+    expect(headerTexts()).toEqual([...DOMAIN_HEADERS, "Created at"]);
+    const row1 = screen.getByText("Spring Gala").closest("tr");
+    expect(row1).not.toBeNull();
+    if (row1 === null) return;
+    const created = new Date(audit.created_at).toLocaleString();
+    expect(within(row1).getByText(created)).toBeInTheDocument();
+    unmount();
+
+    // `hidden: false` works too; shown audit columns follow AUDIT_FIELDS order.
+    renderTable(
+      <ResourceTable
+        resource="events"
+        columns={[{ field: "updated_by" }, { field: "id", hidden: false, header: "#" }]}
+      />,
+    );
+    expect(headerTexts()).toEqual([...DOMAIN_HEADERS, "#", "Updated by"]);
+  });
+
+  it("showAuditFields shows all five after the domain columns; hidden: true still wins", () => {
+    const { unmount } = renderTable(<ResourceTable resource="events" showAuditFields />);
+    expect(headerTexts()).toEqual([...DOMAIN_HEADERS, ...AUDIT_HEADERS]);
+    unmount();
+
+    renderTable(
+      <ResourceTable resource="events" showAuditFields columns={[{ field: "id", hidden: true }]} />,
+    );
+    expect(headerTexts()).toEqual([...DOMAIN_HEADERS, ...AUDIT_HEADERS.slice(1)]);
+  });
+
+  it("orders shown audit columns by AUDIT_FIELDS, whatever the schema order", () => {
+    mockUseSchema.mockReturnValue({
+      data: { ...eventsSchema, fields: [...eventsSchema.fields].reverse() },
+      isLoading: false,
+      error: null,
+    });
+    renderTable(<ResourceTable resource="events" showAuditFields />);
+    expect(headerTexts()).toEqual([...[...DOMAIN_HEADERS].reverse(), ...AUDIT_HEADERS]);
+  });
+
+  it("a writable field that merely shares an audit name is domain data", () => {
+    mockUseSchema.mockReturnValue({
+      data: {
+        ...eventsSchema,
+        fields: eventsSchema.fields.map((def) =>
+          def.name === "id" ? { ...def, readOnly: false } : def,
+        ),
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderTable(<ResourceTable resource="events" />);
+    expect(headerTexts()).toEqual(["Id", ...DOMAIN_HEADERS]);
+  });
+
+  it("rows stay keyed by id while the Id column is hidden", async () => {
+    const user = userEvent.setup();
+    const archive = vi.fn();
+    const onRowClick = vi.fn();
+    const onEdit = vi.fn();
+    const remove = vi.fn();
+    mockUseResourceMutations.mockReturnValue({
+      create: { mutate: vi.fn(), isPending: false },
+      update: { mutate: vi.fn(), isPending: false },
+      remove: { mutate: remove, isPending: false },
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderTable(
+      <ResourceTable
+        resource="events"
+        bulkActions={[{ label: "Archive", onClick: archive }]}
+        onRowClick={onRowClick}
+        onEdit={onEdit}
+        enableDelete
+        rowActions={(row) => <button>View {String(row["id"])}</button>}
+      />,
+    );
+    expect(screen.queryByRole("columnheader", { name: "Id" })).not.toBeInTheDocument();
+
+    // getRowId: bulk selection is keyed by String(row.id).
+    const rowBoxes = screen.getAllByRole("checkbox", { name: "Select row" });
+    await user.click(rowBoxes[0]);
+    await user.click(rowBoxes[2]);
+    await user.click(screen.getByRole("button", { name: "Archive" }));
+    expect(archive).toHaveBeenCalledWith(["1", "3"]);
+
+    // Navigation and row actions receive the full row, id included.
+    await user.click(screen.getByText("Winter Ball"));
+    expect(onRowClick).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
+    expect(screen.getByRole("button", { name: "View 2" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    expect(remove).toHaveBeenCalledWith(1);
+  });
+
+  it("sorting by a hidden audit field still reaches the server", () => {
+    renderTable(
+      <ResourceTable resource="events" initialSorting={[{ id: "created_at", desc: true }]} />,
+    );
+    expect(lastListParams()?.ordering).toBe("-created_at");
+    expect(screen.queryByRole("columnheader", { name: "Created at" })).not.toBeInTheDocument();
+    expect(screen.getByText("Spring Gala")).toBeInTheDocument();
+  });
+
+  it("derived filters skip audit relations unless showAuditFields (domain first)", () => {
+    // Default: created_by/updated_by are declared relation params, yet the
+    // four slots go to domain fields.
+    const { unmount } = renderTable(<ResourceTable resource="events" />);
+    expect(screen.queryByLabelText("Created by")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Updated by")).not.toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
+    unmount();
+
+    // A schema with room under the cap: audit candidates follow the domain ones.
+    const byName = new Map(eventsSchema.fields.map((def) => [def.name, def]));
+    const pick = (...names: string[]): FieldDef[] =>
+      names.map((name) => byName.get(name)).filter((def): def is FieldDef => def !== undefined);
+    mockUseSchema.mockReturnValue({
+      data: { ...eventsSchema, fields: pick("id", "created_by", "updated_by", "title", "status") },
+      isLoading: false,
+      error: null,
+    });
+    const second = renderTable(<ResourceTable resource="events" />);
+    expect(screen.getByRole("combobox", { name: "Status" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Created by")).not.toBeInTheDocument();
+    second.unmount();
+
+    renderTable(<ResourceTable resource="events" showAuditFields />);
+    const status = screen.getByRole("combobox", { name: "Status" });
+    const createdBy = screen.getByLabelText("Created by");
+    expect(screen.getByLabelText("Updated by")).toBeInTheDocument();
+    expect(status.compareDocumentPosition(createdBy) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it("an explicit filters list may name an audit field", () => {
+    renderTable(<ResourceTable resource="events" filters={["created_by"]} />);
+    fireEvent.change(screen.getByLabelText("Created by"), { target: { value: "7" } });
+    expect(lastListParams()?.filters).toEqual({ created_by: "7" });
   });
 });
 
@@ -362,7 +567,7 @@ describe("sorting (server mode)", () => {
 
   it("relation/many columns are not sortable by default; scalars are", () => {
     renderTable(<ResourceTable resource="events" />);
-    expect(screen.getByRole("button", { name: "Id" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Capacity" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Status" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Organizer" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tags" })).not.toBeInTheDocument();

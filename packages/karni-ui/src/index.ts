@@ -95,6 +95,7 @@ export { ResourceSelect } from "./components/resource/ResourceSelect";
 export type { ResourceSelectProps } from "./components/resource/ResourceSelect";
 
 export { displayLabel } from "./components/resource/displayLabel";
+export { AUDIT_FIELDS } from "./components/resource/audit-fields";
 
 // --- hooks ------------------------------------------------------------------
 export { karniKeys } from "./hooks/keys";

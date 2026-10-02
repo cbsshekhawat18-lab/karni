@@ -104,6 +104,19 @@ export const CustomColumns: Story = {
   },
 };
 
+/**
+ * Audit columns (AUDIT_FIELDS) are hidden by default; `showAuditFields`
+ * appends them after the domain columns. To show just one, name it in
+ * `columns`, e.g. `columns={[{ field: "created_at" }]}`.
+ */
+export const AuditFields: Story = {
+  args: {
+    showAuditFields: true,
+    // Keeps the created_by relation filter (users) out of this demo backend.
+    filters: ["status", "is_public"],
+  },
+};
+
 export const Empty: Story = {
   parameters: { msw: { handlers: demoHandlers(makeDemoEvents(0)) } },
 };

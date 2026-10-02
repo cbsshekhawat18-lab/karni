@@ -1,8 +1,13 @@
 /**
  * Schema → TanStack column derivation (contract "ResourceTable" + D5).
  *
- * - Declaration order; writeOnly / json / file / unknown fields are skipped
- *   unless the consumer explicitly names them in the `columns` prop.
+ * - Domain fields first, in declaration order; writeOnly / json / file /
+ *   unknown fields are skipped unless the consumer explicitly names them in
+ *   the `columns` prop.
+ * - Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
+ *   updated_by) are hidden by default. A `columns` entry naming one (without
+ *   `hidden: true`) or `showAuditFields` brings it back, after the domain
+ *   columns, in AUDIT_FIELDS order.
  * - Column ids equal schema field names verbatim — that IS the DRF `ordering`
  *   contract (D5).
  * - relation / json / file / array / unknown columns are unsortable by
@@ -16,6 +21,7 @@ import * as React from "react";
 import { humanize } from "../../../schema/parse";
 import type { FieldDef, FieldKind } from "../../../schema/types";
 import { CheckIcon } from "../../primitives/icons";
+import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { asRecord, enumLabel } from "./table-utils";
 
@@ -182,6 +188,8 @@ export interface DeriveColumnsArgs<T> {
   fields: readonly FieldDef[];
   columns?: ReadonlyArray<ResourceColumn<T>>;
   getRowLabel?: RowLabeler;
+  /** Show every audit field (AUDIT_FIELDS) without naming each in `columns`. */
+  showAuditFields?: boolean;
 }
 
 function columnForField<T>(
@@ -203,23 +211,26 @@ function columnForField<T>(
 }
 
 /**
- * Builds the derived column set. `columns` overrides merge onto their fields;
- * entries naming fields the schema does not declare become plain accessor
- * columns appended after the schema-derived ones (escape hatch for computed
- * or server-extra keys).
+ * Builds the derived column set: domain columns (schema order), then any
+ * shown audit columns (AUDIT_FIELDS order), then `columns` entries naming
+ * fields the schema does not declare — plain accessor columns (escape hatch
+ * for computed or server-extra keys). `columns` overrides merge onto their
+ * fields; naming a default-skipped field (json, audit, ...) shows it.
  */
 export function deriveColumns<T>(args: DeriveColumnsArgs<T>): Array<ColumnDef<T>> {
   const pending = new Map<string, ResourceColumn<T>>(
     (args.columns ?? []).map((column) => [column.field, column]),
   );
   const defs: Array<ColumnDef<T>> = [];
+  const { domain, audit } = partitionAuditFields(args.fields);
 
-  for (const field of args.fields) {
+  for (const field of [...domain, ...audit]) {
     const override = pending.get(field.name);
     pending.delete(field.name);
     if (override?.hidden === true) continue;
-    if (override === undefined && (field.writeOnly || DEFAULT_SKIPPED_KINDS.has(field.kind))) {
-      continue;
+    if (override === undefined) {
+      if (field.writeOnly || DEFAULT_SKIPPED_KINDS.has(field.kind)) continue;
+      if (args.showAuditFields !== true && isAuditField(field)) continue;
     }
     defs.push(columnForField(field, override, args.getRowLabel));
   }

@@ -73,6 +73,25 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", () => {
     // …and the schema-driven default expand resolved organizer objects (D5).
     expect(within(table).getAllByText("Ada Lovelace").length).toBeGreaterThan(0);
 
+    // The demo Event declares the BaseModel audit fields first, as a real
+    // backend does — the columns still lead with domain fields, audit hidden.
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((th) => th.textContent),
+    ).toEqual([
+      "Title",
+      "Starts at",
+      "Capacity",
+      "Status",
+      "Is public",
+      "Organizer",
+      "Venue",
+      "Tags",
+    ]);
+    // created_by is a declared relation filter param; it takes no filter slot.
+    expect(screen.queryByText("Created by")).not.toBeInTheDocument();
+
     // Paginated: DRF count drives the page math.
     expect(screen.getByText("Page 1 of 3 · 57 items")).toBeInTheDocument();
 

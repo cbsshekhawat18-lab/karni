@@ -171,6 +171,15 @@ override props, and you can always drop down to the hooks + primitives.
 <ResourceSelect resource="venues" value={venueId} onChange={setVenueId} />
 ```
 
+Audit fields — `AUDIT_FIELDS`: `id`, `created_at`, `updated_at`, `created_by`,
+`updated_by`, which every Karni resource carries — never lead the screen.
+`ResourceTable` hides their columns by default (domain fields come first, in
+schema order; rows are still keyed by `id`). Show one by naming it in `columns`
+(`{ field: "created_at" }`), or show all of them after the domain columns with
+`showAuditFields`. `ResourceDetail` lists them last, in a muted "Record" group,
+and still honours `fields` overrides for them. `ResourceForm` never renders them
+(they are read-only).
+
 Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`;
 `displayLabel(obj)` picks a human label for relation objects.
 

@@ -7,6 +7,12 @@
  * declares `search`, the filter bar derives from the declared query params,
  * and pagination speaks `page` / `page_size`.
  *
+ * Audit fields (AUDIT_FIELDS — id, created_at, updated_at, created_by,
+ * updated_by, carried by every BaseModel resource) are hidden by default so
+ * domain fields lead; rows stay keyed by `id` regardless (getRowId, row
+ * actions, onRowClick, bulk selection). Show one with a `columns` entry
+ * (`{ field: "created_at" }`), or all of them with `showAuditFields`.
+ *
  * Escape hatches: `columns` (per-field overrides), `extraColumns` (ColumnDef
  * passthrough), `columnsOverride` (applied last over the derived + merged
  * domain columns; the selection and actions columns are structural and follow
@@ -37,6 +43,7 @@ import { Button } from "../../primitives/button";
 import { Checkbox } from "../../primitives/checkbox";
 import { ChevronDownIcon, ChevronUpIcon } from "../../primitives/icons";
 import { Skeleton } from "../../primitives/skeleton";
+import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { BulkActionsBar, type BulkAction } from "./BulkActionsBar";
 import { deriveColumns, type ResourceColumn } from "./derive-columns";
@@ -62,7 +69,17 @@ const MAX_DERIVED_FILTERS = 4;
 
 export interface ResourceTableProps<T = Record<string, unknown>> {
   resource: string;
+  /**
+   * Per-field overrides. Naming a default-hidden field (an audit field such
+   * as `created_at`, or a json/file field) shows it; `hidden: true` hides one.
+   */
   columns?: ReadonlyArray<ResourceColumn<T>>;
+  /**
+   * Show the audit columns (AUDIT_FIELDS: id, created_at, updated_at,
+   * created_by, updated_by) after the domain columns, and let audit fields
+   * into the derived filter bar. Default false: they are hidden.
+   */
+  showAuditFields?: boolean;
   /** TanStack ColumnDef pass-through, appended after derived columns. */
   extraColumns?: ReadonlyArray<ColumnDef<T>>;
   /** Full escape hatch, applied last over the derived + merged columns. */
@@ -84,7 +101,8 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   pageSize?: number;
   /**
    * Field names to build the filter bar from; `false` disables it. Default:
-   * (enum/boolean/relation fields) ∩ declared list query params, cap 4 (D5).
+   * (enum/boolean/relation fields) ∩ declared list query params, domain
+   * fields first, audit fields only with `showAuditFields`, cap 4 (D5).
    * Only enum, boolean and relation fields get controls.
    */
   filters?: readonly string[] | false;
@@ -248,6 +266,7 @@ export function ResourceTable<T = Record<string, unknown>>(
   const {
     resource,
     columns,
+    showAuditFields,
     extraColumns,
     columnsOverride,
     rowActions,
@@ -333,17 +352,19 @@ export function ResourceTable<T = Record<string, unknown>>(
         .filter((field): field is FieldDef => field !== undefined);
     }
     const declared = new Set(schema.operations.list?.queryParams ?? []);
-    return schema.fields
+    const { domain, audit } = partitionAuditFields(schema.fields);
+    return [...domain, ...audit]
       .filter(
         (field) =>
           !field.writeOnly &&
+          (showAuditFields === true || !isAuditField(field)) &&
           declared.has(field.name) &&
           (field.kind === "enum" ||
             field.kind === "boolean" ||
             (field.kind === "relation" && field.relation !== undefined)),
       )
       .slice(0, MAX_DERIVED_FILTERS);
-  }, [filters, schema]);
+  }, [filters, schema, showAuditFields]);
 
   const searchEnabled = schema?.operations.list?.hasSearch === true;
 
@@ -380,7 +401,7 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const columnDefs = React.useMemo<Array<ColumnDef<T>>>(() => {
     if (schema === undefined) return [];
-    let defs = deriveColumns<T>({ fields: schema.fields, columns, getRowLabel });
+    let defs = deriveColumns<T>({ fields: schema.fields, columns, getRowLabel, showAuditFields });
     if (extraColumns !== undefined) defs = [...defs, ...extraColumns];
     if (columnsOverride !== undefined) defs = columnsOverride(defs);
     const leading: Array<ColumnDef<T>> = hasBulkSelect ? [selectionColumn<T>()] : [];
@@ -392,6 +413,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     schema,
     columns,
     getRowLabel,
+    showAuditFields,
     extraColumns,
     columnsOverride,
     hasBulkSelect,
@@ -417,7 +439,8 @@ export function ResourceTable<T = Record<string, unknown>>(
     enableRowSelection: hasBulkSelect,
     onSortingChange: handleSortingChange,
     onRowSelectionChange: setRowSelection,
-    // D5: selection is keyed by String(row.id) and persists across pages.
+    // D5: selection is keyed by String(row.id) and persists across pages —
+    // rows always carry `id`, even while its column is hidden.
     getRowId: (row) => String(asRecord(row).id),
     getCoreRowModel: getCoreRowModel(),
   });
