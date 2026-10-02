@@ -6,3 +6,5 @@ __pycache__/
 frontend/node_modules/
 frontend/dist/
 /data/
+# Machine-local karni state (one-time tips etc.); also self-ignored via its own .gitignore.
+.karni/local/

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .check import check_file, check_source, supported
+from .history import active_conditions
 from .overrides import OVERRIDE_FILE, OverrideError, read_overrides, resolve_rules
 from .rules import CATEGORIES, PROCEDURES, RULES, Procedure, Rule
 
@@ -47,9 +48,15 @@ def _karni_version() -> str:
 
 
 def dump(root: str | Path | None = None) -> dict[str, Any]:
-    """Rules (with ``<root>/karni.rules.py`` applied), procedures and adapter overrides."""
+    """Rules (with ``<root>/karni.rules.py`` applied), procedures and adapter overrides.
+
+    A rule with ``when`` set is included only while that condition holds for
+    ``root`` (``conditions`` lists the active ones; see
+    :func:`karni.agent.history.active_conditions`).
+    """
     overrides = read_overrides(root)
-    rules = resolve_rules(overrides)
+    conditions = active_conditions(root)
+    rules = [r for r in resolve_rules(overrides) if not r.when or r.when in conditions]
     categories = list(dict.fromkeys([*CATEGORIES, *(r.category for r in rules)]))
     return {
         "schema": SCHEMA_VERSION,
@@ -59,6 +66,7 @@ def dump(root: str | Path | None = None) -> dict[str, Any]:
         "procedures": [procedure.to_dict() for procedure in PROCEDURES],
         "adapters": overrides.adapters,
         "overrides_file": str(overrides.path) if overrides.path else None,
+        "conditions": sorted(conditions),
     }
 
 

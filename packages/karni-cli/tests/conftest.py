@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib
 import os
+import subprocess
 from pathlib import Path
+from typing import Any, NoReturn
 
 import pytest
 from typer.testing import CliRunner
@@ -41,3 +44,69 @@ def _no_ambient_templates_env(monkeypatch: pytest.MonkeyPatch):
     for var in ("KARNI_TEMPLATES", "KARNI_AGENT_SOURCE"):
         if var in os.environ:
             monkeypatch.delenv(var)
+
+
+# --- history providers: the suite runs with none, and none spawns anything --------------
+
+HISTORY_MARKER = "history_provider"
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers", f"{HISTORY_MARKER}: the test runs a history provider's subprocess on purpose"
+    )
+
+
+def _spawns_chronicle(args: Any) -> bool:
+    argv0 = args[0] if isinstance(args, list | tuple) and args else str(args).split(" ")[0]
+    return Path(str(argv0)).name.split(".")[0] == "chronicle"
+
+
+def _chronicle_classes() -> list[type]:
+    """The built-in provider class as karni and as the karni-cli bundle load it."""
+    from karni_cli import agent_data
+
+    classes: list[type] = []
+    for package in ("karni.agent", None):
+        try:
+            if package is None:
+                bundled = agent_data._bundled()
+                if bundled is None:
+                    continue
+                package = bundled.__name__
+            module = importlib.import_module(f"{package}.history_chronicle")
+        except ImportError:
+            continue
+        classes.append(module.ChronicleProvider)
+    return classes
+
+
+@pytest.fixture(autouse=True)
+def _no_history_provider_subprocess(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Spec: the full suite passes with no provider set up, and no provider code runs.
+
+    Any attempt to run Chronicle fails the test — whether or not a real
+    ``chronicle`` is on this machine's PATH — unless it is marked
+    ``history_provider``. ``pytest.fail`` raises a BaseException, so Karni's
+    "a provider failure is no brief" handling cannot swallow it. Global
+    config and forced rule conditions are isolated from the developer's.
+    """
+    monkeypatch.delenv("KARNI_AGENT_CONDITIONS", raising=False)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".xdg-config"))
+    if request.node.get_closest_marker(HISTORY_MARKER) is not None:
+        return
+    real_run = subprocess.run
+
+    def guarded(args: Any, *a: Any, **kw: Any) -> Any:
+        if _spawns_chronicle(args):
+            pytest.fail(f"a history provider spawned {args!r} without opting in")
+        return real_run(args, *a, **kw)
+
+    def no_run(self: Any, repo: Path, args: list[str], command: str) -> NoReturn:
+        pytest.fail(f"the Chronicle provider tried to run `chronicle {' '.join(args)}`")
+
+    monkeypatch.setattr(subprocess, "run", guarded)
+    for cls in _chronicle_classes():
+        monkeypatch.setattr(cls, "_run", no_run)

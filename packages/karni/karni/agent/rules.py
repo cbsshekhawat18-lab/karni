@@ -36,6 +36,10 @@ CATEGORIES: tuple[str, ...] = ("workflow", "architecture", "backend", "frontend"
 
 SEVERITIES: tuple[str, ...] = ("error", "must", "should")
 
+#: Values ``Rule.when`` may take. ``history``: a history provider detects a
+#: prompt-history store for the project (:mod:`karni.agent.history`).
+CONDITIONS: tuple[str, ...] = ("history",)
+
 
 @dataclass(frozen=True)
 class Rule:
@@ -51,6 +55,9 @@ class Rule:
     #: Enforcement rule ids this code maps to (karni.testing ids, ESLint
     #: ``karni/*`` names, ``jscpd``). Empty for unenforced conventions.
     enforced_by: tuple[str, ...] = ()
+    #: Emitted only when this condition holds for the project (one of
+    #: ``CONDITIONS``); empty = always. Evaluated by :func:`karni.agent.dump`.
+    when: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -171,6 +178,22 @@ RULES: tuple[Rule, ...] = (
             "`karni context` prints the inventory."
         ),
         rationale="They run inside the right interpreter (project .venv or compose service).",
+    ),
+    Rule(
+        code="K008",
+        category="workflow",
+        severity="must",
+        summary="Before editing a file: karni context --with-history FILE.",
+        rule=(
+            "This project keeps a prompt-history store. Before editing a file that already "
+            "has history, run `karni context --with-history <file>` and read its HISTORY "
+            "section, so you do not redo a decision that was already made and reverted."
+        ),
+        rationale=(
+            "The inventory shows what the code contains now; the history provider shows "
+            "what was already asked, decided and abandoned for that file."
+        ),
+        when="history",
     ),
     # --- architecture -----------------------------------------------------------
     Rule(

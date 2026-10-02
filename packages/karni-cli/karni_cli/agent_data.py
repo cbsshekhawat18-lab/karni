@@ -14,6 +14,11 @@ stdlib-only data module, so it may be imported when available. Resolution
 
 Every path yields the same JSON-able shape (``karni.agent.dump``), so the
 renderers below never care which one answered.
+
+History providers (``karni.agent.history``, :func:`history_module`) are the
+exception: they always run in the CLI's own environment, and in ``project``
+mode the CLI hands its detection to the project interpreter
+(``KARNI_AGENT_CONDITIONS``) so conditional rules follow the same providers.
 """
 
 from __future__ import annotations
@@ -105,22 +110,62 @@ def _bundled() -> ModuleType | None:
     return module
 
 
-def _project_command(project: Path) -> list[str] | None:
+def history_module() -> ModuleType | None:
+    """``karni.agent.history`` for the CLI's own environment.
+
+    History providers always run in the CLI's environment (third-party
+    providers are discovered from its entry points): karni's module when
+    importable here (unless ``KARNI_AGENT_SOURCE=bundled``), else the bundled
+    copy, which carries the built-in Gigai Chronicle provider by itself.
+    """
+    if os.environ.get("KARNI_AGENT_SOURCE", "").strip() != "bundled":
+        try:
+            from karni.agent import history
+
+            return history
+        except ImportError:
+            pass  # karni absent here, or a karni older than history providers
+    bundled = _bundled()
+    if bundled is None:
+        return None
+    try:
+        return importlib.import_module(f"{bundled.__name__}.history")
+    except ImportError:
+        return None
+
+
+def _conditions_env(project: Path) -> dict[str, str]:
+    """The CLI's own condition detection, handed to the project interpreter so a
+    conditional rule follows the same providers as ``karni context --with-history``
+    (and a compose container that cannot see a store above its mount)."""
+    module = history_module()
+    if module is None:
+        return {}
+    return {module.CONDITIONS_ENV: ",".join(sorted(module.active_conditions(project)))}
+
+
+def _project_command(project: Path, env: dict[str, str] | None = None) -> list[str] | None:
     python = project_mod.venv_python(project)
     if python is not None:
         return [str(python), "-m", "karni.agent"]
     service = os.environ.get("KARNI_COMPOSE_SERVICE", "django")
     if project_mod.compose_service_running(project, service):
-        return ["docker", "compose", "exec", "-T", service, "python", "-m", "karni.agent"]
+        flags = [flag for key, value in (env or {}).items() for flag in ("-e", f"{key}={value}")]
+        return ["docker", "compose", "exec", "-T", *flags, service, "python", "-m", "karni.agent"]
     return None
 
 
-def _run_project(project: Path, args: list[str]) -> Any | None:
-    command = _project_command(project)
+def _run_project(project: Path, args: list[str], env: dict[str, str] | None = None) -> Any | None:
+    command = _project_command(project, env)
     if command is None:
         return None
     proc = subprocess.run(
-        [*command, *args], cwd=project, text=True, capture_output=True, check=False
+        [*command, *args],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+        env={**os.environ, **env} if env else None,
     )
     if proc.returncode == 2:
         raise CliError(proc.stderr.strip())
@@ -155,7 +200,7 @@ def load(project: Path | None) -> AgentData:
         if source == "project":
             if project is None:
                 continue
-            raw = _run_project(project, ["dump", "--root", "."])
+            raw = _run_project(project, ["dump", "--root", "."], _conditions_env(project))
             if raw is not None:
                 return AgentData(raw, source)
             continue

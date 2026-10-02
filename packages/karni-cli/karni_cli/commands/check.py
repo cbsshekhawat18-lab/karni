@@ -5,6 +5,9 @@ including the architecture and duplication rules) and, when ``frontend/``
 exists, jscpd via the project's own pinned binary driven solely by
 ``frontend/.jscpd.json``. Both steps always run; the exit code aggregates
 both and each step's output is shown.
+
+Outside CI, a clean run may end with one tip on stderr (:mod:`karni_cli.tips`,
+at most once per project); ``-q`` suppresses it.
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from pathlib import Path
 import typer
 
 from karni_cli import project as project_mod
+from karni_cli import tips
 from karni_cli.project import require_project
 
 _BARE_IGNORE = re.compile(r"jscpd:ignore-start\s*$")
@@ -59,6 +63,7 @@ def check(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
     frontend: bool = typer.Option(True, "--frontend/--no-frontend"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Do not print the optional tip."),
 ) -> None:
     project = require_project()
     backend = project_mod.run_manage(
@@ -67,4 +72,10 @@ def check(
     dup = _frontend_duplication(project) if frontend else 0
     if backend or dup:
         sys.stderr.write("karni check: FAILED\n")
+    else:
+        # Only after a clean run (failures deserve the attention), never in CI,
+        # and on stderr so stdout stays exactly the checks' output.
+        tip = tips.history_tip(project, quiet=quiet)
+        if tip:
+            sys.stderr.write(f"\n{tip}\n")
     raise typer.Exit(1 if (backend or dup) else 0)

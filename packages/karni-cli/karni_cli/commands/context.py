@@ -7,6 +7,11 @@ read statically from the project tree (no Django): APPS — the local apps in
 the ``# karni:apps`` block that live in this project — and PAGES — the files
 under ``frontend/src/pages/``. Together with ``karni rules`` this is enough
 for an agent to start work without reading files.
+
+``--with-history [PATH]`` appends a ``HISTORY:`` block from any history
+provider that detects a store (``karni.agent.history``), capped at ~300
+tokens; with no store the output is byte-identical to plain ``karni context``.
+stdout stays machine-clean in every mode: no tips, no warnings.
 """
 
 from __future__ import annotations
@@ -18,9 +23,14 @@ from pathlib import Path
 
 import typer
 
+from karni_cli import history
 from karni_cli import project as project_mod
 from karni_cli.project import CliError, require_project
 from karni_cli.settings_edit import MARKER
+
+#: Mirrors karni.agent.history.HISTORY_TOKEN_CAP (that module enforces it); a
+#: constant here keeps `karni context --help` free of provider discovery.
+HISTORY_TOKEN_CAP = 300
 
 _PAGE_SUFFIXES = (".tsx", ".ts", ".jsx", ".js")
 _QUOTED = re.compile(r"""["']([^"']+)["']""")
@@ -124,15 +134,38 @@ def build_context_text(
     return f"{apps}\n{text}" if apps else text
 
 
+_WITH_HISTORY_HELP = (
+    "Append what a history provider (e.g. Gigai Chronicle) recorded about PATH under a "
+    "HISTORY: heading — without PATH, the project's recorded decisions, from providers "
+    f"that offer them. Capped at ~{HISTORY_TOKEN_CAP} tokens (~{4 * HISTORY_TOKEN_CAP} "
+    "characters), cut at line boundaries with a last line naming the command for the full "
+    "brief. With no history store detected, prints the plain inventory and nothing else."
+)
+
+
 def context(
+    path: str | None = typer.Argument(
+        None,
+        metavar="PATH",
+        help="File to brief, relative to the cwd (needs --with-history).",
+        show_default=False,
+    ),
+    with_history: bool = typer.Option(False, "--with-history", help=_WITH_HISTORY_HELP),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
     manifest: Path | None = typer.Option(None, "--manifest", help="Explicit manifest.json path"),
 ) -> None:
+    if path is not None and not with_history:
+        raise typer.BadParameter("PATH is only used with --with-history.", param_hint="PATH")
     project = require_project()
     try:
+        target = history.target(project, path) if path is not None else None
         text = build_context_text(project, docker=docker, service=service, manifest=manifest)
     except CliError as exc:
         sys.stderr.write(f"{exc}\n")
         raise typer.Exit(1) from None
+    if with_history:
+        block = history.block(project, target)
+        if block:
+            text = f"{text}\n{block}"
     typer.echo(text)

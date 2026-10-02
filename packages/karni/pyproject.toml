@@ -40,6 +40,11 @@ dependencies = [
 architecture = "karni.testing.architecture:run_checks"
 duplication = "karni.testing.duplication:run_check"
 
+# History providers (karni.agent.history). Karni registers its built-in one
+# like any third party would; it only shells out to `chronicle` when present.
+[project.entry-points."karni.history_providers"]
+gigai-chronicle = "karni.agent.history_chronicle:ChronicleProvider"
+
 [project.optional-dependencies]
 s3 = ["django-storages[s3]>=1.14", "boto3>=1.34"]
 images = ["Pillow>=10.3"]

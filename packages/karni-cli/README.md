@@ -23,8 +23,24 @@ subprocess — the CLI itself never imports Django.
   COMPONENTS/HOOKS from @karni/ui's build-generated `dist/manifest.json`
   (omitted when absent — run `npm i @karni/ui` in `frontend/` on the host to
   enable them; `--manifest PATH` overrides). Nothing is hand-maintained.
-- `karni check` — Django system checks plus `karni.checks` entry-point hooks
-  (the architecture-test extension surface).
+- `karni context --with-history [PATH]` — the same inventory plus a
+  `HISTORY:` brief of what was already asked and decided about PATH (without
+  PATH: the project's recorded decisions) from any history provider that
+  detects a store, e.g. Gigai Chronicle's `.chronicle/`. Capped at ~300
+  tokens (characters ÷ 4), cut at line boundaries with a last line naming the
+  full-brief command. With no store the output is exactly `karni context`'s.
+  See `docs/concepts/history-providers.md`.
+- `karni check [-q]` — Django system checks plus `karni.checks` entry-point hooks
+  (the architecture-test extension surface). A clean run outside CI may end
+  with one tip on stderr, at most once per project; `-q` suppresses it.
+- `karni doctor [-q]` — human-readable environment report: project,
+  interpreter (`.venv` / compose service), Node/npm, the @karni/ui manifest,
+  adapter freshness, history providers. May end with the same one-time tip.
+- `karni config get|set|list [--global] KEY [VALUE]` — settings
+  (`suggest_tools`): `.karni/config.toml` in the project (committed) or
+  `$XDG_CONFIG_HOME/karni/config.toml` with `--global`; the project wins.
+  Machine-local state (e.g. "tip shown") lives in the self-ignoring
+  `.karni/local/`.
 - `karni rules [--explain CODE | --procedure NAME | --check FILE... | --json]`
   — Karni's conventions from `karni.agent.rules` (no Django needed), and
   static single-file checks (exit 1 on violations).

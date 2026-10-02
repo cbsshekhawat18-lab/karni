@@ -6,7 +6,9 @@ import typer
 
 from karni_cli.commands.add import add
 from karni_cli.commands.check import check
+from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
+from karni_cli.commands.doctor import doctor
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.new import new
 from karni_cli.commands.rules import rules_app
@@ -29,6 +31,8 @@ app.command(help="Run architecture and system checks")(check)
 app.command(help="Apply mechanical migrations between Karni versions")(upgrade)
 app.add_typer(rules_app, name="rules")
 app.command(help="Serve context, rules and check as MCP tools (needs karni-cli[mcp])")(mcp)
+app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
+app.add_typer(config_app, name="config")
 
 
 def run() -> None:
