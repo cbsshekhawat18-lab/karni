@@ -91,7 +91,7 @@ RULES: tuple[Rule, ...] = (
         code="K001",
         category="workflow",
         severity="must",
-        summary="karni context first; trust it over file reads.",
+        summary="karni context first; trust it.",
         rule=(
             "Run `karni context` before reading any files. It prints the current apps, "
             "models, viewsets, UI components, hooks, pages and installed modules in a few "
@@ -170,12 +170,14 @@ RULES: tuple[Rule, ...] = (
         code="K007",
         category="workflow",
         severity="should",
-        summary="Commands: make up/migrate, karni types/check.",
+        summary="Commands: karni --help.",
         rule=(
-            "Use the project commands: `make up` starts the stack; `make migrate` runs "
-            "makemigrations + migrate; `karni types` regenerates TS types + typed hooks "
-            "from the API schema; `karni check` runs architecture and system checks; "
-            "`karni context` prints the inventory."
+            "Use the project commands (`karni --help` lists them all): `make up` starts the "
+            "stack; `make migrate` runs makemigrations + migrate; `karni types` regenerates "
+            "TS types + typed hooks from the API schema; `karni check` runs architecture and "
+            "system checks; `karni context` prints the inventory; `karni make <type>` "
+            "scaffolds; runners like `karni test`, `karni shell`, `karni routes`, "
+            "`karni worker`, `karni schedule list` wrap manage.py/celery/pytest."
         ),
         rationale="They run inside the right interpreter (project .venv or compose service).",
     ),
@@ -194,6 +196,25 @@ RULES: tuple[Rule, ...] = (
             "what was already asked, decided and abandoned for that file."
         ),
         when="history",
+    ),
+    Rule(
+        code="K009",
+        category="workflow",
+        severity="must",
+        summary="Scaffold via karni make, not by hand.",
+        rule=(
+            "Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, "
+            "listeners, management commands, services, middleware, pages, components and "
+            "modules with `karni make <type>` (`karni make --list`; `--dry-run` previews, "
+            "`--help` per type). Never hand-create a file, class or route a generator makes "
+            "— run it, then edit what it wrote."
+        ),
+        rationale=(
+            "Generators emit the conventions in one step (BaseModel, a mandatory access "
+            "declaration, settings and route markers, ruff-clean imports) and are tested to "
+            "pass every rule; hand-written scaffolding drifts."
+        ),
+        fix="Delete the hand-written scaffold and run the matching `karni make` command.",
     ),
     # --- architecture -----------------------------------------------------------
     Rule(
@@ -227,7 +248,7 @@ RULES: tuple[Rule, ...] = (
         code="K303",
         category="architecture",
         severity="must",
-        summary="Extend via override props/methods; never fork.",
+        summary="Extend via props/methods; never fork.",
         rule=(
             "If an existing component or base class almost fits, extend it through its "
             "override props / hooks (`columns`, `fields`, `slots`, `AdminMeta`, `APIMeta`, "
@@ -275,7 +296,7 @@ RULES: tuple[Rule, ...] = (
         code="K307",
         category="architecture",
         severity="should",
-        summary="Cross-project code belongs in a Karni module.",
+        summary="Cross-project code: a Karni module.",
         rule=(
             "Anything reusable across projects belongs in a Karni module (a `karni_<name>` "
             "package), not in this project — say so instead of building it."
@@ -286,7 +307,7 @@ RULES: tuple[Rule, ...] = (
         code="K308",
         category="architecture",
         severity="must",
-        summary="Configure modules by documented settings only.",
+        summary="Configure modules via documented settings.",
         rule=(
             "Configure an installed module only through the settings it documents; never "
             "patch its internals."
@@ -317,7 +338,7 @@ RULES: tuple[Rule, ...] = (
         code="K108",
         category="backend",
         severity="must",
-        summary="Off-request writes: wrap in current_user(u).",
+        summary="Off-request writes: current_user(u).",
         rule=(
             "`AuditedModel` stamps `created_by`/`updated_by` from the current request. "
             "Outside a request (Celery tasks, management commands) nothing is stamped "
@@ -535,17 +556,17 @@ PROCEDURES: tuple[Procedure, ...] = (
         intro="Add a new domain model: {arguments}",
         steps=(
             "Run `karni context` to see existing apps, models and viewsets.",
-            "In the owning app's `models.py`, define the model inheriting "
-            "`karni.models.BaseModel` (or compose its mixins: `UUIDModel`, "
-            "`TimestampedModel`, `SoftDeleteModel`, `AuditedModel`). Declare "
-            "`class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, "
-            "read-only or write-only. Do NOT write an admin, serializer or router.",
-            "In the same app's `viewsets.py`: `class XViewSet(BaseViewSet): model = X` "
-            "plus `access = Access(read=..., write=...)` saying who reads and who writes "
-            '(e.g. `read=Owned("owner") | HasRole("staff"), write=Owned("owner")`; '
-            "`Public()` only for deliberately public reads) (+ `search_fields` if "
-            "searchable). The auto-router registers it; admin, filters, schema are derived.",
-            "`make migrate && karni types`",
+            "`karni make model <Name> <field:type ...> --with viewset --access <who> "
+            "[--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and "
+            "its viewset (`-a` also adds list/detail/form pages). Field types: "
+            "`karni make model --help`. `--access`: authenticated (default), public-read, "
+            "owned:<fk to user>, staff, role:<name>; edit the generated `access` for anything "
+            "richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, "
+            "serializer or router: the auto-router registers it; admin, filters, schema are "
+            "derived.",
+            "Add `class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, "
+            "read-only or write-only.",
+            "`karni make migration && karni migrate && karni types`",
             "Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works "
             "for a caller `access` admits and is refused (401/403) or empty for one it does not.",
         ),
@@ -553,7 +574,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Total new code should be well under 20 lines. If it isn't, stop — you are "
             "reimplementing something Karni provides."
         ),
-        rules=("K101", "K102", "K109", "K108", "K302", "K305", "K003"),
+        rules=("K009", "K101", "K102", "K109", "K108", "K302", "K305", "K003"),
     ),
     Procedure(
         name="new-page",
@@ -562,20 +583,19 @@ PROCEDURES: tuple[Procedure, ...] = (
         intro="Add a page: {arguments}",
         steps=(
             "Run `karni context` for available components, hooks, resources and pages.",
-            "Create one file in `frontend/src/pages/`. Compose @karni/ui — never hand-roll "
-            "tables, forms or fetching: list screen "
-            '`<Page title="..."><ResourceTable resource="..." /></Page>`; edit/create '
-            '`<ResourceForm resource="..." id={...} />`; read view '
-            '`<ResourceDetail resource="..." id={...} />`.',
+            "`karni make page <name> --resource <resource> --kind list|detail|form` writes "
+            "`frontend/src/pages/<name>.tsx` composing @karni/ui and does the rest a person "
+            "would do by hand: register the route alongside the existing pages "
+            "(frontend/src/routes.tsx). Without `--resource` it is a bare `<Page>`. Never "
+            "hand-roll tables, forms or fetching.",
             "Custom behaviour goes through props (`columns`, `fields`, `rowActions`, slots, "
             "custom cell/field renderers) — extend, never fork a variant.",
-            "Register the route alongside the existing pages.",
             "Keep the file at 50 lines or fewer. Data access only via @karni/ui hooks "
             "(`useResourceList`, `useResourceItem`, `useResourceMutations`) and the typed "
             "hooks generated by `karni types`.",
             "`karni rules --check <the page file>` must report no violations.",
         ),
-        rules=("K201", "K202", "K204", "K303", "K306"),
+        rules=("K009", "K201", "K202", "K204", "K303", "K306"),
     ),
     Procedure(
         name="add-module",
@@ -593,8 +613,10 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Run `karni context` — the module must appear under MODULES; `karni rules` now "
             "includes its guidance.",
             "Configure only settings the module documents; do not patch its internals.",
+            "To create a new reusable module instead: `karni make module <name>` "
+            "(modules/karni-<name>/, docs/modules.md).",
         ),
-        rules=("K308",),
+        rules=("K009", "K308"),
     ),
     Procedure(
         name="new-module",
@@ -603,15 +625,18 @@ PROCEDURES: tuple[Procedure, ...] = (
         intro="Create a local app: {arguments}",
         steps=(
             "Run `karni context` first — confirm the domain isn't already covered.",
-            "Create `<app>/` with only: `__init__.py`, `apps.py` (plain AppConfig), "
-            "`models.py` (BaseModel subclasses), `viewsets.py` (BaseViewSet subclasses). "
-            "No admin.py, serializers.py, urls.py, forms.py — Karni derives all of that.",
-            "Add the app to the `# karni:apps` block in config/settings.py.",
-            "`make migrate && karni types`, then `karni context` to verify.",
-            "Anything reusable across projects belongs in a Karni module (karni_<name> "
-            "package), not in this project — say so instead of building it.",
+            "`karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, "
+            "`viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` "
+            "block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py — "
+            "Karni derives all of that.",
+            "Add models with `karni make model <Name> <field:type ...> --app <app_name> "
+            "--with viewset --access <who>` (procedure new-model).",
+            "`karni make migration && karni migrate && karni types`, then `karni context` "
+            "to verify.",
+            "Anything reusable across projects belongs in a Karni module: "
+            "`karni make module <name>`, not in this project — say so instead of building it.",
         ),
-        rules=("K305", "K307"),
+        rules=("K009", "K305", "K307"),
     ),
 )
 

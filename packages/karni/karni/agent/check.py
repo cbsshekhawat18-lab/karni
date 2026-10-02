@@ -105,6 +105,10 @@ class SqlVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+#: Serializer bases whose Meta-only subclasses duplicate the generated serializer.
+SERIALIZER_BASES = frozenset({"ModelSerializer", "KarniModelSerializer"})
+
+
 def _is_abstract(cls: ast.ClassDef) -> bool:
     for stmt in cls.body:
         if isinstance(stmt, ast.ClassDef) and stmt.name == "Meta":
@@ -289,7 +293,7 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                         _class_lines(node),
                     )
                 )
-            if "ModelSerializer" in short and _is_meta_only(node):
+            if short & SERIALIZER_BASES and _is_meta_only(node):
                 found.append(
                     (
                         _finding(

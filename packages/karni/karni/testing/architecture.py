@@ -328,7 +328,9 @@ def check_http_client() -> list[Violation]:
 
 def _is_meta_only(cls: type, stop: type) -> bool:
     for klass in cls.__mro__:
-        if klass is stop:
+        # Karni's own serializer bases (e.g. KarniModelSerializer) carry
+        # framework attributes; only the project's classes count as a body.
+        if klass is stop or klass.__module__.startswith("karni."):
             break
         body = {
             k
