@@ -4,12 +4,24 @@ The CLI never imports Django. Everything project-side runs through the
 project's own interpreter, resolved in this order (per command flags):
 explicit ``--docker/--no-docker`` > ``<project>/.venv`` > a running docker
 compose service > a two-line error naming both remedies.
+
+Interactive runners (shell, test, worker, ...) pass ``interactive=True``:
+in docker mode that allocates a TTY (``docker compose exec`` without
+``-T``) when the CLI itself runs in a terminal, so prompts, colours and
+Ctrl-C work; scripted and agent runs (no TTY) keep ``-T``.
 """
 
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
+from typing import Any
+
+#: Typer ``context_settings`` for runners that pass unknown options through
+#: to the wrapped command (``karni test -x -k name``). Put ``--`` before
+#: arguments that clash with the runner's own options.
+PASSTHROUGH: dict[str, Any] = {"ignore_unknown_options": True, "allow_extra_args": True}
 
 
 class CliError(Exception):
@@ -81,6 +93,46 @@ def resolve_execution(project: Path, docker: bool | None, service: str) -> str:
     )
 
 
+def _tty() -> bool:
+    """True when the CLI runs in a terminal (both stdin and stdout)."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def python_command(
+    project: Path,
+    args: list[str],
+    *,
+    docker: bool | None = None,
+    service: str = "django",
+    interactive: bool = False,
+) -> list[str]:
+    """The argv running ``python <args>`` in the resolved environment."""
+    mode = resolve_execution(project, docker, service)
+    if mode == "venv":
+        return [str(venv_python(project)), *args]
+    no_tty = [] if interactive and _tty() else ["-T"]
+    return ["docker", "compose", "exec", *no_tty, service, "python", *args]
+
+
+def run_python(
+    project: Path,
+    args: list[str],
+    *,
+    docker: bool | None = None,
+    service: str = "django",
+    capture: bool = True,
+    interactive: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``python <args>`` through the project interpreter, cwd pinned to the project.
+
+    Returns the CompletedProcess (text mode, never raises on non-zero exit).
+    With ``capture=False`` output streams through to the terminal (stdin is
+    always inherited); ``interactive=True`` also asks docker for a TTY.
+    """
+    cmd = python_command(project, args, docker=docker, service=service, interactive=interactive)
+    return subprocess.run(cmd, cwd=project, text=True, capture_output=capture, check=False)
+
+
 def run_manage(
     project: Path,
     args: list[str],
@@ -88,15 +140,25 @@ def run_manage(
     docker: bool | None = None,
     service: str = "django",
     capture: bool = True,
+    interactive: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Run ``manage.py <args>`` in the resolved environment, cwd pinned to the project.
+    """Run ``manage.py <args>`` in the resolved environment (see :func:`run_python`)."""
+    return run_python(
+        project,
+        ["manage.py", *args],
+        docker=docker,
+        service=service,
+        capture=capture,
+        interactive=interactive,
+    )
 
-    Returns the CompletedProcess (text mode, never raises on non-zero exit).
-    With ``capture=False`` output streams through to the terminal.
-    """
-    mode = resolve_execution(project, docker, service)
-    if mode == "venv":
-        cmd = [str(venv_python(project)), "manage.py", *args]
-    else:
-        cmd = ["docker", "compose", "exec", "-T", service, "python", "manage.py", *args]
-    return subprocess.run(cmd, cwd=project, text=True, capture_output=capture, check=False)
+
+def run_compose(project: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run ``docker compose <args>`` in the project, streaming to the terminal."""
+    try:
+        return subprocess.run(["docker", "compose", *args], cwd=project, text=True, check=False)
+    except FileNotFoundError:
+        raise CliError(
+            "docker not found — install Docker with the compose plugin, "
+            "or run without it: karni serve --local"
+        ) from None

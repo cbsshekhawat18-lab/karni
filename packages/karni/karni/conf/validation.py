@@ -71,6 +71,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"
     KARNI_API_ROUTER: str = "karni.api.routers.get_default_router"
+    KARNI_EVENTS_AUTODISCOVER: bool = True
+    KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6

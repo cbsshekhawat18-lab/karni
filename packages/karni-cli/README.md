@@ -56,6 +56,35 @@ subprocess — the CLI itself never imports Django.
 
 See `docs/agents.md` for the agent surface in full.
 
+## Runners
+Artisan-style shortcuts. Each runner runs one project command through the
+project interpreter (see *Execution environment* below), streams its output
+and exits with its exit code. `--help` on each names the command it wraps.
+Extra arguments pass straight through; put `--` before any that clash with
+karni's own options (`--docker`, `--service`, `--help`).
+
+| Command | Runs |
+|---|---|
+| `karni serve` | `docker compose up` (`--build`, `-d`) |
+| `karni serve --local [--host H] [--port P]` | `manage.py runserver 127.0.0.1:8000` via `.venv` |
+| `karni migrate [ARGS]` | `manage.py migrate [ARGS]` |
+| `karni test [ARGS]` | `python -m pytest [ARGS]` |
+| `karni shell [ARGS]` | `manage.py shell [ARGS]` |
+| `karni routes [--json]` | `manage.py karni_routes`: every URL with methods, name, view, model, access |
+| `karni worker [-A APP] [-l LEVEL] [ARGS]` | `python -m celery -A config worker -l info [ARGS]` |
+| `karni beat [-A APP] [-l LEVEL] [ARGS]` | `python -m celery -A config beat -l info [ARGS]` |
+| `karni schedule list [--json]` | `manage.py karni_schedules`: every merged beat schedule |
+| `karni schedule run NAME` | `manage.py karni_schedules --run NAME`: runs the task once, synchronously |
+| `karni createsuperuser [ARGS]` | `manage.py createsuperuser [ARGS]` |
+| `karni manage ARGS` | `manage.py ARGS`: the raw passthrough for everything else |
+
+In docker mode, `shell`, `test`, `worker`, `beat`, `createsuperuser` and
+`manage` get a TTY (`docker compose exec` without `-T`) when karni runs in a
+terminal, so prompts and Ctrl-C work. Scripted and agent runs keep `-T`.
+With the compose stack up, `worker` and `beat` already run as services, so
+`karni worker` and `karni beat` are for `.venv` development. See
+`docs/events.md` and `docs/scheduling.md`.
+
 ## Execution environment
 Commands that run the project resolve, in order: `--docker/--no-docker` flag →
 `<project>/.venv` → a running compose service (default `django`; change with

@@ -107,6 +107,12 @@ app = create_celery_app()
 
 Broker, django-db results, database beat scheduler and task autodiscovery are
 configured from the `CELERY_*` settings that `karni_settings()` provided.
+Periodic tasks declared with `karni.schedule.every()` / `cron()` in
+`<app>/schedules.py` are merged into the beat schedule
+([docs/scheduling.md](../../docs/scheduling.md)). Model lifecycle listeners
+live in `<app>/listeners.py` ([docs/events.md](../../docs/events.md)).
+`manage.py karni_routes` and `manage.py karni_schedules` list every URL and
+every schedule (`--json` for agents).
 
 ## Health checks
 

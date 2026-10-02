@@ -369,6 +369,11 @@ BASE: dict[str, Any] = {
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
+    # --- Events & schedules (karni.events / karni.schedule) -----------------
+    # <app>/listeners.py, <app>/events.py and <app>/schedules.py are
+    # autodiscovered at startup; set False to wire them yourself.
+    "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
+    "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
     # Architecture-rule configuration (karni.testing); checks fall back to the
     # same defaults when this setting is absent, so non-karni.conf projects work.
     "KARNI_ARCHITECTURE": {

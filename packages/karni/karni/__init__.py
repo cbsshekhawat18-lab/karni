@@ -8,6 +8,10 @@ overridable entry points:
 * :func:`karni.celery.create_celery_app` — a configured Celery application.
 * :mod:`karni.storage` — S3-compatible or local file storage plus thumbnails.
 * :mod:`karni.health` — liveness and readiness endpoints.
+* :mod:`karni.events` — ``<app>/listeners.py`` model lifecycle listeners
+  (``on_created`` / ``on_updated`` / ``on_deleted``, ``queued``).
+* :mod:`karni.schedule` — ``<app>/schedules.py`` beat schedules
+  (``every`` / ``cron``).
 
 Every default Karni applies can be overridden from the project's own
 ``settings.py``: values defined before ``karni_settings(globals())`` are never

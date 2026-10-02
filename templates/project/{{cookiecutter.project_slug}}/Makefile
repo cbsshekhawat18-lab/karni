@@ -1,14 +1,20 @@
-.PHONY: up down migrate types check context rules agents test logs
+.PHONY: up down serve migrate types check context rules agents test shell routes schedules superuser logs
+
+# Every target is a thin alias for a `karni` command, which runs through the
+# project .venv when present, else the running compose service.
 
 up:
-	docker compose up -d
+	karni serve -d
 
 down:
 	docker compose down
 
+serve:
+	karni serve
+
 migrate:
-	docker compose exec django python manage.py makemigrations
-	docker compose exec django python manage.py migrate
+	karni manage makemigrations
+	karni migrate
 
 types:
 	karni types
@@ -28,7 +34,19 @@ context:
 	karni context
 
 test:
-	docker compose exec django pytest
+	karni test
+
+shell:
+	karni shell
+
+routes:
+	karni routes
+
+schedules:
+	karni schedule list
+
+superuser:
+	karni createsuperuser
 
 logs:
 	docker compose logs -f django worker beat

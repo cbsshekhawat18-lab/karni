@@ -5,16 +5,26 @@ from __future__ import annotations
 import typer
 
 from karni_cli.commands.add import add
+from karni_cli.commands.beat import beat
 from karni_cli.commands.check import check
 from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
+from karni_cli.commands.createsuperuser import createsuperuser
 from karni_cli.commands.doctor import doctor
+from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
+from karni_cli.commands.migrate import migrate
 from karni_cli.commands.new import new
+from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
+from karni_cli.commands.run_tests import test
+from karni_cli.commands.schedule import schedule_app
+from karni_cli.commands.serve import serve
+from karni_cli.commands.shell import shell
 from karni_cli.commands.types import types
 from karni_cli.commands.upgrade import upgrade
-from karni_cli.project import CliError
+from karni_cli.commands.worker import worker
+from karni_cli.project import PASSTHROUGH, CliError
 
 app = typer.Typer(
     name="karni",
@@ -33,6 +43,19 @@ app.add_typer(rules_app, name="rules")
 app.command(help="Serve context, rules and check as MCP tools (needs karni-cli[mcp])")(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
 app.add_typer(config_app, name="config")
+
+# Runners: each wraps one project command (named in its --help), run through
+# the project interpreter (.venv, else the running compose service).
+app.command()(serve)
+app.command(context_settings=PASSTHROUGH)(migrate)
+app.command(context_settings=PASSTHROUGH)(test)
+app.command(context_settings=PASSTHROUGH)(shell)
+app.command()(routes)
+app.command(context_settings=PASSTHROUGH)(worker)
+app.command(context_settings=PASSTHROUGH)(beat)
+app.add_typer(schedule_app, name="schedule")
+app.command(context_settings=PASSTHROUGH)(createsuperuser)
+app.command(context_settings=PASSTHROUGH)(manage)
 
 
 def run() -> None:
