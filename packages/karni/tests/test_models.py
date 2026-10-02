@@ -35,7 +35,7 @@ class Author(BaseModel):
 
 
 class Post(SoftDeleteModel):
-    """Concrete ``SoftDeleteModel`` with an FK parent for related-manager tests."""
+    """Standalone ``SoftDeleteModel`` (integer pk, no timestamps) with an FK parent."""
 
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name="posts")
     title = models.CharField(max_length=50)
@@ -206,8 +206,20 @@ def test_instance_delete_is_soft(model_tables: None) -> None:
     assert post.deleted_at is not None
     assert Post.objects.count() == 0
     assert Post.all_objects.count() == 1
-    # save() ran, so auto_now refreshed updated_at alongside deleted_at.
     stored = Post.all_objects.get(pk=post.pk)
+    assert stored.deleted_at is not None
+    # Post is a standalone SoftDeleteModel: no timestamps to refresh.
+    assert not hasattr(stored, "updated_at")
+
+
+@pytest.mark.django_db
+def test_base_model_delete_refreshes_updated_at(model_tables: None) -> None:
+    author = Author.objects.create(name="Ada")
+
+    author.delete()
+
+    # BaseModel has updated_at, so the soft-delete save refreshes it too.
+    stored = Author.objects.all_with_deleted().get(pk=author.pk)
     assert stored.deleted_at is not None
     assert stored.updated_at >= stored.deleted_at
 

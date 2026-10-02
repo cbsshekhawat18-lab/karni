@@ -1,0 +1,30 @@
+# https://editorconfig.org — kept in step with ruff.toml (Python, 100 cols)
+# and the UI packages' .prettierrc (2-space TS/JS/CSS/JSON).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+[*.{toml,ini,cfg}]
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+# Two trailing spaces are a Markdown hard line break.
+trim_trailing_whitespace = false
+
+# Cookiecutter scaffold: files are templates, formatted by their own rules.
+[templates/**]
+trim_trailing_whitespace = unset
+insert_final_newline = unset

@@ -42,15 +42,21 @@ export default defineConfig({
         index: resolve(root, "src/index.ts"),
         "tailwind-preset": resolve(root, "tailwind-preset.ts"),
       },
-      formats: ["es"],
+      // Dual output: ESM for bundlers (`import`), CJS for `require()` consumers
+      // (Jest, tailwind.config.cjs, older tooling). The package is
+      // "type": "module", so CJS files MUST carry the .cjs extension.
+      formats: ["es", "cjs"],
+      fileName: (format, entryName) => `${entryName}.${format === "es" ? "js" : "cjs"}`,
     },
     rollupOptions: {
       // Externalize every bare import: peers and dependencies are resolved by
-      // the consumer's bundler (the package is ESM-only, documented in README).
+      // the consumer (bundler or Node's require).
       external: (id) => !id.startsWith(".") && !id.startsWith("/"),
       output: {
-        entryFileNames: "[name].js",
-        chunkFileNames: "chunks/[name]-[hash].js",
+        // Shared code-split chunks keep Vite's lib default
+        // (`[name]-[hash].js` / `.cjs`), which picks the right extension per
+        // format; a custom pattern here would apply to both formats.
+        exports: "named",
       },
     },
   },

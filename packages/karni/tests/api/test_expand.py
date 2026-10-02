@@ -82,6 +82,10 @@ def test_expand_venue_nests_the_object(organizer: Any, venue: Venue) -> None:
         "city": "Berlin",
         "created_at": row["venue"]["created_at"],
         "updated_at": row["venue"]["updated_at"],
+        # AuditedModel fields nest as read-only PKs (never expandable);
+        # nothing was saved inside a request, so nobody was stamped.
+        "created_by": None,
+        "updated_by": None,
     }
     # Only the requested relation nests; the rest stay PKs.
     assert row["organizer"] == organizer.pk

@@ -231,7 +231,7 @@ def _default_field_names(model: type[Model]) -> list[str]:
     """Default field set: concrete fields plus declared M2Ms, sans password."""
     names = [field.name for field in model._meta.concrete_fields]
     names += [field.name for field in model._meta.many_to_many]
-    return [name for name in names if name != "password"]
+    return [name for name in names if name not in ("password", "deleted_at")]
 
 
 def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
@@ -269,7 +269,14 @@ def _extra_kwargs(
                 f"{model.__name__}.APIMeta.{label} names fields outside the "
                 f"serializer's field set: {', '.join(unknown)}."
             )
-    always_read_only = {model._meta.pk.name, "created_at", "updated_at"} & effective
+    always_read_only = {
+        model._meta.pk.name,
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "deleted_at",
+    } & effective
     forced = (USER_FORCED_READ_ONLY & effective) if _is_user_model(model) else set()
     read_only_set = set(read_only) | always_read_only | forced
     overlap = sorted(read_only_set & set(write_only))

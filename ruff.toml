@@ -1,0 +1,33 @@
+# Repo-wide ruff defaults.
+#
+# Ruff uses the CLOSEST config file, so a package's own pyproject.toml
+# [tool.ruff] block wins inside that package (packages/karni,
+# packages/karni-cli, modules/karni-payments). Keep those blocks consistent
+# with this file: py312, line length 100, the rule selection below.
+# This file governs everything else (repo scripts, future modules, CI helpers).
+
+target-version = "py312"
+line-length = 100
+extend-exclude = [
+    # Cookiecutter sources contain Jinja syntax, not valid Python.
+    "templates",
+    "packages/karni-cli/karni_cli/_templates",
+    "**/migrations",
+    "**/node_modules",
+]
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+]
+# B008: typer's documented pattern puts typer.Option() in argument defaults.
+ignore = ["B008"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

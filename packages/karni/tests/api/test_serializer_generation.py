@@ -129,8 +129,10 @@ def test_schema_name_replaces_the_stem(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_base_model_fields_are_always_read_only() -> None:
     fields = build_serializer(Event)().fields
-    for name in ("id", "created_at", "updated_at"):
+    for name in ("id", "created_at", "updated_at", "created_by", "updated_by"):
         assert fields[name].read_only, name
+    # Soft-delete state is server-side only: never part of the generated surface.
+    assert "deleted_at" not in fields
 
 
 def test_api_meta_read_only_and_write_only_are_honoured() -> None:
@@ -154,7 +156,16 @@ def test_expanded_relations_become_read_only_nested_serializers() -> None:
     fields = build_serializer(Event, expand=frozenset({"venue"}))().fields
     assert isinstance(fields["venue"], serializers.ModelSerializer)
     assert fields["venue"].read_only
-    assert set(fields["venue"].fields) == {"id", "created_at", "updated_at", "name", "city"}
+    # Every BaseModel carries the audit FKs (read-only); deleted_at never surfaces.
+    assert set(fields["venue"].fields) == {
+        "id",
+        "created_at",
+        "updated_at",
+        "created_by",
+        "updated_by",
+        "name",
+        "city",
+    }
 
 
 def test_user_serializer_matches_the_accounts_contract() -> None:

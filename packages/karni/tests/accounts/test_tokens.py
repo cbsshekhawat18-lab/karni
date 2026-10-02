@@ -212,6 +212,11 @@ def test_related_name_and_cascade_delete(user: User) -> None:
     issue_token(user, RESET)
     assert user.one_time_tokens.count() == 2
 
+    # Users are BaseModels: delete() is soft and, by design, never cascades.
     user.delete()
+    assert OneTimeToken.objects.count() == 2
 
-    assert OneTimeToken.objects.count() == 0
+    # Only the explicit hard delete runs the database cascade.
+    user.hard_delete()
+
+    assert OneTimeToken.objects.all_with_deleted().count() == 0

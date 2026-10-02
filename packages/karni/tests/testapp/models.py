@@ -1,10 +1,21 @@
-"""Models exercised by every ``tests/api/`` module.
+"""Models exercised by every ``tests/api/`` module, plus the model-layer set.
 
 The trio covers the shapes the api contract cares about: plain fields of every
 derivable filter type, choices, nullable numerics, forward FKs (one to the
 user model), an M2M, and an ``APIMeta`` with both ``read_only`` and
 ``write_only`` entries (``Event``); relation targets with no relations of
 their own (``Venue``, ``Tag``).
+
+The second group backs ``tests/test_model_layer.py`` (no viewsets, so the API
+and its schema never see them; they live in an installed app because cascades
+and admin need real reverse relations):
+
+* ``Stamp`` / ``Entry`` / ``Remark`` — ``UUIDModel``, ``TimestampedModel`` and
+  ``AuditedModel`` each used *alone*;
+* ``Shelf`` → ``Book`` ↔ ``Label`` — ``BaseModel`` parent/child (``CASCADE``)
+  and M2M, every primary key a UUID;
+* ``Review`` — ``SoftDeleteModel`` used alone (integer pk) as a ``CASCADE``
+  child of the UUID-keyed ``Book``.
 """
 
 from __future__ import annotations
@@ -12,7 +23,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.db import models
 
-from karni.models import BaseModel
+from karni.models import AuditedModel, BaseModel, SoftDeleteModel, TimestampedModel, UUIDModel
 
 
 class Venue(BaseModel):
@@ -74,3 +85,75 @@ class Event(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+# --- model layer (tests/test_model_layer.py) ---------------------------------
+
+
+class Stamp(UUIDModel):
+    """``UUIDModel`` alone: a UUID primary key and nothing else from Karni."""
+
+    value = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class Entry(TimestampedModel):
+    """``TimestampedModel`` alone: integer pk, ``created_at`` / ``updated_at``."""
+
+    text = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.text
+
+
+class Remark(AuditedModel):
+    """``AuditedModel`` alone: integer pk, ``created_by`` / ``updated_by``."""
+
+    text = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.text
+
+
+class Shelf(BaseModel):
+    """``BaseModel`` parent of ``Book``."""
+
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Label(BaseModel):
+    """``BaseModel`` M2M target of ``Book``."""
+
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Book(BaseModel):
+    """``BaseModel`` child: FK and M2M, both to UUID-keyed models."""
+
+    shelf = models.ForeignKey(Shelf, on_delete=models.CASCADE, related_name="books")
+    title = models.CharField(max_length=100)
+    labels = models.ManyToManyField(Label, blank=True, related_name="books")
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class Review(SoftDeleteModel):
+    """``SoftDeleteModel`` alone: integer pk, ``CASCADE`` child of ``Book``."""
+
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="reviews")
+    stars = models.PositiveSmallIntegerField(default=5)
+
+    class Meta(SoftDeleteModel.Meta):
+        ordering = ("id",)
+
+    def __str__(self) -> str:
+        return f"{self.stars} stars"

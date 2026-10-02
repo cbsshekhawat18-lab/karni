@@ -542,6 +542,16 @@
       "readOnly": true,
       "type": "string"
      },
+     "created_by": {
+      "format": "uuid",
+      "nullable": true,
+      "readOnly": true,
+      "type": "string",
+      "x-karni-relation": {
+       "many": false,
+       "resource": "users"
+      }
+     },
      "description": {
       "type": "string"
      },
@@ -590,6 +600,16 @@
       "readOnly": true,
       "type": "string"
      },
+     "updated_by": {
+      "format": "uuid",
+      "nullable": true,
+      "readOnly": true,
+      "type": "string",
+      "x-karni-relation": {
+       "many": false,
+       "resource": "users"
+      }
+     },
      "venue": {
       "format": "uuid",
       "nullable": true,
@@ -602,11 +622,13 @@
     },
     "required": [
      "created_at",
+     "created_by",
      "id",
      "starts_at",
      "status",
      "title",
-     "updated_at"
+     "updated_at",
+     "updated_by"
     ],
     "type": "object"
    },
@@ -684,6 +706,16 @@
       "readOnly": true,
       "type": "string"
      },
+     "created_by": {
+      "format": "uuid",
+      "nullable": true,
+      "readOnly": true,
+      "type": "string",
+      "x-karni-relation": {
+       "many": false,
+       "resource": "users"
+      }
+     },
      "id": {
       "format": "uuid",
       "readOnly": true,
@@ -697,14 +729,26 @@
       "format": "date-time",
       "readOnly": true,
       "type": "string"
+     },
+     "updated_by": {
+      "format": "uuid",
+      "nullable": true,
+      "readOnly": true,
+      "type": "string",
+      "x-karni-relation": {
+       "many": false,
+       "resource": "users"
+      }
      }
     },
     "required": [
      "city",
      "created_at",
+     "created_by",
      "id",
      "name",
-     "updated_at"
+     "updated_at",
+     "updated_by"
     ],
     "type": "object"
    },
@@ -1392,6 +1436,14 @@
       }
      },
      {
+      "in": "query",
+      "name": "created_by",
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     },
+     {
       "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: organizer, tags, venue.",
       "explode": false,
       "in": "query",
@@ -1531,6 +1583,14 @@
       "name": "updated_at__lte",
       "schema": {
        "format": "date-time",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "updated_by",
+      "schema": {
+       "format": "uuid",
        "type": "string"
       }
      },
@@ -2322,6 +2382,14 @@
      },
      {
       "in": "query",
+      "name": "created_by",
+      "schema": {
+       "format": "uuid",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
       "name": "name",
       "schema": {
        "type": "string"
@@ -2382,6 +2450,14 @@
       "name": "updated_at__lte",
       "schema": {
        "format": "date-time",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "updated_by",
+      "schema": {
+       "format": "uuid",
        "type": "string"
       }
      }

@@ -25,15 +25,17 @@ export default defineConfig({
     sourcemap: true,
     lib: {
       entry: { index: resolve(root, "src/index.ts") },
-      formats: ["es"],
+      // Dual ESM/CJS output, mirroring @karni/ui ("type": "module" => .cjs).
+      formats: ["es", "cjs"],
+      fileName: (format, entryName) => `${entryName}.${format === "es" ? "js" : "cjs"}`,
     },
     rollupOptions: {
       // Externalize every bare import: @karni/ui, react and react-query are
-      // resolved by the consumer's bundler (ESM-only, mirrors @karni/ui).
+      // resolved by the consumer (bundler or Node's require).
       external: (id) => !id.startsWith(".") && !id.startsWith("/"),
       output: {
-        entryFileNames: "[name].js",
-        chunkFileNames: "chunks/[name]-[hash].js",
+        // Chunks keep Vite's per-format lib default (`[name]-[hash].js|.cjs`).
+        exports: "named",
       },
     },
   },

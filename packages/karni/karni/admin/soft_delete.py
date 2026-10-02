@@ -178,12 +178,14 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
     def restore_selected(self, request: HttpRequest, queryset: QuerySet) -> None:
         """Un-delete the selected rows (``deleted_at=None``).
 
-        Uses ``.update(...)`` with an explicit ``updated_at`` since
-        ``auto_now`` does not fire on ``update()``.
+        Uses ``.update(...)``, so ``auto_now`` does not fire: ``updated_at``
+        is set explicitly when the model has it (a standalone
+        ``SoftDeleteModel`` may not).
         """
-        restored = queryset.filter(deleted_at__isnull=False).update(
-            deleted_at=None, updated_at=timezone.now()
-        )
+        changes: dict[str, object] = {"deleted_at": None}
+        if any(f.name == "updated_at" for f in queryset.model._meta.concrete_fields):
+            changes["updated_at"] = timezone.now()
+        restored = queryset.filter(deleted_at__isnull=False).update(**changes)
         self.message_user(
             request,
             _("Restored %(count)d %(items)s.")

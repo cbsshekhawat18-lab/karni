@@ -42,11 +42,19 @@ def test_blank_provider_payment_ids_may_repeat(make_payment) -> None:
     assert Payment.objects.filter(provider_payment_id="").count() == 2
 
 
-def test_refund_cascades_with_payment(make_payment) -> None:
+def test_soft_deleting_a_payment_keeps_its_refunds(make_payment) -> None:
     payment = make_payment()
     Refund.objects.create(payment=payment, amount=Decimal("10.00"))
     payment.delete()
-    assert Refund.objects.count() == 0
+    assert Refund.objects.count() == 1
+    assert Refund.objects.get().payment == payment  # FK still resolves
+
+
+def test_refund_cascades_with_payment_hard_delete(make_payment) -> None:
+    payment = make_payment()
+    Refund.objects.create(payment=payment, amount=Decimal("10.00"))
+    payment.hard_delete()
+    assert Refund.objects.all_with_deleted().count() == 0
 
 
 # ---------------------------------------------------------------------------

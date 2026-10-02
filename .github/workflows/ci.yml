@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Python: packages/karni, packages/karni-cli, modules/karni-payments.
+  # Every step goes through the root Makefile, so CI and `make` never drift.
+  # ---------------------------------------------------------------------------
+  python:
+    name: Python ${{ matrix.python }} / Django ${{ matrix.django }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+        django: ["5.1.*"]
+
+    services:
+      # Only the Postgres step below talks to this; the main suites run on
+      # sqlite in-memory (their tests/settings.py pin it).
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: karni
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+            modules/karni-payments/pyproject.toml
+
+      - name: Install packages (editable) + dev tools
+        run: make install-py
+
+      - name: Pin Django ${{ matrix.django }}
+        run: python -m pip install "Django==${{ matrix.django }}"
+
+      - name: Versions
+        run: python -c "import sys, django; print(sys.version); print('Django', django.get_version())"
+
+      - name: Lint (ruff check + ruff format --check)
+        run: make lint-py
+
+      - name: Typecheck (mypy, root mypy.ini)
+        run: make typecheck-py
+
+      - name: Test (pytest, sqlite)
+        run: make test-py
+
+      # packages/karni/tests/settings.py pins sqlite and does not read
+      # DATABASE_URL, so the Postgres-only tests (skipped unless
+      # connection.vendor == "postgresql") run through a CI settings overlay:
+      # .github/ci/karni_postgres_settings.py. --no-migrations is required
+      # because tests.testapp (unmigrated) has a FK to the migrated user model.
+      # The OpenAPI snapshot test is deselected here: the committed snapshot is
+      # generated on sqlite, and drf-spectacular derives integer bounds from
+      # the backend (PositiveIntegerField max 2^63-1 on sqlite, 2^31-1 + int32
+      # format on Postgres). It runs in the sqlite step above.
+      - name: Enable pg_trgm for test databases
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d template1 -c "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+
+      - name: Test packages/karni on PostgreSQL 16
+        working-directory: packages/karni
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pip install "psycopg[binary]>=3.1"
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations \
+            --deselect tests/api/test_schema_snapshot.py::test_schema_snapshot_is_current
+
+      # -----------------------------------------------------------------------
+      # SLOT: schema snapshot / agent-adapter staleness check.
+      # Owned by the `karni rules sync` work (not wired yet). It will land here
+      # as e.g.:
+      #
+      # - name: Agent rules / adapters are up to date
+      #   run: karni rules sync --check
+      # -----------------------------------------------------------------------
+
+  # ---------------------------------------------------------------------------
+  # UI: packages/karni-ui (@karni/ui) and modules/karni-payments/ui.
+  # ---------------------------------------------------------------------------
+  ui:
+    name: UI (Node 20)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            packages/karni-ui/package-lock.json
+            modules/karni-payments/ui/package-lock.json
+
+      # karni-ui first: payments-ui resolves @karni/ui from its source, which
+      # imports packages/karni-ui/node_modules.
+      - name: npm ci
+        run: make install-ui
+
+      - name: Typecheck (tsc --noEmit)
+        run: make typecheck-ui
+
+      - name: Lint (eslint + prettier --check)
+        run: make lint-ui
+
+      - name: Test (vitest)
+        run: make test-ui
+
+      - name: Build (vite, dual ESM/CJS)
+        run: make build-ui
+
+      - name: Smoke-test package entry points (require + import)
+        run: |
+          set -euo pipefail
+          cd packages/karni-ui
+          node -e "const m = require('@karni/ui'); if (!m.ResourceTable) throw new Error('CJS @karni/ui missing exports'); console.log('cjs', require.resolve('@karni/ui'))"
+          node -e "require('@karni/ui/tailwind-preset')"
+          node --input-type=module -e "const m = await import('@karni/ui'); if (!m.ResourceTable) throw new Error('ESM @karni/ui missing exports'); console.log('esm', import.meta.resolve('@karni/ui'))"
+          node --input-type=module -e "await import('@karni/ui/tailwind-preset'); await import('@karni/ui/eslint-plugin')"
+          test -f dist/manifest.json
+          cd ../../modules/karni-payments/ui
+          node -e "const m = require('@karni/payments-ui'); if (!m.CheckoutButton) throw new Error('CJS payments-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/payments-ui'); if (!m.CheckoutButton) throw new Error('ESM payments-ui missing exports')"

@@ -18,7 +18,7 @@ from karni.admin.base import (
     resolve_admin_base,
 )
 from karni.admin.soft_delete import SoftDeleteAdminMixin
-from tests.adminapp.models import ApiCredential, Bot, KitchenSink, Note, Tuned
+from tests.adminapp.models import ApiCredential, Bot, KitchenSink, Ledger, Metric, Note, Tuned
 
 
 @pytest.fixture
@@ -46,6 +46,9 @@ class TestAdminMetaApplication:
             "id",
             "created_at",
             "updated_at",
+            "deleted_at",
+            "created_by",
+            "updated_by",
             "total",
         ]
 
@@ -61,12 +64,21 @@ class TestBuildModelAdmin:
         assert cls._karni_generated
         assert cls._karni_autocomplete_managed
         assert issubclass(cls, KarniModelAdmin)
-        assert not issubclass(cls, SoftDeleteAdminMixin)
 
     def test_soft_delete_models_get_the_mixin_in_front(self) -> None:
-        cls = build_model_admin(Note)
-        assert issubclass(cls, SoftDeleteAdminMixin)
-        assert cls.__mro__.index(SoftDeleteAdminMixin) < cls.__mro__.index(KarniModelAdmin)
+        # A standalone SoftDeleteModel (Note) and a BaseModel (KitchenSink —
+        # every BaseModel is soft-deletable) alike.
+        for model in (Note, KitchenSink):
+            cls = build_model_admin(model)
+            assert issubclass(cls, SoftDeleteAdminMixin), model
+            assert cls.__mro__.index(SoftDeleteAdminMixin) < cls.__mro__.index(KarniModelAdmin)
+
+    def test_models_without_soft_delete_get_no_mixin(self) -> None:
+        # Ledger composes every Karni mixin except SoftDeleteModel.
+        for model in (Ledger, Metric):
+            cls = build_model_admin(model)
+            assert issubclass(cls, KarniModelAdmin), model
+            assert not issubclass(cls, SoftDeleteAdminMixin), model
 
     def test_inlines_are_attached(self) -> None:
         from karni.admin.inlines import build_inline
@@ -111,7 +123,14 @@ class TestHandRegisteredDerivation:
         ]
         assert list(model_admin.search_fields) == ["name", "slug", "email", "url", "blurb"]
         assert model_admin.date_hierarchy == "published_on"
-        assert list(model_admin.readonly_fields) == ["id", "created_at", "updated_at"]
+        assert list(model_admin.readonly_fields) == [
+            "id",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "created_by",
+            "updated_by",
+        ]
         # No FK in the derived display → nothing to select_related.
         assert model_admin.list_select_related is False
 

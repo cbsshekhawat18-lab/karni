@@ -56,20 +56,24 @@ def _class_violation(cls: type, rule: str, message: str, hint: str = "") -> list
 
 
 def check_model_base() -> list[Violation]:
-    from karni.models import BaseModel
+    from karni.models import AuditedModel, SoftDeleteModel, TimestampedModel, UUIDModel
+
+    # BaseModel or any composition of Karni's mixins counts; only a model
+    # built on django.db.models.Model alone is a violation.
+    karni_bases = (UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel)
 
     violations: list[Violation] = []
     for cfg in project_app_configs():
         for model in cfg.get_models():
             if model._meta.auto_created or model._meta.proxy:
                 continue
-            if issubclass(model, BaseModel):
+            if issubclass(model, karni_bases):
                 continue
             violations += _class_violation(
                 model,
                 "model-base",
                 f"{model.__name__} inherits django.db.models.Model directly",
-                "inherit karni.models.BaseModel (or SoftDeleteModel)",
+                "inherit karni.models.BaseModel (or compose its mixins)",
             )
     return violations
 

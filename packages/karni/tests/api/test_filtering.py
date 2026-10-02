@@ -117,6 +117,14 @@ def test_m2m_field_is_not_derived() -> None:
     assert "tags" not in base
 
 
+def test_soft_delete_state_is_not_filterable_but_audit_users_are() -> None:
+    """Mirrors the serializer: ``deleted_at`` stays server-side, audit FKs are exposed."""
+    base = _derived(Event).base_filters
+    assert not any(name.startswith("deleted_at") for name in base)
+    for name in ("created_by", "updated_by"):
+        assert isinstance(base[name], django_filters.UUIDFilter), name
+
+
 def test_user_model_sensitive_fields_are_not_filterable() -> None:
     """APIMeta restricts the effective set; password is never filterable."""
     base = _derived(get_user_model()).base_filters

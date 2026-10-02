@@ -1,178 +1,132 @@
 """Karni model primitives.
 
-Every Karni model — in ``karni.*`` apps and in projects built on Karni —
-inherits :class:`BaseModel`: a UUID primary key plus ``created_at`` /
-``updated_at`` audit timestamps. Models that must never lose rows inherit
-:class:`SoftDeleteModel` instead, which turns ``delete()`` into a timestamp
-flip and keeps hard deletion available as an explicit ``hard_delete()``.
+Four independent abstract mixins, each usable on its own, and
+:class:`BaseModel` combining all of them — the base every project model
+inherits:
 
-Override / escape hatch: both bases are abstract — projects subclass them
-freely, add fields, override managers (declare your own ``objects``) or
-methods, and may skip them entirely for models that want Django's stock
-behaviour. Nothing in Karni requires a model to inherit these classes.
+* :class:`UUIDModel` — random UUID primary key (no sequential enumeration).
+* :class:`TimestampedModel` — ``created_at`` / ``updated_at``.
+* :class:`SoftDeleteModel` — ``deleted_at``; ``delete()`` hides instead of
+  removing, the default manager excludes deleted rows, and
+  ``objects.all_with_deleted()`` / ``objects.deleted_only()`` reach them.
+* :class:`AuditedModel` — ``created_by`` / ``updated_by``, stamped from
+  :func:`karni.middleware.get_current_user` (contextvars; WSGI and ASGI).
+
+Override / escape hatch: every class is abstract — subclass, redeclare a
+field or manager, or compose only the mixins you want (``class Log(
+UUIDModel, TimestampedModel)`` for an append-only table that must never be
+soft-deleted). Nothing in Karni requires a model to inherit these classes.
 """
 
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
+from typing import Any, ClassVar
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from karni.managers import (
+    AuditedQuerySet,
+    BaseManager,
+    BaseQuerySet,
+    SoftDeleteManager,
+    SoftDeleteQuerySet,
+    TimestampedQuerySet,
+)
+from karni.middleware import get_current_user
+
 __all__ = [
+    "AuditedModel",
     "BaseModel",
     "SoftDeleteManager",
     "SoftDeleteModel",
     "SoftDeleteQuerySet",
+    "TimestampedModel",
+    "UUIDModel",
 ]
 
 
-class BaseModel(models.Model):
-    """Abstract base for every Karni model.
+def _with_field(update_fields: Any, *names: str) -> Any:
+    """Add ``names`` to a ``save(update_fields=...)`` value (``None`` stays ``None``)."""
+    if update_fields is None:
+        return None
+    return {*update_fields, *names}
 
-    Provides a random UUID primary key (safe to expose in URLs and APIs, no
-    sequential enumeration) and indexed ``created_at`` / ``updated_at`` audit
-    timestamps. ``id``, ``created_at`` and ``updated_at`` are treated as
-    read-only by Karni's serializer generation and as audit fields by the
-    derived admin.
 
-    Override / escape hatch: subclass and add fields as usual; redeclare a
-    field (e.g. a different primary key) to replace it, or don't inherit
-    ``BaseModel`` at all for models that want Django defaults. Note that
-    changing these base fields in a project ripples migrations into every
-    model that inherits them, including a swapped user model.
-    """
+class UUIDModel(models.Model):
+    """Random UUID primary key — safe to expose in URLs, no enumeration."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
 
 
-class SoftDeleteQuerySet(models.QuerySet):
-    """QuerySet whose ``delete()`` soft-deletes by stamping ``deleted_at``.
+class TimestampedModel(models.Model):
+    """``created_at`` (indexed) and ``updated_at``, maintained by Django.
 
-    Hard deletion never happens implicitly: it is only ever the explicit
-    :meth:`hard_delete`. Both methods are ``queryset_only`` so neither is
-    copied onto managers — ``Model.objects.delete()`` does not exist; you must
-    build a queryset first (``Model.objects.all().delete()``), keeping bulk
-    deletion deliberate.
-
-    Override / escape hatch: subclass this queryset (and a matching manager
-    via ``Manager.from_queryset``) and redeclare ``objects`` /
-    ``all_objects`` on your model to change any of this behaviour.
+    ``updated_at`` uses ``auto_now``: bulk ``QuerySet.update()`` does not
+    refresh it — set it explicitly in bulk updates that should count.
     """
 
-    def delete(self) -> tuple[int, dict[str, int]]:
-        """Soft-delete every row in the queryset.
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-        Sets ``deleted_at`` to now with a single ``UPDATE`` and returns a
-        Django-style ``(count, {model_label: count})`` tuple. Unlike a real
-        delete this sends no ``pre_delete``/``post_delete`` signals, does not
-        cascade to related objects, and (being a bulk ``update()``) does not
-        refresh ``updated_at``.
-        """
-        count = self.update(deleted_at=timezone.now())
-        return count, {self.model._meta.label: count}
+    objects: ClassVar[models.Manager] = models.Manager.from_queryset(TimestampedQuerySet)()
 
-    delete.queryset_only = True  # type: ignore[attr-defined]
-    delete.alters_data = True  # type: ignore[attr-defined]
-
-    def hard_delete(self) -> tuple[int, dict[str, int]]:
-        """Really delete the rows (Django's ``QuerySet.delete``), cascading as usual."""
-        return models.QuerySet.delete(self)
-
-    hard_delete.queryset_only = True  # type: ignore[attr-defined]
-    hard_delete.alters_data = True  # type: ignore[attr-defined]
-
-    def alive(self) -> SoftDeleteQuerySet:
-        """Only rows that are not soft-deleted."""
-        return self.filter(deleted_at__isnull=True)
-
-    def dead(self) -> SoftDeleteQuerySet:
-        """Only rows that are soft-deleted."""
-        return self.filter(deleted_at__isnull=False)
+    class Meta:
+        abstract = True
 
 
-_SoftDeleteManagerBase = models.Manager.from_queryset(SoftDeleteQuerySet)
+class SoftDeleteModel(models.Model):
+    """Rows are hidden by ``delete()`` instead of removed.
 
+    * ``objects`` (the default manager) excludes deleted rows — so do related
+      descriptors like ``parent.children.all()`` and the admin.
+    * ``objects.all_with_deleted()`` / ``objects.deleted_only()`` reach them.
+    * ``delete()`` (instance and queryset) stamps ``deleted_at``; ``restore()``
+      clears it; ``hard_delete()`` is the only real deletion and runs Django's
+      normal cascade, including over soft-deleted children.
+    * Soft deletes send no deletion signals and do not cascade; a child's FK
+      to a soft-deleted parent still resolves (the base manager is unfiltered),
+      so existing references never break.
 
-class SoftDeleteManager(_SoftDeleteManagerBase):
-    """Manager that hides soft-deleted rows from every query.
-
-    Bound as ``objects`` (and as the default manager) on
-    :class:`SoftDeleteModel`, so ordinary queries — including related
-    descriptors like ``parent.children.all()`` — never see deleted rows. Use
-    the model's ``all_objects`` manager to reach them.
-
-    Neither this manager nor ``all_objects`` sets ``use_in_migrations``, so
-    swapping them in a subclass never touches migration state.
+    Override / escape hatch: redeclare ``objects`` with your own manager, or
+    override ``delete``/``hard_delete``/``restore``. When declaring your own
+    ``Meta``, subclass ``SoftDeleteModel.Meta`` to keep
+    ``default_manager_name`` (and with it deleted-row hiding on relations).
     """
 
-    def get_queryset(self) -> SoftDeleteQuerySet:
-        """Return the base queryset with soft-deleted rows filtered out."""
-        queryset: SoftDeleteQuerySet = super().get_queryset()
-        return queryset.filter(deleted_at__isnull=True)
-
-
-class SoftDeleteModel(BaseModel):
-    """Abstract base for models whose rows are soft-deleted.
-
-    ``delete()`` (instance and queryset) stamps ``deleted_at`` instead of
-    removing the row; ``objects`` hides deleted rows while ``all_objects``
-    sees everything — though its ``delete()`` is *still* soft. Hard deletion
-    is only ever the explicit :meth:`hard_delete` /
-    ``queryset.hard_delete()``.
-
-    Semantics to be aware of (all deliberate):
-
-    * Soft deletes send no ``pre_delete``/``post_delete`` signals and do not
-      cascade — related rows are untouched.
-    * Hard deletes are real Django deletes: signals fire and cascades run,
-      including over soft-deleted children.
-    * Related descriptors hide deleted rows (``Meta.default_manager_name`` is
-      ``"objects"``), but direct foreign-key access (``child.parent``) still
-      resolves a soft-deleted target — Django's base manager is unfiltered so
-      existing references keep working.
-
-    Override / escape hatch: redeclare ``objects``/``all_objects`` with your
-    own manager classes, or override ``delete``/``hard_delete``/``restore``.
-    When declaring your own ``Meta``, subclass ``SoftDeleteModel.Meta`` to
-    keep ``default_manager_name`` (and with it deleted-row hiding on related
-    descriptors).
-    """
-
-    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
 
     objects: ClassVar[SoftDeleteManager] = SoftDeleteManager()
-    all_objects: ClassVar[models.Manager] = _SoftDeleteManagerBase()
+    #: Unfiltered manager kept for existing callers; prefer ``objects.all_with_deleted()``.
+    all_objects: ClassVar[models.Manager] = models.Manager.from_queryset(SoftDeleteQuerySet)()
 
-    class Meta(BaseModel.Meta):
+    class Meta:
         abstract = True
         default_manager_name = "objects"
 
     @property
     def is_deleted(self) -> bool:
-        """Whether this row is currently soft-deleted."""
         return self.deleted_at is not None
+
+    def _save_deleted_at(self, using: str | None) -> None:
+        fields = ["deleted_at"]
+        if any(f.name == "updated_at" for f in self._meta.concrete_fields):
+            fields.append("updated_at")
+        self.save(using=using, update_fields=fields)
 
     def delete(
         self,
         using: str | None = None,
         keep_parents: bool = False,
     ) -> tuple[int, dict[str, int]]:
-        """Soft-delete this row (stamp ``deleted_at`` and save).
-
-        Keeps Django's ``delete(using=None, keep_parents=False)`` signature so
-        callers (including the admin) need no special-casing; ``keep_parents``
-        is accepted but irrelevant since nothing cascades. Sends no deletion
-        signals. Returns a Django-style ``(1, {model_label: 1})`` tuple.
-        """
+        """Soft-delete this row. Keeps Django's signature so callers need no special case."""
         self.deleted_at = timezone.now()
-        self.save(using=using, update_fields=["deleted_at", "updated_at"])
+        self._save_deleted_at(using)
         return 1, {self._meta.label: 1}
 
     delete.alters_data = True  # type: ignore[attr-defined]
@@ -188,8 +142,73 @@ class SoftDeleteModel(BaseModel):
     hard_delete.alters_data = True  # type: ignore[attr-defined]
 
     def restore(self, using: str | None = None) -> None:
-        """Un-delete this row (clear ``deleted_at`` and save)."""
+        """Un-delete this row."""
         self.deleted_at = None
-        self.save(using=using, update_fields=["deleted_at", "updated_at"])
+        self._save_deleted_at(using)
 
     restore.alters_data = True  # type: ignore[attr-defined]
+
+
+class AuditedModel(models.Model):
+    """``created_by`` / ``updated_by``, stamped from the current user on save.
+
+    The user comes from :func:`karni.middleware.get_current_user` — set by
+    ``CurrentUserMiddleware`` during requests, or explicitly with
+    ``karni.middleware.current_user(user)`` in tasks and commands. With no
+    current user nothing is stamped (an existing ``created_by`` is never
+    cleared). Both FKs are nullable, ``SET_NULL`` on user deletion, and have
+    no reverse accessor (``related_name="+"``) — query with
+    ``Model.objects.created_by(user)``.
+    """
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    objects: ClassVar[models.Manager] = models.Manager.from_queryset(AuditedQuerySet)()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        user = get_current_user()
+        if user is not None:
+            if self._state.adding and self.created_by_id is None:
+                self.created_by = user
+            self.updated_by = user
+            kwargs["update_fields"] = _with_field(kwargs.get("update_fields"), "updated_by")
+        super().save(*args, **kwargs)
+
+
+class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
+    """The base every Karni project model inherits: all four mixins.
+
+    UUID primary key, timestamps, soft delete and audit users. ``id``,
+    ``created_at``, ``updated_at``, ``created_by``, ``updated_by`` and
+    ``deleted_at`` are read-only to Karni's generated serializers and audit
+    fields to the derived admin; ``deleted_at`` is not exposed by the API.
+
+    Override / escape hatch: subclass and add fields; redeclare a field to
+    replace it; or compose the individual mixins instead. Changing these base
+    fields ripples migrations into every inheriting model, including a
+    swapped user model.
+    """
+
+    objects: ClassVar[BaseManager] = BaseManager()
+    all_objects: ClassVar[models.Manager] = models.Manager.from_queryset(BaseQuerySet)()
+
+    class Meta(SoftDeleteModel.Meta):
+        abstract = True

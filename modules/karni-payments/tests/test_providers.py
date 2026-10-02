@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterator
 from decimal import Decimal
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -120,7 +121,7 @@ CREDENTIALS = {
 @pytest.mark.parametrize("provider_class", [StripeProvider, RazorpayProvider, TestProvider])
 class TestProviderConformance:
     @pytest.fixture(autouse=True)
-    def _setup(self, fake_sdks: None) -> None:
+    def _setup(self, fake_sdks: None) -> Iterator[None]:
         self._settings = override_settings(**CREDENTIALS)
         self._settings.enable()
         yield

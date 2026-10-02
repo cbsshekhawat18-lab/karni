@@ -39,11 +39,20 @@ def test_bases_line_matches_real_exports() -> None:
     from karni.accounts.models import AbstractKarniUser  # noqa: F401
     from karni.admin import KarniModelAdmin  # noqa: F401
     from karni.api import BaseViewSet  # noqa: F401
-    from karni.models import BaseModel, SoftDeleteModel  # noqa: F401
+    from karni.models import (  # noqa: F401
+        AuditedModel,
+        BaseModel,
+        SoftDeleteModel,
+        TimestampedModel,
+        UUIDModel,
+    )
 
     resolved = {
         "BaseModel",
+        "UUIDModel",
+        "TimestampedModel",
         "SoftDeleteModel",
+        "AuditedModel",
         "BaseViewSet",
         "KarniModelAdmin",
         "AbstractKarniUser",

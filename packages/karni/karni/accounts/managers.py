@@ -12,12 +12,20 @@ from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth.base_user import BaseUserManager
 
+from karni.managers import BaseQuerySet, SoftDeleteManagerMixin
+
 if TYPE_CHECKING:
     from karni.accounts.models import AbstractKarniUser
 
 
-class KarniUserManager(BaseUserManager):
+class KarniUserManager(SoftDeleteManagerMixin, BaseUserManager.from_queryset(BaseQuerySet)):  # type: ignore[misc]
     """Creates users keyed by email — there is no username field.
+
+    Soft-delete aware like every ``BaseModel`` manager: deleted users are
+    invisible to ``get_by_natural_key``, so they cannot authenticate, and
+    ``objects.all_with_deleted()`` reaches them. A deleted user's email stays
+    reserved (``USERNAME_FIELD`` must be unique) — ``restore()`` the user, or
+    ``hard_delete()`` to free the address.
 
     ``use_in_migrations`` is True (like Django's own ``UserManager``) so data
     migrations can call ``create_user`` on historical models.

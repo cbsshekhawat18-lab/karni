@@ -40,12 +40,19 @@ DEFAULT_MAX_EXPAND_DEPTH = 2
 """Fallback for ``settings.KARNI_API_MAX_EXPAND_DEPTH`` when it is unset."""
 
 
+#: Audit FKs from ``AuditedModel``; never auto-expandable.
+AUDIT_RELATIONS = frozenset({"created_by", "updated_by"})
+
+
 def auto_expandable_fields(model: type[Model]) -> dict[str, str]:
     """Return the automatically expandable relations of ``model``.
 
     Every forward ``ForeignKey``, ``OneToOneField`` and ``ManyToManyField``
     is expandable under its own field name (an identity mapping of expand key
-    to relation name). Reverse relations are never included automatically.
+    to relation name). Reverse relations are never included automatically, nor
+    are the ``AuditedModel`` fields ``created_by``/``updated_by`` — expanding them
+    would embed user records in every response; list them in
+    ``expandable_fields`` to opt in deliberately.
 
     Override / escape hatch: set ``expandable_fields`` on the viewset to
     replace this mapping entirely — restrict keys, alias them, or add reverse
@@ -54,6 +61,8 @@ def auto_expandable_fields(model: type[Model]) -> dict[str, str]:
     result: dict[str, str] = {}
     for field in model._meta.get_fields():
         if getattr(field, "auto_created", False):
+            continue
+        if field.name in AUDIT_RELATIONS:
             continue
         if isinstance(field, ForeignKey | ManyToManyField):
             result[field.name] = field.name

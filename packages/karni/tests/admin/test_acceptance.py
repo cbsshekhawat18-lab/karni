@@ -16,6 +16,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from karni.admin.soft_delete import SoftDeleteListFilter
 from tests.adminapp.models import Category, KitchenSink, Note
 
 CHANGELIST_URL = reverse("admin:adminapp_kitchensink_changelist")
@@ -28,7 +29,9 @@ def test_kitchen_sink_is_fully_configured_with_zero_admin_code(
     assert type(model_admin)._karni_generated
 
     assert list(model_admin.list_display) == ["name", "slug", "email", "url", "count", "price"]
+    # A BaseModel is soft-deletable, so the "deleted" filter leads.
     assert list(model_admin.list_filter) == [
+        SoftDeleteListFilter,
         "featured",
         "status",
         ("category", admin.RelatedOnlyFieldListFilter),
@@ -37,7 +40,14 @@ def test_kitchen_sink_is_fully_configured_with_zero_admin_code(
     ]
     assert list(model_admin.search_fields) == ["name", "slug", "email", "url", "blurb"]
     assert model_admin.date_hierarchy == "published_on"
-    assert list(model_admin.readonly_fields) == ["id", "created_at", "updated_at"]
+    assert list(model_admin.readonly_fields) == [
+        "id",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+        "created_by",
+        "updated_by",
+    ]
     assert list(model_admin.autocomplete_fields) == ["category", "tags"]
     (inline,) = model_admin.inlines
     assert inline.model is Note

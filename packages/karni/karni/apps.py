@@ -30,6 +30,8 @@ class KarniAppConfig(AppConfig):
         """Validate the merged Django settings unless ``KARNI_VALIDATE`` is False."""
         from django.conf import settings
 
+        from karni import checks  # noqa: F401 - registers Karni's system checks
+
         if getattr(settings, "KARNI_VALIDATE", True):
             from karni.conf.validation import validate_settings
 

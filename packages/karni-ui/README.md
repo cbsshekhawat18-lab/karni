@@ -14,8 +14,11 @@ plus the themable primitives they are built from — without regenerating boiler
   Tabs, DropdownMenu, Skeleton: Radix-based, token-themed, `forwardRef`,
   `className`-mergeable.
 
-The package is **ESM-only** and ships ES modules plus `.d.ts` files; your bundler
-resolves the peer dependencies.
+The package ships **dual ESM/CJS** output plus `.d.ts` files: `import` resolves
+`dist/index.js`, `require()` resolves `dist/index.cjs` (same for
+`@karni/ui/tailwind-preset`, whose CJS form exposes the preset as `.default`).
+The `@karni/ui/eslint-plugin` export stays ESM-only (flat config). Peer
+dependencies are resolved by your bundler or by Node.
 
 ## Install
 

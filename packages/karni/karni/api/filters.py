@@ -30,10 +30,11 @@ def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
     """Field names eligible for filter derivation under the ``APIMeta`` policy.
 
     Mirrors the serializer-generation convention: the effective field set is
-    ``APIMeta.fields`` when declared (else every concrete + many-to-many field)
-    minus ``APIMeta.exclude``. Fields in ``APIMeta.write_only`` and fields
-    named ``"password"`` are never filterable — filters must not leak values
-    the API never reads back.
+    ``APIMeta.fields`` when declared (else every concrete + many-to-many field
+    except ``deleted_at``, which the generated API never exposes) minus
+    ``APIMeta.exclude``. Fields in ``APIMeta.write_only`` and fields named
+    ``"password"`` are never filterable — filters must not leak values the
+    API never reads back.
     """
     api_meta = getattr(model, "APIMeta", None)
     declared = getattr(api_meta, "fields", None)
@@ -43,7 +44,9 @@ def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
         effective = frozenset(declared)
     else:
         effective = frozenset(
-            field.name for field in (*model._meta.concrete_fields, *model._meta.many_to_many)
+            field.name
+            for field in (*model._meta.concrete_fields, *model._meta.many_to_many)
+            if field.name != "deleted_at"
         )
     return frozenset(name for name in effective - excluded - write_only if name != "password")
 

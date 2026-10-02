@@ -7,14 +7,17 @@ The contract's prescribed test app, one model (or pair) per behaviour:
   choices char, FK, M2M, file, image, extra non-pk uuid), with more
   display-worthy fields than the ``list_display`` cap;
 * ``Category`` / ``Tag2`` — searchable FK and M2M targets (autocomplete);
-* ``Note`` — soft-delete model, ``AdminMeta.inline_on`` child of
-  ``KitchenSink`` that stays registered itself;
+* ``Note`` — *standalone* ``SoftDeleteModel`` (integer pk, no timestamps or
+  audit users), ``AdminMeta.inline_on`` child of ``KitchenSink`` that stays
+  registered itself;
 * ``Citation`` — points at the soft-delete ``Note`` (FK widening, alive-only
   autocomplete, hard-delete cascade);
 * ``Tuned`` — the full ``AdminMeta`` override surface from the contract
   (including ``read_only`` and ``extra={"list_per_page": 10}``);
-* ``Memo`` — soft-delete model whose explicit ``AdminMeta.list_filter`` must
-  still get the "deleted" filter prepended;
+* ``Memo`` — standalone soft-delete model whose explicit
+  ``AdminMeta.list_filter`` must still get the "deleted" filter prepended;
+* ``Ledger`` — every Karni mixin *except* soft delete (the append-only
+  composition): no soft-delete admin, filter or actions;
 * ``ApiCredential`` — password-named field kept out of displays and forms;
 * ``Hidden`` — ``AdminMeta.exclude = True`` skips registration;
 * ``Metric`` / ``Reading`` — plain-Django FK target with no searchable
@@ -32,7 +35,7 @@ import uuid
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
 
-from karni.models import BaseModel, SoftDeleteModel
+from karni.models import AuditedModel, BaseModel, SoftDeleteModel, TimestampedModel, UUIDModel
 
 
 class Category(BaseModel):
@@ -98,7 +101,11 @@ class KitchenSink(BaseModel):
 
 
 class Note(SoftDeleteModel):
-    """Soft-delete subject, inlined on ``KitchenSink`` via ``inline_on``."""
+    """Standalone soft-delete subject, inlined on ``KitchenSink`` via ``inline_on``.
+
+    Only the soft-delete mixin: integer pk, ``deleted_at`` and nothing else
+    from Karni — the admin must work without timestamps or audit users.
+    """
 
     title = models.CharField(max_length=200)
     body = models.TextField(blank=True)
@@ -189,6 +196,20 @@ class Memo(SoftDeleteModel):
 
     def __str__(self) -> str:
         return self.subject
+
+
+class Ledger(UUIDModel, TimestampedModel, AuditedModel):
+    """Append-only composition: every Karni mixin except soft delete.
+
+    Its derived admin must not get the soft-delete mixin, filter or actions,
+    while the audit fields still stay read-only and out of the displays.
+    """
+
+    entry = models.CharField(max_length=200)
+    settled = models.BooleanField(default=False)
+
+    def __str__(self) -> str:
+        return self.entry
 
 
 class ApiCredential(BaseModel):

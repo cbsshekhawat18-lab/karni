@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import typer
 
@@ -11,7 +12,7 @@ from karni_cli.project import CliError, require_project, venv_python
 from karni_cli.upgrades import UPGRADES, applicable
 
 
-def _installed_version(project, docker: bool | None, service: str) -> str:
+def _installed_version(project: Path, docker: bool | None, service: str) -> str:
     code = "import karni; print(karni.__version__)"
     mode = project_mod.resolve_execution(project, docker, service)
     if mode == "venv":

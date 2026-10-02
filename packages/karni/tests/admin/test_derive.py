@@ -29,6 +29,7 @@ from tests.adminapp.models import (
     Citation,
     Hidden,
     KitchenSink,
+    Ledger,
     Memo,
     Metric,
     Note,
@@ -93,7 +94,10 @@ class TestListDisplay:
 
 class TestListFilter:
     def test_booleans_choices_fks_then_dates(self) -> None:
+        # KitchenSink is a BaseModel, hence soft-deletable: the "deleted"
+        # filter leads, then the derived order. Audit FKs never qualify.
         assert derive_list_filter(KitchenSink) == [
+            SoftDeleteListFilter,
             "featured",
             "status",
             ("category", admin.RelatedOnlyFieldListFilter),
@@ -108,11 +112,18 @@ class TestListFilter:
         assert derive_list_filter(Memo) == [SoftDeleteListFilter]
 
     def test_soft_delete_models_get_the_deleted_filter_first(self) -> None:
+        # Standalone SoftDeleteModel and BaseModel alike.
         assert derive_list_filter(Note) == [
             SoftDeleteListFilter,
             ("kitchen", admin.RelatedOnlyFieldListFilter),
         ]
-        assert derive_list_filter(KitchenSink)[0] is not SoftDeleteListFilter
+        assert derive_list_filter(KitchenSink)[0] is SoftDeleteListFilter
+
+    def test_models_without_soft_delete_get_no_deleted_filter(self) -> None:
+        # Ledger composes every Karni mixin except SoftDeleteModel; its
+        # created_at is audit metadata, so only the boolean qualifies.
+        assert derive_list_filter(Ledger) == ["settled"]
+        assert derive_list_filter(Metric) == []
 
 
 class TestSearchFields:
@@ -140,7 +151,12 @@ class TestDateHierarchy:
 
     def test_falls_back_to_created_at(self) -> None:
         assert derive_date_hierarchy(Category) == "created_at"
-        assert derive_date_hierarchy(Note) == "created_at"
+        assert derive_date_hierarchy(Ledger) == "created_at"
+
+    def test_audit_dates_never_become_the_hierarchy(self) -> None:
+        # A standalone SoftDeleteModel's only date is deleted_at (audit
+        # metadata), and it has no created_at to fall back to.
+        assert derive_date_hierarchy(Note) is None
 
     def test_none_without_any_date_field(self) -> None:
         assert derive_date_hierarchy(Metric) is None
@@ -148,12 +164,24 @@ class TestDateHierarchy:
 
 class TestReadonlyFields:
     def test_audit_fields_present_on_the_model(self) -> None:
-        assert derive_readonly_fields(KitchenSink) == ("id", "created_at", "updated_at")
-        assert derive_readonly_fields(Note) == (
+        # BaseModel: all four mixins' fields, in MRO declaration order.
+        assert derive_readonly_fields(KitchenSink) == (
             "id",
             "created_at",
             "updated_at",
             "deleted_at",
+            "created_by",
+            "updated_by",
+        )
+        # Standalone SoftDeleteModel: its auto pk and deleted_at only.
+        assert derive_readonly_fields(Note) == ("id", "deleted_at")
+        # Mixin composition without soft delete.
+        assert derive_readonly_fields(Ledger) == (
+            "id",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
         )
 
     def test_only_audit_names_present_on_the_model_are_listed(self) -> None:

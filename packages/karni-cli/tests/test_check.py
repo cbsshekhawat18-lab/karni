@@ -37,8 +37,13 @@ def test_no_frontend_flag_skips_duplication(runner, tmp_path, monkeypatch) -> No
     (tmp_path / "manage.py").write_text("")
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
-    called = []
-    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: called.append(p) or 1)
+    called: list[Path] = []
+
+    def fake_frontend(p: Path) -> int:
+        called.append(p)
+        return 1
+
+    monkeypatch.setattr(check_mod, "_frontend_duplication", fake_frontend)
     assert runner.invoke(app, ["check", "--no-frontend"]).exit_code == 0
     assert called == []
 

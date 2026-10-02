@@ -155,6 +155,9 @@ BASE: dict[str, Any] = {
         "django.middleware.common.CommonMiddleware",
         "django.middleware.csrf.CsrfViewMiddleware",
         "django.contrib.auth.middleware.AuthenticationMiddleware",
+        # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
+        # so JWT users authenticated later inside DRF views are seen too.
+        "karni.middleware.CurrentUserMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "django_structlog.middlewares.RequestMiddleware",

@@ -44,6 +44,8 @@ _SKIP_FIELDS: frozenset[str] = frozenset(
         "created_at",
         "updated_at",
         "deleted_at",
+        "created_by",
+        "updated_by",
         "password",
         "last_login",
         "is_superuser",
@@ -55,7 +57,10 @@ _SKIP_FIELDS: frozenset[str] = frozenset(
 #: Karni base classes, versioned with this package (guarded by an import test).
 BASES: tuple[str, ...] = (
     "BaseModel",
+    "UUIDModel",
+    "TimestampedModel",
     "SoftDeleteModel",
+    "AuditedModel",
     "BaseViewSet",
     "KarniModelAdmin",
     "AbstractKarniUser",

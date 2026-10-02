@@ -23,7 +23,9 @@ from django.db import models
 from karni.admin.soft_delete import SoftDeleteListFilter
 from karni.models import SoftDeleteModel
 
-AUDIT_FIELDS = frozenset({"id", "created_at", "updated_at", "deleted_at"})
+AUDIT_FIELDS = frozenset(
+    {"id", "created_at", "updated_at", "deleted_at", "created_by", "updated_by"}
+)
 """Field names treated as audit metadata: hidden from displays, kept read-only.
 
 Override / escape hatch: per model, set explicit values on ``class AdminMeta``
@@ -211,6 +213,8 @@ def derive_autocomplete_fields(model: type[models.Model], site: admin.AdminSite)
     relations: list[models.Field] = [*model._meta.fields, *model._meta.many_to_many]
     for field in relations:
         if not isinstance(field, models.ForeignKey | models.ManyToManyField):
+            continue
+        if _skip_always(field):
             continue
         target = field.remote_field.model
         target_admin: Any = site._registry.get(target)

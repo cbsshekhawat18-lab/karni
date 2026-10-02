@@ -41,5 +41,7 @@ def flush_expired_tokens() -> dict[str, int | bool]:
         call_command("flushexpiredtokens")
         blacklist_flushed = True
 
-    deleted, _per_model = OneTimeToken.objects.filter(expires_at__lt=timezone.now()).delete()
+    deleted, _per_model = (
+        OneTimeToken.objects.all_with_deleted().filter(expires_at__lt=timezone.now()).hard_delete()
+    )
     return {"jwt_blacklist_flushed": blacklist_flushed, "one_time_tokens_deleted": deleted}
