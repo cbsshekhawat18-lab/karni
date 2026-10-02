@@ -33,10 +33,78 @@ curl http://localhost:8000/health/ready/
 Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `/api/schema/`, Swagger UI at `/api/docs/`.
 
-## Using a local karni checkout
+## Frontend
 
-Until karni is published to PyPI, vendor a checkout into the project and point
-the `KARNI_SRC` build arg at it (docker-compose reads it from `.env`):
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni):
+`src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
+`AuthProvider`, the router and a `Toaster`; `src/main.tsx` imports
+`@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
+(Tailwind v3 with the `@karni/ui/tailwind-preset`, see `tailwind.config.ts`).
+Every route renders inside `src/layout.tsx` — @karni/ui's `Layout` with one
+nav entry per static route in `src/routes.tsx`, so pages from
+`karni make page` (or `karni make model ... -a`) appear in the sidebar.
+
+```sh
+cd frontend
+npm install
+npm run dev     # http://localhost:5173 — proxies /api and /health to Django
+npm run build   # tsc + vite build into frontend/dist
+npm run lint    # ESLint with the karni/* enforcement rules
+```
+
+The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`);
+docker compose sets `KARNI_API_PROXY=http://django:8000` for its container.
+
+## Using a local Karni checkout
+
+Until karni and @karni/ui are published, a project can run against a Karni
+checkout.
+
+**@karni/ui.** `karni new` resolves it like the project template:
+`KARNI_UI_SRC=/path/to/Karni/packages/karni-ui` > the Karni checkout `karni`
+itself runs from > the npm release (`^0.1.0`). A local source is written into
+`frontend/package.json` as `"@karni/ui": "file:/abs/path/to/packages/karni-ui"`,
+and `frontend/.npmrc` (`install-links=true`) installs it as a packed copy —
+exactly like the npm release, so React and TanStack Query exist once. The copy
+ships the checkout's built `dist/` (`karni new` builds it when missing). The
+copy is a snapshot — a plain `npm install` does not notice a rebuilt checkout.
+After changing @karni/ui, rebuild it and refresh the copy:
+
+```sh
+(cd /path/to/Karni/packages/karni-ui && npm run build)
+(cd frontend && rm -rf node_modules/@karni/ui && npm install)
+# docker compose: docker compose exec frontend rm -rf node_modules/@karni/ui
+#                 docker compose restart frontend
+```
+
+Under docker compose the `frontend` container runs `npm install` on start and
+gets the checkout mounted read-only at the same absolute path, so the `file:`
+spec resolves inside the container too (the mount is in `docker-compose.yml`
+when `karni new` found a local @karni/ui). The container ignores
+`package-lock.json`, which records the checkout relative to the host's
+`frontend/`. Moving the checkout means updating both `frontend/package.json`
+and that mount, or running `karni new` again.
+
+Without Docker, run everything on the host: export `.env` with local services
+(`DATABASE_URL=sqlite:///db.sqlite3`, `REDIS_URL=redis://127.0.0.1:6379/0`),
+then `karni serve --local` for Django and `npm run dev` in `frontend/`:
+
+```sh
+set -a && . ./.env && set +a
+karni migrate && karni serve --local    # http://127.0.0.1:8000
+(cd frontend && npm run dev)            # http://localhost:5173, in a second shell
+```
+
+**karni (Python).** For the host `.venv` (`karni serve --local`,
+`karni migrate`, ...), install the checkout next to the project's other
+dependencies:
+
+```sh
+uv venv && uv pip install -e /path/to/Karni/packages/karni -r pyproject.toml
+```
+
+For Docker, vendor a checkout into the project and point the `KARNI_SRC`
+build arg at it (docker-compose reads it from `.env`):
 
 ```sh
 cp -r /path/to/Karni/packages/karni ./.karni-src

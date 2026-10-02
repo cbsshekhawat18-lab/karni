@@ -1,3 +1,4 @@
+import { Page } from "@karni/ui";
 import { useEffect, useState } from "react";
 import { fetchHealth, type Health } from "../api/health";
 
@@ -9,19 +10,19 @@ export default function HomePage() {
     }, []);
 
     return (
-        <main>
-            <h1>{{ cookiecutter.project_name }}</h1>
-            <p>
-                Vite + React dev server is running. API requests to{" "}
-                <code>/api</code> and <code>/health</code> are proxied to
-                Django.
+        <Page
+            title="{{ cookiecutter.project_name }}"
+            description="Vite + React dev server. Requests to /api and /health are proxied to Django."
+        >
+            <p className="text-sm">
+                Backend readiness:{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5">{health}</code>
             </p>
-            <p>
-                Backend readiness: <code>{health}</code>
+            <p className="text-sm">
+                <a className="font-medium underline underline-offset-4" href="/api/docs/">
+                    API docs
+                </a>
             </p>
-            <p>
-                <a href="/api/docs/">API docs</a>
-            </p>
-        </main>
+        </Page>
     );
 }

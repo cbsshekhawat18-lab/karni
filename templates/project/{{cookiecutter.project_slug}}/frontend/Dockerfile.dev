@@ -1,9 +1,17 @@
-# Dev-only image for the Vite dev server (docker-compose bind-mounts the
-# source over /app and keeps the image's node_modules via an anonymous volume).
+# Dev-only image for the Vite dev server. docker-compose bind-mounts the
+# source over /app and keeps node_modules in a named volume.
+#
+# Dependencies install when the container STARTS, not at image build: a local
+# @karni/ui ("file:<path>" in package.json, written by `karni new` from a Karni
+# checkout) lives outside this build context and is only reachable through
+# the read-only mount docker-compose.yml adds at that same path. Installing on
+# start also keeps the node_modules volume in sync with package.json.
+#
+# --no-package-lock: the host's package-lock.json records a local @karni/ui
+# relative to the host's frontend/ directory, which does not hold from /app;
+# the container resolves from package.json and never rewrites the host lock.
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json ./
-RUN npm install
 COPY . .
 EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["sh", "-c", "npm install --no-package-lock --no-audit --no-fund && exec npm run dev -- --host"]

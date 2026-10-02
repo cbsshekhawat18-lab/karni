@@ -41,9 +41,24 @@ def generated_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def _no_ambient_templates_env(monkeypatch: pytest.MonkeyPatch):
-    for var in ("KARNI_TEMPLATES", "KARNI_AGENT_SOURCE"):
+    for var in ("KARNI_TEMPLATES", "KARNI_AGENT_SOURCE", "KARNI_UI_SRC"):
         if var in os.environ:
             monkeypatch.delenv(var)
+
+
+@pytest.fixture(autouse=True)
+def _no_npm(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`karni new` never runs npm in the suite (an unbuilt checkout would build @karni/ui).
+
+    The stub fails like a missing npm, so `karni new` warns and carries on;
+    tests of the build path replace it.
+    """
+    from karni_cli import scaffold
+
+    def no_npm(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 127, stdout="", stderr="npm disabled in tests")
+
+    monkeypatch.setattr(scaffold, "run_npm", no_npm)
 
 
 # --- history providers: the suite runs with none, and none spawns anything --------------
