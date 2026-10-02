@@ -1,4 +1,0 @@
-Canonical agent rules live in AGENTS.md at the project root. Read AGENTS.md
-before any work and follow it exactly. Do not duplicate its content here —
-AGENTS.md is the single source of truth (CLAUDE.md and this file only point
-to it, so the three can never drift).

@@ -1,4 +1,4 @@
-.PHONY: up down migrate types check context test logs
+.PHONY: up down migrate types check context rules agents test logs
 
 up:
 	docker compose up -d
@@ -15,6 +15,14 @@ types:
 
 check:
 	karni check
+	karni rules sync --check
+
+# Agent guidance: conventions, and regenerating AGENTS.md / CLAUDE.md / tool adapters.
+rules:
+	karni rules
+
+agents:
+	karni rules sync
 
 context:
 	karni context

@@ -16,6 +16,10 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+# `karni mcp`: the official MCP Python SDK (MCPServer in 2.x, FastMCP in 1.x).
+mcp = ["mcp>=1.2"]
+
 [project.scripts]
 karni = "karni_cli.main:run"
 
@@ -24,10 +28,10 @@ test = ["pytest>=8.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["karni_cli"]
-artifacts = ["karni_cli/_templates/"]
+artifacts = ["karni_cli/_templates/", "karni_cli/_agent/"]
 
 [tool.hatch.build.targets.sdist]
-artifacts = ["karni_cli/_templates/"]
+artifacts = ["karni_cli/_templates/", "karni_cli/_agent/"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"

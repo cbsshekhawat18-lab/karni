@@ -4,6 +4,11 @@ Every rule fails a build — nothing warns. Every rule has an explicit, inline
 opt-out that requires a reason, because rules without escape hatches cause
 forks, and a fork is worse than a duplicate.
 
+Each enforced rule also has a stable agent-facing code (`K101`…`K205`) in
+Karni's rule registry: `karni rules` lists them, `karni rules --explain
+<code>` gives the rationale and fix, and `karni rules --check <file>` runs a
+fast single-file subset of these checks. See [Karni for AI agents](agents.md).
+
 ## Backend rules (karni.testing)
 
 Run in CI as `pytest --pyargs karni.testing.architecture`, and on every

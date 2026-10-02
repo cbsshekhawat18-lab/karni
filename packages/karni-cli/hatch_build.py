@@ -3,6 +3,10 @@
 From the monorepo, ../../templates/project is copied to karni_cli/_templates/
 project so sdists are self-contained. Building a wheel FROM an sdist finds the
 copy already in-tree and no-ops — never a missing-source error.
+
+The same applies to Karni's stdlib-only agent rules (packages/karni/karni/
+agent -> karni_cli/_agent): the fallback `karni rules` / `karni new` use when
+karni itself is not importable and no project interpreter is reachable.
 """
 
 from __future__ import annotations
@@ -32,3 +36,18 @@ class TemplateBundleHook(BuildHookInterface):
                 "nor a bundled karni_cli/_templates copy exists."
             )
         build_data.setdefault("artifacts", []).append("karni_cli/_templates/")
+
+        agent_bundle = pkg_root / "karni_cli" / "_agent"
+        agent_source = pkg_root.parent / "karni" / "karni" / "agent"
+        if agent_source.is_dir():
+            if agent_bundle.exists():
+                shutil.rmtree(agent_bundle)
+            shutil.copytree(
+                agent_source, agent_bundle, ignore=shutil.ignore_patterns("__pycache__")
+            )
+        elif not agent_bundle.is_dir():
+            raise RuntimeError(
+                "No agent rules available: neither the monorepo packages/karni/karni/agent "
+                "nor a bundled karni_cli/_agent copy exists."
+            )
+        build_data["artifacts"].append("karni_cli/_agent/")

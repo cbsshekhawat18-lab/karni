@@ -16,6 +16,7 @@ htmlcov/
 dist/
 build/
 packages/karni-cli/karni_cli/_templates/
+packages/karni-cli/karni_cli/_agent/
 
 # Node
 node_modules/

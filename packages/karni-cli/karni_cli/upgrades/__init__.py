@@ -24,7 +24,7 @@ class Upgrade:
     apply: Callable[[Path, bool], list[str]]
 
 
-#: Registered mechanical migrations. Empty in v0.1 — machinery + tests only.
+#: Registered mechanical migrations, appended below (never edited in place).
 UPGRADES: list[Upgrade] = []
 
 
@@ -32,3 +32,24 @@ def applicable(installed: str) -> list[Upgrade]:
     version = Version(installed)
     matches = [u for u in UPGRADES if version in u.from_spec]
     return sorted(matches, key=lambda u: Version(u.to_version))
+
+
+def _register() -> None:
+    from karni_cli.upgrades.agent_guidance import migrate_agent_guidance
+
+    # Detection-based and idempotent, so it applies to every 0.x project: it
+    # only touches agent files that are recognisably Karni's old hand-written ones.
+    UPGRADES.append(
+        Upgrade(
+            from_spec=SpecifierSet(">=0.1.0"),
+            to_version="0.1.0",
+            description=(
+                "agent guidance: AGENTS.md/CLAUDE.md/.cursorrules/.claude/commands -> "
+                "karni.rules.py + generated adapters"
+            ),
+            apply=migrate_agent_guidance,
+        )
+    )
+
+
+_register()

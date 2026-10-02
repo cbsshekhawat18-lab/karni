@@ -12,6 +12,7 @@ from karni_cli.upgrades import Upgrade, applicable
 def test_empty_registry_short_circuits_without_probe(runner, tmp_path, monkeypatch) -> None:
     # no manage.py, no project — must still succeed because nothing is registered
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(upgrade_mod, "UPGRADES", [])
     called = False
 
     def probe(*a, **k):

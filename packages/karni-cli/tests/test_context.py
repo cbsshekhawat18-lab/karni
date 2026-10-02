@@ -5,7 +5,13 @@ import subprocess
 from pathlib import Path
 
 from karni_cli import project as project_mod
-from karni_cli.commands.context import assemble, find_manifest, manifest_lines
+from karni_cli.commands.context import (
+    apps_line,
+    assemble,
+    find_manifest,
+    manifest_lines,
+    pages_line,
+)
 from karni_cli.main import app
 
 BACKEND = (
@@ -73,3 +79,55 @@ def test_budget_for_ten_model_project() -> None:
         [],
     )
     assert len(output) < 800
+
+
+def test_apps_and_pages_are_read_statically(generated_project: Path) -> None:
+    settings = generated_project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text().replace(
+            '    # "myapp",\n',
+            '    # "commented",\n    "events",\n    "apps.billing.apps.BillingConfig",\n'
+            '    "karni_payments",\n',
+        )
+    )
+    (generated_project / "events").mkdir()
+    (generated_project / "apps" / "billing").mkdir(parents=True)
+    assert apps_line(generated_project) == "APPS: events(events/) billing(apps/billing/)"
+
+    pages = generated_project / "frontend" / "src" / "pages"
+    (pages / "events").mkdir(parents=True)
+    (pages / "home.tsx").write_text("")
+    (pages / "events" / "edit.tsx").write_text("")
+    (pages / "home.test.tsx").write_text("")
+    assert pages_line(generated_project) == "PAGES: events/edit home"
+
+
+def test_context_prepends_apps_and_appends_pages(
+    runner, generated_project: Path, monkeypatch
+) -> None:
+    settings = generated_project / "config" / "settings.py"
+    settings.write_text(settings.read_text().replace('    # "myapp",\n', '    "events",\n'))
+    (generated_project / "events").mkdir()
+    (generated_project / "frontend" / "src" / "pages").mkdir(parents=True)
+    (generated_project / "frontend" / "src" / "pages" / "events.tsx").write_text("")
+    monkeypatch.chdir(generated_project)
+    monkeypatch.setattr(
+        project_mod,
+        "run_manage",
+        lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
+    )
+    result = runner.invoke(app, ["context"])
+    assert result.exit_code == 0, result.output
+    keys = [line.split(":")[0] for line in result.output.strip().split("\n")]
+    assert keys == ["APPS", "MODELS", "VIEWSETS", "PAGES", "MODULES", "BASES"]
+
+
+def test_context_failure_exits_nonzero(runner, tmp_path: Path, monkeypatch) -> None:
+    (tmp_path / "manage.py").write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        project_mod,
+        "run_manage",
+        lambda *a, **k: subprocess.CompletedProcess([], 3, stdout="", stderr="boom\n"),
+    )
+    assert runner.invoke(app, ["context"]).exit_code == 1

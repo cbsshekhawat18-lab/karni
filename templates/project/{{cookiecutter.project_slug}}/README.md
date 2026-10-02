@@ -60,6 +60,16 @@ Add new apps to `INSTALLED_APPS` in `config/settings.py`; override any Django,
 DRF, Celery or Karni setting in the same file, below the `karni_settings()`
 call.
 
+## AI coding agents
+
+`karni new` generated thin agent adapters — `AGENTS.md`, `CLAUDE.md`,
+`.cursor/rules/karni.mdc`, `.windsurf/rules/karni.md`,
+`.github/copilot-instructions.md`, `.clinerules/karni.md`, `CONVENTIONS.md`,
+`.junie/AGENTS.md` and slash commands. They all say the same thing: run
+`karni context` and `karni rules` first. Do not edit them; put project rules
+in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
+are stale). `karni mcp` serves the same surface over MCP.
+
 ## Production
 
 The `prod` Dockerfile target builds a slim, non-root image that runs

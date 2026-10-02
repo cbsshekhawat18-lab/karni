@@ -1,0 +1,160 @@
+# Agent adapter registry for `karni rules sync`.
+#
+# One entry per tool convention. Renaming a file or changing a frontmatter key
+# is an edit here, not a code change. Projects can disable entries or move
+# paths from karni.rules.py:  ADAPTERS = {"disable": [...], "paths": {...}}.
+#
+# Every adapter says the same thing: run `karni context` and `karni rules`
+# first, then follow what they return. The content lives in karni.agent.rules
+# (packages/karni/karni/agent/rules.py); these files are thin pointers.
+#
+# Templates (implemented in karni_cli/adapters.py):
+#   instructions  - the shared ~15-line body (+ optional YAML frontmatter)
+#   import        - an `@<file>` import of another adapter (Claude Code)
+#   command       - one file per procedure (slash commands / prompt files)
+#
+# Each entry records where its convention was verified, and when. Re-verify
+# before a release: these conventions change.
+
+[defaults]
+max_lines = 100
+
+# --- instruction adapters -----------------------------------------------------
+
+[[adapter]]
+id = "agents-md"
+tool = "AGENTS.md (canonical: Codex, Jules, Gemini CLI, Zed, Warp, Devin; also read by Cursor, Copilot, Windsurf, Cline, Junie)"
+path = "AGENTS.md"
+template = "instructions"
+modules = true
+# Source: https://agents.md/ (verified 2026-10-02). Plain Markdown at the
+# repository root, no required fields or frontmatter; the nearest AGENTS.md in
+# the directory tree wins.
+
+[[adapter]]
+id = "claude"
+tool = "Claude Code"
+path = "CLAUDE.md"
+template = "import"
+import = "agents-md"
+# Source: https://code.claude.com/docs/en/memory (verified 2026-10-02). When a
+# CLAUDE.md exists Claude Code reads it INSTEAD of AGENTS.md by default; the
+# documented way to share one file is a CLAUDE.md containing `@AGENTS.md`
+# (imports expand at launch; block-level HTML comments are stripped).
+
+[[adapter]]
+id = "cursor"
+tool = "Cursor"
+path = ".cursor/rules/karni.mdc"
+template = "instructions"
+frontmatter = { description = "Karni project conventions: run karni context and karni rules before any work", globs = "", alwaysApply = true }
+# Source: https://cursor.com/docs/context/rules (verified 2026-10-02). Project
+# rules are .mdc files in .cursor/rules with frontmatter keys description,
+# globs, alwaysApply (alwaysApply: true = every session). The legacy
+# .cursorrules file is no longer documented. Cursor also reads AGENTS.md.
+
+[[adapter]]
+id = "windsurf"
+tool = "Windsurf (Cascade; now documented as Devin Desktop)"
+path = ".windsurf/rules/karni.md"
+template = "instructions"
+frontmatter = { trigger = "always_on" }
+# Source: https://docs.devin.ai/desktop/cascade/memories (docs.windsurf.com
+# redirects there; verified 2026-10-02). Workspace rules are one Markdown file
+# per rule in .devin/rules/ (preferred) or .windsurf/rules/, frontmatter
+# `trigger: always_on|model_decision|glob|manual`, 12,000 chars per file. The
+# single-file .windsurfrules is legacy ("also still read"). .windsurf/rules/
+# is used because both Windsurf and Devin Desktop read it.
+
+[[adapter]]
+id = "copilot"
+tool = "GitHub Copilot"
+path = ".github/copilot-instructions.md"
+template = "instructions"
+# Source: https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions
+# (verified 2026-10-02). Repository-wide instructions: .github/copilot-instructions.md,
+# natural-language Markdown, no frontmatter. Copilot also reads AGENTS.md.
+
+[[adapter]]
+id = "cline"
+tool = "Cline"
+path = ".clinerules/karni.md"
+template = "instructions"
+# Source: https://docs.cline.bot/features/cline-rules (verified 2026-10-02).
+# Workspace rules are Markdown files inside the .clinerules/ (or .cline/rules/)
+# DIRECTORY; optional `paths` frontmatter scopes a rule (none = always on).
+# Cline also reads AGENTS.md.
+
+[[adapter]]
+id = "aider"
+tool = "Aider"
+path = "CONVENTIONS.md"
+template = "instructions"
+note = "Aider does not load this file by itself: run `aider --read CONVENTIONS.md`, or add `read: CONVENTIONS.md` to .aider.conf.yml."
+# Source: https://aider.chat/docs/usage/conventions.html (verified 2026-10-02).
+# Not auto-loaded: `aider --read CONVENTIONS.md`, or `read: CONVENTIONS.md` in
+# .aider.conf.yml (the body says so; karni never writes your aider config).
+
+[[adapter]]
+id = "junie"
+tool = "JetBrains Junie"
+path = ".junie/AGENTS.md"
+template = "instructions"
+modules = true
+# Source: https://junie.jetbrains.com/docs/guidelines-and-memory.html
+# (verified 2026-10-02). Lookup order: .junie/AGENTS.md, then root AGENTS.md
+# (+ .junie/rules/*.md), then the LEGACY .junie/guidelines.md. A file at
+# .junie/guidelines.md would never be read while AGENTS.md exists, so the
+# preferred .junie/AGENTS.md is generated; it shadows the root file for Junie,
+# hence `modules = true` (same module guidance as AGENTS.md).
+
+# --- command targets (one file per procedure) ---------------------------------
+# `arguments` replaces {arguments} in the procedure's first line.
+
+[[commands]]
+id = "claude-commands"
+tool = "Claude Code"
+dir = ".claude/commands"
+suffix = ".md"
+arguments = "$ARGUMENTS"
+frontmatter = ["description", "argument-hint"]
+# Source: https://code.claude.com/docs/en/slash-commands (verified 2026-10-02).
+# .claude/commands/<name>.md creates /<name> (merged into skills; still
+# supported). Frontmatter description, argument-hint; $ARGUMENTS substitution.
+
+[[commands]]
+id = "cursor-commands"
+tool = "Cursor"
+dir = ".cursor/commands"
+suffix = ".md"
+arguments = "the request typed after the command"
+frontmatter = []
+# Source: Cursor commands docs (docs.cursor.com/en/agent/chat/commands now
+# redirects to the docs index; corroborated by forum.cursor.com threads,
+# verified 2026-10-02). .cursor/commands/<name>.md, plain Markdown, NO
+# frontmatter, invoked as /<name>.
+
+[[commands]]
+id = "windsurf-workflows"
+tool = "Windsurf"
+dir = ".windsurf/workflows"
+suffix = ".md"
+arguments = "the request typed after the command"
+frontmatter = ["description"]
+# Source: https://docs.devin.ai/desktop/cascade/workflows
+# (verified 2026-10-02). Markdown workflows in .devin/workflows/ (preferred) or
+# .windsurf/workflows/ (legacy, still read), invoked as /<name>; title,
+# description and steps; 12,000 chars per file.
+
+[[commands]]
+id = "copilot-prompts"
+tool = "GitHub Copilot (VS Code prompt files)"
+dir = ".github/prompts"
+suffix = ".prompt.md"
+arguments = "${input:request:what to add}"
+frontmatter = ["description", "argument-hint", "agent"]
+agent = "agent"
+# Source: https://code.visualstudio.com/docs/copilot/customization/prompt-files
+# (verified 2026-10-02). .github/prompts/<name>.prompt.md, frontmatter
+# description, name, argument-hint, agent, model, tools; invoked as /<name>;
+# ${input:var:placeholder} collects input.

@@ -103,13 +103,26 @@ jobs:
             --deselect tests/api/test_schema_snapshot.py::test_schema_snapshot_is_current
 
       # -----------------------------------------------------------------------
-      # SLOT: schema snapshot / agent-adapter staleness check.
-      # Owned by the `karni rules sync` work (not wired yet). It will land here
-      # as e.g.:
-      #
-      # - name: Agent rules / adapters are up to date
-      #   run: karni rules sync --check
+      # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a
+      # project, then `karni rules sync --check` fails if any generated adapter
+      # (AGENTS.md, CLAUDE.md, .cursor/rules/karni.mdc, ...) differs from what
+      # the rule registry produces; also fails if the generated procedures
+      # block in docs/agents.md is stale. Projects run the same
+      # `karni rules sync --check` in their own CI (`make check`).
       # -----------------------------------------------------------------------
+      - name: Agent adapters are up to date (karni rules sync --check)
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          karni new "Adapter Check" -o "$work"
+          (cd "$work/adapter_check" && karni rules sync --check)
+          karni rules --prompts-doc > "$work/prompts.md"
+          python - "$work/prompts.md" docs/agents.md <<'PY'
+          import sys
+          block, docs = (open(path).read().strip() for path in sys.argv[1:])
+          if block not in docs:
+              sys.exit("docs/agents.md procedures block is stale: paste `karni rules --prompts-doc`")
+          PY
 
   # ---------------------------------------------------------------------------
   # UI: packages/karni-ui (@karni/ui) and modules/karni-payments/ui.

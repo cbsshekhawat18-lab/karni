@@ -7,7 +7,9 @@ import typer
 from karni_cli.commands.add import add
 from karni_cli.commands.check import check
 from karni_cli.commands.context import context
+from karni_cli.commands.mcp import mcp
 from karni_cli.commands.new import new
+from karni_cli.commands.rules import rules_app
 from karni_cli.commands.types import types
 from karni_cli.commands.upgrade import upgrade
 from karni_cli.project import CliError
@@ -25,6 +27,8 @@ app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(t
 app.command(help="Print a compact machine-readable project inventory")(context)
 app.command(help="Run architecture and system checks")(check)
 app.command(help="Apply mechanical migrations between Karni versions")(upgrade)
+app.add_typer(rules_app, name="rules")
+app.command(help="Serve context, rules and check as MCP tools (needs karni-cli[mcp])")(mcp)
 
 
 def run() -> None:

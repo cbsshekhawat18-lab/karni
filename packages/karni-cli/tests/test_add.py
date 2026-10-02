@@ -83,6 +83,7 @@ def test_add_without_installed_module_prints_run_again_hint(
     assert result.exit_code == 0, result.output
     assert "run `karni add payments` again after installing" in result.output
     assert "karni:module:payments" not in (generated_project / "AGENTS.md").read_text()
+    assert not (generated_project / ".karni" / "modules").exists()
 
 
 def test_add_merges_agents_fragment_through_project_interpreter(
@@ -105,12 +106,22 @@ def test_add_merges_agents_fragment_through_project_interpreter(
     assert "importlib.resources" in command[2]
     assert "karni_payments" in command[2]
 
-    agents = (generated_project / "AGENTS.md").read_text()
-    assert "<!-- karni:module:payments -->" in agents
-    assert "<!-- /karni:module:payments -->" in agents
-    assert "go through karni_payments.services" in agents
-    # The template's own guidance is untouched.
-    assert "karni context" in agents
+    # Recorded in the project (source of truth for module guidance) ...
+    recorded = generated_project / ".karni" / "modules" / "payments.md"
+    assert recorded.read_text() == FRAGMENT
+    # ... and rendered into the canonical adapters between markers.
+    for rel in ("AGENTS.md", ".junie/AGENTS.md"):
+        agents = (generated_project / rel).read_text()
+        assert "<!-- karni:module:payments -->" in agents
+        assert "<!-- /karni:module:payments -->" in agents
+        assert "go through karni_payments.services" in agents
+        assert "karni context" in agents  # the generated guidance is still there
+    # Tool-specific thin adapters stay thin; the CLI carries the guidance.
+    assert "karni_payments" not in (generated_project / ".cursor/rules/karni.mdc").read_text()
+    rules = runner.invoke(app, ["rules"])
+    assert rules.exit_code == 0, rules.output
+    assert "[module:payments]" in rules.output
+    assert "go through karni_payments.services" in rules.output
 
 
 def test_agents_fragment_merge_is_idempotent(
@@ -132,16 +143,13 @@ def test_agents_fragment_merge_is_idempotent(
     assert second.count("<!-- karni:module:payments -->") == 1
 
 
-def test_fragment_update_replaces_the_marked_block(tmp_path: Path) -> None:
-    agents = tmp_path / "AGENTS.md"
-    agents.write_text("# Project\n\nkeep me\n")
-    add_command.merge_agents_fragment(agents, "payments", "old guidance\n")
-    add_command.merge_agents_fragment(agents, "payments", "new guidance\n")
-    text = agents.read_text()
-    assert "new guidance" in text
-    assert "old guidance" not in text
-    assert "keep me" in text
-    assert text.count("<!-- karni:module:payments -->") == 1
+def test_fragment_update_replaces_the_recorded_guidance(generated_project: Path) -> None:
+    from karni_cli.adapters import module_fragments
+
+    assert add_command.record_module_fragment(generated_project, "payments", "old guidance\n")
+    assert add_command.record_module_fragment(generated_project, "payments", "new guidance\n")
+    assert not add_command.record_module_fragment(generated_project, "payments", "new guidance")
+    assert module_fragments(generated_project) == {"payments": "new guidance"}
 
 
 def test_failing_subprocess_falls_back_to_the_hint(

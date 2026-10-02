@@ -18,6 +18,7 @@ from importlib import import_module
 from django.apps import AppConfig
 from django.utils.module_loading import module_has_submodule
 
+from karni.agent.check import SqlVisitor, http_client_imports
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -30,7 +31,6 @@ from karni.testing._source import (
 )
 
 VIEWSET_MODULES = ("viewsets", "api", "serializers")
-_HTTP_BANNED = {"requests", "httpx", "urllib.request"}
 
 
 def _project_modules(cfg: AppConfig) -> list[object]:
@@ -156,28 +156,6 @@ def check_admin_convention() -> list[Violation]:
 # --- raw-sql ------------------------------------------------------------------
 
 
-class _SqlVisitor(ast.NodeVisitor):
-    def __init__(self) -> None:
-        self.hits: list[tuple[int, str]] = []
-        self._rawsql_names = {"RawSQL"}
-
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        for alias in node.names:
-            if alias.name == "RawSQL":
-                self._rawsql_names.add(alias.asname or alias.name)
-        self.generic_visit(node)
-
-    def visit_Call(self, node: ast.Call) -> None:
-        func = node.func
-        if isinstance(func, ast.Attribute) and func.attr in {"raw", "execute", "executemany"}:
-            self.hits.append((node.lineno, f".{func.attr}(...)"))
-        elif isinstance(func, ast.Name) and func.id in self._rawsql_names:
-            self.hits.append((node.lineno, "RawSQL(...)"))
-        elif isinstance(func, ast.Attribute) and func.attr in self._rawsql_names:
-            self.hits.append((node.lineno, "RawSQL(...)"))
-        self.generic_visit(node)
-
-
 def check_raw_sql() -> list[Violation]:
     allowed = config("sql_allowed")
     violations: list[Violation] = []
@@ -189,7 +167,7 @@ def check_raw_sql() -> list[Violation]:
                 tree = ast.parse(path.read_text())
             except (OSError, SyntaxError):
                 continue
-            visitor = _SqlVisitor()
+            visitor = SqlVisitor()
             visitor.visit(tree)
             for lineno, what in visitor.hits:
                 violations += check_optout(
@@ -220,30 +198,19 @@ def check_http_client() -> list[Violation]:
                 tree = ast.parse(path.read_text())
             except (OSError, SyntaxError):
                 continue
-            for node in ast.walk(tree):
-                names: list[tuple[int, str]] = []
-                if isinstance(node, ast.Import):
-                    names = [(node.lineno, a.name) for a in node.names]
-                elif isinstance(node, ast.ImportFrom) and node.module:
-                    names = [(node.lineno, node.module)] + [
-                        (node.lineno, f"{node.module}.{a.name}") for a in node.names
-                    ]
-                for lineno, name in names:
-                    if name in _HTTP_BANNED or any(
-                        name.startswith(f"{banned}.") for banned in _HTTP_BANNED
-                    ):
-                        violations += check_optout(
-                            path,
-                            "http-client",
-                            [lineno],
-                            Violation(
-                                rule="http-client",
-                                location=f"{relative(path)}:{lineno}",
-                                message=f"direct HTTP client import: {name}",
-                                hint="call it from a */services/* module instead",
-                            ),
-                        )
-                        break
+            # One finding per import statement, shared with `karni rules --check`.
+            for lineno, name in http_client_imports(tree):
+                violations += check_optout(
+                    path,
+                    "http-client",
+                    [lineno],
+                    Violation(
+                        rule="http-client",
+                        location=f"{relative(path)}:{lineno}",
+                        message=f"direct HTTP client import: {name}",
+                        hint="call it from a */services/* module instead",
+                    ),
+                )
     return violations
 
 

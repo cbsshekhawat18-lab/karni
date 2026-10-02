@@ -38,7 +38,7 @@ karni-<x>/
     models.py              # on karni.models.BaseModel / SoftDeleteModel
     viewsets.py            # on karni.api.BaseViewSet (auto-registered)
     migrations/            # real, committed migrations
-    AGENTS.fragment.md     # agent guidance merged into project AGENTS.md
+    AGENTS.fragment.md     # agent guidance surfaced by `karni rules` + AGENTS.md
     urls.py                # OPTIONAL — only for non-API URLs (webhooks etc.)
   tests/                   # standalone suite with its own settings module
 ```
@@ -142,8 +142,11 @@ Contents: what the module provides, the one `urls.py` include line (if any),
 the env vars, and the module's hard rules (karni-payments: "never call
 provider SDKs directly", "never trust client amounts"). `karni add <x>`
 reads it through the **project's** interpreter
-(`importlib.resources.files("karni_<x>")`) and splices it into the project's
-`AGENTS.md` between markers:
+(`importlib.resources.files("karni_<x>")`) and records it in the project as
+`.karni/modules/<x>.md` (committed). From there it reaches agents through
+the CLI — `karni rules` prints it under `[module:<x>]` — and through the
+generated adapters: `karni rules sync` renders it into `AGENTS.md` (and
+`.junie/AGENTS.md`) between markers:
 
 ```
 <!-- karni:module:<x> -->
@@ -151,9 +154,9 @@ reads it through the **project's** interpreter
 <!-- /karni:module:<x> -->
 ```
 
-The merge is idempotent (re-running `karni add` replaces the block). If the
+Recording is idempotent (re-running `karni add` replaces the file). If the
 module is not installed yet, `karni add` tells the user to run it again
-after installing.
+after installing. See [Karni for AI agents](agents.md).
 
 ### 6. Optional `urls.py` — explicit include, documented
 
@@ -231,9 +234,10 @@ A module's UI package (`@karni/<x>-ui` or your own scope):
    `pyproject.toml` (idempotent, parsed — never string-matched);
 2. inserts `"karni_<x>"` into the `# karni:apps` marker block in
    `config/settings.py` (idempotent);
-3. merges `AGENTS.fragment.md` into the project's `AGENTS.md` between the
-   module's markers (through the project interpreter; prints "run again
-   after installing" when the module is not importable yet);
+3. records `AGENTS.fragment.md` as `.karni/modules/<x>.md` (read through
+   the project interpreter; prints "run again after installing" when the
+   module is not importable yet) and refreshes the agent adapters, so
+   `karni rules` and `AGENTS.md` carry the module's guidance;
 4. prints the `urls.py` include line and the install + `make migrate`
    reminder. `karni add` never touches the network — the user installs.
 
