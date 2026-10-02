@@ -85,12 +85,13 @@ when `karni new` found a local @karni/ui). The container ignores
 `frontend/`. Moving the checkout means updating both `frontend/package.json`
 and that mount, or running `karni new` again.
 
-Without Docker, run everything on the host: export `.env` with local services
-(`DATABASE_URL=sqlite:///db.sqlite3`, `REDIS_URL=redis://127.0.0.1:6379/0`),
-then `karni serve --local` for Django and `npm run dev` in `frontend/`:
+Without Docker, run everything on the host. Point `.env` at local services
+(`DATABASE_URL=sqlite:///db.sqlite3`, `REDIS_URL=redis://127.0.0.1:6379/0`);
+settings.py loads it automatically (variables you already exported win; set
+`KARNI_DOTENV=false` to skip it). Then `karni serve --local` for Django and
+`npm run dev` in `frontend/`:
 
 ```sh
-set -a && . ./.env && set +a
 karni migrate && karni serve --local    # http://127.0.0.1:8000
 (cd frontend && npm run dev)            # http://localhost:5173, in a second shell
 ```

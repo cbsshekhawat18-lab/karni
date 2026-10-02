@@ -43,8 +43,10 @@ JSX_SUFFIXES = frozenset({".tsx", ".jsx"})
 PAGE_MAX_LINES = 50
 
 _PY_ALLOW = re.compile(r"#\s*karni:\s*allow\(([^)]*)\)\s*(?::\s*(.*))?$")
+# ESLint only honours a directive that opens the comment (`// eslint-disable...`
+# or `/* eslint-disable... */`); prose that merely mentions it is not one.
 _ESLINT_DIRECTIVE = re.compile(
-    r"eslint-disable(?P<kind>-next-line|-line)?\s+(?P<rules>[^*\n]*?)\s*(?:--\s*(?P<reason>.*?))?\s*(?:\*/)?\s*$"
+    r"^(?://|/\*)\s*eslint-disable(?P<kind>-next-line|-line)?\s+(?P<rules>[^*\n]*?)\s*(?:--\s*(?P<reason>.*?))?\s*(?:\*/)?\s*$"
 )
 
 
