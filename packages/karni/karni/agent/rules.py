@@ -335,12 +335,50 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Viewsets inherit BaseViewSet (model = X).",
         rule=(
-            "Viewsets inherit `karni.api.BaseViewSet` — usually just `model = X` "
-            "(+ `search_fields`); the auto-router registers it."
+            "Viewsets inherit `karni.api.BaseViewSet` — usually just `model = X` plus its "
+            "`access` declaration (K109) (+ `search_fields`); the auto-router registers it."
         ),
         rationale="BaseViewSet derives serializer, filters, pagination, permissions and schema.",
         fix="Inherit karni.api.BaseViewSet and set `model = X`.",
         enforced_by=("viewset-base",),
+    ),
+    Rule(
+        code="K109",
+        category="backend",
+        severity="error",
+        summary="Viewsets declare access.",
+        rule=(
+            "Every `BaseViewSet` declares `access = Access(read=..., write=...)` "
+            '(`create=` defaults to `write`), built from `Owned("<fk to user>")`, '
+            "`HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` "
+            "combined with `|` / `&`. Reads are public only when you write `Public()`. A "
+            "viewset without `access` denies every request; `Unscoped(reason=...)` is the "
+            "explicit opt-out."
+        ),
+        rationale=(
+            "One declaration compiles into both the request gate and the row filter, so "
+            "neither can be forgotten; a forgotten permission class fails open silently."
+        ),
+        fix="Add `access = Access(read=..., write=...)` (e.g. write=Authenticated()).",
+        enforced_by=("viewset-access",),
+    ),
+    Rule(
+        code="K110",
+        category="backend",
+        severity="error",
+        summary="Row rules belong in access.",
+        rule=(
+            "Express who sees which rows in `access` (`Where(...)` for custom logic, "
+            "`@action(..., access=...)` for one action). An overridden `get_queryset` is "
+            "still read-scoped — never use it to widen. Overriding `filter_queryset_for_user` "
+            "needs `# karni: allow(access-override): <why>`."
+        ),
+        rationale=(
+            "The queryset is the authoritative layer: lists, details, actions, relation "
+            "PKs and ?expand= all go through the read scope, so a bypass leaks everywhere."
+        ),
+        fix="Move the condition into access (Where(lambda request: Q(...))), or add the marker.",
+        enforced_by=("access-override",),
     ),
     Rule(
         code="K103",
@@ -480,16 +518,19 @@ PROCEDURES: tuple[Procedure, ...] = (
             "`class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, "
             "read-only or write-only. Do NOT write an admin, serializer or router.",
             "In the same app's `viewsets.py`: `class XViewSet(BaseViewSet): model = X` "
-            "(+ `search_fields` if searchable). The auto-router registers it; admin, "
-            "filters, schema are derived.",
+            "plus `access = Access(read=..., write=...)` saying who reads and who writes "
+            '(e.g. `read=Owned("owner") | HasRole("staff"), write=Owned("owner")`; '
+            "`Public()` only for deliberately public reads) (+ `search_fields` if "
+            "searchable). The auto-router registers it; admin, filters, schema are derived.",
             "`make migrate && karni types`",
-            "Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works.",
+            "Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works "
+            "for a caller `access` admits and is refused (401/403) or empty for one it does not.",
         ),
         outro=(
             "Total new code should be well under 20 lines. If it isn't, stop — you are "
             "reimplementing something Karni provides."
         ),
-        rules=("K101", "K102", "K108", "K302", "K305", "K003"),
+        rules=("K101", "K102", "K109", "K108", "K302", "K305", "K003"),
     ),
     Procedure(
         name="new-page",

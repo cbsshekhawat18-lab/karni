@@ -132,14 +132,21 @@ existence through unique-email 400s — documented and accepted.
 Roles are plain Django groups with thin helpers in
 `karni.accounts.permissions`: `assign_role(user, name)`,
 `remove_role(user, name)`, `user_roles(user)`, `has_role(user, *names)`.
-DRF pieces:
+On a `karni.api.BaseViewSet` use the `access` declaration —
+`HasRole("staff")` and `Owned("user")` there are backed by these helpers (role
+names are looked up once per request); see
+[Access control](api.md#access-control). For plain DRF views:
 
 - `RolePermission.for_roles("staff", "editor")` → a permission class.
 - `IsOwner` — object permission comparing `obj.<view.owner_field>`
   (default `"user"`, `user_id` fallback) to `request.user`.
 - `ObjectPermissionsMixin` — `owner_field`, `object_permission_classes` and a
-  `filter_queryset_for_user(qs)` hook, consumed by `karni.api.BaseViewSet`.
-  (A deliberate staged exception to the three-occurrences rule.)
+  `filter_queryset_for_user(qs)` hook. `BaseViewSet` still inherits it: the
+  hook runs after the access read scope (overriding it needs
+  `# karni: allow(access-override): <reason>`), and `object_permission_classes`
+  on a `BaseViewSet` is deprecated (removed in 1.0; it still runs after the
+  access object check). (A deliberate staged exception to the
+  three-occurrences rule.)
 
 `me/` includes `roles: list[str]` (read-only) so frontends can gate UI on
 roles without a second request.

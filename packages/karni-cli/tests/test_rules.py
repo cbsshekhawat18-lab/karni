@@ -71,7 +71,7 @@ def test_check_exit_codes(runner, monkeypatch) -> None:
     bad = runner.invoke(app, ["rules", "--check", "app/bad_models.py"])
     assert bad.exit_code == 1
     assert "app/bad_models.py:" in bad.output and "fix:" in bad.output
-    for code in ("K101", "K102", "K103", "K104", "K105", "K106", "K005"):
+    for code in ("K101", "K102", "K103", "K104", "K105", "K106", "K109", "K110", "K005"):
         assert code in bad.output, code
 
     page = runner.invoke(app, ["rules", "--check", "frontend/src/pages/bad_page.tsx"])

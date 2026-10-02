@@ -7,31 +7,29 @@ looks). Per amendment G1:
 
 * both are **read-only**: ``create``/``update``/``partial_update``/
   ``destroy`` raise ``MethodNotAllowed`` (no ``http_method_names`` games);
-* payments are never anonymously readable (``IsAuthenticated``);
-* lists/details are owner-scoped via ``filter_queryset_for_user`` — holders
-  of the ``payments-admin`` role bypass the scoping;
-* ``checkout`` is a ``detail=False`` action, ``refund`` a ``detail=True``
-  action gated on the ``payments-admin`` role, both with explicit
-  input/output serializers and ``@extend_schema`` (the schema drives
-  @karni/ui's typed hooks).
+* access is one declaration per viewset (ADR 0001 Decision 2): payments are
+  never anonymously readable, lists/details are owner-scoped, and holders of
+  the ``payments-admin`` role bypass the owner scope
+  (``read=Owned("user") | HasRole("payments-admin")``);
+* ``checkout`` is a ``detail=False`` action (it inherits ``write``: any
+  authenticated user, for their own payment), ``refund`` a ``detail=True``
+  action gated on the ``payments-admin`` role with ``@action(access=...)``;
+  both have explicit input/output serializers and ``@extend_schema`` (the
+  schema drives @karni/ui's typed hooks).
 
 Override / escape hatches: all the standard Karni/DRF ones — subclass and
-override ``permission_classes`` / ``filter_queryset_for_user`` / the
-actions; swap the role name by overriding ``admin_role``; set
-``auto_register = False`` on a subclass and register your own.
+redeclare ``access`` (e.g. to use another role name), override the actions;
+set ``auto_register = False`` on a subclass and register your own.
 """
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
-from django.db.models import QuerySet
 from drf_spectacular.utils import extend_schema
-from karni.accounts.permissions import RolePermission, has_role
-from karni.api import BaseViewSet
+from karni.api import Access, BaseViewSet, HasRole, Owned
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -48,6 +46,8 @@ __all__ = ["PAYMENTS_ADMIN_ROLE", "PaymentViewSet", "RefundViewSet"]
 
 PAYMENTS_ADMIN_ROLE = "payments-admin"
 """Role (Django auth group) granting refund rights and unscoped reads."""
+
+_PAYMENTS_ADMIN = HasRole(PAYMENTS_ADMIN_ROLE)
 
 
 class _ReadOnlyModelMixin:
@@ -75,22 +75,11 @@ class PaymentViewSet(_ReadOnlyModelMixin, BaseViewSet):
     """Owner-scoped, read-only payments plus the checkout/refund actions."""
 
     model = Payment
-    permission_classes = [IsAuthenticated]
-    admin_role: ClassVar[str] = PAYMENTS_ADMIN_ROLE
-
-    def filter_queryset_for_user(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
-        """Owner scoping with a ``payments-admin`` bypass (amendment G1).
-
-        The pattern for role-gated detail actions × owner scoping: admins
-        must reach *any* payment (the refund action calls ``get_object()``,
-        which runs through this filter), everyone else only their own.
-        """
-        user = self.request.user
-        if not user.is_authenticated:
-            return queryset.none()
-        if has_role(user, self.admin_role):
-            return queryset
-        return queryset.filter(user=user)
+    # Role-gated detail actions × owner scoping: the admin role must be in
+    # `read`, because the refund action's get_object() looks the payment up
+    # through the read scope. `user` (the owner) is read-only in the
+    # generated serializer; checkout stamps it server-side.
+    access = Access(read=Owned("user") | _PAYMENTS_ADMIN, write=Owned("user"))
 
     @extend_schema(
         request=CheckoutInputSerializer,
@@ -120,11 +109,7 @@ class PaymentViewSet(_ReadOnlyModelMixin, BaseViewSet):
             "remainder). Requires the payments-admin role."
         ),
     )
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[RolePermission.for_roles(PAYMENTS_ADMIN_ROLE)],
-    )
+    @action(detail=True, methods=["post"], access=_PAYMENTS_ADMIN)
     def refund(self, request: Request, pk: str | None = None) -> Response:
         """``POST /api/payments/{id}/refund/`` → ``services.create_refund``."""
         payment = self.get_object()
@@ -141,18 +126,13 @@ class PaymentViewSet(_ReadOnlyModelMixin, BaseViewSet):
 class RefundViewSet(_ReadOnlyModelMixin, BaseViewSet):
     """Read-only refunds, gated on the ``payments-admin`` role.
 
+    ``HasRole`` is both the request gate (non-admins get 403) and the row
+    policy (non-admins would see no rows even if the gate were swapped).
+
     Override / escape hatch: to let customers list their own refunds,
-    subclass with ``permission_classes = [IsAuthenticated]`` and an
-    owner-scoping ``filter_queryset_for_user`` over ``payment__user``.
+    subclass with ``access = Access(read=Owned("payment__user") |
+    HasRole("payments-admin"), write=HasRole("payments-admin"))``.
     """
 
     model = Refund
-    permission_classes = [RolePermission.for_roles(PAYMENTS_ADMIN_ROLE)]
-    admin_role: ClassVar[str] = PAYMENTS_ADMIN_ROLE
-
-    def filter_queryset_for_user(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
-        """Defence in depth: even with permissions swapped, non-admins see nothing."""
-        user = self.request.user
-        if user.is_authenticated and has_role(user, self.admin_role):
-            return queryset
-        return queryset.none()
+    access = Access(read=_PAYMENTS_ADMIN, write=_PAYMENTS_ADMIN)

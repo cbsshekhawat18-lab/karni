@@ -9,7 +9,18 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   ``BaseViewSet`` registered with the default router;
 * ``x-karni-relation: {"resource": "<router prefix>", "many": bool}`` on
   every relation field of a generated serializer whose target model has a
-  registered route (omitted silently otherwise).
+  registered route (omitted silently otherwise);
+* ``x-karni-access`` on every ``BaseViewSet`` operation: the access
+  predicate governing that operation (ADR 0001 Decision 2), e.g.
+  ``{"any": [{"owned": "organizer"}, {"role": ["staff"]}]}``. Keys:
+  ``public``, ``authenticated``, ``role`` (any of the names), ``owned``
+  (owner path), ``where`` (custom function name), ``any`` / ``all``
+  (``|`` / ``&``), ``unscoped`` (the reason) and ``deny`` (no declaration).
+  Display hints for clients only — the server enforces.
+
+Operations whose access predicate can admit anonymous callers (``Public``,
+``Where``, or a combination containing them) list the empty security
+requirement ``{}``, as drf-spectacular does for ``AllowAny``.
 
 The ``search`` parameter is contributed by ``KarniSearchFilter``; ordering
 and pagination parameters come from their native classes untouched. v0.1
@@ -35,6 +46,17 @@ from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.utils import OpenApiParameter
 
+from karni.api.access import (
+    Access,
+    AllOf,
+    AnyOf,
+    Owned,
+    Predicate,
+    Public,
+    Where,
+    action_predicate,
+    describe_access,
+)
 from karni.api.expansion import auto_expandable_fields
 
 __all__ = ["KarniAutoSchema"]
@@ -65,7 +87,7 @@ class KarniAutoSchema(AutoSchema):
         method: str,
         registry: Any,
     ) -> dict[str, Any] | None:
-        """Stock operation plus ``x-karni-resource`` on routed list ops."""
+        """Stock operation plus ``x-karni-resource`` (routed list ops) and ``x-karni-access``."""
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
         if operation is None:
             return None
@@ -73,7 +95,29 @@ class KarniAutoSchema(AutoSchema):
             prefix = _route_for_viewset(type(self.view))
             if prefix is not None:
                 operation["x-karni-resource"] = prefix
+        view = self._karni_view()
+        if view is not None:
+            declaration, predicate = self._karni_access(view)
+            operation["x-karni-access"] = describe_access(declaration, predicate)
         return operation
+
+    def get_auth(self) -> list[Any]:
+        """Stock security requirements, optional (``{}``) where access admits anonymous."""
+        auths = list(super().get_auth())
+        view = self._karni_view()
+        if view is None or {} in auths:
+            return auths
+        _declaration, predicate = self._karni_access(view)
+        if predicate is not None and _admits_anonymous(predicate):
+            auths.append({})
+        return auths
+
+    def _karni_access(self, view: Any) -> tuple[Any, Predicate | None]:
+        """The view's declaration and the predicate governing this operation."""
+        declaration = view.get_access()
+        if not isinstance(declaration, Access):
+            return declaration, None
+        return declaration, action_predicate(view, declaration, method=self.method)
 
     def _karni_view(self) -> Any | None:
         """The view when it is a ``BaseViewSet``, else ``None``."""
@@ -153,6 +197,19 @@ class KarniManyRelatedFieldExtension(OpenApiSerializerFieldExtension):
         return _annotate_relation(schema, self.target, many=True)
 
 
+def _admits_anonymous(predicate: Predicate) -> bool:
+    """Whether ``predicate``'s request gate can pass for an anonymous caller (static)."""
+    if isinstance(predicate, Public | Where):
+        return True
+    if isinstance(predicate, AnyOf):
+        return any(_admits_anonymous(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return all(_admits_anonymous(part) for part in predicate.parts)
+    if isinstance(predicate, Owned) and predicate.bypass is not None:
+        return _admits_anonymous(predicate.bypass)
+    return False
+
+
 def _annotate_relation(schema: Any, field: Any, *, many: bool) -> Any:
     """Attach ``x-karni-relation`` when the target model has a route."""
     if not isinstance(schema, dict):
@@ -222,8 +279,15 @@ def _route_for_viewset(viewset_class: type) -> str | None:
 
 
 def _route_for_model(model: type[Model]) -> str | None:
-    """Router prefix of the first registered viewset serving ``model``."""
-    return _registered_prefix(lambda registered: getattr(registered, "model", None) is model)
+    """Router prefix of the first registered viewset serving ``model``.
+
+    Same model → viewset rule as relation scoping
+    (:func:`karni.api.routers.viewset_for_model`): registry order, the
+    viewset's ``model`` else ``queryset.model``.
+    """
+    from karni.api.routers import serves_model
+
+    return _registered_prefix(lambda registered: serves_model(registered, model))
 
 
 def add_auth_mode(result: dict, generator: object, request: object, public: bool) -> dict:

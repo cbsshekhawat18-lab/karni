@@ -9,6 +9,11 @@ Override / escape hatch: everything is a module-level function or a small
 class designed for subclassing. :class:`ObjectPermissionsMixin` is consumed by
 ``karni.api.BaseViewSet`` and is an explicit staged exception to the
 three-occurrences rule (amendment A11).
+
+On a ``BaseViewSet`` the ``access`` declaration (:mod:`karni.api.access`) is
+the gate and the row policy; its ``HasRole`` predicate is backed by
+:func:`user_roles`. :class:`RolePermission` and :class:`IsOwner` remain the
+building blocks for plain DRF views.
 """
 
 from __future__ import annotations
@@ -147,11 +152,14 @@ class ObjectPermissionsMixin:
     """Object-permission and owner-scoping hooks consumed by ``karni.api.BaseViewSet``.
 
     Deliberately dependency-free (nothing here imports ``karni.api``) so the
-    viewset layer can build on it: ``BaseViewSet.get_queryset()`` pipes its
-    queryset through :meth:`filter_queryset_for_user`, and DRF's per-object
-    check picks up :attr:`object_permission_classes` via the extended
-    :meth:`check_object_permissions`. Mix it into any
-    :class:`rest_framework.views.APIView` subclass.
+    viewset layer can build on it: ``BaseViewSet.get_queryset()`` pipes the
+    access-scoped queryset through :meth:`filter_queryset_for_user` (the
+    escape hatch after ``access``), and DRF's per-object check picks up
+    :attr:`object_permission_classes` via the extended
+    :meth:`check_object_permissions` — after the access object check.
+    Declaring ``object_permission_classes`` on a ``BaseViewSet`` is
+    deprecated (removed in Karni 1.0): express the rule in ``access``. Mix it
+    into any :class:`rest_framework.views.APIView` subclass.
 
     This mixin is an explicit staged exception to the three-occurrences rule
     (amendment A11): it ships before three consumers exist because
@@ -190,9 +198,14 @@ class ObjectPermissionsMixin:
     def filter_queryset_for_user(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
         """Hook to scope list/detail querysets to the requesting user.
 
-        The default returns the queryset unchanged. Override for owner
-        scoping::
+        The default returns the queryset unchanged. On a ``BaseViewSet`` it
+        receives the queryset already narrowed by ``access.read`` and is the
+        escape hatch for row logic ``access`` cannot express; prefer
+        ``Owned(...)`` / ``Where(...)`` there. Overriding it in project code
+        needs ``# karni: allow(access-override): <reason>`` (architecture
+        rule ``access-override``)::
 
+            # karni: allow(access-override): rows come from the billing service
             def filter_queryset_for_user(self, queryset):
                 if not self.request.user.is_authenticated:
                     return queryset.none()

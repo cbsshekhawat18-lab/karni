@@ -134,6 +134,50 @@ def _is_meta_only(cls: ast.ClassDef) -> bool:
     return bool(body) and all(isinstance(s, ast.ClassDef) and s.name == "Meta" for s in body)
 
 
+def _assigned_names(cls: ast.ClassDef) -> set[str]:
+    names: set[str] = set()
+    for stmt in cls.body:
+        if isinstance(stmt, ast.Assign):
+            names |= {t.id for t in stmt.targets if isinstance(t, ast.Name)}
+        elif isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+            names.add(stmt.target.id)
+        elif isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef):
+            names.add(stmt.name)
+    return names
+
+
+def _lacks_access(cls: ast.ClassDef) -> bool:
+    """A routable direct ``BaseViewSet`` subclass (``model``/``queryset``) without ``access``.
+
+    Subclasses of other viewsets inherit their parent's declaration, which a
+    single-file scan cannot see; ``karni check`` judges those.
+    """
+    names = _assigned_names(cls)
+    routable = bool(names & {"model", "queryset"})
+    return routable and not names & {"access", "get_access"}
+
+
+def access_override_defs(tree: ast.AST) -> list[tuple[int, list[int]]]:
+    """``(def line, opt-out marker lines)`` for each ``filter_queryset_for_user`` in a class.
+
+    Shared by the ``access-override`` architecture rule and ``karni rules
+    --check``. Markers count on the ``def`` line, the line above it, or the
+    line above its first decorator.
+    """
+    hits: list[tuple[int, list[int]]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for stmt in node.body:
+            if (
+                isinstance(stmt, ast.FunctionDef | ast.AsyncFunctionDef)
+                and stmt.name == "filter_queryset_for_user"
+            ):
+                first = min([stmt.lineno, *(d.lineno for d in stmt.decorator_list)])
+                hits.append((stmt.lineno, sorted({stmt.lineno, stmt.lineno - 1, first - 1})))
+    return sorted(hits)
+
+
 def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
     tree = ast.parse(text, filename=path)
     model_names = {"models.Model", "django.db.models.Model"}
@@ -175,6 +219,17 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                         _class_lines(node),
                     )
                 )
+            if "BaseViewSet" in short and _lacks_access(node):
+                found.append(
+                    (
+                        _finding(
+                            "viewset-access",
+                            node.lineno,
+                            f"{node.name} declares no `access` — every request is denied",
+                        ),
+                        _class_lines(node),
+                    )
+                )
             if "ModelSerializer" in short and _is_meta_only(node):
                 found.append(
                     (
@@ -202,6 +257,18 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                     [node.lineno, node.lineno - 1],
                 )
             )
+
+    for lineno, candidates in access_override_defs(tree):
+        found.append(
+            (
+                _finding(
+                    "access-override",
+                    lineno,
+                    "filter_queryset_for_user overridden — express row rules in `access`",
+                ),
+                candidates,
+            )
+        )
 
     if not _matches(path, SQL_ALLOWED):
         visitor = SqlVisitor()

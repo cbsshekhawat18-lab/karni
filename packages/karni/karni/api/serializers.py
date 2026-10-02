@@ -25,7 +25,10 @@ subclasses it is stripped even from an explicit ``APIMeta.fields`` while
 
 Relations serialize as writable primary keys by default; relations named in
 ``expand`` become nested read-only serializers built recursively (a cycle or
-the depth limit stops nesting at the primary key).
+the depth limit stops nesting at the primary key). A writable relation only
+accepts primary keys of rows the requester can read through the target
+model's routed viewset (ADR 0001 Q2.5, see
+:class:`KarniPrimaryKeyRelatedField`).
 
 Override / escape hatch: set ``serializer_class`` on the viewset to bypass
 generation entirely, declare ``APIMeta`` for per-model tweaks, or subclass
@@ -39,7 +42,7 @@ from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 from django.test.signals import setting_changed
 from rest_framework import serializers
 from rest_framework.relations import (
@@ -67,14 +70,31 @@ USER_FORCED_READ_ONLY = frozenset(
 class KarniPrimaryKeyRelatedField(PrimaryKeyRelatedField):
     """``PrimaryKeyRelatedField`` used by Karni-generated serializers.
 
-    Behaviourally identical to the stock field; it exists so that
-    drf-spectacular extensions can annotate exactly the relations of
-    generated serializers with the ``x-karni-relation`` vendor extension
-    (see :mod:`karni.api.schema`).
+    Two differences from the stock field:
+
+    * **Scoped PK validation** (ADR 0001 Q2.5): :meth:`get_queryset` narrows
+      the target model's default manager to the rows the requester may read
+      through the target's routed viewset (its ``access.read`` and
+      ``filter_queryset_for_user``; see
+      :func:`karni.api.access.target_read_scope`). A PK outside that scope
+      fails exactly like a PK that does not exist, so a client can neither
+      link an object it cannot read nor probe for its existence. A target
+      with no routed viewset has no row policy (default manager only); with
+      no request in the serializer context nothing is narrowed.
+    * drf-spectacular extensions annotate exactly these fields with the
+      ``x-karni-relation`` vendor extension (see :mod:`karni.api.schema`).
 
     Override / escape hatch: set ``serializer_related_field`` on a
-    :class:`KarniModelSerializer` subclass to swap the relation field class.
+    :class:`KarniModelSerializer` subclass to swap the relation field class,
+    or declare the field explicitly with your own ``queryset``.
     """
+
+    def get_queryset(self) -> QuerySet[Any]:
+        """The stock queryset narrowed to what the requester may read."""
+        from karni.api.access import readable
+
+        queryset: QuerySet[Any] = super().get_queryset()
+        return readable(queryset, self.context.get("request"))
 
     @classmethod
     def many_init(cls, *args: Any, **kwargs: Any) -> KarniManyRelatedField:
@@ -139,6 +159,7 @@ def build_serializer(
     expand: frozenset[str] = frozenset(),
     _seen: tuple[type[Model], ...] = (),
     max_depth: int | None = None,
+    read_only: Iterable[str] = (),
 ) -> type[serializers.ModelSerializer]:
     """Build (or fetch from cache) the generated serializer for ``model``.
 
@@ -153,9 +174,13 @@ def build_serializer(
     :param max_depth: nesting depth limit; ``None`` reads the
         ``KARNI_API_MAX_EXPAND_DEPTH`` setting (default 2). Reaching the
         limit stops nesting at the primary key.
+    :param read_only: extra top-level fields forced read-only on top of the
+        ``APIMeta`` policy — ``BaseViewSet`` passes the owner fields of its
+        ``access`` declaration (``Owned("organizer")`` in ``write``), which
+        are stamped server-side. Names outside the field set are ignored.
 
     Caching: only top-level builds (empty ``_seen``) are cached, keyed by
-    ``(model, expand, effective max depth)``; nested and guard-truncated
+    ``(model, expand, effective max depth, read_only)``; nested and guard-truncated
     variants are always built fresh. Cache writes are last-write-wins under
     the GIL and generated classes are pure (no mutable class state), so
     concurrent builds are safe. ``build_serializer.cache_clear()`` empties
@@ -167,20 +192,23 @@ def build_serializer(
     generated.
     """
     expand = frozenset(expand)
+    forced = frozenset(read_only)
     if _seen:
-        return _build_serializer_class(model, expand, tuple(_seen), _resolve_max_depth(max_depth))
+        return _build_serializer_class(
+            model, expand, tuple(_seen), _resolve_max_depth(max_depth), forced
+        )
     depth = _resolve_max_depth(max_depth)
-    key = (model, expand, depth)
+    key = (model, expand, depth, forced)
     cached = _SERIALIZER_CACHE.get(key)
     if cached is not None:
         return cached
-    built = _build_serializer_class(model, expand, (), depth)
+    built = _build_serializer_class(model, expand, (), depth, forced)
     _SERIALIZER_CACHE[key] = built
     return built
 
 
 _SERIALIZER_CACHE: dict[
-    tuple[type[Model], frozenset[str], int], type[serializers.ModelSerializer]
+    tuple[type[Model], frozenset[str], int, frozenset[str]], type[serializers.ModelSerializer]
 ] = {}
 
 
@@ -256,7 +284,10 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
 
 
 def _extra_kwargs(
-    model: type[Model], api_meta: Any, field_names: Iterable[str]
+    model: type[Model],
+    api_meta: Any,
+    field_names: Iterable[str],
+    forced_read_only: frozenset[str] = frozenset(),
 ) -> dict[str, dict[str, Any]]:
     """Build ``Meta.extra_kwargs`` enforcing the read-only/write-only policy."""
     effective = set(field_names)
@@ -278,7 +309,7 @@ def _extra_kwargs(
         "deleted_at",
     } & effective
     forced = (USER_FORCED_READ_ONLY & effective) if _is_user_model(model) else set()
-    read_only_set = set(read_only) | always_read_only | forced
+    read_only_set = set(read_only) | always_read_only | forced | (forced_read_only & effective)
     overlap = sorted(read_only_set & set(write_only))
     if overlap:
         raise ImproperlyConfigured(
@@ -324,11 +355,12 @@ def _build_serializer_class(
     expand: frozenset[str],
     seen: tuple[type[Model], ...],
     max_depth: int,
+    forced_read_only: frozenset[str] = frozenset(),
 ) -> type[serializers.ModelSerializer]:
     """Assemble the serializer class (uncached workhorse)."""
     api_meta = getattr(model, "APIMeta", None)
     field_names = _effective_field_names(model, api_meta)
-    extra_kwargs = _extra_kwargs(model, api_meta, field_names)
+    extra_kwargs = _extra_kwargs(model, api_meta, field_names, forced_read_only)
     effective = set(field_names)
     meta_fields = list(field_names)
     declared: dict[str, Any] = {}

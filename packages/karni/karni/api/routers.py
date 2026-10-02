@@ -23,22 +23,38 @@ returns it. The setting is consumed at first URLconf import (see
 :mod:`karni.api.urls`); overriding it afterwards is a no-op. Per-viewset
 knobs: ``auto_register = False`` opts a viewset out, ``route = "..."``
 replaces the derived prefix.
+
+The same router is Karni's model → viewset map: :func:`viewset_for_model`
+answers "which viewset serves this model?" for relation scoping (a relation
+field validates PKs against its target's routed viewset) and the schema's
+``x-karni-relation`` extension.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+import weakref
 from collections.abc import Iterator
 from importlib import import_module
 from types import ModuleType
 from typing import Any
 
 from django.apps import AppConfig, apps
-from django.utils.module_loading import module_has_submodule
+from django.conf import settings
+from django.test.signals import setting_changed
+from django.utils.module_loading import import_string, module_has_submodule
 from rest_framework.routers import DefaultRouter
 
-__all__ = ["KarniRouter", "get_default_router", "kebab", "pluralize"]
+__all__ = [
+    "KarniRouter",
+    "get_default_router",
+    "kebab",
+    "pluralize",
+    "resolve_router",
+    "serves_model",
+    "viewset_for_model",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +186,84 @@ def get_default_router() -> KarniRouter:
         _default_router = KarniRouter()
     _default_router.autodiscover()
     return _default_router
+
+
+DEFAULT_ROUTER_FACTORY = "karni.api.routers.get_default_router"
+"""Factory used when the ``KARNI_API_ROUTER`` setting is absent."""
+
+_RESOLVED_ROUTERS: dict[str, Any] = {}
+_MODEL_INDEX: weakref.WeakKeyDictionary[Any, tuple[int, dict[type[Any], type[Any]]]] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def resolve_router() -> Any | None:
+    """The router built by the ``KARNI_API_ROUTER`` factory, or ``None``.
+
+    Resolved once per setting value and cached (the cache is dropped when
+    ``override_settings`` changes ``KARNI_API_ROUTER``), so request-time
+    callers such as relation scoping never re-run autodiscovery. ``None``
+    when the factory cannot be imported.
+
+    Override / escape hatch: point ``KARNI_API_ROUTER`` at your own
+    zero-argument factory (see the module docstring).
+    """
+    dotted = getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY)
+    if dotted not in _RESOLVED_ROUTERS:
+        try:
+            factory = import_string(dotted)
+        except ImportError:
+            return None
+        _RESOLVED_ROUTERS[dotted] = factory()
+    return _RESOLVED_ROUTERS[dotted]
+
+
+def _served_model(viewset: type[Any]) -> type[Any] | None:
+    served = getattr(viewset, "model", None)
+    if served is None:
+        served = getattr(getattr(viewset, "queryset", None), "model", None)
+    return served
+
+
+def serves_model(viewset: type[Any], model: type[Any]) -> bool:
+    """True when ``viewset`` serves exactly ``model`` (its ``model``, else ``queryset.model``)."""
+    return _served_model(viewset) is model
+
+
+def viewset_for_model(model: type[Any], router: Any | None = None) -> type[Any] | None:
+    """The first viewset registered on ``router`` that serves ``model``.
+
+    ``router`` defaults to :func:`resolve_router`. "First" is registry order,
+    so an explicitly registered viewset (registered before
+    ``autodiscover()``) wins. ``None`` when no registered viewset serves the
+    model — viewsets with ``auto_register = False`` count only once they are
+    registered explicitly. The per-router index is rebuilt whenever the
+    registry grows.
+    """
+    if router is None:
+        router = resolve_router()
+    registry = getattr(router, "registry", None)
+    if registry is None:
+        return None
+    cached = _MODEL_INDEX.get(router)
+    if cached is None or cached[0] != len(registry):
+        index: dict[type[Any], type[Any]] = {}
+        for _prefix, viewset, _basename in registry:
+            served = _served_model(viewset)
+            if served is not None:
+                index.setdefault(served, viewset)
+        cached = (len(registry), index)
+        _MODEL_INDEX[router] = cached
+    return cached[1].get(model)
+
+
+def _reset_router_cache(sender: object, setting: str, **kwargs: Any) -> None:
+    """Forget resolved routers when ``KARNI_API_ROUTER`` changes (tests)."""
+    if setting == "KARNI_API_ROUTER":
+        _RESOLVED_ROUTERS.clear()
+
+
+setting_changed.connect(_reset_router_cache, dispatch_uid="karni.api.routers.router_cache")
 
 
 def _viewset_modules(app_config: AppConfig) -> Iterator[ModuleType]:

@@ -2,7 +2,7 @@
 # Known-good fixture for `karni rules --check`: Karni-style code, zero findings.
 from django.db import models
 
-from karni.api import BaseViewSet
+from karni.api import Access, Authenticated, BaseViewSet, Owned
 from karni.models import BaseModel, TimestampedModel, UUIDModel
 
 
@@ -24,7 +24,14 @@ class Base(models.Model):
 
 class InvoiceViewSet(BaseViewSet):
     model = Invoice
+    access = Access(read=Owned("created_by"), write=Authenticated())
     search_fields = ["number"]
+
+
+class ArchivedInvoiceViewSet(InvoiceViewSet):
+    # karni: allow(access-override): archived rows are filtered by the retention service
+    def filter_queryset_for_user(self, queryset):
+        return queryset
 
 
 def legacy_report() -> list[Invoice]:

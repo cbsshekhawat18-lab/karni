@@ -62,6 +62,20 @@ def test_detail_of_another_users_payment_is_404(api_client, other_user, user, ma
     assert api_client.get(f"{PAYMENTS}{payment.pk}/").status_code == 404
 
 
+def test_payments_admin_retrieves_any_users_payment(
+    api_client, other_user, admin_user, make_payment
+) -> None:
+    payment = make_payment(user=other_user)
+    api_client.force_authenticate(user=admin_user)
+    assert api_client.get(f"{PAYMENTS}{payment.pk}/").status_code == 200
+
+
+def test_anonymous_refund_is_401(api_client, make_payment) -> None:
+    payment = make_payment(status=Payment.Status.SUCCEEDED)
+    assert api_client.post(f"{PAYMENTS}{payment.pk}/refund/", {}, format="json").status_code == 401
+    assert payment.refunds.count() == 0
+
+
 def test_payment_payload_hides_checkout_internals(api_client, user, make_payment) -> None:
     make_payment(checkout_session_id="test_cs_secret")
     api_client.force_authenticate(user=user)

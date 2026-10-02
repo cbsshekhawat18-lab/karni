@@ -240,8 +240,10 @@ BASE: dict[str, Any] = {
             "rest_framework_simplejwt.authentication.JWTAuthentication",
             "rest_framework.authentication.SessionAuthentication",
         ],
+        # Not the gate of a BaseViewSet: its `access` declaration is (ADR 0001
+        # Q2.1). This fallback covers plain DRF views and Unscoped viewsets only.
         "DEFAULT_PERMISSION_CLASSES": [
-            "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+            "rest_framework.permissions.IsAuthenticated",
         ],
         "DEFAULT_PAGINATION_CLASS": "karni.pagination.KarniPageNumberPagination",
         "PAGE_SIZE": env.int("KARNI_PAGE_SIZE", default=50),

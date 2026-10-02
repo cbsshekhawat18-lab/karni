@@ -21,6 +21,8 @@ and must pass these rules in their own CI.
 |---|---|---|
 | `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` / `SoftDeleteModel` |
 | `viewset-base` | a GenericViewSet subclass bypasses `BaseViewSet` | inherit `karni.api.BaseViewSet` |
+| `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` — inherited declarations and an overridden `get_access()` count | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
+| `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
 | `admin-convention` | a registered admin for a project model isn't a `KarniModelAdmin` | use `AdminMeta` on the model, or subclass `KarniModelAdmin` |
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
@@ -28,12 +30,30 @@ and must pass these rules in their own CI.
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 
-Opt-out (same line, the line above a class, or the line above its first
-decorator; `opt-out-reason` itself cannot be suppressed):
+Opt-out (same line, the line above a class or method, or the line above its
+first decorator; `opt-out-reason` itself cannot be suppressed):
 
 ```python
 # karni: allow(raw-sql): aggregation too complex for the ORM, reviewed 2026-10
 ```
+
+```python
+class InvoiceViewSet(BaseViewSet):
+    model = Invoice
+    access = Access(read=Authenticated(), write=HasRole("billing"))
+
+    # karni: allow(access-override): rows come from the subscription service
+    def filter_queryset_for_user(self, queryset):
+        return queryset.filter(account__in=subscriptions.visible_accounts(self.request.user))
+```
+
+The two access rules guard ADR 0001 Decision 2. `viewset-access` makes a
+forgotten declaration a build failure; at runtime such a viewset already
+denies every request, and opting out of the rule does not change that.
+`access-override` makes widening the row policy visible: the hook receives
+the access-scoped queryset, and only replacing it can widen it. An
+overridden `get_queryset` needs no marker — it is wrapped, so the read scope
+still applies to whatever it returns.
 
 Configuration — `KARNI_ARCHITECTURE` in settings (all keys optional):
 

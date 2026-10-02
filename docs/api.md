@@ -1,26 +1,26 @@
 # karni.api
 
-> **Posture warning — read first.** Every `BaseViewSet` is auto-registered
-> on the API router and, under the default
-> `IsAuthenticatedOrReadOnly` permission, **anonymously readable**. The two
-> knobs: set `permission_classes` on the viewset (or change
-> `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`) to lock reads down, and
-> set `auto_register = False` to keep a viewset off the router.
+> **Posture — read first.** Every `BaseViewSet` must declare `access`; it is
+> the only gate. A viewset without it answers **403 to every request** (the
+> message names the fix) and fails the build (`viewset-access`). Nothing is
+> anonymously readable unless the declaration says `Public()`. Set
+> `auto_register = False` to keep a viewset off the router.
 
-A model becomes a full API resource with three lines:
+A model becomes a full API resource with four lines:
 
 ```python
 # myapp/viewsets.py  (or myapp/api/viewsets.py)
-from karni.api import BaseViewSet
+from karni.api import Access, Authenticated, BaseViewSet, Public
 from myapp.models import Event
 
 class EventViewSet(BaseViewSet):
     model = Event
+    access = Access(read=Public(), write=Authenticated())
     search_fields = ["title"]
 ```
 
-That yields CRUD, filtering, pagination, ordering, search, permissions and a
-correct OpenAPI schema at `/api/events/`. Mount once:
+That yields CRUD, filtering, pagination, ordering, search, access control
+and a correct OpenAPI schema at `/api/events/`. Mount once:
 
 ```python
 # config/urls.py
@@ -29,11 +29,12 @@ path("api/", include("karni.api.urls")),
 
 ## BaseViewSet
 
-Declarative attributes (all optional except `model`):
+Declarative attributes (all optional except `model` and `access`):
 
 | attribute | default | meaning |
 |---|---|---|
 | `model` | — | drives queryset, serializer, filters, route |
+| `access` | — (**required**) | `Access(read=, write=, create=)` or `Unscoped(reason=)` — see [Access control](#access-control) |
 | `serializer_class` | `None` | explicit class **always** beats generation |
 | `queryset` | `model._default_manager.all()` | replace to pre-filter |
 | `search_fields` | `()` | enables `?search=` via the search provider |
@@ -46,8 +47,115 @@ Default ordering: model `Meta.ordering`, else `-created_at` when the field
 exists, else `-pk`. Every normal DRF hook (`get_queryset`,
 `get_serializer_class`, `permission_classes`, `filterset_class`, …) remains
 overridable — `BaseViewSet` is a plain `ModelViewSet` underneath, plus
-`ObjectPermissionsMixin` (`owner_field`, `object_permission_classes`,
-`filter_queryset_for_user`) from `karni.accounts`.
+`ObjectPermissionsMixin` (`filter_queryset_for_user`) from `karni.accounts`.
+Overriding `get_queryset` (with or without `super()`) never loses the access
+scope: `BaseViewSet.__init_subclass__` wraps it.
+
+## Access control
+
+One declaration per viewset (ADR 0001, Decision 2), compiled into **both**
+enforcement layers:
+
+1. a **request gate** — a DRF permission (`karni.api.access.AccessPermission`)
+   that `get_permissions()` always puts first: 401/403 before any query;
+2. a **row filter** — the `read` predicate as a `Q`, applied in
+   `get_queryset()`. It is authoritative: lists, details, custom actions,
+   relation-field PK validation and `?expand=` all go through it.
+
+```python
+from karni.api import Access, Authenticated, BaseViewSet, HasRole, Owned
+
+class EventViewSet(BaseViewSet):
+    model = Event
+    access = Access(
+        read=Owned("organizer") | HasRole("staff"),
+        write=Owned("organizer"),
+        create=Authenticated(),        # organizer is stamped server-side
+    )
+```
+
+The vocabulary is closed — every predicate has a request-level and a
+row-level answer:
+
+| predicate | gate | rows |
+|---|---|---|
+| `Public()` | everyone | all |
+| `Authenticated()` | authenticated users | all (none for anonymous) |
+| `HasRole("a", "b")` | holds any of the roles (Django groups, one query per request) | all for holders, none otherwise |
+| `Owned("organizer")` | authenticated users | `organizer = request.user`; traversals (`"event__organizer"`) and to-many paths (`"members"`, automatic `distinct()`) work; `Owned("pk")` on the user model |
+| `Owned("user", bypass=HasRole("x"))` | same as `Owned("user") \| HasRole("x")` | |
+| `Where(lambda request: Q(...))` | passes (or the function returns a `bool` for both) | the returned `Q` |
+| `a \| b`, `a & b` | any / all | OR / AND of the row filters |
+| `Can("area:action")` | reserved for DB-backed grants — raises today | |
+
+`Owned()` without a field is a class-definition error that names the fix
+(`created_by` only when written explicitly). An `Owned` path that does not
+lead to the user model fails at class definition too. Python's `or`/`and`
+on predicates raise `TypeError` — use `|`/`&`.
+
+Which predicate governs which action:
+
+| action | predicate | out of scope |
+|---|---|---|
+| `list` | `read` | row not listed |
+| `retrieve`, safe custom `@action` | `read` | **404** (the message names the read scope; no existence oracle) |
+| `create` | `create` (default: `write`) | 401/403 at the gate |
+| `update` / `partial_update` / `destroy`, unsafe custom `@action` | `write`, row looked up through `read` | unreadable → **404**; readable but not writable → **403** |
+| `@action(detail=True, methods=["post"], access=HasRole("x"))` | that predicate; the lookup still goes through `read` | as above |
+
+Owner fields: a direct FK to the user model named by `Owned` in `write` or
+`create` is stamped from `request.user` on create (`perform_create`) and is
+read-only in the generated serializer — the body never chooses the owner.
+
+**Posture and DRF permissions.** `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`
+(Karni default: `IsAuthenticated`) is **not** consulted for a viewset with an
+`Access` declaration — the declaration is the gate, so a permissive project
+default cannot open one. `permission_classes` set on a viewset (or an
+`@action`) are ANDed **after** the access gate: they can only narrow. The
+DRF default still covers plain DRF views and `Unscoped` viewsets.
+
+**Model scopes cannot be lifted.** The row filter is only ever `filter()`-ed
+onto the model's default manager, so no predicate (`HasRole` bypasses
+included) can reach soft-deleted rows or, later, another tenant's rows.
+Lifting a model scope takes `Model.objects.without(name, reason=...)`.
+
+**Relations and expansion follow the target's scope.** A writable relation
+field of a generated serializer (`KarniPrimaryKeyRelatedField`) accepts only
+primary keys of rows the requester can read through the **target** model's
+viewset; an out-of-scope PK fails exactly like a missing one. `?expand=`
+embeds only readable rows: to-many levels are scoped `Prefetch`es, and a
+to-one level into a narrowed target becomes a scoped `Prefetch` too (one
+extra query; an unreadable target renders as `null`). The target viewset is
+the **first viewset registered for the target model on the `KARNI_API_ROUTER`
+router** (`karni.api.routers.viewset_for_model`, the same map
+`x-karni-relation` uses); its `access.read` and `filter_queryset_for_user`
+apply, its own `get_queryset` does not. A target with **no routed viewset**
+(`auto_register = False` and not registered explicitly, or simply no
+viewset) is not an API resource and has no row policy: PKs and expansion use
+its default manager, so model scopes still hold. A target whose viewset has
+no `access` accepts no PK and expands to nothing. Serializers used without a
+request in their context (server-side code) are not narrowed.
+
+Escape hatches, least to most drastic:
+
+1. change the declaration;
+2. `Where(...)` for arbitrary row logic, `@action(access=...)` for one action,
+   `get_access()` to compute the declaration per request;
+3. override `filter_queryset_for_user(queryset)` — it receives the
+   access-scoped queryset; the `access-override` rule requires
+   `# karni: allow(access-override): <reason>`;
+4. `access = Unscoped(reason="...")` — no compiled gate, no row policy: the
+   viewset's `permission_classes` (else the DRF default) decide, rows are
+   limited only by model scopes and `filter_queryset_for_user`; the reason is
+   published as `x-karni-access`;
+5. `auto_register = False` plus your own view (the `viewset-base` rule still
+   applies).
+
+Deprecated: `object_permission_classes` on a `BaseViewSet` warns
+(`KarniDeprecationWarning`) and is removed in 1.0 — it still runs, after the
+access object check. Express the rule in `access` instead. `IsOwner`,
+`RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
+(see [accounts](accounts.md#roles-and-object-permissions)).
 
 ## APIMeta — model-side API metadata
 
@@ -112,9 +220,14 @@ untouched.
   and an unknown key answers 400 listing the allowed keys there.
 - Depth is capped by `KARNI_API_MAX_EXPAND_DEPTH` (env, default 2) — deeper
   paths answer 400. Cycles stop at the PK.
-- Expanded relations are automatically `select_related` (FK/O2O paths) or
-  `prefetch_related` (any M2M/reverse segment), so expansion adds no N+1.
+- Expanded relations are automatically `select_related` (FK/O2O paths into
+  targets whose read scope keeps every row) or `prefetch_related` with a
+  scoped `Prefetch` (any M2M/reverse segment, or a narrowed target), so
+  expansion adds no N+1.
 - Expanded nested representations are read-only; writes keep using PKs.
+- Only rows the requester can read are embedded — every level goes through
+  its target's read scope (see [Access control](#access-control)); a to-one
+  target outside it renders as `null`.
 
 v0.1 bound: each distinct expand-set builds (and caches) one serializer
 class; pathological clients can grow that cache breadth-wise. The cap on
@@ -221,7 +334,14 @@ nullable, required from blank/default) and adds:
 - vendor extensions for typed frontends: `x-karni-resource` (router prefix,
   on list operations of auto-registered viewsets), `x-karni-relation`
   (`{"resource", "many"}` on relation fields whose target has a registered
-  route), and `x-karni-auth-mode` at the schema root;
+  route), `x-karni-access` on every `BaseViewSet` operation (the predicate
+  governing it: `{"public": true}`, `{"authenticated": true}`,
+  `{"role": [...]}`, `{"owned": "<path>"}`, `{"where": "<fn>"}`,
+  `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
+  `{"deny": ...}` — display hints only, the server enforces), and
+  `x-karni-auth-mode` at the schema root;
+- operations whose access can admit anonymous callers (`Public`, `Where`)
+  list the empty security requirement `{}`;
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload
   fields keep `format: binary` on the request side.
 

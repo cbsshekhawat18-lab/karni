@@ -18,7 +18,7 @@ from importlib import import_module
 from django.apps import AppConfig
 from django.utils.module_loading import module_has_submodule
 
-from karni.agent.check import SqlVisitor, http_client_imports
+from karni.agent.check import SqlVisitor, access_override_defs, http_client_imports
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -81,12 +81,10 @@ def check_model_base() -> list[Violation]:
 # --- viewset-base -------------------------------------------------------------
 
 
-def check_viewset_base() -> list[Violation]:
+def _viewset_candidates() -> list[type]:
+    """Project viewsets: GenericViewSet subclasses in project modules + the router's."""
     from rest_framework.viewsets import GenericViewSet
 
-    from karni.api import BaseViewSet
-
-    violations: list[Violation] = []
     seen: set[type] = set()
     candidates: list[type] = []
     for cfg in project_app_configs():
@@ -114,7 +112,14 @@ def check_viewset_base() -> list[Violation]:
                 candidates.append(viewset)
     except Exception:  # noqa: BLE001 - registry inspection is best-effort
         pass
-    for cls in candidates:
+    return candidates
+
+
+def check_viewset_base() -> list[Violation]:
+    from karni.api import BaseViewSet
+
+    violations: list[Violation] = []
+    for cls in _viewset_candidates():
         if not issubclass(cls, BaseViewSet):
             violations += _class_violation(
                 cls,
@@ -122,6 +127,65 @@ def check_viewset_base() -> list[Violation]:
                 f"{cls.__name__} bypasses BaseViewSet",
                 "inherit karni.api.BaseViewSet",
             )
+    return violations
+
+
+# --- viewset-access -----------------------------------------------------------
+
+
+def check_viewset_access() -> list[Violation]:
+    """A routable BaseViewSet (``model``/``queryset`` set) with no ``access`` (ADR 0001 Q2.1).
+
+    An inherited declaration counts, and so does an overridden
+    ``get_access()``. Abstract bases without a model are skipped. Opting out
+    only silences the build: at runtime the viewset still denies everything.
+    """
+    from karni.api import BaseViewSet
+
+    violations: list[Violation] = []
+    for cls in _viewset_candidates():
+        if not issubclass(cls, BaseViewSet):
+            continue  # viewset-base reports it
+        if getattr(cls, "access", None) is not None:
+            continue
+        if cls.get_access is not BaseViewSet.get_access:
+            continue
+        if cls.model is None and cls.queryset is None:
+            continue
+        violations += _class_violation(
+            cls,
+            "viewset-access",
+            f"{cls.__name__} declares no access — every request is denied",
+            "add access = Access(read=..., write=...), or Unscoped(reason=...)",
+        )
+    return violations
+
+
+# --- access-override ----------------------------------------------------------
+
+
+def check_access_override() -> list[Violation]:
+    """Every ``filter_queryset_for_user`` override in project code needs a reason (Q2.7)."""
+    violations: list[Violation] = []
+    for cfg in project_app_configs():
+        for path in project_sources(cfg):
+            try:
+                tree = ast.parse(path.read_text())
+            except (OSError, SyntaxError):
+                continue
+            for lineno, candidates in access_override_defs(tree):
+                violations += check_optout(
+                    path,
+                    "access-override",
+                    candidates,
+                    Violation(
+                        rule="access-override",
+                        location=f"{relative(path)}:{lineno}",
+                        message="filter_queryset_for_user is overridden",
+                        hint="express the row rule in access (Where(...)), or add an "
+                        "allow marker with the reason",
+                    ),
+                )
     return violations
 
 
@@ -280,6 +344,8 @@ def check_redundant_serializer() -> list[Violation]:
 ALL_CHECKS = (
     check_model_base,
     check_viewset_base,
+    check_viewset_access,
+    check_access_override,
     check_admin_convention,
     check_raw_sql,
     check_http_client,
@@ -305,6 +371,14 @@ def test_models_inherit_base_model() -> None:
 
 def test_viewsets_inherit_base_viewset() -> None:
     _assert_clean(check_viewset_base())
+
+
+def test_viewsets_declare_access() -> None:
+    _assert_clean(check_viewset_access())
+
+
+def test_access_overrides_state_a_reason() -> None:
+    _assert_clean(check_access_override())
 
 
 def test_admins_follow_the_override_convention() -> None:

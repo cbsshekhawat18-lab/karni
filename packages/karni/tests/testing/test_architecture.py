@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from django.apps import apps as django_apps
@@ -148,6 +150,125 @@ def test_testapp_viewsets_pass(monkeypatch) -> None:
     real = [django_apps.get_app_config("testapp")]
     monkeypatch.setattr(architecture, "project_app_configs", lambda: real)
     assert architecture.check_viewset_base() == []
+
+
+# --- viewset-access -----------------------------------------------------------
+
+VIEWSETS = """
+from karni.api import Access, Authenticated, BaseViewSet, Public
+from tests.testapp.models import Event
+
+
+class Declared(BaseViewSet):
+    model = Event
+    access = Access(read=Public(), write=Authenticated())
+
+
+class Inherits(Declared):
+    pass
+
+
+class Dynamic(BaseViewSet):
+    model = Event
+
+    def get_access(self):
+        return Access(read=Public(), write=Authenticated())
+
+
+class AbstractBase(BaseViewSet):
+    pass
+
+
+class Forgotten(BaseViewSet):
+    model = Event
+
+
+# karni: allow(viewset-access): disabled endpoint, kept for URL stability
+class OptedOut(BaseViewSet):
+    model = Event
+
+
+# karni: allow(viewset-access):
+class NoReason(BaseViewSet):
+    model = Event
+"""
+
+
+@pytest.fixture
+def fake_viewsets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    """Import VIEWSETS from a real file (class source must be retrievable)."""
+    path = tmp_path / "fake_viewsets.py"
+    path.write_text(VIEWSETS)
+    spec = importlib.util.spec_from_file_location("fake_viewsets", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "fake_viewsets", module)
+    spec.loader.exec_module(module)
+    _source._file_lines.cache_clear()
+    classes = [obj for obj in vars(module).values() if isinstance(obj, type)]
+    monkeypatch.setattr(architecture, "_viewset_candidates", lambda: classes)
+    return module
+
+
+def test_viewset_without_access_is_flagged(fake_viewsets: ModuleType) -> None:
+    violations = architecture.check_viewset_access()
+    flagged = sorted(v.message.split()[0] for v in violations if v.rule == "viewset-access")
+    # Declared/Inherits/Dynamic declare access, AbstractBase has no model,
+    # OptedOut carries a reasoned marker; NoReason's marker has no reason.
+    assert flagged == ["Forgotten", "NoReason"]
+    assert [v.rule for v in violations if v.rule == "opt-out-reason"] == ["opt-out-reason"]
+
+
+@pytest.mark.django_db
+def test_testapp_viewsets_declare_access(monkeypatch: pytest.MonkeyPatch) -> None:
+    real = [django_apps.get_app_config("testapp")]
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: real)
+    assert architecture.check_viewset_access() == []
+
+
+# --- access-override ----------------------------------------------------------
+
+OVERRIDE = """
+class EventViewSet(BaseViewSet):
+    model = Event
+
+    def filter_queryset_for_user(self, queryset):
+        return queryset
+"""
+
+
+def test_access_override_detected(tmp_path: Path, as_project) -> None:
+    as_project(fake_app(tmp_path, {"viewsets.py": OVERRIDE}))
+    violations = architecture.check_access_override()
+    assert [v.rule for v in violations] == ["access-override"]
+    assert violations[0].location.endswith("viewsets.py:5")
+
+
+def test_access_override_optout(tmp_path: Path, as_project) -> None:
+    content = OVERRIDE.replace(
+        "    def filter_queryset_for_user",
+        "    # karni: allow(access-override): rows depend on a subscription service\n"
+        "    def filter_queryset_for_user",
+    )
+    as_project(fake_app(tmp_path, {"viewsets.py": content}))
+    assert architecture.check_access_override() == []
+
+
+def test_access_override_optout_needs_a_reason(tmp_path: Path, as_project) -> None:
+    content = OVERRIDE.replace(
+        "    def filter_queryset_for_user(self, queryset):",
+        "    def filter_queryset_for_user(self, queryset):  # karni: allow(access-override):",
+    )
+    as_project(fake_app(tmp_path, {"viewsets.py": content}))
+    rules = [v.rule for v in architecture.check_access_override()]
+    assert rules == ["opt-out-reason", "access-override"]
+
+
+def test_plain_functions_named_like_the_hook_are_ignored(tmp_path: Path, as_project) -> None:
+    as_project(
+        fake_app(tmp_path, {"helpers.py": "def filter_queryset_for_user(qs):\n    return qs\n"})
+    )
+    assert architecture.check_access_override() == []
 
 
 # --- entry points -------------------------------------------------------------

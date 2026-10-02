@@ -1,4 +1,9 @@
-"""``?expand=`` behaviour: nesting, guards, aliasing and query optimisation."""
+"""``?expand=`` behaviour: nesting, guards, aliasing and query optimisation.
+
+Expanding ``organizer`` embeds a user row, and users are readable by
+authenticated callers only (``OrganizerViewSet.access``), so those requests
+authenticate; target-scope behaviour itself is covered in ``test_access``.
+"""
 
 from __future__ import annotations
 
@@ -10,7 +15,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.relations import PrimaryKeyRelatedField
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from karni.api.serializers import build_serializer
 from tests.testapp.models import Event, Tag, Venue
@@ -42,9 +47,16 @@ def _event(title: str = "Event", **kwargs: Any) -> Event:
     return Event.objects.create(title=title, **kwargs)
 
 
-def _list(query: dict[str, Any] | None = None, viewset: type[Any] = EventViewSet) -> Any:
+def _list(
+    query: dict[str, Any] | None = None,
+    viewset: type[Any] = EventViewSet,
+    user: Any = None,
+) -> Any:
     view = viewset.as_view({"get": "list"})
-    return view(APIRequestFactory().get("/", query or {}))
+    request = APIRequestFactory().get("/", query or {})
+    if user is not None:
+        force_authenticate(request, user=user)
+    return view(request)
 
 
 def _retrieve(pk: Any, query: dict[str, Any] | None = None) -> Any:
@@ -93,7 +105,7 @@ def test_expand_venue_nests_the_object(organizer: Any, venue: Venue) -> None:
 
 def test_expand_organizer_nests_the_api_meta_surface(organizer: Any) -> None:
     _event(organizer=organizer)
-    row = _only_row(_list({"expand": "organizer"}))
+    row = _only_row(_list({"expand": "organizer"}, user=organizer))
     nested = row["organizer"]
     assert nested["id"] == str(organizer.pk)
     assert nested["email"] == "organizer@example.com"
@@ -117,8 +129,8 @@ def test_expand_works_on_retrieve(venue: Venue) -> None:
 
 def test_comma_list_and_repeated_params_are_merged(organizer: Any, venue: Venue) -> None:
     _event(organizer=organizer, venue=venue)
-    comma = _only_row(_list({"expand": "venue,organizer"}))
-    repeated = _only_row(_list({"expand": ["venue", "organizer"]}))
+    comma = _only_row(_list({"expand": "venue,organizer"}, user=organizer))
+    repeated = _only_row(_list({"expand": ["venue", "organizer"]}, user=organizer))
     for row in (comma, repeated):
         assert row["venue"]["name"] == "Arena"
         assert row["organizer"]["email"] == "organizer@example.com"
@@ -130,7 +142,7 @@ def test_dotted_path_validates_but_api_meta_still_wins(organizer: Any) -> None:
     excludes ``groups`` — expansion never leaks a field back in (B5).
     """
     _event(organizer=organizer)
-    row = _only_row(_list({"expand": "organizer.groups"}))
+    row = _only_row(_list({"expand": "organizer.groups"}, user=organizer))
     assert row["organizer"]["email"] == "organizer@example.com"
     assert "groups" not in row["organizer"]
 
@@ -234,6 +246,7 @@ def test_expansion_uses_select_related_and_prefetch(
 
     view = EventViewSet.as_view({"get": "list"})
     request = APIRequestFactory().get("/", {"expand": "venue,organizer,tags"})
+    force_authenticate(request, user=organizer)
     # Exactly three queries, independent of row count:
     #   1. COUNT(*) for pagination,
     #   2. SELECT events JOIN venue JOIN user (select_related on the FK paths),

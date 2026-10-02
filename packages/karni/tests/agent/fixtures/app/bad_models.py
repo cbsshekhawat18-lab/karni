@@ -5,6 +5,7 @@
 import requests  # K105
 from django.contrib import admin
 from django.db import connection, models
+from karni.api import BaseViewSet
 from rest_framework import serializers, viewsets
 
 
@@ -27,6 +28,13 @@ class InvoiceSerializer(serializers.ModelSerializer):  # K106
 
 class InvoiceViewSet(viewsets.ModelViewSet):  # K102
     queryset = Invoice.objects.all()
+
+
+class ReceiptViewSet(BaseViewSet):  # K109
+    model = Invoice
+
+    def filter_queryset_for_user(self, queryset):  # K110
+        return queryset
 
 
 def totals() -> list[object]:

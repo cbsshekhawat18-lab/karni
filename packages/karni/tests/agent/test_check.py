@@ -103,6 +103,28 @@ def test_page_cap_counts_physical_lines() -> None:
     assert check_source("./src/components/p.tsx", fifty + "// 51\n") == []
 
 
+def test_access_rules() -> None:
+    missing = (
+        "from karni.api import BaseViewSet\n"
+        "class A(BaseViewSet):\n    model = X\n"
+        "class Base(BaseViewSet):\n    pass\n"  # abstract: no model
+        "class B(A):\n    model = X\n"  # inherits A's (unknown) access
+        "class C(BaseViewSet):\n    model = X\n    def get_access(self):\n        return None\n"
+    )
+    assert [(f.code, f.line) for f in check_source("./app/viewsets.py", missing)] == [("K109", 2)]
+    override = (
+        "class V(Base):\n"
+        "    @property\n"
+        "    def x(self):\n        return 1\n"
+        "    def filter_queryset_for_user(self, qs):\n        return qs\n"
+        "class W(Base):\n"
+        "    # karni: allow(access-override): rows come from the billing service\n"
+        "    def filter_queryset_for_user(self, qs):\n        return qs\n"
+        "def filter_queryset_for_user(qs):\n    return qs\n"
+    )
+    assert [(f.code, f.line) for f in check_source("./app/viewsets.py", override)] == [("K110", 5)]
+
+
 def test_mixins_and_abstract_models_pass() -> None:
     source = (
         "from django.db import models\n"
@@ -145,7 +167,16 @@ def test_module_bridge_prints_json() -> None:
     )
     assert proc.returncode == 0, proc.stderr
     findings = json.loads(proc.stdout)
-    assert {f["code"] for f in findings} >= {"K101", "K102", "K103", "K104", "K105", "K106"}
+    assert {f["code"] for f in findings} >= {
+        "K101",
+        "K102",
+        "K103",
+        "K104",
+        "K105",
+        "K106",
+        "K109",
+        "K110",
+    }
     assert all(f["path"] == "app/bad_models.py" for f in findings)
 
     dumped = subprocess.run(

@@ -12,9 +12,9 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory
 
+from karni.api import Access, Authenticated, BaseViewSet, Public
 from karni.api.search import SearchProvider, get_search_provider
 from karni.api.search.simple import SimpleSearchProvider
-from karni.api.viewsets import BaseViewSet
 from tests.testapp.models import Event, Venue
 from tests.testapp.viewsets import EventViewSet
 
@@ -124,6 +124,7 @@ def test_empty_search_parameter_is_a_noop() -> None:
 def test_search_is_a_noop_without_search_fields() -> None:
     class BareVenueViewSet(BaseViewSet):
         model = Venue
+        access = Access(read=Public(), write=Authenticated())
 
     Venue.objects.create(name="Berlin Arena", city="Rome")
     Venue.objects.create(name="Alpha Hall", city="Berlin")

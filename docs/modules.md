@@ -220,7 +220,8 @@ enforcement suite against your app:
 pytest --pyargs karni.testing.architecture
 ```
 
-(models on `BaseModel`, viewsets on `BaseViewSet`, no raw SQL outside
+(models on `BaseModel`, viewsets on `BaseViewSet` with an `access`
+declaration, no `filter_queryset_for_user` override without a reason, no raw SQL outside
 `sql/`/`migrations/`, no direct HTTP clients outside `services/`/
 `providers/`, no redundant serializers — each rule has the documented
 `# karni: allow(<rule>): <reason>` opt-out.)
@@ -271,21 +272,25 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 
 ## Patterns worth copying from karni-payments
 
-- **Role-gated detail actions × owner scoping**: a viewset that owner-scopes
-  `filter_queryset_for_user` must let the acting role bypass the scoping,
-  or role-gated detail actions (`@action(detail=True, permission_classes=
-  [RolePermission.for_roles("payments-admin")])`) can never reach other
-  users' objects — `get_object()` runs through the same filter:
+- **Role-gated detail actions × owner scoping**: one `access` declaration.
+  The acting role must be part of `read`, or role-gated detail actions can
+  never reach other users' objects — `get_object()` looks rows up through
+  the read scope. The action gates itself with `@action(access=...)`:
 
   ```python
-  def filter_queryset_for_user(self, queryset):
-      user = self.request.user
-      if not user.is_authenticated:
-          return queryset.none()
-      if has_role(user, "payments-admin"):
-          return queryset
-      return queryset.filter(user=user)
+  class PaymentViewSet(BaseViewSet):
+      model = Payment
+      access = Access(read=Owned("user") | HasRole("payments-admin"), write=Owned("user"))
+
+      @action(detail=True, methods=["post"], access=HasRole("payments-admin"))
+      def refund(self, request, pk=None):
+          payment = self.get_object()  # any payment for an admin, 403 for others
+          ...
   ```
+
+  A role-only resource is `access = Access(read=HasRole("x"), write=HasRole("x"))`:
+  `HasRole` is both the gate (403) and the row policy (no rows), so it stays
+  closed even if someone swaps the permission classes.
 
 - **Read-only resources**: override `create`/`update`/`partial_update`/
   `destroy` to raise `MethodNotAllowed` instead of playing

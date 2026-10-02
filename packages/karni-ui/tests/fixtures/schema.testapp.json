@@ -1387,7 +1387,7 @@
   },
   "/api/events/": {
    "get": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_list",
     "parameters": [
      {
@@ -1627,10 +1627,13 @@
     "tags": [
      "events"
     ],
+    "x-karni-access": {
+     "public": true
+    },
     "x-karni-resource": "events"
    },
    "post": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_create",
     "requestBody": {
      "content": {
@@ -1674,12 +1677,15 @@
     ],
     "tags": [
      "events"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    }
   },
   "/api/events/{id}/": {
    "delete": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_destroy",
     "parameters": [
      {
@@ -1708,10 +1714,13 @@
     ],
     "tags": [
      "events"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    },
    "get": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_retrieve",
     "parameters": [
      {
@@ -1766,10 +1775,13 @@
     ],
     "tags": [
      "events"
-    ]
+    ],
+    "x-karni-access": {
+     "public": true
+    }
    },
    "patch": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_partial_update",
     "parameters": [
      {
@@ -1824,10 +1836,13 @@
     ],
     "tags": [
      "events"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    },
    "put": {
-    "description": "The contract's target API: full CRUD from two declared attributes.",
+    "description": "The contract's target API: full CRUD from three declared attributes.",
     "operationId": "events_update",
     "parameters": [
      {
@@ -1883,7 +1898,10 @@
     ],
     "tags": [
      "events"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    }
   },
   "/api/users/": {
@@ -2075,12 +2093,14 @@
      },
      {
       "cookieAuth": []
-     },
-     {}
+     }
     ],
     "tags": [
      "users"
     ],
+    "x-karni-access": {
+     "authenticated": true
+    },
     "x-karni-resource": "users"
    },
    "post": {
@@ -2127,7 +2147,12 @@
     ],
     "tags": [
      "users"
-    ]
+    ],
+    "x-karni-access": {
+     "role": [
+      "staff"
+     ]
+    }
    }
   },
   "/api/users/{id}/": {
@@ -2161,7 +2186,12 @@
     ],
     "tags": [
      "users"
-    ]
+    ],
+    "x-karni-access": {
+     "role": [
+      "staff"
+     ]
+    }
    },
    "get": {
     "description": "Routes the user model (prefix ``users``) for relation-target lookups.",
@@ -2213,12 +2243,14 @@
      },
      {
       "cookieAuth": []
-     },
-     {}
+     }
     ],
     "tags": [
      "users"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    },
    "patch": {
     "description": "Routes the user model (prefix ``users``) for relation-target lookups.",
@@ -2276,7 +2308,12 @@
     ],
     "tags": [
      "users"
-    ]
+    ],
+    "x-karni-access": {
+     "role": [
+      "staff"
+     ]
+    }
    },
    "put": {
     "description": "Routes the user model (prefix ``users``) for relation-target lookups.",
@@ -2334,7 +2371,12 @@
     ],
     "tags": [
      "users"
-    ]
+    ],
+    "x-karni-access": {
+     "role": [
+      "staff"
+     ]
+    }
    }
   },
   "/api/venues/": {
@@ -2486,6 +2528,9 @@
     "tags": [
      "venues"
     ],
+    "x-karni-access": {
+     "public": true
+    },
     "x-karni-resource": "venues"
    },
    "post": {
@@ -2533,7 +2578,10 @@
     ],
     "tags": [
      "venues"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    }
   },
   "/api/venues/{id}/": {
@@ -2567,7 +2615,10 @@
     ],
     "tags": [
      "venues"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    },
    "get": {
     "description": "Bare declaration \u2014 everything comes from conventions and settings.",
@@ -2607,7 +2658,10 @@
     ],
     "tags": [
      "venues"
-    ]
+    ],
+    "x-karni-access": {
+     "public": true
+    }
    },
    "patch": {
     "description": "Bare declaration \u2014 everything comes from conventions and settings.",
@@ -2665,7 +2719,10 @@
     ],
     "tags": [
      "venues"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    },
    "put": {
     "description": "Bare declaration \u2014 everything comes from conventions and settings.",
@@ -2724,7 +2781,10 @@
     ],
     "tags": [
      "venues"
-    ]
+    ],
+    "x-karni-access": {
+     "authenticated": true
+    }
    }
   }
  },

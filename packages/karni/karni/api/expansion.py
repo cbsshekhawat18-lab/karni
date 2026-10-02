@@ -8,7 +8,16 @@ may be repeated; all values are merged. Expansion drives two things:
 * nested read-only serializers (:func:`karni.api.serializers.build_serializer`),
 * automatic ``select_related`` / ``prefetch_related`` on the queryset
   (:meth:`karni.api.viewsets.BaseViewSet.get_queryset` via
-  :func:`related_lookups`).
+  :func:`scoped_related_lookups`).
+
+Expansion only embeds rows the requester can read (ADR 0001 Q2.5): every
+expanded level goes through the **target** model's read scope — the
+``access.read`` of the viewset routed for that model (see
+:func:`karni.api.access.target_read_scope`). A to-many level is a
+``Prefetch`` over that scope; a to-one level stays a ``select_related`` join
+when the scope keeps every row, and becomes a scoped ``Prefetch`` otherwise,
+so an unreadable target renders as ``null``. A target model with no routed
+viewset has no row policy and is embedded from its default manager.
 
 Override / escape hatch: a viewset restricts or aliases what may be expanded
 with ``expandable_fields`` (a mapping of client-facing expand key to model
@@ -20,12 +29,12 @@ viewset with ``expand_depth``.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
-from django.db.models import Field, ForeignKey, ManyToManyField, Model
+from django.db.models import Field, ForeignKey, ManyToManyField, Model, Prefetch, QuerySet
 from rest_framework.exceptions import ValidationError
 
 __all__ = [
@@ -33,8 +42,13 @@ __all__ = [
     "collect_expand_param",
     "effective_max_depth",
     "related_lookups",
+    "scoped_related_lookups",
     "validate_expand",
 ]
+
+#: ``scope(target_model) -> (readable queryset, filtered)`` — see
+#: :func:`scoped_related_lookups`.
+TargetScope = Callable[[type[Model]], tuple[QuerySet[Any], bool]]
 
 DEFAULT_MAX_EXPAND_DEPTH = 2
 """Fallback for ``settings.KARNI_API_MAX_EXPAND_DEPTH`` when it is unset."""
@@ -211,6 +225,51 @@ def related_lookups(model: type[Model], expand: Iterable[str]) -> tuple[list[str
         else:
             prefetch.append(lookup)
     return select, prefetch
+
+
+def scoped_related_lookups(
+    model: type[Model], expand: Iterable[str], scope: TargetScope
+) -> tuple[list[str], list[Prefetch]]:
+    """Like :func:`related_lookups`, but every level obeys its target's read scope.
+
+    ``scope(target)`` returns ``(queryset, filtered)``: the target's rows the
+    requester may read and whether that narrowed anything. Per level of each
+    validated path:
+
+    * a forward FK/O2O whose scope is unfiltered, reached only through
+      ``select_related`` levels, joins via ``select_related`` (no extra
+      query, as before);
+    * anything else — a to-many level, a filtered to-one, or any level below
+      a prefetched one — becomes ``Prefetch(lookup, queryset=<scoped>)``.
+      A to-one target outside the scope is cached as ``None`` and renders as
+      ``null``; to-many lists contain only readable rows.
+
+    Returns ``(select_related_paths, prefetch_objects)`` with parents before
+    children. Paths that do not resolve are skipped silently.
+    """
+    select: list[str] = []
+    prefetch: dict[str, Prefetch] = {}
+    for path in sorted(expand):
+        current: type[Model] = model
+        lookups: list[str] = []
+        prefetching = False
+        for segment in path.split("."):
+            field = _relation_field(current, segment)
+            if field is None:
+                break
+            target: type[Model] = field.related_model
+            lookups.append(segment)
+            lookup = "__".join(lookups)
+            queryset, filtered = scope(target)
+            if not prefetching and isinstance(field, ForeignKey) and not filtered:
+                if lookup not in select:
+                    select.append(lookup)
+            else:
+                prefetching = True
+                if lookup not in prefetch:
+                    prefetch[lookup] = Prefetch(lookup, queryset=queryset)
+            current = target
+    return select, list(prefetch.values())
 
 
 def _split_values(values: Iterable[str | None]) -> tuple[str, ...]:

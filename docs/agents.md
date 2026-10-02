@@ -25,8 +25,9 @@ follow what they return.
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
-enforcement (AST for Python: model-base, viewset-base, admin-convention,
-raw-sql, http-client, redundant-serializer, opt-out reasons; a comment- and
+enforcement (AST for Python: model-base, viewset-base, viewset-access (direct
+`BaseViewSet` subclasses only), access-override, admin-convention, raw-sql,
+http-client, redundant-serializer, opt-out reasons; a comment- and
 string-aware scan for TS/JS: raw elements, the page cap, deep imports, direct
 HTTP, eslint-disable reasons). `karni check` and the `@karni/ui` ESLint preset
 stay authoritative; cross-file rules (duplicates) are not checked per file.
@@ -54,8 +55,9 @@ Stable; a code is never reused for a different rule.
 | `P001`… | your project's rules (`karni.rules.py`) |
 
 Severity `error` (shown as `K101!`) means enforced: the rule maps onto an
-enforcement id (`model-base`, `viewset-base`, `admin-convention`, `raw-sql`,
-`http-client`, `redundant-serializer`, `duplicate`, `opt-out-reason`,
+enforcement id (`model-base`, `viewset-base`, `viewset-access`,
+`access-override`, `admin-convention`, `raw-sql`, `http-client`,
+`redundant-serializer`, `duplicate`, `opt-out-reason`,
 `karni/no-raw-elements`, `karni/max-page-lines`, `karni/no-deep-imports`,
 `karni/no-direct-http`, `jscpd`) and fails the build. `must` is a mandatory
 convention that is not machine-checked; `should` is a strong default.
@@ -220,13 +222,13 @@ Add a new domain model: <ModelName> [in <app>] [fields...]
 
 1. Run `karni context` to see existing apps, models and viewsets.
 2. In the owning app's `models.py`, define the model inheriting `karni.models.BaseModel` (or compose its mixins: `UUIDModel`, `TimestampedModel`, `SoftDeleteModel`, `AuditedModel`). Declare `class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, read-only or write-only. Do NOT write an admin, serializer or router.
-3. In the same app's `viewsets.py`: `class XViewSet(BaseViewSet): model = X` (+ `search_fields` if searchable). The auto-router registers it; admin, filters, schema are derived.
+3. In the same app's `viewsets.py`: `class XViewSet(BaseViewSet): model = X` plus `access = Access(read=..., write=...)` saying who reads and who writes (e.g. `read=Owned("owner") | HasRole("staff"), write=Owned("owner")`; `Public()` only for deliberately public reads) (+ `search_fields` if searchable). The auto-router registers it; admin, filters, schema are derived.
 4. `make migrate && karni types`
-5. Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works.
+5. Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works for a caller `access` admits and is refused (401/403) or empty for one it does not.
 
 Total new code should be well under 20 lines. If it isn't, stop — you are reimplementing something Karni provides.
 
-Rules that apply: K101, K102, K108, K302, K305, K003
+Rules that apply: K101, K102, K109, K108, K302, K305, K003
 ```
 
 ### `new-page` — Add a frontend page composing @karni/ui (50 lines or fewer)
