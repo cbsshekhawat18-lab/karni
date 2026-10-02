@@ -101,7 +101,9 @@ soft-delete aware:
 
 - The changelist defaults to **alive rows only**; the "deleted" filter
   switches to only-deleted or everything. The change form can open deleted
-  rows (the admin queryset uses `all_objects`).
+  rows. The admin queryset lifts the `soft_delete` scope, and only that one
+  (`objects.without("soft_delete", reason=...)`), so any other scope, such as
+  a tenant, still applies.
 - Django's built-in *delete selected* action stays and is **soft** on soft
   models (it is a real delete everywhere else). Extra actions: *restore
   selected*, and *hard delete selected* — superuser-only and routed through

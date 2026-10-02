@@ -30,17 +30,17 @@ class AccessLog(UUIDModel, TimestampedModel): ...
 
 ```python
 event.delete()                         # sets deleted_at; the row stays
-Event.objects.all()                    # excludes deleted rows (default manager)
-Event.objects.all_with_deleted()       # everything
-Event.objects.deleted_only()           # only deleted rows
+Event.objects.all()                    # excludes deleted rows (the soft_delete scope)
+Event.objects.without("soft_delete", reason="restore screen")         # everything
+Event.objects.without("soft_delete", reason="restore screen").dead()  # deleted only
 event.restore()                        # instance; queryset.restore() for bulk
 event.hard_delete()                    # real DELETE, Django cascade applies
 ```
 
 - **Related lookups.** `venue.event_set.all()` hides deleted events, because
-  the default manager filters them. Accessing a foreign key directly
-  (`booking.event`) still resolves even when the target is soft-deleted, so
-  existing references never break.
+  the default manager filters them. So do prefetches and the admin.
+  Accessing a foreign key directly (`booking.event`) still resolves even when
+  the target is soft-deleted, so existing references never break.
 - **No cascade on soft delete.** Soft-deleting a parent leaves its children
   in place, and no `pre_delete`/`post_delete` signals are sent. `hard_delete()`
   runs Django's normal cascade, including over soft-deleted children.
@@ -53,6 +53,99 @@ event.hard_delete()                    # real DELETE, Django cascade applies
   and restore / hard-delete actions.
 - **API.** `DELETE` soft-deletes. `deleted_at` is never exposed by generated
   serializers.
+
+## Scopes: the filters every default manager applies
+
+Hiding deleted rows is a **scope**: a named, ordered filter that Karni's
+default managers apply to every queryset they build. Core registers one,
+`soft_delete` (order 10, every model with a `deleted_at` column). Installed
+modules can add more. The planned `karni-tenancy` module adds `tenant`
+(order 20) to every `BaseModel`, without any change to project code.
+
+A scope reaches everything built from a model's default manager:
+`Model.objects`, related managers (`venue.event_set`, M2M), `prefetch_related`,
+the admin, and DRF relation fields. It does not reach Django's base manager
+(forward FK access, `refresh_from_db`, deletion cascades), joins across
+relations (`Venue.objects.filter(event__title=...)`, so add
+`event__deleted_at__isnull=True` yourself), or raw SQL.
+
+**Lift one scope, never all of them.**
+
+```python
+Event.objects.without("soft_delete", reason="restore screen")
+venue.event_set.without("soft_delete", reason="venue history")  # keeps the relation
+# with karni-tenancy installed: lift both, for a cross-tenant report
+Event.objects.without("tenant", "soft_delete", reason="nightly billing export")
+```
+
+- `reason` is required, and is logged on the `karni.scopes` logger: DEBUG for
+  `soft_delete`, INFO for other scopes. A missing or blank reason raises.
+- Only the named scopes are lifted. Every other scope still applies, so
+  showing deleted rows never also shows another tenant's rows.
+- An unknown name raises `UnknownScope`, which lists the registered names.
+  A registered scope that does not cover the model is a no-op.
+- `without()` lives on managers, because a scope cannot be removed from a
+  queryset after it was applied. For another database, use
+  `Event.objects.db_manager("replica").without(...)`.
+
+**`karni context`** prints a `SCOPES:` line when the pipeline differs from
+this default: any scope besides `soft_delete`, with the models it covers, or
+`soft_delete(off)`.
+
+**Escape hatches**, least to most drastic:
+
+| Need | Do |
+|---|---|
+| One query sees hidden rows | `objects.without("<scope>", reason=...)` |
+| A model is exempt from a scope | `class ScopeMeta: tenant = "shared"`. Each scope reads its own `ScopeMeta` attribute through `karni.scopes.scope_option()`. |
+| Different behaviour for a scope | Subclass it and register yours under a new name |
+| Disable or reorder scopes project-wide | `KARNI_SCOPES = ["soft_delete"]`: the active scopes, in pipeline order. Unset means every registered scope by `order`. A registered scope left out raises system-check warning `karni.W001`, so silence it when that is deliberate. |
+
+**Writing a scope** (modules): subclass `karni.scopes.Scope`, set `name` and
+`order`, and implement `applies_to(model)` and `filter(queryset)`. Then
+register the class through the `karni.scopes` entry-point group (see
+[modules.md](modules.md#7b-optional-karniscopes-model-scopes)). `filter()` runs
+when a queryset is *built*, which can be import time for a class-level
+`queryset = Model.objects.all()`. A scope that depends on the current request
+or task must read that context when the SQL is compiled, from an expression
+whose `as_sql` reads it. If nothing is bound there, it must raise
+`karni.scopes.ScopeContextMissing(model, name, fix=...)` so the query fails
+closed, never open.
+
+**Custom managers** must run the pipeline. Build them on
+`karni.managers.ScopedManagerMixin`:
+
+```python
+from django.db.models import Manager
+from karni.managers import BaseQuerySet, ScopedManagerMixin
+
+class EventQuerySet(BaseQuerySet):
+    def upcoming(self): ...
+
+class EventManager(ScopedManagerMixin, Manager.from_queryset(EventQuerySet)):
+    pass
+```
+
+System check `karni.E001` rejects a soft-delete model whose default manager
+does not apply `soft_delete`. `karni.E002` reports a scope that fails to load
+or a malformed `KARNI_SCOPES`.
+
+## Deprecated soft-delete aliases
+
+Deprecated in 0.2 and removed in 1.0. Each emits a
+`karni.deprecation.KarniDeprecationWarning` that names its replacement.
+
+| Deprecated | Use instead |
+|---|---|
+| `Model.all_objects` | `Model.objects.without("soft_delete", reason=...)` |
+| `objects.all_with_deleted()` | `objects.without("soft_delete", reason=...)` |
+| `objects.deleted_only()` | `objects.without("soft_delete", reason=...).dead()` |
+| `karni.managers.SoftDeleteManagerMixin` | `karni.managers.ScopedManagerMixin` (the same class) |
+
+Until 1.0 the aliases still work, with one change. `all_objects` used to
+drop every filter. It now lifts only `soft_delete`, so it can never bypass a
+scope a module adds later. To find every caller, run your tests with
+`-W error::karni.deprecation.KarniDeprecationWarning`.
 
 ## Audit fields
 
@@ -90,6 +183,6 @@ Event.objects.created_since(monday).created_by(user).newest_first()
 ```
 
 To customise, subclass `BaseQuerySet` and build the manager the same way
-`BaseManager` is built:
-`class EventManager(SoftDeleteManagerMixin, Manager.from_queryset(EventQuerySet))`.
+`BaseManager` is built (see *Custom managers* above):
+`class EventManager(ScopedManagerMixin, Manager.from_queryset(EventQuerySet))`.
 Then assign `objects = EventManager()` on the model.

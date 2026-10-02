@@ -7,8 +7,9 @@ inherits:
 * :class:`UUIDModel` — random UUID primary key (no sequential enumeration).
 * :class:`TimestampedModel` — ``created_at`` / ``updated_at``.
 * :class:`SoftDeleteModel` — ``deleted_at``; ``delete()`` hides instead of
-  removing, the default manager excludes deleted rows, and
-  ``objects.all_with_deleted()`` / ``objects.deleted_only()`` reach them.
+  removing, the default manager excludes deleted rows (the ``soft_delete``
+  scope, :mod:`karni.scopes`), and
+  ``objects.without("soft_delete", reason=...)`` reaches them.
 * :class:`AuditedModel` — ``created_by`` / ``updated_by``, stamped from
   :func:`karni.middleware.get_current_user` (contextvars; WSGI and ASGI).
 
@@ -30,10 +31,11 @@ from django.utils import timezone
 from karni.managers import (
     AuditedQuerySet,
     BaseManager,
-    BaseQuerySet,
     SoftDeleteManager,
     SoftDeleteQuerySet,
     TimestampedQuerySet,
+    _BaseAllObjectsManager,
+    _SoftDeleteAllObjectsManager,
 )
 from karni.middleware import get_current_user
 
@@ -83,9 +85,11 @@ class TimestampedModel(models.Model):
 class SoftDeleteModel(models.Model):
     """Rows are hidden by ``delete()`` instead of removed.
 
-    * ``objects`` (the default manager) excludes deleted rows — so do related
-      descriptors like ``parent.children.all()`` and the admin.
-    * ``objects.all_with_deleted()`` / ``objects.deleted_only()`` reach them.
+    * ``objects`` (the default manager) excludes deleted rows through the
+      ``soft_delete`` scope, and so do related descriptors like
+      ``parent.children.all()``, prefetches and the admin.
+    * ``objects.without("soft_delete", reason=...)`` reaches them (add
+      ``.dead()`` for deleted rows only) and keeps every other scope.
     * ``delete()`` (instance and queryset) stamps ``deleted_at``; ``restore()``
       clears it; ``hard_delete()`` is the only real deletion and runs Django's
       normal cascade, including over soft-deleted children.
@@ -93,17 +97,18 @@ class SoftDeleteModel(models.Model):
       to a soft-deleted parent still resolves (the base manager is unfiltered),
       so existing references never break.
 
-    Override / escape hatch: redeclare ``objects`` with your own manager, or
-    override ``delete``/``hard_delete``/``restore``. When declaring your own
-    ``Meta``, subclass ``SoftDeleteModel.Meta`` to keep
+    Override / escape hatch: redeclare ``objects`` with your own manager built
+    on :class:`karni.managers.ScopedManagerMixin` (system check karni.E001
+    rejects one that is not), or override ``delete``/``hard_delete``/``restore``.
+    When declaring your own ``Meta``, subclass ``SoftDeleteModel.Meta`` to keep
     ``default_manager_name`` (and with it deleted-row hiding on relations).
     """
 
     deleted_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
 
     objects: ClassVar[SoftDeleteManager] = SoftDeleteManager()
-    #: Unfiltered manager kept for existing callers; prefer ``objects.all_with_deleted()``.
-    all_objects: ClassVar[models.Manager] = models.Manager.from_queryset(SoftDeleteQuerySet)()
+    #: Deprecated since 0.2, removed in 1.0: ``objects.without("soft_delete", reason=...)``.
+    all_objects: ClassVar[SoftDeleteManager] = _SoftDeleteAllObjectsManager()
 
     class Meta:
         abstract = True
@@ -208,7 +213,8 @@ class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
     """
 
     objects: ClassVar[BaseManager] = BaseManager()
-    all_objects: ClassVar[models.Manager] = models.Manager.from_queryset(BaseQuerySet)()
+    #: Deprecated since 0.2, removed in 1.0: ``objects.without("soft_delete", reason=...)``.
+    all_objects: ClassVar[BaseManager] = _BaseAllObjectsManager()
 
     class Meta(SoftDeleteModel.Meta):
         abstract = True

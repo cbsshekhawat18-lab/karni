@@ -219,4 +219,4 @@ def test_related_name_and_cascade_delete(user: User) -> None:
     # Only the explicit hard delete runs the database cascade.
     user.hard_delete()
 
-    assert OneTimeToken.objects.all_with_deleted().count() == 0
+    assert OneTimeToken.objects.without("soft_delete", reason="test").count() == 0

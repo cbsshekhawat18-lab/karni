@@ -184,13 +184,12 @@ class TestSoftDeleteModelAlone:
         assert list(Review.objects.all()) == [kept]
         with pytest.raises(Review.DoesNotExist):
             Review.objects.get(pk=gone.pk)
-        assert list(Review.objects.all_with_deleted()) == [kept, gone]
-        assert list(Review.objects.deleted_only()) == [gone]
-        assert list(Review.all_objects.all()) == [kept, gone]  # the unfiltered alias
+        assert list(Review.objects.without("soft_delete", reason="test")) == [kept, gone]
+        assert list(Review.objects.without("soft_delete", reason="test").dead()) == [gone]
         # Reaching deleted rows never makes delete() hard.
-        Review.objects.all_with_deleted().delete()
+        Review.objects.without("soft_delete", reason="test").delete()
         assert Review.objects.count() == 0
-        assert Review.objects.all_with_deleted().count() == 2
+        assert Review.objects.without("soft_delete", reason="test").count() == 2
 
     def test_instance_and_queryset_restore(self, book: Book) -> None:
         reviews = [Review.objects.create(book=book, stars=stars) for stars in (1, 2, 3)]
@@ -199,9 +198,12 @@ class TestSoftDeleteModelAlone:
         reviews[0].restore()
         assert list(Review.objects.all()) == reviews[:1]
 
-        assert Review.objects.deleted_only().filter(stars=2).restore() == 1
+        assert (
+            Review.objects.without("soft_delete", reason="test").dead().filter(stars=2).restore()
+            == 1
+        )
         assert list(Review.objects.all()) == reviews[:2]
-        assert list(Review.objects.deleted_only()) == reviews[2:]
+        assert list(Review.objects.without("soft_delete", reason="test").dead()) == reviews[2:]
 
         # Restoring alive rows is a no-op; bulk restore exists on querysets only.
         assert Review.objects.all().restore() == 0
@@ -275,14 +277,19 @@ class TestBaseModelComposition:
         Shelf.objects.by_ids([old.pk, fresh_dead.pk, bobs_dead.pk]).delete()
         cutoff = now - timedelta(days=1)
 
-        everything = Shelf.objects.all_with_deleted()
+        everything = Shelf.objects.without("soft_delete", reason="test")
         assert list(everything.created_since(cutoff).created_by(alice).dead()) == [fresh_dead]
         assert list(everything.dead().created_by(alice).created_since(cutoff)) == [fresh_dead]
         # objects is alive-only, so the same chain from it has nothing dead...
         assert not Shelf.objects.created_since(cutoff).created_by(alice).dead().exists()
         assert list(Shelf.objects.created_since(cutoff).touched_by(alice)) == [fresh_alive]
-        # ...while deleted_only() composes with every mixin's helpers.
-        assert list(Shelf.objects.deleted_only().created_by(alice).newest_first()) == [
+        # ...while lifting soft_delete composes with every mixin's helpers.
+        assert list(
+            Shelf.objects.without("soft_delete", reason="test")
+            .dead()
+            .created_by(alice)
+            .newest_first()
+        ) == [
             fresh_dead,
             old,
         ]
@@ -293,7 +300,7 @@ class TestBaseModelComposition:
         with current_user(bob):
             shelf.delete()
 
-        stored = Shelf.objects.all_with_deleted().get(pk=shelf.pk)
+        stored = Shelf.objects.without("soft_delete", reason="test").get(pk=shelf.pk)
         assert stored.is_deleted
         assert (stored.created_by, stored.updated_by) == (alice, bob)
 
@@ -336,7 +343,7 @@ class TestRelatedLookups:
         assert set(book.labels.all()) == {kept, gone}
 
     def test_related_managers_reach_deleted_rows_within_their_relation_only(self) -> None:
-        """Regression: ``all_with_deleted()``/``deleted_only()`` keep the relation filter."""
+        """Regression: ``without("soft_delete")`` (and ``.dead()``) keep the relation filter."""
         mine = Shelf.objects.create(name="mine")
         other = Shelf.objects.create(name="other")
         alive = Book.objects.create(shelf=mine, title="alive")
@@ -345,26 +352,26 @@ class TestRelatedLookups:
         dead.delete()
         stranger.delete()
 
-        assert set(mine.books.all_with_deleted()) == {alive, dead}
-        assert list(mine.books.deleted_only()) == [dead]
-        assert mine.books.deleted_only().restore() == 1
-        assert Book.objects.deleted_only().get() == stranger
+        assert set(mine.books.without("soft_delete", reason="test")) == {alive, dead}
+        assert list(mine.books.without("soft_delete", reason="test").dead()) == [dead]
+        assert mine.books.without("soft_delete", reason="test").dead().restore() == 1
+        assert Book.objects.without("soft_delete", reason="test").dead().get() == stranger
 
         # Many-to-many related managers likewise.
         x, y, z = (Label.objects.create(name=name) for name in "xyz")
         alive.labels.add(x, y)
         y.delete()
         z.delete()
-        assert set(alive.labels.all_with_deleted()) == {x, y}
-        assert list(alive.labels.deleted_only()) == [y]
+        assert set(alive.labels.without("soft_delete", reason="test")) == {x, y}
+        assert list(alive.labels.without("soft_delete", reason="test").dead()) == [y]
 
         # And a standalone SoftDeleteModel's reverse manager.
         first = Review.objects.create(book=alive)
         second = Review.objects.create(book=alive)
         Review.objects.create(book=stranger).delete()
         second.delete()
-        assert list(alive.reviews.all_with_deleted()) == [first, second]
-        assert list(alive.reviews.deleted_only()) == [second]
+        assert list(alive.reviews.without("soft_delete", reason="test")) == [first, second]
+        assert list(alive.reviews.without("soft_delete", reason="test").dead()) == [second]
 
     def test_forward_fk_still_resolves_a_soft_deleted_parent(
         self, shelf: Shelf, book: Book
@@ -423,7 +430,7 @@ class TestCascades:
         }
         assert count == 7
         for model in (Shelf, Book, Review):
-            assert not model.objects.all_with_deleted().exists(), model
+            assert not model.objects.without("soft_delete", reason="test").exists(), model
         assert not Book.labels.through.objects.exists()
         assert Label.objects.get() == label  # M2M targets are never cascaded
 
@@ -433,11 +440,11 @@ class TestCascades:
         Review.objects.create(book=book)
         shelf.delete()
 
-        count, per_model = Shelf.objects.deleted_only().hard_delete()
+        count, per_model = Shelf.objects.without("soft_delete", reason="test").dead().hard_delete()
 
         assert per_model == {"testapp.Shelf": 1, "testapp.Book": 1, "testapp.Review": 1}
         assert count == 3
-        assert not Book.objects.all_with_deleted().exists()
+        assert not Book.objects.without("soft_delete", reason="test").exists()
 
     def test_audit_fks_outlive_a_soft_deleted_user_and_null_on_hard_delete(
         self, alice: Any
@@ -717,7 +724,7 @@ def test_soft_deleted_users_are_hidden_and_cannot_authenticate(alice: Any) -> No
     alice.delete()
 
     assert not user_model.objects.filter(pk=alice.pk).exists()
-    assert user_model.objects.all_with_deleted().get(pk=alice.pk).is_deleted
+    assert user_model.objects.without("soft_delete", reason="test").get(pk=alice.pk).is_deleted
     with pytest.raises(user_model.DoesNotExist):
         user_model.objects.get_by_natural_key(alice.email)
     assert authenticate(email=alice.email, password=PASSWORD) is None
@@ -726,7 +733,7 @@ def test_soft_deleted_users_are_hidden_and_cannot_authenticate(alice: Any) -> No
     )
     assert response.status_code == 401
 
-    user_model.objects.all_with_deleted().get(pk=alice.pk).restore()
+    user_model.objects.without("soft_delete", reason="test").get(pk=alice.pk).restore()
     assert authenticate(email=alice.email, password=PASSWORD) == alice
 
 

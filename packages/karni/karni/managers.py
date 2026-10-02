@@ -1,23 +1,33 @@
-"""Composable querysets and managers behind Karni's model mixins.
+"""Composable querysets, and the scoped managers behind Karni's model mixins.
 
-Each model mixin in :mod:`karni.models` has a matching queryset here, and
-they all extend :class:`KarniQuerySet`, so any combination composes by plain
-multiple inheritance — ``BaseQuerySet`` is just the four stacked. Chaining
-works across them: ``Event.objects.created_since(t).created_by(u).dead()``.
+Each model mixin in :mod:`karni.models` has a matching queryset here. They
+all extend :class:`KarniQuerySet`, so any combination composes by plain
+multiple inheritance; ``BaseQuerySet`` is the four stacked. Chaining works
+across them: ``Event.objects.created_since(t).created_by(u)``.
 
-Override / escape hatch: subclass any queryset, build a manager with
-``YourManager = SoftDeleteManagerMixin + Manager.from_queryset(YourQuerySet)``
-(see :class:`BaseManager`) and redeclare ``objects`` on your model.
+Default managers run the named-scope pipeline (:mod:`karni.scopes`) through
+:class:`ScopedManagerMixin`. Every queryset they build is filtered by each
+active scope covering the model, ``soft_delete`` first.
+``objects.without("soft_delete", reason="...")`` lifts exactly that scope.
+
+Override / escape hatch: subclass any queryset, then build a manager the way
+:class:`BaseManager` is built,
+``class EventManager(ScopedManagerMixin, Manager.from_queryset(EventQuerySet))``,
+and redeclare ``objects`` on your model.
 """
 
 from __future__ import annotations
 
 import copy
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, NoReturn, Self
 
 from django.db import models
+from django.db.models.manager import ManagerDescriptor
 from django.utils import timezone
+
+from karni.deprecation import warn_deprecated
+from karni.scopes import SOFT_DELETE, ScopeError, apply_scopes, registry
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -27,11 +37,16 @@ __all__ = [
     "BaseManager",
     "BaseQuerySet",
     "KarniQuerySet",
+    "ScopedManagerMixin",
     "SoftDeleteManager",
-    "SoftDeleteManagerMixin",
     "SoftDeleteQuerySet",
     "TimestampedQuerySet",
 ]
+
+#: ``doc_anchor`` of every soft-delete alias deprecated in 0.2.
+_SOFT_DELETE_ALIASES_DOC = "models.md#deprecated-soft-delete-aliases"
+_REMOVED_IN = "1.0"
+_LIFT_SOFT_DELETE = 'objects.without("soft_delete", reason=...)'
 
 
 class KarniQuerySet(models.QuerySet):
@@ -40,6 +55,17 @@ class KarniQuerySet(models.QuerySet):
     def by_ids(self, ids: Any) -> Self:
         """Rows whose primary key is in ``ids`` (any iterable)."""
         return self.filter(pk__in=list(ids))
+
+    def without(self, *names: str, reason: str = "") -> NoReturn:
+        """Not on querysets: a scope is lifted on the manager, before it applies."""
+        quoted = ", ".join(f'"{name}"' for name in names) or '"<scope>"'
+        raise ScopeError(
+            "without() is a manager method: a queryset has already applied every scope. "
+            f"Start from the manager: {self.model.__name__}.objects.without({quoted}, "
+            'reason="...").filter(...)'
+        )
+
+    without.queryset_only = True  # type: ignore[attr-defined]
 
 
 class TimestampedQuerySet(KarniQuerySet):
@@ -122,41 +148,130 @@ class BaseQuerySet(TimestampedQuerySet, SoftDeleteQuerySet, AuditedQuerySet):
     """Everything above, for :class:`karni.models.BaseModel`."""
 
 
-class SoftDeleteManagerMixin:
-    """Hides soft-deleted rows; adds ``all_with_deleted()`` / ``deleted_only()``.
+def _without_prefetch_cache(instance: models.Model) -> models.Model:
+    """A shallow copy of ``instance`` with no ``prefetch_related`` results.
 
-    Mix in ahead of a ``Manager.from_queryset(...)`` class whose queryset has
-    a ``deleted_at`` filterable field. Both helpers keep every other filter
-    the manager applies — on a related manager (``parent.children``, M2M) they
-    stay scoped to that relation.
+    A prefetch cache was filled through every scope. A related manager that
+    lifts one must query past it, without touching the caller's instance.
+    """
+    clone = instance.__class__.__new__(instance.__class__)
+    clone.__dict__.update(instance.__dict__)
+    del clone.__dict__["_prefetched_objects_cache"]
+    return clone
+
+
+class ScopedManagerMixin:
+    """Applies the named-scope pipeline (:mod:`karni.scopes`) to ``get_queryset()``.
+
+    Mix it in ahead of a ``Manager.from_queryset(...)`` class. Django builds
+    related managers (``parent.children``, M2M) and prefetch querysets by
+    subclassing a model's default manager, so they run the pipeline too.
+    They add their relation filter around it, and :meth:`without` keeps
+    that relation filter.
     """
 
-    #: Set on a copy of the manager by :meth:`all_with_deleted`.
-    _karni_include_deleted: bool = False
+    #: Scope names this manager copy skips (set by :meth:`without`).
+    _karni_lifted: frozenset[str] = frozenset()
 
     def get_queryset(self) -> Any:
-        queryset = super().get_queryset()  # type: ignore[misc]
-        if self._karni_include_deleted:
-            return queryset
-        return queryset.filter(deleted_at__isnull=True)
+        return apply_scopes(super().get_queryset(), lifted=self._karni_lifted)  # type: ignore[misc]
 
-    def all_with_deleted(self) -> Any:
-        """Every row, soft-deleted or not (its ``delete()`` is still soft)."""
-        # Run the whole get_queryset() chain (a related manager adds its
-        # relation filter *around* this mixin) with only the alive filter
-        # off; copying a manager is how Django's own db_manager() works.
+    def without(self, *names: str, reason: str) -> Any:
+        """Every row the named scopes hide; every other scope still applies.
+
+        ``Event.objects.without("soft_delete", reason="restore screen")``
+        returns alive and soft-deleted events, and a tenant scope (when
+        installed) still applies. ``reason`` is required and logged.
+        Unknown names raise :class:`karni.scopes.UnknownScope`. On a related
+        manager (``shelf.books.without(...)``) the relation filter stays, and
+        prefetched results are read past.
+        """
+        lifted = registry.lift(self.model, names, reason)  # type: ignore[attr-defined]
+        # Run the whole get_queryset() chain with only these scopes skipped.
+        # A related manager adds its relation filter *around* this mixin.
+        # Copying a manager is how Django's own db_manager() works.
         manager = copy.copy(self)
-        manager._karni_include_deleted = True
+        manager._karni_lifted = self._karni_lifted | lifted
+        instance = getattr(manager, "instance", None)
+        if getattr(instance, "_prefetched_objects_cache", None):
+            manager.instance = _without_prefetch_cache(instance)  # type: ignore[attr-defined]
         return manager.get_queryset()
 
+    def all_with_deleted(self) -> Any:
+        """Deprecated: use ``objects.without("soft_delete", reason=...)``."""
+        warn_deprecated(
+            "objects.all_with_deleted()",
+            _LIFT_SOFT_DELETE,
+            removed_in=_REMOVED_IN,
+            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+        )
+        return self.without(SOFT_DELETE, reason="all_with_deleted() (deprecated alias)")
+
     def deleted_only(self) -> Any:
-        """Only soft-deleted rows."""
-        return self.all_with_deleted().filter(deleted_at__isnull=False)
+        """Deprecated: use ``objects.without("soft_delete", reason=...).dead()``."""
+        warn_deprecated(
+            "objects.deleted_only()",
+            'objects.without("soft_delete", reason=...).dead()',
+            removed_in=_REMOVED_IN,
+            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+        )
+        return self.without(SOFT_DELETE, reason="deleted_only() (deprecated alias)").dead()
 
 
-class SoftDeleteManager(SoftDeleteManagerMixin, models.Manager.from_queryset(SoftDeleteQuerySet)):  # type: ignore[misc]
+class SoftDeleteManager(ScopedManagerMixin, models.Manager.from_queryset(SoftDeleteQuerySet)):  # type: ignore[misc]
     """Default manager of :class:`karni.models.SoftDeleteModel`."""
 
 
-class BaseManager(SoftDeleteManagerMixin, models.Manager.from_queryset(BaseQuerySet)):  # type: ignore[misc]
+class BaseManager(ScopedManagerMixin, models.Manager.from_queryset(BaseQuerySet)):  # type: ignore[misc]
     """Default manager of :class:`karni.models.BaseModel`."""
+
+
+# --- deprecated aliases (removed in 1.0) ----------------------------------------
+
+
+class _DeprecatedAllObjectsDescriptor(ManagerDescriptor):
+    """``Model.all_objects``: resolves the manager, then warns."""
+
+    def __get__(self, instance: Any, cls: Any = None) -> Any:
+        manager = super().__get__(instance, cls)
+        warn_deprecated(
+            f"{cls.__name__}.all_objects",
+            f"{cls.__name__}.{_LIFT_SOFT_DELETE}",
+            removed_in=_REMOVED_IN,
+            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+        )
+        return manager
+
+
+class _AllObjectsMixin:
+    """The deprecated ``all_objects``: the default manager with ``soft_delete`` lifted.
+
+    It used to be a plain manager that dropped every filter. It now lifts
+    only ``soft_delete``, so it can never leak across a future tenant scope.
+    """
+
+    _karni_lifted = frozenset({SOFT_DELETE})
+
+    def contribute_to_class(self, cls: Any, name: str) -> None:
+        super().contribute_to_class(cls, name)  # type: ignore[misc]
+        setattr(cls, name, _DeprecatedAllObjectsDescriptor(self))
+
+
+class _SoftDeleteAllObjectsManager(_AllObjectsMixin, SoftDeleteManager):
+    """``SoftDeleteModel.all_objects`` (deprecated)."""
+
+
+class _BaseAllObjectsManager(_AllObjectsMixin, BaseManager):
+    """``BaseModel.all_objects`` (deprecated)."""
+
+
+def __getattr__(name: str) -> Any:
+    if name == "SoftDeleteManagerMixin":
+        warn_deprecated(
+            "karni.managers.SoftDeleteManagerMixin",
+            "karni.managers.ScopedManagerMixin",
+            removed_in=_REMOVED_IN,
+            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+        )
+        return ScopedManagerMixin
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

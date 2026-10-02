@@ -54,7 +54,7 @@ def test_refund_cascades_with_payment_hard_delete(make_payment) -> None:
     payment = make_payment()
     Refund.objects.create(payment=payment, amount=Decimal("10.00"))
     payment.hard_delete()
-    assert Refund.objects.all_with_deleted().count() == 0
+    assert Refund.objects.without("soft_delete", reason="test").count() == 0
 
 
 # ---------------------------------------------------------------------------

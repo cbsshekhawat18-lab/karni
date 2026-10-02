@@ -80,5 +80,12 @@ DJANGO_SETTINGS_MODULE = "tests.settings"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
+# Deprecations fail the suite: any use of a Karni deprecated alias (tests that
+# assert one warns wrap it in pytest.warns), and any DeprecationWarning that
+# Karni's own code triggers. Later entries take precedence.
+filterwarnings = [
+    "error::DeprecationWarning:karni(\\.|$)",
+    "error::karni.deprecation.KarniDeprecationWarning",
+]
 
 # mypy is configured repo-wide in /mypy.ini (the Makefile and CI pass it explicitly).

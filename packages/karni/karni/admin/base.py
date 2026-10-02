@@ -54,7 +54,7 @@ from karni.admin.derive import (
     derive_search_fields,
     password_field_names,
 )
-from karni.admin.soft_delete import SoftDeleteAdminMixin
+from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
 from karni.models import SoftDeleteModel
 
 __all__ = [
@@ -288,9 +288,9 @@ class KarniAdminMixin(admin.ModelAdmin):
             obj = getattr(request, _REQUEST_OBJ_ATTR, None)
             current_pk = getattr(obj, db_field.attname, None) if obj is not None else None
             if current_pk is not None:
-                kwargs["queryset"] = target.all_objects.filter(
-                    Q(deleted_at__isnull=True) | Q(pk=current_pk)
-                )
+                kwargs["queryset"] = lift_soft_delete(
+                    target._default_manager, reason="admin: keep the current FK value valid"
+                ).filter(Q(deleted_at__isnull=True) | Q(pk=current_pk))
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     # -- internals -----------------------------------------------------------

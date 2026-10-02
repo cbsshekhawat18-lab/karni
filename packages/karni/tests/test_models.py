@@ -126,8 +126,7 @@ def test_soft_delete_model_declaration() -> None:
     assert Post._meta.default_manager_name == "objects"
     assert Post._default_manager is Post.objects
     assert isinstance(Post.objects, SoftDeleteManager)
-    assert not isinstance(Post.all_objects, SoftDeleteManager)
-    assert isinstance(Post.all_objects.all(), SoftDeleteQuerySet)
+    assert isinstance(Post.objects.without("soft_delete", reason="test"), SoftDeleteQuerySet)
 
 
 def test_bulk_delete_exists_only_on_querysets() -> None:
@@ -136,11 +135,10 @@ def test_bulk_delete_exists_only_on_querysets() -> None:
     # queryset (Post.objects.all().delete()).
     assert not hasattr(Post.objects, "delete")
     assert not hasattr(Post.objects, "hard_delete")
-    assert not hasattr(Post.all_objects, "delete")
-    assert not hasattr(Post.all_objects, "hard_delete")
-    # ...while the filtering helpers are copied onto the managers.
+    assert not hasattr(Post.objects, "restore")
+    # ...while the filtering helpers are copied onto the manager.
     assert hasattr(Post.objects, "alive")
-    assert hasattr(Post.all_objects, "dead")
+    assert hasattr(Post.objects, "dead")
 
 
 def test_queryset_and_instance_method_flags() -> None:
@@ -155,7 +153,8 @@ def test_queryset_and_instance_method_flags() -> None:
 
 def test_soft_delete_managers_stay_out_of_migrations() -> None:
     assert SoftDeleteManager.use_in_migrations is False
-    assert type(Post.all_objects).use_in_migrations is False
+    # managers_map reads the deprecated all_objects alias without warning.
+    assert type(Post._meta.managers_map["all_objects"]).use_in_migrations is False
 
 
 def test_instance_delete_keeps_django_signature() -> None:
@@ -205,8 +204,8 @@ def test_instance_delete_is_soft(model_tables: None) -> None:
     assert post.is_deleted is True
     assert post.deleted_at is not None
     assert Post.objects.count() == 0
-    assert Post.all_objects.count() == 1
-    stored = Post.all_objects.get(pk=post.pk)
+    assert Post.objects.without("soft_delete", reason="test").count() == 1
+    stored = Post.objects.without("soft_delete", reason="test").get(pk=post.pk)
     assert stored.deleted_at is not None
     # Post is a standalone SoftDeleteModel: no timestamps to refresh.
     assert not hasattr(stored, "updated_at")
@@ -219,7 +218,7 @@ def test_base_model_delete_refreshes_updated_at(model_tables: None) -> None:
     author.delete()
 
     # BaseModel has updated_at, so the soft-delete save refreshes it too.
-    stored = Author.objects.all_with_deleted().get(pk=author.pk)
+    stored = Author.objects.without("soft_delete", reason="test").get(pk=author.pk)
     assert stored.deleted_at is not None
     assert stored.updated_at >= stored.deleted_at
 
@@ -247,22 +246,22 @@ def test_queryset_delete_is_soft_and_reports_counts(model_tables: None) -> None:
 
     assert result == (2, {"karni_tests_models.Post": 2})
     assert Post.objects.count() == 0
-    assert Post.all_objects.count() == 2
-    assert Post.all_objects.dead().count() == 2
+    assert Post.objects.without("soft_delete", reason="test").count() == 2
+    assert Post.objects.without("soft_delete", reason="test").dead().count() == 2
 
 
 @pytest.mark.django_db
-def test_all_objects_delete_is_still_soft(model_tables: None) -> None:
+def test_delete_with_soft_delete_lifted_is_still_soft(model_tables: None) -> None:
     author = Author.objects.create(name="Ada")
     post = Post.objects.create(author=author, title="one")
     post.delete()
     Post.objects.create(author=author, title="two")
 
-    result = Post.all_objects.all().delete()
+    result = Post.objects.without("soft_delete", reason="test").delete()
 
     assert result[0] == 2  # matches every row, including the already-deleted one
     assert Post.objects.count() == 0
-    assert Post.all_objects.count() == 2
+    assert Post.objects.without("soft_delete", reason="test").count() == 2
 
 
 @pytest.mark.django_db
@@ -272,7 +271,7 @@ def test_hard_delete_really_removes(model_tables: None) -> None:
 
     post.hard_delete()
 
-    assert Post.all_objects.count() == 0
+    assert Post.objects.without("soft_delete", reason="test").count() == 0
 
 
 @pytest.mark.django_db
@@ -281,11 +280,11 @@ def test_queryset_hard_delete_really_removes(model_tables: None) -> None:
     Post.objects.create(author=author, title="one")
     Post.objects.create(author=author, title="two")
 
-    count, per_model = Post.all_objects.all().hard_delete()
+    count, per_model = Post.objects.without("soft_delete", reason="test").hard_delete()
 
     assert count == 2
     assert per_model == {"karni_tests_models.Post": 2}
-    assert Post.all_objects.count() == 0
+    assert Post.objects.without("soft_delete", reason="test").count() == 0
 
 
 @pytest.mark.django_db
@@ -295,8 +294,8 @@ def test_alive_and_dead_filters(model_tables: None) -> None:
     dead = Post.objects.create(author=author, title="dead")
     dead.delete()
 
-    assert list(Post.all_objects.alive()) == [alive]
-    assert list(Post.all_objects.dead()) == [dead]
+    assert list(Post.objects.without("soft_delete", reason="test").alive()) == [alive]
+    assert list(Post.objects.without("soft_delete", reason="test").dead()) == [dead]
     # objects already excludes deleted rows, so its dead() is always empty.
     assert Post.objects.dead().count() == 0
 
@@ -332,7 +331,7 @@ def test_soft_delete_sends_no_deletion_signals(model_tables: None) -> None:
 
     with capture_deletion_signals(Post) as seen:
         post.delete()
-        Post.all_objects.all().delete()
+        Post.objects.without("soft_delete", reason="test").delete()
     assert seen == []
 
 

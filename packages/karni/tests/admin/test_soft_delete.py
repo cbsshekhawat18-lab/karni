@@ -99,7 +99,9 @@ class TestActions:
         assert confirmation.status_code == 200  # Django's stock confirmation page
         response = admin_client.post(CHANGELIST_URL, {**data, "post": "yes"})
         assert response.status_code == 302
-        refreshed = Note.all_objects.get(pk=note.pk)  # row still exists
+        refreshed = Note.objects.without("soft_delete", reason="test").get(
+            pk=note.pk
+        )  # row still exists
         assert refreshed.deleted_at is not None
 
     def test_restore_selected_undeletes(self, admin_client: Client) -> None:
@@ -134,11 +136,13 @@ class TestActions:
         ]
         # The collector lists the cascade child on the confirmation page.
         assert b"Cascades too" in confirmation.content
-        assert Note.all_objects.filter(pk=note.pk).exists()  # nothing deleted yet
+        assert (
+            Note.objects.without("soft_delete", reason="test").filter(pk=note.pk).exists()
+        )  # nothing deleted yet
 
         response = admin_client.post(url, {**data, "post": "yes"})
         assert response.status_code == 302
-        assert not Note.all_objects.filter(pk=note.pk).exists()
+        assert not Note.objects.without("soft_delete", reason="test").filter(pk=note.pk).exists()
         assert not Citation.objects.filter(pk=citation.pk).exists()
 
     def test_hard_delete_is_superuser_only(
@@ -178,7 +182,7 @@ class TestActions:
         # selected.") and touches nothing.
         assert response.status_code == 302
         assert response.url == CHANGELIST_URL
-        assert Note.all_objects.filter(pk=note.pk).exists()
+        assert Note.objects.without("soft_delete", reason="test").filter(pk=note.pk).exists()
 
 
 class TestAutocomplete:

@@ -179,6 +179,30 @@ runs:
 payments = "karni_payments.checks:run_checks"   # () -> list[str] of failures
 ```
 
+### 7b. Optional `karni.scopes`: model scopes
+
+A module can add a **scope**, a named filter that every Karni default
+manager applies (see [models.md](models.md#scopes-the-filters-every-default-manager-applies)).
+Installing the module turns it on. No project code changes:
+
+```toml
+[project.entry-points."karni.scopes"]
+tenant = "karni_tenancy.scopes:TenantScope"   # a karni.scopes.Scope subclass or instance
+```
+
+- `name` must be unique (core owns `soft_delete`). `order` places the scope
+  in the pipeline (`soft_delete` is 10).
+- `applies_to(model)` decides which models it covers. Honour a per-model
+  opt-out read through `karni.scopes.scope_option(model, name)`, which reads
+  `class ScopeMeta: <name> = ...` on the model.
+- `filter(queryset)` runs when a queryset is *built*, which can be import
+  time. Read request or task context when the SQL compiles, and raise
+  `ScopeContextMissing(model, name, fix=...)` when none is bound. The scope
+  fails closed.
+- A load failure, a duplicate name or a bad attribute raises
+  `ImproperlyConfigured` naming the entry point (system check `karni.E002`).
+  Projects reorder or disable scopes with `KARNI_SCOPES`.
+
 ### 8. Tests — standalone, with fakes
 
 `tests/` runs with `python -m pytest` inside the module, against the

@@ -3,8 +3,10 @@
 Applies only to :class:`karni.models.SoftDeleteModel` subclasses:
 ``autodiscover()`` puts :class:`SoftDeleteAdminMixin` in front of
 ``KarniModelAdmin`` when building their admin classes. The changelist and
-change form see every row (``all_objects``); the default changelist view is
-scoped back to alive rows by :class:`SoftDeleteListFilter`.
+change form see deleted rows too: the admin queryset lifts the ``soft_delete``
+scope (``objects.without("soft_delete", reason=...)``) and keeps every other
+scope. The default changelist view is scoped back to alive rows by
+:class:`SoftDeleteListFilter`.
 
 Django's builtin ``delete_selected`` stays available and is *soft* on these
 models (``queryset.delete()`` is soft on both managers). Note that its
@@ -31,12 +33,27 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
+from karni.managers import ScopedManagerMixin
+from karni.scopes import SOFT_DELETE
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from django.contrib.admin.views.main import ChangeList
 
     from karni.models import SoftDeleteModel
+
+
+def lift_soft_delete(manager: Any, *, reason: str) -> QuerySet:
+    """``manager.without("soft_delete", reason=reason)``, for admin code.
+
+    A default manager that does not run Karni's scope pipeline (system check
+    karni.E001, silenced) has no ``soft_delete`` to lift. Its plain queryset
+    already includes deleted rows.
+    """
+    if isinstance(manager, ScopedManagerMixin):
+        return manager.without(SOFT_DELETE, reason=reason)
+    return manager.get_queryset()
 
 
 def _is_autocomplete_request(request: HttpRequest) -> bool:
@@ -102,8 +119,9 @@ class SoftDeleteListFilter(admin.SimpleListFilter):
 class SoftDeleteAdminMixin(admin.ModelAdmin):
     """Admin behaviour for soft-delete models.
 
-    * ``get_queryset()`` uses ``all_objects`` so the filter can show deleted
-      rows (and deleted rows stay editable through the change form).
+    * ``get_queryset()`` lifts the ``soft_delete`` scope (only that one), so
+      the filter can show deleted rows and they stay editable through the
+      change form.
     * Autocomplete responses stay alive-only.
     * ``restore_selected`` and the superuser-only, confirmation-guarded
       ``hard_delete_selected`` actions join the builtin (soft)
@@ -124,13 +142,16 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
     model: type[SoftDeleteModel]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
-        """Return ``all_objects`` (deleted included), with admin ordering applied.
+        """Every row the ``soft_delete`` scope hides, too, with admin ordering applied.
 
-        Mirrors ``ModelAdmin.get_queryset`` exactly, swapping the default
-        manager for ``all_objects``; :class:`SoftDeleteListFilter` scopes the
-        changelist back to alive rows by default.
+        Mirrors ``ModelAdmin.get_queryset`` exactly, except that the default
+        manager's queryset has ``soft_delete`` lifted. Every other scope still
+        applies. :class:`SoftDeleteListFilter` scopes the changelist back to
+        alive rows by default.
         """
-        queryset = self.model.all_objects.get_queryset()
+        queryset = lift_soft_delete(
+            self.model._default_manager, reason="admin: deleted filter and change form"
+        )
         ordering = self.get_ordering(request)
         if ordering:
             queryset = queryset.order_by(*ordering)

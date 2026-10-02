@@ -68,6 +68,8 @@ BASES: tuple[str, ...] = (
 
 FIELD_CAP = 4
 MODEL_CAP = 40
+#: Model names listed per scope in the SCOPES section.
+SCOPE_MODEL_CAP = 6
 
 
 def _skip_apps() -> frozenset[str]:
@@ -81,7 +83,11 @@ def _model_fields(model: type[models.Model]) -> list[str]:
     return names[:FIELD_CAP]
 
 
-def models_section() -> str | None:
+def _domain_models() -> list[tuple[str, type[models.Model]]]:
+    """(display name, model) for every non-skipped model, sorted by app label then name.
+
+    The display name is ``label.Name`` only when two apps share a model name.
+    """
     skip = _skip_apps()
     entries: list[tuple[str, str, type[models.Model]]] = []
     for cfg in apps.get_app_configs():
@@ -89,17 +95,65 @@ def models_section() -> str | None:
             continue
         for model in cfg.get_models():
             entries.append((cfg.label, model.__name__, model))
-    if not entries:
-        return None
     entries.sort(key=lambda e: (e[0], e[1]))
     name_counts = Counter(name for _, name, _ in entries)
-    parts: list[str] = []
-    for label, name, model in entries[:MODEL_CAP]:
-        shown = f"{label}.{name}" if name_counts[name] > 1 else name
-        parts.append(f"{shown}({','.join(_model_fields(model))})")
+    return [
+        (f"{label}.{name}" if name_counts[name] > 1 else name, model)
+        for label, name, model in entries
+    ]
+
+
+def models_section() -> str | None:
+    entries = _domain_models()
+    if not entries:
+        return None
+    parts = [f"{shown}({','.join(_model_fields(model))})" for shown, model in entries[:MODEL_CAP]]
     if len(entries) > MODEL_CAP:
         parts.append(f"+{len(entries) - MODEL_CAP} more")
     return "MODELS: " + " ".join(parts)
+
+
+def _capped(names: list[str]) -> str:
+    shown = ",".join(names[:SCOPE_MODEL_CAP])
+    return shown + (f",+{len(names) - SCOPE_MODEL_CAP}" if len(names) > SCOPE_MODEL_CAP else "")
+
+
+def scopes_section() -> str | None:
+    """Model scopes that differ from the default, and how to lift one.
+
+    ``soft_delete`` on every soft-delete model is the documented default and
+    is only printed when ``KARNI_SCOPES`` switched it off. Every other active
+    scope is printed with the domain models it covers: ``(all)``,
+    ``(all except A,B)``, or the covered models when they are the minority.
+    """
+    from karni.scopes import SOFT_DELETE, registry
+
+    try:
+        active = registry.active()
+        registered = registry.names()
+    except Exception as exc:  # noqa: BLE001 - inventory must degrade, never crash
+        sys.stderr.write(f"WARNING: scope inventory unavailable: {exc}\n")
+        return None
+    entries = _domain_models()
+    parts: list[str] = []
+    if SOFT_DELETE in registered and all(scope.name != SOFT_DELETE for scope in active):
+        parts.append(f"{SOFT_DELETE}(off)")
+    for scope in active:
+        if scope.name == SOFT_DELETE:
+            continue
+        covered = [shown for shown, model in entries if scope in registry.for_model(model)]
+        skipped = [shown for shown, model in entries if scope not in registry.for_model(model)]
+        if not covered:
+            continue
+        if not skipped:
+            parts.append(f"{scope.name}(all)")
+        elif len(skipped) <= len(covered):
+            parts.append(f"{scope.name}(all except {_capped(skipped)})")
+        else:
+            parts.append(f"{scope.name}({_capped(covered)})")
+    if not parts:
+        return None
+    return "SCOPES: " + " ".join(parts) + '; lift: objects.without("<scope>", reason=...)'
 
 
 def viewsets_section() -> str | None:
@@ -139,6 +193,7 @@ def build_context() -> str:
     """The full inventory, one section per line, empty sections omitted."""
     sections = [
         models_section(),
+        scopes_section(),
         viewsets_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),
