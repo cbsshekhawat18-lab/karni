@@ -5,6 +5,7 @@ with **one CLI command and at most one URL include** — no settings editing,
 no serializer/router/admin boilerplate. `karni-payments`
 (`modules/karni-payments/`) is the reference implementation; this page is
 precise enough to build a module without reading Karni's source.
+`karni make module <name>` writes the skeleton below (`modules/karni-<name>/`).
 
 ## Naming
 

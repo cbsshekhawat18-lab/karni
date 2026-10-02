@@ -13,7 +13,7 @@ serve:
 	karni serve
 
 migrate:
-	karni manage makemigrations
+	karni make migration
 	karni migrate
 
 types:

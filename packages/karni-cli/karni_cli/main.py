@@ -11,6 +11,7 @@ from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
 from karni_cli.commands.doctor import doctor
+from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.migrate import migrate
@@ -56,6 +57,10 @@ app.command(context_settings=PASSTHROUGH)(beat)
 app.add_typer(schedule_app, name="schedule")
 app.command(context_settings=PASSTHROUGH)(createsuperuser)
 app.command(context_settings=PASSTHROUGH)(manage)
+
+# Generators: `karni make <type>` (+ hidden `karni make:<type>` aliases).
+app.add_typer(make_app, name="make")
+register_aliases(app)
 
 
 def run() -> None:

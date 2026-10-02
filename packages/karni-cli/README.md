@@ -85,6 +85,56 @@ With the compose stack up, `worker` and `beat` already run as services, so
 `karni worker` and `karni beat` are for `.venv` development. See
 `docs/events.md` and `docs/scheduling.md`.
 
+## Generators
+`karni make <type>` writes the project code a task needs, so neither a person
+nor an AI agent hand-creates a file a generator makes. `karni make --list`
+prints them all; every one is also a hidden Laravel-style alias
+`karni make:<type>`. The full reference (every option, the field DSL) is
+[docs/cli.md](../../docs/cli.md), generated from this CLI.
+
+| Command | Writes |
+|---|---|
+| `karni make app NAME` | `NAME/{__init__,apps,models,viewsets}.py`, `migrations/`, `tests/`; wires `# karni:apps` |
+| `karni make model NAME [FIELD...]` | `class NAME(BaseModel)` in `<app>/models.py`; `--with viewset,page` / `-a` chains; `--migrate` |
+| `karni make viewset MODEL` | `<Model>ViewSet` with its `access` (`--access authenticated\|public-read\|owned:<field>\|staff\|role:<name>`), `--search` |
+| `karni make serializer MODEL --reason ...` | `<app>/serializers.py` + `serializer_class` on the viewset |
+| `karni make migration [NAME]` | runs `manage.py makemigrations [--app] [--name] [--empty]` through the project interpreter |
+| `karni make task NAME` | `@shared_task` in `<app>/tasks.py` (`--retry N`) |
+| `karni make schedule NAME` | `every(...)`/`cron(...)` in `<app>/schedules.py` (`--every 15m` / `--cron "0 3 * * *"`, `--task`) |
+| `karni make event NAME` | a `Signal` in `<app>/events.py` |
+| `karni make listener NAME --on ...` | `<app>/listeners.py`: `Model.created\|updated\|deleted` or a custom event; `--queued` |
+| `karni make command NAME` | `<app>/management/commands/NAME.py` |
+| `karni make service NAME` | `<app>/services/NAME.py` (where HTTP clients are allowed) |
+| `karni make middleware NAME` | `<app>/middleware.py`, wired through `# karni:middleware` |
+| `karni make page NAME` | `frontend/src/pages/NAME.tsx` (≤ 50 lines; `--resource R --kind list\|detail\|form`), route in `frontend/src/routes.tsx` |
+| `karni make component NAME` | `frontend/src/components/NAME.tsx` claiming a role (`--role`) |
+| `karni make module NAME` | `modules/karni-NAME/` per docs/modules.md |
+
+```sh
+karni make app events
+karni make model Event title:str:200 starts_at:datetime "status:choice:draft|live" \
+    organizer:fk:User 'venue:fk:Venue?' -a --access owned:organizer --search title
+karni make migration && karni migrate
+karni make listener notify_organizer --on Event.created --queued
+karni make schedule nightly-report --cron "0 3 * * *"
+```
+
+Every generator: never overwrites without `--force`; `--dry-run` prints the
+files and diff and writes nothing; prints each created/modified file plus
+notes (the chosen `access`, the route, the next command); resolves the app
+from `--app` or the project's only local app; edits existing files only
+through marker comments or AST-located appends (an unfamiliar layout is an
+error naming the manual step); never imports Django. Generated Python is
+clean under ruff (lint and format) and `karni rules --check`, and generated
+pages parse and stay within 50 lines — `tests/test_make_gate.py` generates
+every type into a fresh scaffold and asserts it (plus `tsc` and the
+frontend's ESLint config when `KARNI_TEST_NODE_MODULES` points at an
+installed `frontend/node_modules`), then runs the generated backend for real
+(makemigrations, migrate, check, requests through the Django test client).
+
+Quote fields that end in `?` in zsh (`'venue:fk:Venue?'`) and choice values
+joined by `|`.
+
 ## Execution environment
 Commands that run the project resolve, in order: `--docker/--no-docker` flag →
 `<project>/.venv` → a running compose service (default `django`; change with

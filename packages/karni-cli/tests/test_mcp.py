@@ -47,7 +47,9 @@ def test_context_tool(generated_project: Path, monkeypatch) -> None:
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=backend, stderr=""),
     )
-    assert mcp_server.context_tool() == backend
+    # The scaffold ships one page (frontend/src/pages/home.tsx), read statically.
+    expected = "MODELS: Event(title)\nPAGES: home\nBASES: BaseModel BaseViewSet"
+    assert mcp_server.context_tool() == expected
 
 
 def test_context_tool_outside_a_project(tmp_path: Path, monkeypatch) -> None:

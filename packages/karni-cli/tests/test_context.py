@@ -108,7 +108,8 @@ def test_context_prepends_apps_and_appends_pages(
     settings = generated_project / "config" / "settings.py"
     settings.write_text(settings.read_text().replace('    # "myapp",\n', '    "events",\n'))
     (generated_project / "events").mkdir()
-    (generated_project / "frontend" / "src" / "pages").mkdir(parents=True)
+    # The scaffold ships frontend/src/pages/ (home.tsx) already.
+    (generated_project / "frontend" / "src" / "pages").mkdir(parents=True, exist_ok=True)
     (generated_project / "frontend" / "src" / "pages" / "events.tsx").write_text("")
     monkeypatch.chdir(generated_project)
     monkeypatch.setattr(

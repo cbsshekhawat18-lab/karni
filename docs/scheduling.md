@@ -1,7 +1,9 @@
 # Scheduling and background work
 
 Declare periodic work next to the app that owns it, in `<app>/schedules.py`.
-There's no `CELERY_BEAT_SCHEDULE` dict to maintain by hand:
+There's no `CELERY_BEAT_SCHEDULE` dict to maintain by hand. `karni make
+schedule <name> --every 15m` (or `--cron "0 3 * * *"`) writes the entry and
+the task it runs; `karni make task <name>` writes a task alone:
 
 ```python
 # shop/schedules.py

@@ -4,7 +4,8 @@ React to things that happen to your data without wiring signals by hand.
 Put listeners in `<app>/listeners.py`; Karni imports that module for every
 installed app at startup (`KarniAppConfig.ready()`), in web, worker and beat
 processes alike. There's no `AppConfig.ready()` boilerplate and no import to
-remember.
+remember. Generate them: `karni make listener <name> --on Order.created
+[--queued]`, `karni make event <name>` (see [the CLI reference](cli.md)).
 
 ```python
 # shop/listeners.py

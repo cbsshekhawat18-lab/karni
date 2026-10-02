@@ -50,15 +50,21 @@ precedence.
 
 ## Day-to-day
 
+Generate code with `karni make` (`karni make --list` shows every generator;
+each runs through the project's `.venv` or the running compose service where
+it needs Django):
+
 ```sh
-docker compose run --rm django python manage.py createsuperuser
-docker compose run --rm django python manage.py startapp myapp
-docker compose run --rm django python manage.py makemigrations
+karni make app events                       # replaces manage.py startapp; wires INSTALLED_APPS
+karni make model Event title:str:200 starts_at:datetime organizer:fk:User -a \
+    --access owned:organizer                # model + viewset + list/detail/form pages
+karni make migration && karni migrate
+karni createsuperuser
 ```
 
-Add new apps to `INSTALLED_APPS` in `config/settings.py`; override any Django,
-DRF, Celery or Karni setting in the same file, below the `karni_settings()`
-call.
+Override any Django, DRF, Celery or Karni setting in `config/settings.py`,
+below the `karni_settings()` call. Generators add apps to the `# karni:apps`
+block and middleware to the `# karni:middleware` block — keep those markers.
 
 ## AI coding agents
 
