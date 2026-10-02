@@ -1,0 +1,88 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "fixture API", "version": "0.1.0"},
+  "paths": {
+    "/api/events/": {
+      "get": {
+        "operationId": "events_list",
+        "x-karni-resource": "events",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/PaginatedTestappEventList"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/": {
+      "get": {
+        "operationId": "events_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {"schema": {"$ref": "#/components/schemas/TestappEvent"}}
+            }
+          }
+        }
+      }
+    },
+    "/api/venues/": {
+      "get": {
+        "operationId": "venues_list",
+        "x-karni-resource": "venues",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/PaginatedTestappVenueList"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TestappEvent": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid", "readOnly": true},
+          "title": {"type": "string", "maxLength": 200}
+        },
+        "required": ["id", "title"]
+      },
+      "TestappVenue": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid", "readOnly": true},
+          "name": {"type": "string"}
+        },
+        "required": ["id", "name"]
+      },
+      "PaginatedTestappEventList": {
+        "type": "object",
+        "properties": {
+          "count": {"type": "integer"},
+          "results": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/TestappEvent"}
+          }
+        }
+      },
+      "PaginatedTestappVenueList": {
+        "type": "object",
+        "properties": {
+          "count": {"type": "integer"},
+          "results": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/TestappVenue"}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+.learning/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+packages/karni-cli/karni_cli/_templates/
+
+# Node
+node_modules/
+storybook-static/
+*.tsbuildinfo
+
+# Local env / editor / tooling
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

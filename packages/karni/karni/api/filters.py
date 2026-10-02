@@ -1,0 +1,248 @@
+"""Karni's DRF filter backends: auto-derived filtersets and pluggable search.
+
+Both backends are part of :class:`karni.api.viewsets.BaseViewSet`'s default
+``filter_backends`` (and of the conf-level DRF defaults), in the order
+``[KarniFilterBackend, OrderingFilter, KarniSearchFilter]`` — search runs
+last so a ranking provider can either impose rank ordering (no explicit
+``?ordering=``) or leave the explicitly requested ordering untouched.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, ClassVar, cast
+
+import django_filters
+from django.db import models
+from django_filters.rest_framework import DjangoFilterBackend, FilterSet
+from rest_framework.filters import BaseFilterBackend, OrderingFilter
+from rest_framework.request import Request
+from rest_framework.settings import api_settings
+
+from karni.api.search import get_search_provider
+
+__all__ = ["KarniFilterBackend", "KarniSearchFilter"]
+
+_FILTERSET_CACHE: dict[tuple[type, type[models.Model]], type[FilterSet]] = {}
+
+
+def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
+    """Field names eligible for filter derivation under the ``APIMeta`` policy.
+
+    Mirrors the serializer-generation convention: the effective field set is
+    ``APIMeta.fields`` when declared (else every concrete + many-to-many field)
+    minus ``APIMeta.exclude``. Fields in ``APIMeta.write_only`` and fields
+    named ``"password"`` are never filterable — filters must not leak values
+    the API never reads back.
+    """
+    api_meta = getattr(model, "APIMeta", None)
+    declared = getattr(api_meta, "fields", None)
+    excluded = frozenset(getattr(api_meta, "exclude", None) or ())
+    write_only = frozenset(getattr(api_meta, "write_only", None) or ())
+    if declared is not None:
+        effective = frozenset(declared)
+    else:
+        effective = frozenset(
+            field.name for field in (*model._meta.concrete_fields, *model._meta.many_to_many)
+        )
+    return frozenset(name for name in effective - excluded - write_only if name != "password")
+
+
+class KarniFilterBackend(DjangoFilterBackend):
+    """``DjangoFilterBackend`` that derives a sensible FilterSet automatically.
+
+    For a :class:`~karni.api.viewsets.BaseViewSet` subclass (or any view
+    setting ``karni_auto_filterset = True``) with no explicit
+    ``filterset_class`` / ``filterset_fields``, a FilterSet is derived from the
+    model and cached per (backend class, model):
+
+    * fields with ``choices`` → a ``ChoiceFilter`` with ``exact`` only (the
+      enum stays an enum);
+    * Char/Slug/Email → ``exact`` and ``icontains``;
+    * Integer/Float/Decimal/Date/DateTime → ``exact``, ``gte`` and ``lte``
+      (parameters ``?field=``, ``?field__gte=``, ``?field__lte=``);
+    * Boolean → ``exact``;
+    * forward FK / OneToOne → ``exact`` against the target's primary-key type
+      (for example ``UUIDFilter`` for UUID keys — never a
+      ``ModelChoiceFilter`` that would render the whole related queryset);
+    * everything else — Text, JSON, File/Image, binary, M2M — is skipped, as
+      is any field outside the model's ``APIMeta`` policy (see
+      :func:`_api_filterable_names`).
+
+    On every other view this backend behaves exactly like the stock
+    ``DjangoFilterBackend``, and an explicit ``filterset_class`` or
+    ``filterset_fields`` (even an empty one) on any view always wins untouched.
+
+    Override / escape hatch: set ``filterset_class`` / ``filterset_fields`` on
+    the view for full control, or subclass this backend and override
+    :attr:`lookup_map`, :attr:`pk_filter_map`, :meth:`filterable_fields` or
+    :meth:`derive_filterset_class`, then point the view's ``filter_backends``
+    (or ``REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"]``) at your subclass.
+    """
+
+    lookup_map: ClassVar[Mapping[type[models.Field], tuple[str, ...]]] = {
+        models.CharField: ("exact", "icontains"),
+        models.SlugField: ("exact", "icontains"),
+        models.EmailField: ("exact", "icontains"),
+        models.IntegerField: ("exact", "gte", "lte"),
+        models.FloatField: ("exact", "gte", "lte"),
+        models.DecimalField: ("exact", "gte", "lte"),
+        models.DateTimeField: ("exact", "gte", "lte"),
+        models.DateField: ("exact", "gte", "lte"),
+        models.BooleanField: ("exact",),
+    }
+    """Field type → derived lookups. Resolved through each field's MRO, so
+    subclasses (``PositiveIntegerField`` → ``IntegerField``) inherit their
+    base's lookups while ``TextField`` (deliberately absent: unindexed
+    seq-scans) stays excluded. Override on a backend subclass to change it."""
+
+    pk_filter_map: ClassVar[Mapping[type[models.Field], type[django_filters.Filter]]] = {
+        models.UUIDField: django_filters.UUIDFilter,
+        models.IntegerField: django_filters.NumberFilter,
+        models.CharField: django_filters.CharFilter,
+    }
+    """Relation-target pk type → filter class for derived FK/O2O filters."""
+
+    def get_filterset_class(
+        self, view: Any, queryset: models.QuerySet[Any] | None = None
+    ) -> type[FilterSet] | None:
+        """Explicit ``filterset_*`` wins; otherwise derive for opted-in views."""
+        if (
+            getattr(view, "filterset_class", None) is not None
+            or getattr(view, "filterset_fields", None) is not None
+        ):
+            return super().get_filterset_class(view, queryset)
+        if queryset is None or not self._auto_derivation_enabled(view):
+            return super().get_filterset_class(view, queryset)
+        return self.derive_filterset_class(queryset.model)
+
+    def derive_filterset_class(self, model: type[models.Model]) -> type[FilterSet]:
+        """Return the derived FilterSet for ``model``, cached per backend class."""
+        cache_key = (type(self), model)
+        cached = _FILTERSET_CACHE.get(cache_key)
+        if cached is None:
+            cached = _FILTERSET_CACHE[cache_key] = self._build_filterset(model)
+        return cached
+
+    def filterable_fields(self, model: type[models.Model]) -> frozenset[str]:
+        """Names eligible for derivation; override to change the policy."""
+        return _api_filterable_names(model)
+
+    def _auto_derivation_enabled(self, view: Any) -> bool:
+        """Auto-derivation is opt-in: BaseViewSet or ``karni_auto_filterset``."""
+        if getattr(view, "karni_auto_filterset", False):
+            return True
+        from karni.api.viewsets import BaseViewSet
+
+        return isinstance(view, BaseViewSet)
+
+    def _lookups_for(self, field: models.Field) -> tuple[str, ...] | None:
+        for klass in type(field).__mro__:
+            lookups = self.lookup_map.get(klass)
+            if lookups is not None:
+                return tuple(lookups)
+        return None
+
+    def _relation_filter(self, field: models.Field) -> django_filters.Filter:
+        """Exact filter typed after the relation target's primary key."""
+        # Only forward FK/O2O fields reach this point (see _build_filterset).
+        target = cast("models.ForeignKey[Any, Any]", field).target_field
+        for klass in type(target).__mro__:
+            filter_class = self.pk_filter_map.get(klass)
+            if filter_class is not None:
+                return filter_class(field_name=field.name)
+        return django_filters.CharFilter(field_name=field.name)
+
+    def _build_filterset(self, model: type[models.Model]) -> type[FilterSet]:
+        allowed = self.filterable_fields(model)
+        meta_fields: dict[str, list[str]] = {}
+        declared: dict[str, Any] = {}
+        for field in model._meta.concrete_fields:
+            if field.name not in allowed:
+                continue
+            if field.is_relation:
+                if field.many_to_one or field.one_to_one:
+                    declared[field.name] = self._relation_filter(field)
+                continue
+            if getattr(field, "choices", None):
+                meta_fields[field.name] = ["exact"]
+                continue
+            lookups = self._lookups_for(field)
+            if lookups is not None:
+                meta_fields[field.name] = list(lookups)
+        meta = type("Meta", (), {"model": model, "fields": meta_fields})
+        return type(
+            f"{model.__name__}AutoFilterSet",
+            (self.filterset_base,),
+            {"Meta": meta, **declared},
+        )
+
+
+class KarniSearchFilter(BaseFilterBackend):
+    """Backend delegating ``?search=`` to the configured search provider.
+
+    Reads the search term from the request (parameter name from DRF's
+    ``SEARCH_PARAM``, default ``"search"``), and is a no-op when the term is
+    empty or the view declares no ``search_fields``. Otherwise it calls
+    ``get_search_provider().search(...)`` with ``rank_order`` set to whether
+    the request carries **no** explicit ordering parameter — so search-rank
+    ordering stands by default but an explicit ``?ordering=`` always wins
+    (this backend runs after ``OrderingFilter``).
+
+    The ``search`` schema parameter is emitted only for views whose
+    ``search_fields`` is non-empty, so resources without search never document
+    a dead search box.
+
+    Override / escape hatch: change the provider via the
+    ``KARNI_SEARCH_PROVIDER`` setting (see :mod:`karni.api.search`), or
+    subclass and override :meth:`rank_order` / :meth:`filter_queryset`.
+    """
+
+    search_param: str = api_settings.SEARCH_PARAM
+    search_description: str = "A search term."
+
+    def filter_queryset(
+        self, request: Request, queryset: models.QuerySet[Any], view: Any
+    ) -> models.QuerySet[Any]:
+        """Delegate to the provider, or pass through when there is no search."""
+        query = self.get_search_query(request)
+        fields = tuple(getattr(view, "search_fields", None) or ())
+        if not query or not fields:
+            return queryset
+        return get_search_provider().search(
+            queryset=queryset,
+            query=query,
+            fields=fields,
+            view=view,
+            rank_order=self.rank_order(request, view),
+        )
+
+    def get_search_query(self, request: Request) -> str:
+        """The stripped ``?search=`` value (empty string when absent)."""
+        value = request.query_params.get(self.search_param, "")
+        return value.strip() if isinstance(value, str) else ""
+
+    def rank_order(self, request: Request, view: Any) -> bool:
+        """``True`` when no explicit ordering parameter is on the request."""
+        return self.ordering_param(view) not in request.query_params
+
+    def ordering_param(self, view: Any) -> str:
+        """The ordering parameter name honoured by the view's OrderingFilter."""
+        for backend in getattr(view, "filter_backends", None) or ():
+            if isinstance(backend, type) and issubclass(backend, OrderingFilter):
+                return cast("type[OrderingFilter]", backend).ordering_param
+        return api_settings.ORDERING_PARAM
+
+    def get_schema_operation_parameters(self, view: Any) -> list[dict[str, Any]]:
+        """Document ``?search=`` — only where searching actually does something."""
+        if not getattr(view, "search_fields", None):
+            return []
+        return [
+            {
+                "name": self.search_param,
+                "required": False,
+                "in": "query",
+                "description": self.search_description,
+                "schema": {"type": "string"},
+            }
+        ]

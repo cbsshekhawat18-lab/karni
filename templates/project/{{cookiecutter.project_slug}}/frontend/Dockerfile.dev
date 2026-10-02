@@ -1,0 +1,9 @@
+# Dev-only image for the Vite dev server (docker-compose bind-mounts the
+# source over /app and keeps the image's node_modules via an anonymous volume).
+FROM node:20-alpine
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]

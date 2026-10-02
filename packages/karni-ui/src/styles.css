@@ -1,0 +1,87 @@
+/**
+ * @karni/ui design tokens.
+ *
+ * Every color used by @karni/ui components resolves to one of these
+ * custom properties (HSL triplets, consumed as `hsl(var(--karni-*) / <alpha>)`
+ * by the Tailwind preset). Override any token in your own stylesheet to
+ * retheme the whole library; add the `dark` class to <html> (or any ancestor)
+ * to switch to the dark palette.
+ */
+:root {
+  color-scheme: light;
+
+  --karni-background: 0 0% 100%;
+  --karni-foreground: 224 71.4% 4.1%;
+
+  --karni-card: 0 0% 100%;
+  --karni-card-foreground: 224 71.4% 4.1%;
+
+  --karni-popover: 0 0% 100%;
+  --karni-popover-foreground: 224 71.4% 4.1%;
+
+  --karni-primary: 220.9 39.3% 11%;
+  --karni-primary-foreground: 210 20% 98%;
+
+  --karni-secondary: 220 14.3% 95.9%;
+  --karni-secondary-foreground: 220.9 39.3% 11%;
+
+  --karni-muted: 220 14.3% 95.9%;
+  --karni-muted-foreground: 220 8.9% 46.1%;
+
+  --karni-accent: 220 14.3% 95.9%;
+  --karni-accent-foreground: 220.9 39.3% 11%;
+
+  --karni-destructive: 0 84.2% 60.2%;
+  --karni-destructive-foreground: 210 20% 98%;
+
+  --karni-border: 220 13% 91%;
+  --karni-input: 220 13% 91%;
+  --karni-ring: 224 71.4% 4.1%;
+
+  --karni-radius: 0.5rem;
+
+  /* DataChart series colors (chart-1 .. chart-5). */
+  --karni-chart-1: 220 70% 50%;
+  --karni-chart-2: 160 60% 45%;
+  --karni-chart-3: 30 80% 55%;
+  --karni-chart-4: 280 65% 60%;
+  --karni-chart-5: 340 75% 55%;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --karni-background: 224 71.4% 4.1%;
+  --karni-foreground: 210 20% 98%;
+
+  --karni-card: 224 71.4% 4.1%;
+  --karni-card-foreground: 210 20% 98%;
+
+  --karni-popover: 224 71.4% 4.1%;
+  --karni-popover-foreground: 210 20% 98%;
+
+  --karni-primary: 210 20% 98%;
+  --karni-primary-foreground: 220.9 39.3% 11%;
+
+  --karni-secondary: 215 27.9% 16.9%;
+  --karni-secondary-foreground: 210 20% 98%;
+
+  --karni-muted: 215 27.9% 16.9%;
+  --karni-muted-foreground: 217.9 10.6% 64.9%;
+
+  --karni-accent: 215 27.9% 16.9%;
+  --karni-accent-foreground: 210 20% 98%;
+
+  --karni-destructive: 0 62.8% 30.6%;
+  --karni-destructive-foreground: 210 20% 98%;
+
+  --karni-border: 215 27.9% 16.9%;
+  --karni-input: 215 27.9% 16.9%;
+  --karni-ring: 216 12.2% 83.9%;
+
+  --karni-chart-1: 217 91% 60%;
+  --karni-chart-2: 160 60% 45%;
+  --karni-chart-3: 30 80% 55%;
+  --karni-chart-4: 280 65% 60%;
+  --karni-chart-5: 340 75% 55%;
+}

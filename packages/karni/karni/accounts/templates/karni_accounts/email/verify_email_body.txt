@@ -1,0 +1,9 @@
+{% autoescape off %}Hi{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+Thanks for signing up. Please confirm that {{ user.email }} is your email
+address by opening the link below:
+
+{{ link }}
+
+If you did not create this account, you can safely ignore this email.
+{% endautoescape %}

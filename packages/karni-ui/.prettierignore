@@ -1,0 +1,7 @@
+dist/
+storybook-static/
+public/
+coverage/
+package-lock.json
+# Byte-identical copy of the Python side's generated snapshot (D9) — never reformat.
+tests/fixtures/schema.testapp.json

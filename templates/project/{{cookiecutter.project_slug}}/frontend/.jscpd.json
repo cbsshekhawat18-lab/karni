@@ -1,0 +1,8 @@
+{
+  "minTokens": 70,
+  "threshold": 2,
+  "pattern": "src/**/*.{ts,tsx}",
+  "ignore": ["src/api/**"],
+  "exitCode": 1,
+  "reporters": ["consoleFull"]
+}

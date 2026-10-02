@@ -1,0 +1,364 @@
+"""Automatic ``ModelSerializer`` generation for Karni API endpoints.
+
+:func:`build_serializer` turns a model class into a fully configured DRF
+serializer so viewsets need no hand-written serializer for the common case.
+Behaviour is steered by an inner ``class APIMeta:`` on the model:
+
+``fields``
+    Explicit field list (default: every concrete non-relation-through field
+    plus declared many-to-many fields). Mutually exclusive with ``exclude``.
+``exclude``
+    Field names removed from the default list.
+``read_only`` / ``write_only``
+    Field names forced read-only / write-only. Both must be subsets of the
+    effective field set. ``BaseModel``'s ``id`` / ``created_at`` /
+    ``updated_at`` are *always* read-only.
+``schema_name``
+    Replaces the ``{CamelAppLabel}{Model}`` stem used for generated class
+    (and therefore OpenAPI component) names.
+
+Sensitive-field policy: a field named ``password`` is never exposed by the
+automatic default, and for ``AbstractBaseUser`` / ``PermissionsMixin``
+subclasses it is stripped even from an explicit ``APIMeta.fields`` while
+``last_login`` / ``is_staff`` / ``is_superuser`` / ``is_active`` / ``groups``
+/ ``user_permissions`` are forced read-only.
+
+Relations serialize as writable primary keys by default; relations named in
+``expand`` become nested read-only serializers built recursively (a cycle or
+the depth limit stops nesting at the primary key).
+
+Override / escape hatch: set ``serializer_class`` on the viewset to bypass
+generation entirely, declare ``APIMeta`` for per-model tweaks, or subclass
+:class:`KarniModelSerializer` and generate from it in your own code.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any
+
+from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.db.models import Model
+from django.test.signals import setting_changed
+from rest_framework import serializers
+from rest_framework.relations import (
+    MANY_RELATION_KWARGS,
+    ManyRelatedField,
+    PrimaryKeyRelatedField,
+)
+
+from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+
+__all__ = [
+    "KarniManyRelatedField",
+    "KarniModelSerializer",
+    "KarniPrimaryKeyRelatedField",
+    "build_serializer",
+    "serializer_name",
+]
+
+USER_FORCED_READ_ONLY = frozenset(
+    {"last_login", "is_staff", "is_superuser", "is_active", "groups", "user_permissions"}
+)
+"""Fields forced read-only on user-model serializers (sensitive-field policy)."""
+
+
+class KarniPrimaryKeyRelatedField(PrimaryKeyRelatedField):
+    """``PrimaryKeyRelatedField`` used by Karni-generated serializers.
+
+    Behaviourally identical to the stock field; it exists so that
+    drf-spectacular extensions can annotate exactly the relations of
+    generated serializers with the ``x-karni-relation`` vendor extension
+    (see :mod:`karni.api.schema`).
+
+    Override / escape hatch: set ``serializer_related_field`` on a
+    :class:`KarniModelSerializer` subclass to swap the relation field class.
+    """
+
+    @classmethod
+    def many_init(cls, *args: Any, **kwargs: Any) -> KarniManyRelatedField:
+        """Build a :class:`KarniManyRelatedField` wrapping this field."""
+        list_kwargs: dict[str, Any] = {"child_relation": cls(*args, **kwargs)}
+        for key in kwargs:
+            if key in MANY_RELATION_KWARGS:
+                list_kwargs[key] = kwargs[key]
+        return KarniManyRelatedField(**list_kwargs)
+
+
+class KarniManyRelatedField(ManyRelatedField):
+    """``ManyRelatedField`` counterpart of :class:`KarniPrimaryKeyRelatedField`.
+
+    Created by :meth:`KarniPrimaryKeyRelatedField.many_init` for to-many
+    relations so schema generation can mark them ``{"many": true}``.
+    """
+
+
+class KarniModelSerializer(serializers.ModelSerializer):
+    """Base class of every serializer produced by :func:`build_serializer`.
+
+    Relations are rendered with :class:`KarniPrimaryKeyRelatedField` (and its
+    to-many wrapper) so the OpenAPI schema can carry Karni's vendor
+    extensions.
+
+    Override / escape hatch: subclass this (or plain ``ModelSerializer``) and
+    point the viewset's ``serializer_class`` at your class — an explicit
+    ``serializer_class`` always wins over generation.
+    """
+
+    serializer_related_field = KarniPrimaryKeyRelatedField
+
+
+def serializer_name(model: type[Model], expand: frozenset[str] = frozenset()) -> str:
+    """Return the deterministic class name for a generated serializer.
+
+    The stem is ``APIMeta.schema_name`` if declared, otherwise the
+    camel-cased app label followed by the model name (app-qualified so names
+    never collide across apps). Expanded variants append the sorted expand
+    paths — each path camel-cased per dotted segment, paths joined with
+    ``_`` so ``{"a", "b"}`` and ``{"a.b"}`` stay distinct — plus an
+    ``Expanded`` marker.
+
+    Override / escape hatch: declare ``APIMeta.schema_name`` on the model.
+    """
+    api_meta = getattr(model, "APIMeta", None)
+    stem = getattr(api_meta, "schema_name", None) or (
+        f"{_camel(model._meta.app_label)}{model.__name__}"
+    )
+    if not expand:
+        return f"{stem}Serializer"
+    joined = "_".join(
+        "".join(_camel(segment) for segment in path.split(".")) for path in sorted(expand)
+    )
+    return f"{stem}_{joined}ExpandedSerializer"
+
+
+def build_serializer(
+    model: type[Model],
+    *,
+    expand: frozenset[str] = frozenset(),
+    _seen: tuple[type[Model], ...] = (),
+    max_depth: int | None = None,
+) -> type[serializers.ModelSerializer]:
+    """Build (or fetch from cache) the generated serializer for ``model``.
+
+    :param model: the model to serialize.
+    :param expand: validated relation paths (see
+        :func:`karni.api.expansion.validate_expand`) to embed as nested
+        read-only serializers instead of primary keys.
+    :param _seen: internal recursion guard — the models already on the
+        nesting path. Expanding into a model present here (a cycle) stops at
+        the primary key. Callers pass a non-empty value only when they want
+        an uncached nested build.
+    :param max_depth: nesting depth limit; ``None`` reads the
+        ``KARNI_API_MAX_EXPAND_DEPTH`` setting (default 2). Reaching the
+        limit stops nesting at the primary key.
+
+    Caching: only top-level builds (empty ``_seen``) are cached, keyed by
+    ``(model, expand, effective max depth)``; nested and guard-truncated
+    variants are always built fresh. Cache writes are last-write-wins under
+    the GIL and generated classes are pure (no mutable class state), so
+    concurrent builds are safe. ``build_serializer.cache_clear()`` empties
+    the cache; it is also emptied automatically when ``override_settings``
+    changes ``KARNI_API_MAX_EXPAND_DEPTH``.
+
+    Override / escape hatch: an explicit ``serializer_class`` on the viewset
+    bypasses this function entirely; ``APIMeta`` on the model steers what is
+    generated.
+    """
+    expand = frozenset(expand)
+    if _seen:
+        return _build_serializer_class(model, expand, tuple(_seen), _resolve_max_depth(max_depth))
+    depth = _resolve_max_depth(max_depth)
+    key = (model, expand, depth)
+    cached = _SERIALIZER_CACHE.get(key)
+    if cached is not None:
+        return cached
+    built = _build_serializer_class(model, expand, (), depth)
+    _SERIALIZER_CACHE[key] = built
+    return built
+
+
+_SERIALIZER_CACHE: dict[
+    tuple[type[Model], frozenset[str], int], type[serializers.ModelSerializer]
+] = {}
+
+
+def _cache_clear() -> None:
+    """Drop every cached generated serializer class.
+
+    Public as ``build_serializer.cache_clear()``. Call it after mutating a
+    model's ``APIMeta`` at runtime (tests do; production code should not).
+    """
+    _SERIALIZER_CACHE.clear()
+
+
+build_serializer.cache_clear = _cache_clear  # type: ignore[attr-defined]
+
+
+def _reset_cache_on_setting_change(sender: object, setting: str, **kwargs: Any) -> None:
+    """Reset the serializer cache when the expansion depth setting changes."""
+    if setting == "KARNI_API_MAX_EXPAND_DEPTH":
+        _SERIALIZER_CACHE.clear()
+
+
+setting_changed.connect(
+    _reset_cache_on_setting_change, dispatch_uid="karni.api.serializers.cache_reset"
+)
+
+
+def _resolve_max_depth(max_depth: int | None) -> int:
+    """Return the effective nesting depth limit."""
+    if max_depth is not None:
+        return int(max_depth)
+    return int(getattr(settings, "KARNI_API_MAX_EXPAND_DEPTH", DEFAULT_MAX_EXPAND_DEPTH))
+
+
+def _camel(value: str) -> str:
+    """Camel-case a snake_case name (``karni_accounts`` → ``KarniAccounts``)."""
+    return "".join(part[:1].upper() + part[1:] for part in value.split("_") if part)
+
+
+def _is_user_model(model: type[Model]) -> bool:
+    """True for ``AbstractBaseUser`` / ``PermissionsMixin`` subclasses."""
+    from django.contrib.auth.base_user import AbstractBaseUser
+    from django.contrib.auth.models import PermissionsMixin
+
+    return issubclass(model, AbstractBaseUser | PermissionsMixin)
+
+
+def _default_field_names(model: type[Model]) -> list[str]:
+    """Default field set: concrete fields plus declared M2Ms, sans password."""
+    names = [field.name for field in model._meta.concrete_fields]
+    names += [field.name for field in model._meta.many_to_many]
+    return [name for name in names if name != "password"]
+
+
+def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
+    """Resolve the serializer's field list from ``APIMeta`` (or defaults)."""
+    declared = getattr(api_meta, "fields", None)
+    excluded = getattr(api_meta, "exclude", None)
+    if declared is not None and excluded is not None:
+        raise ImproperlyConfigured(
+            f"{model.__name__}.APIMeta declares both 'fields' and 'exclude'; "
+            "they are mutually exclusive."
+        )
+    if declared is not None:
+        names = list(declared)
+    else:
+        names = _default_field_names(model)
+        if excluded is not None:
+            excluded_set = set(excluded)
+            names = [name for name in names if name not in excluded_set]
+    if _is_user_model(model):
+        names = [name for name in names if name != "password"]
+    return names
+
+
+def _extra_kwargs(
+    model: type[Model], api_meta: Any, field_names: Iterable[str]
+) -> dict[str, dict[str, Any]]:
+    """Build ``Meta.extra_kwargs`` enforcing the read-only/write-only policy."""
+    effective = set(field_names)
+    read_only = list(getattr(api_meta, "read_only", ()) or ())
+    write_only = list(getattr(api_meta, "write_only", ()) or ())
+    for label, listed in (("read_only", read_only), ("write_only", write_only)):
+        unknown = sorted(set(listed) - effective)
+        if unknown:
+            raise ImproperlyConfigured(
+                f"{model.__name__}.APIMeta.{label} names fields outside the "
+                f"serializer's field set: {', '.join(unknown)}."
+            )
+    always_read_only = {model._meta.pk.name, "created_at", "updated_at"} & effective
+    forced = (USER_FORCED_READ_ONLY & effective) if _is_user_model(model) else set()
+    read_only_set = set(read_only) | always_read_only | forced
+    overlap = sorted(read_only_set & set(write_only))
+    if overlap:
+        raise ImproperlyConfigured(
+            f"{model.__name__}.APIMeta marks fields as both read-only and "
+            f"write-only: {', '.join(overlap)}."
+        )
+    kwargs: dict[str, dict[str, Any]] = {
+        name: {"read_only": True} for name in sorted(read_only_set)
+    }
+    for name in write_only:
+        kwargs[name] = {"write_only": True}
+    return kwargs
+
+
+def _group_expand(expand: frozenset[str]) -> dict[str, set[str]]:
+    """Group expand paths by their first segment: ``a.b`` → ``{"a": {"b"}}``."""
+    groups: dict[str, set[str]] = {}
+    for path in expand:
+        head, _, rest = path.partition(".")
+        bucket = groups.setdefault(head, set())
+        if rest:
+            bucket.add(rest)
+    return groups
+
+
+def _relation_field_or_raise(model: type[Model], name: str) -> Any:
+    """Return the relation field ``name`` of ``model`` or raise loudly."""
+    try:
+        field = model._meta.get_field(name)
+    except FieldDoesNotExist as exc:
+        raise ImproperlyConfigured(
+            f"Cannot expand {name!r} on {model.__name__}: no such field."
+        ) from exc
+    if not getattr(field, "is_relation", False) or field.related_model is None:
+        raise ImproperlyConfigured(
+            f"Cannot expand {name!r} on {model.__name__}: it is not a relation."
+        )
+    return field
+
+
+def _build_serializer_class(
+    model: type[Model],
+    expand: frozenset[str],
+    seen: tuple[type[Model], ...],
+    max_depth: int,
+) -> type[serializers.ModelSerializer]:
+    """Assemble the serializer class (uncached workhorse)."""
+    api_meta = getattr(model, "APIMeta", None)
+    field_names = _effective_field_names(model, api_meta)
+    extra_kwargs = _extra_kwargs(model, api_meta, field_names)
+    effective = set(field_names)
+    meta_fields = list(field_names)
+    declared: dict[str, Any] = {}
+
+    for head, sub_paths in sorted(_group_expand(expand).items()):
+        field = _relation_field_or_raise(model, head)
+        forward = is_forward_relation(field)
+        if forward and head not in effective:
+            # Excluded forward relation: expansion never leaks it back in.
+            continue
+        related = field.related_model
+        if related is model or related in seen or len(seen) + 1 > max_depth:
+            # Cycle or depth guard: the representation stays at the PK
+            # (reverse relations simply stay absent).
+            continue
+        nested_class = _build_serializer_class(
+            related, frozenset(sub_paths), (*seen, model), max_depth
+        )
+        many = bool(getattr(field, "many_to_many", False) or getattr(field, "one_to_many", False))
+        declared[head] = nested_class(read_only=True, many=many)
+        extra_kwargs.pop(head, None)
+        if not forward and head not in effective:
+            meta_fields.append(head)
+
+    meta = type(
+        "Meta",
+        (),
+        {"model": model, "fields": meta_fields, "extra_kwargs": extra_kwargs},
+    )
+    attrs: dict[str, Any] = {
+        "Meta": meta,
+        "__module__": __name__,
+        "__doc__": (
+            f"Auto-generated serializer for {model._meta.label}"
+            + (f" expanding {', '.join(sorted(expand))}." if expand else ".")
+            + " See karni.api.serializers.build_serializer."
+        ),
+        **declared,
+    }
+    return type(serializer_name(model, expand), (KarniModelSerializer,), attrs)
