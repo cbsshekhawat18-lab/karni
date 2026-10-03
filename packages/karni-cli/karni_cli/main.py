@@ -20,6 +20,7 @@ from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
 from karni_cli.commands.run_tests import test
 from karni_cli.commands.schedule import schedule_app
+from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
 from karni_cli.commands.types import types
@@ -57,6 +58,7 @@ app.command(context_settings=PASSTHROUGH)(beat)
 app.add_typer(schedule_app, name="schedule")
 app.command(context_settings=PASSTHROUGH)(createsuperuser)
 app.command(context_settings=PASSTHROUGH)(manage)
+app.command(context_settings=PASSTHROUGH)(seed)
 
 # Generators: `karni make <type>` (+ hidden `karni make:<type>` aliases).
 app.add_typer(make_app, name="make")

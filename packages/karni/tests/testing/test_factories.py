@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -9,21 +10,26 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.test.utils import isolate_apps
+from django.utils import timezone
+from factory.random import reseed_random
 
 from karni.testing import factories
 from karni.testing.factories import (
     DEFAULT_PASSWORD,
     AutoFactory,
     FactoryBuilder,
+    ModelFactory,
     auto_factory,
     build,
     create,
     create_batch,
     explicit_factories,
     factory_for,
+    hashed_password,
 )
+from karni.testing.values import NAME_RULES, SAFE_DOMAINS, NameRule, ValueContext, ValueInference
 from tests.perfapp.factories import GenreFactory
-from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen
+from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen, Writer
 from tests.testapp.models import Event
 
 pytestmark = pytest.mark.django_db
@@ -128,13 +134,89 @@ def test_unsupported_required_fields_fail_when_used() -> None:
     assert odd.build(where="here").where == "here"
 
 
-def test_builder_methods_are_overridable() -> None:
+def test_value_rules_are_overridable() -> None:
+    class Shouty(ValueInference):
+        rules = (
+            NameRule("loud name", ("name",), (models.CharField,), lambda ctx: "NAME"),
+            *NAME_RULES,
+        )
+
+        def text(self, ctx: ValueContext) -> str:
+            return "TEXT"
+
+    builder = FactoryBuilder(values=Shouty())
+    assert auto_factory(Publisher, builder=builder).build().name == "NAME"
+    assert auto_factory(Chapter, builder=builder).build().title != "TEXT"  # a name rule
+    assert auto_factory(Specimen, builder=builder).build().label == "TEXT"[:12]
+
+
+def test_a_phase_12a_value_hook_override_still_applies() -> None:
     class Shouty(FactoryBuilder):
         def text_value(self, field: Any, stem: str) -> Any:
             return stem.upper()
 
     publisher = auto_factory(Publisher, builder=Shouty()).build()
-    assert publisher.name == "NAME"
+    assert publisher.name == "NAME"  # the override beats the name rule, as before
+
+
+def test_values_follow_field_names() -> None:
+    user = create(get_user_model())
+    local, _, domain = user.email.partition("@")
+    assert domain in SAFE_DOMAINS
+    assert local.startswith(f"{user.first_name}.{user.last_name}".lower().replace("'", ""))
+    event = create(Event)
+    assert event.starts_at > timezone.now()  # starts_at: near future
+    assert event.title and not event.title.startswith("title-")
+    specimen = create(Specimen)
+    assert Decimal("5") <= specimen.price <= Decimal("500")  # price: money
+    assert specimen.price == specimen.price.quantize(Decimal("0.01"))
+
+
+def test_unique_constraint_fields_embed_the_sequence() -> None:
+    chapters = create_batch(Chapter, 4, novel=create(Novel))  # unique (novel, number)
+    assert len({chapter.number for chapter in chapters}) == 4
+
+
+def test_fill_optional_fills_nullable_blank_fields() -> None:
+    class Filling(FactoryBuilder):
+        fill_optional = 1.0
+
+    assert auto_factory(Specimen, builder=Filling()).build().note
+    assert auto_factory(Specimen).build().note is None
+
+
+def test_generated_users_share_one_hash_per_password() -> None:
+    first, second = create_batch(get_user_model(), 2)
+    assert first.password == second.password == hashed_password(DEFAULT_PASSWORD)
+    assert create(get_user_model(), password="other-pass").check_password("other-pass")
+
+
+def test_reseeding_reproduces_the_values() -> None:
+    reseed_random(7)
+    first = build(Specimen)
+    reseed_random(7)
+    second = build(Specimen)
+    assert (first.body, first.price, first.moment) == (second.body, second.price, second.moment)
+
+
+def test_model_factory_declares_only_what_differs() -> None:
+    from tests.perfapp.factories import PublisherFactory
+
+    assert factory_for(Publisher) is PublisherFactory
+    publisher = create(Publisher)
+    assert publisher.name == "Acme Books"  # declared
+    writer = create(Writer)  # the generated Writer factory uses the explicit one
+    assert writer.publisher.name == "Acme Books"
+    assert {"name"} <= set(PublisherFactory._meta.declarations)
+
+    class NovelFactory(ModelFactory):
+        class Meta:
+            model = "perfapp.Novel"
+
+        status = "out"
+
+    novel = NovelFactory.create()
+    assert novel.status == "out" and novel.title and novel.writer.pk  # the rest generated
 
 
 def test_clear_cache_rediscovers(monkeypatch: pytest.MonkeyPatch) -> None:

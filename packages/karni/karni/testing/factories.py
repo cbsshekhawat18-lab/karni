@@ -16,13 +16,23 @@ when a project defines one, otherwise a generated one (cached per model):
   app's ``<app>/factories.py`` whose ``Meta.model`` is the model (when one
   module defines several, the one named ``<Model>Factory`` wins, else the
   first defined). Explicit factories are used everywhere: as related-object
-  factories inside generated ones, and by the N+1 scaling check of
-  :mod:`karni.testing.performance`.
+  factories inside generated ones, by ``karni seed`` and by the N+1 scaling
+  check of :mod:`karni.testing.performance`. Derive them from
+  :class:`ModelFactory` and declare only what differs — every other field
+  keeps its generated declaration::
+
+      class EventFactory(ModelFactory):
+          class Meta:
+              model = Event
+
+          status = "published"
+
 * generated — :class:`FactoryBuilder` declares a value for every field
   that needs one.
 
-**Generated values** (:class:`FactoryBuilder`; every rule is an overridable
-method):
+**Generated values** (:class:`FactoryBuilder` decides *which* fields get a
+value; :mod:`karni.testing.values` decides *what* value — by field name, then
+type — and is the same engine ``karni seed`` uses):
 
 ======================================  ===============================================
 Field                                   Value
@@ -30,61 +40,67 @@ Field                                   Value
 auto / defaulted / non-editable         left to the model (``id``, ``created_at``,
                                         ``created_by``, ``deleted_at`` …)
 ``choices``                             cycles through the choice values
-Char / Slug / Text                      ``"<field>-<n>"`` (unique, within ``max_length``)
-Email / URL / IP                        ``user<n>@example.com`` / ``https://example.com/<n>``
-                                        / ``10.x.y.z``
-integers / float / decimal              a sequence inside the type's range, the field's
+a known name (``email``, ``price``,     a realistic value: ``email`` an address at
+``starts_at``, ``city`` …)              example.com, ``price`` money, ``starts_at`` a
+                                        near-future datetime (:data:`~karni.testing.
+                                        values.NAME_RULES`)
+any other field                         a realistic value for its type, inside
+                                        ``max_length``, the type's range, the
                                         Min/MaxValueValidators and ``max_digits``
-date / datetime / time / duration       today / now / now / a sequence of minutes
-UUID / JSON / binary / file / image     ``uuid4()`` / ``{"n": <n>}`` / ``b""`` / a small file
+unique field / unique constraint        the value embeds the row's sequence number
 nullable + blank non-relation field     ``None`` (nullable but not blank: a value)
+file / image                            a small file (left empty when ``blank``)
 ForeignKey / OneToOneField              the target's factory (``factory_for(target)``);
                                         a nullable FK stays ``None`` on a cycle or below
                                         :attr:`FactoryBuilder.max_depth`
 ManyToManyField                         empty, or ``create(M, tags=[t1, t2])`` /
                                         ``create(M, tags=3)`` (creates three)
-user model ``password``                 :data:`DEFAULT_PASSWORD`, hashed
+user model ``password``                 :data:`DEFAULT_PASSWORD`, hashed once per process
 anything else that is required          an error *when used* naming the fix — pass the
                                         field, or write an explicit factory
 ======================================  ===============================================
 
-Unique fields get sequence-based values; unique constraints over FKs hold
-because every related row is new. Constraints over choices/booleans alone
-need an explicit factory.
+Random choices come from Faker's shared generator: the ``karni`` pytest
+plugin reseeds it per test, so a failing test reproduces.
 
 Override / escape hatches: keyword overrides on every call (including
 factory-boy's ``venue__city="Pune"`` and ``tags__through_defaults={...}``);
 an explicit factory in ``<app>/factories.py``; or subclass
-:class:`FactoryBuilder` and call :func:`auto_factory` with it. Phase 13 seeds
-build on this module.
+:class:`FactoryBuilder` (structure) / :class:`~karni.testing.values.
+ValueInference` (values) and call :func:`auto_factory` with
+``FactoryBuilder(values=...)``.
 """
 
 from __future__ import annotations
 
-import datetime
 import decimal
-import ipaddress
-import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
+from functools import lru_cache
 from importlib import import_module
 from typing import Any, Final
 
 import factory
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.hashers import make_password
 from django.core import validators
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
-from django.utils import timezone
 from django.utils.module_loading import module_has_submodule
+from factory.base import FactoryMetaClass
+from factory.declarations import BaseDeclaration
 from factory.django import DjangoModelFactory
+
+from karni.testing.values import MISSING, ValueInference, unique_field_names
 
 __all__ = [
     "DEFAULT_PASSWORD",
     "AutoFactory",
     "AutoSubFactory",
     "FactoryBuilder",
+    "ModelFactory",
     "auto_factory",
     "build",
     "clear_cache",
@@ -92,6 +108,7 @@ __all__ = [
     "create_batch",
     "explicit_factories",
     "factory_for",
+    "hashed_password",
 ]
 
 DEFAULT_PASSWORD: Final = "karni-password"
@@ -102,6 +119,9 @@ SKIP: Final = object()
 
 #: Models being created, outermost first — cycle and depth guard for FKs.
 _CHAIN: ContextVar[tuple[type[models.Model], ...]] = ContextVar("karni_factory_chain", default=())
+
+#: A fixed salt: generated users share one hash per password (hashed once, deterministic).
+_SALT: Final = "karnigeneratedusers0001"
 
 ModelRef = type[models.Model] | str
 
@@ -116,6 +136,23 @@ def _model(model: ModelRef) -> type[models.Model]:
             f"{model.__name__} is abstract; factories need a concrete model."
         )
     return model
+
+
+@lru_cache(maxsize=64)
+def _hash(raw: str, hashers: tuple[str, ...]) -> str:
+    return make_password(raw, salt=_SALT)
+
+
+def hashed_password(raw: str | None) -> str:
+    """``make_password(raw)`` with a fixed salt, computed once per password and hasher setup.
+
+    Generated users (tests and ``karni seed``) all share it: hashing with the
+    production hasher costs ~0.3 s, and a fixed salt keeps seeded rows
+    byte-for-byte reproducible. ``None`` gives an unusable password.
+    """
+    if raw is None:
+        return make_password(None)
+    return _hash(raw, tuple(settings.PASSWORD_HASHERS))
 
 
 class AutoFactory(DjangoModelFactory):
@@ -171,6 +208,21 @@ class AutoSubFactory(factory.SubFactory):
             _CHAIN.reset(token)
 
 
+class OptionalValue(BaseDeclaration):
+    """``inner`` with probability ``rate``, else ``None`` (optional fields in seeds)."""
+
+    def __init__(self, inner: Any, rate: float, values: ValueInference) -> None:
+        super().__init__()
+        self.inner, self.rate, self.values = inner, rate, values
+
+    def evaluate(self, instance: Any, step: Any, extra: dict[str, Any]) -> Any:
+        if self.values.fake.random.random() >= self.rate:
+            return None
+        if isinstance(self.inner, BaseDeclaration):
+            return self.inner.evaluate_pre(instance, step, extra)
+        return self.inner
+
+
 def _m2m_hook(name: str, target: type[models.Model]) -> Callable[..., None]:
     def hook(obj: models.Model, create: bool, extracted: Any, **kwargs: Any) -> None:
         if not create or extracted is None:
@@ -207,7 +259,8 @@ def _bounds(field: models.Field[Any, Any], low: float, high: float) -> tuple[flo
     return low, high
 
 
-_INT_RANGES: Final[tuple[tuple[type[models.Field[Any, Any]], int, int], ...]] = (
+#: Ranges of the ``number_value`` compatibility hook (used when a subclass overrides it).
+_LEGACY_INT_RANGES: Final[tuple[tuple[type[models.Field[Any, Any]], int, int], ...]] = (
     (models.PositiveSmallIntegerField, 0, 32767),
     (models.PositiveBigIntegerField, 0, 9223372036854775807),
     (models.PositiveIntegerField, 0, 2147483647),
@@ -220,12 +273,23 @@ _INT_RANGES: Final[tuple[tuple[type[models.Field[Any, Any]], int, int], ...]] = 
 class FactoryBuilder:
     """Turns a model into a factory-boy factory. Subclass to change any rule.
 
+    :param values: the value engine (default :class:`~karni.testing.values.
+        ValueInference`), shared with ``karni seed``.
+
     :attr:`max_depth` bounds how deep nullable FKs are filled (required FKs
-    are always created). :meth:`declaration` decides per field; the
-    ``*_value`` methods produce the declarations.
+    are always created). :attr:`fill_optional` is the probability that a
+    nullable + blank field gets a value instead of ``None`` (``0`` for tests,
+    raised by seeding). :meth:`declaration` decides per field;
+    :meth:`relation_value`, :meth:`choice_value` and :meth:`value` produce
+    the declarations.
     """
 
     max_depth: int = 3
+    fill_optional: float = 0.0
+
+    def __init__(self, values: ValueInference | None = None) -> None:
+        self.values = values if values is not None else ValueInference()
+        self._unique: dict[type[models.Model], frozenset[str]] = {}
 
     def build(self, model: type[models.Model]) -> type[DjangoModelFactory]:
         """A new ``AutoFactory`` subclass for ``model``."""
@@ -233,14 +297,27 @@ class FactoryBuilder:
             "Meta": type("Meta", (), {"model": model, "skip_postgeneration_save": True}),
             "__module__": __name__,
             "__doc__": f"Generated factory for {model._meta.label} (karni.testing.factories).",
+            **self.declarations(model),
         }
+        return type(f"{model.__name__}AutoFactory", (AutoFactory,), attrs)
+
+    def declarations(self, model: type[models.Model]) -> dict[str, Any]:
+        """Every field declaration of the generated factory (M2M hooks included)."""
+        found: dict[str, Any] = {}
         for field in model._meta.concrete_fields:
             value = self.declaration(model, field)
             if value is not SKIP:
-                attrs[field.name] = value
+                found[field.name] = value
         for m2m in model._meta.many_to_many:
-            attrs[m2m.name] = factory.PostGeneration(_m2m_hook(m2m.name, m2m.related_model))
-        return type(f"{model.__name__}AutoFactory", (AutoFactory,), attrs)
+            found[m2m.name] = factory.PostGeneration(_m2m_hook(m2m.name, m2m.related_model))
+        return found
+
+    def is_unique(self, model: type[models.Model], field: models.Field[Any, Any]) -> bool:
+        """True when ``field`` is unique or part of a unique constraint."""
+        names = self._unique.get(model)
+        if names is None:
+            names = self._unique[model] = unique_field_names(model)
+        return field.name in names
 
     def declaration(self, model: type[models.Model], field: models.Field[Any, Any]) -> Any:
         """The declaration for ``field``, or :data:`SKIP` to leave it to the model."""
@@ -249,13 +326,18 @@ class FactoryBuilder:
         if field.primary_key and (field.has_default() or isinstance(field, models.AutoField)):
             return SKIP
         if issubclass(model, AbstractBaseUser) and field.name == "password":
-            return factory.django.Password(DEFAULT_PASSWORD)
+            return factory.django.Password(DEFAULT_PASSWORD, transform=hashed_password)
         if field.is_relation:
             return self.relation_value(model, field)
         if field.has_default():
             return SKIP
         if field.null and field.blank:
-            return None
+            if not self.fill_optional:
+                return None
+            filled = self.choice_value(field) if field.choices else self.value(model, field)
+            if filled is SKIP:
+                return None
+            return OptionalValue(filled, self.fill_optional, self.values)
         if field.choices:
             return self.choice_value(field)
         return self.value(model, field)
@@ -278,79 +360,25 @@ class FactoryBuilder:
             values = [value for value in values if value not in validators.EMPTY_VALUES] or values
         return factory.Iterator(values)
 
-    def text_value(self, field: Any, stem: str) -> Any:
-        """``"<stem>-<n>"`` within ``max_length`` (the counter is kept, the stem cut)."""
-        max_length = field.max_length or 255
-
-        def make(n: int) -> str:
-            suffix = f"-{n}"
-            return stem[: max(max_length - len(suffix), 0)] + suffix
-
-        return factory.Sequence(make)
-
-    def number_value(self, field: models.Field[Any, Any], low: float, high: float) -> Any:
-        """A sequence inside ``[low, high]`` and the field's Min/MaxValueValidators."""
-        low, high = _bounds(field, low, high)
-        if isinstance(field, models.FloatField):
-            return factory.Sequence(lambda n: float(low + n % max(int(high - low), 1)))
-        start, span = int(low), max(int(high) - int(low) + 1, 1)
-        return factory.Sequence(lambda n: start + n % span)
-
-    def decimal_value(self, field: models.DecimalField[Any]) -> Any:
-        places = field.decimal_places or 0
-        whole = max((field.max_digits or 10) - places, 0)
-        low, high = _bounds(field, 0, 10**whole - 1 if whole else 0)
-        quantum = decimal.Decimal(1).scaleb(-places)
-        span = max(int(high) - int(low) + 1, 1)
-        return factory.Sequence(lambda n: (decimal.Decimal(int(low) + n % span)).quantize(quantum))
-
     def value(self, model: type[models.Model], field: Any) -> Any:
-        """The declaration for a required, non-relation field without a default."""
-        name = field.name
-        if isinstance(field, models.EmailField):
-            return factory.Sequence(lambda n: f"user{n}@example.com")
-        if isinstance(field, models.URLField):
-            return factory.Sequence(lambda n: f"https://example.com/{n}")
-        if isinstance(field, models.GenericIPAddressField):
-            if field.protocol.lower() == "ipv6":
-                return factory.Sequence(lambda n: str(ipaddress.IPv6Address(0x20010DB8 << 96 | n)))
-            return factory.Sequence(lambda n: str(ipaddress.IPv4Address(0x0A000000 + n % 2**24)))
-        if isinstance(field, models.SlugField):
-            return self.text_value(field, name.replace("_", "-"))
-        if isinstance(field, models.CharField | models.TextField):
-            return self.text_value(field, name)
-        if isinstance(field, models.BooleanField):
-            return False
-        if isinstance(field, models.DecimalField):
-            return self.decimal_value(field)
-        if isinstance(field, models.FloatField):
-            return self.number_value(field, 0, 1_000_000)
-        for kind, low, high in _INT_RANGES:
-            if isinstance(field, kind):
-                return self.number_value(field, low, high)
-        if isinstance(field, models.DateTimeField):
-            return factory.LazyFunction(timezone.now)
-        if isinstance(field, models.DateField):
-            return factory.LazyFunction(datetime.date.today)
-        if isinstance(field, models.TimeField):
-            return factory.LazyFunction(
-                lambda: datetime.datetime.now().time().replace(microsecond=0)
-            )
-        if isinstance(field, models.DurationField):
-            return factory.Sequence(lambda n: datetime.timedelta(minutes=n))
-        if isinstance(field, models.UUIDField):
-            return factory.LazyFunction(uuid.uuid4)
-        if isinstance(field, models.JSONField):
-            return factory.Sequence(lambda n: {"n": n})
-        if isinstance(field, models.BinaryField):
-            return b""
+        """The declaration for a required, non-relation, non-choice field without a default.
+
+        Files and images get a small file (none when ``blank``); everything
+        else comes from :attr:`values` (name rules, then the type).
+        """
+        legacy = self._legacy_value(model, field)
+        if legacy is not None:
+            return legacy
         if isinstance(field, models.ImageField):
             return self.image_value(field)
         if isinstance(field, models.FileField):
             if field.blank:
                 return SKIP
-            return factory.django.FileField(filename=f"{name}.txt", data=b"karni")
-        return _missing_value(model, field)
+            return factory.django.FileField(filename=f"{field.name}.txt", data=b"karni")
+        declaration = self.values.declaration(model, field, unique=self.is_unique(model, field))
+        if declaration is MISSING:
+            return _missing_value(model, field)
+        return declaration
 
     def image_value(self, field: Any) -> Any:
         if field.blank:
@@ -360,6 +388,107 @@ class FactoryBuilder:
         except ImportError:
             return factory.django.FileField(filename=f"{field.name}.png", data=b"karni")
         return factory.django.ImageField(filename=f"{field.name}.png")
+
+    # --- compatibility value hooks ----------------------------------------------------
+    # Phase 12a's per-type hooks. Overriding one still replaces that type's values
+    # (and bypasses name rules for it); new code overrides ValueInference instead.
+
+    def text_value(self, field: Any, stem: str) -> Any:
+        """Compatibility hook: ``"<stem>-<n>"``; used only when a subclass overrides it."""
+        max_length = field.max_length or 255
+
+        def make(n: int) -> str:
+            suffix = f"-{n}"
+            return stem[: max(max_length - len(suffix), 0)] + suffix
+
+        return factory.Sequence(make)
+
+    def number_value(self, field: models.Field[Any, Any], low: float, high: float) -> Any:
+        """Compatibility hook: a sequence in ``[low, high]``; used only when overridden."""
+        low, high = _bounds(field, low, high)
+        if isinstance(field, models.FloatField):
+            return factory.Sequence(lambda n: float(low + n % max(int(high - low), 1)))
+        start, span = int(low), max(int(high) - int(low) + 1, 1)
+        return factory.Sequence(lambda n: start + n % span)
+
+    def decimal_value(self, field: models.DecimalField[Any]) -> Any:
+        """Compatibility hook: a sequence within ``max_digits``; used only when overridden."""
+        places = field.decimal_places or 0
+        whole = max((field.max_digits or 10) - places, 0)
+        low, high = _bounds(field, 0, 10**whole - 1 if whole else 0)
+        quantum = decimal.Decimal(1).scaleb(-places)
+        span = max(int(high) - int(low) + 1, 1)
+        return factory.Sequence(lambda n: (decimal.Decimal(int(low) + n % span)).quantize(quantum))
+
+    def _legacy_value(self, model: type[models.Model], field: Any) -> Any:
+        """The compatibility hooks, only when a subclass overrides them."""
+        cls = type(self)
+        if cls.text_value is not FactoryBuilder.text_value:
+            if isinstance(field, models.SlugField):
+                return self.text_value(field, field.name.replace("_", "-"))
+            if isinstance(field, models.CharField | models.TextField) and not isinstance(
+                field, models.EmailField | models.URLField
+            ):
+                return self.text_value(field, field.name)
+        if cls.decimal_value is not FactoryBuilder.decimal_value:
+            if isinstance(field, models.DecimalField):
+                return self.decimal_value(field)
+        if cls.number_value is not FactoryBuilder.number_value:
+            if isinstance(field, models.FloatField):
+                return self.number_value(field, 0, 1_000_000)
+            for kind, low, high in _LEGACY_INT_RANGES:
+                if isinstance(field, kind):
+                    return self.number_value(field, low, high)
+        return None
+
+
+# --- explicit factories that keep the generated declarations ------------------------------
+
+
+class _AutoFillMeta(FactoryMetaClass):  # type: ignore[misc]
+    """Fills every field a :class:`ModelFactory` subclass does not declare."""
+
+    def __new__(mcs, class_name: str, bases: tuple[type, ...], attrs: dict[str, Any]) -> Any:
+        meta = attrs.get("Meta")
+        model = getattr(meta, "model", None)
+        if model is not None and not getattr(meta, "abstract", False):
+            declared = set(attrs)
+            builder: FactoryBuilder | None = attrs.get("_builder")
+            for base in bases:
+                base_meta = getattr(base, "_meta", None)
+                if base_meta is not None:
+                    declared |= set(base_meta.base_declarations) | set(base_meta.parameters)
+                builder = builder or getattr(base, "_builder", None)
+            params = attrs.get("Params")
+            if params is not None:
+                declared |= {name for name in vars(params) if not name.startswith("_")}
+            fill = (builder or FactoryBuilder()).declarations(_model(model))
+            for name, declaration in fill.items():
+                if name not in declared:
+                    attrs[name] = declaration
+        return super().__new__(mcs, class_name, bases, attrs)
+
+
+class ModelFactory(AutoFactory, metaclass=_AutoFillMeta):
+    """Base for explicit factories: declare only what differs, the rest is generated.
+
+    ::
+
+        # events/factories.py — picked up automatically
+        class EventFactory(ModelFactory):
+            class Meta:
+                model = Event
+
+            status = "published"
+            title = factory.Faker("catch_phrase")
+
+    Override / escape hatch: set ``_builder = MyBuilder()`` on the class to
+    generate the undeclared fields with another :class:`FactoryBuilder`.
+    """
+
+    class Meta:
+        abstract = True
+        skip_postgeneration_save = True
 
 
 # --- resolution -------------------------------------------------------------------------------

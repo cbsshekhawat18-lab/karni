@@ -1,17 +1,23 @@
 """``karni make model <Name> [field:type ...]`` — a model on BaseModel.
 
 The field DSL is documented in :mod:`karni_cli.generators.fields`. ``--with
-viewset,page`` (or ``-a/--all``) chains the other generators in the same
-run: a viewset (``--access``/``--search`` apply) and the list, detail and
-form pages for the resource, linked to each other.
+viewset,page,test,factory,seeder`` chains the other generators in the same
+run: a viewset (``--access``/``--search`` apply), the list, detail and form
+pages for the resource (linked to each other), its API test, an explicit
+factory and a seeder. ``-a/--all`` chains viewset, page and test — factories
+and seeders are overrides of what Karni already generates, so they are only
+written when asked for.
 """
 
 from __future__ import annotations
 
 import typer
 
+from karni_cli.generators import apitest as test_gen
+from karni_cli.generators import factory as factory_gen
 from karni_cli.generators import migration as migration_gen
 from karni_cli.generators import page as page_gen
+from karni_cli.generators import seeder as seeder_gen
 from karni_cli.generators import viewset as viewset_gen
 from karni_cli.generators.core import (
     APP_OPTION,
@@ -38,10 +44,12 @@ from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace
 from karni_cli.project import CliError
 
 NAME = "model"
-SUMMARY = "Add a model on BaseModel from a field DSL; --with viewset,page or -a chains them."
+SUMMARY = "Add a model on BaseModel from a field DSL; --with viewset,page,test or -a chains them."
 
-#: What ``--with`` / ``-a`` can chain today, in run order.
-CHAINABLE = ("viewset", "page")
+#: What ``--with`` can chain, in run order.
+CHAINABLE = ("viewset", "page", "test", "factory", "seeder")
+#: What ``-a/--all`` chains: everything except the explicit overrides (factory, seeder).
+ALL = ("viewset", "page", "test")
 
 
 def _targets(
@@ -135,10 +143,16 @@ def plan_chain(
         planned = {path for spec in specs for path in spec.paths}
         for spec in specs:
             page_gen.plan(ws, spec, planned_routes=planned)
+    if "test" in chain:
+        test_gen.plan(ws, app, model)
+    if "factory" in chain:
+        factory_gen.plan(ws, app, model)
+    if "seeder" in chain:
+        seeder_gen.plan(ws, app, model)
 
 
 def resolve_chain(with_: list[str], all_: bool) -> list[str]:
-    chain = list(CHAINABLE) if all_ else split_csv(with_)
+    chain = [*ALL, *split_csv(with_)] if all_ else split_csv(with_)
     unknown = [item for item in chain if item not in CHAINABLE]
     if unknown:
         raise CliError(f"--with {', '.join(unknown)}: unknown (available: {', '.join(CHAINABLE)}).")
@@ -157,10 +171,12 @@ def command(
         show_default=False,
     ),
     with_: list[str] | None = typer.Option(
-        None, "--with", help="Also generate: viewset, page (comma-separated or repeated)."
+        None,
+        "--with",
+        help="Also generate: viewset, page, test, factory, seeder (comma-separated or repeated).",
     ),
     all_: bool = typer.Option(
-        False, "--all", "-a", help="Also generate everything: viewset, page."
+        False, "--all", "-a", help="Also generate the viewset, the pages and the API test."
     ),
     access: str | None = typer.Option(
         None, "--access", help=f"With viewset: {viewset_gen.ACCESS_CHOICES}."

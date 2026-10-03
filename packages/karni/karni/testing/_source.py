@@ -59,9 +59,31 @@ def _site_packages_roots() -> tuple[str, ...]:
     return tuple(roots)
 
 
-def project_app_configs() -> list[AppConfig]:
-    """Installed apps whose code lives in the project tree (see module docstring)."""
+def project_root() -> Path:
+    """``settings.BASE_DIR``, else the directory above the settings package, else the cwd.
+
+    A Karni scaffold keeps its settings in ``<project>/config/settings.py``,
+    so the fallback finds the project even when ``BASE_DIR`` is not defined.
+    """
     base_dir = getattr(settings, "BASE_DIR", None)
+    if base_dir is not None:
+        return Path(base_dir).resolve()
+    module = sys.modules.get(getattr(settings, "SETTINGS_MODULE", "") or "")
+    file = getattr(module, "__file__", None)
+    if file:
+        return Path(file).resolve().parent.parent
+    return Path.cwd().resolve()
+
+
+def project_app_configs(*, infer_root: bool = False) -> list[AppConfig]:
+    """Installed apps whose code lives in the project tree (see module docstring).
+
+    Without ``BASE_DIR`` the result is empty, unless ``infer_root`` asks for
+    :func:`project_root`'s fallback (seeding and the API test helpers do).
+    """
+    base_dir = getattr(settings, "BASE_DIR", None)
+    if base_dir is None and infer_root:
+        base_dir = project_root()
     if base_dir is None:
         return []
     base = str(Path(base_dir).resolve())

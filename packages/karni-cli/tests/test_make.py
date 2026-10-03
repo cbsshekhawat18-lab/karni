@@ -25,6 +25,9 @@ GENERATORS = {
     "viewset",
     "serializer",
     "migration",
+    "test",
+    "factory",
+    "seeder",
     "task",
     "schedule",
     "event",
@@ -82,7 +85,6 @@ def test_list_prints_every_generator_and_only_those() -> None:
     result = ok("make", "--list")
     names = {line.split()[0] for line in result.output.strip().splitlines()}
     assert names == GENERATORS
-    assert not {"test", "factory", "seeder"} & names
 
 
 def test_make_without_a_type_prints_help() -> None:
@@ -240,6 +242,66 @@ def test_serializer_needs_a_reason_and_wires_the_viewset(project: Path) -> None:
     viewsets = (project / "events" / "viewsets.py").read_text()
     assert "    model = Event\n    serializer_class = EventSerializer\n" in viewsets
     assert "from events.serializers import EventSerializer" in viewsets
+
+
+# --- test / factory / seeder ----------------------------------------------------------------
+
+
+def test_test_generator_follows_the_viewset(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Event", "title:str", "organizer:fk:User")
+    fails("make", "test", "Event", match="create it first: karni make viewset Event")
+    ok("make", "viewset", "Event", "--access", "owned:organizer")
+    result = ok("make", "test", "Event")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert "from events.viewsets import EventViewSet" in text
+    assert "        self.assert_crud(EventViewSet)\n" in text
+    assert "        self.assert_isolated(EventViewSet)\n" in text
+    assert "as any signed-in user + owner isolation" in result.output
+    assert "run: karni test events/tests/test_event.py" in result.output
+    fails("make", "test", "Event", match="--force")
+    ok("make", "test", "Event", "--role", "organizer", "--force")
+    assert (
+        'self.assert_crud(EventViewSet, "organizer")'
+        in (project / "events" / "tests" / "test_event.py").read_text()
+    )
+
+
+def test_test_generator_takes_the_declared_role(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str", "--with", "viewset,test", "--access", "staff")
+    text = (project / "events" / "tests" / "test_venue.py").read_text()
+    assert 'self.assert_crud(VenueViewSet, "staff")' in text
+    assert "assert_isolated" not in text  # nothing Owned: no isolation test
+
+
+def test_factory_and_seeder_generators(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str")
+    ok("make", "model", "Event", "title:str", "--with", "factory,seeder")
+    ok("make", "factory", "Venue")
+    ok("make:seeder", "Venue", "--count", "0")
+    factories = (project / "events" / "factories.py").read_text()
+    assert "from karni.testing.factories import ModelFactory" in factories
+    assert "class EventFactory(ModelFactory):" in factories
+    assert "class VenueFactory(ModelFactory):" in factories
+    assert factories.count("        model = ") == 2
+    seeds = (project / "events" / "seeds.py").read_text()
+    assert "from karni.seeding import Seeder" in seeds
+    assert "class EventSeeder(Seeder):" in seeds
+    assert "        model = Venue\n        count = 0\n" in seeds
+    fails("make", "factory", "Venue", match="--force")
+    fails("make", "seeder", "Nope", match="create it first")
+    fails("make", "seeder", "Venue", "--count", "-1", "--force", match="0 or more")
+
+
+def test_all_chains_the_test_but_not_the_overrides(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Event", "title:str", "-a")
+    assert (project / "events" / "tests" / "test_event.py").is_file()
+    assert not (project / "events" / "factories.py").exists()
+    assert not (project / "events" / "seeds.py").exists()
+    fails("make", "model", "Other", "--with", "nope", match="available: viewset, page, test")
 
 
 # --- tasks, schedules, events, listeners ---------------------------------------------------

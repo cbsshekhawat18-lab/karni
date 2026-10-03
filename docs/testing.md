@@ -5,14 +5,126 @@ wires it in so that it runs without project code:
 
 | Piece | What it gives you |
 |---|---|
-| [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model; `<app>/factories.py` overrides |
+| [`APITestCase`, `client_as`](#clients-per-role) | an authenticated client per role, in one call |
+| [`assert_crud`](#the-full-crud-surface-in-one-call) | the whole CRUD surface of a resource for a role, checked against its `access` declaration and the OpenAPI contract |
+| [`assert_isolated`](#isolation-the-test-people-forget) | one line proving a role cannot see or touch another owner's rows |
+| [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
+| [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values; `<app>/factories.py` overrides |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
 | the `karni` pytest plugin | loaded automatically (`pytest11` entry point) wherever `karni` is installed |
 | [`karni.testing.architecture`](enforcement.md) | the build-failing architecture rules (and the scaling check) |
 
 CI runs two invocations: the project's own suite (`pytest`) and Karni's rules
 (`pytest --pyargs karni.testing.architecture`). Both need `pytest-django`
-and a test database.
+and a test database. `karni make test <Model>` writes a starting test file
+like the one below.
+
+## A resource's full test, in 15 lines
+
+<!-- karni:example:crud (tests/testing/test_docs_example.py runs this block) -->
+```python
+# events/tests/test_events.py
+from karni.testing import APITestCase
+
+from events.viewsets import EventViewSet
+
+
+class EventAPITests(APITestCase):
+    def test_full_crud_surface_for_organizers(self):
+        self.assert_crud(EventViewSet, "organizer")
+
+    def test_staff_get_exactly_the_promised_denials(self):
+        self.assert_crud(EventViewSet, "staff")
+
+    def test_organizers_never_see_each_others_events(self):
+        self.assert_isolated(EventViewSet, "organizer")
+```
+
+That covers list, retrieve, create, update (PATCH and PUT) and delete for
+two roles, every permission denial their `access` declaration promises,
+pagination, filtering, the response contract, and owner isolation. The
+viewset it tests:
+
+```python
+class EventViewSet(BaseViewSet):
+    model = Event
+    access = Access(
+        read=Owned("organizer") | HasRole("staff"),
+        write=Owned("organizer"),
+        create=HasRole("organizer"),
+    )
+```
+
+## Clients per role
+
+Roles are Django groups (the same ones `HasRole(...)` checks), created on
+demand:
+
+```python
+client = self.client_as("organizer")      # a user in the "organizer" group
+client.user                               # that user
+self.client_as("organizer").user == client.user   # same roles, same user, all test long
+self.client_as()                          # signed in, no roles
+self.client_as(None)                      # anonymous
+self.client_as(user=alice)                # a user you made
+```
+
+Outside `APITestCase` (plain pytest), `from karni.testing import client_as`
+works the same, and there is a `client_as` fixture.
+
+## The full CRUD surface in one call
+
+`assert_crud(resource, role)` (or `self.assert_crud(...)`) drives the
+resource through its routed URLs as that role and checks:
+
+- **list / retrieve / create / update / delete:** the status the resource's
+  `access` promises the role. For allowed actions it also checks the effect:
+  the created row exists with the sent values and the owner stamped from the
+  requester, the update is stored, and the deleted row is gone.
+- **Denials:** every action the role may not perform returns 401/403/404 as
+  declared. A denial that *should* happen is a pass.
+- **Pagination and filtering:** a list page has the paginator's shape, and
+  declared filters actually narrow the result.
+- **Contract:** every response is validated against the OpenAPI schema
+  (types, enums, nullability, required fields, no undeclared properties).
+
+A failure names what broke: the action, the expected and actual status, and
+the field or check involved. `resource` can be the viewset class, the model,
+or the route name.
+
+## Isolation: the test people forget
+
+```python
+self.assert_isolated(EventViewSet, "organizer")
+```
+
+Two users with the role each get a row of their own. The first must see and
+change only their own row: the other's row is absent from the list, returns
+404 for retrieve, update and delete, and stays unchanged. Naming another
+owner in a create body is ignored, and the row is stamped with the
+requester. It runs for every isolation dimension that applies: `owner` (any
+`Owned(...)` read path) ships with Karni. A tenancy module adds `tenant` by
+registering a dimension, and existing tests then cover it with no change. A
+resource no dimension applies to fails and says why: `read=Authenticated()`
+lets every signed-in user see every row, which is exactly the bug this
+catches.
+
+## Schema snapshot
+
+```python
+# tests/test_api_schema.py
+from karni.testing import assert_schema_snapshot
+
+def test_the_api_contract_is_unchanged(db):
+    assert_schema_snapshot()
+```
+
+The generated schema is compared with `tests/openapi.snapshot.json`. A
+difference fails, listing breaking changes (removed and changed paths) first.
+A missing snapshot is written and the test passes, except under CI, where it
+fails, because a snapshot that was never committed protects nothing. To
+accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test`, then
+commit the file.
 
 ## Automatic factories (`karni.testing.factories`)
 

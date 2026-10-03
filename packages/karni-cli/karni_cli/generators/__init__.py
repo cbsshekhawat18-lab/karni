@@ -14,10 +14,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from karni_cli.generators import (
+    apitest,
     app,
     command,
     component,
     event,
+    factory,
     listener,
     middleware,
     migration,
@@ -25,6 +27,7 @@ from karni_cli.generators import (
     module,
     page,
     schedule,
+    seeder,
     serializer,
     service,
     task,
@@ -47,6 +50,9 @@ GENERATORS: tuple[Generator, ...] = tuple(
         viewset,
         serializer,
         migration,
+        apitest,
+        factory,
+        seeder,
         task,
         schedule,
         event,

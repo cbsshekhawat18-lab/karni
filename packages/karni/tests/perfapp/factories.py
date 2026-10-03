@@ -5,7 +5,8 @@ from __future__ import annotations
 import factory
 from factory.django import DjangoModelFactory
 
-from tests.perfapp.models import Genre
+from karni.testing.factories import ModelFactory
+from tests.perfapp.models import Genre, Publisher
 
 
 class GenreFactory(DjangoModelFactory):
@@ -24,3 +25,12 @@ class OtherGenreFactory(DjangoModelFactory):
         model = Genre
 
     name = factory.Sequence(lambda n: f"other-genre-{n}")
+
+
+class PublisherFactory(ModelFactory):
+    """Declares one field; every other field keeps its generated declaration."""
+
+    class Meta:
+        model = Publisher
+
+    name = "Acme Books"

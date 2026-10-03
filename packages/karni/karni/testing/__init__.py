@@ -15,23 +15,59 @@ with a required reason::
 Rules without escape hatches cause forks, and a fork is worse than a
 duplicate. See docs/enforcement.md.
 
-Test tooling (docs/testing.md): :mod:`karni.testing.factories` (automatic
-factory-boy factories), :mod:`karni.testing.performance` (query budgets and
-the scaling check) and the ``karni`` pytest plugin
-(:mod:`karni.testing.pytest_plugin`). ``karni.testing.query_budget`` is
-re-exported lazily so importing this package stays free of test-only imports.
+Test tooling (docs/testing.md), re-exported here lazily so importing this
+package stays free of test-only imports:
+
+* ``APITestCase``, ``client_as``, ``user_with_roles``, ``assert_crud``
+  (:mod:`karni.testing.api`) — clients per role, a resource's whole CRUD
+  surface in one call;
+* ``assert_isolated`` (:mod:`karni.testing.isolation`) — a role cannot reach
+  another owner's (or tenant's) rows;
+* ``assert_schema_snapshot`` (:mod:`karni.testing.schema`) — the OpenAPI
+  contract snapshot;
+* ``query_budget`` (:mod:`karni.testing.performance`);
+* :mod:`karni.testing.factories` and :mod:`karni.testing.values` —
+  generated factories and the value engine ``karni seed`` shares.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
 
-__all__ = ["query_budget"]
+if TYPE_CHECKING:
+    from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
+    from karni.testing.isolation import assert_isolated
+    from karni.testing.performance import query_budget
+    from karni.testing.schema import assert_schema_snapshot
+
+__all__ = [
+    "APITestCase",
+    "assert_crud",
+    "assert_isolated",
+    "assert_schema_snapshot",
+    "client_as",
+    "query_budget",
+    "user_with_roles",
+]
+
+_LAZY = {
+    "APITestCase": "karni.testing.api",
+    "assert_crud": "karni.testing.api",
+    "assert_isolated": "karni.testing.isolation",
+    "assert_schema_snapshot": "karni.testing.schema",
+    "client_as": "karni.testing.api",
+    "query_budget": "karni.testing.performance",
+    "user_with_roles": "karni.testing.api",
+}
 
 
 def __getattr__(name: str) -> Any:
-    if name == "query_budget":
-        from karni.testing.performance import query_budget
+    module = _LAZY.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(import_module(module), name)
 
-        return query_budget
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+def __dir__() -> list[str]:
+    return sorted([*__all__, *globals()])

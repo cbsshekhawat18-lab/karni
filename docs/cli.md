@@ -14,7 +14,7 @@ options.
 
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [types](#karni-types), [mcp](#karni-mcp)
-- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Generators**: [make](#karni-make)
 
 ## Project
@@ -346,6 +346,28 @@ karni schedule run [OPTIONS] NAME
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+### `karni seed`
+
+Fill every model with realistic demo data — wraps `manage.py karni_seed [ARGS]`.
+
+Values come from field names and types (an `email` gets an email, `price` money, `starts_at` a near-future date); relations point at seeded rows; the same --seed gives the same rows. Prints a demo login (demo@example.com / karni-password). Per-model overrides live in &lt;app&gt;/seeds.py (`karni make seeder <Model>`).
+
+Example:
+
+```sh
+karni seed --count 20 --seed 42 --reset
+```
+
+```
+karni seed [OPTIONS] [ARGS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### `karni createsuperuser`
 
 Create an admin user — wraps `manage.py createsuperuser [ARGS]`.
@@ -411,10 +433,13 @@ Every generator follows the same rules:
 
 ```
 app         Create a local Django app (models.py, viewsets.py) wired into # karni:apps.
-model       Add a model on BaseModel from a field DSL; --with viewset,page or -a chains them.
+model       Add a model on BaseModel from a field DSL; --with viewset,page,test or -a chains them.
 viewset     Add a BaseViewSet for a model, with its access declaration (--access).
 serializer  Add an explicit serializer (--reason required) and set serializer_class.
 migration   Create migrations: wraps manage.py makemigrations [app] [--name] [--empty].
+test        Add <app>/tests/test_<model>.py: assert_crud + the isolation check for a resource.
+factory     Add an explicit test factory to <app>/factories.py (overrides the generated one).
+seeder      Add a Seeder to <app>/seeds.py: per-model rows and values for karni seed.
 task        Add a Celery task (@shared_task) to <app>/tasks.py; --retry N.
 schedule    Add a beat schedule (every/cron) to <app>/schedules.py, creating the task if needed.
 event       Add a custom event (a Django Signal) to <app>/events.py.
@@ -482,8 +507,8 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | --- | --- | --- |
 | `NAME` (required) |  | Model class name, PascalCase (e.g. Event). |
 | `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime email url slug json file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; trailing ? = optional. |
-| `--with` TEXT (repeatable) |  | Also generate: viewset, page (comma-separated or repeated). |
-| `--all`, `-a` |  | Also generate everything: viewset, page. |
+| `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
+| `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
@@ -546,6 +571,59 @@ karni make migration [OPTIONS] [NAME]
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni make test`
+
+Add APP/tests/test_&lt;model&gt;.py — the resource's whole API surface in a few lines.
+
+One APITestCase: `assert_crud` checks list, retrieve, create, update, delete, the denials the access declaration promises, pagination, filtering and the OpenAPI contract; `assert_isolated` (when reads are Owned) checks another owner's rows are out of reach. Run it with `karni test`.
+
+```
+karni make test [OPTIONS] MODEL
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODEL` (required) |  | Model class name (e.g. Event); it needs a viewset. |
+| `--role` TEXT |  | The role (Django group) the test acts as. Default: the first HasRole the viewset declares, else any signed-in user. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write; write nothing. |
+
+#### `karni make factory`
+
+Add `<Model>Factory(ModelFactory)` to APP/factories.py.
+
+Only needed to change generated values: an explicit factory replaces the generated one everywhere (tests, related rows, karni seed), and fields it does not declare keep their generated, realistic values.
+
+```
+karni make factory [OPTIONS] MODEL
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODEL` (required) |  | Model class name (e.g. Event). |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write; write nothing. |
+
+#### `karni make seeder`
+
+Add `<Model>Seeder(Seeder)` to APP/seeds.py, read by `karni seed`.
+
+Only needed to steer a model's demo data: Meta.count pins its rows per run, and a class attribute overrides a field (a value or a factory-boy declaration); every other field stays inferred from its name and type.
+
+```
+karni make seeder [OPTIONS] MODEL
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODEL` (required) |  | Model class name (e.g. Event). |
+| `--count` INTEGER |  | Rows per `karni seed` run for this model (0 skips it). |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write; write nothing. |
 
 #### `karni make task`
 

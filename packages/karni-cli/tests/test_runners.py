@@ -112,6 +112,21 @@ VENV_CASES: list[tuple[list[str], list[str]]] = [
         ["schedule", "run", "nightly-report"],
         ["manage.py", "karni_schedules", "--run", "nightly-report"],
     ),
+    (["seed"], ["manage.py", "karni_seed"]),
+    (
+        ["seed", "--count", "20", "--seed", "42", "--reset", "--model", "events.Event"],
+        [
+            "manage.py",
+            "karni_seed",
+            "--count",
+            "20",
+            "--seed",
+            "42",
+            "--reset",
+            "--model",
+            "events.Event",
+        ],
+    ),
     (["createsuperuser"], ["manage.py", "createsuperuser"]),
     (
         ["createsuperuser", "--email", "a@example.com", "--noinput"],
@@ -141,7 +156,9 @@ def test_runner_runs_the_documented_command(
     assert call["capture_output"] is False  # output streams to the terminal
 
 
-@pytest.mark.parametrize("argv", [["migrate"], ["test"], ["schedule", "run", "x"], ["manage", "x"]])
+@pytest.mark.parametrize(
+    "argv", [["migrate"], ["test"], ["schedule", "run", "x"], ["manage", "x"], ["seed"]]
+)
 def test_runner_propagates_the_exit_code(
     runner: CliRunner, project: Path, monkeypatch: pytest.MonkeyPatch, argv: list[str]
 ) -> None:
@@ -273,6 +290,7 @@ def test_serve_without_docker_names_the_alternative(
         (["schedule", "list"], "manage.py karni_schedules"),
         (["schedule", "run"], "karni_schedules --run NAME"),
         (["createsuperuser"], "manage.py createsuperuser"),
+        (["seed"], "manage.py karni_seed [ARGS]"),
         (["manage"], "manage.py ARGS"),
     ],
 )

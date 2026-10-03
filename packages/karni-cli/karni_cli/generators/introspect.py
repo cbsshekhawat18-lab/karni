@@ -187,3 +187,24 @@ def top_level_assignments(ws: Workspace, path: Path) -> set[str]:
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
     return names
+
+
+def role_names(cls: ast.ClassDef) -> list[str]:
+    """String arguments of every ``HasRole("...")`` call in the class body, in order."""
+    found: list[str] = []
+    for node in ast.walk(cls):
+        if isinstance(node, ast.Call) and _call_name(node) == "HasRole":
+            for arg in node.args:
+                if (
+                    isinstance(arg, ast.Constant)
+                    and isinstance(arg.value, str)
+                    and arg.value not in found
+                ):
+                    found.append(arg.value)
+    return found
+
+
+def viewset_module(ws: Workspace, app: App, path: Path) -> str:
+    """The dotted module of a viewsets file of ``app`` (``events.viewsets``)."""
+    rel = path.relative_to(app.path).with_suffix("")
+    return ".".join([app.module, *rel.parts])

@@ -11,6 +11,7 @@ dependencies = [
 ]
 
 [dependency-groups]
+# factory-boy and Faker come with karni (karni.testing factories, `karni seed`).
 dev = [
     "pytest",
     "pytest-django",
@@ -18,6 +19,8 @@ dev = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
-testpaths = ["tests"]
+# tests/ plus every app's own tests/ (`karni make test <Model>` writes there).
+# modules/ is left out: each module runs its own suite with its own settings.
+testpaths = ["tests", "*/tests"]
 # Karni's architecture rules run as a SEPARATE invocation (never via addopts):
 #   pytest --pyargs karni.testing.architecture

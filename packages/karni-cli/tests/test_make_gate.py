@@ -13,13 +13,15 @@
    project's ESLint config (karni/* rules included) run too.
 2. Run the generated backend for real through the project interpreter
    (``karni make migration``, ``karni migrate``, ``manage.py check``), hit
-   the generated endpoints with the Django test client, and run a generated
-   module's standalone test suite.
+   the generated endpoints with the Django test client, seed it
+   (``manage.py karni_seed``), run the API tests ``karni make test`` wrote
+   (they must pass), and run a generated module's standalone test suite.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -50,6 +52,11 @@ SEQUENCE: list[list[str]] = [
      "ref:uuid", "doc:file?", "photo:image?", "tags:m2m:shop.Tag?", "profile:o2o:User?",
      "--app", "events", "-a", "--access", "owned:organizer", "--search", "title,status"],
     ["make", "viewset", "Venue", "--app", "events", "--access", "staff"],
+    ["make:test", "Venue", "--app", "events"],
+    ["make", "factory", "Venue", "--app", "events"],
+    ["make:factory", "Tag", "--app", "shop"],
+    ["make", "seeder", "Venue", "--app", "events", "--count", "3"],
+    ["make:seeder", "Event", "--app", "events"],
     ["make:serializer", "Venue", "--app", "events", "--reason", "adds a computed label"],
     ["make", "task", "send_digest", "--app", "events", "--retry", "3"],
     ["make:task", "plain_task", "--app", "events"],
@@ -321,6 +328,10 @@ def test_generated_backend_runs_for_real(
          "--search", "title"],
         ["make", "viewset", "Venue", "--access", "staff"],
         ["make", "serializer", "Venue", "--reason", "explicit field list"],
+        ["make", "test", "Event"],
+        ["make", "test", "Venue"],
+        ["make", "seeder", "Venue", "--count", "4"],
+        ["make", "factory", "Event"],
         ["make", "listener", "stamp_event", "--on", "Event.created"],
         ["make", "listener", "sync_event", "--on", "Event.updated", "--queued"],
         ["make", "schedule", "nightly-report", "--cron", "0 3 * * *"],
@@ -353,6 +364,30 @@ def test_generated_backend_runs_for_real(
     )
     assert verify.returncode == 0, verify.stdout[-3000:] + verify.stderr[-3000:]
     assert "generated backend OK" in verify.stdout
+
+    # karni seed fills every model (the seeder pins Venue at 4) and prints the demo login.
+    seeded = subprocess.run(
+        [str(python), "manage.py", "karni_seed", "--count", "6", "--seed", "42", "--json"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert seeded.returncode == 0, seeded.stdout[-3000:] + seeded.stderr[-3000:]
+    report = json.loads(seeded.stdout)
+    assert report["rows"]["events.Event"] == 6 and report["rows"]["events.Venue"] == 4
+    assert report["demo"] == "demo@example.com" and "staff" in report["roles"]
+
+    # The API tests `karni make test` wrote pass: CRUD surface + owner isolation.
+    tests = subprocess.run(
+        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "events/tests"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tests.returncode == 0, tests.stdout[-4000:] + tests.stderr[-3000:]
+    assert "3 passed" in tests.stdout, tests.stdout[-2000:]  # Event: crud + isolation; Venue
 
     # A generated module's standalone suite passes too, even inside a project tree.
     if importlib.util.find_spec("pytest_django") is not None:

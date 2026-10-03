@@ -35,6 +35,7 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "worker",
             "beat",
             "schedule",
+            "seed",
             "createsuperuser",
             "manage",
         ),
