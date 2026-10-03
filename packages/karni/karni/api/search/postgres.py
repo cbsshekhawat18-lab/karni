@@ -33,6 +33,7 @@ from django.contrib.postgres.search import (
     SearchVector,
     TrigramSimilarity,
 )
+from django.db import connections
 from django.db.models import Expression, Q, QuerySet
 from django.db.models.functions import Greatest
 
@@ -68,6 +69,9 @@ class PostgresSearchProvider(SearchProvider):
     """Minimum trigram similarity for a non-full-text match to be kept."""
 
     use_trigram: bool = True
+    #: On a non-PostgreSQL database (sqlite in local development), delegate to
+    #: SimpleSearchProvider instead of emitting SQL the database cannot run.
+    portable_fallback: bool = True
     """Set ``False`` to drop the trigram leg (no ``pg_trgm`` requirement)."""
 
     def search(
@@ -79,9 +83,22 @@ class PostgresSearchProvider(SearchProvider):
         view: Any | None = None,
         rank_order: bool = True,
     ) -> QuerySet[Any]:
-        """Annotate, filter and (optionally) rank-order ``queryset``."""
+        """Annotate, filter and (optionally) rank-order ``queryset``.
+
+        On a non-PostgreSQL database (sqlite for local development, for
+        example) full-text SQL cannot run, so the search falls back to
+        :class:`~karni.api.search.simple.SimpleSearchProvider` instead of
+        failing. Set :attr:`portable_fallback` to ``False`` to always emit
+        PostgreSQL SQL (e.g. to inspect it), or set ``KARNI_SEARCH_PROVIDER``.
+        """
         if not query or not fields:
             return queryset
+        if self.portable_fallback and connections[queryset.db].vendor != "postgresql":
+            from karni.api.search.simple import SimpleSearchProvider
+
+            return SimpleSearchProvider().search(
+                queryset=queryset, query=query, fields=fields, view=view, rank_order=rank_order
+            )
         vector = SearchVector(*fields)
         search_query = SearchQuery(query)
         annotations: dict[str, Expression] = {

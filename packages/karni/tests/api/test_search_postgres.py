@@ -43,9 +43,15 @@ requires_pg_driver = pytest.mark.skipif(
 # --- provider SQL shape -------------------------------------------------------
 
 
+class SqlShapeProvider(PostgresSearchProvider):
+    """Always emits PostgreSQL SQL, so its shape can be inspected on SQLite."""
+
+    portable_fallback = False
+
+
 @requires_pg_driver
 def test_annotates_vector_rank_and_sim_and_rank_orders() -> None:
-    queryset = PostgresSearchProvider().search(
+    queryset = SqlShapeProvider().search(
         queryset=Event.objects.all(), query="music", fields=["title", "description"]
     )
     assert {"vector", "rank", "sim"} <= set(queryset.query.annotations)
@@ -56,7 +62,7 @@ def test_annotates_vector_rank_and_sim_and_rank_orders() -> None:
 
 @requires_pg_driver
 def test_compiled_sql_contains_fts_and_trigram_legs() -> None:
-    queryset = PostgresSearchProvider().search(
+    queryset = SqlShapeProvider().search(
         queryset=Event.objects.all(), query="music", fields=["title", "description"]
     )
     sql = str(queryset.query)
@@ -68,7 +74,7 @@ def test_compiled_sql_contains_fts_and_trigram_legs() -> None:
 
 @requires_pg_driver
 def test_single_field_uses_plain_trigram_similarity() -> None:
-    queryset = PostgresSearchProvider().search(
+    queryset = SqlShapeProvider().search(
         queryset=Event.objects.all(), query="music", fields=["title"]
     )
     assert isinstance(queryset.query.annotations["sim"], TrigramSimilarity)
@@ -76,7 +82,7 @@ def test_single_field_uses_plain_trigram_similarity() -> None:
 
 @requires_pg_driver
 def test_rank_order_false_annotates_but_keeps_incoming_ordering() -> None:
-    queryset = PostgresSearchProvider().search(
+    queryset = SqlShapeProvider().search(
         queryset=Event.objects.order_by("title"),
         query="music",
         fields=["title"],
@@ -88,7 +94,7 @@ def test_rank_order_false_annotates_but_keeps_incoming_ordering() -> None:
 
 @requires_pg_driver
 def test_use_trigram_false_drops_the_similarity_leg() -> None:
-    class FtsOnlyProvider(PostgresSearchProvider):
+    class FtsOnlyProvider(SqlShapeProvider):
         use_trigram = False
 
     queryset = FtsOnlyProvider().search(
@@ -101,7 +107,7 @@ def test_use_trigram_false_drops_the_similarity_leg() -> None:
 
 @requires_pg_driver
 def test_similarity_threshold_is_an_overridable_class_attribute() -> None:
-    class StrictProvider(PostgresSearchProvider):
+    class StrictProvider(SqlShapeProvider):
         similarity_threshold = 0.7
 
     queryset = StrictProvider().search(
@@ -191,3 +197,13 @@ def test_kebab(name: str, expected: str) -> None:
 
 def test_default_route_is_kebab_plural_of_model_name() -> None:
     assert default_route(Event) == "events"
+
+
+def test_default_provider_falls_back_on_non_postgres_databases() -> None:
+    """sqlite (local development) cannot run full-text SQL: the default falls back."""
+    Event.objects.create(title="Jazz night", starts_at="2030-01-01T20:00Z")
+    Event.objects.create(title="Chess club", starts_at="2030-01-02T20:00Z")
+    found = PostgresSearchProvider().search(
+        queryset=Event.objects.all(), query="jazz", fields=["title"]
+    )
+    assert [e.title for e in found] == ["Jazz night"]
