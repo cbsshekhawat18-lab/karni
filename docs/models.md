@@ -133,7 +133,9 @@ or a malformed `KARNI_SCOPES`.
 ## Deprecated soft-delete aliases
 
 Deprecated in 0.2 and removed in 1.0. Each emits a
-`karni.deprecation.KarniDeprecationWarning` that names its replacement.
+`karni.deprecation.KarniDeprecationWarning` that names its replacement and
+links its [migration note](migrations/0.2.md#deprecated-in-02-removed-in-10).
+`karni upgrade` rewrites every use.
 
 | Deprecated | Use instead |
 |---|---|

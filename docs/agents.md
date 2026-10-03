@@ -200,7 +200,8 @@ runs a codemod for them:
    generated.
 
 Files that do not look like Karni's are left untouched and reported.
-`karni upgrade --dry-run` shows what would change.
+`karni upgrade --dry-run` shows the diff. This is one entry in Karni's
+changelog; see [migrating to 0.2](migrations/0.2.md#agent-guidance-files).
 
 ## Plain-language prompts
 

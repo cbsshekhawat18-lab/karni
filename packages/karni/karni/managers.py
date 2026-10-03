@@ -43,8 +43,8 @@ __all__ = [
     "TimestampedQuerySet",
 ]
 
-#: ``doc_anchor`` of every soft-delete alias deprecated in 0.2.
-_SOFT_DELETE_ALIASES_DOC = "models.md#deprecated-soft-delete-aliases"
+#: Every soft-delete alias deprecated in 0.2 is removed in 1.0; each warning
+#: links its own migration note in ``docs/migrations/0.2.md``.
 _REMOVED_IN = "1.0"
 _LIFT_SOFT_DELETE = 'objects.without("soft_delete", reason=...)'
 
@@ -203,7 +203,7 @@ class ScopedManagerMixin:
             "objects.all_with_deleted()",
             _LIFT_SOFT_DELETE,
             removed_in=_REMOVED_IN,
-            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+            doc_anchor="migrations/0.2.md#all_with_deleted",
         )
         return self.without(SOFT_DELETE, reason="all_with_deleted() (deprecated alias)")
 
@@ -213,7 +213,7 @@ class ScopedManagerMixin:
             "objects.deleted_only()",
             'objects.without("soft_delete", reason=...).dead()',
             removed_in=_REMOVED_IN,
-            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+            doc_anchor="migrations/0.2.md#deleted_only",
         )
         return self.without(SOFT_DELETE, reason="deleted_only() (deprecated alias)").dead()
 
@@ -238,7 +238,7 @@ class _DeprecatedAllObjectsDescriptor(ManagerDescriptor):
             f"{cls.__name__}.all_objects",
             f"{cls.__name__}.{_LIFT_SOFT_DELETE}",
             removed_in=_REMOVED_IN,
-            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+            doc_anchor="migrations/0.2.md#all_objects",
         )
         return manager
 
@@ -271,7 +271,7 @@ def __getattr__(name: str) -> Any:
             "karni.managers.SoftDeleteManagerMixin",
             "karni.managers.ScopedManagerMixin",
             removed_in=_REMOVED_IN,
-            doc_anchor=_SOFT_DELETE_ALIASES_DOC,
+            doc_anchor="migrations/0.2.md#softdeletemanagermixin",
         )
         return ScopedManagerMixin
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

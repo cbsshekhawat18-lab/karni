@@ -572,7 +572,7 @@ class TestContextSection:
 
 # --- deprecations ---------------------------------------------------------------
 
-ALIAS_DOCS = DOCS_BASE_URL + "models.md#deprecated-soft-delete-aliases"
+ALIAS_DOCS = DOCS_BASE_URL + "migrations/0.2.md#all_objects"
 DEPRECATED_NAMES = {"all_objects", "all_with_deleted", "deleted_only", "SoftDeleteManagerMixin"}
 
 

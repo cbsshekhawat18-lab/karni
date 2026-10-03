@@ -158,7 +158,9 @@ Escape hatches, least to most drastic:
 
 Deprecated: `object_permission_classes` on a `BaseViewSet` warns
 (`KarniDeprecationWarning`) and is removed in 1.0 — it still runs, after the
-access object check. Express the rule in `access` instead. `IsOwner`,
+access object check. Express the rule in `access` instead
+([migration note](migrations/0.2.md#object_permission_classes); `karni upgrade`
+lists every viewset that sets it). `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
 (see [accounts](accounts.md#roles-and-object-permissions)).
 

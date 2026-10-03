@@ -1,0 +1,15 @@
+# FIXTURE, not a shipped change: @karni/ui has had no breaking change yet.
+# It shows that the first real TypeScript change is one changelog entry plus one
+# line of data (`CODEMOD = RenameExport(...)`); tests/test_upgrade.py resolves
+# this codemod id to that object.
+version = "0.9.0"
+
+[[change]]
+id = "fixture-data-table"
+kind = "import-move"
+symbol = "@karni/ui DataTable"
+replacement = "@karni/ui ResourceTable"
+summary = "FIXTURE: DataTable is exported as ResourceTable."
+mechanical = true
+codemod = "v0_9.data_table_to_resource_table"
+migration = "migrations/0.9.md#datatable"

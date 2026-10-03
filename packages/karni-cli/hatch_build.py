@@ -6,7 +6,10 @@ copy already in-tree and no-ops — never a missing-source error.
 
 The same applies to Karni's stdlib-only agent rules (packages/karni/karni/
 agent -> karni_cli/_agent): the fallback `karni rules` / `karni new` use when
-karni itself is not importable and no project interpreter is reachable.
+karni itself is not importable and no project interpreter is reachable. And
+to Karni's machine-readable changelog (packages/karni/karni/changelog ->
+karni_cli/_changelog), which `karni upgrade` reads: the CLI must know every
+change up to its own release, whatever karni the project has installed.
 """
 
 from __future__ import annotations
@@ -37,17 +40,23 @@ class TemplateBundleHook(BuildHookInterface):
             )
         build_data.setdefault("artifacts", []).append("karni_cli/_templates/")
 
-        agent_bundle = pkg_root / "karni_cli" / "_agent"
-        agent_source = pkg_root.parent / "karni" / "karni" / "agent"
-        if agent_source.is_dir():
-            if agent_bundle.exists():
-                shutil.rmtree(agent_bundle)
-            shutil.copytree(
-                agent_source, agent_bundle, ignore=shutil.ignore_patterns("__pycache__")
-            )
-        elif not agent_bundle.is_dir():
+        self._bundle_karni(pkg_root, "agent", "_agent", "agent rules", build_data)
+        self._bundle_karni(pkg_root, "changelog", "_changelog", "changelog", build_data)
+
+    @staticmethod
+    def _bundle_karni(
+        pkg_root: Path, package: str, bundle: str, what: str, build_data: dict[str, Any]
+    ) -> None:
+        """Copy the stdlib-only ``karni/<package>`` into ``karni_cli/<bundle>``."""
+        bundled = pkg_root / "karni_cli" / bundle
+        source = pkg_root.parent / "karni" / "karni" / package
+        if source.is_dir():
+            if bundled.exists():
+                shutil.rmtree(bundled)
+            shutil.copytree(source, bundled, ignore=shutil.ignore_patterns("__pycache__"))
+        elif not bundled.is_dir():
             raise RuntimeError(
-                "No agent rules available: neither the monorepo packages/karni/karni/agent "
-                "nor a bundled karni_cli/_agent copy exists."
+                f"No {what} available: neither the monorepo packages/karni/karni/{package} "
+                f"nor a bundled karni_cli/{bundle} copy exists."
             )
-        build_data["artifacts"].append("karni_cli/_agent/")
+        build_data["artifacts"].append(f"karni_cli/{bundle}/")

@@ -246,7 +246,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                 f"{cls.__name__}.object_permission_classes on a BaseViewSet",
                 "the access declaration (e.g. access = Access(read=..., write=Owned('owner')))",
                 removed_in="1.0",
-                doc_anchor="api.md#access-control",
+                doc_anchor="migrations/0.2.md#object_permission_classes",
             )
         if apps.models_ready:
             _validate_once(cls)

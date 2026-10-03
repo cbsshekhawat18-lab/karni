@@ -47,7 +47,7 @@ karni add MODULE
 
 ### `karni upgrade`
 
-Apply mechanical migrations between Karni versions
+Upgrade across Karni versions: codemods, diff, manual-change report
 
 ```
 karni upgrade [OPTIONS]
@@ -55,9 +55,12 @@ karni upgrade [OPTIONS]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `--list` |  | List registered migrations |
-| `--dry-run` |  |  |
-| `--docker/--no-docker` |  |  |
+| `--to` TEXT |  | Target Karni version (default: the newest release in the changelog) |
+| `--from` TEXT |  | The project's current Karni version, instead of asking its interpreter (use it when the new karni is already installed) |
+| `--dry-run` |  | Print a unified diff of every change and write nothing |
+| `--allow-dirty` |  | Write even with uncommitted changes, or outside a git work tree |
+| `--list` |  | List every recorded breaking change and exit |
+| `--docker/--no-docker` |  | Where to ask for the installed karni version |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ### `karni doctor`

@@ -15,6 +15,10 @@ and .claude/commands/*.md. For each one that is recognisably Karni's:
 
 Files that do not look like Karni's are left untouched and reported. Nothing
 a user wrote is discarded silently.
+
+Changelog entry ``agent-guidance-files`` (0.2.0); ``CODEMOD`` is what
+``karni upgrade`` runs. :func:`migrate_agent_guidance` is the same migration
+for direct callers, with its own dry run and printed notes.
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ import typer
 
 from karni_cli import agent_data
 from karni_cli.adapters import MODULES_DIR, backup, is_generated, sync
+from karni_cli.upgrades.codemod import Codemod, Outcome, Site
 from karni_cli.upgrades.legacy_agent_files import LEGACY_FILES, PROJECT_NAME
 
 RULES_FILE = "karni.rules.py"
@@ -196,25 +201,19 @@ def render_rules_block(migration: Migration, existing: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def migrate_agent_guidance(project: Path, dry_run: bool) -> list[str]:
-    """Upgrade.apply: returns the files changed (or that would change)."""
-    migration = plan(project)
-    for rel in migration.foreign:
-        typer.echo(f"   {rel}: does not look like Karni's file — left untouched, review it")
-    if not migration.migrated:
-        return []
-    changed: list[str] = []
-    rules_path = project / RULES_FILE
-    existing = rules_path.read_text(encoding="utf-8") if rules_path.is_file() else ""
+def _would_change(migration: Migration) -> list[str]:
+    changed = list(migration.migrated)
     if migration.entries or migration.removed:
         changed.append(RULES_FILE)
-    for name in migration.modules:
-        changed.append((MODULES_DIR / f"{name}.md").as_posix())
-    for rel, line in migration.removed:
-        typer.echo(f"   REVIEW {rel}: you removed {line.strip()!r} (noted in {RULES_FILE})")
-    if dry_run:
-        return sorted({*changed, *migration.migrated})
+    changed += [(MODULES_DIR / f"{name}.md").as_posix() for name in migration.modules]
+    return sorted(set(changed))
 
+
+def _apply(project: Path, migration: Migration) -> list[str]:
+    """Write the migration; returns every file written, backed up or removed."""
+    changed = _would_change(migration)
+    rules_path = project / RULES_FILE
+    existing = rules_path.read_text(encoding="utf-8") if rules_path.is_file() else ""
     if migration.entries or migration.removed:
         block = render_rules_block(migration, existing)
         rules_path.write_text(existing + ("\n" if existing else "") + block, encoding="utf-8")
@@ -228,4 +227,43 @@ def migrate_agent_guidance(project: Path, dry_run: bool) -> list[str]:
         (project / rel).unlink()
     result = sync(project, agent_data.load(project))
     changed += result.written + result.removed
-    return sorted(set(changed) | set(migration.migrated))
+    return sorted(set(changed))
+
+
+def _notes(migration: Migration) -> list[tuple[str, str]]:
+    """``(file, note)`` for everything a person has to look at."""
+    notes = [
+        (rel, "does not look like Karni's file — left untouched, review it")
+        for rel in migration.foreign
+    ]
+    notes += [
+        (rel, f"REVIEW: you removed {line.strip()!r} (noted in {RULES_FILE})")
+        for rel, line in migration.removed
+    ]
+    return notes
+
+
+def migrate_agent_guidance(project: Path, dry_run: bool) -> list[str]:
+    """Migrate (or, with ``dry_run``, list) the agent files; prints what needs review."""
+    migration = plan(project)
+    for rel, note in _notes(migration):
+        typer.echo(f"   {rel}: {note}")
+    if not migration.migrated:
+        return []
+    if dry_run:
+        return _would_change(migration)
+    return _apply(project, migration)
+
+
+class AgentGuidance(Codemod):
+    """The ``karni upgrade`` codemod: same migration, notes reported as sites."""
+
+    def apply(self, root: Path) -> Outcome:
+        migration = plan(root)
+        sites = [Site(rel, 0, note) for rel, note in _notes(migration)]
+        if not migration.migrated:
+            return Outcome(sites=sites)
+        return Outcome(files=dict.fromkeys(_apply(root, migration), 1), sites=sites)
+
+
+CODEMOD = AgentGuidance()

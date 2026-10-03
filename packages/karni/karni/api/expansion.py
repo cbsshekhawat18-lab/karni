@@ -292,7 +292,7 @@ def _warn_subsumed(name: str) -> None:
         f"karni.api.expansion.{name}",
         "karni.api.optimizer.optimize(queryset, serializer, scope=...)",
         removed_in="1.0",
-        doc_anchor="api.md#query-optimisation",
+        doc_anchor="migrations/0.2.md#related_lookups-and-scoped_related_lookups",
         stacklevel=3,
     )
 

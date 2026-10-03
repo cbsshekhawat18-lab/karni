@@ -10,8 +10,8 @@ import karni_cli.commands.upgrade as upgrade_mod
 from karni_cli import agent_data
 from karni_cli.adapters import GENERATED_MARK, sync
 from karni_cli.main import app
-from karni_cli.upgrades.agent_guidance import migrate_agent_guidance, plan
 from karni_cli.upgrades.legacy_agent_files import LEGACY_FILES, PROJECT_NAME
+from karni_cli.upgrades.v0_2.agent_guidance import CODEMOD, migrate_agent_guidance, plan
 
 FRAGMENT = "## Payments (karni-payments)\n- Never call provider SDKs directly."
 
@@ -139,12 +139,30 @@ def test_cli_upgrade_runs_the_codemod(runner, generated_project: Path, monkeypat
     monkeypatch.chdir(generated_project)
     monkeypatch.setattr(upgrade_mod, "_installed_version", lambda *a: "0.1.0")
     listed = runner.invoke(app, ["upgrade", "--list"])
-    assert "agent guidance" in listed.output
-    result = runner.invoke(app, ["upgrade"])
+    assert "agent-guidance-files" in listed.output
+    assert "codemod v0_2.agent_guidance" in listed.output
+    preview = runner.invoke(app, ["upgrade", "--dry-run"])
+    assert preview.exit_code == 0, preview.output
+    assert "+++ b/karni.rules.py" in preview.output  # a real diff, nothing written
+    assert not (generated_project / "karni.rules.py").exists()
+    # The generated project is not a git repository: writing needs --allow-dirty.
+    refused = runner.invoke(app, ["upgrade"])
+    assert refused.exit_code != 0
+    result = runner.invoke(app, ["upgrade", "--allow-dirty"])
     assert result.exit_code == 0, result.output
-    assert "REVIEW AGENTS.md" in result.output
-    assert "karni.rules.py" in result.output
+    assert "REVIEW: you removed" in result.output
+    assert "karni.rules.py: 1" in result.output
     assert GENERATED_MARK in (generated_project / "AGENTS.md").read_text()
+    assert (generated_project / ".karni" / "backup" / "AGENTS.md").is_file()
+
+
+def test_the_codemod_reports_review_notes_as_sites(generated_project: Path) -> None:
+    _write_legacy(generated_project, _customised())
+    outcome = CODEMOD.apply(generated_project)
+    assert "karni.rules.py" in outcome.files
+    notes = [site.render() for site in outcome.sites]
+    assert any(n.startswith("AGENTS.md: REVIEW: you removed") for n in notes), notes
+    assert CODEMOD.apply(generated_project).files == {}  # idempotent
 
 
 @pytest.mark.parametrize("rel", sorted(LEGACY_FILES))

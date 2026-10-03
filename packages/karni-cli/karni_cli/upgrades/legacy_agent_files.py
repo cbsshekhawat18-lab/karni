@@ -1,6 +1,6 @@
 """Karni's phase-8 scaffold agent files, frozen verbatim (karni-cli 0.1.0 template).
 
-The upgrade codemod (:mod:`karni_cli.upgrades.agent_guidance`) diffs a
+The upgrade codemod (:mod:`karni_cli.upgrades.v0_2.agent_guidance`) diffs a
 project's files against these to tell Karni's text from the project's own
 additions. Never edit them: they are historical records, not guidance.
 ``PROJECT_NAME`` marks where the template substituted the project name.

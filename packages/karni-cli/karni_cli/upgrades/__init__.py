@@ -1,55 +1,28 @@
-"""Mechanical migration registry for ``karni upgrade`` (E6).
+"""``karni upgrade``: move a project across Karni versions with the changelog's codemods.
 
-Version N+1 only appends :class:`Upgrade` entries — the machinery never
-changes. An entry applies when the installed karni version matches
-``from_spec``; entries run in ascending ``to_version`` order.
+* :mod:`.changelog` — Karni's machine-readable changelog (one TOML file per
+  release in ``packages/karni/karni/changelog``) and the selection of the
+  changes between two versions;
+* :mod:`.codemod` — the codemod contract, and which project files it may touch;
+* :mod:`.python` — data-driven libcst codemods (rename a symbol or a setting,
+  replace an attribute or a method call) and detectors for manual changes;
+* :mod:`.typescript` — the pinned jscodeshift runner and its data-driven
+  transforms (``transforms/``);
+* :mod:`.engine` — runs codemods over a scratch copy, diffs it, writes it
+  back all or nothing, and builds the report;
+* ``v<major>_<minor>/<name>.py`` — one module per breaking change, named by
+  the release in which the old form breaks, exposing ``CODEMOD``.
+
+Recording a breaking change:
+
+1. append a ``[[change]]`` to ``packages/karni/karni/changelog/<release>.toml``;
+2. if it is mechanical, add ``upgrades/v<X>_<Y>/<name>.py``, usually one line
+   of data (``CODEMOD = RenameSymbol(old=..., new=...)``,
+   ``RenameSetting(...)``, ``RenameExport(...)`` for ``@karni/ui``), plus a
+   before/after test; if it is manual, optionally a detector the same way;
+3. write its section in ``docs/migrations/<release>.md``; if it deprecates
+   something, ``warn_deprecated(..., removed_in=..., doc_anchor=<that section>)``.
+
+The changelog tests (packages/karni/tests/test_changelog.py,
+tests/test_upgrade.py here) fail until every piece is in place.
 """
-
-from __future__ import annotations
-
-from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import Path
-
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
-
-
-@dataclass(frozen=True)
-class Upgrade:
-    from_spec: SpecifierSet
-    to_version: str
-    description: str
-    #: apply(project_root, dry_run) -> list of changed (or would-change) file paths
-    apply: Callable[[Path, bool], list[str]]
-
-
-#: Registered mechanical migrations, appended below (never edited in place).
-UPGRADES: list[Upgrade] = []
-
-
-def applicable(installed: str) -> list[Upgrade]:
-    version = Version(installed)
-    matches = [u for u in UPGRADES if version in u.from_spec]
-    return sorted(matches, key=lambda u: Version(u.to_version))
-
-
-def _register() -> None:
-    from karni_cli.upgrades.agent_guidance import migrate_agent_guidance
-
-    # Detection-based and idempotent, so it applies to every 0.x project: it
-    # only touches agent files that are recognisably Karni's old hand-written ones.
-    UPGRADES.append(
-        Upgrade(
-            from_spec=SpecifierSet(">=0.1.0"),
-            to_version="0.1.0",
-            description=(
-                "agent guidance: AGENTS.md/CLAUDE.md/.cursorrules/.claude/commands -> "
-                "karni.rules.py + generated adapters"
-            ),
-            apply=migrate_agent_guidance,
-        )
-    )
-
-
-_register()

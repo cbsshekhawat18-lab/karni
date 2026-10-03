@@ -50,9 +50,21 @@ subprocess — the CLI itself never imports Django.
   staleness gate.
 - `karni mcp` — context, rules and check as MCP tools
   (`pip install 'karni-cli[mcp]'`).
-- `karni upgrade [--list] [--dry-run]` — mechanical migrations between Karni
-  versions (codemod: old hand-written agent files -> `karni.rules.py` +
-  generated adapters).
+- `karni upgrade [--to VERSION] [--from VERSION] [--dry-run] [--allow-dirty] [--list]`
+  moves the project across Karni versions. It reads the karni installed in
+  the project (`--from` overrides), takes every breaking change between that
+  and `--to` from Karni's machine-readable changelog
+  (`packages/karni/karni/changelog/*.toml`, bundled into karni-cli), and runs
+  their codemods in release order. Python codemods use libcst; TypeScript
+  codemods use a pinned jscodeshift through `npx` and are skipped, with the
+  reason, without Node.js. The codemods run on a scratch copy, and the result
+  is written back all at once, or not at all if one fails. `--dry-run` prints
+  a unified diff and writes nothing. Writing needs a clean git tree;
+  `--allow-dirty` overrides that, and is also required outside git. The
+  report lists what was applied (each file and its rewrite count), what could
+  not be fixed automatically (the sites found, with each migration-note link)
+  and what was skipped. Run it before you raise the karni pin. See
+  `docs/migrations/`.
 
 See `docs/agents.md` for the agent surface in full.
 

@@ -3,12 +3,17 @@
 Karni's policy (CLAUDE.md): a public API change warns for one minor release
 and is removed at the next major. Every deprecated name calls
 :func:`warn_deprecated`, so every warning has the same shape: what is
-deprecated, its replacement, the Karni version that removes it, and a docs
-link built from :data:`DOCS_BASE_URL`::
+deprecated, its replacement, the Karni version that removes it, and a link
+to its migration note (``docs/migrations/<version>.md``) built from
+:data:`DOCS_BASE_URL`::
 
     Model.all_objects is deprecated; use Model.objects.without("soft_delete",
     reason=...) instead. It will be removed in Karni 1.0. See
-    https://github.com/karni/karni/blob/main/docs/models.md#deprecated-soft-delete-aliases
+    https://github.com/karni/karni/blob/main/docs/migrations/0.2.md#all_objects
+
+Each deprecation also has an entry in Karni's machine-readable changelog
+(:mod:`karni.changelog`), which ``karni upgrade`` reads to rewrite or report
+every use before the removal lands; tests keep the two in step.
 
 All of them use one category, :class:`KarniDeprecationWarning` (a
 ``DeprecationWarning``), so a project can find every caller in one run:
@@ -23,7 +28,11 @@ for callers that report it some other way.
 from __future__ import annotations
 
 import warnings
-from typing import Final
+
+# One constant for every docs link Karni builds (deprecation warnings here,
+# `karni upgrade`'s report through the changelog), defined where karni-cli
+# can read it without importing Django.
+from karni.changelog import DOCS_BASE_URL, docs_url
 
 __all__ = [
     "DOCS_BASE_URL",
@@ -33,17 +42,9 @@ __all__ = [
     "warn_deprecated",
 ]
 
-#: Where ``docs/`` is published; ``doc_anchor`` values are relative to it.
-DOCS_BASE_URL: Final[str] = "https://github.com/karni/karni/blob/main/docs/"
-
 
 class KarniDeprecationWarning(DeprecationWarning):
     """Category of every warning raised through :func:`warn_deprecated`."""
-
-
-def docs_url(doc_anchor: str) -> str:
-    """Absolute docs link for ``doc_anchor`` (``"models.md#section"``)."""
-    return DOCS_BASE_URL + doc_anchor.lstrip("/")
 
 
 def deprecation_message(old: str, new: str, *, removed_in: str, doc_anchor: str) -> str:
