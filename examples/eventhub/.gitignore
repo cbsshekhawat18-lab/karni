@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.karni-src/
+frontend/node_modules/
+frontend/dist/
+/data/
+# Machine-local karni state (one-time tips etc.); also self-ignored via its own .gitignore.
+.karni/local/
+# Local build notes (not part of the example).
+.notes/
+.notes-e2e-*.log
+frontend/test-results/
+frontend/playwright-report/
