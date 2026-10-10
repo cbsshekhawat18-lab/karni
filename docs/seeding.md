@@ -36,6 +36,10 @@ run with `DEBUG = False` (a production database) unless you pass `--force`.
   `access` declarations name. About half of the user-owned rows belong to it,
   so every screen has data when you sign in. Users are matched by email, so
   re-running never duplicates them and `--reset` never deletes them.
+- **Known logins.** `KARNI_SEED_LOGINS = {"organizer@example.com": ["organizer"],
+  "attendee@example.com": ["attendee"]}` (env: JSON) creates those users with
+  the demo password and the roles listed — the accounts a demo script or an
+  end-to-end suite signs in with. Re-runs reuse them.
 - **Determinism.** `--seed` drives every random choice. The same seed and
   count give the same rows, including UUIDs and dates, which come from a
   fixed anchor rather than "now".

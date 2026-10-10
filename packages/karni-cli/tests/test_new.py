@@ -16,6 +16,7 @@ from karni_cli.scaffold import (
     derive_slug,
     resolve_template,
     resolve_ui_source,
+    ui_mount_target,
     ui_spec,
     validate_name,
 )
@@ -94,9 +95,15 @@ def test_ui_source_repo_walk_is_verified(tmp_path: Path) -> None:
     assert resolve_ui_source(start) is None
 
 
-def test_ui_spec() -> None:
+def test_ui_spec(tmp_path: Path) -> None:
     assert ui_spec(None) == "^0.1.0"
     assert ui_spec(Path("/opt/Karni/packages/karni-ui")) == "file:/opt/Karni/packages/karni-ui"
+    # A project elsewhere keeps the absolute path; one inside the checkout gets a
+    # relative one (from frontend/), so examples/ install on any machine.
+    ui = tmp_path / "Karni" / "packages" / "karni-ui"
+    assert ui_spec(ui, tmp_path / "elsewhere" / "proj") == f"file:{ui}"
+    inside = ui_spec(ui, tmp_path / "Karni" / "examples" / "demo")
+    assert inside == "file:../../../packages/karni-ui"
 
 
 def test_new_writes_a_local_ui_dependency(runner, tmp_path: Path, monkeypatch) -> None:
@@ -115,6 +122,29 @@ def test_new_writes_a_local_ui_dependency(runner, tmp_path: Path, monkeypatch) -
     assert mount in _frontend_volumes(project)
     assert f"@karni/ui: file:{ui.resolve()}" in result.output
     assert "Building @karni/ui" not in result.output
+
+
+def test_new_inside_the_checkout_uses_a_relative_ui_path(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    ui = _fake_ui(tmp_path / "karni")
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setenv("KARNI_UI_SRC", str(ui))
+    examples = tmp_path / "karni" / "examples"
+    result = runner.invoke(app, ["new", "Demo", "-o", str(examples)])
+    assert result.exit_code == 0, result.output
+    package = json.loads((examples / "demo" / "frontend" / "package.json").read_text())
+    assert package["dependencies"]["@karni/ui"] == "file:../../../packages/karni-ui"
+    mount = {"type": "bind", "source": "../../../packages/karni-ui",
+             "target": "/packages/karni-ui", "read_only": True}  # fmt: skip
+    assert mount in _frontend_volumes(examples / "demo")
+    assert "@karni/ui: file:../../../packages/karni-ui" in result.output
+
+
+def test_ui_mount_target() -> None:
+    assert ui_mount_target("file:/opt/Karni/packages/karni-ui") == "/opt/Karni/packages/karni-ui"
+    assert ui_mount_target("file:../../../packages/karni-ui") == "/packages/karni-ui"
+    assert ui_mount_target("^0.1.0") == "^0.1.0"
 
 
 def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> None:

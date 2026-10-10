@@ -46,14 +46,26 @@ _LIFECYCLE = re.compile(
     r"^(?:(?P<app>[a-z_]\w*)\.)?(?P<model>[A-Z]\w*)\.(?P<event>created|updated|deleted)$"
 )
 _EVENT = re.compile(r"^(?:(?P<module>[a-z_][\w.]*)\.events\.)?(?P<event>[a-z_]\w*)$")
-_ON_HELP = "Model.created|Model.updated|Model.deleted, or a custom event (order_shipped)"
+_ON_HELP = (
+    "Model.created|Model.updated|Model.deleted (app_label.Model.event for an installed "
+    "app's model, e.g. karni_payments.Payment.updated), or a custom event (order_shipped)"
+)
+#: The user model's label when no local app defines ``User`` (Karni's default).
+_USER_MODEL = "karni_accounts.User"
 
 
-def _app_named(ws: Workspace, label: str) -> App:
+def _local_app(ws: Workspace, label: str) -> App | None:
     for other in local_apps(ws):
         if label in (other.label, other.module):
             return other
-    raise CliError(f"--on: no local app {label!r}.", code="C102")
+    return None
+
+
+def _app_named(ws: Workspace, label: str) -> App:
+    found = _local_app(ws, label)
+    if found is None:
+        raise CliError(f"--on: no local app {label!r}.", code="C102")
+    return found
 
 
 def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -> None:
@@ -63,20 +75,26 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
     custom = None if lifecycle else _EVENT.match(on)
     imports: list[Import] = []
     if lifecycle:
-        owner = _app_named(ws, lifecycle["app"]) if lifecycle["app"] else app
-        model_name, event = lifecycle["model"], lifecycle["event"]
-        model = (
-            models_in(ws, owner).get(model_name)
-            if lifecycle["app"]
-            else find_model(ws, owner, model_name)
-        )
-        if model is None:
+        label, model_name, event = lifecycle["app"], lifecycle["model"], lifecycle["event"]
+        owner = _local_app(ws, label) if label else app
+        model = None
+        if owner is not None:
+            model = (
+                models_in(ws, owner).get(model_name) if label else find_model(ws, owner, model_name)
+            )
+        # Not a local model: an installed app's (karni_payments.Payment) or the user
+        # model. karni.events takes the lazy "app_label.Model" string, so no import.
+        lazy = f"{label}.{model_name}" if label else (_USER_MODEL if model_name == "User" else "")
+        if model is None and not lazy:
             raise CliError(
-                f"--on {on}: no model {model_name} — create it first: karni make model {model_name}",
+                f"--on {on}: no model {model_name} — create it first: karni make model "
+                f"{model_name}, or name an installed app's model as app_label.{model_name}.{event}.",
                 code="C105",
             )
-        decorator = f"@on_{event}({model.name}{', queued=True' if queued else ''})"
-        param = snake(model.name)
+        target = model.name if model is not None else f'"{lazy}"'
+        annotation = model.name if model is not None else "Any"
+        decorator = f"@on_{event}({target}{', queued=True' if queued else ''})"
+        param = snake(model_name)
         if param == name:
             param = "instance"
         where = (
@@ -84,10 +102,15 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         )
         lines = [
             decorator,
-            f"def {name}({param}: {model.name}) -> None:",
-            docstring(f"Runs after {model.name} rows are {event} — {where}.", "    ", line),
+            f"def {name}({param}: {annotation}) -> None:",
+            docstring(f"Runs after {model_name} rows are {event} — {where}.", "    ", line),
         ]
-        imports += [Import("karni.events", f"on_{event}"), Import(model.import_module, model.name)]
+        imports.append(Import("karni.events", f"on_{event}"))
+        imports.append(
+            Import(model.import_module, model.name)
+            if model is not None
+            else Import("typing", "Any")
+        )
     elif custom:
         source = _app_named(ws, custom["module"]) if custom["module"] else app
         event = custom["event"]

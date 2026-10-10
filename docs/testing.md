@@ -209,6 +209,29 @@ Public API: `factory_for`, `auto_factory`, `explicit_factories`, `create`,
 `create_batch`, `build`, `clear_cache`, `FactoryBuilder`, `AutoFactory`
 (base of generated factories), `AutoSubFactory`, `DEFAULT_PASSWORD`.
 
+## Queued listeners and Celery tasks
+
+A `queued=True` listener (or any task) dispatches on commit and runs in a
+worker, so a test sees nothing unless it runs Celery in-process and executes
+the commit callbacks. pytest-django's `settings` fixture and
+`django_capture_on_commit_callbacks` do both:
+
+```python
+@pytest.fixture(autouse=True)
+def _in_process_celery(settings):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.CELERY_TASK_EAGER_PROPAGATES = True
+
+
+def test_a_confirmed_booking_is_emailed(client_as, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        client_as("attendee").post(...)      # the save that queues the listener
+    assert len(mail.outbox) == 1
+```
+
+The listener function itself is unchanged by the decorator, so unit tests can
+also call it directly with a model instance.
+
 ## Query budgets and N+1 (`karni.testing.performance`)
 
 Three layers, all active in every test run with no project code:

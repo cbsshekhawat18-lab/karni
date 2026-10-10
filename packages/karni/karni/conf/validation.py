@@ -73,6 +73,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_2FA: bool = False
     KARNI_FRONTEND_URL: str = "http://localhost:5173"
     KARNI_ACCOUNTS_TOKEN_TTL: dict[str, Any] = Field(default_factory=dict)
+    KARNI_ACCOUNTS_DEFAULT_ROLES: list[str] = Field(default_factory=list)
+    KARNI_SEED_LOGINS: dict[str, list[str]] = Field(default_factory=dict)
     KARNI_AUTH_THROTTLE_RATES: dict[str, Any] = Field(default_factory=dict)
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"

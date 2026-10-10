@@ -292,6 +292,10 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
       expect(status.readOnly).toBe(true); // read_only via APIMeta
       expect(status.enumValues).toBeDefined();
       expect(status.enumValues?.length).toBeGreaterThan(0);
+      expect(status.default).toBeUndefined(); // read-only: nothing to prefill
+
+      const isPublic = fieldOf(event, "is_public");
+      expect(isPublic.default).toBe(true); // the model default, for create forms
 
       const capacity = fieldOf(event, "capacity");
       expect(capacity.kind).toBe("integer");

@@ -64,6 +64,19 @@ describe("isDirtyEntry (D3 top-level granularity)", () => {
 });
 
 describe("buildFormValues", () => {
+  it("starts a create form from the field's schema default; item and defaultValues win", () => {
+    const status = writableFields.find((field) => field.name === "status");
+    if (status === undefined) throw new Error("fixture lost its status field");
+    const fields = [{ ...status, default: "draft" }];
+    expect(buildFormValues({ fields, item: undefined })["status"]).toBe("draft");
+    expect(
+      buildFormValues({ fields, item: undefined, defaultValues: { status: "published" } })[
+        "status"
+      ],
+    ).toBe("published");
+    expect(buildFormValues({ fields, item: { status: "published" } })["status"]).toBe("published");
+  });
+
   it("gives every field a controlled-input-safe initial value", () => {
     const values = buildFormValues({ fields: writableFields, item: undefined });
     expect(values["title"]).toBe("");

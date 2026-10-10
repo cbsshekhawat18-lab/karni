@@ -329,6 +329,8 @@ class SeedReport:
     demo: str | None = None
     demo_password: str | None = None
     roles: list[str] = field(default_factory=list)
+    #: ``KARNI_SEED_LOGINS`` users that exist after the run: login -> roles.
+    logins: dict[str, list[str]] = field(default_factory=dict)
     reset: list[str] = field(default_factory=list)
     seconds: float = 0.0
 
@@ -349,6 +351,9 @@ class SeedReport:
             roles = f", roles: {', '.join(self.roles)}" if self.roles else ""
             secret = f" / {self.demo_password}" if self.demo_password else " (existing user)"
             lines.append(f"Log in as {self.demo}{secret} (staff{roles}).")
+        for login, login_roles in self.logins.items():
+            held = f" (roles: {', '.join(login_roles)})" if login_roles else ""
+            lines.append(f"Also {login} / {DEFAULT_PASSWORD}{held}.")
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
@@ -359,6 +364,7 @@ class SeedReport:
             "reused": self.reused,
             "demo": self.demo,
             "roles": self.roles,
+            "logins": self.logins,
             "reset": self.reset,
             "seconds": round(self.seconds, 3),
         }
@@ -629,14 +635,32 @@ class _Run:
                 continue
             declared = frozenset(seeder_class.declarations()) if seeder_class else frozenset()
             context = SeedContext(model, count, self.factory(model, seeder_class), self, declared)
+            fixed = 0
             if model is self.user_model:
                 self.demo = context.create(1, **self.demo_values())[0]
-                context.count -= 1
                 self.seed_demo_roles()
+                fixed = 1 + len(self.seed_logins(context))
+                context.count = max(context.count - fixed, 0)
             rows = (seeder_class or Seeder)().seed(context)
             label = model._meta.label
-            self.report.rows[label] = len(rows) + (1 if model is self.user_model else 0)
+            self.report.rows[label] = len(rows) + fixed
         return self.report
+
+    def seed_logins(self, context: SeedContext) -> list[Any]:
+        """``KARNI_SEED_LOGINS``: known logins with their roles (re-runs reuse them)."""
+        from django.conf import settings
+
+        from karni.accounts.permissions import assign_role
+
+        login_field = self.user_model.USERNAME_FIELD
+        created: list[Any] = []
+        for login, roles in (getattr(settings, "KARNI_SEED_LOGINS", None) or {}).items():
+            user = context.create(1, **{login_field: login, "is_active": True})[0]
+            for role in roles:
+                assign_role(user, role)
+            self.report.logins[login] = list(roles)
+            created.append(user)
+        return created
 
     def seed_demo_roles(self) -> None:
         from karni.accounts.permissions import assign_role

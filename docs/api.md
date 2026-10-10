@@ -176,7 +176,25 @@ class Event(BaseModel):
         schema_name = "Event"  # optional: replaces the AppLabelModel stem
         select = ["venue"]     # optional query hints for properties listed in fields
         prefetch = ["tags"]    #   (see Performance → Query optimisation)
+        validate = True        # run Model.clean() on create/update (default)
 ```
+
+**Model validation.** A domain invariant lives in the model's `clean()`:
+
+```python
+class Booking(BaseModel):
+    def clean(self):
+        if self.quantity > self.tier.remaining:
+            raise ValidationError({"quantity": f"Only {self.tier.remaining} seats left."})
+```
+
+The generated serializer runs `clean()` on the would-be row before every
+create and update — including the values the viewset stamps on save, such as
+owner fields — and a `django.core.exceptions.ValidationError` becomes the 400
+response, keyed by field. No serializer is needed for a cross-field rule.
+Opt out per model with `APIMeta.validate = False`; an explicit
+`serializer_class` built on `KarniModelSerializer` keeps the behaviour and can
+override `run_model_clean()`.
 
 Rules enforced at build time (violations raise `ImproperlyConfigured` naming
 the model):
@@ -192,7 +210,11 @@ the model):
 
 Generated serializers get deterministic app-qualified component names
 (`MyappEventSerializer`, expanded variants suffixed per expand path), so
-schema components never collide across apps. Top-level generated classes are
+schema components never collide across apps. An explicit `serializer_class`
+(`karni make serializer`) is named by drf-spectacular from its class name
+(`EventSerializer` → `Event`), so switching to one changes the schema
+snapshot and the generated frontend types once; `x-karni-access.owned` is
+published only when the read predicate is a single `Owned(...)`. Top-level generated classes are
 cached per `(model, expand-set, max-depth)`; `build_serializer.cache_clear()`
 resets the cache (it also resets when `KARNI_API_MAX_EXPAND_DEPTH` changes
 under `override_settings`).

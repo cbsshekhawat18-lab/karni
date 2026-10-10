@@ -42,7 +42,7 @@ from karni_cli.project import CliError
 NAME = "page"
 SUMMARY = "Add a frontend page (<= 50 lines) composing @karni/ui, with its route."
 
-KINDS = ("list", "detail", "form")
+KINDS = ("list", "detail", "form", "login")
 MAX_LINES = 50
 PAGES = FRONTEND / "src" / "pages"
 ROUTES = FRONTEND / "src" / "routes.tsx"
@@ -91,7 +91,7 @@ def spec_for(
     require_kebab(name, "Page name")
     if kind is not None and kind not in KINDS:
         raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.", code="C106")
-    if kind is not None and resource is None:
+    if kind is not None and kind != "login" and resource is None:
         raise CliError(
             f"--kind {kind} needs --resource <route>, e.g. --resource events.", code="C004"
         )
@@ -105,7 +105,11 @@ def spec_for(
         stem = name
         for suffix in _SUFFIXES:
             stem = stem.removesuffix(suffix)
-        title = humanize(resource if kind == "list" and resource else stem)
+        title = (
+            "Sign in"
+            if kind == "login"
+            else humanize(resource if kind == "list" and resource else stem)
+        )
     if any(ch in title for ch in '"{}<>\\`'):
         raise CliError(
             f"--title {title!r}: plain text only (no quotes, braces or angle brackets).",
@@ -175,6 +179,10 @@ def render(spec: PageSpec, routes: set[str]) -> str:
             f'    return <Page title="{spec.title}" />;\n'
             "}\n"
         )
+    if spec.kind == "login":
+        home = "/" if "/" in routes or not routes else min(routes)
+        props = [f"onSuccess={{() => {_go(home)}}}"]
+        return _shell(spec, "LoginForm", props, None, hooks=[], ui={"LoginForm"})
     detail, new, edit = f"{base}/$id", f"{base}/new", f"{base}/$id/edit"
     resource = spec.resource
     if spec.kind == "list":
@@ -332,7 +340,9 @@ def command(
         None, "--resource", help="API resource (router prefix, e.g. events)."
     ),
     kind: str | None = typer.Option(
-        None, "--kind", help="With --resource: list (default), detail or form."
+        None,
+        "--kind",
+        help="With --resource: list (default), detail or form; login needs no resource.",
     ),
     path: str | None = typer.Option(
         None, "--path", help="Route path (resource pages: the base, default /<resource>)."

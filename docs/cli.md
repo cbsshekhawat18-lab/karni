@@ -298,6 +298,8 @@ karni routes [OPTIONS]
 
 Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`.
 
+A host worker on macOS gets `--pool=solo` (the prefork pool cannot run tasks there).
+
 ```
 karni worker [OPTIONS] [ARGS...]
 ```
@@ -705,7 +707,7 @@ karni make listener [OPTIONS] NAME
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `NAME` (required) |  | Listener function name, snake_case. |
-| `--on` TEXT (required) |  | Model.created\|Model.updated\|Model.deleted, or a custom event (order_shipped). |
+| `--on` TEXT (required) |  | Model.created\|Model.updated\|Model.deleted (app_label.Model.event for an installed app's model, e.g. karni_payments.Payment.updated), or a custom event (order_shipped). |
 | `--queued` |  | Run the work in a Celery worker after the transaction commits. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
@@ -772,7 +774,7 @@ karni make page [OPTIONS] NAME
 | --- | --- | --- |
 | `NAME` (required) |  | Page file name, kebab-case (e.g. events). |
 | `--resource` TEXT |  | API resource (router prefix, e.g. events). |
-| `--kind` TEXT |  | With --resource: list (default), detail or form. |
+| `--kind` TEXT |  | With --resource: list (default), detail or form; login needs no resource. |
 | `--path` TEXT |  | Route path (resource pages: the base, default /&lt;resource&gt;). |
 | `--title` TEXT |  | Page title (default: from the name). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |

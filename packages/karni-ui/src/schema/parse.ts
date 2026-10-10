@@ -38,6 +38,7 @@ export interface KarniRelationExtension {
 }
 
 export interface SchemaObject {
+  default?: unknown;
   $ref?: string;
   type?: string | readonly string[];
   format?: string;
@@ -175,6 +176,7 @@ interface PropertyInfo {
   format?: string;
   description?: string;
   title?: string;
+  default?: unknown;
   readOnly: boolean;
   writeOnly: boolean;
   relation?: RelationRef;
@@ -261,6 +263,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
     format: resolved.format,
     description: resolved.description,
     title: resolved.title,
+    default: resolved.default,
     readOnly: resolved.readOnly === true,
     writeOnly: resolved.writeOnly === true,
     maxLength: resolved.maxLength,
@@ -392,11 +395,15 @@ function mergeField(
       requestInfo?.writeOnly === true ||
       responseInfo?.writeOnly === true ||
       (responseInfo === undefined && requestInfo !== undefined),
-    nullable: (requestInfo?.nullable ?? false) || (responseInfo?.nullable ?? false),
+    // Write-facing: a file is a nullable URL on the way out and a plain upload
+    // on the way in, and only the request side says what a form may send.
+    nullable: requestInfo !== undefined ? requestInfo.nullable : (responseInfo?.nullable ?? false),
     order,
   };
 
   const enumValues = requestInfo?.enumValues ?? responseInfo?.enumValues;
+  const fallback = requestInfo?.default ?? responseInfo?.default;
+  if (fallback !== undefined) field.default = fallback;
   if (enumValues !== undefined) field.enumValues = enumValues;
   const maxLength = requestInfo?.maxLength ?? responseInfo?.maxLength;
   if (maxLength !== undefined) field.maxLength = maxLength;

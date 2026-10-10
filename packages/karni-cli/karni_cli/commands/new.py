@@ -67,14 +67,15 @@ def new(
         extra_context={
             "project_name": name,
             "domain": domain,
-            "karni_ui": scaffold.ui_spec(ui_source),
+            "karni_ui": (ui_spec := scaffold.ui_spec(ui_source, output_dir / slug)),
+            "karni_ui_mount": scaffold.ui_mount_target(ui_spec),
         },
         output_dir=str(output_dir),
     )
     adapters = write_agent_adapters(output_dir / slug)
     typer.echo(f"Created {output_dir / slug} ({adapters} agent adapter files)")
     if ui_source is not None:
-        typer.echo(f"@karni/ui: file:{ui_source} (local checkout)")
+        typer.echo(f"@karni/ui: {ui_spec} (local checkout)")
     else:
         typer.echo(
             f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm — until it is published, "
@@ -84,5 +85,7 @@ def new(
     typer.echo(f"  cd {slug}")
     typer.echo("  cp .env.example .env")
     typer.echo("  docker compose up -d")
+    typer.echo(
+        "  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on the host"
+    )
     typer.echo("  karni check")
-    typer.echo("  cd frontend && npm install    # editor, lint and type-check on the host")

@@ -335,10 +335,16 @@ def test_listener_variants(project: Path) -> None:
     fails("make", "listener", "x", "--on", "Venue.created", match="no model Venue")
     fails("make", "listener", "x", "--on", "order_shipped", match="karni make event")
     ok("make", "listener", "sync", "--on", "Event.updated", "--queued")
+    # An installed app's model, and the user model: the lazy "app_label.Model" form.
+    ok("make", "listener", "confirm_paid", "--on", "karni_payments.Payment.updated")
+    ok("make", "listener", "welcome", "--on", "User.created")
     ok("make", "event", "order_shipped")
     ok("make", "listener", "notify", "--on", "order_shipped", "--queued")
     listeners = (project / "events" / "listeners.py").read_text()
     assert "@on_updated(Event, queued=True)\ndef sync(event: Event) -> None:" in listeners
+    assert '@on_updated("karni_payments.Payment")\ndef confirm_paid(payment: Any)' in listeners
+    assert '@on_created("karni_accounts.User")\ndef welcome(user: Any)' in listeners
+    assert "from typing import Any" in listeners and "karni_payments" not in listeners.split("@")[0]
     assert "@receiver(order_shipped)" in listeners
     assert "transaction.on_commit(tasks.notify.delay)" in listeners
     assert "def notify() -> None:" in (project / "events" / "tasks.py").read_text()
@@ -385,6 +391,13 @@ def test_pages_link_only_to_routes_that_exist(project: Path) -> None:
     assert routes.count('path: "/events"') == 1  # --force did not duplicate the route
     assert 'import EventDetailPage from "./pages/event-detail";' in routes
     fails("make", "page", "other", "--path", "/events", match="already registered")
+    # The sign-in page: @karni/ui's LoginForm, no resource needed.
+    result = ok("make", "page", "login", "--kind", "login")
+    assert "page: /login -> LoginPage" in result.output
+    login = (project / "frontend" / "src" / "pages" / "login.tsx").read_text()
+    assert 'import { LoginForm, Page } from "@karni/ui";' in login
+    assert '<LoginForm onSuccess={() => void navigate({ to: "/" })} />' in login
+    assert '<Page title="Sign in">' in login
     fails("make", "page", "x", "--kind", "list", match="needs --resource")
     fails("make", "page", "Bad_Name", match="kebab-case")
     fails("make", "page", "x", "--title", 'Say "hi"', match="plain text only")

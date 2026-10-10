@@ -84,6 +84,21 @@ def test_a_run_creates_connected_realistic_rows_and_a_demo_login() -> None:
     assert Tag.objects.count() == 8
 
 
+def test_seed_logins_exist_with_their_roles(settings) -> None:
+    from django.contrib.auth import get_user_model
+
+    settings.KARNI_SEED_LOGINS = {"organizer@example.com": ["organizer"], "fan@example.com": []}
+    report = seed(models=EVENTS, count=4, seed=1, now=NOW, reset=True)
+    organizer = get_user_model().objects.get(email="organizer@example.com")
+    assert [g.name for g in organizer.groups.all()] == ["organizer"]
+    assert organizer.check_password("karni-password") and organizer.is_active
+    assert report.logins == {"organizer@example.com": ["organizer"], "fan@example.com": []}
+    assert "Also organizer@example.com / karni-password (roles: organizer)." in report.render()
+    again = seed(models=EVENTS, count=4, seed=1, now=NOW, reset=False)
+    assert get_user_model().objects.filter(email="organizer@example.com").count() == 1
+    assert again.logins["fan@example.com"] == []
+
+
 def test_the_same_seed_reproduces_the_same_rows() -> None:
     plan = [Venue, Tag, Event, get_user_model()]
     seed(models=EVENTS, count=6, seed=42, now=NOW)

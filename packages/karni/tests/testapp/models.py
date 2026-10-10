@@ -21,6 +21,7 @@ and admin need real reverse relations):
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from karni.models import AuditedModel, BaseModel, SoftDeleteModel, TimestampedModel, UUIDModel
@@ -144,6 +145,31 @@ class Book(BaseModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+class Slot(BaseModel):
+    """A model whose invariant lives in clean(): the API runs it (karni.api.serializers)."""
+
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+
+    def clean(self) -> None:
+        if self.ends_at <= self.starts_at:
+            raise ValidationError({"ends_at": "ends_at must be after starts_at."})
+
+
+class LooseSlot(BaseModel):
+    """Same rule, but APIMeta.validate = False keeps the API from running clean()."""
+
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+
+    class APIMeta:
+        validate = False
+
+    def clean(self) -> None:
+        if self.ends_at <= self.starts_at:
+            raise ValidationError({"ends_at": "ends_at must be after starts_at."})
 
 
 class Review(SoftDeleteModel):

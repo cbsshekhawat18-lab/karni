@@ -75,6 +75,23 @@ def _invoke(runner: CliRunner, *args: str) -> Any:
 
 # --- venv mode: the exact command per runner ----------------------------------
 
+
+@pytest.fixture(autouse=True)
+def _linux_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The expected worker args are Linux's; macOS hosts add --pool=solo (tested below)."""
+    monkeypatch.setattr("karni_cli.commands.worker.sys.platform", "linux")
+
+
+def test_host_pool_args_adds_solo_on_macos_only() -> None:
+    from karni_cli.commands.worker import host_pool_args
+
+    assert host_pool_args(None, platform="darwin") == ["--pool=solo"]
+    assert host_pool_args(["-Q", "high"], platform="darwin") == ["-Q", "high", "--pool=solo"]
+    assert host_pool_args(["--pool=threads"], platform="darwin") == ["--pool=threads"]
+    assert host_pool_args(["-P", "gevent"], platform="darwin") == ["-P", "gevent"]
+    assert host_pool_args(["-Q", "high"], platform="linux") == ["-Q", "high"]
+
+
 VENV_CASES: list[tuple[list[str], list[str]]] = [
     (["migrate"], ["manage.py", "migrate"]),
     (["migrate", "events", "0003", "--plan"], ["manage.py", "migrate", "events", "0003", "--plan"]),

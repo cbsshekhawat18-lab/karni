@@ -54,7 +54,8 @@ def _field_lists(model: ModelInfo, owners: list[str]) -> tuple[list[str], list[s
     if bases & {"BaseModel", "AuditedModel"}:
         tail += ["created_by", "updated_by"]
     fields = [*head, *model.fields, *tail]
-    read_only = [*head, *tail, *(o for o in owners if o in model.fields)]
+    owned = dict.fromkeys(o for o in owners if o in model.fields)  # read + write may both name it
+    read_only = [*head, *tail, *owned]
     return fields, read_only
 
 

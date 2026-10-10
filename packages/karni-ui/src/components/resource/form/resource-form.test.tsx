@@ -244,6 +244,26 @@ describe("ResourceForm create mode", () => {
   });
 });
 
+describe("ResourceForm create mode: cleared optional fields", () => {
+  it("validates a cleared optional, non-nullable enum as absent and omits it", async () => {
+    mockZodFor.mockReturnValue(
+      z
+        .object({ title: z.string().min(1), status: z.enum(["draft", "published"]).optional() })
+        .passthrough() as unknown as ZodObject<ZodRawShape>,
+    );
+    const { create } = setupMutations();
+    const onSuccess = vi.fn();
+    render(<ResourceForm resource="events" onSuccess={onSuccess} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("textbox", { name: "Title" }), "Launch");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    const sent = create.mutateAsync.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(sent["title"]).toBe("Launch");
+    expect("status" in sent).toBe(false);
+  });
+});
+
 describe("ResourceForm edit mode (D3/D10)", () => {
   it("loads the unexpanded item and PATCHes only dirty fields", async () => {
     const user = userEvent.setup();

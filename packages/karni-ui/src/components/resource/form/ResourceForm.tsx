@@ -254,10 +254,28 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
     [formFields, item, defaultValues],
   );
 
-  const resolver = React.useMemo(
-    () => zodResolver(zodFor(schema, mode)) as unknown as Resolver<FieldValues>,
-    [schema, mode],
-  );
+  const resolver = React.useMemo<Resolver<FieldValues>>(() => {
+    const base = zodResolver(zodFor(schema, mode)) as unknown as Resolver<FieldValues>;
+    // A cleared optional, non-nullable field (a select's "no selection") is
+    // omitted from the request (D3), so it must not fail validation as null.
+    // Many relations are cleared with [] and stay.
+    const omittable = new Set(
+      schema.fields
+        .filter(
+          (field) =>
+            !field.required &&
+            !field.nullable &&
+            !(field.kind === "relation" && field.relation?.many === true),
+        )
+        .map((field) => field.name),
+    );
+    return (values, context, options) => {
+      const cleaned: FieldValues = Object.fromEntries(
+        Object.entries(values).filter(([name, value]) => !(value === null && omittable.has(name))),
+      );
+      return base(cleaned, context, options);
+    };
+  }, [schema, mode]);
 
   const methods = useForm<FieldValues>({
     resolver,

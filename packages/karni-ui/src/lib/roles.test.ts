@@ -117,6 +117,7 @@ describe("package self-registrations", () => {
       "empty-state": "EmptyState",
       "file-upload": "FileUpload",
       "layout-shell": "Layout",
+      "login-form": "LoginForm",
       modal: "Modal",
       "page-shell": "Page",
       "resource-form": "ResourceForm",

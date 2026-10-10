@@ -86,6 +86,11 @@ per-request blacklist lookup.
 Password change keeps the user's own session alive
 (`update_session_auth_hash`) while still revoking their refresh tokens.
 
+Session mode is also what makes a plain link to an authenticated endpoint
+work — a CSV export action, a file behind `access` — because the browser
+sends the cookie with the navigation. In JWT mode a link cannot carry the
+token; fetch the body through the `KarniClient` instead.
+
 Cookie constraints: same-site setups (frontend and API on one origin, or the
 Vite dev proxy) work out of the box. Cross-site setups (SPA on a different
 registrable domain) additionally need `SESSION_COOKIE_SAMESITE = "None"` and

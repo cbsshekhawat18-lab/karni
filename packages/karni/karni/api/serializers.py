@@ -41,11 +41,13 @@ generation entirely, declare ``APIMeta`` for per-model tweaks, or subclass
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Iterable
 from typing import Any
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Model, QuerySet
 from django.test.signals import setting_changed
 from rest_framework import serializers
@@ -132,6 +134,58 @@ class KarniModelSerializer(serializers.ModelSerializer):
     """
 
     serializer_related_field = KarniPrimaryKeyRelatedField
+
+    def build_standard_field(self, field_name: str, model_field: Any) -> tuple[Any, dict[str, Any]]:
+        """Publish a model field's plain default in the schema (``default:``).
+
+        DRF leaves a model default to the model, so the OpenAPI document never
+        says what a field starts as; forms then cannot prefill it. A literal
+        default (``"draft"``, ``True``) becomes the serializer field's default,
+        which drf-spectacular emits. Callable defaults (``uuid4``, ``now``)
+        stay with the model.
+        """
+        field_class, kwargs = super().build_standard_field(field_name, model_field)
+        default = model_field.default if model_field.has_default() else None
+        if (
+            model_field.has_default()
+            and not callable(default)
+            and not kwargs.get("read_only")
+            and not kwargs.get("required")
+            and "default" not in kwargs
+        ):
+            kwargs["default"] = default
+        return field_class, kwargs
+
+    def create(self, validated_data: dict[str, Any]) -> Any:
+        self.run_model_clean(validated_data)
+        return super().create(validated_data)
+
+    def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
+        self.run_model_clean(validated_data, instance)
+        return super().update(instance, validated_data)
+
+    def run_model_clean(self, validated_data: dict[str, Any], instance: Any = None) -> None:
+        """Run ``Model.clean()`` on the would-be row; its errors become a 400.
+
+        The probe carries every validated value, including what the viewset
+        stamps on save (owner fields), so a cross-field rule in ``clean()``
+        is the one place a domain invariant lives — no serializer needed.
+
+        Override / escape hatch: ``class APIMeta: validate = False`` on the
+        model skips it; override this method for another validation step.
+        """
+        model = self.Meta.model
+        if getattr(getattr(model, "APIMeta", None), "validate", True) is False:
+            return
+        concrete = {field.name for field in model._meta.concrete_fields}
+        probe = copy.copy(instance) if instance is not None else model()
+        for name, value in validated_data.items():
+            if name in concrete:
+                setattr(probe, name, value)
+        try:
+            probe.clean()
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(serializers.as_serializer_error(exc)) from exc
 
 
 def serializer_name(model: type[Model], expand: frozenset[str] = frozenset()) -> str:

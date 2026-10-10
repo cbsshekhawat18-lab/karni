@@ -6,6 +6,8 @@ command is for local (``.venv``) development or a one-off extra worker.
 
 from __future__ import annotations
 
+import sys
+
 import typer
 
 from karni_cli import project as project_mod
@@ -15,6 +17,21 @@ from karni_cli.project import require_project
 def celery_args(celery_app: str, role: str, loglevel: str, extra: list[str] | None) -> list[str]:
     """``-m celery -A <app> <role> -l <level> [extra]`` (shared with ``karni beat``)."""
     return ["-m", "celery", "-A", celery_app, role, "-l", loglevel, *(extra or [])]
+
+
+def host_pool_args(extra: list[str] | None, platform: str | None = None) -> list[str]:
+    """``--pool=solo`` for a host worker on macOS, unless the caller chose a pool.
+
+    Celery's default prefork pool cannot run tasks on macOS (every task fails
+    in ``fast_trace_task`` with "not enough values to unpack"); the solo pool
+    does, and a development worker needs nothing more. Docker runs Linux and
+    keeps the default.
+    """
+    args = list(extra or [])
+    platform = platform or sys.platform
+    if platform != "darwin" or any(a == "-P" or a.startswith(("--pool", "-P")) for a in args):
+        return args
+    return [*args, "--pool=solo"]
 
 
 def worker(
@@ -28,11 +45,16 @@ def worker(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`."""
+    """Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`.
+
+    A host worker on macOS gets `--pool=solo` (the prefork pool cannot run tasks there).
+    """
     project = require_project()
+    on_host = docker is not True and project_mod.venv_python(project) is not None
+    extra = host_pool_args(args) if on_host else list(args or [])
     proc = project_mod.run_python(
         project,
-        celery_args(celery_app, "worker", loglevel, args),
+        celery_args(celery_app, "worker", loglevel, extra),
         docker=docker,
         service=service,
         capture=False,

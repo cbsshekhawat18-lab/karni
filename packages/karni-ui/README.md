@@ -180,6 +180,10 @@ schema order; rows are still keyed by `id`). Show one by naming it in `columns`
 and still honours `fields` overrides for them. `ResourceForm` never renders them
 (they are read-only).
 
+A create form starts from the schema's defaults (a model's `default=`), and a
+cleared optional field is left out of the request rather than sent as `null`
+(`null` is sent only for nullable fields).
+
 Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`;
 `displayLabel(obj)` picks a human label for relation objects.
 

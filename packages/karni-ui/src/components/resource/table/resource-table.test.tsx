@@ -658,6 +658,13 @@ describe("search box and filter bar (D5)", () => {
     expect(lastListParams()?.filters).toEqual({ organizer: "7" });
   });
 
+  it("params pins filters on every request and keeps them out of the bar", () => {
+    renderTable(<ResourceTable resource="events" params={{ organizer: "7" }} />);
+    expect(lastListParams()?.filters).toEqual({ organizer: "7" });
+    expect(screen.queryByLabelText("Organizer")).toBeNull();
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+  });
+
   it("filters={false} disables the bar; filters=[...] overrides the derived set", () => {
     const { unmount } = renderTable(<ResourceTable resource="events" filters={false} />);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();

@@ -31,12 +31,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from django.apps import apps
+from django.conf import settings
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
 from rest_framework.exceptions import ValidationError
 
 from karni.accounts.emails import AccountsEmail, build_link, get_email_backend
+from karni.accounts.permissions import assign_role
 from karni.accounts.tokens import TokenError, consume_token, issue_token
 
 if TYPE_CHECKING:
@@ -132,11 +134,16 @@ def register(email: str, password: str, **fields: Any) -> AbstractKarniUser:
     surrounding transaction later rolls back; in eager test transactions use
     ``django_capture_on_commit_callbacks`` to observe it.
 
+    ``KARNI_ACCOUNTS_DEFAULT_ROLES`` (e.g. ``["attendee"]``) are assigned
+    before the commit, so ``HasRole`` works from the first request.
+
     Uniqueness is enforced by the serializer at the API layer (a duplicate
     email is a 400 there — documented, accepted enumeration surface); calling
     this function directly with a duplicate email raises ``IntegrityError``.
     """
     user = _user_model().objects.create_user(email=email, password=password, **fields)
+    for role in getattr(settings, "KARNI_ACCOUNTS_DEFAULT_ROLES", None) or ():
+        assign_role(user, role)
     transaction.on_commit(lambda: send_verification(user))
     return user
 

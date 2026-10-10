@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -117,9 +118,29 @@ def resolve_ui_source(start: Path | None = None) -> Path | None:
     return None
 
 
-def ui_spec(source: Path | None) -> str:
-    """The ``@karni/ui`` dependency spec written into frontend/package.json."""
-    return f"file:{source}" if source is not None else UI_REGISTRY_SPEC
+def ui_spec(source: Path | None, project: Path | None = None) -> str:
+    """The ``@karni/ui`` dependency spec written into frontend/package.json.
+
+    A local checkout is a ``file:`` path. When the project lives inside that
+    checkout (``examples/``), the path is relative to ``frontend/`` so the
+    project installs on any machine; elsewhere it is absolute.
+    """
+    if source is None:
+        return UI_REGISTRY_SPEC
+    root = source.parent.parent
+    if project is not None and project.resolve().is_relative_to(root):
+        return f"file:{os.path.relpath(source, project.resolve() / 'frontend')}"
+    return f"file:{source}"
+
+
+def ui_mount_target(spec: str, container_dir: str = "/app") -> str:
+    """Where a ``file:`` spec resolves inside the frontend container (compose bind target)."""
+    if not spec.startswith("file:"):
+        return spec
+    path = spec.removeprefix("file:")
+    if posixpath.isabs(path):
+        return path
+    return posixpath.normpath(posixpath.join(container_dir, path))
 
 
 def ui_dist_missing(source: Path) -> list[str]:

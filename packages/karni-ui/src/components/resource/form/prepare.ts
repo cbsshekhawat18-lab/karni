@@ -115,6 +115,7 @@ export function buildFormValues({ fields, item, defaultValues }: BuildFormValues
   const out: FormValues = {};
   for (const field of fields) {
     let source: unknown = defaultValues?.[field.name];
+    if (source === undefined) source = field.default; // the model default, on create
     if (item !== undefined && field.name in item) source = item[field.name];
     out[field.name] = initialFieldValue(field, source);
   }

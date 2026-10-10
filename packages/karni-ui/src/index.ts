@@ -142,6 +142,9 @@ export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
 export { AuthGuard } from "./auth/AuthGuard";
 export type { AuthGuardProps } from "./auth/AuthGuard";
 
+export { LoginForm } from "./auth/LoginForm";
+export type { LoginFormProps } from "./auth/LoginForm";
+
 export { usePermission } from "./auth/usePermission";
 export type { PermissionHelpers } from "./auth/usePermission";
 

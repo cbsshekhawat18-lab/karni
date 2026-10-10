@@ -34,6 +34,7 @@ import * as React from "react";
 import { karniKeys } from "../../../hooks/keys";
 import type { FilterValue, ResourceListParams } from "../../../hooks/types";
 import { useResourceList } from "../../../hooks/useResourceList";
+import type { KarniQueryValue } from "../../../schema/client";
 import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import { cn } from "../../../lib/cn";
 import type { FieldDef } from "../../../schema/types";
@@ -106,6 +107,12 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    * Only enum, boolean and relation fields get controls.
    */
   filters?: readonly string[] | false;
+  /**
+   * Fixed filters sent with every request and hidden from the filter bar —
+   * e.g. `{ event: eventId }` for "the bookings of this event". A user filter
+   * on the same field never overrides them.
+   */
+  params?: Readonly<Record<string, KarniQueryValue>>;
   /** Extra toolbar content, rendered to the right of the search/filter row. */
   toolbar?: React.ReactNode;
   /** Replaces the default EmptyState when the list has no results. */
@@ -278,6 +285,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     initialSorting,
     pageSize,
     filters,
+    params,
     toolbar,
     empty,
     footer,
@@ -343,11 +351,13 @@ export function ResourceTable<T = Record<string, unknown>>(
       .map((field) => field.name);
   }, [expand, schema]);
 
+  const pinned = React.useMemo(() => new Set(Object.keys(params ?? {})), [params]);
   const filterFields = React.useMemo<readonly FieldDef[]>(() => {
     if (filters === false || schema === undefined) return [];
     if (filters !== undefined) {
       const byName = new Map(schema.fields.map((field) => [field.name, field]));
       return filters
+        .filter((name) => !pinned.has(name))
         .map((name) => byName.get(name))
         .filter((field): field is FieldDef => field !== undefined);
     }
@@ -357,6 +367,7 @@ export function ResourceTable<T = Record<string, unknown>>(
       .filter(
         (field) =>
           !field.writeOnly &&
+          !pinned.has(field.name) &&
           (showAuditFields === true || !isAuditField(field)) &&
           declared.has(field.name) &&
           (field.kind === "enum" ||
@@ -364,7 +375,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             (field.kind === "relation" && field.relation !== undefined)),
       )
       .slice(0, MAX_DERIVED_FILTERS);
-  }, [filters, schema, showAuditFields]);
+  }, [filters, pinned, schema, showAuditFields]);
 
   const searchEnabled = schema?.operations.list?.hasSearch === true;
 
@@ -376,10 +387,22 @@ export function ResourceTable<T = Record<string, unknown>>(
       pageSize: effectivePageSize,
       ordering: sortingToOrdering(sorting),
       search: searchEnabled && trimmedSearch.length > 0 ? trimmedSearch : undefined,
-      filters: Object.keys(filterValues).length > 0 ? filterValues : undefined,
+      filters:
+        Object.keys(filterValues).length > 0 || params !== undefined
+          ? { ...filterValues, ...params }
+          : undefined,
       expand: expandList.length > 0 ? expandList : undefined,
     }),
-    [page, effectivePageSize, sorting, searchEnabled, trimmedSearch, filterValues, expandList],
+    [
+      page,
+      effectivePageSize,
+      sorting,
+      searchEnabled,
+      trimmedSearch,
+      filterValues,
+      params,
+      expandList,
+    ],
   );
 
   const list = useResourceList<T>(resource, listParams, {

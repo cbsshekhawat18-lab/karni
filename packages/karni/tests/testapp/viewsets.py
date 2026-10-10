@@ -17,7 +17,7 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 
 from karni.api import Access, Authenticated, BaseViewSet, HasRole, Public
-from tests.testapp.models import Event, Tag, Venue
+from tests.testapp.models import Event, LooseSlot, Slot, Tag, Venue
 
 
 class EventViewSet(BaseViewSet):
@@ -48,3 +48,13 @@ class OrganizerViewSet(BaseViewSet):
 
     model = get_user_model()
     access = Access(read=Authenticated(), write=HasRole("staff"))
+
+
+class SlotViewSet(BaseViewSet):
+    model = Slot
+    access = Access(read=Authenticated(), write=Authenticated())
+
+
+class LooseSlotViewSet(BaseViewSet):
+    model = LooseSlot
+    access = Access(read=Authenticated(), write=Authenticated())

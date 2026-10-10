@@ -206,6 +206,8 @@ BASE: dict[str, Any] = {
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
+    # Roles (Django groups) every self-registered user starts with, e.g. ["attendee"].
+    "KARNI_ACCOUNTS_DEFAULT_ROLES": env.list("KARNI_ACCOUNTS_DEFAULT_ROLES", default=[]),
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,
@@ -345,6 +347,8 @@ BASE: dict[str, Any] = {
     "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="off"),
     # Per-request query count / duplicates / time log (QueryLogMiddleware).
     "KARNI_QUERY_LOG": env.bool("KARNI_QUERY_LOG", default=False),
+    # Extra `karni seed` logins with their roles, e.g. {"organizer@example.com": ["organizer"]}.
+    "KARNI_SEED_LOGINS": env.json("KARNI_SEED_LOGINS", default={}),
     # Response caching for BaseViewSet list/retrieve (karni.api.caching).
     "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
     "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),

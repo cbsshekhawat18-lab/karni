@@ -17,7 +17,7 @@ follow what they return.
 | `karni rules` | Every convention as `CODE summary` (under 400 tokens for Karni's own rules) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
-| `karni rules --check FILE…` | Static violations with code, line, message and fix; exit 1 if any |
+| `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix; exit 1 if any |
 | `karni rules --json` | The raw data (rules, procedures, adapter overrides) |
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
