@@ -26,9 +26,10 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from django.core.exceptions import ImproperlyConfigured
 from django.test.signals import setting_changed
 from django.utils.module_loading import import_string
+from karni.errorcodes import KarniError
+from karni.exceptions import KarniImproperlyConfigured, KarniLookupError, KarniValueError
 
 from karni_payments import conf
 
@@ -52,20 +53,24 @@ __all__ = [
 ]
 
 
-class WebhookVerificationError(Exception):
+class WebhookVerificationError(KarniError):
     """A webhook's signature (or required identity header) failed verification.
 
     The webhook view maps this to an **unpersisted** HTTP 400 plus one
     structured warning log — forged payloads never reach the database.
     """
 
+    code = "PAY006"
 
-class UnsupportedCurrencyError(ValueError):
+
+class UnsupportedCurrencyError(KarniValueError):
     """The currency cannot be converted to integer minor units.
 
     Raised for 3-decimal currencies (unsupported in karni-payments v0.1) and
     for amounts with sub-minor-unit fractions.
     """
+
+    code = "PAY007"
 
 
 # Currencies whose minor unit equals the major unit (amount 500 JPY is sent
@@ -101,7 +106,9 @@ def _currency_exponent(currency: str) -> int:
     code = currency.lower()
     if code in THREE_DECIMAL_CURRENCIES:
         raise UnsupportedCurrencyError(
-            f"3-decimal currency {currency!r} is not supported by karni-payments v0.1."
+            f"3-decimal currency {currency!r} is not supported by karni-payments v0.1: "
+            "providers need integer minor units and these need special rounding. Charge "
+            "in a 0- or 2-decimal currency."
         )
     return 0 if code in ZERO_DECIMAL_CURRENCIES else 2
 
@@ -117,7 +124,9 @@ def to_minor_units(amount: Decimal, currency: str) -> int:
     minor = Decimal(amount).scaleb(_currency_exponent(currency))
     if minor != minor.to_integral_value():
         raise UnsupportedCurrencyError(
-            f"Amount {amount} has sub-minor-unit precision for currency {currency!r}."
+            f"Amount {amount} has sub-minor-unit precision for currency {currency!r}, and "
+            "Karni never rounds money silently. Round it to the currency's minor unit "
+            "(e.g. Decimal('10.50')) before charging."
         )
     return int(minor)
 
@@ -256,13 +265,14 @@ def get_provider(name: str | None = None) -> PaymentProvider:
     try:
         provider_class = import_string(path)
     except ImportError as exc:
-        raise ImproperlyConfigured(
-            f"KARNI_PAYMENTS_PROVIDER spec {spec!r} cannot be imported: {exc}"
+        raise KarniImproperlyConfigured(
+            f"KARNI_PAYMENTS_PROVIDER spec {spec!r} cannot be imported: {exc}", code="PAY001"
         ) from exc
     if not (isinstance(provider_class, type) and issubclass(provider_class, PaymentProvider)):
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"KARNI_PAYMENTS_PROVIDER spec {spec!r} must name a "
-            "karni_payments.providers.base.PaymentProvider subclass."
+            "karni_payments.providers.base.PaymentProvider subclass.",
+            code="PAY001",
         )
     instance = provider_class()
     _provider_cache[spec] = instance
@@ -285,7 +295,11 @@ def get_provider_by_name(name: str) -> PaymentProvider:
         return configured
     if name in PROVIDER_SHORTCUTS:
         return get_provider(name)
-    raise LookupError(f"No payment provider named {name!r} is available.")
+    raise KarniLookupError(
+        f"No payment provider named {name!r} is available. Use the configured provider "
+        f"({configured.name!r}) or a shortcut: {', '.join(sorted(PROVIDER_SHORTCUTS))}.",
+        code="PAY002",
+    )
 
 
 def _reset_provider_cache(sender: object, setting: str, **kwargs: Any) -> None:

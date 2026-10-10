@@ -41,7 +41,8 @@ from types import FrameType
 from typing import Any, Final
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+
+from karni.exceptions import KarniAssertionError, KarniImproperlyConfigured
 
 __all__ = [
     "BUDGET_MODES",
@@ -306,11 +307,13 @@ class QueryReport:
 # --- budgets ----------------------------------------------------------------------------------
 
 
-class QueryBudgetExceeded(AssertionError):
+class QueryBudgetExceeded(KarniAssertionError):
     """A request (or a ``query_budget`` block) ran more queries than its budget.
 
     An ``AssertionError`` so a test that trips it fails like any assertion.
     """
+
+    code = "E117"
 
 
 _UNSET: Final = object()
@@ -333,24 +336,26 @@ class Budget:
 
     def __init__(self, *, reason: str, default: Any = _UNSET, **actions: int | None) -> None:
         if not isinstance(reason, str) or not reason.strip():
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 'Budget(..., reason="...") needs a non-empty reason saying why this viewset '
-                "needs a different query budget (e.g. reason='per-row signed URLs, measured')."
+                "needs a different query budget (e.g. reason='per-row signed URLs, measured').",
+                code="E115",
             )
         limits: dict[str, int | None] = dict(actions)
         if default is not _UNSET:
             limits["*"] = default
         if not limits:
-            raise ImproperlyConfigured(
-                "Budget() names no action; write e.g. Budget(list=25, reason='...')."
+            raise KarniImproperlyConfigured(
+                "Budget() names no action; write e.g. Budget(list=25, reason='...').", code="E115"
             )
         for action, value in limits.items():
             if value is not None and (
                 isinstance(value, bool) or not isinstance(value, int) or value <= 0
             ):
-                raise ImproperlyConfigured(
+                raise KarniImproperlyConfigured(
                     f"Budget({action}={value!r}) must be a positive integer, or None to stop "
-                    "checking that action."
+                    "checking that action.",
+                    code="E115",
                 )
         object.__setattr__(self, "limits", limits)
         object.__setattr__(self, "reason", reason)
@@ -376,8 +381,9 @@ def budget_mode() -> str:
     """The active ``KARNI_QUERY_BUDGET_MODE`` (``"off"`` when unset)."""
     mode = getattr(settings, "KARNI_QUERY_BUDGET_MODE", "off") or "off"
     if mode not in BUDGET_MODES:
-        raise ImproperlyConfigured(
-            f"KARNI_QUERY_BUDGET_MODE = {mode!r}; expected one of {', '.join(BUDGET_MODES)}."
+        raise KarniImproperlyConfigured(
+            f"KARNI_QUERY_BUDGET_MODE = {mode!r}; expected one of {', '.join(BUDGET_MODES)}.",
+            code="E118",
         )
     return str(mode)
 

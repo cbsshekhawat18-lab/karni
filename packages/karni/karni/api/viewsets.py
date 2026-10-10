@@ -99,6 +99,7 @@ from karni.api.filters import KarniFilterBackend, KarniSearchFilter
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
+from karni.exceptions import KarniImproperlyConfigured
 from karni.pagination import Unpaginated, check_pagination_class
 from karni.performance import (
     Budget,
@@ -265,9 +266,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self.model
         if self.queryset is not None:
             return self.queryset.model
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{type(self).__name__} must declare 'model' or 'queryset' (or "
-            "override get_queryset()/get_serializer_class())."
+            "override get_queryset()/get_serializer_class()).",
+            code="E110",
         )
 
     def get_access(self) -> Access | Unscoped | None:
@@ -501,11 +503,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         this is the backstop when validation is off.
         """
         if self.pagination_class is None:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{type(self).__name__} has no pagination_class (REST_FRAMEWORK"
                 "['DEFAULT_PAGINATION_CLASS'] is None?). Keep "
                 "'karni.pagination.KarniPageNumberPagination', or declare "
-                "pagination = Unpaginated(max_rows=N, reason='...')."
+                "pagination = Unpaginated(max_rows=N, reason='...').",
+                code="E111",
             )
         paginator: BasePagination = super().paginator
         return paginator
@@ -620,15 +623,17 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
     declared = cls.__dict__.get("pagination")
     if declared is not None:
         if not isinstance(declared, Unpaginated):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name}.pagination must be Unpaginated(max_rows=N, reason='...'), got "
-                f"{declared!r}; to change the paginator set pagination_class instead."
+                f"{declared!r}; to change the paginator set pagination_class instead.",
+                code="E113",
             )
         own = cls.__dict__.get("pagination_class")
         if own is not None:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name} declares both pagination = Unpaginated(...) and pagination_class; "
-                "keep one."
+                "keep one.",
+                code="E114",
             )
         cls.pagination_class = declared.paginator_class()
     elif "pagination_class" in cls.__dict__:
@@ -636,27 +641,30 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
     budget = cls.__dict__.get("query_budget")
     if budget is not None:
         if not isinstance(budget, Budget):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name}.query_budget must be a Budget, e.g. "
-                f"query_budget = Budget(list={budget!r}, reason='...'), got {budget!r}."
+                f"query_budget = Budget(list={budget!r}, reason='...'), got {budget!r}.",
+                code="E115",
             )
         known = _STANDARD_ACTIONS | {extra.__name__ for extra in cls.get_extra_actions()}
         unknown = sorted(set(budget.limits) - known)
         if unknown:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name}.query_budget names unknown action(s) {', '.join(unknown)}; "
-                f"known: {', '.join(sorted(known - {'*'}))} (default= for the rest)."
+                f"known: {', '.join(sorted(known - {'*'}))} (default= for the rest).",
+                code="E116",
             )
     cache = cls.__dict__.get("cache")
     if cache is not None and not isinstance(cache, Cache | Uncached):
-        raise ImproperlyConfigured(
-            f"{name}.cache must be Cache(...) or Uncached(reason='...'), got {cache!r}."
+        raise KarniImproperlyConfigured(
+            f"{name}.cache must be Cache(...) or Uncached(reason='...'), got {cache!r}.",
+            code="E119",
         )
     for hint in ("select_related", "prefetch_related"):
         if hint in cls.__dict__:
             validate_hints(name, hint, cls.__dict__[hint])
     if not isinstance(cls.optimize, bool):
-        raise ImproperlyConfigured(f"{name}.optimize must be True or False.")
+        raise KarniImproperlyConfigured(f"{name}.optimize must be True or False.", code="E121")
 
 
 _VALIDATED: weakref.WeakSet[type[Any]] = weakref.WeakSet()

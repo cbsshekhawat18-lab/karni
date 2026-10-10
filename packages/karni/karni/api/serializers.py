@@ -45,7 +45,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from django.conf import settings
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Model, QuerySet
 from django.test.signals import setting_changed
 from rest_framework import serializers
@@ -56,6 +56,7 @@ from rest_framework.relations import (
 )
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
     "KarniManyRelatedField",
@@ -271,9 +272,10 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
     declared = getattr(api_meta, "fields", None)
     excluded = getattr(api_meta, "exclude", None)
     if declared is not None and excluded is not None:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{model.__name__}.APIMeta declares both 'fields' and 'exclude'; "
-            "they are mutually exclusive."
+            "they are mutually exclusive.",
+            code="E122",
         )
     if declared is not None:
         names = list(declared)
@@ -300,9 +302,10 @@ def _extra_kwargs(
     for label, listed in (("read_only", read_only), ("write_only", write_only)):
         unknown = sorted(set(listed) - effective)
         if unknown:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{model.__name__}.APIMeta.{label} names fields outside the "
-                f"serializer's field set: {', '.join(unknown)}."
+                f"serializer's field set: {', '.join(unknown)}.",
+                code="E123",
             )
     always_read_only = {
         model._meta.pk.name,
@@ -316,9 +319,10 @@ def _extra_kwargs(
     read_only_set = set(read_only) | always_read_only | forced | (forced_read_only & effective)
     overlap = sorted(read_only_set & set(write_only))
     if overlap:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{model.__name__}.APIMeta marks fields as both read-only and "
-            f"write-only: {', '.join(overlap)}."
+            f"write-only: {', '.join(overlap)}.",
+            code="E124",
         )
     kwargs: dict[str, dict[str, Any]] = {
         name: {"read_only": True} for name in sorted(read_only_set)
@@ -344,12 +348,12 @@ def _relation_field_or_raise(model: type[Model], name: str) -> Any:
     try:
         field = model._meta.get_field(name)
     except FieldDoesNotExist as exc:
-        raise ImproperlyConfigured(
-            f"Cannot expand {name!r} on {model.__name__}: no such field."
+        raise KarniImproperlyConfigured(
+            f"Cannot expand {name!r} on {model.__name__}: no such field.", code="E125"
         ) from exc
     if not getattr(field, "is_relation", False) or field.related_model is None:
-        raise ImproperlyConfigured(
-            f"Cannot expand {name!r} on {model.__name__}: it is not a relation."
+        raise KarniImproperlyConfigured(
+            f"Cannot expand {name!r} on {model.__name__}: it is not a relation.", code="E125"
         )
     return field
 

@@ -80,34 +80,44 @@ def plan(
 ) -> None:
     if not _NAME.match(name):
         raise CliError(
-            f"Schedule name {name!r}: use letters, digits, _ - . : (e.g. nightly-report)."
+            f"Schedule name {name!r}: use letters, digits, _ - . : (e.g. nightly-report).",
+            code="C103",
         )
     if (every is None) == (cron is None):
-        raise CliError('Give exactly one of --every (e.g. 15m, 1h, 1d) or --cron "0 3 * * *".')
+        raise CliError(
+            'Give exactly one of --every (e.g. 15m, 1h, 1d) or --cron "0 3 * * *".', code="C004"
+        )
     if every is not None and not _INTERVAL.match(every):
-        raise CliError(f"--every {every!r}: use a number with s, m, h or d — 30s, 15m, 1h30m, 1d.")
+        raise CliError(
+            f"--every {every!r}: use a number with s, m, h or d — 30s, 15m, 1h30m, 1d.", code="C106"
+        )
     if cron is not None and len(cron.split()) != 5:
         raise CliError(
             f"--cron {cron!r}: needs 5 fields 'minute hour day-of-month month day-of-week', "
-            "e.g. '0 3 * * *' (03:00 daily)."
+            "e.g. '0 3 * * *' (03:00 daily).",
+            code="C106",
         )
     for other in local_apps(ws):
         if other != app and name in _app_schedules(ws, other):
             raise CliError(
                 f"Schedule {name!r} is already declared in {ws.rel(other.file('schedules.py'))} "
-                "— schedule names are project-wide (they become PeriodicTask names)."
+                "— schedule names are project-wide (they become PeriodicTask names).",
+                code="C107",
             )
     imports = [Import("karni.schedule", "every" if every is not None else "cron")]
     if task is not None:
         if not _DOTTED.match(task):
-            raise CliError(f"--task {task!r}: give the dotted task name, e.g. shop.tasks.sync.")
+            raise CliError(
+                f"--task {task!r}: give the dotted task name, e.g. shop.tasks.sync.", code="C106"
+            )
         module, _, function = task.rpartition(".")
         if module == f"{app.module}.tasks" and function not in top_level_functions(
             ws, app.file("tasks.py")
         ):
             raise CliError(
                 f"No task {function} in {ws.rel(app.file('tasks.py'))} — "
-                f"karni make task {function} --app {app.label} (or drop --task)."
+                f"karni make task {function} --app {app.label} (or drop --task).",
+                code="C105",
             )
         ref = pystr(task)
     else:

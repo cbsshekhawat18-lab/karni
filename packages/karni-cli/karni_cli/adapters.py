@@ -103,7 +103,9 @@ def load_registry(path: Path | None = None) -> Registry:
     )
     for adapter in adapters:
         if adapter.template not in _TEMPLATES:
-            raise CliError(f"agent adapter {adapter.id}: unknown template {adapter.template!r}")
+            raise CliError(
+                f"agent adapter {adapter.id}: unknown template {adapter.template!r}", code="C205"
+            )
     return Registry(adapters, commands, int(data.get("defaults", {}).get("max_lines", 100)))
 
 
@@ -115,7 +117,8 @@ def apply_overrides(registry: Registry, overrides: dict[str, Any]) -> Registry:
     if unknown:
         raise CliError(
             f"karni.rules.py ADAPTERS names unknown adapter id(s): {', '.join(sorted(unknown))} "
-            f"(known: {', '.join(sorted(registry.ids()))})."
+            f"(known: {', '.join(sorted(registry.ids()))}).",
+            code="C205",
         )
     adapters = tuple(
         Adapter(**{**a.__dict__, "path": paths.get(a.id, a.path)})
@@ -290,7 +293,8 @@ def render_all(project: Path, data: AgentData, registry: Registry | None = None)
         if count > registry.max_lines:
             raise CliError(
                 f"{rel} would be {count} lines (cap {registry.max_lines}); shorten the "
-                "project rules or module guidance feeding it."
+                "project rules or module guidance feeding it.",
+                code="C205",
             )
     return files
 

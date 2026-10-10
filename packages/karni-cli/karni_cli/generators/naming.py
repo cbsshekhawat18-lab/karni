@@ -66,7 +66,7 @@ def humanize(name: str) -> str:
 def require_identifier(name: str, what: str) -> str:
     """``name`` when it is a usable Python identifier, else a CliError naming the fix."""
     if not name.isidentifier() or keyword.iskeyword(name):
-        raise CliError(f"{what} {name!r} is not a valid Python identifier.")
+        raise CliError(f"{what} {name!r} is not a valid Python identifier.", code="C103")
     return name
 
 
@@ -74,7 +74,8 @@ def require_snake(name: str, what: str) -> str:
     if not _SNAKE.match(name) or keyword.iskeyword(name):
         raise CliError(
             f"{what} {name!r} must be snake_case (lowercase letters, digits, underscores), "
-            f"e.g. {snake(name) or 'my_name'!r}."
+            f"e.g. {snake(name) or 'my_name'!r}.",
+            code="C103",
         )
     return name
 
@@ -82,7 +83,9 @@ def require_snake(name: str, what: str) -> str:
 def require_pascal(name: str, what: str) -> str:
     converted = pascal(name)
     if not converted or not re.fullmatch(r"[A-Z][A-Za-z0-9]*", converted):
-        raise CliError(f"{what} {name!r} must be a class name such as 'Event' or 'EventType'.")
+        raise CliError(
+            f"{what} {name!r} must be a class name such as 'Event' or 'EventType'.", code="C103"
+        )
     return converted
 
 
@@ -91,6 +94,7 @@ def require_kebab(name: str, what: str) -> str:
         suggestion = "-".join(words(name)) or "my-page"
         raise CliError(
             f"{what} {name!r} must be kebab-case (lowercase letters, digits, dashes), "
-            f"e.g. {suggestion!r}."
+            f"e.g. {suggestion!r}.",
+            code="C103",
         )
     return name

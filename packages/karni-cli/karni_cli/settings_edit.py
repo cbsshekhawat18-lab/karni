@@ -82,12 +82,16 @@ def add_entry(text: str, entry: str, *, setting: str, marker: str, filename: str
     lines = text.splitlines()
     found = _locate(lines, setting, marker)
     if found is None:
-        raise CliError(f"No `{marker}` marker in {filename} — add {entry!r} to {setting} manually.")
+        raise CliError(
+            f"No `{marker}` marker in {filename} — add {entry!r} to {setting} manually.",
+            code="C108",
+        )
     open_idx, marker_idx = found
     if open_idx < 0:
         raise CliError(
             f"Unrecognized `{marker}` block shape in {filename} — add {entry!r} to {setting} "
-            "manually."
+            "manually.",
+            code="C108",
         )
     if open_idx == marker_idx:
         single = _single_line(setting).match(lines[marker_idx])
@@ -110,7 +114,7 @@ def add_entry(text: str, entry: str, *, setting: str, marker: str, filename: str
 def add_app(settings_path: Path, app: str) -> bool:
     """Insert ``app`` into the ``# karni:apps`` block. Returns False when already present."""
     if not settings_path.is_file():
-        raise CliError(f"{settings_path} not found.")
+        raise CliError(f"{settings_path} not found.", code="C001")
     updated = add_entry(
         settings_path.read_text(),
         app,

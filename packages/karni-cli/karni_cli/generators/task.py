@@ -37,7 +37,7 @@ def plan(
     """Plan the task; returns its registered name (``<app>.tasks.<name>``)."""
     require_snake(name, "Task name")
     if retry is not None and retry < 1:
-        raise CliError("--retry must be 1 or more.")
+        raise CliError("--retry must be 1 or more.", code="C106")
     path = app.file("tasks.py")
     rel = ws.rel(path)
     line = ws.line_length

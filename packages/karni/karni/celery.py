@@ -40,6 +40,8 @@ from typing import Any
 
 from celery import Celery, signals
 
+from karni.exceptions import KarniImproperlyConfigured
+
 __all__ = ["apply_discovered_schedules", "create_celery_app", "resolve_task"]
 
 logger = logging.getLogger(__name__)
@@ -205,7 +207,6 @@ def resolve_task(ref: Any) -> Any:
     if not isinstance(ref, str):
         return ref
     from celery import current_app
-    from django.core.exceptions import ImproperlyConfigured
     from django.utils.module_loading import import_string
 
     registered = current_app.tasks.get(ref)
@@ -217,8 +218,9 @@ def resolve_task(ref: Any) -> Any:
         candidate = None
     if candidate is not None and hasattr(candidate, "apply_async"):
         return candidate
-    raise ImproperlyConfigured(
+    raise KarniImproperlyConfigured(
         f"Celery task {ref!r} not found: it is not registered and is not an importable "
         "task. Check the dotted name, and that the function is decorated with "
-        "@shared_task in an installed app's tasks.py (Celery autodiscovers only those)."
+        "@shared_task in an installed app's tasks.py (Celery autodiscovers only those).",
+        code="E403",
     )

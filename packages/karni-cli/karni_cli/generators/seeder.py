@@ -31,7 +31,7 @@ SUMMARY = "Add a Seeder to <app>/seeds.py: per-model rows and values for karni s
 def plan(ws: Workspace, app: App, model_name: str, *, count: int | None = None) -> str:
     """Plan ``<Model>Seeder``; returns the class name."""
     if count is not None and count < 0:
-        raise CliError("--count must be 0 or more (0 skips the model).")
+        raise CliError("--count must be 0 or more (0 skips the model).", code="C106")
     model = require_model(ws, app, require_pascal(model_name, "Model"))
     path = model.app.file("seeds.py")
     rel = ws.rel(path)

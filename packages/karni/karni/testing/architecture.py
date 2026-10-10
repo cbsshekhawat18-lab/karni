@@ -24,6 +24,7 @@ from karni.agent.check import (
     http_client_imports,
     unpaginated_action_calls,
 )
+from karni.exceptions import KarniAssertionError
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -410,7 +411,12 @@ def run_checks() -> list[str]:
 
 
 def _assert_clean(violations: list[Violation]) -> None:
-    assert not violations, "\n" + "\n".join(v.render() for v in violations)
+    if violations:
+        raise KarniAssertionError(
+            f"{len(violations)} architecture violation(s); each names its rule and fix "
+            "(`karni explain <code>` for more):\n" + "\n".join(v.render() for v in violations),
+            code="E702",
+        )
 
 
 def test_models_inherit_base_model() -> None:

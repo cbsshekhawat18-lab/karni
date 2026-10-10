@@ -32,10 +32,20 @@ test = ["pytest>=8.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["karni_cli"]
-artifacts = ["karni_cli/_templates/", "karni_cli/_agent/", "karni_cli/_changelog/"]
+artifacts = [
+    "karni_cli/_templates/",
+    "karni_cli/_agent/",
+    "karni_cli/_changelog/",
+    "karni_cli/_errorcodes/",
+]
 
 [tool.hatch.build.targets.sdist]
-artifacts = ["karni_cli/_templates/", "karni_cli/_agent/", "karni_cli/_changelog/"]
+artifacts = [
+    "karni_cli/_templates/",
+    "karni_cli/_agent/",
+    "karni_cli/_changelog/",
+    "karni_cli/_errorcodes/",
+]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"

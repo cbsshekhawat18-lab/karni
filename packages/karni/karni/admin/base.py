@@ -37,7 +37,6 @@ from typing import Any, ClassVar
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.utils import flatten, flatten_fieldsets
-from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models import Q
 from django.forms import ModelForm
@@ -55,6 +54,7 @@ from karni.admin.derive import (
     password_field_names,
 )
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
+from karni.exceptions import KarniImproperlyConfigured
 from karni.models import SoftDeleteModel
 
 __all__ = [
@@ -110,13 +110,14 @@ def resolve_admin_base() -> type[admin.ModelAdmin]:
     try:
         base = import_string(path)
     except ImportError as exc:
-        raise ImproperlyConfigured(
-            f"KARNI_ADMIN_BASE points at {path!r}, which cannot be imported: {exc}"
+        raise KarniImproperlyConfigured(
+            f"KARNI_ADMIN_BASE points at {path!r}, which cannot be imported: {exc}", code="E301"
         ) from exc
     if not (isinstance(base, type) and issubclass(base, admin.ModelAdmin)):
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"KARNI_ADMIN_BASE must name a django.contrib.admin.ModelAdmin "
-            f"subclass; {path!r} is not one."
+            f"subclass; {path!r} is not one.",
+            code="E301",
         )
     return base
 

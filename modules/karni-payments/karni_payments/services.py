@@ -38,6 +38,8 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.utils.module_loading import import_string
+from karni.errorcodes import KarniError
+from karni.exceptions import api_error
 from rest_framework.exceptions import ValidationError
 
 from karni_payments import conf
@@ -69,12 +71,14 @@ logger = logging.getLogger(__name__)
 REFUND_COUNTED_STATUSES: tuple[str, ...] = (Refund.Status.PENDING, Refund.Status.SUCCEEDED)
 
 
-class UnmatchedWebhookEventError(Exception):
+class UnmatchedWebhookEventError(KarniError):
     """A webhook event references a payment this database does not hold (yet).
 
     Raised — never swallowed — so the Celery task's retry/backoff can find
     the payment once the checkout transaction has landed.
     """
+
+    code = "PAY009"
 
 
 def default_checkout_validator(
@@ -114,14 +118,11 @@ def _validate_redirect_url(url: str, field: str) -> None:
     parts = urlsplit(str(url))
     origin = f"{parts.scheme}://{parts.netloc}"
     if not parts.scheme or not parts.netloc or origin not in _allowed_redirect_origins():
-        raise ValidationError(
-            {
-                field: [
-                    f"Origin {origin!r} is not an allowed checkout redirect target. "
-                    "Allowed origins come from KARNI_FRONTEND_URL and "
-                    "KARNI_PAYMENTS_ALLOWED_REDIRECTS."
-                ]
-            }
+        raise api_error(
+            "PAY008",
+            f"Origin {origin!r} is not an allowed checkout redirect target. Redirect to "
+            "KARNI_FRONTEND_URL, or add the origin to KARNI_PAYMENTS_ALLOWED_REDIRECTS.",
+            field=field,
         )
 
 

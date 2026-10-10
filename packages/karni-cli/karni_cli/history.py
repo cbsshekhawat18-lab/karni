@@ -22,9 +22,9 @@ def target(project: Path, raw: str) -> str:
     try:
         relative = absolute.relative_to(project.resolve())
     except ValueError:
-        raise CliError(f"{raw} is outside the project ({project}).") from None
+        raise CliError(f"{raw} is outside the project ({project}).", code="C010") from None
     if relative == Path("."):
-        raise CliError("--with-history PATH names a file, not the project root.")
+        raise CliError("--with-history PATH names a file, not the project root.", code="C010")
     return relative.as_posix()
 
 

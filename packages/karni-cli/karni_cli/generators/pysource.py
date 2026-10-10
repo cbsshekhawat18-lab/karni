@@ -37,7 +37,8 @@ def parse(ws: Workspace, rel: object, text: str) -> ast.Module:
         return ast.parse(text)
     except SyntaxError as exc:
         raise CliError(
-            f"{rel}:{exc.lineno}: cannot parse ({exc.msg}) — fix the file, then re-run."
+            f"{rel}:{exc.lineno}: cannot parse ({exc.msg}) — fix the file, then re-run.",
+            code="C110",
         ) from None
 
 

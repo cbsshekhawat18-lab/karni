@@ -33,10 +33,11 @@ from dataclasses import dataclass
 from typing import Any, ClassVar, Final
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from rest_framework.pagination import BasePagination, CursorPagination, PageNumberPagination
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
     "DEFAULT_MAX_PAGE_SIZE",
@@ -192,14 +193,16 @@ class Unpaginated:
             or not isinstance(self.max_rows, int)
             or self.max_rows <= 0
         ):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Unpaginated(max_rows={self.max_rows!r}) needs a positive row limit; "
-                "unbounded responses are not allowed."
+                "unbounded responses are not allowed.",
+                code="E113",
             )
         if not isinstance(self.reason, str) or not self.reason.strip():
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 'Unpaginated(max_rows=..., reason="...") needs a non-empty reason saying why '
-                "this list is not paginated (e.g. reason='CSV export')."
+                "this list is not paginated (e.g. reason='CSV export').",
+                code="E113",
             )
 
     def paginator_class(self) -> type[UnpaginatedPagination]:
@@ -211,14 +214,16 @@ class Unpaginated:
 def check_pagination_class(owner: str, value: object) -> None:
     """Raise unless ``value`` is a :class:`KarniPagination` subclass (for messages: ``owner``)."""
     if value is None:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{owner}.pagination_class = None switches pagination off. Lists must stay "
             "bounded: declare pagination = Unpaginated(max_rows=N, reason='...') instead "
-            "(ADR 0001 Q3.5)."
+            "(ADR 0001 Q3.5).",
+            code="E111",
         )
     if not (isinstance(value, type) and issubclass(value, KarniPagination)):
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{owner}.pagination_class = {value!r} is not a karni.pagination.KarniPagination "
             "subclass; subclass KarniPageNumberPagination or KarniCursorPagination (they "
-            "enforce KARNI_MAX_PAGE_SIZE)."
+            "enforce KARNI_MAX_PAGE_SIZE).",
+            code="E112",
         )

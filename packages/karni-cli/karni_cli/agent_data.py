@@ -168,7 +168,7 @@ def _run_project(project: Path, args: list[str], env: dict[str, str] | None = No
         env={**os.environ, **env} if env else None,
     )
     if proc.returncode == 2:
-        raise CliError(proc.stderr.strip())
+        raise CliError(proc.stderr.strip(), code="C009")
     if proc.returncode != 0:
         return None  # e.g. an older karni without karni.agent: try the next source
     return json.loads(proc.stdout)
@@ -179,7 +179,9 @@ def _order() -> tuple[str, ...]:
     if not forced:
         return SOURCES
     if forced not in SOURCES:
-        raise CliError(f"KARNI_AGENT_SOURCE must be one of {', '.join(SOURCES)}, got {forced!r}.")
+        raise CliError(
+            f"KARNI_AGENT_SOURCE must be one of {', '.join(SOURCES)}, got {forced!r}.", code="C007"
+        )
     return (forced,)
 
 
@@ -191,7 +193,7 @@ def _call(module: ModuleType, name: str, *args: Any) -> Any:
     try:
         return getattr(module, name)(*args)
     except module.OverrideError as exc:
-        raise CliError(str(exc)) from None
+        raise CliError(_bare(exc), code=getattr(exc, "code", "E701")) from None
 
 
 def load(project: Path | None) -> AgentData:
@@ -210,7 +212,8 @@ def load(project: Path | None) -> AgentData:
     raise CliError(
         "Karni's agent rules are unavailable: karni is not importable here, the project "
         "interpreter is unreachable, and no bundled copy ships with this karni-cli.\n"
-        "Install karni next to karni-cli, or run inside a project with a .venv."
+        "Install karni next to karni-cli, or run inside a project with a .venv.",
+        code="C005",
     )
 
 
@@ -230,8 +233,13 @@ def check(paths: list[Path], project: Path | None) -> list[dict[str, Any]]:
             try:
                 return list(_call(module, "check_paths", paths, project))
             except (OSError, ValueError) as exc:
-                raise CliError(str(exc)) from None
-    raise CliError("Karni's agent checks are unavailable (see `karni rules`).")
+                raise CliError(_bare(exc), code=getattr(exc, "code", "C010")) from None
+    raise CliError("Karni's agent checks are unavailable (see `karni rules`).", code="C005")
+
+
+def _bare(exc: BaseException) -> str:
+    """The message without the code prefix the bundled exception adds to ``str()``."""
+    return str(exc.args[0]) if exc.args else str(exc)
 
 
 def _relative(path: Path, project: Path) -> str:
@@ -240,7 +248,8 @@ def _relative(path: Path, project: Path) -> str:
     except ValueError:
         raise CliError(
             f"{path} is outside the project; the project interpreter can only check "
-            "files inside it."
+            "files inside it.",
+            code="C010",
         ) from None
 
 

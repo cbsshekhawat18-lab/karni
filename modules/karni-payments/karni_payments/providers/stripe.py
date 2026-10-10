@@ -28,7 +28,7 @@ import json
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from django.core.exceptions import ImproperlyConfigured
+from karni.exceptions import KarniImproperlyConfigured
 
 from karni_payments import conf
 from karni_payments.providers.base import (
@@ -51,9 +51,10 @@ def _stripe_sdk() -> Any:
     try:
         import stripe
     except ImportError as exc:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             "The Stripe provider needs the stripe SDK — install the extra: "
-            'pip install "karni-payments[stripe]".'
+            'pip install "karni-payments[stripe]".',
+            code="PAY003",
         ) from exc
     return stripe
 
@@ -74,8 +75,11 @@ class StripeProvider(PaymentProvider):
     def _secret_key(self) -> str:
         key = str(conf.get("STRIPE_SECRET_KEY"))
         if not key:
-            raise ImproperlyConfigured(
-                "STRIPE_SECRET_KEY is not set — the Stripe provider cannot make API calls."
+            raise KarniImproperlyConfigured(
+                "STRIPE_SECRET_KEY is not set — the Stripe provider cannot make API calls. "
+                "Set it in the environment (.env in development), or use "
+                "KARNI_PAYMENTS_PROVIDER = 'test' locally.",
+                code="PAY004",
             )
         return key
 
@@ -119,8 +123,11 @@ class StripeProvider(PaymentProvider):
         stripe = _stripe_sdk()
         secret = str(conf.get("STRIPE_WEBHOOK_SECRET"))
         if not secret:
-            raise ImproperlyConfigured(
-                "STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified."
+            raise KarniImproperlyConfigured(
+                "STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified, so "
+                "they are refused. Copy the endpoint's signing secret (whsec_...) from the "
+                "Stripe dashboard.",
+                code="PAY005",
             )
         signature = headers.get("Stripe-Signature", "")
         try:

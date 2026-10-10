@@ -31,7 +31,9 @@ def types(
     project = require_project()
     fmt = _FORMATS.get(schema_out.suffix)
     if fmt is None:
-        raise CliError(f"--schema-out must end in .yml/.yaml/.json, got {schema_out.suffix}")
+        raise CliError(
+            f"--schema-out must end in .yml/.yaml/.json, got {schema_out.suffix}", code="C106"
+        )
 
     (project / schema_out).parent.mkdir(parents=True, exist_ok=True)
     proc = project_mod.run_manage(
@@ -56,7 +58,8 @@ def types(
         typer.echo(ts.stderr, err=True)
         raise CliError(
             "openapi-typescript failed — is Node available? "
-            "Add openapi-typescript to frontend devDependencies to pin it."
+            "Add openapi-typescript to frontend devDependencies to pin it.",
+            code="C006",
         )
 
     hooks = write_hooks(project / schema_out, project / out)

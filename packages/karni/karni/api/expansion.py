@@ -37,11 +37,11 @@ from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from django.conf import settings
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, ForeignKey, ManyToManyField, Model, Prefetch, QuerySet
-from rest_framework.exceptions import ValidationError
 
 from karni.deprecation import warn_deprecated
+from karni.exceptions import KarniImproperlyConfigured, api_error
 
 __all__ = [
     "auto_expandable_fields",
@@ -155,15 +155,18 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
     for path in paths:
         segments = path.split(".")
         if any(not segment for segment in segments):
-            raise ValidationError({"expand": [f"Malformed expand path {path!r}."]})
+            raise api_error(
+                "E126",
+                f"Malformed expand path {path!r}: segments are relation names joined by "
+                "dots, paths are comma-separated (?expand=venue,tiers.event).",
+                field="expand",
+            )
         if len(segments) > max_depth:
-            raise ValidationError(
-                {
-                    "expand": [
-                        f"Expand path {path!r} is {len(segments)} levels deep; the "
-                        f"maximum allowed depth is {max_depth}."
-                    ]
-                }
+            raise api_error(
+                "E127",
+                f"Expand path {path!r} is {len(segments)} levels deep; the maximum is "
+                f"{max_depth}. Request fewer levels, or raise KARNI_API_MAX_EXPAND_DEPTH.",
+                field="expand",
             )
         current_model = model
         allowed: Mapping[str, str] = top_allowed
@@ -171,24 +174,21 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
         for segment in segments:
             if segment not in allowed:
                 allowed_keys = ", ".join(sorted(allowed)) or "(none)"
-                raise ValidationError(
-                    {
-                        "expand": [
-                            f"Unknown expand key {segment!r} in {path!r}. Allowed keys "
-                            f"at this level: {allowed_keys}."
-                        ]
-                    }
+                raise api_error(
+                    "E126",
+                    f"Unknown expand key {segment!r} in {path!r}. Allowed keys at this "
+                    f"level: {allowed_keys}.",
+                    field="expand",
                 )
             relation = allowed[segment]
             field = _relation_field(current_model, relation)
             if field is None:
-                raise ValidationError(
-                    {
-                        "expand": [
-                            f"Expand key {segment!r} in {path!r} does not map to a "
-                            f"relation on {current_model.__name__}."
-                        ]
-                    }
+                raise api_error(
+                    "E126",
+                    f"Expand key {segment!r} in {path!r} does not map to a relation on "
+                    f"{current_model.__name__}; fix {type(viewset).__name__}."
+                    "expandable_fields so each key names a relation.",
+                    field="expand",
                 )
             resolved_segments.append(relation)
             current_model = field.related_model
@@ -321,9 +321,10 @@ def _viewset_model(viewset: Any) -> type[Model]:
     if model is None:
         model = getattr(getattr(viewset, "queryset", None), "model", None)
     if model is None:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{type(viewset).__name__} exposes neither 'model' nor 'queryset'; "
-            "expansion cannot be validated."
+            "expansion cannot be validated.",
+            code="E110",
         )
     return model
 

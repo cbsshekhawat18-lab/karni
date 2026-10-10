@@ -179,7 +179,9 @@ def test_an_owner_that_is_not_stamped_fails_create() -> None:
 
 def test_a_viewset_without_access_fails_naming_the_fix() -> None:
     _fails(
-        crud_urls.UndeclaredEventViewSet, "organizer", "access: UndeclaredEventViewSet declares no"
+        crud_urls.UndeclaredEventViewSet,
+        "organizer",
+        "access: E101: UndeclaredEventViewSet declares no",
     )
 
 

@@ -47,11 +47,13 @@ from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.constants import LOOKUP_SEP
 from rest_framework.relations import ManyRelatedField, RelatedField
 from rest_framework.serializers import BaseSerializer, ListSerializer
+
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
     "Plan",
@@ -279,13 +281,15 @@ def validate_hints(owner: str, name: str, value: Any) -> tuple[Hint, ...]:
     if value is None:
         return ()
     if isinstance(value, str | Prefetch) or not isinstance(value, Sequence):
-        raise ImproperlyConfigured(
-            f'{owner}.{name} must be a list of lookups (e.g. ["venue"]), got {value!r}.'
+        raise KarniImproperlyConfigured(
+            f'{owner}.{name} must be a list of lookups (e.g. ["venue"]), got {value!r}.',
+            code="E120",
         )
     for item in value:
         if not isinstance(item, str | Prefetch):
-            raise ImproperlyConfigured(
-                f"{owner}.{name} entries must be lookup strings or Prefetch objects, got {item!r}."
+            raise KarniImproperlyConfigured(
+                f"{owner}.{name} entries must be lookup strings or Prefetch objects, got {item!r}.",
+                code="E120",
             )
     return tuple(value)
 
@@ -296,7 +300,7 @@ def api_meta_hints(model: type[Model]) -> tuple[tuple[Hint, ...], tuple[Hint, ..
     owner = f"{model.__name__}.APIMeta"
     select = validate_hints(owner, "select", getattr(api_meta, "select", None))
     if any(isinstance(item, Prefetch) for item in select):
-        raise ImproperlyConfigured(f"{owner}.select takes lookup strings only.")
+        raise KarniImproperlyConfigured(f"{owner}.select takes lookup strings only.", code="E120")
     return select, validate_hints(owner, "prefetch", getattr(api_meta, "prefetch", None))
 
 

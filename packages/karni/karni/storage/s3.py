@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from karni.exceptions import KarniImportError
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from storages.backends.s3 import S3Storage as S3Storage  # noqa: F401
 
@@ -59,7 +61,7 @@ def _build_s3_storage_class() -> type:
                 S3Boto3Storage as _BaseS3Storage,
             )
         except ImportError as exc:
-            raise ImportError(_INSTALL_HINT) from exc
+            raise KarniImportError(_INSTALL_HINT, code="E501") from exc
 
     from storages.utils import setting
 

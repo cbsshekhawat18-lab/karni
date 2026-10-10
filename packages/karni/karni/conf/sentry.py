@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import environ
 
+from karni.exceptions import KarniImportError
+
 
 def maybe_init_sentry(env: environ.Env) -> None:
     """Initialise the Sentry SDK when ``SENTRY_DSN`` is set; otherwise do nothing.
@@ -35,9 +37,10 @@ def maybe_init_sentry(env: environ.Env) -> None:
         from sentry_sdk.integrations.celery import CeleryIntegration
         from sentry_sdk.integrations.django import DjangoIntegration
     except ImportError as exc:  # pragma: no cover - exercised without the extra
-        raise ImportError(
+        raise KarniImportError(
             "SENTRY_DSN is set but sentry-sdk is not installed. "
-            "Install the Sentry extra: pip install 'karni[sentry]'"
+            "Install the Sentry extra: pip install 'karni[sentry]'",
+            code="E501",
         ) from exc
 
     sentry_sdk.init(

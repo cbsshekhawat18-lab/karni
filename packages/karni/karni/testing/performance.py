@@ -40,6 +40,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Final
 
+from karni.exceptions import KarniAssertionError
 from karni.performance import QueryBudgetExceeded, QueryRecorder, budget_failure, record_queries
 
 __all__ = [
@@ -147,7 +148,8 @@ def _optout(viewset: type[Any]) -> tuple[bool, str]:
         return True, ""
     return False, (
         f"[opt-out-reason] {relative(path)}:{allow.line}: karni: allow({RULE}) requires a "
-        "non-empty reason"
+        f"non-empty reason: write `# karni: allow({RULE}): <why the growth is expected>` "
+        "above the class."
     )
 
 
@@ -365,8 +367,10 @@ def test_list_and_retrieve_queries_do_not_grow_with_rows(
     """Every routed project viewset's ``list``/``retrieve`` is N-independent."""
     import pytest
 
-    assert not karni_scaling_case.optout_error, karni_scaling_case.optout_error
+    if karni_scaling_case.optout_error:
+        raise KarniAssertionError(karni_scaling_case.optout_error, code="E130")
     result = check_scaling(karni_scaling_case)
     if result.skipped:
         pytest.skip(result.skipped)
-    assert not result.grows, result.message()
+    if result.grows:
+        raise KarniAssertionError(result.message(), code="E129")

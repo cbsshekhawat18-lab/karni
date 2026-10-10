@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from typing import Any, ClassVar, Final
 
+from karni.exceptions import KarniAssertionError, KarniValueError
 from karni.testing.api import (
     Resource,
     _ids,
@@ -163,7 +164,7 @@ _LOADED = False
 def register_isolation(dimension: Isolation) -> None:
     """Add (or replace) a dimension; ``assert_isolated`` tests it wherever it applies."""
     if not dimension.name:
-        raise ValueError("an Isolation needs a name")
+        raise KarniValueError("an Isolation needs a name", code="E605")
     _REGISTERED[dimension.name] = dimension
 
 
@@ -282,15 +283,17 @@ def assert_isolated(
     names = (by,) if isinstance(by, str) else tuple(by or dimensions)
     unknown = [name for name in names if name not in dimensions]
     if unknown:
-        raise AssertionError(
-            f"Unknown isolation dimension(s) {unknown} (registered: {', '.join(dimensions)})."
+        raise KarniAssertionError(
+            f"Unknown isolation dimension(s) {unknown} (registered: {', '.join(dimensions)}).",
+            code="E605",
         )
     report = IsolationReport(case.resource.name)
     applicable = [dimensions[name] for name in names if dimensions[name].applies(case)]
     if not applicable:
         reasons = "; ".join(dimensions[name].reason(case) for name in names)
-        raise AssertionError(
-            f"assert_isolated({case.resource.name}): nothing isolates rows — {reasons}."
+        raise KarniAssertionError(
+            f"assert_isolated({case.resource.name}): nothing isolates rows — {reasons}.",
+            code="E605",
         )
     with _unthrottled(case.resource.viewset):
         for dimension in applicable:
@@ -299,5 +302,7 @@ def assert_isolated(
     if report.failures:
         who = f"role {role!r}" if role else "authenticated users"
         lines = "\n".join(f"  - {failure}" for failure in report.failures)
-        raise AssertionError(f"assert_isolated({case.resource.name}) for {who}: rows leak\n{lines}")
+        raise KarniAssertionError(
+            f"assert_isolated({case.resource.name}) for {who}: rows leak\n{lines}", code="E606"
+        )
     return report

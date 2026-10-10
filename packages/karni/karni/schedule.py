@@ -50,6 +50,8 @@ from celery.schedules import schedule as interval_schedule
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.module_loading import autodiscover_modules
 
+from karni.exceptions import KarniImproperlyConfigured
+
 __all__ = [
     "Schedule",
     "ScheduleError",
@@ -84,7 +86,7 @@ _CRON_FIELDS = (
 )
 
 
-class ScheduleError(ImproperlyConfigured):
+class ScheduleError(KarniImproperlyConfigured):
     """A schedule declaration is invalid; the message says how to fix it."""
 
 
@@ -138,7 +140,8 @@ class ScheduleRegistry:
             raise ScheduleError(
                 f"Schedule name {entry.name!r} is declared twice ({existing.source} and "
                 f"{entry.source}). Names must be unique — they become django-celery-beat "
-                "PeriodicTask names. Pass a distinct name=... to one of them."
+                "PeriodicTask names. Pass a distinct name=... to one of them.",
+                code="E406",
             )
         self._entries[entry.name] = entry
         return entry
@@ -176,14 +179,16 @@ def _task_name(task: Any, call: str) -> str:
         if not _DOTTED_RE.match(task):
             raise ScheduleError(
                 f"{call}: task {task!r} is not a dotted task name. Pass the task object "
-                "or its full dotted name, e.g. 'shop.tasks.sync_inventory'."
+                "or its full dotted name, e.g. 'shop.tasks.sync_inventory'.",
+                code="E404",
             )
         return task
     name = getattr(task, "name", None)
     if task is None or not isinstance(name, str) or not name:
         raise ScheduleError(
             f"{call}: needs the task to run, got {task!r}. Pass a Celery task (decorated "
-            "with @shared_task) or its dotted name, e.g. 'shop.tasks.sync_inventory'."
+            "with @shared_task) or its dotted name, e.g. 'shop.tasks.sync_inventory'.",
+            code="E404",
         )
     return name
 
@@ -194,7 +199,8 @@ def _json_safe(value: Any, what: str, call: str) -> None:
     except (TypeError, ValueError) as exc:
         raise ScheduleError(
             f"{call}: {what} must be JSON-serializable (django-celery-beat stores them as "
-            f"JSON): {exc}. Pass ids and plain values, not objects."
+            f"JSON): {exc}. Pass ids and plain values, not objects.",
+            code="E404",
         ) from None
 
 
@@ -212,15 +218,16 @@ def _declare(
 ) -> Schedule:
     task_name = _task_name(task, call)
     if name is not None and (not isinstance(name, str) or not name.strip()):
-        raise ScheduleError(f"{call}: name must be a non-empty string, got {name!r}.")
+        raise ScheduleError(f"{call}: name must be a non-empty string, got {name!r}.", code="E404")
     if args is not None and (isinstance(args, str | bytes) or not isinstance(args, Sequence)):
-        raise ScheduleError(f"{call}: args must be a list or tuple, got {args!r}.")
+        raise ScheduleError(f"{call}: args must be a list or tuple, got {args!r}.", code="E404")
     if kwargs is not None and not isinstance(kwargs, Mapping):
-        raise ScheduleError(f"{call}: kwargs must be a dict, got {kwargs!r}.")
+        raise ScheduleError(f"{call}: kwargs must be a dict, got {kwargs!r}.", code="E404")
     if options is not None and not isinstance(options, Mapping):
         raise ScheduleError(
             f"{call}: options must be a dict of apply_async options (e.g. "
-            f"{{'queue': 'low'}}), got {options!r}."
+            f"{{'queue': 'low'}}), got {options!r}.",
+            code="E404",
         )
     args_tuple = tuple(args or ())
     kwargs_dict = dict(kwargs or {})
@@ -256,14 +263,16 @@ def _interval_seconds(
     if interval is not None and given_units:
         raise ScheduleError(
             f"{call}: pass either an interval (every('15m')) or "
-            "seconds=/minutes=/hours=/days= keywords, not both."
+            "seconds=/minutes=/hours=/days= keywords, not both.",
+            code="E405",
         )
     if isinstance(interval, str):
         if not _INTERVAL_FULL_RE.match(interval):
             raise ScheduleError(
                 f"{call}: can't read the interval {interval!r}. Use a number followed by "
                 "s, m, h or d — every('30s'), every('15m'), every('1h30m'), every('1d') — "
-                "or keywords: every(minutes=15)."
+                "or keywords: every(minutes=15).",
+                code="E405",
             )
         seconds: float = sum(
             int(n) * _UNIT_SECONDS[unit] for n, unit in _INTERVAL_RE.findall(interval)
@@ -271,13 +280,16 @@ def _interval_seconds(
     elif isinstance(interval, timedelta):
         seconds = interval.total_seconds()
     elif isinstance(interval, bool):
-        raise ScheduleError(f"{call}: the interval must be a duration, got {interval!r}.")
+        raise ScheduleError(
+            f"{call}: the interval must be a duration, got {interval!r}.", code="E405"
+        )
     elif isinstance(interval, int | float):
         seconds = float(interval)
     elif interval is None:
         if not given_units:
             raise ScheduleError(
-                "every() needs an interval: every('15m', task) or every(minutes=15, task=task)."
+                "every() needs an interval: every('15m', task) or every(minutes=15, task=task).",
+                code="E405",
             )
         seconds = timedelta(
             days=units.get("days", 0),
@@ -288,14 +300,18 @@ def _interval_seconds(
     else:
         raise ScheduleError(
             f"{call}: the interval must be a string like '15m', a number of seconds or a "
-            f"timedelta, got {interval!r}."
+            f"timedelta, got {interval!r}.",
+            code="E405",
         )
     if seconds <= 0:
-        raise ScheduleError(f"{call}: the interval must be positive, got {seconds:g}s.")
+        raise ScheduleError(
+            f"{call}: the interval must be positive, got {seconds:g}s.", code="E405"
+        )
     if seconds != int(seconds):
         raise ScheduleError(
             f"{call}: intervals are whole seconds (django-celery-beat stores integer "
-            f"seconds), got {seconds:g}s. Round it, e.g. every(seconds={round(seconds) or 1})."
+            f"seconds), got {seconds:g}s. Round it, e.g. every(seconds={round(seconds) or 1}).",
+            code="E405",
         )
     return int(seconds)
 
@@ -369,12 +385,15 @@ def cron(
     """
     call = f"cron({expression!r})"
     if not isinstance(expression, str):
-        raise ScheduleError(f"{call}: the expression must be a string like '0 3 * * *'.")
+        raise ScheduleError(
+            f"{call}: the expression must be a string like '0 3 * * *'.", code="E405"
+        )
     parts = expression.split()
     if len(parts) != len(_CRON_FIELDS):
         raise ScheduleError(
             f"{call}: expected 5 fields 'minute hour day-of-month month day-of-week', got "
-            f"{len(parts)}. Example: cron('0 3 * * *') runs at 03:00 every day."
+            f"{len(parts)}. Example: cron('0 3 * * *') runs at 03:00 every day.",
+            code="E405",
         )
     for value, (kwarg, label) in zip(parts, _CRON_FIELDS, strict=True):
         try:
@@ -383,7 +402,8 @@ def cron(
             raise ScheduleError(
                 f"{call}: invalid {label} field {value!r} ({exc}). Fields are "
                 "'minute hour day-of-month month day-of-week'; e.g. '*/15', '0-30/10', "
-                "'mon-fri'."
+                "'mon-fri'.",
+                code="E405",
             ) from None
     spec = dict(zip((kwarg for kwarg, _ in _CRON_FIELDS), parts, strict=True))
     return _declare(
@@ -515,10 +535,13 @@ def run_schedule(name: str, configured: Mapping[str, Any] | None = None) -> Any:
         known = ", ".join(sorted(rows)) or "none"
         raise ScheduleError(
             f"No schedule named {name!r}. Known schedules: {known}. "
-            "List them with `karni schedule list` (manage.py karni_schedules)."
+            "List them with `karni schedule list` (manage.py karni_schedules).",
+            code="E407",
         )
     try:
         task = resolve_task(row["task"])
     except ImproperlyConfigured as exc:
-        raise ScheduleError(f"Schedule {name!r}: {exc}") from None
+        raise ScheduleError(
+            f"Schedule {name!r} cannot run: {getattr(exc, 'message', exc)}", code="E403"
+        ) from None
     return task.apply(args=row["args"], kwargs=row["kwargs"], throw=False)

@@ -10,6 +10,8 @@ karni itself is not importable and no project interpreter is reachable. And
 to Karni's machine-readable changelog (packages/karni/karni/changelog ->
 karni_cli/_changelog), which `karni upgrade` reads: the CLI must know every
 change up to its own release, whatever karni the project has installed.
+Likewise Karni's error code registry (packages/karni/karni/errorcodes ->
+karni_cli/_errorcodes), which `karni explain` and error messages read.
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ class TemplateBundleHook(BuildHookInterface):
 
         self._bundle_karni(pkg_root, "agent", "_agent", "agent rules", build_data)
         self._bundle_karni(pkg_root, "changelog", "_changelog", "changelog", build_data)
+        self._bundle_karni(pkg_root, "errorcodes", "_errorcodes", "error codes", build_data)
 
     @staticmethod
     def _bundle_karni(

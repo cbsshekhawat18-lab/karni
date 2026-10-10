@@ -50,11 +50,12 @@ def module() -> ModuleType:
     if directory is None:
         raise CliError(
             "Karni's changelog is missing from this karni-cli install "
-            "(karni_cli/_changelog). Reinstall karni-cli."
+            "(karni_cli/_changelog). Reinstall karni-cli.",
+            code="C005",
         )
     spec = importlib.util.spec_from_file_location(_MODULE_NAME, directory / "__init__.py")
     if spec is None or spec.loader is None:  # pragma: no cover - importlib contract
-        raise CliError(f"Cannot load Karni's changelog from {directory}")
+        raise CliError(f"Cannot load Karni's changelog from {directory}", code="C005")
     loaded = importlib.util.module_from_spec(spec)
     sys.modules[_MODULE_NAME] = loaded
     try:
@@ -71,7 +72,7 @@ def load(directory: Path | None = None) -> list[Change]:
     try:
         return list(changelog.changes(directory or source_dir()))
     except changelog.ChangelogError as exc:
-        raise CliError(str(exc)) from None
+        raise CliError(str(exc.args[0]) if exc.args else str(exc), code="E704") from None
 
 
 def docs_url(anchor: str) -> str:
@@ -83,7 +84,9 @@ def parse(version: str, what: str) -> Version:
     try:
         return Version(version)
     except InvalidVersion:
-        raise CliError(f"{what} {version!r} is not a version number (e.g. 0.2.0).") from None
+        raise CliError(
+            f"{what} {version!r} is not a version number (e.g. 0.2.0).", code="C203"
+        ) from None
 
 
 def newest_release(changes: Iterable[Change]) -> str:

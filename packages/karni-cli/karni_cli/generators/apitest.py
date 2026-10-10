@@ -75,7 +75,8 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
     if found is None:
         raise CliError(
             f"No viewset routes {model.name} — create it first: karni make viewset "
-            f"{model.name} --app {model.app.label} (the test drives the resource's URLs)."
+            f"{model.name} --app {model.app.label} (the test drives the resource's URLs).",
+            code="C105",
         )
     path, cls = found
     roles = role_names(cls)

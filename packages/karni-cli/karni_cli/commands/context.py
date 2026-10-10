@@ -123,7 +123,7 @@ def build_context_text(
     if proc.stderr:
         sys.stderr.write(proc.stderr)
     if proc.returncode != 0:
-        raise CliError(f"manage.py karni_context failed (exit {proc.returncode}).")
+        raise CliError(f"manage.py karni_context failed (exit {proc.returncode}).", code="C009")
     found = find_manifest(project, manifest)
     ui_lines = manifest_lines(found) if found else []
     pages = pages_line(project)

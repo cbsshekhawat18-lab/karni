@@ -71,7 +71,8 @@ def _targets(
                 if other.label == label and name not in models_in(ws, other):
                     raise CliError(
                         f"Field {spec.name}: app {label} has no model {name} — "
-                        f"karni make model {name} --app {label}"
+                        f"karni make model {name} --app {label}",
+                        code="C104",
                     )
             resolved[spec.name] = RelationTarget(pystr(raw), False, raw.lower())
         elif raw in own:
@@ -83,7 +84,8 @@ def _targets(
                 raise CliError(
                     f"Field {spec.name}: {where} defines a model {raw!r} — create it first "
                     f"(karni make model {raw}) or write app.Model, e.g. "
-                    f"{spec.name}:{spec.kind}:shop.{raw}."
+                    f"{spec.name}:{spec.kind}:shop.{raw}.",
+                    code="C104",
                 )
             target = f"{owners[0].label}.{raw}"
             resolved[spec.name] = RelationTarget(pystr(target), False, target.lower())
@@ -155,7 +157,10 @@ def resolve_chain(with_: list[str], all_: bool) -> list[str]:
     chain = [*ALL, *split_csv(with_)] if all_ else split_csv(with_)
     unknown = [item for item in chain if item not in CHAINABLE]
     if unknown:
-        raise CliError(f"--with {', '.join(unknown)}: unknown (available: {', '.join(CHAINABLE)}).")
+        raise CliError(
+            f"--with {', '.join(unknown)}: unknown (available: {', '.join(CHAINABLE)}).",
+            code="C106",
+        )
     return [item for item in CHAINABLE if item in chain]
 
 
@@ -200,7 +205,9 @@ def command(
     ws = project_workspace(force)
     chain = resolve_chain(with_ or [], all_)
     if (access or search) and "viewset" not in chain:
-        raise CliError("--access/--search configure the viewset: add --with viewset (or -a).")
+        raise CliError(
+            "--access/--search configure the viewset: add --with viewset (or -a).", code="C004"
+        )
     target = resolve_app(ws, app)
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]

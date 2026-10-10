@@ -38,6 +38,7 @@ from django.db.models import Expression, Q, QuerySet
 from django.db.models.functions import Greatest
 
 from karni.api.search import SearchProvider
+from karni.exceptions import KarniImportError
 
 # TrigramExtension is a lazy re-export resolved by module __getattr__ below,
 # so pyflakes cannot see its definition here.
@@ -149,9 +150,10 @@ def __getattr__(name: str) -> Any:
         try:
             from django.contrib.postgres.operations import TrigramExtension
         except ImportError as exc:  # pragma: no cover - depends on environment
-            raise ImportError(
+            raise KarniImportError(
                 "TrigramExtension requires a PostgreSQL driver; "
-                "install psycopg (pip install 'psycopg[binary]')."
+                "install psycopg (pip install 'psycopg[binary]').",
+                code="E501",
             ) from exc
         return TrigramExtension
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

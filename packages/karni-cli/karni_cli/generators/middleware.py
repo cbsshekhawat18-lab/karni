@@ -58,7 +58,7 @@ def plan(ws: Workspace, app: App, name: str) -> str:
     settings = ws.read(SETTINGS)
     try:
         if settings is None:
-            raise CliError(f"{SETTINGS.as_posix()} not found")
+            raise CliError(f"{SETTINGS.as_posix()} not found", code="C001")
         updated = add_entry(
             settings,
             dotted,

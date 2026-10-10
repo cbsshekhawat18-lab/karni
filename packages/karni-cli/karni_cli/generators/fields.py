@@ -145,20 +145,26 @@ def parse_field(token: str) -> FieldSpec:
     if len(parts) < 2 or not parts[0] or not parts[1]:
         raise CliError(
             f"Field {token!r}: expected name:type[:arg][?], e.g. title:str:200 or "
-            "starts_at:datetime? (types: " + ", ".join(TYPES) + ")."
+            "starts_at:datetime? (types: " + ", ".join(TYPES) + ").",
+            code="C104",
         )
     name, kind, *args = parts
     kind = ALIASES.get(kind.lower(), kind.lower())
     if kind not in TYPES:
-        raise CliError(f"Field {token!r}: unknown type {kind!r} (types: {', '.join(TYPES)}).")
+        raise CliError(
+            f"Field {token!r}: unknown type {kind!r} (types: {', '.join(TYPES)}).", code="C104"
+        )
     if not name.isidentifier() or keyword.iskeyword(name) or name != name.lower():
-        raise CliError(f"Field {token!r}: {name!r} must be a snake_case identifier.")
+        raise CliError(f"Field {token!r}: {name!r} must be a snake_case identifier.", code="C104")
     if name.startswith("_") or "__" in name:
-        raise CliError(f"Field {token!r}: names may not start with _ or contain __ (Django).")
+        raise CliError(
+            f"Field {token!r}: names may not start with _ or contain __ (Django).", code="C104"
+        )
     if name in RESERVED:
         raise CliError(
             f"Field {token!r}: {name!r} is reserved — BaseModel already provides it "
-            "(id, created_at, updated_at, deleted_at, created_by, updated_by) or uses the name."
+            "(id, created_at, updated_at, deleted_at, created_by, updated_by) or uses the name.",
+            code="C104",
         )
     return FieldSpec(name, kind, tuple(args), optional)
 
@@ -168,7 +174,7 @@ def parse_fields(tokens: list[str]) -> list[FieldSpec]:
     seen: set[str] = set()
     for spec in specs:
         if spec.name in seen:
-            raise CliError(f"Field {spec.name!r} is declared twice.")
+            raise CliError(f"Field {spec.name!r} is declared twice.", code="C104")
         seen.add(spec.name)
     return specs
 
@@ -178,7 +184,9 @@ def _int_arg(spec: FieldSpec, index: int, default: int, what: str) -> int:
         return default
     value = spec.args[index]
     if not value.isdigit() or int(value) <= 0:
-        raise CliError(f"Field {spec.name}: {what} must be a positive integer, got {value!r}.")
+        raise CliError(
+            f"Field {spec.name}: {what} must be a positive integer, got {value!r}.", code="C104"
+        )
     return int(value)
 
 
@@ -238,7 +246,8 @@ def render_model_body(
             places = _int_arg(spec, 1, 2, "decimal_places")
             if places > digits:
                 raise CliError(
-                    f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits})."
+                    f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits}).",
+                    code="C104",
                 )
             args = [f"max_digits={digits}", f"decimal_places={places}", *_optional_kwargs(spec)]
             out.lines.append(call(head + "DecimalField", args, indent, line_length))
@@ -292,19 +301,23 @@ def _render_choice(spec: FieldSpec, out: Rendered, indent: str, line_length: int
     values = [v.strip() for v in re.split(r"[|,]", raw) if v.strip()]
     if not values:
         raise CliError(
-            f"Field {spec.name}: choice needs values, e.g. '{spec.name}:choice:draft|published'."
+            f"Field {spec.name}: choice needs values, e.g. '{spec.name}:choice:draft|published'.",
+            code="C104",
         )
     members: list[tuple[str, str]] = []
     for value in values:
         if not _CHOICE_VALUE.match(value):
             raise CliError(
-                f"Field {spec.name}: choice value {value!r} may only use letters, digits, - and _."
+                f"Field {spec.name}: choice value {value!r} may only use letters, digits, - and _.",
+                code="C104",
             )
         member = re.sub(r"[^A-Za-z0-9]", "_", value).upper()
         if member[0].isdigit():
             member = f"V_{member}"
         if member in {m for m, _ in members}:
-            raise CliError(f"Field {spec.name}: choice value {value!r} is listed twice.")
+            raise CliError(
+                f"Field {spec.name}: choice value {value!r} is listed twice.", code="C104"
+            )
         members.append((member, value))
     enum = pascal(spec.name)
     out.inner.append(f"{indent}class {enum}(models.TextChoices):")
@@ -320,7 +333,8 @@ def relation_name(spec: FieldSpec) -> str:
     if not spec.args or not spec.args[0]:
         raise CliError(
             f"Field {spec.name}: {spec.kind} needs a target model, e.g. "
-            f"'{spec.name}:{spec.kind}:User' or '{spec.name}:{spec.kind}:shop.Product'."
+            f"'{spec.name}:{spec.kind}:User' or '{spec.name}:{spec.kind}:shop.Product'.",
+            code="C104",
         )
     return spec.args[0]
 

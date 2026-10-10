@@ -34,7 +34,8 @@ def validate_name(project_name: str) -> str:
     if not SLUG_RE.match(slug):
         raise CliError(
             f'"{project_name}" derives the invalid slug "{slug}" '
-            "(allowed: lowercase letters, digits, underscores; must not start with a digit)."
+            "(allowed: lowercase letters, digits, underscores; must not start with a digit).",
+            code="C103",
         )
     return slug
 
@@ -58,7 +59,9 @@ def resolve_template() -> Path:
     if env:
         path = Path(env).expanduser()
         if not (path / "cookiecutter.json").is_file():
-            raise CliError(f"KARNI_TEMPLATES={env} does not contain a cookiecutter template.")
+            raise CliError(
+                f"KARNI_TEMPLATES={env} does not contain a cookiecutter template.", code="C007"
+            )
         return path
 
     for parent in Path(__file__).resolve().parents:
@@ -72,7 +75,8 @@ def resolve_template() -> Path:
             return path
     raise CliError(
         "No project template found (no KARNI_TEMPLATES, no monorepo checkout, "
-        "no packaged copy) — reinstall karni-cli."
+        "no packaged copy) — reinstall karni-cli.",
+        code="C005",
     )
 
 
@@ -102,7 +106,8 @@ def resolve_ui_source(start: Path | None = None) -> Path | None:
             raise CliError(
                 f"KARNI_UI_SRC={env} is not the {UI_PACKAGE} package "
                 "(expected a directory whose package.json is named @karni/ui, "
-                "e.g. /path/to/Karni/packages/karni-ui)."
+                "e.g. /path/to/Karni/packages/karni-ui).",
+                code="C007",
             )
         return path
     for parent in (start or Path(__file__).resolve()).parents:

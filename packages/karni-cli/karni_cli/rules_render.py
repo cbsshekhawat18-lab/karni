@@ -26,7 +26,7 @@ def render_rules(data: AgentData, fragments: dict[str, str] | None = None) -> st
     for name, fragment in (fragments or {}).items():
         lines.append(f"[module:{name}]")
         lines.append(fragment.strip())
-    lines.append("Why/fix: karni rules --explain CODE")
+    lines.append("Why/fix: karni explain CODE")
     return "\n".join(lines)
 
 

@@ -62,7 +62,8 @@ class KarniQuerySet(models.QuerySet):
         raise ScopeError(
             "without() is a manager method: a queryset has already applied every scope. "
             f"Start from the manager: {self.model.__name__}.objects.without({quoted}, "
-            'reason="...").filter(...)'
+            'reason="...").filter(...)',
+            code="E005",
         )
 
     without.queryset_only = True  # type: ignore[attr-defined]

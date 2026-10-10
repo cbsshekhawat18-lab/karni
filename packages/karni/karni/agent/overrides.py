@@ -42,7 +42,12 @@ PROJECT_CODE_RE = re.compile(r"^(?!K\d)[A-Z]{1,3}\d{3}$")
 
 
 class OverrideError(ValueError):
-    """``karni.rules.py`` is malformed; the message says where and why."""
+    """``karni.rules.py`` is malformed; the message says where and why (code ``E701``)."""
+
+    code = "E701"
+
+    def __str__(self) -> str:
+        return f"{self.code}: {super().__str__()} (karni explain {self.code})"
 
 
 @dataclass

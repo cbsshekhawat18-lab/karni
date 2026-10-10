@@ -86,13 +86,13 @@ from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.hashers import make_password
 from django.core import validators
-from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.utils.module_loading import module_has_submodule
 from factory.base import FactoryMetaClass
 from factory.declarations import BaseDeclaration
 from factory.django import DjangoModelFactory
 
+from karni.exceptions import KarniImproperlyConfigured, KarniTypeError
 from karni.testing.values import MISSING, ValueInference, unique_field_names
 
 __all__ = [
@@ -130,10 +130,12 @@ def _model(model: ModelRef) -> type[models.Model]:
     if isinstance(model, str):
         return apps.get_model(model)
     if not (isinstance(model, type) and issubclass(model, models.Model)):
-        raise TypeError(f"expected a model class or 'app_label.Model', got {model!r}")
+        raise KarniTypeError(
+            f"expected a model class or 'app_label.Model', got {model!r}", code="E609"
+        )
     if model._meta.abstract:
-        raise ImproperlyConfigured(
-            f"{model.__name__} is abstract; factories need a concrete model."
+        raise KarniImproperlyConfigured(
+            f"{model.__name__} is abstract; factories need a concrete model.", code="E609"
         )
     return model
 
@@ -197,9 +199,10 @@ class AutoSubFactory(factory.SubFactory):
                 return None
             if self.model in chain:
                 path = " -> ".join(model.__name__ for model in (*chain, self.model))
-                raise ImproperlyConfigured(
+                raise KarniImproperlyConfigured(
                     f"Cannot generate {path}: a required relation loops back. Pass an existing "
-                    "row for that field, or define an explicit factory in <app>/factories.py."
+                    "row for that field, or define an explicit factory in <app>/factories.py.",
+                    code="E611",
                 )
         token = _CHAIN.set((*chain, self.model))
         try:
@@ -237,10 +240,11 @@ def _m2m_hook(name: str, target: type[models.Model]) -> Callable[..., None]:
 
 def _missing_value(model: type[models.Model], field: models.Field[Any, Any]) -> Any:
     def fail() -> Any:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"karni.testing.factories cannot generate {model.__name__}.{field.name} "
             f"({type(field).__name__}); pass it (create({model.__name__}, {field.name}=...)) or "
-            "define an explicit factory in <app>/factories.py."
+            "define an explicit factory in <app>/factories.py.",
+            code="E610",
         )
 
     return factory.LazyFunction(fail)

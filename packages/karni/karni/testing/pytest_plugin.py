@@ -39,6 +39,8 @@ from typing import Any
 
 import pytest
 
+from karni.errorcodes import docs_url
+
 _MODES = ("raise", "warn", "off")
 _UNSET = object()
 
@@ -88,7 +90,8 @@ def _mode(config: pytest.Config) -> str:
     mode = config.getoption("karni_query_budget") or config.getini("karni_query_budget_mode")
     if mode not in _MODES:
         raise pytest.UsageError(
-            f"karni_query_budget_mode = {mode!r}; expected one of {', '.join(_MODES)}."
+            f"E118: karni_query_budget_mode = {mode!r}; set it (or --karni-query-budget) to "
+            f"one of {', '.join(_MODES)}. See {docs_url('E118')}"
         )
     return str(mode)
 

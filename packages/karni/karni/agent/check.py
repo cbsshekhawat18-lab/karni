@@ -601,6 +601,15 @@ def supported(path: str | Path) -> bool:
     return suffix in PY_SUFFIXES or suffix in TS_SUFFIXES
 
 
+class SourceParseError(ValueError):
+    """A file ``karni check`` cannot parse (code ``E703``); a ``ValueError`` for callers."""
+
+    code = "E703"
+
+    def __str__(self) -> str:
+        return f"{self.code}: {super().__str__()}"
+
+
 def check_source(path: str | Path, text: str) -> list[Finding]:
     """Findings for ``text`` as if it lived at ``path`` (the path drives allowances)."""
     posix = Path(path).as_posix()
@@ -609,7 +618,10 @@ def check_source(path: str | Path, text: str) -> list[Finding]:
         try:
             found = _python(posix, text)
         except SyntaxError as exc:
-            raise ValueError(f"{path}:{exc.lineno}: cannot parse: {exc.msg}") from None
+            raise SourceParseError(
+                f"{path}:{exc.lineno}: cannot parse: {exc.msg}. karni check reads code "
+                "statically; fix the syntax error and run it again."
+            ) from None
         findings = _python_optouts(text.splitlines(), found)
     elif suffix in TS_SUFFIXES:
         findings = _ts(posix, text)

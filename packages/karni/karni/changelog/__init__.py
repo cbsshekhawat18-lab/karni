@@ -85,7 +85,15 @@ def docs_url(doc_anchor: str) -> str:
 
 
 class ChangelogError(ValueError):
-    """The changelog does not match the schema (the message lists every problem)."""
+    """The changelog does not match the schema (the message lists every problem).
+
+    Code ``E704``; a ``ValueError`` so callers that predate the code keep working.
+    """
+
+    code = "E704"
+
+    def __str__(self) -> str:
+        return f"{self.code}: {super().__str__()} See {DOCS_BASE_URL}errors.md#e704"
 
 
 def version_key(text: str) -> tuple[int, int, int]:

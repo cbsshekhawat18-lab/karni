@@ -63,14 +63,16 @@ def plan(ws: Workspace, app: App, model_name: str, reason: str) -> str:
     if not reason:
         raise CliError(
             "--reason is required: BaseViewSet already generates this serializer (K106) — say "
-            'why an explicit one is needed, e.g. --reason "computed display_name field".'
+            'why an explicit one is needed, e.g. --reason "computed display_name field".',
+            code="C109",
         )
     model = require_model(ws, app, model_name)
     found = viewset_for(ws, app, model.name)
     if found is None:
         raise CliError(
             f"No viewset for {model.name} in {ws.rel(viewsets_file(ws, app))} to wire the "
-            f"serializer into — karni make viewset {model.name} first."
+            f"serializer into — karni make viewset {model.name} first.",
+            code="C105",
         )
     vs_path, viewset = found
     class_name = f"{model.name}Serializer"

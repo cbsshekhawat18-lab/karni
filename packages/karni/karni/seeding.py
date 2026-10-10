@@ -87,6 +87,7 @@ from django.utils.module_loading import module_has_submodule
 from factory.declarations import BaseDeclaration
 from factory.random import reseed_random
 
+from karni.errorcodes import KarniError
 from karni.testing.factories import DEFAULT_PASSWORD, FactoryBuilder, auto_factory, factory_for
 from karni.testing.values import ValueInference
 
@@ -120,7 +121,7 @@ POOL_LIMIT: Final = 200
 ATTEMPTS: Final = 10
 
 
-class SeedError(Exception):
+class SeedError(KarniError):
     """A model cannot be seeded; the message names the model and the fix."""
 
 
@@ -260,7 +261,9 @@ def _resolve(model: Any) -> type[models.Model]:
         try:
             return apps.get_model(model)
         except (LookupError, ValueError) as exc:
-            raise SeedError(f"--model {model}: no such model (use app_label.Model).") from exc
+            raise SeedError(
+                f"--model {model}: no such model (use app_label.Model).", code="E614"
+            ) from exc
     return model  # type: ignore[no-any-return]
 
 
@@ -298,7 +301,8 @@ def _order(chosen: Iterable[type[models.Model]]) -> list[type[models.Model]]:
     cycle = ", ".join(sorted(model._meta.label for model in pending))
     raise SeedError(
         f"Required relations loop between {cycle}: no seeding order exists. Make one of the "
-        "foreign keys nullable, or seed one model yourself in a Seeder.seed() override."
+        "foreign keys nullable, or seed one model yourself in a Seeder.seed() override.",
+        code="E611",
     )
 
 
@@ -490,14 +494,16 @@ class _Run:
             except ImproperlyConfigured as exc:
                 raise SeedError(
                     f"{context.model._meta.label}: {exc} For seeding, override Seeder.seed() "
-                    f"(karni make seeder {context.model.__name__}) and pass the row yourself."
+                    f"(karni make seeder {context.model.__name__}) and pass the row yourself.",
+                    code="E613",
                 ) from exc
             self.after_create(context, row, values)
             return row
         raise SeedError(
             f"{context.model._meta.label}: {ATTEMPTS} attempts in a row hit a database "
             f"constraint ({problem}). Give the clashing fields distinct values in a Seeder "
-            f"(karni make seeder {context.model.__name__}), e.g. a factory.Sequence."
+            f"(karni make seeder {context.model.__name__}), e.g. a factory.Sequence.",
+            code="E612",
         )
 
     def after_create(self, context: SeedContext, row: Any, values: dict[str, Any]) -> None:

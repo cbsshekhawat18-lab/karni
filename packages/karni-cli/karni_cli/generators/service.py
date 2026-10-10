@@ -31,7 +31,8 @@ def plan(ws: Workspace, app: App, name: str) -> None:
     if ws.exists(app.file("services.py")):
         raise CliError(
             f"{ws.rel(app.file('services.py'))} exists — a services/ package would shadow it. "
-            "Move it to services/__init__.py first, then re-run."
+            "Move it to services/__init__.py first, then re-run.",
+            code="C107",
         )
     init = app.file("services", "__init__.py")
     if not ws.exists(init):

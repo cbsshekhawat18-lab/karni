@@ -21,6 +21,7 @@ follow what they return.
 | `karni rules --json` | The raw data (rules, procedures, adapter overrides) |
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
+| `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
 | `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check` |
 
 `karni context` and `karni rules` together are enough to start work without
@@ -41,6 +42,17 @@ running compose service; this answers with the project's karni version), or
 from the copy bundled into karni-cli (`bundled`, what `karni new` uses when
 only karni-cli is installed). Force one with
 `KARNI_AGENT_SOURCE=local|project|bundled`.
+
+## Error codes
+
+Every error Karni prints starts with a stable code and ends with a link:
+`E104: EventViewSet: Owned('organiser') does not lead from Event to the user
+model ... See …/errors.md#e104`. The message names the class, field or setting
+to change; `karni explain E104` (offline, no project needed) adds why Karni
+objects and the general fix. System checks (`karni.E101`, …) run on every
+`manage.py` command, so a missing `access` or a broken schedule fails on boot,
+not on the first request. All codes: [errors.md](errors.md), generated from
+the registries.
 
 ## Rule codes
 

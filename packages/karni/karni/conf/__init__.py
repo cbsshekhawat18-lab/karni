@@ -23,8 +23,6 @@ from importlib import metadata
 from typing import Any
 from urllib.parse import urlsplit
 
-from django.core.exceptions import ImproperlyConfigured
-
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
@@ -37,6 +35,7 @@ from karni.conf.dev import DEV
 from karni.conf.logging import build_logging
 from karni.conf.prod import PROD
 from karni.conf.sentry import maybe_init_sentry
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = ["karni_settings"]
 
@@ -163,21 +162,24 @@ def _merge_settings_fragments(merged: dict[str, Any]) -> None:
         try:
             fragment = entry_point.load()
         except Exception as exc:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Karni settings fragment {entry_point.name!r} "
-                f"({entry_point.value}) failed to load: {exc}"
+                f"({entry_point.value}) failed to load: {exc}",
+                code="E503",
             ) from exc
         if not isinstance(fragment, dict):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Karni settings fragment {entry_point.name!r} ({entry_point.value}) "
-                f"must be a dict of settings, got {type(fragment).__name__}."
+                f"must be a dict of settings, got {type(fragment).__name__}.",
+                code="E503",
             )
         collisions = sorted(set(fragment) & set(merged))
         if collisions:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Karni settings fragment {entry_point.name!r} ({entry_point.value}) "
                 f"redefines existing setting(s): {', '.join(collisions)}. Fragments "
-                "may only introduce new top-level names."
+                "may only introduce new top-level names.",
+                code="E503",
             )
         merged.update(copy.deepcopy(fragment))
 
@@ -345,10 +347,11 @@ def karni_settings(
     """
     profile: str = env_name or env("DJANGO_ENV", default="dev")
     if profile not in _PROFILES:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"Unknown Karni settings profile {profile!r}; expected one of "
             f"{sorted(_PROFILES)}. Set the DJANGO_ENV environment variable or "
-            "pass env_name= to karni_settings()."
+            "pass env_name= to karni_settings().",
+            code="E502",
         )
 
     # Deep-copy so callers mutating nested defaults never corrupt BASE/DEV/PROD.

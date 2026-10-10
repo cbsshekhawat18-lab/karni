@@ -53,7 +53,7 @@ def _app_named(ws: Workspace, label: str) -> App:
     for other in local_apps(ws):
         if label in (other.label, other.module):
             return other
-    raise CliError(f"--on: no local app {label!r}.")
+    raise CliError(f"--on: no local app {label!r}.", code="C102")
 
 
 def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -> None:
@@ -72,7 +72,8 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         )
         if model is None:
             raise CliError(
-                f"--on {on}: no model {model_name} — create it first: karni make model {model_name}"
+                f"--on {on}: no model {model_name} — create it first: karni make model {model_name}",
+                code="C105",
             )
         decorator = f"@on_{event}({model.name}{', queued=True' if queued else ''})"
         param = snake(model.name)
@@ -94,7 +95,8 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         if event not in top_level_assignments(ws, events_path):
             raise CliError(
                 f"--on {on}: no event {event} in {ws.rel(events_path)} — "
-                f"karni make event {event} --app {source.label}"
+                f"karni make event {event} --app {source.label}",
+                code="C105",
             )
         lines = [f"@receiver({event})", f"def {name}(sender: Any, **kwargs: Any) -> None:"]
         imports += [
@@ -115,7 +117,7 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
                 docstring(f"Runs when {event} is sent — inline, in the sender.", "    ", line)
             )
     else:
-        raise CliError(f"--on {on!r}: expected {_ON_HELP}.")
+        raise CliError(f"--on {on!r}: expected {_ON_HELP}.", code="C106")
     path = app.file("listeners.py")
     rel = ws.rel(path)
     text = ensure_imports(ws, rel, ws.read(path) or "", imports)

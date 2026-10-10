@@ -3,6 +3,7 @@
  * is rebuilding something @karni/ui ships; reach for the component's props
  * (columns, fields, slots) instead.
  */
+import { docsUrl } from "../lib/docs.js";
 import { matchesAny } from "../lib/glob.js";
 
 const DEFAULT_MAX_LINES = 50;
@@ -12,6 +13,7 @@ export default {
   meta: {
     type: "problem",
     docs: {
+      url: docsUrl("max-page-lines"),
       description:
         "Fail page files (default **/pages/**) with more than 50 physical lines: pages compose @karni/ui components, they do not reimplement them.",
     },

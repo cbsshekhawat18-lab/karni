@@ -4,6 +4,7 @@
  * compose the public API instead, and if it does not fit, extend it through
  * its props/overrides (or upstream the change).
  */
+import { docsUrl } from "../lib/docs.js";
 const DEEP_IMPORT = /^@karni\/ui\/(?:dist|src)(?:\/|$)/;
 
 function checkSource(context, sourceNode) {
@@ -21,6 +22,7 @@ export default {
   meta: {
     type: "problem",
     docs: {
+      url: docsUrl("no-deep-imports"),
       description:
         "Ban imports from @karni/ui/dist/* and @karni/ui/src/*: compose the public API, never vendor a copy of an internal.",
     },

@@ -24,6 +24,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from karni.accounts.models import OneTimeToken
+from karni.exceptions import KarniValueError
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -151,4 +152,6 @@ def _require_known_purpose(purpose: str) -> None:
     """Reject purposes outside ``OneTimeToken.Purpose`` with a clear error."""
     if purpose not in OneTimeToken.Purpose.values:
         known = ", ".join(OneTimeToken.Purpose.values)
-        raise ValueError(f"Unknown token purpose {purpose!r}; expected one of: {known}.")
+        raise KarniValueError(
+            f"Unknown token purpose {purpose!r}; expected one of: {known}.", code="E204"
+        )

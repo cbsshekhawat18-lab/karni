@@ -11,6 +11,7 @@ from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
 from karni_cli.commands.doctor import doctor
+from karni_cli.commands.explain import explain
 from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
@@ -44,6 +45,7 @@ app.command(help="Upgrade across Karni versions: codemods, diff, manual-change r
 app.add_typer(rules_app, name="rules")
 app.command(help="Serve context, rules and check as MCP tools (needs karni-cli[mcp])")(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
+app.command(help="Explain an error code (E104, C101, PAY004, K106): why and the fix")(explain)
 app.add_typer(config_app, name="config")
 
 # Runners: each wraps one project command (named in its --help), run through

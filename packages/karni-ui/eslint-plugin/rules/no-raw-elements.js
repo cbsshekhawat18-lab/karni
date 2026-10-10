@@ -3,6 +3,7 @@
  * project code; @karni/ui is their only home. Each message names the
  * component to compose instead.
  */
+import { docsUrl } from "../lib/docs.js";
 import { matchesAny } from "../lib/glob.js";
 
 const REPLACEMENTS = {
@@ -17,6 +18,7 @@ export default {
   meta: {
     type: "problem",
     docs: {
+      url: docsUrl("no-raw-elements"),
       description:
         "Ban raw <table>/<form>/<input>/<select>/<textarea> JSX outside @karni/ui: compose the shipped components instead of rebuilding them.",
     },

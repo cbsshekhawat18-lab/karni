@@ -217,10 +217,13 @@ def plan(ws: Workspace, name: str, parent: Path) -> Path:
     if not _NAME.match(name):
         raise CliError(
             f"Module name {name!r}: lowercase letters and digits, words joined by - or _ "
-            "(e.g. payments, live-chat)."
+            "(e.g. payments, live-chat).",
+            code="C103",
         )
     if name == "karni" or name.startswith(("karni-", "karni_")):
-        raise CliError(f"Module name {name!r}: drop the karni prefix — it is added for you.")
+        raise CliError(
+            f"Module name {name!r}: drop the karni prefix — it is added for you.", code="C103"
+        )
     target = parent / f"karni-{name.replace('_', '-')}"
     ws.create_skeleton({target / rel: content for rel, content in files(name).items()})
     ws.note(f"next: cd {ws.rel(target)} && python -m pytest   ·   in a project: karni add {name}")

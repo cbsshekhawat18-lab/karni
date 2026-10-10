@@ -17,10 +17,10 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit
 
-from django.core.exceptions import ImproperlyConfigured
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from karni.conf.base import INSECURE_SECRET_KEY
+from karni.exceptions import KarniImproperlyConfigured
 
 THROTTLE_RATE_RE = re.compile(r"^\d+/(s|sec|second|m|min|minute|h|hour|d|day)$")
 """Accepted DRF throttle-rate format, e.g. ``"100/min"`` or ``"5/second"``."""
@@ -99,7 +99,7 @@ class KarniSettingsModel(BaseModel):
         """Run every cross-field check and raise one error listing all failures."""
         errors = self.cross_field_errors()
         if errors:
-            raise ValueError("\n".join(errors))
+            raise ValueError("\n".join(errors))  # karni: bare-raise-ok (pydantic validator)
         return self
 
     def cross_field_errors(self) -> list[str]:
@@ -437,8 +437,9 @@ def validate_settings(settings: Any) -> None:
             message = error["msg"].removeprefix("Value error, ")
             for part in message.splitlines():
                 lines.append(f"  - {loc + ': ' if loc else ''}{part}")
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             "Karni settings validation failed:\n"
             + "\n".join(lines)
-            + "\n(set KARNI_VALIDATE = False in settings.py to skip startup validation)"
+            + "\n(set KARNI_VALIDATE = False in settings.py to skip startup validation)",
+            code="E504",
         ) from exc

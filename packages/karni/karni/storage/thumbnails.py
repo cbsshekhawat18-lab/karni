@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Any
 
 from django.core.files.base import ContentFile, File
 
+from karni.exceptions import KarniImportError
+
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from django.core.files.storage import Storage
 
@@ -54,7 +56,7 @@ def _load_pillow() -> Any:
     try:
         from PIL import Image
     except ImportError as exc:
-        raise ImportError(_INSTALL_HINT) from exc
+        raise KarniImportError(_INSTALL_HINT, code="E501") from exc
     return Image
 
 

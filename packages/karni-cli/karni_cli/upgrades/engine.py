@@ -172,7 +172,8 @@ def run(
             except Exception as exc:
                 raise CliError(
                     f"codemod {change.codemod} ({change.id}) failed: {exc!r}. "
-                    "Nothing was written; please report this with the file it stopped on."
+                    "Nothing was written; please report this with the file it stopped on.",
+                    code="C199",
                 ) from exc
             _record(report, change, codemod, outcome)
         report.changes = _compare(project, scratch, copied)

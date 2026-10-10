@@ -4,6 +4,7 @@
  * directory (allowPatterns, default **-slash-api). Data access goes through
  * the generated typed hooks and the KarniClient from @karni/ui.
  */
+import { docsUrl } from "../lib/docs.js";
 import { matchesAny } from "../lib/glob.js";
 
 const DEFAULT_ALLOW_PATTERNS = ["**/api/**"];
@@ -49,6 +50,7 @@ export default {
   meta: {
     type: "problem",
     docs: {
+      url: docsUrl("no-direct-http"),
       description:
         "Ban fetch/axios/XMLHttpRequest/new WebSocket outside the generated api client directory: use the generated typed hooks or KarniClient.",
     },

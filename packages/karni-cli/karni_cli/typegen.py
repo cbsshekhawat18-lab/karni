@@ -28,7 +28,7 @@ def load_schema(path: Path) -> dict[str, Any]:
 
 def _resolve(doc: dict[str, Any], ref: str) -> dict[str, Any]:
     if not ref.startswith("#/"):
-        raise CliError(f"Unsupported external $ref: {ref}")
+        raise CliError(f"Unsupported external $ref: {ref}", code="C206")
     node: Any = doc
     for part in ref[2:].split("/"):
         node = node[part]
@@ -66,7 +66,7 @@ def _pascal(resource: str) -> str:
 def generate_hooks(doc: dict[str, Any]) -> str:
     resources = resource_components(doc)
     if not resources:
-        raise CliError("No x-karni-resource list operations found in the schema.")
+        raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
     lines = [
         HEADER.rstrip("\n"),
         'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";',

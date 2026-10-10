@@ -67,12 +67,13 @@ def plan(ws: Workspace, name: str, *, role: str | None, replace_reason: str | No
             raise CliError(
                 f"Role {role!r} is already claimed by {owner}. Compose or extend it instead "
                 "(K303), pick another --role, or replace it on purpose with "
-                '--replace-reason "<why>".'
+                '--replace-reason "<why>".',
+                code="C107",
             )
         reason = json.dumps(replace_reason)
         options = f", {{ replace: true, reason: {reason} }}"
     elif replace_reason:
-        raise CliError(f"--replace-reason: no component claims role {role!r} yet.")
+        raise CliError(f"--replace-reason: no component claims role {role!r} yet.", code="C106")
     source = (
         'import type { ReactNode } from "react";\n'
         'import { registerComponentRole } from "@karni/ui";\n'

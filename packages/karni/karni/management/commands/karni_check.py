@@ -13,7 +13,9 @@ from importlib.metadata import entry_points
 from typing import Any
 
 from django.core.management import call_command
-from django.core.management.base import BaseCommand, CommandError, SystemCheckError
+from django.core.management.base import BaseCommand, SystemCheckError
+
+from karni.exceptions import KarniCommandError
 
 
 class Command(BaseCommand):
@@ -38,5 +40,9 @@ class Command(BaseCommand):
         if failures:
             for failure in failures:
                 self.stderr.write(failure)
-            raise CommandError(f"karni check failed ({len(failures)} failure(s))")
+            raise KarniCommandError(
+                f"karni check found {len(failures)} problem(s), listed above. Fix each one "
+                "(each names its K or E code; `karni explain <code>` explains it).",
+                code="E702",
+            )
         self.stdout.write("karni check: ok")

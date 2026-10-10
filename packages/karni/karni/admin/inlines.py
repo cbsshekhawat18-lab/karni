@@ -37,11 +37,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from unfold.admin import TabularInline
 
 from karni.admin.derive import admin_meta, password_field_names
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = ["build_inline", "collect_inlines"]
 
@@ -76,14 +77,16 @@ def collect_inlines(
             try:
                 field = child._meta.get_field(name)
             except FieldDoesNotExist as exc:
-                raise ImproperlyConfigured(
+                raise KarniImproperlyConfigured(
                     f"{child._meta.label}.AdminMeta.inline_on names {name!r}, "
-                    f"which is not a field on {child.__name__}."
+                    f"which is not a field on {child.__name__}.",
+                    code="E302",
                 ) from exc
             if not isinstance(field, models.ForeignKey):
-                raise ImproperlyConfigured(
+                raise KarniImproperlyConfigured(
                     f"{child._meta.label}.AdminMeta.inline_on names {name!r}, "
-                    f"which is a {type(field).__name__}, not a ForeignKey."
+                    f"which is a {type(field).__name__}, not a ForeignKey.",
+                    code="E302",
                 )
             parent = field.remote_field.model
             mapping.setdefault(parent, []).append((child, name))

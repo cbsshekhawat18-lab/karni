@@ -13,7 +13,7 @@ options.
 ## Contents
 
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
-- **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [types](#karni-types), [mcp](#karni-mcp)
+- **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Generators**: [make](#karni-make)
 
@@ -179,6 +179,19 @@ karni check [OPTIONS]
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` | on |  |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
+
+### `karni explain`
+
+Explain an error code (E104, C101, PAY004, K106): why and the fix
+
+```
+karni explain [OPTIONS] CODE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `--json` |  | Machine-readable output. |
 
 ### `karni types`
 

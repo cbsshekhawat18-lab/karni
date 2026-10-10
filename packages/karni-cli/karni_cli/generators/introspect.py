@@ -79,7 +79,8 @@ def models_file(ws: Workspace, app: App) -> Path:
         raise CliError(
             f"{ws.rel(app.file('models'))}/ is a package — karni make writes "
             f"{ws.rel(path)}. Add the class to the package yourself (and re-export it "
-            "from models/__init__.py)."
+            "from models/__init__.py).",
+            code="C107",
         )
     return path
 
@@ -117,7 +118,8 @@ def require_model(ws: Workspace, app: App, name: str) -> ModelInfo:
     if info is None:
         raise CliError(
             f"No model {name} in {ws.rel(models_file(ws, app))} — create it first: "
-            f"karni make model {name} --app {app.label}"
+            f"karni make model {name} --app {app.label}",
+            code="C105",
         )
     return info
 

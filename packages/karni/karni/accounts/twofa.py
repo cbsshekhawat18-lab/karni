@@ -46,7 +46,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login as django_login
 from django.core.cache import cache
-from django.core.exceptions import ImproperlyConfigured
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.urls import path
@@ -59,6 +58,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from karni.accounts.api.throttles import AccountRateThrottle, AuthScopedRateThrottle
+from karni.exceptions import KarniImproperlyConfigured
 
 if TYPE_CHECKING:
     from django.contrib.auth.base_user import AbstractBaseUser
@@ -116,9 +116,10 @@ def _require_django_otp() -> Any:
     try:
         import django_otp
     except ImportError as exc:  # pragma: no cover - exercised only without the extra
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             "Two-factor authentication requires django-otp. "
-            "Install it with `pip install 'karni[2fa]'` and enable KARNI_2FA."
+            "Install it with `pip install 'karni[2fa]'` and enable KARNI_2FA.",
+            code="E501",
         ) from exc
     return django_otp
 

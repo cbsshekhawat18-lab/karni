@@ -26,12 +26,15 @@ def serve(
     project = require_project()
     if local:
         if build or detach:
-            raise CliError("--build/--detach apply to docker compose; drop them or drop --local.")
+            raise CliError(
+                "--build/--detach apply to docker compose; drop them or drop --local.", code="C004"
+            )
         if project_mod.venv_python(project) is None:
             raise CliError(
                 "karni serve --local needs the project's .venv "
                 "(uv venv && uv pip install -r pyproject.toml).\n"
-                "Without one, drop --local to run the docker compose stack."
+                "Without one, drop --local to run the docker compose stack.",
+                code="C002",
             )
         addrport = f"{host or '127.0.0.1'}:{port or 8000}"
         proc = project_mod.run_manage(project, ["runserver", addrport], docker=False, capture=False)
@@ -39,7 +42,8 @@ def serve(
         if host is not None or port is not None:
             raise CliError(
                 "--host/--port need --local; under docker compose the port is set in "
-                "docker-compose.yml (8000)."
+                "docker-compose.yml (8000).",
+                code="C004",
             )
         args = ["up", *(["--build"] if build else []), *(["--detach"] if detach else [])]
         proc = project_mod.run_compose(project, args)

@@ -25,7 +25,25 @@ PASSTHROUGH: dict[str, Any] = {"ignore_unknown_options": True, "allow_extra_args
 
 
 class CliError(Exception):
-    """User-facing CLI failure; the message is printed without a traceback."""
+    """User-facing CLI failure; the message is printed without a traceback.
+
+    ``code`` is a registered code (``C101``, or a Karni code such as ``E704``
+    passed through); ``str()`` is ``"<code>: <message> See <docs url>"`` and
+    ``karni explain <code>`` prints the full entry offline.
+    """
+
+    def __init__(self, message: str, *, code: str | None = None) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+
+    def __str__(self) -> str:
+        if not self.code:
+            return self.message
+        from karni_cli.errorcodes import docs_url
+
+        sep = "\n" if "\n" in self.message else " "
+        return f"{self.code}: {self.message}{sep}See {docs_url(self.code)}"
 
 
 def find_project(start: Path | None = None) -> Path | None:
@@ -40,7 +58,9 @@ def find_project(start: Path | None = None) -> Path | None:
 def require_project(start: Path | None = None) -> Path:
     project = find_project(start)
     if project is None:
-        raise CliError("No manage.py found here or above — run inside a Karni project.")
+        raise CliError(
+            "No manage.py found here or above — run inside a Karni project.", code="C001"
+        )
     return project
 
 
@@ -72,14 +92,16 @@ def resolve_execution(project: Path, docker: bool | None, service: str) -> str:
         if not compose_service_running(project, service):
             raise CliError(
                 f'docker compose service "{service}" is not running.\n'
-                "Start the stack first: docker compose up -d"
+                "Start the stack first: docker compose up -d",
+                code="C002",
             )
         return "docker"
     if docker is False:
         if venv_python(project) is None:
             raise CliError(
                 "No .venv found in the project (and --no-docker was given).\n"
-                "Create one (uv venv && uv pip install -r pyproject.toml) or drop --no-docker."
+                "Create one (uv venv && uv pip install -r pyproject.toml) or drop --no-docker.",
+                code="C002",
             )
         return "venv"
     if venv_python(project) is not None:
@@ -89,7 +111,8 @@ def resolve_execution(project: Path, docker: bool | None, service: str) -> str:
     raise CliError(
         "No way to run the project: no .venv and the compose stack is not running.\n"
         "Either `docker compose up -d`, or create a venv "
-        "(uv venv && uv pip install -r pyproject.toml)."
+        "(uv venv && uv pip install -r pyproject.toml).",
+        code="C002",
     )
 
 
@@ -160,5 +183,6 @@ def run_compose(project: Path, args: list[str]) -> subprocess.CompletedProcess[s
     except FileNotFoundError:
         raise CliError(
             "docker not found — install Docker with the compose plugin, "
-            "or run without it: karni serve --local"
+            "or run without it: karni serve --local",
+            code="C003",
         ) from None

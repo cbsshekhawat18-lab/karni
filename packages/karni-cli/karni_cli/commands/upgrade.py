@@ -45,7 +45,8 @@ def _installed_version(project: Path, docker: bool | None, service: str) -> str:
         raise CliError(
             "Could not determine the installed karni version "
             f"(exit {proc.returncode}): {proc.stderr.strip()}\n"
-            "Pass it instead: karni upgrade --from <version>"
+            "Pass it instead: karni upgrade --from <version>",
+            code="C009",
         )
     return proc.stdout.strip()
 
@@ -87,7 +88,8 @@ def _check_tree(project: Path, allow_dirty: bool) -> None:
         if not allow_dirty:
             raise CliError(
                 f"Refusing to upgrade: {why}\nPreview it with --dry-run, put the project "
-                "under git, or pass --allow-dirty to write anyway."
+                "under git, or pass --allow-dirty to write anyway.",
+                code="C201",
             )
         typer.echo(f"warning: {why} Continuing because of --allow-dirty.", err=True)
         return
@@ -101,7 +103,8 @@ def _check_tree(project: Path, allow_dirty: bool) -> None:
         if not allow_dirty:
             raise CliError(
                 f"Refusing to upgrade: {why}\nCommit or stash first, preview with --dry-run, "
-                "or pass --allow-dirty."
+                "or pass --allow-dirty.",
+                code="C201",
             )
         typer.echo(f"warning: {why} Continuing because of --allow-dirty.", err=True)
 
@@ -170,7 +173,8 @@ def upgrade(
     if then < now:
         raise CliError(
             f"--to {target} is older than the project's karni {current}; "
-            "karni upgrade does not downgrade."
+            "karni upgrade does not downgrade.",
+            code="C202",
         )
     horizon = changelog.horizon(changes)
     if then > horizon:

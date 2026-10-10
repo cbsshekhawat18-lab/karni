@@ -43,8 +43,10 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.core.signals import setting_changed
+
+from karni.errorcodes import KarniError
+from karni.exceptions import KarniImproperlyConfigured
 
 if TYPE_CHECKING:
     from django.db import models
@@ -75,12 +77,14 @@ ENTRY_POINT_GROUP: Final[str] = "karni.scopes"
 SETTING: Final[str] = "KARNI_SCOPES"
 
 
-class ScopeError(Exception):
+class ScopeError(KarniError):
     """Misuse of the scope API: no scope named, an unknown name, no reason."""
 
 
 class UnknownScope(ScopeError, LookupError):
     """A scope name that no built-in scope or installed module registers."""
+
+    code = "E003"
 
 
 class ScopeContextMissing(ScopeError):
@@ -92,13 +96,16 @@ class ScopeContextMissing(ScopeError):
     tenant_context(t)"``.
     """
 
+    code = "E006"
+
     def __init__(self, model: type[models.Model], scope: str, fix: str | None = None) -> None:
         self.model = model
         self.scope = scope
         how = fix or f"bind the current {scope} before querying"
         super().__init__(
             f"{model._meta.label} is filtered by the {scope!r} scope, but no {scope} is "
-            f"bound. Fix: {how}. To query across every {scope} on purpose, use "
+            f"bound, and Karni fails closed rather than return every {scope}'s rows. "
+            f"Fix: {how}. To query across every {scope} on purpose, use "
             f'{model.__name__}.objects.without("{scope}", reason="...").'
         )
 
@@ -270,7 +277,8 @@ class ScopeRegistry:
             raise ScopeError(
                 f"{model_name}.objects.without() needs the name of the scope to lift, "
                 f'e.g. without("{SOFT_DELETE}", reason="..."). '
-                f"Registered scopes: {', '.join(self.names())}."
+                f"Registered scopes: {', '.join(self.names())}.",
+                code="E003",
             )
         scopes = self._loaded()
         for name in names:
@@ -281,7 +289,8 @@ class ScopeRegistry:
             raise ScopeError(
                 f"{model_name}.objects.without({quoted}) needs a reason: pass "
                 'reason="<why this query must see rows the scope hides>", e.g. '
-                'reason="admin: deleted filter". The reason is logged.'
+                'reason="admin: deleted filter". The reason is logged.',
+                code="E004",
             )
         level = max(scopes[name].lift_log_level for name in names)
         logger.log(
@@ -310,25 +319,29 @@ class ScopeRegistry:
     @staticmethod
     def _add(scopes: dict[str, Scope], scope: object, *, source: str) -> None:
         if not isinstance(scope, Scope):
-            raise ImproperlyConfigured(
-                f"{source}: expected a karni.scopes.Scope subclass or instance, got {scope!r}."
+            raise KarniImproperlyConfigured(
+                f"{source}: expected a karni.scopes.Scope subclass or instance, got {scope!r}.",
+                code="E002",
             )
         kind = type(scope).__name__
         name = getattr(scope, "name", None)
         order = getattr(scope, "order", None)
         if not isinstance(name, str) or not name.isidentifier():
-            raise ImproperlyConfigured(
-                f"{source}: {kind}.name must be an identifier such as 'tenant', got {name!r}."
+            raise KarniImproperlyConfigured(
+                f"{source}: {kind}.name must be an identifier such as 'tenant', got {name!r}.",
+                code="E002",
             )
         if isinstance(order, bool) or not isinstance(order, int):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{source}: {kind}.order must be an int (soft_delete is 10, tenant 20), "
-                f"got {order!r}."
+                f"got {order!r}.",
+                code="E002",
             )
         if name in scopes:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{source}: a scope named {name!r} is already registered ({scopes[name]!r}). "
-                "Give the new scope another name, or unregister the existing one first."
+                "Give the new scope another name, or unregister the existing one first.",
+                code="E002",
             )
         scopes[name] = scope
 
@@ -341,18 +354,22 @@ class ScopeRegistry:
         if not isinstance(configured, list | tuple) or not all(
             isinstance(name, str) for name in configured
         ):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{SETTING} must be a list of scope names in pipeline order "
-                f"(registered: {registered}), or unset for all of them; got {configured!r}."
+                f"(registered: {registered}), or unset for all of them; got {configured!r}.",
+                code="E002",
             )
         unknown = [name for name in configured if name not in scopes]
         if unknown:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{SETTING} names unknown scope(s) {', '.join(unknown)}; registered: "
-                f"{registered}. Remove them, or install the module that provides them."
+                f"{registered}. Remove them, or install the module that provides them.",
+                code="E002",
             )
         if len(set(configured)) != len(configured):
-            raise ImproperlyConfigured(f"{SETTING} lists a scope twice: {configured!r}.")
+            raise KarniImproperlyConfigured(
+                f"{SETTING} lists a scope twice: {configured!r}.", code="E002"
+            )
         return tuple(scopes[name] for name in configured)
 
     def _unknown(self, name: str) -> UnknownScope:
@@ -370,7 +387,7 @@ def _load_entry_point(entry_point: metadata.EntryPoint, source: str) -> object:
     try:
         loaded = entry_point.load()
     except Exception as exc:  # noqa: BLE001 - re-raised with the entry point named
-        raise ImproperlyConfigured(f"{source} failed to load: {exc}") from exc
+        raise KarniImproperlyConfigured(f"{source} failed to load: {exc}", code="E002") from exc
     if isinstance(loaded, type) and issubclass(loaded, Scope):
         return loaded()
     return loaded

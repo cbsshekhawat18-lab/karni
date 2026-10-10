@@ -65,7 +65,8 @@ def plan(ws: Workspace, app: App, name: str) -> None:
     if name in BUILTIN:
         raise CliError(
             f"`{name}` is a Django/Karni command — an app command of that name would be "
-            "shadowed. Choose another name."
+            "shadowed. Choose another name.",
+            code="C103",
         )
     for package in ("management", "management/commands"):
         init = app.file(*package.split("/"), "__init__.py")

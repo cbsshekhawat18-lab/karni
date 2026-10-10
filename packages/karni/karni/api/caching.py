@@ -50,10 +50,12 @@ from typing import TYPE_CHECKING, Any, Final
 from django.apps import apps
 from django.conf import settings
 from django.core.cache import BaseCache, caches
-from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.exceptions import ValidationError
 from django.db.models import Model
 from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.utils.translation import get_language
+
+from karni.exceptions import KarniImproperlyConfigured
 
 if TYPE_CHECKING:
     from rest_framework.response import Response
@@ -85,7 +87,9 @@ class Cache:
         if self.ttl is not None and (
             isinstance(self.ttl, bool) or not isinstance(self.ttl, int) or self.ttl <= 0
         ):
-            raise ImproperlyConfigured(f"Cache(ttl={self.ttl!r}) must be a positive integer.")
+            raise KarniImproperlyConfigured(
+                f"Cache(ttl={self.ttl!r}) must be a positive integer.", code="E119"
+            )
         object.__setattr__(self, "depends_on", tuple(self.depends_on))
 
 
@@ -97,9 +101,10 @@ class Uncached:
 
     def __post_init__(self) -> None:
         if not isinstance(self.reason, str) or not self.reason.strip():
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 'Uncached(reason="...") needs a non-empty reason saying why this viewset is '
-                "never cached (e.g. reason='balances change on every request')."
+                "never cached (e.g. reason='balances change on every request').",
+                code="E119",
             )
 
 

@@ -36,14 +36,15 @@ def _add_dependency(project_root: str, distribution: str) -> bool:
     """Add the distribution to [project].dependencies. Returns False when present."""
     pyproject = Path(project_root) / "pyproject.toml"
     if not pyproject.is_file():
-        raise CliError("No pyproject.toml in the project root.")
+        raise CliError("No pyproject.toml in the project root.", code="C207")
     doc = tomlkit.parse(pyproject.read_text())
     try:
         deps = doc["project"]["dependencies"]
     except (KeyError, TypeError):
         raise CliError(
             "pyproject.toml has no [project].dependencies table — "
-            "karni add only manages that table; add the dependency manually."
+            "karni add only manages that table; add the dependency manually.",
+            code="C207",
         ) from None
     target = canonicalize_name(distribution)
     for dep in deps:

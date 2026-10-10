@@ -152,7 +152,7 @@ def test_karni_check_hook_failures(monkeypatch) -> None:
     from django.core.management.base import CommandError
 
     err = StringIO()
-    with pytest.raises(CommandError, match="2 failure"):
+    with pytest.raises(CommandError, match=r"E702: karni check found 2 problem"):
         call_command("karni_check", stderr=err)
     text = err.getvalue()
     assert "boom: exploded" in text and "layers: fat model detected" in text

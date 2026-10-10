@@ -30,6 +30,10 @@ razorpay = ["razorpay>=1.4"]
 [project.entry-points."karni.settings"]
 payments = "karni_payments.conf:DEFAULTS"
 
+# Error codes (PAY001...) for `karni explain` and docs/errors.md.
+[project.entry-points."karni.errorcodes"]
+payments = "karni_payments.errorcodes:CODES"
+
 [dependency-groups]
 dev = [
     "pytest>=8.2",

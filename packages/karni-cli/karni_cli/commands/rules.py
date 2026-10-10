@@ -46,7 +46,7 @@ def check_text(paths: list[Path], project: Path | None) -> tuple[str, int]:
     """Rendered findings and their count for ``paths``."""
     missing = [str(p) for p in paths if not p.is_file()]
     if missing:
-        raise CliError(f"No such file: {', '.join(missing)}")
+        raise CliError(f"No such file: {', '.join(missing)}", code="C010")
     findings = agent_data.check(paths, project)
     if not findings:
         return f"ok: no violations in {len(paths)} file(s)", 0
@@ -79,14 +79,14 @@ def rules(
     if explain:
         rule = data.rule(explain)
         if rule is None:
-            raise CliError(f"No rule {explain!r} — `karni rules` lists the codes.")
+            raise CliError(f"No rule {explain!r} — `karni rules` lists the codes.", code="C204")
         typer.echo(json.dumps(rule, indent=2) if as_json else render_explain(rule))
         return
     if procedure:
         found = data.procedure(procedure)
         if found is None:
             names = ", ".join(p["name"] for p in data.procedures)
-            raise CliError(f"No procedure {procedure!r} (available: {names}).")
+            raise CliError(f"No procedure {procedure!r} (available: {names}).", code="C204")
         typer.echo(json.dumps(found, indent=2) if as_json else render_procedure(found))
         return
     if prompts_doc:

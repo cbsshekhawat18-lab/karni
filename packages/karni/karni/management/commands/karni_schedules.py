@@ -17,8 +17,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.core.management.base import BaseCommand, CommandParser
 
+from karni.exceptions import KarniCommandError
 from karni.schedule import ScheduleError, describe_schedules, run_schedule
 
 _COLUMNS = ("name", "task", "timing", "source")
@@ -60,7 +61,7 @@ class Command(BaseCommand):
         try:
             rows = describe_schedules()
         except ScheduleError as exc:
-            raise CommandError(str(exc)) from None
+            raise KarniCommandError(exc.message, code=exc.code) from None
         if options["json"]:
             self.stdout.write(json.dumps(rows, indent=2, default=str))
         elif rows:
@@ -72,9 +73,9 @@ class Command(BaseCommand):
         try:
             result = run_schedule(name)
         except ScheduleError as exc:
-            raise CommandError(str(exc)) from None
+            raise KarniCommandError(exc.message, code=exc.code) from None
         if result.failed():
             if result.traceback:
                 self.stderr.write(str(result.traceback))
-            raise CommandError(f"Schedule {name!r} failed: {result.result!r}")
+            raise KarniCommandError(f"Schedule {name!r} failed: {result.result!r}", code="E408")
         self.stdout.write(f"Ran {name}: {result.result!r}")

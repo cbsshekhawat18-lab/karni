@@ -50,11 +50,13 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Model, Q, QuerySet
 from django.db.models.constants import LOOKUP_SEP
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS, BasePermission
+
+from karni.exceptions import KarniImproperlyConfigured, KarniTypeError, docs_url
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -77,6 +79,7 @@ __all__ = [
     "apply_rows",
     "describe_access",
     "missing_access_message",
+    "missing_access_text",
     "owner_paths_models",
     "readable",
     "target_read_scope",
@@ -199,9 +202,10 @@ class Predicate:
         return AllOf((*_flatten(self, AllOf), *_flatten(other, AllOf)))
 
     def __bool__(self) -> bool:
-        raise TypeError(
+        raise KarniTypeError(
             "Access predicates combine with | and & (e.g. Owned('user') | HasRole('staff')); "
-            "`or`, `and` and `not` would silently drop one side."
+            "`or`, `and` and `not` would silently drop one side.",
+            code="E109",
         )
 
 
@@ -235,15 +239,17 @@ class Owned(Predicate):
 
     def __init__(self, path: str | None = None, *, bypass: Predicate | None = None) -> None:
         if path is None or path == "":
-            raise ImproperlyConfigured(OWNED_NEEDS_A_FIELD)
+            raise KarniImproperlyConfigured(OWNED_NEEDS_A_FIELD, code="E104")
         if not isinstance(path, str):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Owned() takes the owner field's name as a string, got {path!r}. "
-                + OWNED_NEEDS_A_FIELD
+                + OWNED_NEEDS_A_FIELD,
+                code="E104",
             )
         if bypass is not None and not isinstance(bypass, Predicate):
-            raise ImproperlyConfigured(
-                f"Owned(bypass=...) takes a predicate such as HasRole('admin'), got {bypass!r}."
+            raise KarniImproperlyConfigured(
+                f"Owned(bypass=...) takes a predicate such as HasRole('admin'), got {bypass!r}.",
+                code="E103",
             )
         object.__setattr__(self, "path", path)
         object.__setattr__(self, "bypass", bypass)
@@ -296,8 +302,9 @@ class HasRole(Predicate):
 
     def __init__(self, *names: str) -> None:
         if not names or not all(isinstance(name, str) and name for name in names):
-            raise ImproperlyConfigured(
-                "HasRole() needs one or more role (group) names, e.g. HasRole('staff')."
+            raise KarniImproperlyConfigured(
+                "HasRole() needs one or more role (group) names, e.g. HasRole('staff').",
+                code="E105",
             )
         object.__setattr__(self, "names", tuple(names))
 
@@ -324,9 +331,10 @@ class Can(Predicate):
     __slots__ = ()
 
     def __init__(self, *grants: str) -> None:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             "Can(...) is reserved for the DB-grants tier (ADR 0001 Q2.2) and is not "
-            "available yet; use HasRole(...) over Django groups."
+            "available yet; use HasRole(...) over Django groups.",
+            code="E108",
         )
 
 
@@ -380,17 +388,19 @@ class Where(Predicate):
 
     def __post_init__(self) -> None:
         if not callable(self.fn):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"Where() takes a function of the request, got {self.fn!r}; "
-                "e.g. Where(lambda request: Q(published=True))."
+                "e.g. Where(lambda request: Q(published=True)).",
+                code="E106",
             )
 
     def _evaluate(self, request: Any) -> Q | bool:
         value = self.fn(request)
         if isinstance(value, Q | bool):
             return value
-        raise ImproperlyConfigured(
-            f"{self!r} returned {value!r}; a Where() function must return a Q or a bool."
+        raise KarniImproperlyConfigured(
+            f"{self!r} returned {value!r}; a Where() function must return a Q or a bool.",
+            code="E106",
         )
 
     def allows(self, request: Any) -> bool:
@@ -483,12 +493,14 @@ def _require_predicate(slot: str, value: object) -> Predicate:
     if isinstance(value, Predicate):
         return value
     if isinstance(value, type) and issubclass(value, Predicate):
-        raise ImproperlyConfigured(
-            f"Access({slot}={value.__name__}) needs an instance: write {value.__name__}()."
+        raise KarniImproperlyConfigured(
+            f"Access({slot}={value.__name__}) needs an instance: write {value.__name__}().",
+            code="E103",
         )
-    raise ImproperlyConfigured(
+    raise KarniImproperlyConfigured(
         f"Access({slot}=...) takes a predicate (Owned, HasRole, Authenticated, Public, "
-        f"Where, combined with | and &), got {value!r}."
+        f"Where, combined with | and &), got {value!r}.",
+        code="E103",
     )
 
 
@@ -546,23 +558,29 @@ class Unscoped:
 
     def __post_init__(self) -> None:
         if not isinstance(self.reason, str) or not self.reason.strip():
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 'Unscoped(reason="...") needs a non-empty reason saying why this viewset '
-                "opts out of access control (e.g. reason='public catalogue')."
+                "opts out of access control (e.g. reason='public catalogue').",
+                code="E107",
             )
 
 
 # --- compilation helpers ------------------------------------------------------------
 
 
-def missing_access_message(view_class: type[Any]) -> str:
-    """The deny-all message for a viewset that declares no ``access`` (names the fix)."""
+def missing_access_text(view_class: type[Any]) -> str:
+    """What is wrong and how to fix it, for a viewset that declares no ``access``."""
     return (
-        f"{view_class.__name__} declares no `access`, so every request is denied "
-        "(ADR 0001 Q2.1). Declare one on the viewset, e.g. "
-        "`access = Access(read=Authenticated(), write=Authenticated())`, "
+        f"{view_class.__name__} declares no `access`, so every request is denied: access "
+        "is mandatory (ADR 0001 Q2.1). Declare one on the viewset, e.g. "
+        "`access = Access(read=Authenticated(), write=Owned('owner'))`, "
         "or opt out explicitly with `access = Unscoped(reason=...)`."
     )
+
+
+def missing_access_message(view_class: type[Any]) -> str:
+    """The deny-all message (code E101 and docs link) for a viewset without ``access``."""
+    return f"E101: {missing_access_text(view_class)} See {docs_url('E101')}"
 
 
 def action_override(view: Any) -> Predicate | None:
@@ -578,9 +596,10 @@ def action_override(view: Any) -> Predicate | None:
     if override is None:
         return None
     if not isinstance(override, Predicate):
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{type(view).__name__}.{action}: @action(access=...) takes a predicate such as "
-            f"HasRole('admin'), got {override!r}."
+            f"HasRole('admin'), got {override!r}.",
+            code="E103",
         )
     return override
 
@@ -693,9 +712,10 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
             if isinstance(declaration, Predicate)
             else "`access = Access(read=..., write=...)` or `Unscoped(reason=...)`"
         )
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"{name}.access must be an Access(...) or Unscoped(...) declaration, got "
-            f"{declaration!r}; write {hint}."
+            f"{declaration!r}; write {hint}.",
+            code="E102",
         )
     owned: list[Owned] = list(declaration.owned()) if isinstance(declaration, Access) else []
     for extra in getattr(view_class, "get_extra_actions", lambda: [])():
@@ -703,9 +723,10 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
         if override is None:
             continue
         if not isinstance(override, Predicate):
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name}.{extra.__name__}: @action(access=...) takes a predicate such as "
-                f"HasRole('admin'), got {override!r}."
+                f"HasRole('admin'), got {override!r}.",
+                code="E103",
             )
         owned.extend(override.owned())
     if model is None:
@@ -713,10 +734,11 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
     for predicate in owned:
         valid, problem = _owned_target(model, predicate.path)
         if not valid:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 f"{name}: Owned({predicate.path!r}) does not lead from {model.__name__} to "
                 f"the user model ({problem}). Name a relation path ending at the user, "
-                'e.g. Owned("organizer") or Owned("event__organizer").'
+                'e.g. Owned("organizer") or Owned("event__organizer").',
+                code="E104",
             )
 
 
@@ -791,7 +813,7 @@ class AccessPermission(BasePermission):
         declaration = view.get_access()
         if declaration is None:
             _log_missing(type(view))
-            raise PermissionDenied(detail=missing_access_message(type(view)), code="access_missing")
+            raise PermissionDenied(detail=missing_access_message(type(view)), code="E101")
         if isinstance(declaration, Unscoped):
             return True
         predicate = action_predicate(view, declaration)

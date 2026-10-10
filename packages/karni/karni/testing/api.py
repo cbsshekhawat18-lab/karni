@@ -74,6 +74,8 @@ from rest_framework import serializers
 from rest_framework import test as drf_test
 from rest_framework.relations import ManyRelatedField, RelatedField
 
+from karni.exceptions import KarniAssertionError, KarniValueError
+
 __all__ = [
     "CHECKS",
     "APITestCase",
@@ -197,26 +199,30 @@ def resolve_resource(resource: Any) -> Resource:
     if isinstance(resource, type) and issubclass(resource, models.Model):
         viewset = viewset_for_model(resource, router)
         if viewset is None:
-            raise AssertionError(
+            raise KarniAssertionError(
                 f"No routed viewset serves {resource.__name__} — route one "
-                f"(karni make viewset {resource.__name__}) or pass the viewset class."
+                f"(karni make viewset {resource.__name__}) or pass the viewset class.",
+                code="E601",
             )
     elif isinstance(resource, str):
         prefix = resource.strip("/").removeprefix("api/")
         viewset = next((vs for p, vs, _b in registry if p == prefix), None)
         if viewset is None:
             known = ", ".join(sorted(p for p, _vs, _b in registry)) or "none"
-            raise AssertionError(f"No route {resource!r} on the API router (routes: {known}).")
+            raise KarniAssertionError(
+                f"No route {resource!r} on the API router (routes: {known}).", code="E601"
+            )
     else:
         viewset = resource
     for prefix, registered, basename in registry:
         if registered is viewset:
             model = viewset.model if viewset.model is not None else viewset.queryset.model
             return Resource(viewset, model, prefix, basename)
-    raise AssertionError(
+    raise KarniAssertionError(
         f"{getattr(viewset, '__name__', viewset)!r} is not routed on the API router "
         "(KARNI_API_ROUTER) — assert_crud tests a resource through its URLs. Check "
-        "auto_register, or register it on the router your factory builds."
+        "auto_register, or register it on the router your factory builds.",
+        code="E601",
     )
 
 
@@ -462,8 +468,8 @@ class CrudReport:
         return "\n".join(lines)
 
 
-class _RequestError(AssertionError):
-    pass
+class _RequestError(KarniAssertionError):
+    code = "E604"
 
 
 @contextmanager
@@ -513,7 +519,9 @@ class _Crud:
     ) -> None:
         unknown = set(skip) - set(CHECKS)
         if unknown:
-            raise ValueError(f"skip={sorted(unknown)}: unknown checks (known: {', '.join(CHECKS)})")
+            raise KarniValueError(
+                f"skip={sorted(unknown)}: unknown checks (known: {', '.join(CHECKS)})", code="E603"
+            )
         self.resource = resource
         self.role = role
         self.values = dict(values)
@@ -1003,7 +1011,7 @@ def assert_crud(
     )
     report = run.run()
     if report.failures:
-        raise AssertionError(report.render())
+        raise KarniAssertionError(report.render(), code="E602")
     return report
 
 

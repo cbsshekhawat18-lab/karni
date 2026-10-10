@@ -18,8 +18,9 @@ import json
 from typing import Any
 
 from django.conf import settings
-from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.core.management.base import BaseCommand, CommandParser
 
+from karni.exceptions import KarniCommandError
 from karni.seeding import DEFAULT_COUNT, DEFAULT_SEED, SeedError, seed
 
 
@@ -50,13 +51,14 @@ class Command(BaseCommand):
 
     def handle(self, *args: Any, **options: Any) -> None:
         if not settings.DEBUG and not options["force"]:
-            raise CommandError(
+            raise KarniCommandError(
                 "Refusing to seed: DEBUG is False, so this may be a production database, and "
                 "seeding creates a demo superuser with a known password. Pass --force if you "
-                "really mean it."
+                "really mean it.",
+                code="E615",
             )
         if options["count"] < 0:
-            raise CommandError("--count must be 0 or more.")
+            raise KarniCommandError("--count must be 0 or more.", code="E614")
         raw_seed = options["seed"]
         seed_value: int | str = int(raw_seed) if str(raw_seed).lstrip("-").isdigit() else raw_seed
         try:
@@ -67,7 +69,7 @@ class Command(BaseCommand):
                 models=options["model"] or None,
             )
         except SeedError as exc:
-            raise CommandError(str(exc)) from exc
+            raise KarniCommandError(exc.message, code=exc.code) from exc
         if options["json"]:
             self.stdout.write(json.dumps(report.to_dict(), indent=2))
         else:

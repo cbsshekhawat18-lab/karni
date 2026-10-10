@@ -67,12 +67,13 @@ from typing import Any, TypeVar, overload
 from celery import shared_task
 from django.apps import apps
 from django.core import serializers
-from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save
 from django.utils.module_loading import autodiscover_modules
 
 from karni.celery import resolve_task
+from karni.exceptions import KarniImproperlyConfigured, KarniTypeError
 
 __all__ = [
     "AUTODISCOVER_MODULES",
@@ -169,10 +170,11 @@ def _dotted_name(func: Callable[..., Any]) -> str:
     module = getattr(func, "__module__", None)
     qualname = getattr(func, "__qualname__", None)
     if not module or not qualname or "<" in qualname:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"queued listener {func!r} must be a module-level function: the worker finds "
             "it by its dotted name. Define it at the top level of <app>/listeners.py, or "
-            "queue an existing task with queued('app.tasks.task_name')."
+            "queue an existing task with queued('app.tasks.task_name').",
+            code="E401",
         )
     return f"{module}.{qualname}"
 
@@ -317,7 +319,9 @@ def _listener_id(listener: Any) -> str:
 
 def _prepare(listener: Callable[[Any], Any], queued_: bool) -> Callable[[Any], Any]:
     if not callable(listener):
-        raise TypeError(f"karni.events: listener must be callable, got {listener!r}.")
+        raise KarniTypeError(
+            f"karni.events: listener must be callable, got {listener!r}.", code="E402"
+        )
     if queued_ and not isinstance(listener, QueuedListener):
         return QueuedListener(listener)
     return listener
@@ -365,9 +369,10 @@ def _decorator(event: str, model: ModelRef, queued_: bool) -> Callable[[F], F]:
     if not isinstance(model, str) and not (
         isinstance(model, type) and issubclass(model, models.Model)
     ):
-        raise TypeError(
+        raise KarniTypeError(
             f"karni.events.on_{event}() takes a model class or an 'app_label.ModelName' "
-            f"string, got {model!r}."
+            f"string, got {model!r}.",
+            code="E402",
         )
 
     def decorate(listener: F) -> F:

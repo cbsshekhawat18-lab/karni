@@ -60,7 +60,7 @@ def test_an_api_break_fails_with_the_changes_listed(tmp_path: Path) -> None:
     assert '- removed  paths["/api/gone/"]' in message
     assert "~ changed  components.schemas.TestappEvent.properties.capacity.type" in message
     assert "+ added    components.schemas.TestappEvent.properties.title" in message
-    assert f"{SNAPSHOT_ENV}=1 karni test" in message and message.endswith("extra hint")
+    assert f"{SNAPSHOT_ENV}=1 karni test" in message and "\nextra hint\nSee " in message
     lines = message.splitlines()
     first_added = next(i for i, line in enumerate(lines) if "+ added" in line)
     first_removed = next(i for i, line in enumerate(lines) if "- removed" in line)

@@ -90,22 +90,27 @@ def spec_for(
 ) -> PageSpec:
     require_kebab(name, "Page name")
     if kind is not None and kind not in KINDS:
-        raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.")
+        raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.", code="C106")
     if kind is not None and resource is None:
-        raise CliError(f"--kind {kind} needs --resource <route>, e.g. --resource events.")
+        raise CliError(
+            f"--kind {kind} needs --resource <route>, e.g. --resource events.", code="C004"
+        )
     if resource is not None:
         require_kebab(resource, "--resource")
         kind = kind or "list"
     base = (path or f"/{resource or name}").rstrip("/") or "/"
     if not _PATH.match(base):
-        raise CliError(f"--path {path!r} must look like /events or /admin/events.")
+        raise CliError(f"--path {path!r} must look like /events or /admin/events.", code="C106")
     if title is None:
         stem = name
         for suffix in _SUFFIXES:
             stem = stem.removesuffix(suffix)
         title = humanize(resource if kind == "list" and resource else stem)
     if any(ch in title for ch in '"{}<>\\`'):
-        raise CliError(f"--title {title!r}: plain text only (no quotes, braces or angle brackets).")
+        raise CliError(
+            f"--title {title!r}: plain text only (no quotes, braces or angle brackets).",
+            code="C106",
+        )
     return PageSpec(name, kind, resource, base, title)
 
 
@@ -265,7 +270,7 @@ def plan(
     source = render(spec, routes)
     count = source.count("\n")
     if count > MAX_LINES:  # pragma: no cover - the templates stay far below the cap
-        raise CliError(f"internal: generated page is {count} lines (cap {MAX_LINES}).")
+        raise CliError(f"internal: generated page is {count} lines (cap {MAX_LINES}).", code="C199")
     ws.create(spec.file, source)
     if spec.resource and spec.resource not in _routed_resources(ws):
         ws.note(
@@ -288,7 +293,8 @@ def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
         raise CliError(
             f"{ROUTES.as_posix()} with the `{IMPORT_MARKER}` and `{ROUTE_MARKER}` markers "
             "was not found (projects scaffolded before `karni make`). Register the route "
-            f"yourself and re-run with --no-route:\n{manual}"
+            f"yourself and re-run with --no-route:\n{manual}",
+            code="C108",
         )
     lines = text.splitlines()
     import_line = f'import {spec.component} from "./pages/{spec.name}";'
@@ -298,7 +304,8 @@ def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
             if f"component: {spec.component}" not in owner:
                 raise CliError(
                     f"Route {path} is already registered in {ROUTES.as_posix()} — choose "
-                    "another --path (or remove the existing route)."
+                    "another --path (or remove the existing route).",
+                    code="C107",
                 )
     if import_line not in lines:
         index = next(i for i, ln in enumerate(lines) if IMPORT_MARKER in ln)

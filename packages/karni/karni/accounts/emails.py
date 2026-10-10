@@ -26,11 +26,12 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 from django.utils.module_loading import import_string
+
+from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
     "DEFAULT_EMAIL_BACKEND",
@@ -180,8 +181,9 @@ def get_email_backend() -> AccountsEmailBackend:
     backend_cls = import_string(path)
     backend = backend_cls()
     if not isinstance(backend, AccountsEmailBackend):
-        raise ImproperlyConfigured(
-            f"KARNI_ACCOUNTS_EMAIL_BACKEND ({path!r}) must name an AccountsEmailBackend subclass."
+        raise KarniImproperlyConfigured(
+            f"KARNI_ACCOUNTS_EMAIL_BACKEND ({path!r}) must name an AccountsEmailBackend subclass.",
+            code="E201",
         )
     return backend
 
@@ -207,8 +209,9 @@ def build_link(purpose: str, token: str) -> str:
     try:
         template = links[purpose]
     except KeyError as exc:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"No KARNI_ACCOUNTS_LINKS entry for token purpose {purpose!r}; "
-            f"known purposes: {sorted(links)}."
+            f"known purposes: {sorted(links)}.",
+            code="E202",
         ) from exc
     return template.format(frontend=frontend.rstrip("/"), token=token)

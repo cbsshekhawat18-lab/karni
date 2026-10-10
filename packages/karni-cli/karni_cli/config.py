@@ -71,7 +71,7 @@ def project_path(project: Path) -> Path:
 def key(name: str) -> ConfigKey:
     found = KEYS.get(name)
     if found is None:
-        raise CliError(f"Unknown setting {name!r} (known: {', '.join(sorted(KEYS))}).")
+        raise CliError(f"Unknown setting {name!r} (known: {', '.join(sorted(KEYS))}).", code="C007")
     return found
 
 
@@ -82,7 +82,7 @@ def parse(name: str, raw: str) -> bool:
         return True
     if text in _FALSE:
         return False
-    raise CliError(f"{name} is a boolean: use true or false, got {raw!r}.")
+    raise CliError(f"{name} is a boolean: use true or false, got {raw!r}.", code="C007")
 
 
 def render(value: bool) -> str:
@@ -96,13 +96,15 @@ def read_file(path: Path) -> dict[str, bool]:
     try:
         data = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
-        raise CliError(f"{path}: not valid TOML ({exc}).") from None
+        raise CliError(f"{path}: not valid TOML ({exc}).", code="C007") from None
     found: dict[str, bool] = {}
     for name in KEYS:
         if name not in data:
             continue
         if not isinstance(data[name], bool):
-            raise CliError(f"{path}: {name} must be true or false, got {data[name]!r}.")
+            raise CliError(
+                f"{path}: {name} must be true or false, got {data[name]!r}.", code="C007"
+            )
         found[name] = data[name]
     return found
 
@@ -131,10 +133,10 @@ def write(name: str, value: bool, path: Path) -> None:
             else tomlkit.document()
         )
     except Exception as exc:  # noqa: BLE001 - tomlkit raises its own parse errors
-        raise CliError(f"{path}: not valid TOML ({exc}).") from None
+        raise CliError(f"{path}: not valid TOML ({exc}).", code="C007") from None
     document[name] = value
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(tomlkit.dumps(document), encoding="utf-8")
     except OSError as exc:
-        raise CliError(f"Cannot write {path}: {exc}") from None
+        raise CliError(f"Cannot write {path}: {exc}", code="C008") from None

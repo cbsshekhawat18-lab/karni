@@ -1,0 +1,26 @@
+[
+  {
+    "id": "karni/no-raw-elements",
+    "title": "Raw <table>/<form>/<input>/<select>/<textarea> in project code",
+    "why": "@karni/ui ships these as schema-driven components (sorting, pagination, validation, accessibility). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.",
+    "fix": "Compose the component the message names: ResourceTable for <table>, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."
+  },
+  {
+    "id": "karni/max-page-lines",
+    "title": "A page file is longer than its cap (50 lines by default)",
+    "why": "Pages compose @karni/ui components; a long page is rebuilding something Karni ships.",
+    "fix": "Compose Page / ResourceTable / ResourceForm / ResourceDetail and their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`."
+  },
+  {
+    "id": "karni/no-deep-imports",
+    "title": "An import reaches into @karni/ui internals",
+    "why": "Only the package root is public API (docs/stability.md); internals change without notice, and a vendored copy forks the component.",
+    "fix": "Import from \"@karni/ui\" and compose or extend the exported component. Opt out only with `// eslint-disable-next-line karni/no-deep-imports -- <reason>`."
+  },
+  {
+    "id": "karni/no-direct-http",
+    "title": "fetch / axios / XMLHttpRequest / WebSocket outside the api client",
+    "why": "The generated typed hooks and KarniClient handle auth, errors, retries and types in one place; ad-hoc HTTP calls bypass all of it.",
+    "fix": "Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui; keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`."
+  }
+]

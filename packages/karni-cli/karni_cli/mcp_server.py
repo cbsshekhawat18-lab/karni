@@ -88,7 +88,9 @@ def _server_class() -> Any:
 
         return FastMCP
     except ImportError:
-        raise CliError("karni mcp needs the MCP SDK: pip install 'karni-cli[mcp]'") from None
+        raise CliError(
+            "karni mcp needs the MCP SDK: pip install 'karni-cli[mcp]'", code="C006"
+        ) from None
 
 
 def build_server(project: Path | None = None) -> Any:

@@ -41,6 +41,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from karni.exceptions import KarniAssertionError
+
 __all__ = [
     "SNAPSHOT_ENV",
     "Change",
@@ -141,9 +143,10 @@ def assert_schema_snapshot(
         return
     if not target.exists():
         if _truthy(os.environ.get("CI")):
-            raise AssertionError(
+            raise KarniAssertionError(
                 f"No OpenAPI snapshot at {target}. Generate it locally ({accept}) and commit "
-                "it — CI never writes snapshots." + (f"\n{hint}" if hint else "")
+                "it — CI never writes snapshots." + (f"\n{hint}" if hint else ""),
+                code="E607",
             )
         _write(target, generated)
         warnings.warn(
@@ -154,10 +157,11 @@ def assert_schema_snapshot(
     if generated == committed:
         return
     changes = schema_changes(committed, generated)
-    raise AssertionError(
+    raise KarniAssertionError(
         f"The OpenAPI schema differs from {target}:\n{render_changes(changes)}\n"
         f"If the change is intended, accept it with {accept} and commit the file."
-        + (f"\n{hint}" if hint else "")
+        + (f"\n{hint}" if hint else ""),
+        code="E608",
     )
 
 

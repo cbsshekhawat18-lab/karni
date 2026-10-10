@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.contrib.auth.base_user import BaseUserManager
 
+from karni.exceptions import KarniValueError
 from karni.managers import BaseQuerySet, ScopedManagerMixin
 
 if TYPE_CHECKING:
@@ -41,7 +42,7 @@ class KarniUserManager(ScopedManagerMixin, BaseUserManager.from_queryset(BaseQue
     ) -> AbstractKarniUser:
         """Shared implementation behind ``create_user`` and ``create_superuser``."""
         if not email:
-            raise ValueError("Users require an email address.")
+            raise KarniValueError("Users require an email address.", code="E203")
         email = self.normalize_email(email)
         user: AbstractKarniUser = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -73,7 +74,7 @@ class KarniUserManager(ScopedManagerMixin, BaseUserManager.from_queryset(BaseQue
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         if extra_fields["is_staff"] is not True:
-            raise ValueError("Superusers must have is_staff=True.")
+            raise KarniValueError("Superusers must have is_staff=True.", code="E203")
         if extra_fields["is_superuser"] is not True:
-            raise ValueError("Superusers must have is_superuser=True.")
+            raise KarniValueError("Superusers must have is_superuser=True.", code="E203")
         return self._create_user(email, password, **extra_fields)

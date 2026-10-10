@@ -34,7 +34,7 @@ import json
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from django.core.exceptions import ImproperlyConfigured
+from karni.exceptions import KarniImproperlyConfigured
 
 from karni_payments import conf
 from karni_payments.providers.base import (
@@ -60,9 +60,10 @@ def _razorpay_sdk() -> Any:
     try:
         import razorpay
     except ImportError as exc:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             "The Razorpay provider needs the razorpay SDK — install the extra: "
-            'pip install "karni-payments[razorpay]".'
+            'pip install "karni-payments[razorpay]".',
+            code="PAY003",
         ) from exc
     return razorpay
 
@@ -82,9 +83,11 @@ class RazorpayProvider(PaymentProvider):
         key_id = str(conf.get("RAZORPAY_KEY_ID"))
         key_secret = str(conf.get("RAZORPAY_KEY_SECRET"))
         if not key_id or not key_secret:
-            raise ImproperlyConfigured(
+            raise KarniImproperlyConfigured(
                 "RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not set — the Razorpay "
-                "provider cannot make API calls."
+                "provider cannot make API calls. Set both in the environment (.env in "
+                "development), or use KARNI_PAYMENTS_PROVIDER = 'test' locally.",
+                code="PAY004",
             )
         return _razorpay_sdk().Client(auth=(key_id, key_secret))
 
@@ -123,8 +126,10 @@ class RazorpayProvider(PaymentProvider):
         """Verify signature + event-id header, then map the event."""
         secret = str(conf.get("RAZORPAY_WEBHOOK_SECRET"))
         if not secret:
-            raise ImproperlyConfigured(
-                "RAZORPAY_WEBHOOK_SECRET is not set — Razorpay webhooks cannot be verified."
+            raise KarniImproperlyConfigured(
+                "RAZORPAY_WEBHOOK_SECRET is not set — Razorpay webhooks cannot be verified, "
+                "so they are refused. Copy the webhook secret from the Razorpay dashboard.",
+                code="PAY005",
             )
         event_id = headers.get(EVENT_ID_HEADER, "")
         if not event_id:

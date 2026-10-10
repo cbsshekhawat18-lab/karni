@@ -56,7 +56,9 @@ def access_declaration(spec: str, model: ModelInfo | None) -> tuple[list[str], l
         return ['read=HasRole("staff")', 'write=HasRole("staff")'], ["HasRole"]
     if kind == "role":
         if not _ROLE.match(arg):
-            raise CliError(f"--access role:<name> needs a role (group) name, got {spec!r}.")
+            raise CliError(
+                f"--access role:<name> needs a role (group) name, got {spec!r}.", code="C106"
+            )
         role = pystr(arg)
         return [f"read=HasRole({role})", f"write=HasRole({role})"], ["HasRole"]
     if kind == "owned":
@@ -64,17 +66,19 @@ def access_declaration(spec: str, model: ModelInfo | None) -> tuple[list[str], l
             raise CliError(
                 "--access owned:<field> needs the relation to the user, e.g. owned:organizer "
                 f'or owned:event__organizer (got {spec!r}). Owned("created_by") only when '
-                "whoever created the row is its owner."
+                "whoever created the row is its owner.",
+                code="C106",
             )
         first = arg.split("__", 1)[0]
         if model is not None and not model.is_relation(first):
             raise CliError(
                 f"--access {spec}: {model.name}.{first} is not a relation field. Owned() needs "
-                f"a ForeignKey to the user, e.g. add owner:fk:User to {model.name} first."
+                f"a ForeignKey to the user, e.g. add owner:fk:User to {model.name} first.",
+                code="C106",
             )
         path = pystr(arg)
         return [f"read=Owned({path})", f"write=Owned({path})"], ["Owned"]
-    raise CliError(f"--access {spec!r}: choose one of {ACCESS_CHOICES}.")
+    raise CliError(f"--access {spec!r}: choose one of {ACCESS_CHOICES}.", code="C106")
 
 
 def plan(
@@ -90,7 +94,7 @@ def plan(
     declaration, predicates = access_declaration(access or DEFAULT_ACCESS, model)
     for name in search:
         if not model.has_field(name):
-            raise CliError(f"--search {name}: {model.name} has no field {name!r}.")
+            raise CliError(f"--search {name}: {model.name} has no field {name!r}.", code="C106")
     path = viewsets_file(ws, app)
     rel = ws.rel(path)
     text = ws.read(path) or ""
@@ -107,7 +111,8 @@ def plan(
                     ):
                         raise CliError(
                             f"{rel} already routes {model.name} through {node.name} — edit "
-                            "that class (or delete it first)."
+                            "that class (or delete it first).",
+                            code="C107",
                         )
     line = ws.line_length
     body = [f"class {class_name}(BaseViewSet):", f"    model = {model.name}"]
