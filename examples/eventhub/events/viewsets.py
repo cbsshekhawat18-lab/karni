@@ -11,7 +11,6 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from events.models import Booking, Event, TicketTier, Venue
-from events.serializers import BookingSerializer
 
 STAFF = HasRole("staff")
 PUBLISHED = Where(lambda request: Q(status=Event.Status.PUBLISHED))
@@ -78,7 +77,6 @@ class TicketTierViewSet(BaseViewSet):
 
 class BookingViewSet(BaseViewSet):
     model = Booking
-    serializer_class = BookingSerializer
     access = Access(
         read=Owned("attendee") | Owned("event__organizer") | STAFF,
         write=Owned("attendee"),

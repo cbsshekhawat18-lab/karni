@@ -11,11 +11,13 @@ It lives in the Karni repository and runs in CI, so a framework change that
 breaks a real app breaks the build. Read it instead of the reference docs:
 each section below names the Karni feature and the file that uses it.
 
-**Project code: 656 lines** (models 62, viewsets 138, pages 315, other 141),
+**Project code: 582 lines** (models 83, viewsets 87, pages 291, other 121),
 measured with `python scripts/loc.py --pristine <karni new output>` —
 non-blank, non-comment lines of everything EventHub wrote, excluding tests,
-migrations, lockfiles and the untouched scaffold. The 156 lines over Karni's
-500-line target are attributed, line by line, in [FRICTION.md](FRICTION.md).
+migrations, lockfiles and the untouched scaffold. The first build measured
+656; the framework fixes that [FRICTION.md](FRICTION.md) asked for brought it
+to 582, and the 82 lines still over Karni's 500-line target are attributed
+there.
 
 ## Run it
 
@@ -25,17 +27,19 @@ python3.12 -m venv .venv
 .venv/bin/pip install -e '../../packages/karni[images]' -e ../../modules/karni-payments \
     'psycopg[binary]' gunicorn uvicorn-worker pytest pytest-django
 cp .env.example .env            # then: DATABASE_URL=sqlite:///data/db.sqlite3, REDIS_URL=redis://127.0.0.1:6379/0,
-                                #       KARNI_AUTH_MODE=session, KARNI_PAYMENTS_PROVIDER=test, MEDIA_ROOT=data/media
+                                #       KARNI_AUTH_MODE=session, KARNI_PAYMENTS_PROVIDER=test, MEDIA_ROOT=data/media,
+                                #       KARNI_ACCOUNTS_DEFAULT_ROLES=attendee,
+                                #       KARNI_SEED_LOGINS={"organizer@example.com": ["organizer"], "attendee@example.com": ["attendee"]}
 karni migrate && karni seed --reset --seed 42
 karni serve --local             # Django on :8000
 karni worker                    # Celery: the payment webhook and the confirmation email
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-`karni seed` prints the demo login (`demo@example.com`, every role). The seeds
-add `organizer@example.com` and `attendee@example.com` (password
-`karni-password`), three venues, six events (five published), two tiers each
-and ten bookings — the same rows on every machine. Docker Compose works too
+`karni seed` prints the demo login (`demo@example.com`, every role) and the
+two `KARNI_SEED_LOGINS` (`organizer@example.com`, `attendee@example.com`,
+password `karni-password`); the seeds add three venues, six events (five
+published), two tiers each and ten bookings — the same rows on every machine. Docker Compose works too
 (`cp .env.example .env && karni serve`), with the webhook worker included.
 
 ## The walkthrough
@@ -57,7 +61,10 @@ karni make model Booking event:fk:Event tier:fk:TicketTier attendee:fk:User quan
 Every model is a `karni.models.BaseModel`: UUID keys, timestamps, soft delete
 and audit stamps come for free, and `DELETE` on the API hides rows instead
 of removing them. The hand-written parts are two properties
-(`TicketTier.remaining`, `Booking.total`) and two status columns.
+(`TicketTier.remaining`, `Booking.total`), two status columns, an `APIMeta`
+that keeps `status` and `payment` read-only, and `Booking.clean()` — the
+capacity rule and the tier/event cross-check, which the generated serializer
+runs on every create and update.
 
 ### Access — `events/viewsets.py`
 
@@ -79,8 +86,8 @@ class EventViewSet(BaseViewSet):
 `Owned("event__organizer")` lets organizers manage tiers of their events.
 A booking is readable by its attendee *and* the event's organizer, but
 writable only by the attendee (the organizer gets a 403, as the tests prove).
-Roles are Django groups; `events/listeners.py` gives every new user the
-`attendee` role.
+Roles are Django groups; `KARNI_ACCOUNTS_DEFAULT_ROLES=attendee` gives every
+new user the `attendee` role.
 
 ### Custom actions
 
@@ -107,12 +114,13 @@ Celery worker after the commit: Django's `send_mail`, stamped once with
 `confirmation_sent_at`. No signal wiring, no `AppConfig.ready()`: Karni
 imports `listeners.py` for every app at startup.
 
-### Domain rules — `events/serializers.py`
+### Domain rules — `Booking.clean()`
 
 The capacity rule ("only N seats left in VIP") and the tier/event cross-check
-live in a `validate()` method. The serializer exists only for that, which is
-why it carries a `# karni: allow(redundant-serializer)` reason, written by
-`karni make serializer Booking --reason ...`.
+live in the model's `clean()`. Karni's generated serializer runs it before
+every create and update, with the values the viewset stamps (the attendee),
+and turns its `ValidationError` into the 400 response, so no serializer is
+written for a domain rule.
 
 ### Admin
 
@@ -132,9 +140,9 @@ pickers). EventHub adds:
   (`karni make component TierList`);
 - `booking-detail.tsx` — "Pay now" calls the `pay` action and follows the
   checkout URL;
-- `event-dashboard.tsx` — three `Stat` tiles, the bookings table and the CSV
-  export link;
-- `login.tsx` — see FRICTION F1.
+- `event-dashboard.tsx` — three `Stat` tiles, this event's bookings
+  (`ResourceTable params={{ event: id }}`) and the CSV export link;
+- `login.tsx` — `karni make page login --kind login`: @karni/ui's `LoginForm`.
 
 Every page stays under the 50-line cap enforced by `karni/max-page-lines`.
 
@@ -161,9 +169,9 @@ the OpenAPI contract: `karni test` fails on an accidental API break.
 ### Seeds — `events/seeds.py`
 
 `karni make seeder` wrote one class per model. Attribute overrides give the
-venues and events names; `seed()` overrides make tiers and bookings consistent
-and create the two known logins. `karni seed --seed 42` reproduces the same
-rows, UUIDs included.
+venues and events names; `seed()` overrides make tiers and bookings consistent.
+The known logins come from `KARNI_SEED_LOGINS`. `karni seed --seed 42`
+reproduces the same rows, UUIDs included.
 
 ### End to end — `frontend/e2e/`
 
@@ -191,8 +199,7 @@ ESLint preset) is clean.
 | Models, viewsets, pages, tests | the four `karni make model` lines above |
 | Payments | `karni add payments` |
 | Listeners | `karni make listener send_booking_confirmation --on Booking.updated --queued` |
-| Domain rule | `karni make serializer Booking --reason "..."` |
 | Factories, seeds | `karni make factory Event`, `karni make factory Booking`, `karni make seeder <Model>` ×4 |
-| Extra pages | `karni make page login --path /login`, `karni make page event-dashboard --path '/events/$id/dashboard'`, `karni make component TierList` |
+| Extra pages | `karni make page login --kind login`, `karni make page event-dashboard --path '/events/$id/dashboard'`, `karni make component TierList` |
 | Migrations | `karni make migration --app events && karni migrate` |
 | Verify | `karni test`, `karni check`, `karni rules sync --check`, `scripts/e2e.sh` |

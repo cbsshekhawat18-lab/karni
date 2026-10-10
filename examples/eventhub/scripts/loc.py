@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 GROUPS: dict[str, tuple[str, ...]] = {
     "models": ("events/models.py",),
-    "viewsets": ("events/viewsets.py", "events/serializers.py"),
+    "viewsets": ("events/viewsets.py",),
     "pages": (
         "frontend/src/pages/login.tsx",
         "frontend/src/pages/events.tsx",

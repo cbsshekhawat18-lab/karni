@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
 from karni.models import BaseModel
@@ -74,9 +75,32 @@ class Booking(BaseModel):
     confirmed_at = models.DateTimeField(null=True, blank=True)
     confirmation_sent_at = models.DateTimeField(null=True, blank=True)
 
+    class APIMeta:
+        read_only = ["status", "payment", "confirmed_at"]
+        exclude = ["confirmation_sent_at"]
+
     def __str__(self) -> str:
         return f"{self.quantity} x {self.tier} for {self.event}"
 
     @property
     def total(self) -> Decimal:
         return self.tier.price * self.quantity
+
+    def clean(self) -> None:
+        """Only published events; the tier must be the event's; never over capacity."""
+        if self.event_id and self.event.status != Event.Status.PUBLISHED:
+            raise ValidationError({"event": "Only published events can be booked."})
+        if self.tier_id and self.event_id and self.tier.event_id != self.event_id:
+            raise ValidationError({"tier": "This ticket tier belongs to another event."})
+        if self.quantity < 1:
+            raise ValidationError({"quantity": "Book at least one ticket."})
+        if self.tier_id:
+            held = 0
+            if self.pk:  # editing: this booking's own seats are not taken by someone else
+                held = Booking.objects.filter(pk=self.pk, tier_id=self.tier_id).exclude(
+                    status=Booking.Status.CANCELLED
+                ).values_list("quantity", flat=True).first() or 0
+            if self.quantity > self.tier.remaining + held:
+                raise ValidationError(
+                    {"quantity": f"Only {self.tier.remaining} seats left in {self.tier.name}."}
+                )

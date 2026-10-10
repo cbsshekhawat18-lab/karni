@@ -1,146 +1,6 @@
 {
   "components": {
     "schemas": {
-      "Booking": {
-        "description": "Base class of every serializer produced by :func:`build_serializer`.\n\nRelations are rendered with :class:`KarniPrimaryKeyRelatedField` (and its\nto-many wrapper) so the OpenAPI schema can carry Karni's vendor\nextensions.\n\nOverride / escape hatch: subclass this (or plain ``ModelSerializer``) and\npoint the viewset's ``serializer_class`` at your class \u2014 an explicit\n``serializer_class`` always wins over generation.",
-        "properties": {
-          "attendee": {
-            "format": "uuid",
-            "readOnly": true,
-            "type": "string"
-          },
-          "confirmed_at": {
-            "format": "date-time",
-            "nullable": true,
-            "readOnly": true,
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "readOnly": true,
-            "type": "string"
-          },
-          "created_by": {
-            "format": "uuid",
-            "nullable": true,
-            "readOnly": true,
-            "type": "string"
-          },
-          "event": {
-            "format": "uuid",
-            "type": "string",
-            "x-karni-relation": {
-              "many": false,
-              "resource": "events"
-            }
-          },
-          "id": {
-            "format": "uuid",
-            "readOnly": true,
-            "type": "string"
-          },
-          "payment": {
-            "format": "uuid",
-            "nullable": true,
-            "readOnly": true,
-            "type": "string",
-            "x-karni-relation": {
-              "many": false,
-              "resource": "payments"
-            }
-          },
-          "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "type": "integer"
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BookingStatusEnum"
-              }
-            ],
-            "readOnly": true
-          },
-          "tier": {
-            "format": "uuid",
-            "type": "string",
-            "x-karni-relation": {
-              "many": false,
-              "resource": "ticket-tiers"
-            }
-          },
-          "updated_at": {
-            "format": "date-time",
-            "readOnly": true,
-            "type": "string"
-          },
-          "updated_by": {
-            "format": "uuid",
-            "nullable": true,
-            "readOnly": true,
-            "type": "string"
-          }
-        },
-        "required": [
-          "attendee",
-          "confirmed_at",
-          "created_at",
-          "created_by",
-          "event",
-          "id",
-          "payment",
-          "quantity",
-          "status",
-          "tier",
-          "updated_at",
-          "updated_by"
-        ],
-        "type": "object"
-      },
-      "BookingRequest": {
-        "description": "Base class of every serializer produced by :func:`build_serializer`.\n\nRelations are rendered with :class:`KarniPrimaryKeyRelatedField` (and its\nto-many wrapper) so the OpenAPI schema can carry Karni's vendor\nextensions.\n\nOverride / escape hatch: subclass this (or plain ``ModelSerializer``) and\npoint the viewset's ``serializer_class`` at your class \u2014 an explicit\n``serializer_class`` always wins over generation.",
-        "properties": {
-          "event": {
-            "format": "uuid",
-            "type": "string",
-            "x-karni-relation": {
-              "many": false,
-              "resource": "events"
-            }
-          },
-          "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
-            "type": "integer"
-          },
-          "tier": {
-            "format": "uuid",
-            "type": "string",
-            "x-karni-relation": {
-              "many": false,
-              "resource": "ticket-tiers"
-            }
-          }
-        },
-        "required": [
-          "event",
-          "quantity",
-          "tier"
-        ],
-        "type": "object"
-      },
-      "BookingStatusEnum": {
-        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `cancelled` - Cancelled",
-        "enum": [
-          "pending",
-          "confirmed",
-          "cancelled"
-        ],
-        "type": "string"
-      },
       "CheckoutInputRequest": {
         "description": "Input of ``POST /api/payments/checkout/``.\n\nThe amount is transport, not authority: the server-side\n``KARNI_PAYMENTS_CHECKOUT_VALIDATOR`` decides whether it is acceptable\n(amendment G2 \u2014 never trust client amounts).",
         "properties": {
@@ -232,6 +92,146 @@
           "new_email"
         ],
         "type": "object"
+      },
+      "EventsBooking": {
+        "description": "Auto-generated serializer for events.Booking. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "attendee": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "confirmed_at": {
+            "format": "date-time",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "event": {
+            "format": "uuid",
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "events"
+            }
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "payment": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "payments"
+            }
+          },
+          "quantity": {
+            "format": "int64",
+            "maximum": 9223372036854775807,
+            "minimum": -9223372036854775808,
+            "type": "integer"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EventsBookingStatusEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "tier": {
+            "format": "uuid",
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "ticket-tiers"
+            }
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "attendee",
+          "confirmed_at",
+          "created_at",
+          "created_by",
+          "event",
+          "id",
+          "payment",
+          "quantity",
+          "status",
+          "tier",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object"
+      },
+      "EventsBookingRequest": {
+        "description": "Auto-generated serializer for events.Booking. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "event": {
+            "format": "uuid",
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "events"
+            }
+          },
+          "quantity": {
+            "format": "int64",
+            "maximum": 9223372036854775807,
+            "minimum": -9223372036854775808,
+            "type": "integer"
+          },
+          "tier": {
+            "format": "uuid",
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "ticket-tiers"
+            }
+          }
+        },
+        "required": [
+          "event",
+          "quantity",
+          "tier"
+        ],
+        "type": "object"
+      },
+      "EventsBookingStatusEnum": {
+        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `cancelled` - Cancelled",
+        "enum": [
+          "pending",
+          "confirmed",
+          "cancelled"
+        ],
+        "type": "string"
       },
       "EventsEvent": {
         "description": "Auto-generated serializer for events.Event. See karni.api.serializers.build_serializer.",
@@ -869,7 +869,7 @@
         ],
         "type": "object"
       },
-      "PaginatedBookingList": {
+      "PaginatedEventsBookingList": {
         "properties": {
           "count": {
             "example": 123,
@@ -889,7 +889,7 @@
           },
           "results": {
             "items": {
-              "$ref": "#/components/schemas/Booking"
+              "$ref": "#/components/schemas/EventsBooking"
             },
             "type": "array"
           }
@@ -1122,8 +1122,8 @@
         ],
         "type": "object"
       },
-      "PatchedBookingRequest": {
-        "description": "Base class of every serializer produced by :func:`build_serializer`.\n\nRelations are rendered with :class:`KarniPrimaryKeyRelatedField` (and its\nto-many wrapper) so the OpenAPI schema can carry Karni's vendor\nextensions.\n\nOverride / escape hatch: subclass this (or plain ``ModelSerializer``) and\npoint the viewset's ``serializer_class`` at your class \u2014 an explicit\n``serializer_class`` always wins over generation.",
+      "PatchedEventsBookingRequest": {
+        "description": "Auto-generated serializer for events.Booking. See karni.api.serializers.build_serializer.",
         "properties": {
           "event": {
             "format": "uuid",
@@ -2044,30 +2044,6 @@
           },
           {
             "in": "query",
-            "name": "confirmation_sent_at",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "confirmation_sent_at__gte",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "confirmation_sent_at__lte",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
             "name": "confirmed_at",
             "schema": {
               "format": "date-time",
@@ -2264,7 +2240,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedBookingList"
+                  "$ref": "#/components/schemas/PaginatedEventsBookingList"
                 }
               }
             },
@@ -2306,17 +2282,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             }
           },
@@ -2327,7 +2303,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },
@@ -2425,7 +2401,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },
@@ -2478,17 +2454,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedBookingRequest"
+                "$ref": "#/components/schemas/PatchedEventsBookingRequest"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedBookingRequest"
+                "$ref": "#/components/schemas/PatchedEventsBookingRequest"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/PatchedBookingRequest"
+                "$ref": "#/components/schemas/PatchedEventsBookingRequest"
               }
             }
           }
@@ -2498,7 +2474,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },
@@ -2539,17 +2515,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             }
           },
@@ -2560,7 +2536,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },
@@ -2603,17 +2579,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             }
           },
@@ -2624,7 +2600,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },
@@ -2667,17 +2643,17 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "application/x-www-form-urlencoded": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             },
             "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/BookingRequest"
+                "$ref": "#/components/schemas/EventsBookingRequest"
               }
             }
           },
@@ -2688,7 +2664,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Booking"
+                  "$ref": "#/components/schemas/EventsBooking"
                 }
               }
             },

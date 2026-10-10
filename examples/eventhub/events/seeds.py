@@ -6,30 +6,11 @@ from decimal import Decimal
 import factory
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from karni.accounts.permissions import assign_role
 from karni.seeding import SeedContext, Seeder
 
 from events.models import Booking, Event, TicketTier, Venue
 
-DEMO_PASSWORD = "karni-password"
-#: Known logins for the demo and the end-to-end suite (besides demo@example.com).
-LOGINS = (("organizer@example.com", "organizer"), ("attendee@example.com", "attendee"))
-
-
-class UserSeeder(Seeder):
-    class Meta:
-        model = get_user_model()
-        count = 2
-
-    def seed(self, context: SeedContext) -> list:
-        rows = []
-        for email, role in LOGINS:
-            user = context.model.objects.filter(email=email).first()
-            if user is None:
-                user = context.model.objects.create_user(email=email, password=DEMO_PASSWORD)
-            assign_role(user, role)
-            rows.append(user)
-        return rows
+# organizer@example.com and attendee@example.com come from KARNI_SEED_LOGINS (.env).
 
 
 class VenueSeeder(Seeder):

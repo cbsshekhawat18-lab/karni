@@ -1,16 +1,9 @@
 from django.core.mail import send_mail
 from django.utils import timezone
-from karni.accounts.permissions import assign_role
-from karni.events import on_created, on_updated
+from karni.events import on_updated
 from karni_payments.models import Payment
 
 from events.models import Booking
-
-
-@on_created("karni_accounts.User")
-def grant_attendee_role(user) -> None:
-    """Everyone who signs up can book; organizers and staff are promoted by staff."""
-    assign_role(user, "attendee")
 
 
 @on_updated(Payment)

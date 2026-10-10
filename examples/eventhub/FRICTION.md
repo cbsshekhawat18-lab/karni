@@ -14,6 +14,11 @@ every feature in the brief shipped.
 Status *done without workaround* means EventHub is unaffected once the
 framework fix lands (the project code just gets deleted).
 
+**After the framework fixes.** Everything below except F3 was fixed in Karni
+in the commit that followed this log, and EventHub adopted the fixes: 656 →
+582 lines. The entries keep their original wording as the record of what a
+user hit; the table at the end shows what is still over the target.
+
 ## Workaround-needed
 
 ### F1 — No login page or form in @karni/ui
@@ -198,7 +203,9 @@ framework fix lands (the project code just gets deleted).
 - `karni check` fails with "jscpd not installed — run `npm install` in
   frontend/". Reorder the printed steps.
 
-## Where the 156 excess lines are
+## Where the excess lines were, and are
+
+Before the fixes (656 lines, 156 over):
 
 | Lines | Code | Friction |
 |---|---|---|
@@ -208,4 +215,9 @@ framework fix lands (the project code just gets deleted).
 | 46 | `UserSeeder` and the `seed()` overrides in `seeds.py` | F6 |
 | 4 | `grant_attendee_role` | F2 |
 
-With F1, F3, F5 and F6 in Karni, EventHub is about 495 lines.
+After them (582 lines, 82 over):
+
+| Lines | Code | Friction |
+|---|---|---|
+| 45 | dashboard + CSV actions in `viewsets.py`, fetch in `event-dashboard.tsx` | F3 (open: one occurrence) |
+| 37 | the `seed()` overrides keeping tiers and bookings consistent in `seeds.py` | F6 (second half: `karni seed` should honour `factories.py`) |

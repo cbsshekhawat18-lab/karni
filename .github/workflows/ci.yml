@@ -175,6 +175,8 @@ jobs:
       KARNI_AUTH_MODE: session
       KARNI_PAYMENTS_PROVIDER: test
       KARNI_FRONTEND_URL: http://127.0.0.1:4173
+      KARNI_ACCOUNTS_DEFAULT_ROLES: attendee
+      KARNI_SEED_LOGINS: '{"organizer@example.com": ["organizer"], "attendee@example.com": ["attendee"]}'
       PY: python
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
 

@@ -34,7 +34,7 @@ export default function EventDashboardPage() {
                 <Stat label="Revenue" value={stats ? stats.revenue : "…"} />
             </div>
             <h2 className="mt-6 text-lg font-semibold">Bookings</h2>
-            <ResourceTable resource="bookings" filters={["event", "status"]} />
+            <ResourceTable resource="bookings" params={{ event: id }} filters={["status"]} />
         </Page>
     );
 }
