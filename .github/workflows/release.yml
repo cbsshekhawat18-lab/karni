@@ -1,0 +1,130 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes every package at X.Y.Z (lockstep versioning,
+# docs/releasing.md): karni, karni-cli and karni-payments to PyPI, @karni/ui
+# and @karni/payments-ui to npm, each with build provenance.
+#
+# One-time setup (repository settings, not code):
+#   - PyPI: add a trusted publisher for each of the three projects
+#     (this repository, workflow release.yml, environment "pypi").
+#   - npm: add a trusted publisher for @karni/ui and @karni/payments-ui
+#     (this repository, workflow release.yml, environment "npm"). No token is
+#     stored; npm exchanges the workflow's OIDC token at publish time.
+#   - Environments "pypi" and "npm": add required reviewers to gate a publish
+#     on a human.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Every gate CI runs on main, run again on exactly the tagged commit.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  check:
+    name: Release metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install packaging
+      - name: Versions, repository URLs, licences, module ranges
+        run: python .github/ci/check_release.py --tag "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"
+
+  build-python:
+    name: Build Python distributions
+    needs: [ci, check]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      # Each package builds from its own directory; karni-cli's build hook
+      # bundles templates/project, the agent rules and the changelog into it.
+      - name: Build sdists and wheels
+        run: |
+          set -euo pipefail
+          for d in packages/karni packages/karni-cli modules/karni-payments; do
+            python -m build --outdir dist "$d"
+          done
+          python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build-python
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write # trusted publishing + PEP 740 attestations (provenance)
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+  publish-npm:
+    name: Publish to npm
+    # After PyPI: a JS-only failure must not leave npm ahead of the backend
+    # it talks to.
+    needs: [ci, check, publish-pypi]
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing + provenance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1; Node 20 ships npm 10.
+      - run: npm install -g npm@^11.5.1
+      - name: Build and publish (@karni/ui first; payments-ui peers on it)
+        run: |
+          set -euo pipefail
+          for d in packages/karni-ui modules/karni-payments/ui; do
+            (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
+          done
+
+  github-release:
+    name: GitHub release
+    needs: [publish-pypi, publish-npm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - name: Create the release with the built distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Migration notes: docs/migrations/. Upgrade with \`karni upgrade --to ${GITHUB_REF_NAME#v}\`."
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Karni ${GITHUB_REF_NAME#v}" \
+            --notes "$notes" --verify-tag

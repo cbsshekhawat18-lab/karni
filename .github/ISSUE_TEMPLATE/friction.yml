@@ -1,0 +1,43 @@
+name: Friction — Karni should have provided this
+description: You wrote project code that every Karni project would also need.
+labels: ["friction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Karni's rule: if code would be written more than once across projects, it belongs in Karni.
+        These reports are how we find the gaps. Show us the code you had to write.
+  - type: textarea
+    id: goal
+    attributes:
+      label: What you were trying to do
+      placeholder: Show organizers a revenue total per event on their dashboard.
+    validations:
+      required: true
+  - type: textarea
+    id: offered
+    attributes:
+      label: What Karni offered
+      description: The base class, component, command or docs page you tried first, and where it fell short.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: The code you had to write
+      description: Paste it (trim domain details). Its size is the cost every project pays.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: occurrences
+    attributes:
+      label: Other places this pattern occurs
+      description: >
+        Karni adds an abstraction once a pattern has three real occurrences.
+        Other projects, apps or screens where you wrote the same thing.
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would want instead (optional)
+      description: The one-line declaration, component or command that would have replaced your code.

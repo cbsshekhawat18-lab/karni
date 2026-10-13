@@ -5,9 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "karni"
 version = "0.1.0"
-description = "Batteries-included Django settings, Celery, storage and health-check framework."
+description = "Django framework where projects write only domain code: declare models and access; the API, admin, permissions, tests and seed data follow."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
 keywords = ["django", "drf", "celery", "settings", "framework"]
 classifiers = [
@@ -38,6 +40,13 @@ dependencies = [
     # Imported only by tests and seed commands, never by the web process.
     "factory-boy>=3.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 # Karni's pytest plugin: KARNI_QUERY_BUDGET_MODE = "raise" for the test session
 # and the `query_budget` fixture (karni.testing.pytest_plugin).

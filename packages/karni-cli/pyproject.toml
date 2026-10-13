@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "The karni command: scaffold, wire, introspect and upgrade Karni projects."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
 dependencies = [
     "typer>=0.12",
     "cookiecutter>=2.5",
@@ -19,6 +22,13 @@ dependencies = [
     # is imported only by that command (prebuilt wheels for every platform).
     "libcst>=1.4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 [project.optional-dependencies]
 # `karni mcp`: the official MCP Python SDK (MCPServer in 2.x, FastMCP in 1.x).

@@ -1,0 +1,64 @@
+name: Bug report
+description: Karni does something wrong or crashes.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems do not go here: see SECURITY.md (private reporting).
+        If Karni works as designed but made you write code it should have provided, use the **Friction** template instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The smallest model, viewset/`access` declaration, page or command that shows the bug,
+        and the request or command that goes wrong. A failing test is ideal.
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error output
+      description: >
+        The full message and traceback. Karni errors carry a code (E012, C004, PAY001, ...);
+        `karni explain <CODE>` prints what Karni expected.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: >
+        karni and karni-cli (`pip show karni karni-cli`), @karni/ui (`npm ls @karni/ui` in frontend/),
+        Python, Django and Node. For CLI problems, also paste `karni doctor` below.
+      placeholder: karni 0.1.0, karni-cli 0.1.0, @karni/ui 0.1.0, Python 3.12.6, Django 5.1.4, Node 20.18
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - models / scopes / soft delete
+        - access / permissions
+        - API (viewsets, serializers, filters, expand, search, pagination)
+        - accounts / auth
+        - admin
+        - events / listeners / schedule / Celery
+        - testing / seeding
+        - "@karni/ui"
+        - karni CLI (new, make, runners, upgrade)
+        - agent guidance (rules, context, MCP)
+        - a module (karni-payments, ...)
+        - scaffold (karni new output)
+        - docs
+    validations:
+      required: true

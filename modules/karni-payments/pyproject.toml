@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Payments module for Karni: checkout, refunds and webhooks for Stripe and Razorpay."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
 keywords = ["django", "karni", "payments", "stripe", "razorpay"]
 classifiers = [
@@ -20,6 +22,13 @@ classifiers = [
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
 dependencies = ["karni>=0.1,<0.2"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
 
 [project.optional-dependencies]
 stripe = ["stripe>=10"]

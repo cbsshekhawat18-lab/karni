@@ -1,0 +1,39 @@
+name: Feature request
+description: Propose a new capability, module or command.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before proposing an abstraction, check CONTRIBUTING.md: Karni adds one only when the
+        pattern has three real occurrences, and anything with meaningful RAM cost or its own
+        service belongs in an optional module, not core.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you need to build, and why Karni's current surface does not cover it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed surface
+      description: What a project would write (the declaration, component or command), and its escape hatch.
+    validations:
+      required: true
+  - type: dropdown
+    id: placement
+    attributes:
+      label: Where it belongs
+      options:
+        - core (packages/karni, @karni/ui, karni CLI)
+        - an optional module (modules/)
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: occurrences
+    attributes:
+      label: Real occurrences
+      description: Three projects, apps or screens where this pattern was written by hand.
