@@ -1,0 +1,87 @@
+site_name: Karni
+site_description: "A Django + React framework that stays a dependency: declare models and access, and the API, admin, permissions, tests and seed data follow. Built so an AI coding agent extends it instead of reinventing it."
+site_url: https://cbsshekhawat18-lab.github.io/karni/
+repo_url: https://github.com/cbsshekhawat18-lab/karni
+repo_name: cbsshekhawat18-lab/karni
+edit_uri: edit/main/docs/
+docs_dir: docs
+strict: true
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Start here:
+      - Quickstart: quickstart.md
+      - Tutorial — build EventHub: tutorial.md
+      - Building with an AI agent: guide/with-ai.md
+      - Building without one: guide/without-ai.md
+      - Adding an entity end to end: adding-an-entity.md
+  - Reference:
+      - Models: models.md
+      - API: api.md
+      - Accounts: accounts.md
+      - Admin: admin.md
+      - Events and listeners: events.md
+      - Scheduling: scheduling.md
+      - Testing: testing.md
+      - Seeding: seeding.md
+      - Settings: settings.md
+      - "@karni/ui": ui.md
+      - The karni command: cli.md
+      - Error codes: errors.md
+      - Enforcement: enforcement.md
+      - Modules: modules.md
+  - Concepts:
+      - Why serializers are generated: concepts/generated-serializers.md
+      - Permissions at the queryset: concepts/queryset-permissions.md
+      - The enforcement layer, and opting out: concepts/enforcement-layer.md
+      - History providers: concepts/history-providers.md
+      - ADR 0001 — core architecture: decisions/0001-core-architecture.md
+  - Karni for AI agents: agents.md
+  - Upgrading:
+      - Stability promise: stability.md
+      - Migrating to 0.2: migrations/0.2.md
+      - Migrating to 1.0: migrations/1.0.md
+  - Project:
+      - Releasing: releasing.md
+      - Contributing: contributing.md
+      - Security: security.md

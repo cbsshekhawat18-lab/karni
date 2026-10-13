@@ -27,7 +27,7 @@ from typing import Any, Final, NamedTuple
 __all__ = ["CODES", "CliCode", "core_module", "docs_url", "lookup"]
 
 _MODULE_NAME = "karni_cli._bundled_karni_errorcodes"
-_FALLBACK_BASE = "https://github.com/karni/karni/blob/main/docs/"
+_FALLBACK_BASE = "https://cbsshekhawat18-lab.github.io/karni/"
 
 
 class CliCode(NamedTuple):
@@ -61,9 +61,10 @@ CODES: Final[tuple[CliCode, ...]] = (
         "No way to run the project's Python",
         "karni_cli.project (runners: serve, migrate, test, shell, seed, ...)",
         "Project commands run in the project's own interpreter: its .venv, else the "
-        "running docker compose stack.",
-        "Create the venv (uv venv && uv pip install -r pyproject.toml), or start the "
-        "stack (docker compose up -d). The message says which one the command looked for.",
+        "active virtualenv (VIRTUAL_ENV), else the running docker compose stack.",
+        "Create the venv (python -m venv .venv && .venv/bin/pip install -e .), activate "
+        "one that has the project's dependencies, or start the stack (docker compose up "
+        "-d). The message says which one the command looked for.",
     ),
     _c(
         "C003",
@@ -311,7 +312,7 @@ def docs_url(code: str) -> str:
     core = core_module()
     if core is not None:
         return str(core.docs_url(code))
-    return f"{_FALLBACK_BASE}errors.md#{code.lower()}"
+    return f"{_FALLBACK_BASE}errors/#{code.lower()}"
 
 
 def _module_entries() -> list[Any]:

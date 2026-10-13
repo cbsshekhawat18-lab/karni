@@ -43,7 +43,7 @@ on this page:
 ```text
 E104: EventViewSet: Owned('organiser') does not lead from Event to the user model
 (Event has no field 'organiser'). Name a relation path ending at the user, e.g.
-Owned("organizer") or Owned("event__organizer"). See …/errors.md#e104
+Owned("organizer") or Owned("event__organizer"). See …/errors/#e104
 ```
 
 The message names *your* class, field or setting. The entry below says why

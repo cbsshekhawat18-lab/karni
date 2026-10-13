@@ -47,6 +47,12 @@ def _no_ambient_templates_env(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The suite's expectations are for a project without an interpreter around it."""
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _no_npm(monkeypatch: pytest.MonkeyPatch) -> None:
     """`karni new` never runs npm in the suite (an unbuilt checkout would build @karni/ui).
 

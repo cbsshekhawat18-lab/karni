@@ -40,6 +40,21 @@ def test_resolve_prefers_venv(tmp_path: Path) -> None:
     assert venv_python(project) == python
 
 
+def test_venv_python_falls_back_to_the_active_virtualenv(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "proj"
+    project.mkdir()
+    assert venv_python(project) is None
+    active = tmp_path / "shared-venv"
+    (active / "bin").mkdir(parents=True)
+    (active / "bin" / "python").write_text("")
+    monkeypatch.setenv("VIRTUAL_ENV", str(active))
+    assert venv_python(project) == active / "bin" / "python"
+    monkeypatch.setenv("VIRTUAL_ENV", str(tmp_path / "missing"))
+    assert venv_python(project) is None
+
+
 def test_resolve_falls_back_to_running_compose(tmp_path: Path, monkeypatch) -> None:
     project = _make_project(tmp_path)
     monkeypatch.setattr(project_mod, "compose_service_running", lambda p, s: True)

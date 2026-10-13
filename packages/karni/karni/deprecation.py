@@ -9,7 +9,7 @@ to its migration note (``docs/migrations/<version>.md``) built from
 
     Model.all_objects is deprecated; use Model.objects.without("soft_delete",
     reason=...) instead. It will be removed in Karni 1.0. See
-    https://github.com/karni/karni/blob/main/docs/migrations/0.2.md#all_objects
+    https://cbsshekhawat18-lab.github.io/karni/migrations/0.2/#all_objects
 
 Each deprecation also has an entry in Karni's machine-readable changelog
 (:mod:`karni.changelog`), which ``karni upgrade`` reads to rewrite or report

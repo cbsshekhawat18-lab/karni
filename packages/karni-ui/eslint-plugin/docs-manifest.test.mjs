@@ -26,7 +26,7 @@ describe("eslint rules manifest", () => {
   it("links every rule to its docs/errors.md anchor", () => {
     for (const name of names) {
       expect(plugin.rules[name].meta.docs.url).toBe(docsUrl(name));
-      expect(docsUrl(name)).toMatch(/errors\.md#karni-[a-z-]+$/);
+      expect(docsUrl(name)).toMatch(/errors\/#karni-[a-z-]+$/);
     }
   });
 });

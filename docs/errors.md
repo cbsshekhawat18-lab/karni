@@ -8,7 +8,7 @@ on this page:
 ```text
 E104: EventViewSet: Owned('organiser') does not lead from Event to the user model
 (Event has no field 'organiser'). Name a relation path ending at the user, e.g.
-Owned("organizer") or Owned("event__organizer"). See …/errors.md#e104
+Owned("organizer") or Owned("event__organizer"). See …/errors/#e104
 ```
 
 The message names *your* class, field or setting. The entry below says why
@@ -917,9 +917,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni_cli.project (runners: serve, migrate, test, shell, seed, ...)`
 
-**Why Karni objects.** Project commands run in the project's own interpreter: its .venv, else the running docker compose stack.
+**Why Karni objects.** Project commands run in the project's own interpreter: its .venv, else the active virtualenv (VIRTUAL_ENV), else the running docker compose stack.
 
-**Fix.** Create the venv (uv venv && uv pip install -r pyproject.toml), or start the stack (docker compose up -d). The message says which one the command looked for.
+**Fix.** Create the venv (python -m venv .venv && .venv/bin/pip install -e .), activate one that has the project's dependencies, or start the stack (docker compose up -d). The message says which one the command looked for.
 
 <a id="c003"></a>
 

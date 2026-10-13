@@ -55,7 +55,7 @@ __all__ = [
 #: Where ``docs/`` is published: ``migration`` values here and ``doc_anchor``
 #: values in :func:`karni.deprecation.warn_deprecated` are relative to it.
 #: A placeholder until the docs site exists; the one place to change it.
-DOCS_BASE_URL: Final[str] = "https://github.com/karni/karni/blob/main/docs/"
+DOCS_BASE_URL: Final[str] = "https://cbsshekhawat18-lab.github.io/karni/"
 
 #: What a change can be. ``project-files``: files the scaffold generated changed shape.
 KINDS: Final = (
@@ -80,8 +80,16 @@ _OPTIONAL: Final = ("replacement", "removed_in", "codemod")
 
 
 def docs_url(doc_anchor: str) -> str:
-    """Absolute docs link for ``doc_anchor`` (``"migrations/0.2.md#section"``)."""
-    return DOCS_BASE_URL + doc_anchor.lstrip("/")
+    """Absolute docs-site link for ``doc_anchor`` (``"migrations/0.2.md#section"``).
+
+    Pages are addressed as in the repository (``models.md``); the site serves
+    each page as a directory (``models/``), so the link is translated.
+    """
+    path, _, anchor = doc_anchor.lstrip("/").partition("#")
+    if path.endswith(".md"):
+        path = path[:-3]
+        path = "" if path == "index" else path + "/"
+    return DOCS_BASE_URL + path + (f"#{anchor}" if anchor else "")
 
 
 class ChangelogError(ValueError):
@@ -93,7 +101,7 @@ class ChangelogError(ValueError):
     code = "E704"
 
     def __str__(self) -> str:
-        return f"{self.code}: {super().__str__()} See {DOCS_BASE_URL}errors.md#e704"
+        return f"{self.code}: {super().__str__()} See {DOCS_BASE_URL}errors/#e704"
 
 
 def version_key(text: str) -> tuple[int, int, int]:

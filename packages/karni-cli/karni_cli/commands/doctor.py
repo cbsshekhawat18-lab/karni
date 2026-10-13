@@ -59,8 +59,8 @@ def _interpreter(project: Path, service: str) -> str:
     if project_mod.compose_service_running(project, service):
         return f'docker compose service "{service}" (running)'
     return (
-        "none — create .venv (uv venv && uv pip install -r pyproject.toml) "
-        "or start the stack (docker compose up -d)"
+        "none — create .venv (python -m venv .venv && .venv/bin/pip install -e .), activate a "
+        "virtualenv with the project's dependencies, or start the stack (docker compose up -d)"
     )
 
 

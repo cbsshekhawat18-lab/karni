@@ -47,7 +47,7 @@ only karni-cli is installed). Force one with
 
 Every error Karni prints starts with a stable code and ends with a link:
 `E104: EventViewSet: Owned('organiser') does not lead from Event to the user
-model ... See …/errors.md#e104`. The message names the class, field or setting
+model ... See …/errors/#e104`. The message names the class, field or setting
 to change; `karni explain E104` (offline, no project needed) adds why Karni
 objects and the general fix. System checks (`karni.E101`, …) run on every
 `manage.py` command, so a missing `access` or a broken schedule fails on boot,

@@ -69,7 +69,7 @@ def test_the_shipped_0_2_entries() -> None:
     assert changelog.newest_release(by_id.values()) == "0.2.0"
     assert str(changelog.horizon(by_id.values())) == "1.0"
     assert changelog.docs_url("migrations/0.2.md#all_objects").endswith(
-        "docs/migrations/0.2.md#all_objects"
+        "migrations/0.2/#all_objects"
     )
 
 
@@ -226,10 +226,10 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "      library/models.py: 2" in applied
     # A detector site, with its migration note.
     assert "library/viewsets.py:6: express this rule in the access declaration" in manual
-    assert "docs/migrations/0.2.md#object_permission_classes" in manual
+    assert "migrations/0.2/#object_permission_classes" in manual
     # A manual-only entry: summary and link, no detector.
     assert "mandatory-access: karni.api.BaseViewSet" in manual
-    assert "docs/migrations/0.2.md#every-baseviewset-declares-access" in manual
+    assert "migrations/0.2/#every-baseviewset-declares-access" in manual
     assert "related-lookups: no uses found" in out
     assert "agent-guidance-files: nothing to change" in out
     assert "Next: review `git diff`, pin karni to 0.2.0" in out

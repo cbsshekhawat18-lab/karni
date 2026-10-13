@@ -125,6 +125,67 @@ jobs:
           PY
 
   # ---------------------------------------------------------------------------
+  # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
+  # the page, in a fresh venv and an empty directory, with this checkout's
+  # packages in place of PyPI's (the one documented substitution).
+  # ---------------------------------------------------------------------------
+  quickstart:
+    name: Quickstart (docs/quickstart.md, verbatim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build @karni/ui (karni new installs it from the checkout)
+        working-directory: packages/karni-ui
+        run: npm ci && npm run build
+      - name: Run the page
+        env:
+          KARNI_UI_SRC: ${{ github.workspace }}/packages/karni-ui
+        run: |
+          python .github/ci/quickstart.py \
+            --install "pip install -q -e ${{ github.workspace }}/packages/karni -e ${{ github.workspace }}/packages/karni-cli pytest pytest-django"
+
+  # ---------------------------------------------------------------------------
+  # The documentation site (Material for MkDocs): built strictly on every
+  # push and pull request, deployed to GitHub Pages from main.
+  # ---------------------------------------------------------------------------
+  docs:
+    name: Docs site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install mkdocs-material
+      - name: "Build (strict: a broken link or a missing page fails)"
+        run: python -m mkdocs build --strict --site-dir site
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: site
+
+  docs-deploy:
+    name: Deploy docs
+    needs: docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ---------------------------------------------------------------------------
   # examples/eventhub: the reference application, built on the documented
   # surface only. Builds, migrates, seeds, tests, then runs Playwright against
   # the running stack (Django + Celery worker + the production frontend build).

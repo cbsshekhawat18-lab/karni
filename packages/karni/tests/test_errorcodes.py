@@ -92,7 +92,7 @@ def test_a_code_registered_twice_is_refused() -> None:
 
 def test_docs_links_share_the_changelog_base_url() -> None:
     assert errorcodes.DOCS_BASE_URL == CHANGELOG_DOCS_BASE_URL
-    assert errorcodes.docs_url("E104") == f"{CHANGELOG_DOCS_BASE_URL}errors.md#e104"
+    assert errorcodes.docs_url("E104") == f"{CHANGELOG_DOCS_BASE_URL}errors/#e104"
 
 
 def test_lookup_is_case_insensitive() -> None:

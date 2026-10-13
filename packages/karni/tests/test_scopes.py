@@ -572,7 +572,7 @@ class TestContextSection:
 
 # --- deprecations ---------------------------------------------------------------
 
-ALIAS_DOCS = DOCS_BASE_URL + "migrations/0.2.md#all_objects"
+ALIAS_DOCS = DOCS_BASE_URL + "migrations/0.2/#all_objects"
 DEPRECATED_NAMES = {"all_objects", "all_with_deleted", "deleted_only", "SoftDeleteManagerMixin"}
 
 
@@ -580,9 +580,9 @@ class TestDeprecationHelper:
     def test_message_format_is_stable(self) -> None:
         assert deprecation_message("a()", "b()", removed_in="1.0", doc_anchor="x.md#y") == (
             "a() is deprecated; use b() instead. It will be removed in Karni 1.0. "
-            f"See {DOCS_BASE_URL}x.md#y"
+            f"See {DOCS_BASE_URL}x/#y"
         )
-        assert docs_url("/models.md#z") == DOCS_BASE_URL + "models.md#z"
+        assert docs_url("/models.md#z") == DOCS_BASE_URL + "models/#z"
 
     def test_warns_at_the_caller_of_the_deprecated_api(self) -> None:
         def deprecated() -> None:

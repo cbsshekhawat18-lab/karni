@@ -407,3 +407,21 @@ def test_performance_defaults(make_settings) -> None:
     }
     assert ns["KARNI_API_CACHE"] is False and ns["KARNI_API_CACHE_TTL"] == 300
     validate_settings(ns)
+
+
+def test_a_file_backed_sqlite_database_gets_its_folder(tmp_path) -> None:
+    from karni.conf import _ensure_sqlite_dir
+
+    target = tmp_path / "data" / "nested" / "db.sqlite3"
+    _ensure_sqlite_dir({"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": str(target)}})
+    assert target.parent.is_dir()
+    _ensure_sqlite_dir({"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}})
+    _ensure_sqlite_dir({"default": {"ENGINE": "django.db.backends.postgresql", "NAME": "x"}})
+    _ensure_sqlite_dir(None)
+
+
+def test_karni_settings_creates_the_sqlite_folder_of_a_preset_database(tmp_path) -> None:
+    target = tmp_path / "data" / "db.sqlite3"
+    ns = {"DATABASES": {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": str(target)}}}
+    karni_settings(ns, env_name="dev")
+    assert target.parent.is_dir() and not target.exists()

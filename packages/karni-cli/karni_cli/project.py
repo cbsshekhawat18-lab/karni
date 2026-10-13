@@ -13,6 +13,7 @@ Ctrl-C work; scripted and agent runs (no TTY) keep ``-T``.
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -65,8 +66,21 @@ def require_project(start: Path | None = None) -> Path:
 
 
 def venv_python(project: Path) -> Path | None:
+    """The project's interpreter: its ``.venv``, else the active virtualenv.
+
+    ``VIRTUAL_ENV`` covers the host setup where one activated venv holds
+    karni-cli and the project's dependencies (the quickstart); a pipx-installed
+    ``karni`` sets no such variable and keeps looking for the project's own.
+    """
     python = project / ".venv" / "bin" / "python"
-    return python if python.exists() else None
+    if python.exists():
+        return python
+    active = os.environ.get("VIRTUAL_ENV")
+    if active:
+        candidate = Path(active) / "bin" / "python"
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def compose_service_running(project: Path, service: str) -> bool:
@@ -99,8 +113,9 @@ def resolve_execution(project: Path, docker: bool | None, service: str) -> str:
     if docker is False:
         if venv_python(project) is None:
             raise CliError(
-                "No .venv found in the project (and --no-docker was given).\n"
-                "Create one (uv venv && uv pip install -r pyproject.toml) or drop --no-docker.",
+                "No .venv in the project and no active virtualenv (and --no-docker was given).\n"
+                "Create one (python -m venv .venv && .venv/bin/pip install -e .), activate one "
+                "that has the project's dependencies, or drop --no-docker.",
                 code="C002",
             )
         return "venv"

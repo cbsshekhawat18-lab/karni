@@ -51,9 +51,10 @@ __all__ = [
 
 #: Base URL of Karni's documentation. Equal to ``karni.changelog.DOCS_BASE_URL``
 #: (a test keeps them equal; this module cannot import it when bundled).
-DOCS_BASE_URL: Final[str] = "https://github.com/karni/karni/blob/main/docs/"
-#: The generated page every code links to, relative to :data:`DOCS_BASE_URL`.
-ERRORS_PAGE: Final[str] = "errors.md"
+DOCS_BASE_URL: Final[str] = "https://cbsshekhawat18-lab.github.io/karni/"
+#: The generated page every code links to, relative to :data:`DOCS_BASE_URL`
+#: (``docs/errors.md`` in the repository, served as a directory on the site).
+ERRORS_PAGE: Final[str] = "errors/"
 
 #: ``exception``: raised for code to fix · ``check``: a Django system check
 #: error (boot fails) · ``warning``: a system check warning · ``api``: a 400
@@ -64,7 +65,7 @@ _CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,5}\d{3})$")
 
 
 def docs_url(code: str) -> str:
-    """The documentation link for ``code`` (``…/errors.md#e104``)."""
+    """The documentation link for ``code`` (``…/errors/#e104``)."""
     return f"{DOCS_BASE_URL}{ERRORS_PAGE}#{code.lower()}"
 
 

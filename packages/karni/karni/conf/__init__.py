@@ -20,6 +20,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Iterable, MutableMapping, Sequence
 from importlib import metadata
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -277,6 +278,24 @@ def _apply_session_mode_origins(namespace: MutableMapping[str, Any]) -> None:
     namespace.setdefault("CORS_ALLOW_CREDENTIALS", True)
 
 
+def _ensure_sqlite_dir(databases: Any) -> None:
+    """Create the folder of a file-backed SQLite database (``sqlite:///data/db.sqlite3``).
+
+    A fresh project pointed at SQLite would otherwise fail its first
+    ``migrate`` with "unable to open database file". In-memory and URI
+    databases are left alone.
+    """
+    if not isinstance(databases, dict):
+        return
+    for config in databases.values():
+        if not isinstance(config, dict) or not str(config.get("ENGINE", "")).endswith("sqlite3"):
+            continue
+        name = str(config.get("NAME") or "")
+        if not name or name == ":memory:" or name.startswith("file:"):
+            continue
+        Path(name).parent.mkdir(parents=True, exist_ok=True)
+
+
 def karni_settings(
     namespace: MutableMapping[str, Any],
     *,
@@ -412,4 +431,5 @@ def karni_settings(
             json=bool(namespace.get("KARNI_JSON_LOGS", profile == "prod"))
         )
 
+    _ensure_sqlite_dir(namespace.get("DATABASES"))
     maybe_init_sentry(env)
