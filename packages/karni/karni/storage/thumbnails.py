@@ -47,12 +47,7 @@ _FORMAT_EXTENSIONS = {"JPEG": "jpg", "TIFF": "tif"}
 
 
 def _load_pillow() -> Any:
-    """Import and return Pillow's ``Image`` module, with an install hint.
-
-    Raises:
-        ImportError: When Pillow is not installed, with the message pointing
-            at ``pip install karni[images]``.
-    """
+    """Pillow's ``Image`` module, or ``E501`` with the ``karni[images]`` install hint."""
     try:
         from PIL import Image
     except ImportError as exc:

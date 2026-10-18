@@ -29,7 +29,7 @@ def _payload(response: JsonResponse) -> dict[str, Any]:
     return json.loads(response.content)
 
 
-# --- stand-in checks referenced by dotted path -------------------------------
+# stand-in checks referenced by dotted path
 
 
 def check_always_ok() -> tuple[bool, str]:
@@ -58,7 +58,7 @@ def plain_probe() -> tuple[bool, str]:
     return True, "plain"
 
 
-# --- liveness ----------------------------------------------------------------
+# liveness
 
 
 def test_liveness_returns_ok() -> None:
@@ -67,7 +67,7 @@ def test_liveness_returns_ok() -> None:
     assert _payload(response) == {"status": "ok"}
 
 
-# --- readiness ---------------------------------------------------------------
+# readiness
 
 
 @override_settings(KARNI_HEALTH_CHECKS=[_path("check_always_ok"), _path("plain_probe")])
@@ -146,7 +146,7 @@ def test_readiness_runs_default_checks_via_dotted_paths(
     assert payload["checks"]["celery"] == {"ok": False, "detail": "broken"}
 
 
-# --- individual checks -------------------------------------------------------
+# individual checks
 
 
 @pytest.mark.django_db
@@ -200,7 +200,7 @@ def test_check_celery_fails_without_pong(monkeypatch: pytest.MonkeyPatch) -> Non
     assert app.control.seen_timeout == 0.1
 
 
-# --- urls --------------------------------------------------------------------
+# urls
 
 
 def test_urls_module_names_and_order() -> None:

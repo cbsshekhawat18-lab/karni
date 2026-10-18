@@ -72,7 +72,7 @@ def _matches(path: str, globs: Iterable[str]) -> bool:
     return any(fnmatch.fnmatch(path, g) or fnmatch.fnmatch(name, g) for g in globs)
 
 
-# --- Python -------------------------------------------------------------------
+# Python
 
 
 def _dotted(node: ast.expr) -> str:
@@ -413,7 +413,7 @@ def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) ->
     return result
 
 
-# --- TypeScript / JavaScript --------------------------------------------------
+# TypeScript / JavaScript
 
 _RAW_ELEMENT = re.compile(r"<(table|form|input|select|textarea)(?=[\s/>])")
 _DEEP_IMPORT = re.compile(
@@ -593,7 +593,7 @@ def _ts(path: str, text: str) -> list[Finding]:
     return findings
 
 
-# --- entry points ---------------------------------------------------------------
+# entry points
 
 
 def supported(path: str | Path) -> bool:

@@ -73,7 +73,7 @@ def _params(schema: dict[str, Any], path: str) -> dict[str, dict[str, Any]]:
     return {param["name"]: param for param in operation.get("parameters", [])}
 
 
-# --- components -------------------------------------------------------------------
+# components
 
 
 def test_conf_default_schema_class_is_karni() -> None:
@@ -122,7 +122,7 @@ def test_write_only_field_appears_only_on_the_request_side(schema: dict[str, Any
     assert "internal_note" in _component(schema, "TestappEventRequest")["properties"]
 
 
-# --- operation parameters (B4) -------------------------------------------------------
+# operation parameters (B4)
 
 
 def test_list_operation_documents_the_full_karni_pipeline(schema: dict[str, Any]) -> None:
@@ -158,7 +158,7 @@ def test_search_documented_only_where_search_fields_exist(schema: dict[str, Any]
     assert "search" not in _params(schema, "/api/venues/")  # none declared
 
 
-# --- vendor extensions (B13) ----------------------------------------------------------
+# vendor extensions (B13)
 
 
 def test_list_operations_carry_x_karni_resource(schema: dict[str, Any]) -> None:
@@ -194,7 +194,7 @@ def test_to_many_relation_resolves_through_the_configured_router() -> None:
     assert tags["x-karni-relation"] == {"resource": "labels", "many": True}
 
 
-# --- generation hygiene ------------------------------------------------------------
+# generation hygiene
 
 
 def test_no_spectacular_warnings_or_errors_for_karni_endpoints(

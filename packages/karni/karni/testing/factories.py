@@ -393,7 +393,7 @@ class FactoryBuilder:
             return factory.django.FileField(filename=f"{field.name}.png", data=b"karni")
         return factory.django.ImageField(filename=f"{field.name}.png")
 
-    # --- compatibility value hooks ----------------------------------------------------
+    # compatibility value hooks
     # Phase 12a's per-type hooks. Overriding one still replaces that type's values
     # (and bypasses name rules for it); new code overrides ValueInference instead.
 
@@ -446,7 +446,7 @@ class FactoryBuilder:
         return None
 
 
-# --- explicit factories that keep the generated declarations ------------------------------
+# explicit factories that keep the generated declarations
 
 
 class _AutoFillMeta(FactoryMetaClass):  # type: ignore[misc]
@@ -495,7 +495,7 @@ class ModelFactory(AutoFactory, metaclass=_AutoFillMeta):
         skip_postgeneration_save = True
 
 
-# --- resolution -------------------------------------------------------------------------------
+# resolution
 
 _EXPLICIT: dict[type[models.Model], type[DjangoModelFactory]] | None = None
 _GENERATED: dict[type[models.Model], type[DjangoModelFactory]] = {}

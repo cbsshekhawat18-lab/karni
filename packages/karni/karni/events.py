@@ -111,7 +111,7 @@ def autodiscover() -> None:
     autodiscover_modules(*AUTODISCOVER_MODULES)
 
 
-# --- soft-delete detection ---------------------------------------------------
+# soft-delete detection
 
 
 def _has_soft_delete_field(instance: models.Model) -> bool:
@@ -141,7 +141,7 @@ def is_soft_delete(instance: models.Model, update_fields: Any) -> bool:
     return _is_soft_deleted(instance)
 
 
-# --- queued dispatch ---------------------------------------------------------
+# queued dispatch
 
 
 def _portable_pk(pk: Any) -> Any:
@@ -303,7 +303,7 @@ def queued(
     return QueuedListener(target, **options)
 
 
-# --- lifecycle decorators ----------------------------------------------------
+# lifecycle decorators
 
 
 def _model_label(model: ModelRef) -> str:

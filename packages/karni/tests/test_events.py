@@ -59,7 +59,7 @@ def _events(received: list[tuple[str, str, Any]], model: str = "testapp.Shelf") 
     return [event for event, label, _ in received if label == model]
 
 
-# --- autodiscovery -----------------------------------------------------------
+# autodiscovery
 
 
 def test_events_and_listeners_modules_are_autodiscovered_at_startup() -> None:
@@ -89,7 +89,7 @@ def test_autodiscover_imports_events_before_listeners(monkeypatch: pytest.Monkey
     assert seen == [("events", "listeners")]
 
 
-# --- lifecycle semantics -----------------------------------------------------
+# lifecycle semantics
 
 
 @pytest.mark.django_db
@@ -209,7 +209,7 @@ class TestIsSoftDelete:
         assert is_soft_delete(Entry(text="x"), frozenset({"deleted_at"})) is False
 
 
-# --- queued dispatch ---------------------------------------------------------
+# queued dispatch
 
 
 @pytest.mark.django_db

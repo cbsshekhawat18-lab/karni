@@ -110,7 +110,7 @@ OWNED_NEEDS_A_FIELD: Final = (
 )
 
 
-# --- request helpers ---------------------------------------------------------
+# request helpers
 
 
 def _user(request: Any) -> Any:
@@ -161,7 +161,7 @@ def _and(left: RowFilter, right: RowFilter) -> RowFilter:
     return left & right
 
 
-# --- the predicate vocabulary -------------------------------------------------
+# the predicate vocabulary
 
 
 class Predicate:
@@ -541,7 +541,7 @@ def _flatten_described(predicate: Predicate, key: str) -> list[dict[str, Any]]:
     return [described]
 
 
-# --- declarations -----------------------------------------------------------------
+# declarations
 
 
 def _require_predicate(slot: str, value: object) -> Predicate:
@@ -620,7 +620,7 @@ class Unscoped:
             )
 
 
-# --- compilation helpers ------------------------------------------------------------
+# compilation helpers
 
 
 def missing_access_text(view_class: type[Any]) -> str:
@@ -729,7 +729,7 @@ def apply_rows(queryset: QuerySet[Any], rows: RowFilter) -> QuerySet[Any]:
     return narrowed
 
 
-# --- validation ------------------------------------------------------------------------
+# validation
 
 
 def _owned_target(model: type[Model], path: str) -> tuple[bool, str]:
@@ -882,7 +882,7 @@ def owner_paths_models(
     return found
 
 
-# --- the request gate -------------------------------------------------------------------
+# the request gate
 
 
 class AccessPermission(BasePermission):
@@ -937,7 +937,7 @@ def _log_missing(view_class: type[Any]) -> None:
         logger.error(missing_access_message(view_class))
 
 
-# --- relation targets (ADR 0001 Q2.5) ---------------------------------------------------
+# relation targets (ADR 0001 Q2.5)
 
 
 def _target_view(model: type[Model], request: Any) -> Any | None:

@@ -132,7 +132,7 @@ def _totp_device_model() -> Any:
     return TOTPDevice
 
 
-# --- Services ---------------------------------------------------------------
+# Services
 
 
 def user_has_2fa(user: AbstractBaseUser | None) -> bool:
@@ -213,7 +213,7 @@ def disable_totp(user: AbstractBaseUser, code: str) -> None:
     device_model.objects.devices_for_user(user).delete()
 
 
-# --- Ephemeral login token (amendment A6) -----------------------------------
+# Ephemeral login token (amendment A6)
 
 
 def _signer() -> TimestampSigner:
@@ -266,7 +266,7 @@ def mark_ephemeral_token_used(token: str) -> bool:
     return bool(cache.add(f"{_REPLAY_CACHE_PREFIX}{digest}", 1, EPHEMERAL_TOKEN_MAX_AGE))
 
 
-# --- Throttling (amendment A5) ----------------------------------------------
+# Throttling (amendment A5)
 
 
 class TwoFAAccountRateThrottle(AccountRateThrottle):
@@ -296,7 +296,7 @@ class TwoFAAccountRateThrottle(AccountRateThrottle):
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-# --- Serializers ------------------------------------------------------------
+# Serializers
 
 
 class TwoFACodeSerializer(serializers.Serializer):
@@ -326,7 +326,7 @@ class TwoFADetailSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
-# --- Views ------------------------------------------------------------------
+# Views
 
 
 def _error_response(exc: TwoFAError, status_code: int) -> Response:

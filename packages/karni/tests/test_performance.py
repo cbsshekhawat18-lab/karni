@@ -61,7 +61,7 @@ def _list(viewset: type[Any]) -> Any:
     return viewset.as_view({"get": "list"})(APIRequestFactory().get("/"))
 
 
-# --- recorder & report ------------------------------------------------------------------
+# recorder & report
 
 
 def test_recorder_groups_duplicates_and_names_the_origin() -> None:
@@ -89,7 +89,7 @@ def test_report_without_duplicates_is_one_line() -> None:
     assert recorder.report().duplicates() == []
 
 
-# --- Budget declarations ------------------------------------------------------------------
+# Budget declarations
 
 
 def test_budget_requires_a_reason_and_valid_limits() -> None:
@@ -134,7 +134,7 @@ def test_viewset_budget_declarations_are_validated() -> None:
             auto_register = False
 
 
-# --- enforcement in BaseViewSet.dispatch ------------------------------------------------------
+# enforcement in BaseViewSet.dispatch
 
 
 def test_the_plugin_makes_budgets_raise_in_tests() -> None:
@@ -201,7 +201,7 @@ def test_invalid_mode_is_a_configuration_error() -> None:
             budget_mode()
 
 
-# --- the query_budget fixture ------------------------------------------------------------------
+# the query_budget fixture
 
 
 def test_query_budget_fixture_passes_within_the_limit(query_budget: Any) -> None:
@@ -226,7 +226,7 @@ def test_query_budget_is_reexported_from_karni_testing() -> None:
     assert karni.testing.query_budget is query_budget
 
 
-# --- QueryLogMiddleware ---------------------------------------------------------------------
+# QueryLogMiddleware
 
 
 def test_query_log_is_dropped_when_disabled() -> None:

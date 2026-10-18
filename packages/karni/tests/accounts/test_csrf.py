@@ -48,7 +48,7 @@ def _csrf_cookie(client: APIClient) -> str:
     return str(client.cookies["csrftoken"].value)
 
 
-# --- Cookie bootstrap (A4 / A13: cookie set on csrf/ and login/) --------------
+# Cookie bootstrap (A4 / A13: cookie set on csrf/ and login/)
 
 
 def test_csrf_endpoint_sets_cookie_and_returns_204() -> None:
@@ -84,7 +84,7 @@ def test_session_login_rotates_and_resends_csrf_cookie(settings: Settings) -> No
     assert login.cookies["csrftoken"].value != pre_login
 
 
-# --- Session-mode enforcement --------------------------------------------------
+# Session-mode enforcement
 
 
 def test_session_unsafe_request_requires_csrf_header(settings: Settings) -> None:
@@ -125,7 +125,7 @@ def test_spa_csrf_bootstrap_flow(settings: Settings) -> None:
     assert logout.status_code == 204, logout.data
 
 
-# --- JWT mode is cookie-free ----------------------------------------------------
+# JWT mode is cookie-free
 
 
 def test_jwt_requests_are_never_csrf_checked() -> None:

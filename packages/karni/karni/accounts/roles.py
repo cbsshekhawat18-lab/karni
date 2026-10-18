@@ -77,7 +77,7 @@ def register_scope(name: str, fn: Callable[[Any, type[models.Model]], Q | bool])
     _custom_scopes[name] = fn
 
 
-# --- the declaration ---------------------------------------------------------------
+# the declaration
 
 
 @dataclass(frozen=True)
@@ -219,7 +219,7 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
     return list(resolved.values())
 
 
-# --- sync --------------------------------------------------------------------------
+# sync
 
 
 @dataclass
@@ -357,7 +357,7 @@ def sync_roles(
     return report
 
 
-# --- what a user may do ---------------------------------------------------------------
+# what a user may do
 
 _CACHE_ATTR: Final = "_karni_grants"
 
@@ -387,10 +387,7 @@ def grants_for(user: Any) -> dict[str, list[Grant]]:
         for row in rows:
             key = row.permission.key
             found.setdefault(key, []).append(Grant(key, row.scope, row.scope_path))
-    try:
-        setattr(user, _CACHE_ATTR, found)
-    except AttributeError:  # pragma: no cover - a user object without a __dict__
-        pass
+    setattr(user, _CACHE_ATTR, found)
     return found
 
 

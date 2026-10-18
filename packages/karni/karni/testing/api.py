@@ -123,7 +123,7 @@ METHODS: Final = {
 ANONYMOUS_DENIAL: Final = frozenset({401, 403})
 
 
-# --- users and clients ----------------------------------------------------------------
+# users and clients
 
 
 def user_with_roles(*roles: str, **fields: Any) -> Any:
@@ -158,7 +158,7 @@ def client_as(*roles: str | None, user: Any = None) -> KarniAPIClient:
     return client
 
 
-# --- resources --------------------------------------------------------------------------
+# resources
 
 
 @dataclass(frozen=True)
@@ -226,7 +226,7 @@ def resolve_resource(resource: Any) -> Resource:
     )
 
 
-# --- rows a user can read -----------------------------------------------------------------
+# rows a user can read
 
 
 def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict[str, Any]:
@@ -268,7 +268,7 @@ def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:
     return create(model, **{**owned, **values})
 
 
-# --- what the declaration promises ----------------------------------------------------------
+# what the declaration promises
 
 
 @dataclass(frozen=True)
@@ -356,7 +356,7 @@ def expectation(resource: Resource, action: str, user: Any, row: Any = None) -> 
     return Expectation(success, True)
 
 
-# --- payloads -----------------------------------------------------------------------------
+# payloads
 
 
 def _json_value(value: Any) -> Any:
@@ -445,7 +445,7 @@ def build_payload(
     return body
 
 
-# --- the run --------------------------------------------------------------------------------
+# the run
 
 
 @dataclass
@@ -533,7 +533,7 @@ class _Crud:
         self.schema_errors: list[str] = []
         self.documented: dict[str, Any] = {}
 
-    # --- plumbing ---------------------------------------------------------------------
+    # plumbing
 
     def client(self, user: Any) -> KarniAPIClient:
         return client_as(None) if user is None else client_as(user=user)
@@ -626,7 +626,7 @@ class _Crud:
                     f"{action}: sent {name}={sent.data[name]!r} but stored {rendered[name]!r}"
                 )
 
-    # --- checks -------------------------------------------------------------------------
+    # checks
 
     def preflight(self, row: Any) -> bool:
         """Fail early when the run could only confirm that everything is refused."""

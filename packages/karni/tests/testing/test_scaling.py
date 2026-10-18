@@ -67,7 +67,7 @@ class LeakyWriterViewSet(WriterViewSet):
     optimize = False
 
 
-# --- measuring -------------------------------------------------------------------------
+# measuring
 
 
 @pytest.mark.django_db
@@ -127,7 +127,7 @@ def test_invisible_rows_skip_with_the_reason() -> None:
     assert "answered 404" in detail.skipped
 
 
-# --- the default wiring --------------------------------------------------------------------
+# the default wiring
 
 
 @pytest.mark.django_db

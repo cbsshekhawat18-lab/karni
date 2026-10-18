@@ -40,7 +40,7 @@ requires_pg_driver = pytest.mark.skipif(
 )
 
 
-# --- provider SQL shape -------------------------------------------------------
+# provider SQL shape
 
 
 class SqlShapeProvider(PostgresSearchProvider):
@@ -123,7 +123,7 @@ def test_noop_on_empty_query_or_fields() -> None:
     assert provider.search(queryset=queryset, query="music", fields=()) is queryset
 
 
-# --- migration helpers --------------------------------------------------------
+# migration helpers
 
 
 def test_gin_trgm_index_derives_opclasses_per_field() -> None:
@@ -161,7 +161,7 @@ def test_unknown_module_attribute_raises_attribute_error() -> None:
         postgres.DoesNotExist  # noqa: B018
 
 
-# --- route inflection (contract-mandated location) ----------------------------
+# route inflection (contract-mandated location)
 
 
 @pytest.mark.parametrize(

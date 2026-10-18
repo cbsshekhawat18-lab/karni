@@ -37,7 +37,7 @@ def _patch_api_meta(monkeypatch: pytest.MonkeyPatch, model: type[Any], **attrs: 
     monkeypatch.setattr(model, "APIMeta", meta, raising=False)
 
 
-# --- explicit serializer_class always wins ------------------------------------
+# explicit serializer_class always wins
 
 
 class ExplicitEventSerializer(serializers.ModelSerializer):
@@ -59,7 +59,7 @@ def test_bare_viewset_generates_a_karni_serializer() -> None:
     assert generated is build_serializer(Event)
 
 
-# --- caching (B1) ---------------------------------------------------------------
+# caching (B1)
 
 
 def test_top_level_builds_are_cached_per_model_expand_and_depth() -> None:
@@ -95,7 +95,7 @@ def test_changing_the_depth_setting_resets_the_cache() -> None:
     assert build_serializer(Event) is not inside
 
 
-# --- naming (B2) -----------------------------------------------------------------
+# naming (B2)
 
 
 def test_base_name_is_app_qualified() -> None:
@@ -124,7 +124,7 @@ def test_schema_name_replaces_the_stem(monkeypatch: pytest.MonkeyPatch) -> None:
     assert build_serializer(Venue).__name__ == "LocationSerializer"
 
 
-# --- field policy -----------------------------------------------------------------
+# field policy
 
 
 def test_base_model_fields_are_always_read_only() -> None:
@@ -197,7 +197,7 @@ def test_password_is_stripped_even_from_explicit_user_fields(
     assert fields["is_staff"].read_only  # forced read-only on user models (B5)
 
 
-# --- APIMeta validation (B10) -----------------------------------------------------
+# APIMeta validation (B10)
 
 
 def test_fields_and_exclude_are_mutually_exclusive(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -227,7 +227,7 @@ def test_exclude_removes_fields_from_the_default_set(
     assert "name" in fields
 
 
-# --- recursion and depth -----------------------------------------------------------
+# recursion and depth
 
 
 def test_two_level_nesting_recurses_through_related_models() -> None:

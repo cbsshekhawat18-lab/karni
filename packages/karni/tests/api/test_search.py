@@ -70,7 +70,7 @@ def _search_ids(query: dict[str, str]) -> set[str]:
     return {row["id"] for row in response.data["results"]}
 
 
-# --- SimpleSearchProvider unit behaviour -------------------------------------
+# SimpleSearchProvider unit behaviour
 
 
 def test_simple_provider_matches_substrings_case_insensitively() -> None:
@@ -99,7 +99,7 @@ def test_simple_provider_noop_on_empty_query_or_fields() -> None:
     assert provider.search(queryset=queryset, query="x", fields=()) is queryset
 
 
-# --- end-to-end through the viewset ------------------------------------------
+# end-to-end through the viewset
 
 
 def test_search_end_to_end_on_declared_search_fields() -> None:
@@ -134,7 +134,7 @@ def test_search_is_a_noop_without_search_fields() -> None:
     assert response.data["count"] == 2
 
 
-# --- provider interface: swap, cache, rank_order ------------------------------
+# provider interface: swap, cache, rank_order
 
 
 def test_provider_instance_is_cached() -> None:
@@ -172,7 +172,7 @@ def test_rank_order_false_with_explicit_ordering() -> None:
     assert _RecordingProvider.calls[-1]["rank_order"] is False
 
 
-# --- behavioural parity across providers (B8) ---------------------------------
+# behavioural parity across providers (B8)
 
 
 @pytest.mark.parametrize(

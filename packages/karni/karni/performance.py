@@ -82,7 +82,7 @@ _SELECT_LIST = re.compile(r"^SELECT\s+(?:DISTINCT\s+)?.+?\sFROM\s", re.IGNORECAS
 _FROM_TABLE = re.compile(r"\sFROM\s+[\"`\[]?([\w.]+)", re.IGNORECASE)
 
 
-# --- recording ---------------------------------------------------------------------------
+# recording
 
 
 @dataclass(frozen=True)
@@ -150,7 +150,7 @@ def record_queries(using: str | None = None) -> Iterator[QueryRecorder]:
         yield recorder
 
 
-# --- origins -------------------------------------------------------------------------------
+# origins
 
 
 def _framework_roots() -> tuple[str, ...]:
@@ -225,7 +225,7 @@ def query_origin() -> str:
     return inner_project
 
 
-# --- reporting ------------------------------------------------------------------------------
+# reporting
 
 
 def _short_sql(sql: str, width: int = 140) -> str:
@@ -304,7 +304,7 @@ class QueryReport:
         return "\n".join(lines)
 
 
-# --- budgets ----------------------------------------------------------------------------------
+# budgets
 
 
 class QueryBudgetExceeded(KarniAssertionError):

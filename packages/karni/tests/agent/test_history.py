@@ -62,7 +62,7 @@ def _no_forced_conditions(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(CONDITIONS_ENV, raising=False)
 
 
-# --- the cap ---------------------------------------------------------------------------
+# the cap
 
 
 def test_estimate_matches_the_rules_budget_measure() -> None:
@@ -87,7 +87,7 @@ def test_cap_lines_cuts_an_overlong_first_line_rather_than_dropping_everything()
     assert estimate_tokens("\n".join(capped)) <= 50
 
 
-# --- composition -------------------------------------------------------------------------
+# composition
 
 
 def test_compose_heading_and_brief(store: Path) -> None:
@@ -152,7 +152,7 @@ def test_provider_output_never_reaches_stdout(store: Path, capfd: pytest.Capture
     assert out == "" and err == ""
 
 
-# --- discovery ---------------------------------------------------------------------------
+# discovery
 
 
 def test_builtin_chronicle_is_discovered_by_entry_point_and_fallback() -> None:
@@ -214,7 +214,7 @@ def test_discovered_third_party_excludes_builtins() -> None:
     assert [p.name for p in found.third_party()] == ["x"]
 
 
-# --- conditions and the conditional rule ---------------------------------------------
+# conditions and the conditional rule
 
 
 def test_every_conditional_rule_names_a_known_condition() -> None:

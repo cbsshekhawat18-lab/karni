@@ -37,7 +37,7 @@ def _request(user: Any) -> Request:
     return request
 
 
-# --- Roles -------------------------------------------------------------------
+# Roles
 
 
 class TestRoles:
@@ -84,7 +84,7 @@ class TestRoles:
         assert perms.user_roles(user) == []
 
 
-# --- RolePermission ----------------------------------------------------------
+# RolePermission
 
 
 class TestRolePermission:
@@ -115,7 +115,7 @@ class TestRolePermission:
         assert permission.has_permission(_request(AnonymousUser()), APIView()) is False
 
 
-# --- IsOwner -----------------------------------------------------------------
+# IsOwner
 
 
 class TestIsOwner:
@@ -168,7 +168,7 @@ class TestIsOwner:
         assert permission.has_object_permission(_request(user), view, SimpleNamespace()) is False
 
 
-# --- ObjectPermissionsMixin ---------------------------------------------------
+# ObjectPermissionsMixin
 
 
 class _OwnedView(perms.ObjectPermissionsMixin, APIView):

@@ -252,7 +252,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if apps.models_ready:
             _validate_once(cls)
 
-    # --- model & access ----------------------------------------------------------
+    # model & access
 
     def get_model(self) -> type[Model]:
         """Return the model this viewset serves.
@@ -312,7 +312,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return ()
         return owner_fields(self.get_access(), model)
 
-    # --- the read pipeline -----------------------------------------------------------
+    # the read pipeline
 
     @property
     def ordering(self) -> Sequence[str | Combinable]:
@@ -461,7 +461,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                     ) from exc
             raise
 
-    # --- writes & serializers ----------------------------------------------------------
+    # writes & serializers
 
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Save, stamping every owner field from ``request.user`` (ADR 0001 R6).
@@ -492,7 +492,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             read_only=self.get_owner_fields(),
         )
 
-    # --- pagination ---------------------------------------------------------------------
+    # pagination
 
     @property
     def paginator(self) -> BasePagination:
@@ -535,7 +535,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         response: Response = self.get_paginated_response(serializer.data)
         return response
 
-    # --- query budget -------------------------------------------------------------------
+    # query budget
 
     def get_query_budget(self) -> int | None:
         """The query budget of the current action (``None`` = unchecked).
@@ -583,7 +583,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             raise QueryBudgetExceeded(message)
         logger.warning(message)
 
-    # --- response cache -----------------------------------------------------------------
+    # response cache
 
     def get_response_cache(self) -> ResponseCache | None:
         """The cache entry for this request, or ``None`` when it is not cached.

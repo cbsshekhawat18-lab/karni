@@ -95,7 +95,7 @@ class Event(BaseModel):
         return self.title
 
 
-# --- model layer (tests/test_model_layer.py) ---------------------------------
+# model layer (tests/test_model_layer.py)
 
 
 class Stamp(UUIDModel):

@@ -175,7 +175,7 @@ def repo(tmp_path: Path) -> Path:
     return project
 
 
-# --- detection (no subprocess) ----------------------------------------------------------
+# detection (no subprocess)
 
 
 def test_detect_walks_up_to_the_nearest_store(tmp_path: Path, repo: Path) -> None:
@@ -189,7 +189,7 @@ def test_detect_walks_up_to_the_nearest_store(tmp_path: Path, repo: Path) -> Non
     assert not provider.detect(bare)
 
 
-# --- the real envelope -------------------------------------------------------------------
+# the real envelope
 
 
 @pytest.mark.history_provider
@@ -276,7 +276,7 @@ def test_project_context_lists_decisions_newest_first(chronicle: FakeChronicle, 
     assert call["argv"] == ["knowledge", "--type", "decision", "--json"]
 
 
-# --- pure helpers ------------------------------------------------------------------------
+# pure helpers
 
 
 def test_parse_envelope() -> None:

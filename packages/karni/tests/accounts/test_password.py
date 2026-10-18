@@ -86,7 +86,7 @@ def _login(api_client: APIClient, email: str = EMAIL, password: str = PASSWORD) 
     return str(response.data["refresh"])
 
 
-# --- Reset request ---------------------------------------------------------
+# Reset request
 
 
 def test_reset_request_sends_email(
@@ -119,7 +119,7 @@ def test_reset_request_is_enumeration_silent(
     assert InMemoryEmailBackend.outbox == []
 
 
-# --- Reset confirm ---------------------------------------------------------
+# Reset confirm
 
 
 def test_reset_confirm_sets_new_password(
@@ -216,7 +216,7 @@ def test_reset_confirm_blacklists_outstanding_refresh_tokens(
     assert stale.status_code == 401
 
 
-# --- Password change -------------------------------------------------------
+# Password change
 
 
 def test_change_password_requires_authentication(api_client: APIClient) -> None:

@@ -103,7 +103,7 @@ class AbstractKarniUser(BaseModel, AbstractBaseUser, PermissionsMixin):
         """The first name when set, otherwise the email address."""
         return self.first_name or self.email
 
-    # --- roles as data (karni.accounts.roles) --------------------------------------
+    # roles as data (karni.accounts.roles)
 
     @property
     def roles(self) -> QuerySet[Role]:
@@ -177,7 +177,7 @@ class OneTimeToken(BaseModel):
         return f"{self.purpose} token for user {self.user_id}"
 
 
-# --- roles as data ---------------------------------------------------------------------
+# roles as data
 
 
 class Role(BaseModel):

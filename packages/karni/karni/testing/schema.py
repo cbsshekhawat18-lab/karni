@@ -99,7 +99,7 @@ def _connect() -> None:
 _connect()
 
 
-# --- snapshot ---------------------------------------------------------------------------
+# snapshot
 
 
 def default_snapshot_path() -> Path:
@@ -246,7 +246,7 @@ def render_changes(changes: list[Change], *, limit: int = 40) -> str:
     return "\n".join(lines)
 
 
-# --- response contract ------------------------------------------------------------------
+# response contract
 
 
 def find_operation(schema: dict[str, Any], path: str, method: str) -> dict[str, Any] | None:

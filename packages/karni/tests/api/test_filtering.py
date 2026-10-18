@@ -62,7 +62,7 @@ def _result_ids(response: Any) -> set[str]:
     return {row["id"] for row in response.data["results"]}
 
 
-# --- derivation rules (no database needed) ----------------------------------
+# derivation rules (no database needed)
 
 
 def test_numeric_field_derives_exact_gte_lte_param_names() -> None:
@@ -181,7 +181,7 @@ def test_base_viewset_subclasses_auto_derive() -> None:
     assert "capacity__gte" in filterset.base_filters
 
 
-# --- request-level behaviour --------------------------------------------------
+# request-level behaviour
 
 
 @pytest.mark.django_db

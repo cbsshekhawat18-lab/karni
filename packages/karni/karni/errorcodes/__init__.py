@@ -153,7 +153,7 @@ def _e(code: str, title: str, kind: str, source: str, why: str, fix: str) -> Err
 
 
 CODES: Final[tuple[ErrorCode, ...]] = (
-    # --- E0xx models, managers, scopes -----------------------------------------------
+    # E0xx models, managers, scopes
     _e(
         "E001",
         "A soft-delete model's default manager shows deleted rows",
@@ -230,7 +230,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Add the scope's name to KARNI_SCOPES (or unset KARNI_SCOPES to run every scope). "
         "If switching it off is deliberate, add 'karni.W001' to SILENCED_SYSTEM_CHECKS.",
     ),
-    # --- E1xx API: access ----------------------------------------------------------------
+    # E1xx API: access
     _e(
         "E101",
         "A viewset declares no access",
@@ -310,7 +310,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "be silently dropped.",
         "Combine predicates with | and &: Owned('user') | HasRole('staff').",
     ),
-    # --- E1xx API: viewsets, pagination, budgets, caching --------------------------------
+    # E1xx API: viewsets, pagination, budgets, caching
     _e(
         "E110",
         "A viewset has neither model nor queryset",
@@ -426,7 +426,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "optimize switches the automatic query optimizer for the viewset.",
         "Set optimize = True (default) or optimize = False.",
     ),
-    # --- E1xx API: serializers and expand -------------------------------------------------
+    # E1xx API: serializers and expand
     _e(
         "E122",
         "APIMeta declares both fields and exclude",
@@ -522,7 +522,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "with APIMeta on the model. Keep serializer_class only for a serializer with custom "
         "fields or validation.",
     ),
-    # --- E2xx accounts -------------------------------------------------------------------
+    # E2xx accounts
     _e(
         "E201",
         "KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend",
@@ -613,7 +613,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write Can('events.event:approve'); on EventViewSet it must be an events.event "
         "permission. To gate on another model's permission use HasRole(...).",
     ),
-    # --- E3xx admin ----------------------------------------------------------------------
+    # E3xx admin
     _e(
         "E301",
         "KARNI_ADMIN_BASE is not a ModelAdmin class",
@@ -641,7 +641,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', "
         "'dark': ..., 'icon': ...} with at least 'light'; leave it unset for a text header.",
     ),
-    # --- E4xx events, listeners, schedules, Celery ---------------------------------------
+    # E4xx events, listeners, schedules, Celery
     _e(
         "E401",
         "A queued listener is not a module-level function",
@@ -716,7 +716,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Read the task's own error in the message and fix the task; re-run with "
         "`karni schedule run <name>`.",
     ),
-    # --- E5xx settings and optional dependencies -----------------------------------------
+    # E5xx settings and optional dependencies
     _e(
         "E501",
         "An optional dependency is not installed",
@@ -767,7 +767,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Point CACHES['default'] at a backend every worker shares (Redis — Karni's default "
         "— or the database cache), or silence karni.W501 for a single-process deployment.",
     ),
-    # --- E6xx testing and seeding ----------------------------------------------------------
+    # E6xx testing and seeding
     _e(
         "E601",
         "The resource under test is not routed",
@@ -904,7 +904,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "superuser with a known password.",
         "Seed a development database. If you really mean it, pass --force.",
     ),
-    # --- E7xx agent tooling ----------------------------------------------------------------
+    # E7xx agent tooling
     _e(
         "E701",
         "karni.rules.py is invalid",

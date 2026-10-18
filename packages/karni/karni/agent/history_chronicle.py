@@ -60,7 +60,7 @@ class ChronicleProvider:
         #: Max shaping prompts requested (Chronicle's ``--limit``; its default is 8).
         self.limit = limit
 
-    # --- protocol ------------------------------------------------------------------
+    # protocol
 
     def store(self, project_root: Path) -> Path | None:
         """The nearest ``.chronicle/`` at or above ``project_root`` (Chronicle's walk-up)."""
@@ -114,7 +114,7 @@ class ChronicleProvider:
             return "chronicle knowledge --type decision"
         return f"chronicle context {shlex.quote(path)}"
 
-    # --- the one place Chronicle runs ----------------------------------------------
+    # the one place Chronicle runs
 
     def _run(self, repo: Path, args: list[str], command: str) -> dict[str, Any] | None:
         executable = shutil.which(self.executable)
@@ -141,7 +141,7 @@ class ChronicleProvider:
         return parse_envelope(proc.stdout, command)
 
 
-# --- pure helpers (tested without a binary) --------------------------------------------
+# pure helpers (tested without a binary)
 
 
 def parse_envelope(stdout: str, command: str) -> dict[str, Any] | None:

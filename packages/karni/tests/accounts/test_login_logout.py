@@ -58,7 +58,7 @@ def _login(api_client: APIClient, email: str = EMAIL, password: str = PASSWORD) 
     return dict(response.data)
 
 
-# --- JWT mode: login ---------------------------------------------------------
+# JWT mode: login
 
 
 def test_jwt_login_returns_token_pair_and_user(api_client: APIClient) -> None:
@@ -130,7 +130,7 @@ def test_login_inactive_user_rejected(api_client: APIClient) -> None:
     assert response.status_code == 401
 
 
-# --- JWT mode: logout --------------------------------------------------------
+# JWT mode: logout
 
 
 def test_jwt_logout_blacklists_posted_refresh_token(api_client: APIClient) -> None:
@@ -165,7 +165,7 @@ def test_logout_requires_authentication(api_client: APIClient) -> None:
     assert response.status_code in (401, 403)
 
 
-# --- JWT mode: refresh rotation ----------------------------------------------
+# JWT mode: refresh rotation
 
 
 def test_jwt_refresh_rotates_and_blacklists_previous_token(api_client: APIClient) -> None:
@@ -187,7 +187,7 @@ def test_jwt_refresh_rotates_and_blacklists_previous_token(api_client: APIClient
     assert current.status_code == 200, current.data
 
 
-# --- Session mode --------------------------------------------------------------
+# Session mode
 
 
 def test_session_login_opens_session_without_tokens(settings: Settings) -> None:

@@ -89,7 +89,7 @@ def test_page_size_capped_at_karni_max_page_size() -> None:
     assert pagination.get_page_size(request) == pagination.get_max_page_size() == 100
 
 
-# --- the hard cap and its floor (ADR 0001 Q3.4) -------------------------------------------
+# the hard cap and its floor (ADR 0001 Q3.4)
 
 
 def test_cap_follows_the_setting() -> None:
@@ -138,7 +138,7 @@ def test_cursor_pagination() -> None:
     assert "count" not in response.data and response.data["next"]
 
 
-# --- switching pagination off (ADR 0001 Q3.5) ---------------------------------------------------
+# switching pagination off (ADR 0001 Q3.5)
 
 
 def test_pagination_class_none_is_a_class_definition_error() -> None:
@@ -223,7 +223,7 @@ def test_a_missing_paginator_is_refused_at_request_time() -> None:
         Lost.as_view({"get": "list"})(APIRequestFactory().get("/"))
 
 
-# --- list-returning custom actions (ADR 0001 Q3.6) ----------------------------------------------
+# list-returning custom actions (ADR 0001 Q3.6)
 
 
 class ArchiveViewSet(BaseViewSet):

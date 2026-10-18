@@ -15,7 +15,7 @@ from karni.models import BaseModel
 
 from .factories import DEFAULT_PASSWORD, UserFactory
 
-# --- manager -----------------------------------------------------------------
+# manager
 
 
 @pytest.mark.django_db
@@ -62,7 +62,7 @@ def test_create_superuser_rejects_demoted_flags(flag: str) -> None:
         User.objects.create_superuser("root@example.com", "s3cret-pass", **{flag: False})
 
 
-# --- model shape --------------------------------------------------------------
+# model shape
 
 
 def test_email_is_the_username_field() -> None:
@@ -125,7 +125,7 @@ def test_factory_password_round_trips() -> None:
     assert UserFactory(verified=True).email_verified is True
 
 
-# --- APIMeta (accounts amendment A14) -----------------------------------------
+# APIMeta (accounts amendment A14)
 
 
 def test_apimeta_is_present_and_correct() -> None:

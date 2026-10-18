@@ -48,7 +48,7 @@ pytestmark = pytest.mark.django_db
 ROUTER = "tests.api.test_access"
 
 
-# --- viewsets under test --------------------------------------------------------------
+# viewsets under test
 
 
 class OwnedEvents(BaseViewSet):
@@ -143,7 +143,7 @@ def deny_router() -> KarniRouter:
     return router
 
 
-# --- fixtures & helpers ---------------------------------------------------------------
+# fixtures & helpers
 
 
 @pytest.fixture(autouse=True)
@@ -212,7 +212,7 @@ def _req(user: Any = None) -> Any:
     return SimpleNamespace(user=user or AnonymousUser(), method="GET")
 
 
-# --- predicates: request level and row level ------------------------------------------
+# predicates: request level and row level
 
 
 def test_public_admits_everyone_and_every_row() -> None:
@@ -376,7 +376,7 @@ def test_traversal_paths_follow_foreign_keys(alice: Any, bob: Any) -> None:
     assert _ids(_list(_ByVenueCreator, alice)) == {str(kept.pk)}
 
 
-# --- per-action gates, 404 vs 403 -------------------------------------------------------
+# per-action gates, 404 vs 403
 
 
 def test_list_is_row_scoped_and_roles_bypass(alice: Any, bob: Any, staff: Any) -> None:
@@ -500,7 +500,7 @@ def test_get_access_hatch_computes_a_declaration(alice: Any, bob: Any) -> None:
     assert _ids(_list(_Dynamic, alice)) == {str(own.pk)}
 
 
-# --- deny-all without a declaration ------------------------------------------------------
+# deny-all without a declaration
 
 
 def test_missing_access_denies_everything_and_names_the_fix(alice: Any) -> None:
@@ -529,7 +529,7 @@ def test_missing_access_row_scope_is_empty(alice: Any) -> None:
     assert view.get_queryset().count() == 0
 
 
-# --- get_queryset overrides stay scoped (Q2.7) --------------------------------------------
+# get_queryset overrides stay scoped (Q2.7)
 
 
 @pytest.mark.parametrize("viewset", [OverrideWithoutSuper, OverrideWithSuper, MixinOverride])
@@ -554,7 +554,7 @@ def test_super_chain_scopes_exactly_once(alice: Any) -> None:
     assert sql.count('"organizer_id" =') == 1
 
 
-# --- Unscoped and Public --------------------------------------------------------------------
+# Unscoped and Public
 
 
 def test_unscoped_hands_the_gate_to_drf(alice: Any) -> None:
@@ -579,7 +579,7 @@ def test_public_read_is_explicit(alice: Any) -> None:
     assert _list(OwnedEvents).status_code == 401
 
 
-# --- model-level scopes cannot be lifted ------------------------------------------------------
+# model-level scopes cannot be lifted
 
 
 def _soft_delete(event: Event) -> None:
@@ -619,7 +619,7 @@ def test_apply_rows_only_narrows() -> None:
     assert apply_rows(base, Q(title="Kept")).count() == 1
 
 
-# --- relation PK validation respects the target's read scope (Q2.5) ---------------------------
+# relation PK validation respects the target's read scope (Q2.5)
 
 
 def _create_event(user: Any, **fields: Any) -> Any:
@@ -674,7 +674,7 @@ def test_serializer_without_a_request_is_not_narrowed() -> None:
     assert serializer.is_valid(), serializer.errors
 
 
-# --- ?expand= only embeds readable rows (Q2.5) ---------------------------------------------------
+# ?expand= only embeds readable rows (Q2.5)
 
 
 def test_expanding_users_needs_their_read_scope(alice: Any) -> None:
@@ -722,7 +722,7 @@ def test_reverse_expansion_uses_the_target_scope(alice: Any, bob: Any) -> None:
     assert [event["title"] for event in row["events"]] == ["Mine"]
 
 
-# --- x-karni-access in the schema ----------------------------------------------------------------
+# x-karni-access in the schema
 
 
 def _schema(router: KarniRouter) -> dict[str, Any]:

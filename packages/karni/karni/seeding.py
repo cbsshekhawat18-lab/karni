@@ -202,7 +202,7 @@ class SeedBuilder(FactoryBuilder):
         return super().declaration(model, field)
 
 
-# --- discovery -----------------------------------------------------------------------------
+# discovery
 
 _SEEDERS: dict[type[models.Model], type[Seeder]] | None = None
 
@@ -315,7 +315,7 @@ def seed_plan(models_: Sequence[Any] | None = None) -> list[type[models.Model]]:
     return _order(model for model in chosen if _seedable(model))
 
 
-# --- the run -----------------------------------------------------------------------------
+# the run
 
 
 @dataclass
@@ -435,7 +435,7 @@ class _Run:
         self.plan: set[type[models.Model]] = set()
         self.report = SeedReport(seed_value, count)
 
-    # --- pools -----------------------------------------------------------------------
+    # pools
 
     def pool(self, model: type[models.Model]) -> list[Any]:
         if model not in self.pools:
@@ -461,7 +461,7 @@ class _Run:
                 return self.demo
         return self.random.choice(pool)
 
-    # --- factories -------------------------------------------------------------------
+    # factories
 
     def factory(self, model: type[models.Model], seeder: type[Seeder] | None) -> type[Any]:
         from karni.testing.factories import explicit_factories
@@ -559,7 +559,7 @@ class _Run:
             for name, value in stamps.items():
                 setattr(row, name, value)
 
-    # --- users -----------------------------------------------------------------------
+    # users
 
     def demo_values(self) -> dict[str, Any]:
         model = self.user_model
@@ -598,7 +598,7 @@ class _Run:
                     found |= _role_names(override)
         return sorted(found)
 
-    # --- the run ---------------------------------------------------------------------
+    # the run
 
     def reset(self, plan: list[type[models.Model]]) -> None:
         from django.core.management.color import no_style

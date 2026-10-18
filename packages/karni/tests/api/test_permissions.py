@@ -96,7 +96,7 @@ def _authed(request: Any, user: Any) -> Any:
     return request
 
 
-# --- conf defaults ---------------------------------------------------------------
+# conf defaults
 
 
 def test_conf_default_permission_is_authenticated() -> None:
@@ -129,7 +129,7 @@ def test_a_permissive_drf_default_cannot_open_an_access_viewset() -> None:
     assert Event.objects.count() == 0
 
 
-# --- the gate as seen through EventViewSet (read=Public, write=Authenticated) ------
+# the gate as seen through EventViewSet (read=Public, write=Authenticated)
 
 
 def test_anonymous_list_is_allowed() -> None:
@@ -174,7 +174,7 @@ def test_permission_classes_are_anded_after_the_gate(user: Any) -> None:
     assert "extra permission class" in str(response.data["detail"])
 
 
-# --- legacy ObjectPermissionsMixin hooks (deprecated object_permission_classes) ----
+# legacy ObjectPermissionsMixin hooks (deprecated object_permission_classes)
 
 
 def test_object_permission_classes_still_deny_detail_access(user: Any) -> None:

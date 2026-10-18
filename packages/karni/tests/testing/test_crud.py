@@ -38,7 +38,7 @@ def _fails(resource: object, role: str | None, *expected: str, **options: object
     return message
 
 
-# --- clients -------------------------------------------------------------------------------
+# clients
 
 
 def test_client_as_authenticates_a_user_holding_the_roles() -> None:
@@ -71,7 +71,7 @@ class ClientAsTests(APITestCase):
         assert self.assert_isolated(crud_urls.EventViewSet, "organizer").dimensions == ["owner"]
 
 
-# --- the full surface passes for well-behaved resources -----------------------------------
+# the full surface passes for well-behaved resources
 
 
 def test_the_full_crud_surface_of_an_owned_resource() -> None:
@@ -127,7 +127,7 @@ def test_values_payload_expect_and_skip() -> None:
         assert_crud(crud_urls.EventViewSet, "organizer", skip=("nope",))
 
 
-# --- and fails, naming what broke -----------------------------------------------------------
+# and fails, naming what broke
 
 
 def test_a_missing_permission_check_fails_the_denials() -> None:

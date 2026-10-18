@@ -76,7 +76,7 @@ def _unscoped(model: type[Model]) -> tuple[QuerySet[Any], bool]:
     return model._default_manager.all(), False
 
 
-# --- the plan -------------------------------------------------------------------------------
+# the plan
 
 
 @dataclass
@@ -273,7 +273,7 @@ def plan_cache_clear() -> None:
     _PLANS.clear()
 
 
-# --- hints -------------------------------------------------------------------------------------
+# hints
 
 
 def validate_hints(owner: str, name: str, value: Any) -> tuple[Hint, ...]:
@@ -312,7 +312,7 @@ def _prefixed(hint: Hint, prefix: str) -> Hint:
     return Prefetch(prefix + hint.prefetch_through, queryset=hint.queryset, to_attr=hint.to_attr)
 
 
-# --- materialising ------------------------------------------------------------------------------
+# materialising
 
 
 @dataclass

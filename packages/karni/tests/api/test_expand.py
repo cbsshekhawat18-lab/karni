@@ -70,7 +70,7 @@ def _only_row(response: Any) -> dict[str, Any]:
     return response.data["results"][0]
 
 
-# --- nesting -------------------------------------------------------------------
+# nesting
 
 
 def test_unexpanded_relations_are_primary_keys(organizer: Any, venue: Venue) -> None:
@@ -147,7 +147,7 @@ def test_dotted_path_validates_but_api_meta_still_wins(organizer: Any) -> None:
     assert "groups" not in row["organizer"]
 
 
-# --- guards ----------------------------------------------------------------------
+# guards
 
 
 def test_unknown_expand_key_is_400_listing_allowed_keys() -> None:
@@ -194,7 +194,7 @@ def test_cycle_stops_at_the_primary_key() -> None:
     assert not isinstance(field, serializers.BaseSerializer)
 
 
-# --- expandable_fields (restriction, aliasing, reverse relations) ---------------
+# expandable_fields (restriction, aliasing, reverse relations)
 
 
 def test_expandable_fields_restricts_the_allowed_keys(venue: Venue) -> None:
@@ -233,7 +233,7 @@ def test_reverse_relation_expandable_only_when_listed(venue: Venue) -> None:
     assert [event["title"] for event in row["events"]] == ["On the books"]
 
 
-# --- query optimisation ----------------------------------------------------------
+# query optimisation
 
 
 def test_expansion_uses_select_related_and_prefetch(

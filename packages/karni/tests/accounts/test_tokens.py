@@ -35,7 +35,7 @@ def _row(secret: str) -> OneTimeToken:
     return OneTimeToken.objects.get(token_hash=hash_secret(secret))
 
 
-# --- model shape --------------------------------------------------------------
+# model shape
 
 
 def test_token_model_declaration() -> None:
@@ -49,7 +49,7 @@ def test_token_model_declaration() -> None:
     assert user_field.remote_field.related_name == "one_time_tokens"
 
 
-# --- issuing ------------------------------------------------------------------
+# issuing
 
 
 def test_issue_returns_secret_and_stores_only_its_hash(user: User) -> None:
@@ -124,7 +124,7 @@ def test_reissue_is_scoped_to_user_and_purpose(user: User) -> None:
     assert consume_token(other_secret, VERIFY).user == other_user
 
 
-# --- consuming ----------------------------------------------------------------
+# consuming
 
 
 def test_consume_marks_used_and_persists(user: User) -> None:
@@ -204,7 +204,7 @@ def test_token_error_carries_reason() -> None:
     assert "expired" in str(error)
 
 
-# --- lifecycle ----------------------------------------------------------------
+# lifecycle
 
 
 def test_related_name_and_cascade_delete(user: User) -> None:

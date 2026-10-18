@@ -179,7 +179,7 @@ class NameRule:
         return any(fnmatchcase(name, pattern) for pattern in self.patterns)
 
 
-# --- generators -------------------------------------------------------------------------------
+# generators
 
 _PERSON_MODELS: Final = frozenset(
     "user person member customer client contact author speaker attendee organizer organiser "
@@ -432,7 +432,7 @@ def _clock(low: int, high: int) -> Generator:
 _DATES: Final = (models.DateField, models.DateTimeField)  # DateTimeField subclasses DateField
 
 NAME_RULES: tuple[NameRule, ...] = (
-    # --- people and identity -----------------------------------------------------------------
+    # people and identity
     NameRule("first name", ("first_name", "firstname", "given_name"), _TEXT, _plain("first_name"),
              _STRICT_TEXT),
     NameRule("last name", ("last_name", "lastname", "surname", "family_name"), _TEXT,
@@ -451,7 +451,7 @@ NAME_RULES: tuple[NameRule, ...] = (
              _plain("company"), _STRICT_TEXT),
     NameRule("job title", ("job", "job_title", "occupation", "position", "designation"), _TEXT,
              _plain("job"), _STRICT_TEXT),
-    # --- text --------------------------------------------------------------------------------
+    # text
     NameRule("name", ("name", "*_name"), _TEXT, _name, _STRICT_TEXT),
     NameRule("title", ("title", "*_title", "headline", "subject", "heading"), _TEXT, _title,
              _STRICT_TEXT),
@@ -484,7 +484,7 @@ NAME_RULES: tuple[NameRule, ...] = (
              (models.CharField,), _url, (models.EmailField, models.SlugField)),
     NameRule("slug", ("slug", "*_slug"), (models.CharField,), _slug,
              (models.EmailField, models.URLField)),
-    # --- numbers -----------------------------------------------------------------------------
+    # numbers
     NameRule("money", ("price", "*_price", "amount", "*_amount", "cost", "*_cost", "total",
                        "subtotal", "fee", "*_fee", "balance", "budget", "salary", "revenue",
                        "rate", "fare"), _NUMBER, _number(5, 500)),
@@ -510,7 +510,7 @@ NAME_RULES: tuple[NameRule, ...] = (
              _number(-60, 70, places=6)),
     NameRule("longitude", ("longitude", "lng", "lon", "long"),
              (models.FloatField, models.DecimalField), _number(-180, 180, places=6)),
-    # --- dates and times ---------------------------------------------------------------------
+    # dates and times
     NameRule("birth date", ("birth_date", "birthdate", "birthday", "date_of_birth", "dob",
                             "born_on", "born_at"), _DATES, _birth),
     NameRule("end", tuple(_START_FOR_END), _DATES, _end),
@@ -527,7 +527,7 @@ NAME_RULES: tuple[NameRule, ...] = (
              _clock(8, 11)),
     NameRule("closing time", ("closes", "closing_time", "end_time"), (models.TimeField,),
              _clock(17, 22)),
-    # --- booleans ----------------------------------------------------------------------------
+    # booleans
     NameRule("mostly on", ("is_active", "active", "enabled", "is_enabled", "is_published",
                            "published", "visible", "is_visible", "is_public", "public",
                            "available", "is_available", "in_stock"), (models.BooleanField,),
@@ -587,7 +587,7 @@ class ValueInference:
             return self._now()
         return self._now
 
-    # --- resolution ------------------------------------------------------------------------
+    # resolution
 
     def rule_for(self, model_field: Any) -> NameRule | None:
         """The first rule matching ``model_field``, or ``None``."""
@@ -661,7 +661,7 @@ class ValueInference:
             return MISSING
         return make(self.context(model, model_field, n, unique=unique, row=row))
 
-    # --- type defaults (override any of them) ------------------------------------------------
+    # type defaults (override any of them)
 
     def text(self, ctx: ValueContext) -> str:
         words = ctx.fake.words(ctx.random.randint(2, 3))

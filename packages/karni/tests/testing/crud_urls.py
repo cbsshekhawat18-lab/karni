@@ -51,7 +51,7 @@ class PublicVenueViewSet(BaseViewSet):
     access = Access(read=Public(), write=Authenticated())
 
 
-# --- misbehaving viewsets -------------------------------------------------------------------
+# misbehaving viewsets
 
 
 class AllowAll(BasePermission):

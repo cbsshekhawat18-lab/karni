@@ -58,7 +58,7 @@ def private() -> ScheduleRegistry:
     return ScheduleRegistry()
 
 
-# --- every() -----------------------------------------------------------------
+# every()
 
 
 @pytest.mark.parametrize(
@@ -144,7 +144,7 @@ def test_duplicate_names_are_rejected_identical_redeclaration_is_not(
     assert "sync" not in private
 
 
-# --- cron() ------------------------------------------------------------------
+# cron()
 
 
 def test_cron_builds_a_crontab(private: ScheduleRegistry) -> None:
@@ -185,7 +185,7 @@ def test_cron_rejects_a_non_string(private: ScheduleRegistry) -> None:
         cron(3, "a.b", registry=private)  # type: ignore[arg-type]
 
 
-# --- discovery and merging ---------------------------------------------------
+# discovery and merging
 
 
 def test_discover_imports_app_schedules_modules() -> None:
@@ -272,7 +272,7 @@ def test_database_scheduler_syncs_merged_entries() -> None:
     assert "testapp-tick" in scheduler.schedule
 
 
-# --- describe / run ----------------------------------------------------------
+# describe / run
 
 
 @override_settings(CELERY_BEAT_SCHEDULE=SETTINGS_OVERRIDE)
@@ -324,7 +324,7 @@ def test_run_schedule_unknown_task_names_the_fix() -> None:
         run_schedule("ghost", configured=configured)
 
 
-# --- manage.py karni_schedules -----------------------------------------------
+# manage.py karni_schedules
 
 
 @override_settings(CELERY_BEAT_SCHEDULE=SETTINGS_OVERRIDE)

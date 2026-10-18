@@ -145,7 +145,7 @@ def invalidate(model: type[Model], pk: Any = None) -> None:
     _backend().set_many(values, timeout=None)
 
 
-# --- signal wiring (connected lazily, only for models a cached viewset reads) -------------
+# signal wiring (connected lazily, only for models a cached viewset reads)
 
 
 def _on_write(sender: type[Model], instance: Model, **kwargs: Any) -> None:
@@ -195,7 +195,7 @@ def _watch(models: Iterable[type[Model]]) -> None:
         _CONNECTED.add(concrete)
 
 
-# --- keys ---------------------------------------------------------------------------------
+# keys
 
 
 def _resolve(model: type[Model] | str) -> type[Model]:

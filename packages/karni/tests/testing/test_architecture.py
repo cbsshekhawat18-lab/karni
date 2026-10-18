@@ -37,7 +37,7 @@ def as_project(monkeypatch):
     return _install
 
 
-# --- opt-out semantics (F5) ---------------------------------------------------
+# opt-out semantics (F5)
 
 
 def test_optout_with_reason_suppresses(tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ def test_optout_multiple_rules_one_marker(tmp_path: Path) -> None:
     assert check_optout(f, "http-client", [1], v) == []
 
 
-# --- raw-sql ------------------------------------------------------------------
+# raw-sql
 
 RAW_SQL = """
 from django.db import connection
@@ -96,7 +96,7 @@ def test_raw_sql_optout(tmp_path, as_project) -> None:
     assert architecture.check_raw_sql() == []
 
 
-# --- http-client --------------------------------------------------------------
+# http-client
 
 
 def test_http_import_detected_and_services_allowed(tmp_path, as_project) -> None:
@@ -120,7 +120,7 @@ def test_http_from_import_detected(tmp_path, as_project) -> None:
     assert [v.rule for v in architecture.check_http_client()] == ["http-client"]
 
 
-# --- model-base ---------------------------------------------------------------
+# model-base
 
 
 @pytest.mark.django_db
@@ -142,7 +142,7 @@ def test_plain_model_flagged(monkeypatch) -> None:
     assert len(violations) == 1 and "Rogue" in violations[0].message
 
 
-# --- viewset-base -------------------------------------------------------------
+# viewset-base
 
 
 @pytest.mark.django_db
@@ -152,7 +152,7 @@ def test_testapp_viewsets_pass(monkeypatch) -> None:
     assert architecture.check_viewset_base() == []
 
 
-# --- viewset-access -----------------------------------------------------------
+# viewset-access
 
 VIEWSETS = """
 from karni.api import Access, Authenticated, BaseViewSet, Public
@@ -226,7 +226,7 @@ def test_testapp_viewsets_declare_access(monkeypatch: pytest.MonkeyPatch) -> Non
     assert architecture.check_viewset_access() == []
 
 
-# --- access-override ----------------------------------------------------------
+# access-override
 
 OVERRIDE = """
 class EventViewSet(BaseViewSet):
@@ -271,7 +271,7 @@ def test_plain_functions_named_like_the_hook_are_ignored(tmp_path: Path, as_proj
     assert architecture.check_access_override() == []
 
 
-# --- unpaginated-action ---------------------------------------------------------
+# unpaginated-action
 
 ACTIONS = """
 class EventViewSet(BaseViewSet):
@@ -321,7 +321,7 @@ def test_unpaginated_action_optout_needs_a_reason(tmp_path: Path, as_project) ->
     assert rules == ["opt-out-reason", "unpaginated-action"]
 
 
-# --- entry points -------------------------------------------------------------
+# entry points
 
 
 def test_entry_points_registered() -> None:

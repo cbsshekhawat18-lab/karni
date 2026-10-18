@@ -133,7 +133,7 @@ class TestPerAccountThrottling:
         assert _login(client, "someone-else@example.com", ip="10.0.1.51").status_code != 429
 
 
-# --- TwoFAAccountRateThrottle unit tests --------------------------------------
+# TwoFAAccountRateThrottle unit tests
 #
 # The 2fa/login/ variant of the amendment-A5 per-account throttle: email when
 # present, otherwise the posted ephemeral_token identifies the "account".

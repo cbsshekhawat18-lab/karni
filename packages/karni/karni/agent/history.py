@@ -107,7 +107,7 @@ class Discovered:
         return tuple(p for p in self.providers if p.name not in builtin)
 
 
-# --- discovery ---------------------------------------------------------------------
+# discovery
 
 
 def _looks_like_provider(obj: object) -> bool:
@@ -183,7 +183,7 @@ def discover() -> Discovered:
     return Discovered(tuple(found[name] for name in sorted(found)), tuple(errors))
 
 
-# --- calling providers safely --------------------------------------------------------
+# calling providers safely
 
 
 @contextlib.contextmanager
@@ -239,7 +239,7 @@ def active_conditions(
     return frozenset({CONDITION}) if store_detected(root, providers) else frozenset()
 
 
-# --- composition and the cap ---------------------------------------------------------
+# composition and the cap
 
 
 def estimate_tokens(text: str) -> int:

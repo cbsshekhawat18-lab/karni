@@ -91,7 +91,7 @@ def _event(**kwargs: Any) -> Event:
     return Event.objects.create(**kwargs)
 
 
-# --- the declaration ---------------------------------------------------------------
+# the declaration
 
 
 class TestDeclaration:
@@ -157,7 +157,7 @@ class TestDeclaration:
             expand_grants(spec, permission_keys())
 
 
-# --- sync --------------------------------------------------------------------------
+# sync
 
 
 class TestSync:
@@ -242,7 +242,7 @@ class TestSync:
         assert Role.objects.filter(slug__startswith="branch-manager").count() == 2
 
 
-# --- what a user may do ---------------------------------------------------------------
+# what a user may do
 
 
 class TestUserCan:
@@ -347,7 +347,7 @@ class TestUserCan:
         assert organizer.has_role("organizer") and not organizer.has_role("ops")
 
 
-# --- @requires ----------------------------------------------------------------------
+# @requires
 
 
 class TestRequires:
@@ -388,7 +388,7 @@ class TestRequires:
             _View(_user(django_user_model, "o@example.com", "organizer")).approve()
 
 
-# --- Can in an access declaration ---------------------------------------------------
+# Can in an access declaration
 
 
 class _CanEvents(BaseViewSet):
@@ -451,7 +451,7 @@ class TestCanPredicate:
         assert not AccessPermission().has_permission(view.request, view)
 
 
-# --- karni context ------------------------------------------------------------------
+# karni context
 
 
 def test_roles_section_lists_declared_roles_compactly() -> None:

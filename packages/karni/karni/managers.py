@@ -227,7 +227,7 @@ class BaseManager(ScopedManagerMixin, models.Manager.from_queryset(BaseQuerySet)
     """Default manager of :class:`karni.models.BaseModel`."""
 
 
-# --- deprecated aliases (removed in 1.0) ----------------------------------------
+# deprecated aliases (removed in 1.0)
 
 
 class _DeprecatedAllObjectsDescriptor(ManagerDescriptor):

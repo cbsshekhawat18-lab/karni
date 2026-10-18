@@ -31,7 +31,7 @@ needs_docs = pytest.mark.skipif(
 )
 
 
-# --- helpers ---------------------------------------------------------------------
+# helpers
 
 
 def _slug(heading: str) -> str:
@@ -104,7 +104,7 @@ def _warnings_in_code() -> list[tuple[str, str, str]]:
     return found
 
 
-# --- the shipped changelog ----------------------------------------------------------
+# the shipped changelog
 
 
 def test_the_shipped_changelog_is_valid() -> None:
@@ -183,7 +183,7 @@ def test_links_inside_the_migration_notes_resolve() -> None:
                 assert anchor in _anchors(path), f"{page.name}: no heading for {target}"
 
 
-# --- the schema rejects what the tooling cannot trust ----------------------------------
+# the schema rejects what the tooling cannot trust
 
 GOOD = """\
 version = "0.3.0"

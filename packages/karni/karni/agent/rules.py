@@ -86,7 +86,7 @@ class Procedure:
 
 
 RULES: tuple[Rule, ...] = (
-    # --- workflow ---------------------------------------------------------------
+    # workflow
     Rule(
         code="K001",
         category="workflow",
@@ -216,7 +216,7 @@ RULES: tuple[Rule, ...] = (
         ),
         fix="Delete the hand-written scaffold and run the matching `karni make` command.",
     ),
-    # --- architecture -----------------------------------------------------------
+    # architecture
     Rule(
         code="K301",
         category="architecture",
@@ -314,7 +314,7 @@ RULES: tuple[Rule, ...] = (
         ),
         rationale="Patched internals break on the module's next release.",
     ),
-    # --- backend ----------------------------------------------------------------
+    # backend
     Rule(
         code="K101",
         category="backend",
@@ -483,7 +483,7 @@ RULES: tuple[Rule, ...] = (
         fix="Call the existing implementation instead of copying it.",
         enforced_by=("duplicate",),
     ),
-    # --- frontend ---------------------------------------------------------------
+    # frontend
     Rule(
         code="K201",
         category="frontend",

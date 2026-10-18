@@ -66,7 +66,7 @@ def _rel(path: Path) -> str:
     return path.as_posix()
 
 
-# --- the registry ------------------------------------------------------------------
+# the registry
 
 
 def test_registry_entries_are_complete_and_well_formed() -> None:
@@ -101,7 +101,7 @@ def test_lookup_is_case_insensitive() -> None:
     assert errorcodes.get("E999") is None
 
 
-# --- the exception hierarchy ---------------------------------------------------------
+# the exception hierarchy
 
 
 def test_an_error_reads_code_message_link() -> None:
@@ -138,7 +138,7 @@ def test_check_messages_use_the_code_as_their_id() -> None:
     assert message.hint == f"Declare one. See {errorcodes.docs_url('E101')}"
 
 
-# --- the source ----------------------------------------------------------------------
+# the source
 
 
 def _codes_in_source() -> dict[str, list[str]]:

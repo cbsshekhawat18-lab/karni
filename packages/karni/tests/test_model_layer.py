@@ -110,7 +110,7 @@ def _request_as(path: str, user: Any) -> HttpRequest:
     return request
 
 
-# --- each mixin on its own ----------------------------------------------------
+# each mixin on its own
 
 
 class TestUUIDModelAlone:
@@ -241,7 +241,7 @@ class TestAuditedModelAlone:
         assert list(Remark.objects.all()) == [theirs]  # a real DELETE
 
 
-# --- BaseModel: the four composed ---------------------------------------------
+# BaseModel: the four composed
 
 
 class TestBaseModelComposition:
@@ -311,7 +311,7 @@ class TestBaseModelComposition:
         assert (restored.created_by, restored.updated_by) == (alice, alice)
 
 
-# --- soft delete vs. related lookups ------------------------------------------
+# soft delete vs. related lookups
 
 
 class TestRelatedLookups:
@@ -406,7 +406,7 @@ class TestRelatedLookups:
         ).exists()
 
 
-# --- cascades -----------------------------------------------------------------
+# cascades
 
 
 class TestCascades:
@@ -463,7 +463,7 @@ class TestCascades:
         assert shelf.updated_by is None
 
 
-# --- UUID primary keys in relations -------------------------------------------
+# UUID primary keys in relations
 
 
 class TestUUIDPrimaryKeysInRelations:
@@ -543,7 +543,7 @@ class TestUUIDPrimaryKeysInRelations:
         assert api.get(list_url, {"venue": "not-a-uuid"}).status_code == 400
 
 
-# --- audit population ---------------------------------------------------------
+# audit population
 
 
 def test_current_user_middleware_runs_after_authentication() -> None:
@@ -715,7 +715,7 @@ class TestAuditUnderDRFJWT:
         assert response.json()["updated_by"] == str(bob.pk)
 
 
-# --- the user model is soft-delete aware --------------------------------------
+# the user model is soft-delete aware
 
 
 def test_soft_deleted_users_are_hidden_and_cannot_authenticate(alice: Any) -> None:
@@ -737,7 +737,7 @@ def test_soft_deleted_users_are_hidden_and_cannot_authenticate(alice: Any) -> No
     assert authenticate(email=alice.email, password=PASSWORD) == alice
 
 
-# --- admin --------------------------------------------------------------------
+# admin
 
 
 class TestAdmin:

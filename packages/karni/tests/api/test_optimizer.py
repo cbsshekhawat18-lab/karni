@@ -146,7 +146,7 @@ def _counts_at(viewset: type[Any], small: int = 2, large: int = 12) -> tuple[int
     return at_small, at_large
 
 
-# --- the proof ------------------------------------------------------------------------
+# the proof
 
 
 def test_three_level_nesting_is_n_plus_one_without_the_optimizer() -> None:
@@ -201,7 +201,7 @@ def test_retrieve_is_optimised_too() -> None:
     assert len(response.data["writers"]) == 2
 
 
-# --- the plan --------------------------------------------------------------------------
+# the plan
 
 
 def test_plan_follows_sources_and_merges_relations() -> None:
@@ -296,7 +296,7 @@ def test_optimize_is_idempotent() -> None:
     assert len(twice._prefetch_related_lookups) == len(once._prefetch_related_lookups)
 
 
-# --- viewset declarations ----------------------------------------------------------------
+# viewset declarations
 
 
 def test_unexpanded_m2m_pk_list_on_a_generated_serializer_is_prefetched() -> None:
@@ -334,7 +334,7 @@ def test_viewset_hints_are_validated_at_class_definition() -> None:
             auto_register = False
 
 
-# --- prefetches obey the target's read scope (ADR 0001 R3, Q2.5) -------------------------
+# prefetches obey the target's read scope (ADR 0001 R3, Q2.5)
 
 
 def test_nested_to_one_into_a_row_scoped_target_is_a_scoped_prefetch() -> None:
@@ -371,7 +371,7 @@ def test_nested_to_one_into_a_row_scoped_target_is_a_scoped_prefetch() -> None:
     assert signed_in.data["results"][0]["organizer"]["email"] == "o@example.com"
 
 
-# --- the expansion helpers it replaces ----------------------------------------------------
+# the expansion helpers it replaces
 
 
 def test_expansion_lookup_helpers_are_deprecated() -> None:

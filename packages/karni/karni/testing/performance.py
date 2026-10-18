@@ -91,7 +91,7 @@ def query_budget(
         )
 
 
-# --- the scaling check ------------------------------------------------------------------------
+# the scaling check
 
 
 @dataclass(frozen=True)

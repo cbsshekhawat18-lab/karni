@@ -88,7 +88,7 @@ def capture_deletion_signals(sender: type[models.Model]) -> Iterator[list[str]]:
         post_delete.disconnect(on_post_delete, sender=sender)
 
 
-# --- declaration-level checks (no database) ----------------------------------
+# declaration-level checks (no database)
 
 
 def test_base_model_is_abstract() -> None:
@@ -164,7 +164,7 @@ def test_instance_delete_keeps_django_signature() -> None:
     assert parameters["keep_parents"].default is False
 
 
-# --- BaseModel behaviour ------------------------------------------------------
+# BaseModel behaviour
 
 
 @pytest.mark.django_db
@@ -190,7 +190,7 @@ def test_uuid_pks_are_random_per_row(model_tables: None) -> None:
     assert first.id != second.id
 
 
-# --- soft-delete behaviour ----------------------------------------------------
+# soft-delete behaviour
 
 
 @pytest.mark.django_db

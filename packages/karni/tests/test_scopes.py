@@ -69,7 +69,7 @@ APP_LABEL = "scopeapp"
 WHY = "test: reach rows a scope hides"
 
 
-# --- a fake tenant scope, bound through a ContextVar --------------------------
+# a fake tenant scope, bound through a ContextVar
 
 _current_tenant: ContextVar[str | None] = ContextVar("karni_tests_tenant", default=None)
 
@@ -155,7 +155,7 @@ def _titles(queryset: Any) -> set[str]:
     return {task.title for task in queryset}
 
 
-# --- the pipeline -------------------------------------------------------------
+# the pipeline
 
 
 class TestPipeline:
@@ -241,7 +241,7 @@ class TestWithoutArguments:
         assert str(queryset.query) == str(Shelf.objects.all().query)
 
 
-# --- the tenant scope reaches every default-manager path -------------------------
+# the tenant scope reaches every default-manager path
 
 
 @pytest.mark.django_db
@@ -386,7 +386,7 @@ class TestUnboundTenantFailsClosed:
         assert "Fix: bind the current tenant before querying." in str(error)
 
 
-# --- registration: entry points, KARNI_SCOPES, validation ------------------------
+# registration: entry points, KARNI_SCOPES, validation
 
 
 class FakeEntryPoint:
@@ -504,7 +504,7 @@ class TestKarniScopesSetting:
         assert "'tenant' is registered but not listed in KARNI_SCOPES" in message.msg
 
 
-# --- karni context --------------------------------------------------------------
+# karni context
 
 
 class OnlyEvents(Scope):
@@ -570,7 +570,7 @@ class TestContextSection:
             )
 
 
-# --- deprecations ---------------------------------------------------------------
+# deprecations
 
 ALIAS_DOCS = DOCS_BASE_URL + "migrations/0.2/#all_objects"
 DEPRECATED_NAMES = {"all_objects", "all_with_deleted", "deleted_only", "SoftDeleteManagerMixin"}

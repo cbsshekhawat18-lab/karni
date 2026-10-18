@@ -166,7 +166,7 @@ registry = ScheduleRegistry()
 _default_registry = registry  # reachable inside functions whose parameter is named ``registry``
 
 
-# --- declarations -------------------------------------------------------------
+# declarations
 
 
 def _caller_module(depth: int) -> str:
@@ -419,7 +419,7 @@ def cron(
     )
 
 
-# --- discovery and merging ----------------------------------------------------
+# discovery and merging
 
 
 def discover(registry: ScheduleRegistry | None = None) -> list[Schedule]:

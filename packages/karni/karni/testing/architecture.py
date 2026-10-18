@@ -66,7 +66,7 @@ def _class_violation(cls: type, rule: str, message: str, hint: str = "") -> list
     return check_optout(path, rule, lines, violation)
 
 
-# --- model-base ---------------------------------------------------------------
+# model-base
 
 
 def check_model_base() -> list[Violation]:
@@ -92,7 +92,7 @@ def check_model_base() -> list[Violation]:
     return violations
 
 
-# --- viewset-base -------------------------------------------------------------
+# viewset-base
 
 
 def _viewset_candidates() -> list[type]:
@@ -144,7 +144,7 @@ def check_viewset_base() -> list[Violation]:
     return violations
 
 
-# --- viewset-access -----------------------------------------------------------
+# viewset-access
 
 
 def check_viewset_access() -> list[Violation]:
@@ -175,7 +175,7 @@ def check_viewset_access() -> list[Violation]:
     return violations
 
 
-# --- access-override ----------------------------------------------------------
+# access-override
 
 
 def check_access_override() -> list[Violation]:
@@ -203,7 +203,7 @@ def check_access_override() -> list[Violation]:
     return violations
 
 
-# --- unpaginated-action -------------------------------------------------------
+# unpaginated-action
 
 
 def check_unpaginated_action() -> list[Violation]:
@@ -235,7 +235,7 @@ def check_unpaginated_action() -> list[Violation]:
     return violations
 
 
-# --- admin-convention ---------------------------------------------------------
+# admin-convention
 
 
 def check_admin_convention() -> list[Violation]:
@@ -263,7 +263,7 @@ def check_admin_convention() -> list[Violation]:
     return violations
 
 
-# --- raw-sql ------------------------------------------------------------------
+# raw-sql
 
 
 def check_raw_sql() -> list[Violation]:
@@ -294,7 +294,7 @@ def check_raw_sql() -> list[Violation]:
     return violations
 
 
-# --- http-client (import-based only, F9) -------------------------------------
+# http-client (import-based only, F9)
 
 
 def check_http_client() -> list[Violation]:
@@ -324,7 +324,7 @@ def check_http_client() -> list[Violation]:
     return violations
 
 
-# --- redundant-serializer (conservative per F3) --------------------------------
+# redundant-serializer (conservative per F3)
 
 
 def _is_meta_only(cls: type, stop: type) -> bool:
@@ -387,7 +387,7 @@ def check_redundant_serializer() -> list[Violation]:
     return violations
 
 
-# --- aggregation --------------------------------------------------------------
+# aggregation
 
 ALL_CHECKS = (
     check_model_base,
@@ -407,7 +407,7 @@ def run_checks() -> list[str]:
     return [v.render() for check in ALL_CHECKS for v in check()]
 
 
-# --- pytest surface -----------------------------------------------------------
+# pytest surface
 
 
 def _assert_clean(violations: list[Violation]) -> None:
