@@ -11,7 +11,7 @@ from rest_framework import serializers
 from karni.api.access import Access, Authenticated
 from karni.api.routers import KarniRouter
 from karni.api.viewsets import BaseViewSet
-from karni.checks import check_schedules, check_viewsets
+from karni.checks import check_schedules, check_throttle_cache, check_viewsets
 from karni.errorcodes import docs_url
 from karni.schedule import ScheduleError
 from tests.testapp.models import Venue
@@ -57,6 +57,22 @@ def serializer_router() -> Any:
 
 def _ids(messages: list[Any]) -> list[str]:
     return [message.id for message in messages]
+
+
+_LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+_REDIS = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": "x"}}
+
+
+def test_a_per_process_throttle_cache_warns_only_with_debug_off() -> None:
+    """karni.W501: locmem counters are per worker; fine in DEBUG, a warning in production."""
+    with override_settings(DEBUG=False, CACHES=_LOCMEM):
+        (message,) = check_throttle_cache()
+        assert message.id == "karni.W501" and "per worker" in message.msg
+        assert docs_url("W501") in message.hint
+    with override_settings(DEBUG=True, CACHES=_LOCMEM):
+        assert check_throttle_cache() == []
+    with override_settings(DEBUG=False, CACHES=_REDIS):
+        assert check_throttle_cache() == []
 
 
 def test_the_project_router_is_clean() -> None:

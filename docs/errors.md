@@ -633,6 +633,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Install the extra the message names, e.g. pip install 'karni[sentry]', 'karni[s3]', 'karni[images]', 'karni[2fa]' or 'psycopg[binary]'.
 
+<a id="w501"></a>
+
+#### W501 — The throttle cache is private to each process
+
+*system check (warning)* · from `karni.checks.check_throttle_cache`
+
+**Why Karni objects.** DRF keeps rate-limit counters in CACHES['default']. With DEBUG off, a locmem or dummy backend gives every worker its own counters, so the login, registration and password-reset limits are multiplied by the worker count.
+
+**Fix.** Point CACHES['default'] at a backend every worker shares (Redis — Karni's default — or the database cache), or silence karni.W501 for a single-process deployment.
+
 <a id="e502"></a>
 
 #### E502 — Unknown settings profile

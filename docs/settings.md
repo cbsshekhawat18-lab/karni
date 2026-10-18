@@ -20,6 +20,7 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_ACCOUNTS_EMAIL_BACKEND` | — | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` | — | `False` | Sign a user in right after registration (skips email verification as a gate). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
+| `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in; a request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
 | `KARNI_ROLES` | — | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`; `*` wildcards, scopes `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
 | `KARNI_ACCOUNTS_TOKEN_TTL` | — | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
@@ -44,6 +45,7 @@ DRF settings Karni derives are documented where the feature is.
 | **Admin (karni.admin + django-unfold)** | | | |
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`; unset leaves the text header. See [admin](admin.md#theming). |
+| `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash); set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"],` | App labels or `app_label.ModelName` entries the admin leaves out. |
 | `KARNI_ADMIN_LIST_DISPLAY_MAX` | — | `6` | Columns a derived admin changelist shows at most. |
 | `KARNI_ADMIN_LIST_FILTER_MAX` | — | `6` | Sidebar filters a derived admin shows at most. |

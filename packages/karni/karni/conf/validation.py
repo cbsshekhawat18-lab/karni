@@ -92,6 +92,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_LOGO: Any = None
+    KARNI_ADMIN_PATH: str = "admin/"
+    KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6
     KARNI_ADMIN_SEARCH_MAX: int = 5

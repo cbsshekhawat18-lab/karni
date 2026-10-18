@@ -132,6 +132,24 @@ the account exists). `email/verify/resend/` requires authentication and may
 respond honestly. `register/` and `email/change/` necessarily reveal address
 existence through unique-email 400s — documented and accepted.
 
+## Bots and security events
+
+`register/` carries a honeypot: a request that fills the field named by
+`KARNI_ACCOUNTS_HONEYPOT_FIELD` (default `website`) is answered `202
+Accepted` and creates nothing — a person never sees the field, so put it in
+your registration form hidden from view (`tabindex="-1"`, `autocomplete="off"`,
+visually hidden, never `display: none` alone, which some bots honour). Set
+the setting to `""` to turn it off.
+
+Every auth outcome is a structlog event on the `karni.accounts` logger:
+`accounts.login.ok` / `.failed` / `.2fa_required`, `accounts.logout`,
+`accounts.register.ok` / `.honeypot`, `accounts.email.verified`,
+`accounts.password_reset.requested` / `.confirmed`. Successes carry
+`user_id`; failures carry `email`, a 16-character SHA-256 fingerprint of
+the address, so logs correlate without holding addresses. Alert on a burst
+of `accounts.login.failed` with one fingerprint (credential stuffing) or
+many (password spraying).
+
 ## Roles as data
 
 A project declares its roles once, in `KARNI_ROLES`, and Karni keeps the

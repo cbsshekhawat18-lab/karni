@@ -756,6 +756,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Fix every setting the message lists. KARNI_VALIDATE = False skips validation "
         "(not recommended).",
     ),
+    _e(
+        "W501",
+        "The throttle cache is private to each process",
+        "warning",
+        "karni.checks.check_throttle_cache",
+        "DRF keeps rate-limit counters in CACHES['default']. With DEBUG off, a locmem or "
+        "dummy backend gives every worker its own counters, so the login, registration and "
+        "password-reset limits are multiplied by the worker count.",
+        "Point CACHES['default'] at a backend every worker shares (Redis — Karni's default "
+        "— or the database cache), or silence karni.W501 for a single-process deployment.",
+    ),
     # --- E6xx testing and seeding ----------------------------------------------------------
     _e(
         "E601",

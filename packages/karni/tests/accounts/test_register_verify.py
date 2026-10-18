@@ -109,6 +109,27 @@ def test_register_email_waits_for_commit(
     assert callbacks
 
 
+def test_register_honeypot_accepts_and_creates_nothing(
+    api_client: APIClient, settings: Settings
+) -> None:
+    """A filled honeypot field is a script: pretend to accept, create no user, send no mail."""
+    from structlog.testing import capture_logs
+
+    payload = {"email": EMAIL, "password": PASSWORD, "website": "http://spam.example"}
+    with capture_logs() as logs:
+        response = api_client.post(REGISTER_URL, payload, format="json")
+    assert response.status_code == 202, response.data
+    assert not get_user_model().objects.filter(email=EMAIL).exists()
+    assert InMemoryEmailBackend.outbox == []
+    events = [entry["event"] for entry in logs if entry["event"].startswith("accounts.")]
+    assert events == ["accounts.register.honeypot"]
+    assert EMAIL not in str(logs)
+
+    settings.KARNI_ACCOUNTS_HONEYPOT_FIELD = ""  # off: the field is just ignored
+    response = api_client.post(REGISTER_URL, payload, format="json")
+    assert response.status_code == 201, response.data
+
+
 def test_register_duplicate_email_returns_400(api_client: APIClient) -> None:
     """A9: register necessarily reveals existence via the unique-email 400."""
     get_user_model().objects.create_user(email=EMAIL, password=PASSWORD)

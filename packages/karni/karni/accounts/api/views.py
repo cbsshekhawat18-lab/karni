@@ -27,8 +27,10 @@ DRF hook (``permission_classes``, ``throttle_classes``, ``serializer_class``,
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any, ClassVar
 
+import structlog
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
@@ -114,6 +116,22 @@ def _token_validation_error(exc: TokenError) -> ValidationError:
     return ValidationError({"token": [message]})
 
 
+def _log() -> Any:
+    """The ``karni.accounts`` security-event logger, resolved per call.
+
+    A fresh proxy each time means the structlog configuration in force *now*
+    applies (a module-level proxy caches the first one it sees, which hides
+    events from ``structlog.testing.capture_logs``).
+    """
+    return structlog.get_logger("karni.accounts")
+
+
+def email_fingerprint(email: object) -> str:
+    """A stable, non-reversible handle for an address in security logs (no PII in logs)."""
+    normalized = str(email or "").strip().lower().encode()
+    return hashlib.sha256(normalized).hexdigest()[:16]
+
+
 def _issue_jwt_pair(user: AbstractBaseUser) -> dict[str, str]:
     """Mint a SimpleJWT refresh/access pair for ``user``.
 
@@ -173,6 +191,14 @@ class RegisterView(APIView):
     serializer_class = RegisterSerializer
 
     def post(self, request: Request) -> Response:
+        honeypot = getattr(settings, "KARNI_ACCOUNTS_HONEYPOT_FIELD", "")
+        if honeypot and str(request.data.get(honeypot) or "").strip():
+            # A person never sees the field; whoever filled it is a script.
+            # Pretend to accept so the script learns nothing, and create nothing.
+            _log().info(
+                "accounts.register.honeypot", email=email_fingerprint(request.data.get("email"))
+            )
+            return Response({"detail": "Registration received."}, status=status.HTTP_202_ACCEPTED)
         serializer = self.serializer_class(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         fields = dict(serializer.validated_data)
@@ -208,13 +234,20 @@ class LoginView(APIView):
 
     def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except AuthenticationFailed:
+            _log().warning(
+                "accounts.login.failed", email=email_fingerprint(request.data.get("email"))
+            )
+            raise
         user = serializer.user
         if user is None:  # pragma: no cover - TokenObtainSerializer raises first
             raise AuthenticationFailed()
 
         gate = _twofa_gate_payload(user)
         if gate is not None:
+            _log().info("accounts.login.2fa_required", user_id=str(user.pk))
             return Response(gate)
 
         data: dict[str, Any] = {}
@@ -222,6 +255,7 @@ class LoginView(APIView):
             data.update(_issue_jwt_pair(user))
         else:
             _session_login(request, user)
+        _log().info("accounts.login.ok", user_id=str(user.pk), mode=auth_mode())
         data["user"] = MeSerializer(user, context={"request": request}).data
         return Response(data)
 
@@ -255,6 +289,7 @@ class LogoutView(APIView):
                 token.blacklist()
         else:
             auth_logout(request)
+        _log().info("accounts.logout", user_id=str(request.user.pk), mode=auth_mode())
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

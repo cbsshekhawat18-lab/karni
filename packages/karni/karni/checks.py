@@ -205,6 +205,34 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
     ]
 
 
+@checks.register(checks.Tags.caches)
+def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W501: with DEBUG off, throttle counters must live in a cache every worker shares.
+
+    DRF keeps its rate-limit counters in the ``default`` cache. A per-process
+    backend (locmem, dummy) multiplies every limit by the number of workers,
+    so a login throttle of 10/min becomes 10/min *per worker*.
+    """
+    from django.conf import settings
+
+    if settings.DEBUG:
+        return []
+    backend = str((getattr(settings, "CACHES", None) or {}).get("default", {}).get("BACKEND", ""))
+    if backend.endswith((".LocMemCache", ".DummyCache")):
+        return [
+            check_warning(
+                "W501",
+                f"CACHES['default'] is {backend}, which is private to each process: the "
+                "auth throttles (login, register, password reset) are enforced per worker, "
+                "not per client.",
+                hint="Use a backend every worker shares (Redis, the database cache) in "
+                "production, or silence karni.W501 for a single-process deployment.",
+                obj=backend,
+            )
+        ]
+    return []
+
+
 @checks.register()
 def check_schedules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E404 / E405 / E406: every ``<app>/schedules.py`` declaration, at boot.

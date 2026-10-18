@@ -68,3 +68,11 @@ documented behaviour led you there (then we want to hear about it: it is a
 documentation or design problem); and issues in third-party dependencies,
 which you should report upstream. Do tell us if Karni's pinned range keeps you
 on a vulnerable version.
+
+## What Karni enforces by default
+
+The security baseline a project gets without configuration — access
+enforcement, authentication, throttling, headers, logging and supply-chain
+scanning — is documented at
+<https://cbsshekhawat18-lab.github.io/karni/security/#what-karni-does-by-default>
+(`docs/security.md` in this repository).

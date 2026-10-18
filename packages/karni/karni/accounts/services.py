@@ -30,6 +30,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+import structlog
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model, password_validation
@@ -56,6 +57,11 @@ __all__ = [
 ]
 
 _TOKEN_BLACKLIST_APP = "rest_framework_simplejwt.token_blacklist"
+
+
+def _log() -> Any:
+    """The ``karni.accounts`` security-event logger (user ids only, never addresses)."""
+    return structlog.get_logger("karni.accounts")
 
 
 def _user_model() -> type[AbstractKarniUser]:
@@ -145,6 +151,7 @@ def register(email: str, password: str, **fields: Any) -> AbstractKarniUser:
     for role in getattr(settings, "KARNI_ACCOUNTS_DEFAULT_ROLES", None) or ():
         assign_role(user, role)
     transaction.on_commit(lambda: send_verification(user))
+    _log().info("accounts.register.ok", user_id=str(user.pk))
     return user
 
 
@@ -172,6 +179,7 @@ def verify_email(secret: str) -> AbstractKarniUser:
         if not user.email_verified:
             user.email_verified = True
             user.save(update_fields=["email_verified", "updated_at"])
+    _log().info("accounts.email.verified", user_id=str(user.pk))
     return user
 
 
@@ -192,6 +200,7 @@ def request_password_reset(email: str) -> None:
         return
     secret = issue_token(user, "reset_password")
     _send_account_email("reset_password", user.email, user, secret)
+    _log().info("accounts.password_reset.requested", user_id=str(user.pk))
 
 
 def confirm_password_reset(secret: str, new_password: str) -> AbstractKarniUser:
@@ -215,6 +224,7 @@ def confirm_password_reset(secret: str, new_password: str) -> AbstractKarniUser:
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
         blacklist_user_refresh_tokens(user)
+    _log().info("accounts.password_reset.confirmed", user_id=str(user.pk))
     return user
 
 

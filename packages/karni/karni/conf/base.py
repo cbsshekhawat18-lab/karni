@@ -208,6 +208,9 @@ BASE: dict[str, Any] = {
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
     # Roles (Django groups) every self-registered user starts with, e.g. ["attendee"].
     "KARNI_ACCOUNTS_DEFAULT_ROLES": env.list("KARNI_ACCOUNTS_DEFAULT_ROLES", default=[]),
+    # A form field no person fills in; a registration that fills it is a bot
+    # and is accepted without creating anything. "" turns the honeypot off.
+    "KARNI_ACCOUNTS_HONEYPOT_FIELD": env("KARNI_ACCOUNTS_HONEYPOT_FIELD", default="website"),
     # The project's roles and what they may do: slug -> {name, description, system,
     # grants: {"app.model:action" pattern: scope}}; see docs/accounts.md#roles.
     # Reconciled into the role tables by `karni sync-roles` (and after migrate).
@@ -391,6 +394,9 @@ BASE: dict[str, Any] = {
     # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
     "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
+    # Where the scaffold mounts the Django admin; a path nobody guesses keeps
+    # the login form out of scanners' lists. Trailing slash required.
+    "KARNI_ADMIN_PATH": env("KARNI_ADMIN_PATH", default="admin/"),
     "KARNI_ADMIN_EXCLUDE": env.list(
         "KARNI_ADMIN_EXCLUDE",
         default=[

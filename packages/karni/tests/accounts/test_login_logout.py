@@ -106,6 +106,22 @@ def test_login_unknown_email_indistinguishable_from_wrong_password(
     assert wrong_password.data == unknown.data
 
 
+def test_login_outcomes_are_logged_without_addresses(api_client: APIClient) -> None:
+    """Security events carry a user id or an address fingerprint, never the address."""
+    from structlog.testing import capture_logs
+
+    user = _make_user()
+    with capture_logs() as logs:
+        api_client.post(LOGIN_URL, {"email": EMAIL, "password": "not-the-p4ssword"}, format="json")
+        _login(api_client)
+    # django-structlog's request_started/finished ride along; keep the account events.
+    events = {entry["event"]: entry for entry in logs if entry["event"].startswith("accounts.")}
+    assert set(events) == {"accounts.login.failed", "accounts.login.ok"}
+    assert events["accounts.login.ok"]["user_id"] == str(user.pk)
+    assert len(events["accounts.login.failed"]["email"]) == 16
+    assert EMAIL not in str(logs)
+
+
 def test_login_inactive_user_rejected(api_client: APIClient) -> None:
     user = _make_user()
     user.is_active = False
