@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="Karni">
+<path fill="#000000" d="M495.8 884.4C291.9 874.2 135.4 724 114.7 518.5C97.9 351.3 160.2 221 290.9 150.2C372.3 106.1 439.7 86.4 513.6 85.2C686 82.3 812.9 171.5 867 333.5C903.9 444 890.2 573.8 828.6 698.6C766.8 823.4 644.3 891.8 495.8 884.4Z"/>
+<circle cx="340" cy="300" r="44" fill="#FB5D08"/>
+<circle cx="500" cy="276" r="44" fill="#FB5D08"/>
+<circle cx="660" cy="300" r="44" fill="#FB5D08"/>
+<path fill="none" stroke="#FFFFFF" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"
+      d="M318 420v280l182-250 182 250V420M500 450 410 700M500 450l90 250"/>
+</svg>

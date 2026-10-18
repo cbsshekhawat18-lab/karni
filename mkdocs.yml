@@ -9,6 +9,9 @@ strict: true
 
 theme:
   name: material
+  custom_dir: docs/overrides
+  logo: assets/brand/karni-mark-mono.svg
+  favicon: assets/brand/favicon.svg
   features:
     - navigation.sections
     - navigation.top

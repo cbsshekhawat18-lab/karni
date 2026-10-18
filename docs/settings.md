@@ -43,6 +43,7 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
 | **Admin (karni.admin + django-unfold)** | | | |
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
+| `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`; unset leaves the text header. See [admin](admin.md#theming). |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"],` | App labels or `app_label.ModelName` entries the admin leaves out. |
 | `KARNI_ADMIN_LIST_DISPLAY_MAX` | — | `6` | Columns a derived admin changelist shows at most. |
 | `KARNI_ADMIN_LIST_FILTER_MAX` | — | `6` | Sidebar filters a derived admin shows at most. |

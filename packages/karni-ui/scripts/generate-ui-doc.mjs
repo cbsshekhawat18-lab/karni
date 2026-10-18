@@ -32,6 +32,7 @@ const GROUPS = [
       "Stat",
       "DataChart",
       "FileUpload",
+      "KarniMark",
     ],
   ],
   ["Auth", ["AuthProvider", "AuthGuard", "LoginForm", "KarniProvider"]],

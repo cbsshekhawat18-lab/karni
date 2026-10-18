@@ -631,6 +631,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "inline_on names the foreign key under whose parent the model is shown inline.",
         "Name a ForeignKey field of the model: class AdminMeta: inline_on = 'event'.",
     ),
+    _e(
+        "E303",
+        "KARNI_ADMIN_LOGO is not a logo declaration",
+        "exception",
+        "karni.conf.admin_logo.unfold_logo_entries",
+        "The admin logo is wired into UNFOLD from this one setting, so it must name static "
+        "files unfold can serve.",
+        "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', "
+        "'dark': ..., 'icon': ...} with at least 'light'; leave it unset for a text header.",
+    ),
     # --- E4xx events, listeners, schedules, Celery ---------------------------------------
     _e(
         "E401",

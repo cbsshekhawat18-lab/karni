@@ -160,6 +160,9 @@ export type { PageProps } from "./components/page/page";
 export { Layout } from "./components/layout/layout";
 export type { LayoutProps, LayoutNavItem } from "./components/layout/layout";
 
+export { KarniMark } from "./components/brand/karni-mark";
+export type { KarniMarkProps } from "./components/brand/karni-mark";
+
 export { Modal, ModalClose } from "./components/modal/modal";
 export type { ModalProps } from "./components/modal/modal";
 

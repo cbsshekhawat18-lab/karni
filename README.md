@@ -1,4 +1,25 @@
-# Karni
+<p align="left">
+  <a href="https://cbsshekhawat18-lab.github.io/karni/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/brand/karni-horizontal-dark.svg">
+      <img src="assets/brand/karni-horizontal.svg" alt="Karni" width="280">
+    </picture>
+  </a>
+</p>
+
+> A Django + React framework that stays a dependency — built so AI coding
+> agents extend it instead of rewriting it.
+
+[![CI](https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml/badge.svg)](https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml)
+[![Security scans](https://github.com/cbsshekhawat18-lab/karni/actions/workflows/security.yml/badge.svg)](https://github.com/cbsshekhawat18-lab/karni/actions/workflows/security.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/cbsshekhawat18-lab/karni)](https://github.com/cbsshekhawat18-lab/karni/commits/main)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
+> **Status:** 0.1, pre-release. One reference application runs end to end
+> (EventHub: payments, Celery, four roles, Playwright journeys); the public
+> APIs still move under the [stability promise](docs/stability.md), and
+> `karni upgrade` carries a project across each change.
 
 Karni is a framework, not boilerplate: it stays a versioned dependency you
 upgrade, and it is built so an AI coding agent extends it instead of
@@ -78,6 +99,31 @@ younger framework for it.
 | `examples/eventhub/` | the reference application and its friction log |
 | `docs/` | the documentation site (Material for MkDocs) |
 
-Python 3.12+, Django 5.1, Node 20+. Apache-2.0. See
-[CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and the
-[stability promise](docs/stability.md).
+Python 3.12+, Django 5.1, Node 20+.
+
+## Contributing
+
+Pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) (the
+rules every change follows, the development setup, what is generated) and
+the [Code of Conduct](CODE_OF_CONDUCT.md). The most useful contributions
+right now: a second reference application and its friction log, module
+proposals under `modules/`, and anything that makes `karni check` catch a
+mistake earlier. If Karni is useful to you, a star helps other people
+building with agents find it.
+
+## Author and credits
+
+Karni is built and maintained by **Chandrabhan Shekhawat** — **Gigai Kripa
+Services** (<https://gigaikripaservices.com/>). The brand assets are in
+[`assets/brand/`](assets/brand/README.md).
+
+## License
+
+Released under the [Apache License 2.0](LICENSE) — free to use, modify and
+self-host, for individuals and companies alike, with an explicit patent
+grant. © 2026 Chandrabhan Shekhawat — Gigai Kripa Services.
+
+## Security
+
+For responsible disclosure see [SECURITY.md](SECURITY.md); please do not
+open public issues for security reports.

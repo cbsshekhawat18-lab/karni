@@ -140,6 +140,19 @@ UNFOLD = {"SITE_TITLE": "Ops", "SITE_HEADER": "Ops"}
 
 (Defining `UNFOLD` *before* the call also works — setdefault semantics.)
 
+The header and login screen carry no logo by default — the admin is yours,
+not Karni's. `KARNI_ADMIN_LOGO` adds one: `"karni"` uses Karni's own mark
+(the black-ground mark in light mode, the light-ground one in dark mode,
+the small variant as the site icon), or give static paths of your own:
+
+```python
+KARNI_ADMIN_LOGO = {"light": "img/mark.svg", "dark": "img/mark-dark.svg", "icon": "img/icon.svg"}
+```
+
+Each value is passed to `static()`; `dark` and `icon` fall back to `light`.
+`KARNI_ADMIN_LOGO = None` (the default, also the env value `""`) leaves the
+text header.
+
 More escape hatches:
 
 - `KARNI_ADMIN_BASE` (default `"unfold.admin.ModelAdmin"`) — the base class

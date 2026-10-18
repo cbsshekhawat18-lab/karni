@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
+import { KarniMark } from "../brand/karni-mark";
 
 registerComponentRole("layout-shell", "Layout");
 
@@ -73,7 +74,10 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   ) => React.ReactNode;
   /** Escape hatch: replaces the entire derived nav inside the sidebar. */
   sidebar?: React.ReactNode;
-  /** Brand/logo slot pinned to the top of the sidebar. */
+  /**
+   * Brand/logo slot pinned to the top of the sidebar. Defaults to the Karni
+   * mark (`<KarniMark />`); pass your own brand, or `null` for no header.
+   */
   sidebarHeader?: React.ReactNode;
   /** Slot pinned to the bottom of the sidebar (user menu, logout, …). */
   sidebarFooter?: React.ReactNode;
@@ -109,7 +113,7 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       navItems = [],
       renderNavItem,
       sidebar,
-      sidebarHeader,
+      sidebarHeader = <KarniMark className="mx-3" />,
       sidebarFooter,
       header,
       navLabel = "Main",

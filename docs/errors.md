@@ -529,6 +529,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name a ForeignKey field of the model: class AdminMeta: inline_on = 'event'.
 
+<a id="e303"></a>
+
+#### E303 — KARNI_ADMIN_LOGO is not a logo declaration
+
+*exception* · from `karni.conf.admin_logo.unfold_logo_entries`
+
+**Why Karni objects.** The admin logo is wired into UNFOLD from this one setting, so it must name static files unfold can serve.
+
+**Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': ..., 'icon': ...} with at least 'light'; leave it unset for a text header.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>

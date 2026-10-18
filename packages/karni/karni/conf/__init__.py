@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from karni.conf.admin_logo import unfold_logo_entries
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
@@ -430,6 +431,12 @@ def karni_settings(
         namespace["LOGGING"] = build_logging(
             json=bool(namespace.get("KARNI_JSON_LOGS", profile == "prod"))
         )
+
+    # KARNI_ADMIN_LOGO → UNFOLD["SITE_LOGO"/"SITE_ICON"]; explicit UNFOLD keys win.
+    unfold = namespace.get("UNFOLD")
+    if isinstance(unfold, dict):
+        for key, value in unfold_logo_entries(namespace.get("KARNI_ADMIN_LOGO")).items():
+            unfold.setdefault(key, value)
 
     _ensure_sqlite_dir(namespace.get("DATABASES"))
     maybe_init_sentry(env)

@@ -387,6 +387,10 @@ BASE: dict[str, Any] = {
         },
     },
     "KARNI_ADMIN_AUTODISCOVER": env.bool("KARNI_ADMIN_AUTODISCOVER", default=True),
+    # Logo for the admin header and login screen: "" (none, the default),
+    # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
+    # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
+    "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
     "KARNI_ADMIN_EXCLUDE": env.list(
         "KARNI_ADMIN_EXCLUDE",
         default=[

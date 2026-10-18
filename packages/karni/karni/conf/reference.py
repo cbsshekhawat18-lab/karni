@@ -55,6 +55,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ADMIN_LIST_FILTER_MAX": "Sidebar filters a derived admin shows at most.",
     "KARNI_ADMIN_SEARCH_MAX": "Fields a derived admin searches at most.",
     "KARNI_ADMIN_SITE": "Dotted path of the admin site models are registered on.",
+    "KARNI_ADMIN_LOGO": 'Logo for the admin header and login: `karni` for Karni\'s mark, or `{"light": <static path>, "dark": ..., "icon": ...}`; unset leaves the text header. See [admin](admin.md#theming).',
     "KARNI_ADMIN_BASE": "Dotted path of the `ModelAdmin` every derived admin is built on.",
     "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default).",
     "KARNI_HEALTH_CELERY_TIMEOUT": "Seconds the readiness check waits for a Celery worker to answer.",

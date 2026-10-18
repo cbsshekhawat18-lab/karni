@@ -23,7 +23,14 @@ export default function AppLayout() {
     return (
         <Layout
             navItems={navItems}
-            sidebarHeader={<span className="px-3 text-lg font-semibold">{{ cookiecutter.project_name }}</span>}
+            // Your brand goes here: swap the placeholder square for your mark
+            // (an <img src="/favicon.svg">, an inline SVG, or a component).
+            sidebarHeader={
+                <span className="flex items-center gap-2 px-3 text-lg font-semibold">
+                    <span aria-hidden="true" className="h-6 w-6 rounded-md bg-slate-500" />
+                    {{ cookiecutter.project_name }}
+                </span>
+            }
             // Client-side navigation: intercept the default link's click (it
             // still closes the mobile drawer); `contents` keeps the nav grid.
             renderNavItem={(item, { defaultNode }) => (

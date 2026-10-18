@@ -19,6 +19,7 @@ import typer
 
 from karni_cli import agent_data, scaffold
 from karni_cli.adapters import sync
+from karni_cli.brand import print_mark
 from karni_cli.scaffold import resolve_template, validate_name
 
 
@@ -57,6 +58,7 @@ def new(
     from cookiecutter.main import cookiecutter  # lazy: heavy import
 
     slug = validate_name(name)
+    print_mark()
     template = resolve_template()
     ui_source = scaffold.resolve_ui_source()
     if ui_source is not None:

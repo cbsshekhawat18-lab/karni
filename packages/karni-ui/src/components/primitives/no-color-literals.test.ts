@@ -48,7 +48,10 @@ function isShippedSource(path: string): boolean {
     (path.endsWith(".ts") || path.endsWith(".tsx")) &&
     !path.includes(".test.") &&
     !path.includes(".stories.") &&
-    !path.endsWith(".d.ts")
+    !path.endsWith(".d.ts") &&
+    // The Karni mark's own colours are fixed by the brand rules
+    // (assets/brand/README.md), not by the theme; the data file is generated.
+    !path.endsWith("brand/mark-paths.ts")
   );
 }
 

@@ -1,0 +1,17 @@
+{#- Social and icon meta for every page; the images live in docs/assets/brand (copies of assets/brand). -#}
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {% set brand = config.site_url ~ "assets/brand/" %}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="{{ config.site_name }}" />
+  <meta property="og:title" content="{{ page.title if page.title else config.site_name }}" />
+  <meta property="og:description" content="{{ page.meta.description if page.meta and page.meta.description else config.site_description }}" />
+  <meta property="og:url" content="{{ page.canonical_url }}" />
+  <meta property="og:image" content="{{ brand }}karni-social.png" />
+  <meta property="og:image:width" content="1280" />
+  <meta property="og:image:height" content="640" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="{{ brand }}karni-social.png" />
+  <link rel="apple-touch-icon" href="{{ brand }}apple-touch-icon-180.png" />
+{% endblock %}

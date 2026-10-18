@@ -27,6 +27,7 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 - `Stat` — role `stat`
 - `DataChart` — role `chart`
 - `FileUpload` — role `file-upload`
+- `KarniMark`
 
 ## Auth
 
