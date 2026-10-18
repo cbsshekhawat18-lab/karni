@@ -88,4 +88,7 @@ nav:
   - Project:
       - Releasing: releasing.md
       - Contributing: contributing.md
+      - Launch registrations: launch-registrations.md
+      - Launch checklist: launch-checklist.md
+      - Findability research: seo-research.md
       - Security: security.md

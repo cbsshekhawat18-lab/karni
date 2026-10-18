@@ -5,12 +5,41 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-cli"
 version = "0.1.0"
-description = "The karni command: scaffold, wire, introspect and upgrade Karni projects."
+description = "The karni command for the Karni Django + React framework: scaffold a project, generate models, viewsets and pages, run it, upgrade it across releases, and give AI coding agents its context, rules and error explanations."
 readme = "README.md"
 requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
+keywords = [
+    "django",
+    "react",
+    "cli",
+    "scaffolding",
+    "code-generation",
+    "project-template",
+    "cookiecutter",
+    "ai-agents",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "mcp",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Code Generators",
+    "Typing :: Typed",
+]
 dependencies = [
     "typer>=0.12",
     "cookiecutter>=2.5",
@@ -25,7 +54,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"

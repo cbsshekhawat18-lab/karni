@@ -45,6 +45,14 @@ class TemplateBundleHook(BuildHookInterface):
         self._bundle_karni(pkg_root, "agent", "_agent", "agent rules", build_data)
         self._bundle_karni(pkg_root, "changelog", "_changelog", "changelog", build_data)
         self._bundle_karni(pkg_root, "errorcodes", "_errorcodes", "error codes", build_data)
+        # karni.links (every published URL, stdlib only) rides inside the
+        # errorcodes bundle: the registry loads it by path when karni is absent.
+        links = pkg_root.parent / "karni" / "karni" / "links.py"
+        bundled_links = pkg_root / "karni_cli" / "_errorcodes" / "links.py"
+        if links.is_file():
+            shutil.copy2(links, bundled_links)
+        elif not bundled_links.is_file():
+            raise RuntimeError("No karni/links.py to bundle into karni_cli/_errorcodes.")
 
     @staticmethod
     def _bundle_karni(

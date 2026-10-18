@@ -52,9 +52,34 @@ __all__ = [
     "registry",
 ]
 
-#: Base URL of Karni's documentation. Equal to ``karni.changelog.DOCS_BASE_URL``
-#: (a test keeps them equal; this module cannot import it when bundled).
-DOCS_BASE_URL: Final[str] = "https://cbsshekhawat18-lab.github.io/karni/"
+
+def _docs_base_url() -> str:
+    """``karni.links.DOCS_BASE_URL``, also when this module is loaded by path.
+
+    karni-cli bundles this package without ``karni`` installed and loads it
+    under a private name, so the import may fail; the build hook puts a copy
+    of ``links.py`` next to this file, and the monorepo has it one level up.
+    """
+    try:
+        from karni.links import DOCS_BASE_URL as base
+    except ImportError:
+        import importlib.util
+        from pathlib import Path
+
+        here = Path(__file__).resolve()
+        for candidate in (here.parent / "links.py", here.parents[1] / "links.py"):
+            if candidate.is_file():
+                spec = importlib.util.spec_from_file_location("_karni_links", candidate)
+                if spec is not None and spec.loader is not None:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    return str(module.DOCS_BASE_URL)
+        raise
+    return base
+
+
+#: Base URL of Karni's documentation — ``karni.links.DOCS_BASE_URL``, the one place it is set.
+DOCS_BASE_URL: Final[str] = _docs_base_url()
 #: The generated page every code links to, relative to :data:`DOCS_BASE_URL`
 #: (``docs/errors.md`` in the repository, served as a directory on the site).
 ERRORS_PAGE: Final[str] = "errors/"

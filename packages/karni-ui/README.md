@@ -1,6 +1,6 @@
 # @karni/ui
 
-Schema-driven React components for [Karni](../../README.md) backends. Point it at a
+Schema-driven React components for [Karni](https://github.com/cbsshekhawat18-lab/karni#readme) backends. Point it at a
 Karni API's OpenAPI schema and get working tables, forms, detail views and auth —
 plus the themable primitives they are built from — without regenerating boilerplate.
 

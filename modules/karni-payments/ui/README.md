@@ -1,6 +1,6 @@
 # @karni/payments-ui
 
-Payments components for Karni backends, composing [`@karni/ui`](../../../packages/karni-ui).
+Payments components for Karni backends, composing [`@karni/ui`](https://www.npmjs.com/package/@karni/ui).
 Ships two components for the `karni_payments` Django app (`karni add payments`):
 
 - **`CheckoutButton`** — starts a provider checkout (`POST /api/payments/checkout/`) and
@@ -22,7 +22,7 @@ so keep the two packages' versions moving together.
 
 Both components read the Karni client from context — wrap your app in
 `<KarniProvider>` exactly as described in the
-[`@karni/ui` README](../../../packages/karni-ui/README.md) ("Provider setup"):
+[`@karni/ui` README](https://www.npmjs.com/package/@karni/ui) ("Provider setup"):
 
 ```tsx
 import { KarniProvider, createKarniClient } from "@karni/ui";

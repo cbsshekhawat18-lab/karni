@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cbsshekhawat18-lab.github.io/karni/sitemap.xml

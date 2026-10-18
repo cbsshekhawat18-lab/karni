@@ -40,6 +40,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
+from karni import links as _links
+
 __all__ = [
     "DOCS_BASE_URL",
     "KINDS",
@@ -54,8 +56,8 @@ __all__ = [
 
 #: Where ``docs/`` is published: ``migration`` values here and ``doc_anchor``
 #: values in :func:`karni.deprecation.warn_deprecated` are relative to it.
-#: A placeholder until the docs site exists; the one place to change it.
-DOCS_BASE_URL: Final[str] = "https://cbsshekhawat18-lab.github.io/karni/"
+#: Set in one place, ``karni.links``; re-exported here for the upgrade tooling.
+DOCS_BASE_URL: Final[str] = _links.DOCS_BASE_URL
 
 #: What a change can be. ``project-files``: files the scaffold generated changed shape.
 KINDS: Final = (

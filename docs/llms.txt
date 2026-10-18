@@ -1,0 +1,37 @@
+# Karni
+
+> Karni is a Django + React framework that stays a versioned dependency instead of a boilerplate you fork. A project declares models and an `access` policy; the REST API (Django REST Framework, OpenAPI), the admin, permissions and row scoping, the React tables and forms, the tests and the seed data are generated from those declarations. It is built so AI coding agents (Claude Code, Cursor, Copilot and others) extend it instead of regenerating the same serializers, permission classes and admin files in every project. Apache-2.0, pre-release (0.x) under a stability promise.
+
+The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https://github.com/cbsshekhawat18-lab/karni. Python 3.12, Django 5.1, React 18, TypeScript.
+
+## Start here
+
+- [Quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/): install `karni` and `karni-cli`, run `karni new`, add a model and see the API, admin and UI appear.
+- [Tutorial — build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 582 lines of project code.
+- [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how Claude Code, Cursor and Copilot drive a Karni project through the generated adapter files, `karni context`, `karni rules` and `karni explain`.
+- [Building without an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/without-ai/): the same workflow by hand, command by command.
+
+## Main concepts
+
+- [Models](https://cbsshekhawat18-lab.github.io/karni/models/): `BaseModel` (UUID keys, timestamps, audit fields, soft delete) and scopes.
+- [The API](https://cbsshekhawat18-lab.github.io/karni/api/): `BaseViewSet` plus the `access` declaration — one predicate compiled into the request gate and the row filter; filtering, search, pagination, `?expand=`, an N+1-free query plan, the OpenAPI document.
+- [Permissions at the queryset](https://cbsshekhawat18-lab.github.io/karni/concepts/queryset-permissions/): why a row outside the scope is a 404, never a 403.
+- [Accounts](https://cbsshekhawat18-lab.github.io/karni/accounts/): email login, JWT or sessions, one-time tokens, 2FA, social login, roles as data (`KARNI_ROLES`, `user.can()`, `Can("app.model:action")`).
+- [Admin](https://cbsshekhawat18-lab.github.io/karni/admin/): every model gets a derived django-unfold admin.
+- [@karni/ui](https://cbsshekhawat18-lab.github.io/karni/ui/): schema-driven React components — ResourceTable, ResourceForm, ResourceDetail, auth, Layout.
+- [Testing](https://cbsshekhawat18-lab.github.io/karni/testing/): `assert_crud` and `assert_isolated` prove a resource's whole surface and its isolation in two lines; query budgets fail tests on N+1.
+- [Events and listeners](https://cbsshekhawat18-lab.github.io/karni/events/), [Scheduling](https://cbsshekhawat18-lab.github.io/karni/scheduling/), [Seeding](https://cbsshekhawat18-lab.github.io/karni/seeding/).
+- [Enforcement](https://cbsshekhawat18-lab.github.io/karni/enforcement/): `karni check`, the ESLint preset and the architecture tests that keep generic code out of projects.
+- [Karni for AI agents](https://cbsshekhawat18-lab.github.io/karni/agents/): the generated AGENTS.md / CLAUDE.md / Cursor / Copilot adapters, slash commands and the MCP server.
+
+## Reference
+
+- [The karni command](https://cbsshekhawat18-lab.github.io/karni/cli/)
+- [Settings](https://cbsshekhawat18-lab.github.io/karni/settings/)
+- [Error codes](https://cbsshekhawat18-lab.github.io/karni/errors/): every error names its fix; `karni explain <code>`.
+- [Modules](https://cbsshekhawat18-lab.github.io/karni/modules/): the module contract and karni-payments.
+- [Stability promise](https://cbsshekhawat18-lab.github.io/karni/stability/) and [Security](https://cbsshekhawat18-lab.github.io/karni/security/).
+
+## Packages
+
+- PyPI: `karni`, `karni-cli`, `karni-payments`. npm: `@karni/ui`, `@karni/payments-ui`. All released at one version.

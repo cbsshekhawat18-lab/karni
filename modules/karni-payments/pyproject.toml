@@ -5,18 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-payments"
 version = "0.1.0"
-description = "Payments module for Karni: checkout, refunds and webhooks for Stripe and Razorpay."
+description = "Payments module for the Karni Django + React framework: hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI."
 readme = "README.md"
 requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
-keywords = ["django", "karni", "payments", "stripe", "razorpay"]
+keywords = ["django", "karni", "payments", "stripe", "razorpay", "checkout", "webhooks", "react"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
     "Framework :: Django :: 5.1",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
     "Typing :: Typed",
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
@@ -25,7 +32,7 @@ dependencies = ["karni>=0.1,<0.2"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"

@@ -5,18 +5,42 @@ build-backend = "hatchling.build"
 [project]
 name = "karni"
 version = "0.1.0"
-description = "Django framework where projects write only domain code: declare models and access; the API, admin, permissions, tests and seed data follow."
+description = "Django + React framework that stays a versioned dependency, not a boilerplate: declare models and access, get the REST API, admin, permissions, tests and seed data. Built so AI coding agents (Claude Code, Cursor, Copilot) write only the domain code."
 readme = "README.md"
 requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
-keywords = ["django", "drf", "celery", "settings", "framework"]
+keywords = [
+    "django",
+    "react",
+    "django-rest-framework",
+    "framework",
+    "full-stack",
+    "boilerplate",
+    "scaffolding",
+    "code-generation",
+    "ai-agents",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "celery",
+    "openapi",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
     "Framework :: Django :: 5.1",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Typing :: Typed",
 ]
 dependencies = [
@@ -43,7 +67,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
