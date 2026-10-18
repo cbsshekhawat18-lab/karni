@@ -14,7 +14,7 @@ options.
 
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
-- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Generators**: [make](#karni-make)
 
 ## Project
@@ -383,6 +383,28 @@ karni seed [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni sync-roles`
+
+Create or update the roles KARNI_ROLES declares — wraps `manage.py karni_sync_roles [ARGS]`.
+
+Expands each role's grant patterns against every model and action into Role, Permission and RolePermission rows: creates what is missing, updates what changed, reports roles the database holds that the declaration no longer names, and never deletes. The same sync runs after every `karni migrate` (KARNI_ROLES_AUTOSYNC).
+
+Example:
+
+```sh
+karni sync-roles --dry-run
+```
+
+```
+karni sync-roles [OPTIONS] [ARGS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ARGS...` |  | Passed to manage.py karni_sync_roles: --dry-run, --json. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 

@@ -333,9 +333,21 @@ def test_declaration_errors_name_the_fix() -> None:
         HasRole()
 
 
-def test_can_is_reserved() -> None:
-    with pytest.raises(ImproperlyConfigured, match="reserved"):
+def test_can_needs_full_permission_keys() -> None:
+    """``Can`` takes ``app_label.model:action`` keys (roles as data, ADR 0002)."""
+    with pytest.raises(ImproperlyConfigured, match="E209"):
         Can("events:update")
+    with pytest.raises(ImproperlyConfigured, match="E209"):
+        Can()
+    assert Can("testapp.event:approve").describe() == {"can": ["testapp.event:approve"]}
+
+
+def test_can_must_name_the_viewsets_model() -> None:
+    with pytest.raises(ImproperlyConfigured, match="E209"):
+
+        class _WrongModel(BaseViewSet):
+            model = Venue
+            access = Access(read=Can("testapp.event:view"), write=Authenticated())
 
 
 def test_to_many_owner_paths_are_distinct(alice: Any) -> None:

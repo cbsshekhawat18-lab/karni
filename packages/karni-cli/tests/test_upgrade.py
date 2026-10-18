@@ -203,7 +203,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.2.0: 14 change(s), 5 mechanical, 9 manual" in out
+    assert "karni 0.1.0 -> 0.2.0: 15 change(s), 5 mechanical, 10 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

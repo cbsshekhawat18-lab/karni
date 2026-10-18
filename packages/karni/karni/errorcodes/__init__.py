@@ -20,6 +20,9 @@ accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
+Retired codes are never reused: ``E108`` (Can() was reserved before the
+roles-as-data tier shipped in 0.2; a bad ``Can()`` argument is ``E209``).
+
 Modules register their own codes under their own prefix (karni-payments uses
 ``PAY``) through the ``karni.errorcodes`` entry-point group, whose value is a
 tuple of :class:`ErrorCode`. The CLI's codes (``C``) live in karni-cli.
@@ -299,14 +302,6 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write `access = Unscoped(reason='public catalogue')` with a non-empty reason.",
     ),
     _e(
-        "E108",
-        "Can() is not available yet",
-        "exception",
-        "karni.api.access.Can",
-        "Can(...) is reserved for the database-grants tier (ADR 0001 Q2.2), which has not shipped.",
-        "Use HasRole('<group>') over Django groups.",
-    ),
-    _e(
         "E109",
         "Access predicates were combined with and / or / not",
         "exception",
@@ -563,6 +558,60 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.accounts.tokens",
         "One-time tokens are issued per purpose so a reset token cannot verify an email.",
         "Use one of the purposes the message lists.",
+    ),
+    _e(
+        "E205",
+        "KARNI_ROLES is malformed",
+        "exception",
+        "karni.accounts.roles.declared_roles",
+        "The role declaration is the single source of what each role may do; a malformed "
+        "entry cannot be reconciled into the role tables.",
+        "Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, "
+        "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the "
+        "model or the action (or '*' alone); a scope is 'all', 'own', 'related:<key>' or "
+        "'custom:<name>'.",
+    ),
+    _e(
+        "E206",
+        "A grant in KARNI_ROLES cannot be resolved",
+        "exception",
+        "karni.accounts.roles.sync_roles",
+        "A pattern that matches no permission, an 'own' scope on a model with no owner "
+        "field, a 'related' scope on a model without that scope path, or a 'custom' scope "
+        "nobody registered would grant nothing silently; Karni refuses instead.",
+        "Fix the key (permissions look like 'events.event:view'; extra actions come from "
+        "`class Karni: actions`), declare `owner_field` / `scope_paths` in the model's "
+        "`class Karni`, or register the custom scope with karni.accounts.roles.register_scope.",
+    ),
+    _e(
+        "E207",
+        "user.can() was given an action without a model",
+        "exception",
+        "karni.accounts.roles.user_can",
+        "A permission is a (model, action) pair; a bare action name cannot be looked up.",
+        "Pass the full key, user.can('shop.order:approve'), or name the model: "
+        "user.can('approve', obj=order) or user.can('approve', model=Order).",
+    ),
+    _e(
+        "E208",
+        "The request lacks the permission @requires names",
+        "api",
+        "karni.accounts.roles.requires",
+        "A view or service guarded with @requires('app.model:action') was called by a user "
+        "whose roles hold no grant for it (a 403).",
+        "Grant the permission to one of the user's roles in KARNI_ROLES and run "
+        "`karni sync-roles`, or assign the user a role that has it.",
+    ),
+    _e(
+        "E209",
+        "Can() was given a bad permission, or one for another model",
+        "exception",
+        "karni.api.access.Can",
+        "Can() names permissions as 'app_label.model:action', and its row filter is built "
+        "against that model, so a viewset's declaration can only use its own model's "
+        "permissions.",
+        "Write Can('events.event:approve'); on EventViewSet it must be an events.event "
+        "permission. To gate on another model's permission use HasRole(...).",
     ),
     # --- E3xx admin ----------------------------------------------------------------------
     _e(

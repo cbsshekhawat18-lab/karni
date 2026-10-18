@@ -91,7 +91,7 @@ row-level answer:
 | `Owned("user", bypass=HasRole("x"))` | same as `Owned("user") \| HasRole("x")` | |
 | `Where(lambda request: Q(...))` | passes (or the function returns a `bool` for both) | the returned `Q` |
 | `a \| b`, `a & b` | any / all | OR / AND of the row filters |
-| `Can("area:action")` | reserved for DB-backed grants — raises today | |
+| `Can("events.event:approve")` | holds a grant for any of the permissions (`app_label.model:action`; roles as data, one query per request) | the union of the grants' scopes: `all`, `own` (`Karni.owner_field = user`), `related:<key>`, `custom:<name>` — see [roles as data](accounts.md#roles-as-data); the permission must name the viewset's model |
 
 `Owned()` without a field is a class-definition error that names the fix
 (`created_by` only when written explicitly). An `Owned` path that does not

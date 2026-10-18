@@ -31,6 +31,8 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "Dotted path of the `AccountsEmailBackend` that sends verification and reset emails.",
     "KARNI_ACCOUNTS_AUTO_LOGIN": "Sign a user in right after registration (skips email verification as a gate).",
     "KARNI_ACCOUNTS_DEFAULT_ROLES": "Roles (Django groups) every self-registered user starts with, e.g. `attendee`.",
+    "KARNI_ROLES": 'The project\'s roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`; `*` wildcards, scopes `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data).',
+    "KARNI_ROLES_AUTOSYNC": "Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand).",
     "KARNI_ACCOUNTS_TOKEN_TTL": "Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas.",
     "KARNI_ACCOUNTS_LINKS": "Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders.",
     "KARNI_AUTH_THROTTLE_RATES": "Per-scope auth throttle overrides as a JSON object; `null` disables a scope.",

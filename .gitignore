@@ -33,3 +33,6 @@ storybook-static/
 .idea/
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# MkDocs build output
+site/

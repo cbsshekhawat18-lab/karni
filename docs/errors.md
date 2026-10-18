@@ -195,16 +195,6 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write `access = Unscoped(reason='public catalogue')` with a non-empty reason.
 
-<a id="e108"></a>
-
-#### E108 — Can() is not available yet
-
-*exception* · from `karni.api.access.Can`
-
-**Why Karni objects.** Can(...) is reserved for the database-grants tier (ADR 0001 Q2.2), which has not shipped.
-
-**Fix.** Use HasRole('<group>') over Django groups.
-
 <a id="e109"></a>
 
 #### E109 — Access predicates were combined with and / or / not
@@ -466,6 +456,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** One-time tokens are issued per purpose so a reset token cannot verify an email.
 
 **Fix.** Use one of the purposes the message lists.
+
+<a id="e205"></a>
+
+#### E205 — KARNI_ROLES is malformed
+
+*exception* · from `karni.accounts.roles.declared_roles`
+
+**Why Karni objects.** The role declaration is the single source of what each role may do; a malformed entry cannot be reconciled into the role tables.
+
+**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone); a scope is 'all', 'own', 'related:<key>' or 'custom:<name>'.
+
+<a id="e206"></a>
+
+#### E206 — A grant in KARNI_ROLES cannot be resolved
+
+*exception* · from `karni.accounts.roles.sync_roles`
+
+**Why Karni objects.** A pattern that matches no permission, an 'own' scope on a model with no owner field, a 'related' scope on a model without that scope path, or a 'custom' scope nobody registered would grant nothing silently; Karni refuses instead.
+
+**Fix.** Fix the key (permissions look like 'events.event:view'; extra actions come from `class Karni: actions`), declare `owner_field` / `scope_paths` in the model's `class Karni`, or register the custom scope with karni.accounts.roles.register_scope.
+
+<a id="e207"></a>
+
+#### E207 — user.can() was given an action without a model
+
+*exception* · from `karni.accounts.roles.user_can`
+
+**Why Karni objects.** A permission is a (model, action) pair; a bare action name cannot be looked up.
+
+**Fix.** Pass the full key, user.can('shop.order:approve'), or name the model: user.can('approve', obj=order) or user.can('approve', model=Order).
+
+<a id="e208"></a>
+
+#### E208 — The request lacks the permission @requires names
+
+*API 400 response* · from `karni.accounts.roles.requires`
+
+**Why Karni objects.** A view or service guarded with @requires('app.model:action') was called by a user whose roles hold no grant for it (a 403).
+
+**Fix.** Grant the permission to one of the user's roles in KARNI_ROLES and run `karni sync-roles`, or assign the user a role that has it.
+
+<a id="e209"></a>
+
+#### E209 — Can() was given a bad permission, or one for another model
+
+*exception* · from `karni.api.access.Can`
+
+**Why Karni objects.** Can() names permissions as 'app_label.model:action', and its row filter is built against that model, so a viewset's declaration can only use its own model's permissions.
+
+**Fix.** Write Can('events.event:approve'); on EventViewSet it must be an events.event permission. To gate on another model's permission use HasRole(...).
 
 ### 3xx · Admin
 

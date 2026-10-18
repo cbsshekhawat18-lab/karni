@@ -208,6 +208,15 @@ BASE: dict[str, Any] = {
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
     # Roles (Django groups) every self-registered user starts with, e.g. ["attendee"].
     "KARNI_ACCOUNTS_DEFAULT_ROLES": env.list("KARNI_ACCOUNTS_DEFAULT_ROLES", default=[]),
+    # The project's roles and what they may do: slug -> {name, description, system,
+    # grants: {"app.model:action" pattern: scope}}; see docs/accounts.md#roles.
+    # Reconciled into the role tables by `karni sync-roles` (and after migrate).
+    "KARNI_ROLES": {
+        "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+        "user": {"name": "User", "grants": {"*": "own"}},
+        "customer": {"name": "Customer", "grants": {"*": "own"}},
+    },
+    "KARNI_ROLES_AUTOSYNC": env.bool("KARNI_ROLES_AUTOSYNC", default=True),
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

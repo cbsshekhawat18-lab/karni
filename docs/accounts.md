@@ -132,11 +132,88 @@ the account exists). `email/verify/resend/` requires authentication and may
 respond honestly. `register/` and `email/change/` necessarily reveal address
 existence through unique-email 400s — documented and accepted.
 
-## Roles and object permissions
+## Roles as data
 
-Roles are plain Django groups with thin helpers in
-`karni.accounts.permissions`: `assign_role(user, name)`,
-`remove_role(user, name)`, `user_roles(user)`, `has_role(user, *names)`.
+A project declares its roles once, in `KARNI_ROLES`, and Karni keeps the
+database in step. Membership stays a Django group (so the admin's group
+widget, `assign_role` and every `HasRole` check keep working); the role adds
+what a group cannot hold — a slug, a name, a description, and *grants*: what
+members may do, on which rows.
+
+```python
+# settings.py
+KARNI_ROLES = {
+    "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+    "organizer": {
+        "name": "Organizer",
+        "grants": {"events.event:*": "own", "events.event:add": "all", "events.venue:view": "all"},
+    },
+    "venue_manager": {
+        "description": "Approves events at their venue.",
+        "grants": {"events.event:view": "related:venue", "events.event:approve": "related:venue"},
+    },
+}
+```
+
+A grant maps a **permission pattern** to a **scope**. Permissions are
+`app_label.model:action` — `view`, `add`, `change`, `delete` for every model,
+plus the actions a model declares; `*` stands for the model or the action
+(`"*"` alone is everything). A later, more specific pattern wins over an
+earlier wildcard. Scopes:
+
+| scope | rows the action reaches |
+|---|---|
+| `all` | every row |
+| `own` | rows whose `Karni.owner_field` is the user (`created_by` by default) |
+| `related:<key>` | rows whose `Karni.scope_paths[key]` equals `user.<key>` (`user.venue` → `event.venue`) |
+| `custom:<name>` | the `Q` a scope registered with `karni.accounts.roles.register_scope(name, fn)` returns |
+
+The model side lives in `class Karni`, next to `Meta` and `APIMeta`:
+
+```python
+class Event(BaseModel):
+    ...
+
+    class Karni:
+        owner_field = "organizer"          # the `own` scope (default: created_by)
+        scope_paths = {"venue": "venue"}   # keys `related:` may use
+        actions = ["approve"]              # permissions besides view/add/change/delete
+```
+
+The defaults are deliberately boring: a model with no `Karni` class is owned
+by whoever created it, has no scope paths and the four standard actions. The
+shipped `KARNI_ROLES` is `staff` (everything), `user` and `customer` (their own
+rows); replace it entirely. A wildcard `own` grant simply skips models that
+cannot be owned; an explicit one on such a model is an error (`E206`), as is
+a pattern that matches nothing — a typo must not grant silently.
+
+`karni sync-roles` (and every `karni migrate`, unless
+`KARNI_ROLES_AUTOSYNC = False`) expands the declaration into `Role`,
+`Permission` and `RolePermission` rows: it creates, updates and *reports*
+roles the database holds that the declaration no longer names — it never
+deletes a role. `--dry-run` shows the plan; `--json` is for scripts.
+
+Asking the question:
+
+- `user.can("events.event:approve")` — the gate; `user.can("approve", obj=event)`
+  also checks that the row is inside the grant's scope. `user.has_role("organizer")`,
+  `user.roles` (the `Role` rows). Grants are resolved once per user instance,
+  so a request pays one query however many checks it makes.
+- `Can("events.event:approve")` in an `access` declaration: the gate *and* the
+  row filter (the union of the scopes); see [Access control](api.md#access-control).
+  It must name the viewset's own model (`E209`); to gate on another model's
+  permission use `HasRole`.
+- `@requires("events.event:approve")` on a view method (the request's user) or a
+  service function (the current user from `CurrentUserMiddleware`); denial is a
+  403 with code `E208`.
+
+Nothing in Karni compares a role to a string: `staff`, `user` and `customer`
+exist only as the default value of `KARNI_ROLES`.
+
+### Role helpers and object permissions
+
+Membership helpers in `karni.accounts.permissions`: `assign_role(user, slug)`,
+`remove_role(user, slug)`, `user_roles(user)`, `has_role(user, *slugs)`.
 On a `karni.api.BaseViewSet` use the `access` declaration —
 `HasRole("staff")` and `Owned("user")` there are backed by these helpers (role
 names are looked up once per request); see

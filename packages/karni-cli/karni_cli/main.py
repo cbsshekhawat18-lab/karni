@@ -24,6 +24,7 @@ from karni_cli.commands.schedule import schedule_app
 from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
+from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.types import types
 from karni_cli.commands.upgrade import upgrade
 from karni_cli.commands.worker import worker
@@ -59,6 +60,7 @@ app.command(context_settings=PASSTHROUGH)(worker)
 app.command(context_settings=PASSTHROUGH)(beat)
 app.add_typer(schedule_app, name="schedule")
 app.command(context_settings=PASSTHROUGH)(seed)
+app.command("sync-roles", context_settings=PASSTHROUGH)(sync_roles)
 app.command(context_settings=PASSTHROUGH)(createsuperuser)
 app.command(context_settings=PASSTHROUGH)(manage)
 

@@ -10,18 +10,29 @@ to the rest of the framework. See ``docs/accounts.md``.
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.conf import settings
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.models import Group, PermissionsMixin
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 
 from karni.accounts.managers import KarniUserManager
 from karni.models import BaseModel
 
-__all__ = ["AbstractKarniUser", "OneTimeToken", "User"]
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+
+__all__ = [
+    "AbstractKarniUser",
+    "OneTimeToken",
+    "Permission",
+    "Role",
+    "RolePermission",
+    "User",
+]
 
 
 class AbstractKarniUser(BaseModel, AbstractBaseUser, PermissionsMixin):
@@ -92,6 +103,28 @@ class AbstractKarniUser(BaseModel, AbstractBaseUser, PermissionsMixin):
         """The first name when set, otherwise the email address."""
         return self.first_name or self.email
 
+    # --- roles as data (karni.accounts.roles) --------------------------------------
+
+    @property
+    def roles(self) -> QuerySet[Role]:
+        """The :class:`Role` rows behind this user's groups (``user.roles.filter(...)``)."""
+        return Role.objects.filter(group__in=self.groups.all()).order_by("slug")
+
+    def has_role(self, slug: str) -> bool:
+        """Does the user hold the role with this slug? One query, no string compared in Karni."""
+        return self.groups.filter(name=slug).exists()
+
+    def can(self, action: str, obj: Any = None, *, model: type[models.Model] | None = None) -> bool:
+        """May the user perform ``action`` (``"shop.order:approve"``; or ``"approve"`` + ``obj=``)?
+
+        The gate alone without ``obj``; with ``obj``, also whether that row is
+        inside the scope the role grants. Grants are resolved once per user
+        instance, so repeated calls in one request cost no further queries.
+        """
+        from karni.accounts.roles import user_can
+
+        return user_can(self, action, obj, model=model)
+
 
 class User(AbstractKarniUser):
     """Karni's default concrete user model.
@@ -142,3 +175,93 @@ class OneTimeToken(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.purpose} token for user {self.user_id}"
+
+
+# --- roles as data ---------------------------------------------------------------------
+
+
+class Role(BaseModel):
+    """A role: one-to-one with the Django ``Group`` that carries membership.
+
+    Membership stays ``user.groups`` (``assign_role`` / ``remove_role``, the
+    admin's group widget, every existing ``HasRole`` check); the role adds
+    what a group cannot hold — a stable ``slug``, a display name, a
+    description, whether the project's declaration owns it (``is_system``)
+    and, through :class:`RolePermission`, what its members may do and on
+    which rows. Rows are reconciled from ``KARNI_ROLES`` by
+    ``karni sync-roles``, which never deletes.
+    """
+
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name="karni_role")
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True, default="")
+    is_system = models.BooleanField(
+        default=False, help_text="Declared by the project; its grants are managed by sync."
+    )
+
+    class Meta(BaseModel.Meta):
+        ordering: ClassVar[list[str]] = ["slug"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Permission(BaseModel):
+    """One ``(model, action)`` a role can be granted — Karni's, not ``auth.Permission``.
+
+    ``action`` is ``view`` / ``add`` / ``change`` / ``delete`` or one of the
+    model's own (``class Karni: actions``). ``key`` is the ``app_label.model:action``
+    form grants are written in.
+    """
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+")
+    action = models.CharField(max_length=50)
+
+    class Meta(BaseModel.Meta):
+        ordering: ClassVar[list[str]] = ["content_type__app_label", "content_type__model", "action"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["content_type", "action"], name="karni_permission_model_action"
+            )
+        ]
+
+    @property
+    def key(self) -> str:
+        return f"{self.content_type.app_label}.{self.content_type.model}:{self.action}"
+
+    def __str__(self) -> str:
+        return self.key
+
+
+class RolePermission(BaseModel):
+    """A grant: ``role`` may perform ``permission`` on the rows ``scope`` reaches.
+
+    ``scope`` is ``all``, ``own`` (rows whose ``Karni.owner_field`` is the
+    user), ``related`` (rows whose ``Karni.scope_paths[scope_path]`` equals
+    ``user.<scope_path>``) or ``custom`` (``scope_path`` names a scope
+    registered with :func:`karni.accounts.roles.register_scope`).
+    """
+
+    class Scope(models.TextChoices):
+        ALL = "all", "All rows"
+        OWN = "own", "Own rows"
+        RELATED = "related", "Rows related through a scope path"
+        CUSTOM = "custom", "Rows a registered scope returns"
+
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="grants")
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE, related_name="grants")
+    scope = models.CharField(max_length=16, choices=Scope.choices, default=Scope.ALL)
+    scope_path = models.CharField(max_length=100, blank=True, default="")
+
+    class Meta(BaseModel.Meta):
+        ordering: ClassVar[list[str]] = ["role__slug", "permission__action"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            models.UniqueConstraint(
+                fields=["role", "permission"], name="karni_rolepermission_role_permission"
+            )
+        ]
+
+    def __str__(self) -> str:
+        suffix = f":{self.scope_path}" if self.scope_path else ""
+        return f"{self.role_id} may {self.permission_id} ({self.scope}{suffix})"

@@ -321,21 +321,76 @@ class HasRole(Predicate):
         return f"HasRole({', '.join(repr(name) for name in self.names)})"
 
 
+@dataclass(frozen=True, init=False, repr=False)
 class Can(Predicate):
-    """Reserved for DB-backed ``area:action`` grants (ADR 0001 Q2.2).
+    """The requesting user holds a grant for **any** of the named permissions (ADR 0002).
 
-    Not available yet: constructing it raises. Declarations written against
-    :class:`HasRole` keep working when the grants tier arrives.
+    A permission is ``"app_label.model:action"`` — ``view`` / ``add`` /
+    ``change`` / ``delete`` or an action the model declares in ``class
+    Karni: actions``. Grants come from the roles' ``RolePermission`` rows
+    (``KARNI_ROLES``, reconciled by ``karni sync-roles``), resolved once per
+    request. Request level: any grant. Row level: the union of the grants'
+    scopes — ``all`` → every row, ``own`` → ``Karni.owner_field`` is the user,
+    ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>``,
+    ``custom:<name>`` → the registered callable's ``Q``.
+
+    The row filter is built against the permission's own model, so a
+    ``Can`` in a viewset's ``access`` must name that viewset's model
+    (``validate_access`` enforces it); a different model's permission can
+    only gate, which ``HasRole`` already does. ``Granted()`` (P2) is ``Can``
+    for the viewset's model and the current action.
     """
 
-    __slots__ = ()
+    keys: tuple[str, ...]
 
-    def __init__(self, *grants: str) -> None:
-        raise KarniImproperlyConfigured(
-            "Can(...) is reserved for the DB-grants tier (ADR 0001 Q2.2) and is not "
-            "available yet; use HasRole(...) over Django groups.",
-            code="E108",
-        )
+    def __init__(self, *keys: str) -> None:
+        if not keys or not all(isinstance(key, str) and _permission_key_ok(key) for key in keys):
+            raise KarniImproperlyConfigured(
+                "Can() needs one or more permissions as 'app_label.model:action', e.g. "
+                "Can('events.event:approve'). Extra actions come from `class Karni: "
+                "actions = [...]` on the model.",
+                code="E209",
+            )
+        object.__setattr__(self, "keys", tuple(keys))
+
+    def allows(self, request: Any) -> bool:
+        from karni.accounts.roles import user_can
+
+        user = _user(request)
+        return any(user_can(user, key) for key in self.keys)
+
+    def rows(self, request: Any) -> RowFilter:
+        from karni.accounts.roles import rows_for
+
+        user = _user(request)
+        if not _authenticated(request):
+            return False
+        rows: RowFilter = False
+        for key in self.keys:
+            model, action = self.target(key)
+            rows = _or(rows, rows_for(user, model, action))
+            if rows is True:
+                break
+        return rows
+
+    def describe(self) -> dict[str, Any]:
+        return {"can": list(self.keys)}
+
+    @staticmethod
+    def target(key: str) -> tuple[type[Model], str]:
+        """The model and action a permission key names."""
+        from django.apps import apps
+
+        label, action = key.rsplit(":", 1)
+        return apps.get_model(label), action
+
+    def __repr__(self) -> str:
+        return f"Can({', '.join(repr(key) for key in self.keys)})"
+
+
+def _permission_key_ok(key: str) -> bool:
+    label, sep, action = key.rpartition(":")
+    return bool(sep and action and label.count(".") == 1 and all(label.split(".")))
 
 
 @dataclass(frozen=True, repr=False)
@@ -740,6 +795,39 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
                 'e.g. Owned("organizer") or Owned("event__organizer").',
                 code="E104",
             )
+    for can in _cans(declaration, view_class):
+        for key in can.keys:
+            label = key.rsplit(":", 1)[0]
+            if label != model._meta.label_lower:
+                raise KarniImproperlyConfigured(
+                    f"{name}: Can({key!r}) names {label}, but the viewset's model is "
+                    f"{model._meta.label_lower}; the row filter is built against the "
+                    f"permission's model. Use Can('{model._meta.label_lower}:"
+                    f"{key.rsplit(':', 1)[1]}'), or HasRole(...) to gate on another model's "
+                    "permission.",
+                    code="E209",
+                )
+
+
+def _cans(declaration: Any, view_class: type[Any]) -> list[Can]:
+    """Every :class:`Can` in the viewset's ``access`` and its ``@action(access=...)``."""
+    predicates: list[Predicate] = []
+    if isinstance(declaration, Access):
+        predicates.extend((declaration.read, declaration.write, declaration.create))
+    for extra in getattr(view_class, "get_extra_actions", lambda: [])():
+        override = getattr(extra, "kwargs", {}).get("access")
+        if isinstance(override, Predicate):
+            predicates.append(override)
+    found: list[Can] = []
+    while predicates:
+        predicate = predicates.pop()
+        if isinstance(predicate, Can):
+            found.append(predicate)
+        elif isinstance(predicate, AnyOf | AllOf):
+            predicates.extend(predicate.parts)
+        elif isinstance(predicate, Owned) and predicate.bypass is not None:
+            predicates.append(predicate.bypass)
+    return found
 
 
 def owner_fields(declaration: Access | Unscoped | None, model: type[Model]) -> tuple[str, ...]:

@@ -192,6 +192,18 @@ def _role_names(predicate: Any) -> set[str]:
     return set()
 
 
+def _has_can(predicate: Any) -> bool:
+    from karni.api.access import AllOf, AnyOf, Can, Owned
+
+    if isinstance(predicate, Can):
+        return True
+    if isinstance(predicate, AnyOf | AllOf):
+        return any(_has_can(part) for part in predicate.parts)
+    if isinstance(predicate, Owned) and predicate.bypass is not None:
+        return _has_can(predicate.bypass)
+    return False
+
+
 def _requester(viewset: type[Any], model: type[Any]) -> tuple[Any, dict[str, Any]]:
     """A user who may read the seeded rows, and the factory kwargs that make them theirs."""
     from django.contrib.auth import get_user_model
@@ -210,6 +222,10 @@ def _requester(viewset: type[Any], model: type[Any]) -> tuple[Any, dict[str, Any
         for name in sorted(roles):
             user.groups.add(Group.objects.get_or_create(name=name)[0])
         return user, owner  # a role holder already sees every row
+    if _has_can(declaration.read) and hasattr(user, "is_superuser"):
+        user.is_superuser = True  # every grant with scope `all` (karni.accounts.roles)
+        user.save(update_fields=["is_superuser"])
+        return user, owner
     for owned in declaration.read.owned():
         if model is get_user_model() and owned.path in {"pk", model._meta.pk.name}:
             continue

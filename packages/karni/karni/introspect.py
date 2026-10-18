@@ -234,12 +234,54 @@ def module_distribution(module: str) -> str:
     return dists[0] if dists else module.replace("_", "-")
 
 
+ROLE_CAP = 8
+GRANT_CAP = 3
+
+
+def roles_section() -> str | None:
+    """``KARNI_ROLES`` in one line: each role with its grant patterns and scopes.
+
+    ``ROLES: staff[*=all] manager[shop.order:*=related:branch]`` — the
+    patterns as declared (not expanded), capped per role; a ``system`` role
+    is marked ``!``. Models with extra actions follow as ``ACTIONS:``.
+    """
+    from karni.accounts.roles import declared_roles
+    from karni.meta import karni_option
+
+    try:
+        specs = declared_roles()
+    except Exception as exc:  # noqa: BLE001 - inventory must degrade, never crash
+        sys.stderr.write(f"WARNING: role inventory unavailable: {exc}\n")
+        return None
+    if not specs:
+        return None
+    parts = []
+    for spec in specs[:ROLE_CAP]:
+        grants = [f"{pattern}={scope}" for pattern, scope in spec.grants.items()]
+        shown = ",".join(grants[:GRANT_CAP])
+        if len(grants) > GRANT_CAP:
+            shown += f",+{len(grants) - GRANT_CAP}"
+        parts.append(f"{spec.slug}{'!' if spec.system else ''}[{shown}]")
+    if len(specs) > ROLE_CAP:
+        parts.append(f"+{len(specs) - ROLE_CAP} more")
+    line = "ROLES: " + " ".join(parts)
+    actions = [
+        f"{shown}({','.join(extra)})"
+        for shown, model in _domain_models()
+        if (extra := [a for a in (karni_option(model, "actions", ()) or ())])
+    ]
+    if actions:
+        line += "\nACTIONS: " + " ".join(actions)
+    return line
+
+
 def build_context() -> str:
     """The full inventory, one section per line, empty sections omitted."""
     sections = [
         models_section(),
         scopes_section(),
         viewsets_section(),
+        roles_section(),
         performance_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),

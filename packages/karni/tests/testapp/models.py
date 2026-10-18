@@ -84,6 +84,13 @@ class Event(BaseModel):
         read_only = ["status"]
         write_only = ["internal_note"]
 
+    class Karni:
+        """Roles-as-data metadata (tests/accounts/test_roles.py): owned by the organizer."""
+
+        owner_field = "organizer"
+        scope_paths = {"venue": "venue"}
+        actions = ["approve"]
+
     def __str__(self) -> str:
         return self.title
 

@@ -179,3 +179,16 @@ pytest plugin runs tests with KARNI_QUERY_BUDGET_MODE = "raise", so an action \
 over budget now fails its test."""
 mechanical = false
 migration = "migrations/0.2.md#query-budgets-fail-tests"
+
+[[change]]
+id = "roles-as-data"
+kind = "behaviour"
+symbol = "KARNI_ROLES and migrate"
+replacement = "KARNI_ROLES = {...}; karni sync-roles"
+summary = """\
+Roles are data (ADR 0002): migrate now creates the roles KARNI_ROLES declares \
+(staff, user and customer by default, as groups plus Role rows with grants) and \
+a Role row for every existing group. Nothing is deleted; Can('app.model:action') \
+is available in access declarations."""
+mechanical = false
+migration = "migrations/0.2.md#roles-as-data"
