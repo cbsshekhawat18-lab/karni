@@ -42,7 +42,7 @@ def parse(ws: Workspace, rel: object, text: str) -> ast.Module:
         ) from None
 
 
-# --- locating statements -------------------------------------------------------------
+# locating statements
 
 
 def top_level(tree: ast.Module, name: str) -> ast.stmt | None:
@@ -118,7 +118,7 @@ def replace_or_append(ws: Workspace, rel: object, text: str, name: str, block: s
     return replace_span(text, first, last, block)
 
 
-# --- imports ---------------------------------------------------------------------------
+# imports
 
 
 def _bound(tree: ast.Module) -> set[Import]:
@@ -244,7 +244,7 @@ def _module_of(nodes: list[ast.stmt]) -> ast.Module:
     return ast.Module(body=nodes, type_ignores=[])
 
 
-# --- rendering --------------------------------------------------------------------------
+# rendering
 
 
 def pystr(value: str) -> str:

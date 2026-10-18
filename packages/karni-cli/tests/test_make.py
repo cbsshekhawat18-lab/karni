@@ -78,7 +78,7 @@ def snapshot(root: Path) -> dict[str, str]:
     }
 
 
-# --- discovery ----------------------------------------------------------------------------
+# discovery
 
 
 def test_list_prints_every_generator_and_only_those() -> None:
@@ -101,7 +101,7 @@ def test_aliases_are_hidden_but_work(project: Path) -> None:
     assert "def via_alias() -> None:" in tasks and "def via_group() -> None:" in tasks
 
 
-# --- universal behaviour --------------------------------------------------------------------
+# universal behaviour
 
 
 def test_app_wires_settings_and_writes_only_the_contract_files(project: Path) -> None:
@@ -176,7 +176,7 @@ def test_app_name_rules(project: Path) -> None:
     fails("make", "app", "karni_x", match="karni make module")
 
 
-# --- model / viewset / serializer ---------------------------------------------------------
+# model / viewset / serializer
 
 
 def test_model_chain_and_access_default_is_announced(project: Path) -> None:
@@ -244,7 +244,7 @@ def test_serializer_needs_a_reason_and_wires_the_viewset(project: Path) -> None:
     assert "from events.serializers import EventSerializer" in viewsets
 
 
-# --- test / factory / seeder ----------------------------------------------------------------
+# test / factory / seeder
 
 
 def test_test_generator_follows_the_viewset(project: Path) -> None:
@@ -304,7 +304,7 @@ def test_all_chains_the_test_but_not_the_overrides(project: Path) -> None:
     fails("make", "model", "Other", "--with", "nope", match="available: viewset, page, test")
 
 
-# --- tasks, schedules, events, listeners ---------------------------------------------------
+# tasks, schedules, events, listeners
 
 
 def test_schedule(project: Path) -> None:
@@ -376,7 +376,7 @@ def test_middleware_without_marker_prints_the_manual_step(project: Path) -> None
     )
 
 
-# --- frontend ---------------------------------------------------------------------------
+# frontend
 
 
 def test_pages_link_only_to_routes_that_exist(project: Path) -> None:
@@ -428,7 +428,7 @@ def test_component_roles(project: Path) -> None:
     assert '{ replace: true, reason: "virtualised" }' in source
 
 
-# --- module ----------------------------------------------------------------------------------
+# module
 
 
 def test_module_outside_a_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -445,7 +445,7 @@ def test_module_outside_a_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     fails("make", "module", "karni-chat", match="prefix")
 
 
-# --- migration (through the project interpreter) ----------------------------------------------
+# migration (through the project interpreter)
 
 
 class Recorder:

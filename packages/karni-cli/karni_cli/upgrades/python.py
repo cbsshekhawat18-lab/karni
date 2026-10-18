@@ -180,7 +180,7 @@ def _class_like(node: cst.BaseExpression) -> bool:
     )
 
 
-# --- finders (analysis passes and detectors) -----------------------------------------
+# finders (analysis passes and detectors)
 
 
 class _ClassAttributeFinder(Recorder):
@@ -278,7 +278,7 @@ class _ReferenceFinder(Recorder):
         return True
 
 
-# --- RenameSymbol --------------------------------------------------------------------
+# RenameSymbol
 
 
 def _imports_unaliased(module: cst.Module, from_module: str, name: str) -> bool:
@@ -427,7 +427,7 @@ class RenameSymbol(PythonCodemod):
         return _RenameSymbol(path, self.old, self.new, context)
 
 
-# --- RenameSetting -------------------------------------------------------------------
+# RenameSetting
 
 _SETTINGS_OBJECTS = frozenset({"settings", "conf.settings", "django.conf.settings"})
 _SETTINGS_CALLS = frozenset({"override_settings", "modify_settings", "settings"})
@@ -511,7 +511,7 @@ class RenameSetting(PythonCodemod):
         return _RenameSetting(path, self.old, self.new, path in analysis)
 
 
-# --- ReplaceAttribute ----------------------------------------------------------------
+# ReplaceAttribute
 
 
 class _ReplaceAttribute(Recorder):
@@ -583,7 +583,7 @@ class ReplaceAttribute(PythonCodemod):
         return _ReplaceAttribute(path, self, analysis)
 
 
-# --- ReplaceMethodCall ---------------------------------------------------------------
+# ReplaceMethodCall
 
 
 class _ReplaceMethodCall(Recorder):
@@ -633,7 +633,7 @@ class ReplaceMethodCall(PythonCodemod):
         return _ReplaceMethodCall(path, self, analysis)
 
 
-# --- detectors -----------------------------------------------------------------------
+# detectors
 
 
 @dataclass(frozen=True)

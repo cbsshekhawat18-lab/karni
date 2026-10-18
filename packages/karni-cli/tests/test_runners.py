@@ -73,7 +73,7 @@ def _invoke(runner: CliRunner, *args: str) -> Any:
     return runner.invoke(app, list(args))
 
 
-# --- venv mode: the exact command per runner ----------------------------------
+# venv mode: the exact command per runner
 
 
 @pytest.fixture(autouse=True)
@@ -183,7 +183,7 @@ def test_runner_propagates_the_exit_code(
     assert _invoke(runner, *argv).exit_code == 3
 
 
-# --- docker mode --------------------------------------------------------------
+# docker mode
 
 
 def test_docker_mode_execs_in_the_compose_service(
@@ -236,7 +236,7 @@ def test_explicit_no_docker_wins_over_a_running_stack(
     assert run.cmd == [_py(project), "manage.py", "karni_routes"]
 
 
-# --- serve --------------------------------------------------------------------
+# serve
 
 
 @pytest.mark.parametrize(
@@ -290,7 +290,7 @@ def test_serve_without_docker_names_the_alternative(
     assert "karni serve --local" in str(result.exception)
 
 
-# --- help and principles ------------------------------------------------------
+# help and principles
 
 
 @pytest.mark.parametrize(

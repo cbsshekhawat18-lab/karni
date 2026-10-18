@@ -153,7 +153,7 @@ def _routed_resources(ws: Workspace) -> set[str]:
     return found
 
 
-# --- rendering ------------------------------------------------------------------------
+# rendering
 
 
 def _ui_import(names: set[str]) -> str:
@@ -261,7 +261,7 @@ def _shell(
     return "\n".join(lines)
 
 
-# --- planning -------------------------------------------------------------------------
+# planning
 
 
 def plan(

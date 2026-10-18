@@ -105,7 +105,7 @@ def _run(runner, *args: str) -> str:
     return result.stdout
 
 
-# --- karni context --with-history ---------------------------------------------------
+# karni context --with-history
 
 
 def test_with_history_and_no_store_is_byte_identical(runner, project, fake_provider) -> None:
@@ -182,7 +182,7 @@ def test_path_needs_the_flag_and_must_be_inside(runner, project, fake_provider) 
     assert outside.stdout == ""
 
 
-# --- the conditional rule ---------------------------------------------------------------
+# the conditional rule
 
 
 def test_rule_only_with_a_store(runner, project, fake_provider) -> None:
@@ -224,7 +224,7 @@ def test_adapters_are_identical_with_and_without_a_store(
     assert check.exit_code == 0, check.output
 
 
-# --- where providers run ------------------------------------------------------------------
+# where providers run
 
 
 def test_project_interpreter_gets_the_clis_detection(tmp_path, monkeypatch) -> None:
@@ -315,7 +315,7 @@ def test_no_store_spawns_no_provider_process(runner, project, monkeypatch) -> No
     assert not [a for a in spawned if "chronicle" in str(a)]
 
 
-# --- the built-in provider end to end (fake `chronicle` on PATH) ----------------------------
+# the built-in provider end to end (fake `chronicle` on PATH)
 
 FAKE_CHRONICLE = """#!{python}
 import json, os, sys

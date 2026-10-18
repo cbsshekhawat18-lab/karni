@@ -47,7 +47,7 @@ def _c(code: str, title: str, source: str, why: str, fix: str) -> CliCode:
 
 
 CODES: Final[tuple[CliCode, ...]] = (
-    # --- C0xx project and environment ----------------------------------------------------
+    # C0xx project and environment
     _c(
         "C001",
         "Not inside a Karni project",
@@ -129,7 +129,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "These commands read files of the current project only.",
         "Pass an existing file path inside the project.",
     ),
-    # --- C1xx karni make ---------------------------------------------------------------
+    # C1xx karni make
     _c(
         "C101",
         "The file karni make would write already exists",
@@ -218,7 +218,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Report it with the command and the file it stopped on. Meanwhile, make the change "
         "by hand.",
     ),
-    # --- C2xx upgrade, rules, types, add -------------------------------------------------
+    # C2xx upgrade, rules, types, add
     _c(
         "C201",
         "karni upgrade needs a clean git work tree",

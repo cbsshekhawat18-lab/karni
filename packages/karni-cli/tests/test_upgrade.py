@@ -28,7 +28,7 @@ FIXTURE_CHANGELOG = Path(__file__).parent / "fixtures" / "upgrade_changelog"
 FIXTURE_TS = RenameExport(module="@karni/ui", old="DataTable", new="ResourceTable")
 
 
-# --- the changelog and the codemods agree ---------------------------------------------
+# the changelog and the codemods agree
 
 
 def test_every_mechanical_change_resolves_to_an_editing_codemod() -> None:
@@ -73,7 +73,7 @@ def test_the_shipped_0_2_entries() -> None:
     )
 
 
-# --- selection ---------------------------------------------------------------------
+# selection
 
 
 def _ids(current: str, target: str) -> list[str]:
@@ -96,7 +96,7 @@ def test_selection_between_versions() -> None:
     assert set(_ids("0.2.0.dev3", "0.2.0")) == set(every)  # pre-releases count as before
 
 
-# --- the command: helpers -------------------------------------------------------------
+# the command: helpers
 
 MODELS = """\
 from karni.managers import BaseManager, SoftDeleteManagerMixin
@@ -185,7 +185,7 @@ def _snapshot(root: Path) -> dict[str, str]:
     }
 
 
-# --- the command --------------------------------------------------------------------
+# the command
 
 
 def test_list_needs_no_project(runner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -303,7 +303,7 @@ def test_versions(runner, project: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert "records changes up to 1.0" in beyond.output
 
 
-# --- the engine ---------------------------------------------------------------------
+# the engine
 
 
 class _Boom(Codemod):

@@ -257,7 +257,7 @@ def test_docs_prompts_block_is_fresh() -> None:
     assert render_prompts_doc(agent_data.load(None)) in docs
 
 
-# --- functional identity with the audited (pre-retrofit) guidance -----------------
+# functional identity with the audited (pre-retrofit) guidance
 
 #: (legacy file, statement as the old file said it, where it lives now, a phrase
 #: the new source must contain). Every statement of the audited files is listed.

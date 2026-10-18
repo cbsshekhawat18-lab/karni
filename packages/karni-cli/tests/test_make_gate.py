@@ -233,7 +233,7 @@ def _frontend_toolchain(project: Path, files: list[Path]) -> None:
         assert proc.returncode == 0, f"{command[1]}:\n{proc.stdout}{proc.stderr}"
 
 
-# --- the generated backend, for real -------------------------------------------------------
+# the generated backend, for real
 
 VERIFY = """
 import os

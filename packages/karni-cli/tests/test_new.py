@@ -50,7 +50,7 @@ def test_repo_walk_resolution(monkeypatch) -> None:
     assert resolve_template() == TEMPLATE
 
 
-# --- @karni/ui source: KARNI_UI_SRC > monorepo checkout > npm registry ---------------------
+# @karni/ui source: KARNI_UI_SRC > monorepo checkout > npm registry
 
 
 def _fake_ui(root: Path, *, built: bool = True, name: str = "@karni/ui") -> Path:

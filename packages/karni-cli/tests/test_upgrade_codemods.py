@@ -35,7 +35,7 @@ def _untouched(codemod: PythonCodemod, source: str) -> None:
     assert (result, rewrites) == (source, 0)
 
 
-# --- v1_0.all_objects_to_without ----------------------------------------------------
+# v1_0.all_objects_to_without
 
 WITHOUT = 'objects.without("soft_delete", reason="<auto: migrated from all_objects>")'
 
@@ -107,7 +107,7 @@ def test_a_project_defining_its_own_all_objects_gets_a_report(tmp_path: Path) ->
     assert site.path == "views.py" and "models.py:2" in site.note
 
 
-# --- v1_0.all_with_deleted_to_without / v1_0.deleted_only_to_without_dead -------------
+# v1_0.all_with_deleted_to_without / v1_0.deleted_only_to_without_dead
 
 
 def test_all_with_deleted() -> None:
@@ -156,7 +156,7 @@ def test_a_project_method_of_the_same_name_gets_a_report(tmp_path: Path) -> None
     assert [site.path for site in outcome.sites] == ["use.py"]
 
 
-# --- v1_0.soft_delete_manager_mixin_to_scoped -----------------------------------------
+# v1_0.soft_delete_manager_mixin_to_scoped
 
 
 def test_soft_delete_manager_mixin_every_spelling() -> None:
@@ -227,7 +227,7 @@ class A(SoftDeleteManagerMixin):
     )
 
 
-# --- the generic RenameSymbol / RenameSetting framework ---------------------------------
+# the generic RenameSymbol / RenameSetting framework
 
 
 def test_rename_symbol_across_modules_adds_the_new_import() -> None:
@@ -267,7 +267,7 @@ def test_rename_setting_where_it_is_defined_and_read(tmp_path: Path) -> None:
     assert codemod.apply(tmp_path).files == {}
 
 
-# --- detectors -----------------------------------------------------------------------
+# detectors
 
 
 def test_object_permission_classes_is_reported_not_rewritten(tmp_path: Path) -> None:
@@ -303,7 +303,7 @@ def test_related_lookups_references_are_reported(tmp_path: Path) -> None:
     assert [(s.path, s.line) for s in scoped.sites] == [("b.py", 2)]
 
 
-# --- what a codemod may touch -----------------------------------------------------------
+# what a codemod may touch
 
 
 def test_codemods_never_touch_dependencies_or_migrations(tmp_path: Path) -> None:

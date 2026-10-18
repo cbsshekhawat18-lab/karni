@@ -67,7 +67,7 @@ def _no_npm(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(scaffold, "run_npm", no_npm)
 
 
-# --- history providers: the suite runs with none, and none spawns anything --------------
+# history providers: the suite runs with none, and none spawns anything
 
 HISTORY_MARKER = "history_provider"
 

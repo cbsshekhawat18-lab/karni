@@ -81,7 +81,7 @@ def resolve_template() -> Path:
     )
 
 
-# --- @karni/ui source -------------------------------------------------------------------
+# @karni/ui source
 
 
 def _is_karni_ui(candidate: Path) -> bool:

@@ -59,7 +59,7 @@ class Report:
         return unified_diff(self.changes)
 
 
-# --- the scratch copy ------------------------------------------------------------------
+# the scratch copy
 
 
 def _copy(project: Path, scratch: Path) -> set[str]:
@@ -133,7 +133,7 @@ def unified_diff(changes: Sequence[FileChange]) -> str:
     return "".join(chunks)
 
 
-# --- running ---------------------------------------------------------------------------
+# running
 
 
 def _record(report: Report, change: Change, codemod: Codemod, outcome: Outcome) -> None:
@@ -182,7 +182,7 @@ def run(
     return report
 
 
-# --- the report ----------------------------------------------------------------------
+# the report
 
 
 def _title(change: Change) -> str:

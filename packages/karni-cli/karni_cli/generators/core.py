@@ -60,7 +60,7 @@ class Workspace:
         self._files: dict[Path, _Entry] = {}
         self._line_length: int | None = None
 
-    # --- paths ----------------------------------------------------------------
+    # paths
 
     def path(self, rel: str | Path) -> Path:
         candidate = Path(rel)
@@ -72,7 +72,7 @@ class Workspace:
         except ValueError:
             return path.as_posix()
 
-    # --- reading --------------------------------------------------------------
+    # reading
 
     def read(self, rel: str | Path) -> str | None:
         """Planned content, else disk content, else ``None``."""
@@ -98,7 +98,7 @@ class Workspace:
         base = self.root.joinpath(*module.split("."))
         return self.exists(base.with_suffix(".py")) or self.is_dir(base)
 
-    # --- writing --------------------------------------------------------------
+    # writing
 
     def create(self, rel: str | Path, content: str) -> None:
         """Plan a new file; an existing one is an error unless ``--force``."""
@@ -149,7 +149,7 @@ class Workspace:
         before = path.read_text(encoding="utf-8") if path.is_file() else None
         self._files[path] = _Entry(before, content)
 
-    # --- project facts ----------------------------------------------------------
+    # project facts
 
     @property
     def line_length(self) -> int:
@@ -180,7 +180,7 @@ class Workspace:
             return FIRST_PARTY
         return THIRD_PARTY
 
-    # --- output -------------------------------------------------------------------
+    # output
 
     def changes(self) -> list[tuple[Path, str | None, str]]:
         return [
@@ -215,7 +215,7 @@ class Workspace:
             typer.echo("(dry run: nothing written)")
 
 
-# --- shared command options ---------------------------------------------------------
+# shared command options
 
 APP_OPTION = typer.Option(
     None, "--app", help="Target app label (default: the project's only local app)."
@@ -231,7 +231,7 @@ def project_workspace(force: bool) -> Workspace:
     return Workspace(require_project(), force=force)
 
 
-# --- apps -----------------------------------------------------------------------------
+# apps
 
 
 @dataclass(frozen=True)

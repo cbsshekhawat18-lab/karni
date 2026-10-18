@@ -49,7 +49,7 @@ def _state(project: Path) -> Path:
     return local_state.state_path(project)
 
 
-# --- CI detection -------------------------------------------------------------------------
+# CI detection
 
 
 @pytest.mark.parametrize("name", CI_ENV_VARS)
@@ -66,7 +66,7 @@ def test_no_ci_variables_is_not_ci() -> None:
     assert is_ci({"JENKINS_URL": "https://ci.example.com/"})
 
 
-# --- karni doctor -------------------------------------------------------------------------
+# karni doctor
 
 
 def test_doctor_reports_the_environment(runner, project: Path) -> None:
@@ -96,7 +96,7 @@ def test_doctor_outside_a_project(runner, tmp_path: Path, monkeypatch, no_ci) ->
     assert "not found" in result.stdout and TIP_FIRST_LINE not in result.output
 
 
-# --- the tip --------------------------------------------------------------------------------
+# the tip
 
 
 def test_tip_text_discloses_authorship_and_how_to_silence() -> None:
@@ -227,7 +227,7 @@ def test_never_on_machine_output_commands(runner, project: Path, monkeypatch, tm
         assert "tips" not in vars(module), name  # these modules cannot even reach it
 
 
-# --- karni config -----------------------------------------------------------------------------
+# karni config
 
 
 def test_config_defaults_set_get_list(runner, project: Path) -> None:

@@ -27,7 +27,7 @@ def ws(tmp_path: Path) -> Workspace:
     return Workspace(tmp_path)
 
 
-# --- naming (mirrors karni.api.routers) ------------------------------------------------
+# naming (mirrors karni.api.routers)
 
 
 @pytest.mark.parametrize(
@@ -56,7 +56,7 @@ def test_case_conversions() -> None:
     assert pluralize("bus") == "buses"
 
 
-# --- field DSL ------------------------------------------------------------------------
+# field DSL
 
 
 def _body(ws: Workspace, *tokens: str, targets: dict[str, RelationTarget] | None = None) -> str:
@@ -130,7 +130,7 @@ def test_field_optional_marker() -> None:
     assert parse_field("venue:fk:Venue?") == FieldSpec("venue", "fk", ("Venue",), True)
 
 
-# --- imports and layout -------------------------------------------------------------------
+# imports and layout
 
 
 def test_import_sections(ws: Workspace) -> None:

@@ -133,7 +133,7 @@ def apply_overrides(registry: Registry, overrides: dict[str, Any]) -> Registry:
     return Registry(adapters, commands, registry.max_lines)
 
 
-# --- inputs from the project ------------------------------------------------------
+# inputs from the project
 
 
 def module_fragments(project: Path) -> dict[str, str]:
@@ -159,7 +159,7 @@ def project_title(project: Path) -> str:
     return project.resolve().name
 
 
-# --- rendering ---------------------------------------------------------------------
+# rendering
 
 
 def _yaml_value(value: Any) -> str:
@@ -299,7 +299,7 @@ def render_all(project: Path, data: AgentData, registry: Registry | None = None)
     return files
 
 
-# --- sync --------------------------------------------------------------------------
+# sync
 
 
 @dataclass
