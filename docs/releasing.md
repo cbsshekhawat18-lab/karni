@@ -78,3 +78,21 @@ accepts the same version twice.
   publish waits for a human.
 - **Private vulnerability reporting:** enable it under Settings → Security
   ([Security](security.md) points reporters there).
+- **Repository profile** (Settings → General, or `gh repo edit`): the
+  description, the website (`https://cbsshekhawat18-lab.github.io/karni/`)
+  and topics such as `django`, `react`, `framework`, `ai-agents`,
+  `claude-code`, `cursor`, `drf`, `typescript`, `self-hosted`; and under
+  *Social preview*, upload `assets/brand/karni-social.png` (1280×640).
+
+  ```sh
+  gh repo edit cbsshekhawat18-lab/karni \
+    --description "Django + React framework that stays a dependency, built so AI coding agents extend it instead of rewriting it" \
+    --homepage https://cbsshekhawat18-lab.github.io/karni/ \
+    --add-topic django --add-topic react --add-topic framework --add-topic ai-agents \
+    --add-topic claude-code --add-topic cursor --add-topic django-rest-framework \
+    --add-topic typescript --add-topic self-hosted --add-topic python
+  ```
+
+- **GitHub Pages:** source *GitHub Actions* (the docs workflow deploys the
+  site); **Dependabot** and **code scanning** alerts on (`.github/dependabot.yml`
+  and `security.yml` are in the repository).

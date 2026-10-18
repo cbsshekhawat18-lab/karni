@@ -1,0 +1,70 @@
+version: 2
+updates:
+  # Python packages: the core, the CLI and the payments module.
+  - package-ecosystem: pip
+    directory: /packages/karni
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 5
+    labels: [dependencies, python]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      python-minor-patch: {update-types: [minor, patch]}
+    ignore:
+      # Django majors are a deliberate, tested upgrade (docs/stability.md).
+      - dependency-name: django
+        update-types: [version-update:semver-major]
+  - package-ecosystem: pip
+    directory: /packages/karni-cli
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 5
+    labels: [dependencies, python]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      python-minor-patch: {update-types: [minor, patch]}
+  - package-ecosystem: pip
+    directory: /modules/karni-payments
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 5
+    labels: [dependencies, python]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      python-minor-patch: {update-types: [minor, patch]}
+
+  # npm packages: @karni/ui, the payments UI and the reference app's frontend.
+  - package-ecosystem: npm
+    directory: /packages/karni-ui
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 5
+    labels: [dependencies, javascript]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      npm-minor-patch: {update-types: [minor, patch]}
+    ignore:
+      # React and the TanStack majors move together; upgrade them by hand.
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+  - package-ecosystem: npm
+    directory: /modules/karni-payments/ui
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 5
+    labels: [dependencies, javascript]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      npm-minor-patch: {update-types: [minor, patch]}
+  - package-ecosystem: npm
+    directory: /examples/eventhub/frontend
+    schedule: {interval: weekly, day: monday, time: "04:00", timezone: Asia/Kolkata}
+    open-pull-requests-limit: 3
+    labels: [dependencies, javascript]
+    commit-message: {prefix: deps, include: scope}
+    groups:
+      npm-minor-patch: {update-types: [minor, patch]}
+
+  # The actions the workflows pin.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly, day: monday}
+    labels: [dependencies, ci]
+    commit-message: {prefix: ci}
