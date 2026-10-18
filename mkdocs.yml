@@ -76,6 +76,7 @@ nav:
       - The enforcement layer, and opting out: concepts/enforcement-layer.md
       - History providers: concepts/history-providers.md
       - ADR 0001 — core architecture: decisions/0001-core-architecture.md
+      - ADR 0002 — permissions audit: decisions/0002-permissions-audit.md
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
