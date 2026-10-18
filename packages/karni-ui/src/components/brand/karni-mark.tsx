@@ -39,7 +39,11 @@ export const KarniMark = React.forwardRef<SVGSVGElement, KarniMarkProps>(
         {...props}
         {...(simple ? { dangerouslySetInnerHTML: { __html: MARK_SIMPLE_BODY } } : {})}
       >
-        {simple ? null : MARK_PATHS.map((path) => <path key={path.fill + path.d.length} fill={path.fill} d={path.d} />)}
+        {simple
+          ? null
+          : MARK_PATHS.map((path) => (
+              <path key={path.fill + path.d.length} fill={path.fill} d={path.d} />
+            ))}
       </svg>
     );
   },

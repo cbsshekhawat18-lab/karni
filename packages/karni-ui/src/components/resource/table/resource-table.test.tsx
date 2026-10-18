@@ -57,7 +57,7 @@ const mockUseSchema = useSchema as unknown as Mock;
 const mockUseResourceList = useResourceList as unknown as Mock;
 const mockUseResourceMutations = useResourceMutations as unknown as Mock;
 
-// --- fixtures ----------------------------------------------------------------
+// fixtures
 
 type Row = Record<string, unknown>;
 
@@ -282,7 +282,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// --- derived columns ---------------------------------------------------------
+// derived columns
 
 describe("derived columns", () => {
   it("renders domain fields in declaration order, skipping writeOnly/json/unknown/audit", () => {
@@ -324,7 +324,7 @@ describe("derived columns", () => {
   });
 });
 
-// --- escape hatches ----------------------------------------------------------
+// escape hatches
 
 describe("escape hatches", () => {
   it("columns: header/cell overrides, hidden, and sortable flips", () => {
@@ -377,7 +377,7 @@ describe("escape hatches", () => {
   });
 });
 
-// --- audit fields (BaseModel) -----------------------------------------------
+// audit fields (BaseModel)
 
 describe("audit fields (BaseModel)", () => {
   it("AUDIT_FIELDS lists the five BaseModel fields in display order", () => {
@@ -539,7 +539,7 @@ describe("audit fields (BaseModel)", () => {
   });
 });
 
-// --- sorting -----------------------------------------------------------------
+// sorting
 
 describe("sorting (server mode)", () => {
   it("maps header clicks to the DRF ordering param with aria-sort feedback", async () => {
@@ -588,7 +588,7 @@ describe("sorting (server mode)", () => {
   });
 });
 
-// --- search + filter bar -----------------------------------------------------
+// search + filter bar
 
 describe("search box and filter bar (D5)", () => {
   it("debounces the search box into the search param and resets the page", () => {
@@ -678,7 +678,7 @@ describe("search box and filter bar (D5)", () => {
   });
 });
 
-// --- pagination --------------------------------------------------------------
+// pagination
 
 describe("pagination (server mode)", () => {
   it("shows page math from DRF count and navigates with page params", async () => {
@@ -700,7 +700,7 @@ describe("pagination (server mode)", () => {
   });
 });
 
-// --- D5 404 page clamp -------------------------------------------------------
+// D5 404 page clamp
 
 describe("404 page clamp (D5)", () => {
   it("a list 404 with page > 1 decrements the page and recovers without an error panel", async () => {
@@ -730,7 +730,7 @@ describe("404 page clamp (D5)", () => {
   });
 });
 
-// --- bulk select -------------------------------------------------------------
+// bulk select
 
 describe("bulk select (D5)", () => {
   it("renders no checkboxes without bulkActions", () => {
@@ -782,7 +782,7 @@ describe("bulk select (D5)", () => {
   });
 });
 
-// --- row interactions --------------------------------------------------------
+// row interactions
 
 describe("row actions and clicks", () => {
   it("onRowClick fires on cell clicks but not on the selection checkbox", async () => {
@@ -837,7 +837,7 @@ describe("row actions and clicks", () => {
   });
 });
 
-// --- expand (D5) -------------------------------------------------------------
+// expand (D5)
 
 describe("default expand (D5)", () => {
   it("defaults to single-relation fields ∩ the expand enum", () => {
@@ -864,7 +864,7 @@ describe("default expand (D5)", () => {
   });
 });
 
-// --- states ------------------------------------------------------------------
+// states
 
 describe("loading / error / empty states", () => {
   it("shows a skeleton while the list is pending", () => {

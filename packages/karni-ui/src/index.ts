@@ -7,7 +7,7 @@
  * `export type { ... } from` form — no `export *`.
  */
 
-// --- lib --------------------------------------------------------------------
+// lib
 export { cn } from "./lib/cn";
 export { registerComponentRole, getRoleRegistry } from "./lib/roles";
 export type { RegisterComponentRoleOptions } from "./lib/roles";
@@ -20,7 +20,7 @@ export type {
   VariantProps,
 } from "./lib/variants";
 
-// --- primitives -------------------------------------------------------------
+// primitives
 export { Button, buttonVariants } from "./components/primitives/button";
 export type { ButtonProps, ButtonVariantProps } from "./components/primitives/button";
 
@@ -70,7 +70,7 @@ export {
 export { Skeleton } from "./components/primitives/skeleton";
 export type { SkeletonProps } from "./components/primitives/skeleton";
 
-// --- resource components ----------------------------------------------------
+// resource components
 export { ResourceTable } from "./components/resource/ResourceTable";
 export type {
   ResourceTableProps,
@@ -97,7 +97,7 @@ export type { ResourceSelectProps } from "./components/resource/ResourceSelect";
 export { displayLabel } from "./components/resource/displayLabel";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";
 
-// --- hooks ------------------------------------------------------------------
+// hooks
 export { karniKeys } from "./hooks/keys";
 export { useResourceList } from "./hooks/useResourceList";
 export { useResourceItem } from "./hooks/useResourceItem";
@@ -111,7 +111,7 @@ export type {
   ResourceMutationsOptions,
 } from "./hooks/types";
 
-// --- schema client ----------------------------------------------------------
+// schema client
 export { createKarniClient, KarniApiError } from "./schema/client";
 export type {
   KarniClient,
@@ -135,7 +135,7 @@ export type {
   ResourceSchema,
 } from "./schema/types";
 
-// --- auth -------------------------------------------------------------------
+// auth
 export { AuthProvider, useAuth } from "./auth/provider";
 export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
 
@@ -153,7 +153,7 @@ export type { TokenStorage } from "./auth/storage";
 
 export type { KarniUser, AuthStatus, LoginResult } from "./auth/types";
 
-// --- support components -----------------------------------------------------
+// support components
 export { Page } from "./components/page/page";
 export type { PageProps } from "./components/page/page";
 

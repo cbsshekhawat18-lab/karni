@@ -168,7 +168,7 @@ export class AuthEngine {
     this.attach();
   }
 
-  // --- client hook registration ----------------------------------------------
+  // client hook registration
 
   /** Registers the D6 hook points on the client. Idempotent. */
   attach(): void {
@@ -232,7 +232,7 @@ export class AuthEngine {
     for (const listener of this.listeners) listener();
   }
 
-  // --- bootstrap ---------------------------------------------------------------
+  // bootstrap
 
   /** Idempotent: the first call kicks off mode resolution + session restore. */
   ensureInitialized(): Promise<void> {
@@ -317,7 +317,7 @@ export class AuthEngine {
     return token;
   }
 
-  // --- refresh (D6) -------------------------------------------------------------
+  // refresh (D6)
 
   /** ONE shared in-flight refresh; resolves true on success. */
   private ensureRefresh(): Promise<boolean> {
@@ -371,7 +371,7 @@ export class AuthEngine {
     }
   }
 
-  // --- public auth actions -------------------------------------------------------
+  // public auth actions
 
   async login(email: string, password: string): Promise<LoginResult> {
     await this.ensureInitialized();

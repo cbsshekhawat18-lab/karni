@@ -264,7 +264,7 @@ describe("parseOpenApi — resilience", () => {
   });
 });
 
-// --- D9 snapshot guard -------------------------------------------------------
+// D9 snapshot guard
 
 const SNAPSHOT_PATH = join(process.cwd(), "tests", "fixtures", "schema.testapp.json");
 const snapshotPresent = existsSync(SNAPSHOT_PATH);

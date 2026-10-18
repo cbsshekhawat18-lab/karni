@@ -58,7 +58,7 @@ function termsOf(list: Element): Array<string | null> {
   return Array.from(list.querySelectorAll("dt")).map((term) => term.textContent);
 }
 
-// --- pure helpers ------------------------------------------------------------
+// pure helpers
 
 function def(name: string, readOnly: boolean): Pick<FieldDef, "name" | "readOnly"> {
   return { name, readOnly };
@@ -87,7 +87,7 @@ describe("audit-fields helpers", () => {
   });
 });
 
-// --- msw fixture (tests/msw/openapi.ts) --------------------------------------
+// msw fixture (tests/msw/openapi.ts)
 
 /** Domain columns of the handwritten Event, in declaration order. */
 const MSW_DOMAIN_HEADERS = [
@@ -143,7 +143,7 @@ describe("audit fields against the msw fixture (full stack)", () => {
   });
 });
 
-// --- generated testapp snapshot (D9) -----------------------------------------
+// generated testapp snapshot (D9)
 
 const SNAPSHOT_PATH = join(process.cwd(), "tests", "fixtures", "schema.testapp.json");
 const snapshotPresent = existsSync(SNAPSHOT_PATH);

@@ -124,7 +124,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   className?: string;
 }
 
-// --- structural columns ------------------------------------------------------
+// structural columns
 
 function selectionColumn<T>(): ColumnDef<T> {
   return {
@@ -218,7 +218,7 @@ function actionsColumn<T>(options: {
   };
 }
 
-// --- states ------------------------------------------------------------------
+// states
 
 function TableSkeleton({ rows = 8 }: { rows?: number }): React.ReactElement {
   return (
@@ -265,7 +265,7 @@ function SchemaErrorPanel(props: { error: unknown }): React.ReactElement {
   );
 }
 
-// --- the table ---------------------------------------------------------------
+// the table
 
 export function ResourceTable<T = Record<string, unknown>>(
   props: ResourceTableProps<T>,
@@ -296,7 +296,7 @@ export function ResourceTable<T = Record<string, unknown>>(
   const schemaResult = useSchema(resource);
   const schema = schemaResult.data;
 
-  // --- server-mode state (TanStack manual) ----------------------------------
+  // server-mode state (TanStack manual)
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting ?? []);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [page, setPage] = React.useState(1);
@@ -335,7 +335,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     setPage(1);
   }, []);
 
-  // --- schema-derived behaviour (D5) ----------------------------------------
+  // schema-derived behaviour (D5)
   const expandList = React.useMemo<readonly string[]>(() => {
     if (expand !== undefined) return expand;
     const allowed = schema?.operations.list?.expandEnum;
@@ -379,7 +379,7 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const searchEnabled = schema?.operations.list?.hasSearch === true;
 
-  // --- the list query --------------------------------------------------------
+  // the list query
   const trimmedSearch = debouncedSearch.trim();
   const listParams = React.useMemo<ResourceListParams>(
     () => ({
@@ -418,7 +418,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     if (clamping) setPage((current) => Math.max(1, current - 1));
   }, [clamping, page]);
 
-  // --- columns ---------------------------------------------------------------
+  // columns
   const hasBulkSelect = bulkActions !== undefined && bulkActions.length > 0;
   const hasActions = rowActions !== undefined || onEdit !== undefined || enableDelete === true;
 
@@ -475,7 +475,7 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const hasActiveNarrowing = trimmedSearch.length > 0 || Object.keys(filterValues).length > 0;
 
-  // --- render ----------------------------------------------------------------
+  // render
   let body: React.ReactNode;
   if (schemaResult.error !== null && schemaResult.error !== undefined) {
     body = <SchemaErrorPanel error={schemaResult.error} />;

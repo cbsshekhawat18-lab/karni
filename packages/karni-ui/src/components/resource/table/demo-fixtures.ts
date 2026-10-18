@@ -63,7 +63,7 @@ export function makeDemoEvents(count = DEMO_EVENT_COUNT): DemoEvent[] {
   });
 }
 
-// --- OpenAPI document (drf-spectacular dialect, COMPONENT_SPLIT_REQUEST) -----
+// OpenAPI document (drf-spectacular dialect, COMPONENT_SPLIT_REQUEST)
 
 const relationExt = (resource: string, many: boolean): Record<string, unknown> => ({
   "x-karni-relation": { resource, many },
@@ -230,7 +230,7 @@ export const eventsOpenApi: Record<string, unknown> = {
   },
 };
 
-// --- /api/events/ list behaviour --------------------------------------------
+// /api/events/ list behaviour
 
 function compareBy(key: string) {
   return (a: DemoEvent, b: DemoEvent): number => {

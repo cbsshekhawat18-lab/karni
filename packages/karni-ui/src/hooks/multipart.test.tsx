@@ -122,7 +122,7 @@ describe("omitUnchangedFileUrls (D2 PATCH rule)", () => {
   });
 });
 
-// --- end-to-end through the client + msw -------------------------------------
+// end-to-end through the client + msw
 
 function setup() {
   const client = createKarniClient({ baseUrl: BASE });

@@ -30,7 +30,7 @@ import type {
   ResourceSchema,
 } from "./types";
 
-// --- minimal structural OpenAPI types ---------------------------------------
+// minimal structural OpenAPI types
 
 export interface KarniRelationExtension {
   resource?: string;
@@ -113,7 +113,7 @@ export interface OpenApiDocument {
   [extension: string]: unknown;
 }
 
-// --- helpers ----------------------------------------------------------------
+// helpers
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -164,7 +164,7 @@ export function resolveSchema(
   return schema;
 }
 
-// --- per-property analysis --------------------------------------------------
+// per-property analysis
 
 interface PropertyInfo {
   kind: FieldKind;
@@ -354,7 +354,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
   }
 }
 
-// --- split-components field merge (D1) --------------------------------------
+// split-components field merge (D1)
 
 function mergeField(
   name: string,
@@ -424,7 +424,7 @@ function mergeField(
   return field;
 }
 
-// --- operation extraction ---------------------------------------------------
+// operation extraction
 
 function operationDef(
   doc: OpenApiDocument,
@@ -480,7 +480,7 @@ function createRequestSchema(doc: OpenApiDocument, op: OperationObject): SchemaO
   return resolveSchema(doc, media?.schema);
 }
 
-// --- the parser -------------------------------------------------------------
+// the parser
 
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 

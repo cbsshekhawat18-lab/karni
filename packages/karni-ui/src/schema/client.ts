@@ -103,7 +103,7 @@ export interface KarniClient {
   setAuthHooks(hooks: KarniAuthHooks): void;
 }
 
-// --- URL handling ------------------------------------------------------------
+// URL handling
 
 function splitBaseUrl(baseUrl: string): { origin: string; basePath: string } {
   const match = /^(https?:\/\/[^/]+)(\/.*)?$/.exec(baseUrl);
@@ -139,7 +139,7 @@ function appendQuery(url: string, query: Record<string, KarniQueryValue> | undef
   return url.includes("?") ? `${url}&${qs}` : `${url}?${qs}`;
 }
 
-// --- body handling -----------------------------------------------------------
+// body handling
 
 async function parseBody(response: Response): Promise<unknown> {
   if (response.status === 204 || response.status === 205) return undefined;
@@ -156,7 +156,7 @@ async function parseBody(response: Response): Promise<unknown> {
   return text;
 }
 
-// --- the client --------------------------------------------------------------
+// the client
 
 export function createKarniClient(options: KarniClientOptions): KarniClient {
   const { baseUrl, schemaUrl = "/api/schema/", fetch: fetchOption } = options;

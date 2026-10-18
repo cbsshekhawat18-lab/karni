@@ -220,7 +220,7 @@ export function DataChart({
     );
   }
 
-  // --- scales ---------------------------------------------------------------
+  // scales
   const rawMin = Math.min(0, ...values);
   const rawMax = Math.max(0, ...values);
   const ticks = niceTicks(rawMin, rawMax, yTickCount);
@@ -236,7 +236,7 @@ export function DataChart({
   const bandCenter = (index: number): number => MARGIN.left + (index + 0.5) * bandWidth;
   const zeroY = yScale(Math.max(domainMin, Math.min(domainMax, 0)));
 
-  // --- marks ----------------------------------------------------------------
+  // marks
   const seriesCount = Math.max(1, matrix.length);
   const groupWidth = bandWidth * 0.7;
   const barWidth = groupWidth / seriesCount;
@@ -296,7 +296,7 @@ export function DataChart({
     );
   });
 
-  // --- tooltip geometry (percentages of the rendered box) -------------------
+  // tooltip geometry (percentages of the rendered box)
   const pct = (value: number, total: number): string => `${String((value / total) * 100)}%`;
   const hoveredPoints =
     hovered === null
