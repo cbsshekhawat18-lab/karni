@@ -12,19 +12,19 @@ from karni.conf import karni_settings
 
 karni_settings(globals())
 
-# --- Project apps ------------------------------------------------------------
+# Project apps
 INSTALLED_APPS += [  # noqa: F821
     # "myapp",
     "events",
     "karni_payments",
 ]  # karni:apps
 
-# --- Project middleware (runs after Karni's stack) ----------------------------
+# Project middleware (runs after Karni's stack)
 MIDDLEWARE += [  # noqa: F821
     # "myapp.middleware.MyMiddleware",
 ]  # karni:middleware
 
-# --- Project overrides -------------------------------------------------------
+# Project overrides
 # Any Django/Karni setting assigned here beats the Karni default, e.g.:
 # REST_FRAMEWORK["PAGE_SIZE"] = 25
 # CELERY_TASK_TIME_LIMIT = 600
