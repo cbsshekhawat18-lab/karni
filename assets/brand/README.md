@@ -16,10 +16,23 @@ drawing, not redrawn.
 | `karni-horizontal.svg` | Mark plus the `karni` wordmark, for light surfaces. README and docs header. |
 | `karni-horizontal-dark.svg` | The same lockup for dark surfaces. |
 | `favicon.svg`, `favicon-16.png`, `favicon-32.png`, `favicon-48.png`, `apple-touch-icon-180.png` | The icon set; `favicon.svg` is the simple variant. |
-| `karni-social.png` | 1280×640 GitHub social preview. |
+| `avatar-400.png`, `avatar-460.png`, `avatar-512.png`, `avatar-1024.png` | Profile avatars: the mark at 86% on a solid black square, so a circular crop (GitHub, npm, X) is a black disc and a rounded-square crop (Docker Hub, Gravatar) keeps its corners. 400 for Gravatar and social accounts, 460 for the npm org, 512 for GitHub and Docker Hub, 1024 for anything that asks for more. |
+| `avatar-400-transparent.png` … `avatar-1024-transparent.png` | The same sizes with the mark's own ground on a transparent canvas, for surfaces that show the avatar uncropped on their own background. |
+| `social-1280x640.png` | 1280×640 social preview (GitHub repository, Open Graph and Twitter cards on the docs site). |
 
 The SVGs are generated — see [`scripts/brand/`](../../scripts/brand/) —
 from the source drawing; edit the drawing or the scripts, not the SVGs.
+The PNGs are rendered from the SVGs by `scripts/brand/render.mjs`, which
+also writes two contact sheets to `scripts/brand/out/`: `contact-sheet.png`
+(every variant at 16–512px on white, black and grey) and
+`avatar-contact-sheet.png` (`avatar-400.png` square and circle-cropped at
+40, 80, 200 and 400px on white, GitHub dark `#0d1117` and GitHub light
+`#f6f8fa`). The avatars are rendered from the full mark: on that sheet the
+three rings are still visible at 40px as thin hollow dots, so the small-size
+variant was not needed; its 40px rendering sits beside the full mark on the
+sheet's last row (`avatar-400-simple-candidate.png`) and `AVATAR_SOURCE` in
+the script switches the whole set to it if a platform's smallest size proves
+too small.
 
 ## Colours
 

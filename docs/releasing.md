@@ -82,7 +82,7 @@ accepts the same version twice.
   description, the website (`https://cbsshekhawat18-lab.github.io/karni/`)
   and topics such as `django`, `react`, `framework`, `ai-agents`,
   `claude-code`, `cursor`, `drf`, `typescript`, `self-hosted`; and under
-  *Social preview*, upload `assets/brand/karni-social.png` (1280×640).
+  *Social preview*, upload `assets/brand/social-1280x640.png` (1280×640).
 
   ```sh
   gh repo edit cbsshekhawat18-lab/karni \
