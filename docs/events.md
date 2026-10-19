@@ -1,3 +1,7 @@
+---
+description: Events and listeners: react to model changes from an app's listeners.py, loaded in web, worker and beat processes, without wiring Django signals by hand.
+---
+
 # Events and listeners
 
 React to things that happen to your data without wiring signals by hand.

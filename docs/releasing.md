@@ -1,3 +1,7 @@
+---
+description: For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup.
+---
+
 # Releasing Karni
 
 This page is for maintainers. Users, see [the stability promise](stability.md)

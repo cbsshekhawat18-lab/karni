@@ -1,3 +1,7 @@
+---
+description: History providers let karni context include what was already asked, tried and decided about a file, read from a prompt-history store such as Gigai Chronicle.
+---
+
 # History providers
 
 `karni context` tells an agent what a project contains **now**. It cannot

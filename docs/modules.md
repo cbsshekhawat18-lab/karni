@@ -1,3 +1,7 @@
+---
+description: The Karni module contract: how an installable app plugs into a project with one command and one URL include, with karni-payments as the reference implementation.
+---
+
 # The Karni module contract
 
 A Karni module is an installable Django app that plugs into a Karni project

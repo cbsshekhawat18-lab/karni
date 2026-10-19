@@ -1,3 +1,7 @@
+---
+description: Install Karni, scaffold a project, add a model, migrate, seed demo data and run it locally with Python 3.12 and Node 20.
+---
+
 # Quickstart
 
 Ten minutes from an empty directory to a running app with real data, no

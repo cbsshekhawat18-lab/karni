@@ -1,3 +1,7 @@
+---
+description: Periodic and background work declared in an app's schedules.py and tasks, written by karni make schedule and karni make task, run by Celery beat and workers.
+---
+
 # Scheduling and background work
 
 Declare periodic work next to the app that owns it, in `<app>/schedules.py`.

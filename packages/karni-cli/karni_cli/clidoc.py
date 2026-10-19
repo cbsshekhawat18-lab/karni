@@ -44,7 +44,11 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Generators", ("make",)),
 )
 
-HEADER = """# The `karni` command
+HEADER = """---
+description: Every karni command with its arguments and options, generated from the CLI's own help text.
+---
+
+# The `karni` command
 
 > Generated from the CLI itself — `python -m karni_cli.clidoc > docs/cli.md`;
 > `packages/karni-cli/tests/test_clidoc.py` fails when this file is stale.

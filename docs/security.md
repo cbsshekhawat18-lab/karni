@@ -1,3 +1,7 @@
+---
+description: How to report a security problem privately, what Karni's security baseline covers, and what it does not yet provide.
+---
+
 # Security
 
 **Do not open a public issue for a security problem.** Report it privately

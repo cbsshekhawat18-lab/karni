@@ -1,3 +1,7 @@
+---
+description: karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), the managers, related lookups and what each mixin does alone.
+---
+
 # Models
 
 Every project model inherits `karni.models.BaseModel`:

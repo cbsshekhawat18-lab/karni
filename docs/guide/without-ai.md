@@ -1,3 +1,7 @@
+---
+description: The same Karni project built from the terminal without an agent: the karni commands that replace boilerplate and the domain code you write yourself.
+---
+
 # Building without an AI agent
 
 Karni is a framework you drive from a terminal, like Django or Laravel. Every

@@ -1,3 +1,7 @@
+---
+description: The rules Karni enforces at build time for backend and frontend code, the code each one carries, and the inline opt-out with a reason that each one accepts.
+---
+
 # Enforcement
 
 Every rule fails a build — nothing warns. Every rule has an explicit, inline

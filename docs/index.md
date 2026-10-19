@@ -1,3 +1,7 @@
+---
+description: A Django + React framework that stays a versioned dependency: declare models and access, and the API, admin, permissions, tests, seed data and React screens follow.
+---
+
 # Karni
 
 Karni is a framework, not boilerplate: it stays a versioned dependency you

@@ -1,3 +1,7 @@
+---
+description: ADR 0002: the audit of Karni's permission and admin surface that precedes the roles, row scoping, field visibility, history, matrix and import/export work.
+---
+
 # ADR 0002 — Permissions and admin: audit before the retrofits
 
 *Status: accepted 2026-10-18 (P0 of the Permissions & Admin sequence). No code

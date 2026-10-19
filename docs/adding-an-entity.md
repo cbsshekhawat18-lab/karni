@@ -1,3 +1,7 @@
+---
+description: A full CRUD entity end to end in four project files: the model, a viewset with its access rule, the admin that derives itself and a typed React page.
+---
+
 # Adding an entity end to end
 
 The whole point of Karni: a full CRUD entity — API, admin, typed frontend —

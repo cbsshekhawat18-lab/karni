@@ -1,3 +1,7 @@
+---
+description: ADR 0001: the tenancy shape, permission depth and performance defaults Karni's core is built on, with the code that implements each decision.
+---
+
 # ADR 0001 — Core architecture: tenancy shape, permission depth, performance defaults
 
 | | |

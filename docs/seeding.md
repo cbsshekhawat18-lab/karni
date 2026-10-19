@@ -1,3 +1,7 @@
+---
+description: karni seed fills every table with realistic, connected demo data, the same rows for the same seed value, from per-model seed definitions, and prints a demo login.
+---
+
 # Seeding demo data
 
 `karni seed` fills every table of your project with realistic, connected

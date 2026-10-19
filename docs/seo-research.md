@@ -1,3 +1,7 @@
+---
+description: How developers describe the problem Karni solves, measured before any wording was chosen: the phrases, the About line candidates and the repository topics.
+---
+
 # Findability research
 
 How people actually describe the problem Karni solves, measured on

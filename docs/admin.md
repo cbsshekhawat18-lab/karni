@@ -1,3 +1,7 @@
+---
+description: karni.admin: every model gets a derived django-unfold admin with columns, filters, search and autocompletes, and how to override any part of it.
+---
+
 # karni.admin
 
 No project writes `admin.py` for routine models: when Django starts,

@@ -1,3 +1,7 @@
+---
+description: What counts as Karni's public API, how semantic versioning applies from 0.1.0, and the deprecation cycle every breaking change goes through.
+---
+
 # Stability promise
 
 Karni is a dependency you upgrade, not a template you copy, so what may

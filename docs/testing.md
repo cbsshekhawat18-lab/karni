@@ -1,3 +1,7 @@
+---
+description: Karni's test tooling: the assert_crud and assert_isolated one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite.
+---
+
 # Testing
 
 Karni ships the test tooling a project would otherwise write by hand, and

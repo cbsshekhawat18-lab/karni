@@ -1,3 +1,7 @@
+---
+description: How to drive a Karni project with Claude Code, Cursor, Copilot or another coding agent: the adapters, the context and rules commands, and what the agent writes.
+---
+
 # Building with an AI agent
 
 Karni is built to be driven by a coding agent: Claude Code, Cursor, Copilot,

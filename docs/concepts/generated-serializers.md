@@ -1,3 +1,7 @@
+---
+description: Why Karni generates serializers from models instead of hand-writing them, how a generated serializer is customised, and when to write your own.
+---
+
 # Why serializers are generated
 
 In a plain DRF project, every model gets a serializer that restates its

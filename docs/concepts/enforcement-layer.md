@@ -1,3 +1,7 @@
+---
+description: Why every Karni rule fails a build, why every rule has an inline opt-out with a reason, and how that keeps generic code out of projects.
+---
+
 # The enforcement layer, and opting out of it
 
 Karni's promise — projects write only domain code — only holds if the generic

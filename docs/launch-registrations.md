@@ -1,3 +1,7 @@
+---
+description: The maintainer-only launch steps in order: accounts and names, repository settings, trusted publishing and the first release, with the fallback when a name is taken.
+---
+
 # Launch registrations
 
 What only the maintainer can do, in order, with the URL for each step, what

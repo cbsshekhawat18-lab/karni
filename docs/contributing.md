@@ -1,3 +1,7 @@
+---
+description: How to report bugs and security problems, and where Karni's contribution guide lives.
+---
+
 # Contributing
 
 Karni's contribution guide lives in the repository, next to the code it

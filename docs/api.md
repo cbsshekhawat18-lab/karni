@@ -1,3 +1,7 @@
+---
+description: karni.api: BaseViewSet with a mandatory access declaration, generated serializers, filtering, ordering, pagination, search, expansion, query budgets and the OpenAPI document.
+---
+
 # karni.api
 
 > **Posture — read first.** Every `BaseViewSet` must declare `access`; it is
