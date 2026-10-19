@@ -94,6 +94,16 @@ export type {
 export { ResourceSelect } from "./components/resource/ResourceSelect";
 export type { ResourceSelectProps } from "./components/resource/ResourceSelect";
 
+export { ChangeHistory } from "./components/resource/history/ChangeHistory";
+export type { ChangeHistoryProps } from "./components/resource/history/ChangeHistory";
+export { useChangeHistory, changeHistoryKey } from "./hooks/useChangeHistory";
+export type {
+  ChangeAction,
+  ChangeLogEntry,
+  ChangeHistoryPage,
+  ChangeHistoryParams,
+} from "./hooks/useChangeHistory";
+
 export { displayLabel } from "./components/resource/displayLabel";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";
 

@@ -334,6 +334,30 @@ class KarniAdminMixin(admin.ModelAdmin):
             return False
         return bool(super().lookup_allowed(lookup, value, request))
 
+    # -- change history (ADR 0002, P4) ----------------------------------------
+
+    def history_view(
+        self, request: HttpRequest, object_id: str, extra_context: dict[str, Any] | None = None
+    ) -> Any:
+        """The History tab: field-level changes (``karni.audit``) above Django's admin log.
+
+        Only for models that opt in with ``Karni.audit``; the diffs shown
+        respect ``Karni.field_roles`` for the viewing user.
+        """
+        from karni.audit.services import audited, history_for
+
+        context = dict(extra_context or {})
+        if audited(self.model):
+            obj = self.get_object(request, object_id)
+            entries: list[Any] = []
+            if obj is not None:
+                for entry in history_for(obj)[:200]:
+                    entry.visible = entry.visible_diff(request.user)
+                    entries.append(entry)
+            context["karni_change_logs"] = entries
+            self.object_history_template = "karni_admin/object_history.html"
+        return super().history_view(request, object_id, context)
+
     def formfield_for_manytomany(
         self, db_field: models.ManyToManyField, request: HttpRequest, **kwargs: Any
     ) -> Any:

@@ -111,6 +111,7 @@ describe("package self-registrations", () => {
     expect(getRoleRegistry()).toEqual({
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
+      "change-history": "ChangeHistory",
       chart: "DataChart",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",

@@ -117,6 +117,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Bind the context before querying, as the message says (e.g. wrap the task body in the module's context manager), or lift the scope deliberately with Model.objects.without("<scope>", reason="...").
 
+<a id="e007"></a>
+
+#### E007 — Karni.audit or Karni.sensitive is malformed
+
+*exception* · from `karni.audit.capture`
+
+**Why Karni objects.** Change history is opted into per model as True or a list of that model's field names, and sensitive fields are named the same way; a name the model does not have would audit or redact nothing silently.
+
+**Fix.** Write `class Karni: audit = True` (or a list of field names) and `sensitive = [...]` with field names of the model.
+
 ### 1xx · API: access, viewsets, serializers, pagination, budgets, expand
 
 <a id="e101"></a>
@@ -1526,6 +1536,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** An unpaginated list or an N+1 passes with test data and falls over with real data; the scaling check (2 vs 12 rows) and per-action query budgets catch both in CI.
 
 **Fix.** Return self.paginated_response(qs); hint opaque fields with prefetch_related.
+
+<a id="k113"></a>
+
+### K113 — Audited models: no update()/bulk_update().
+
+*agent rule, error* · enforced by `audited-bulk-write`
+
+**Rule.** A model with `class Karni: audit = True` keeps field-level change history through save() and delete(); `QuerySet.update()` and `bulk_update()` bypass it and leave no entry. Save the instances instead, or opt out with `# karni: allow(audited-bulk-write): <reason>`.
+
+**Why Karni objects.** A silent gap in the history is exactly the bug someone discovers during an audit; the rule names every bulk write on an audited model at build time.
+
+**Fix.** Loop and save(), or add the allow marker with the reason.
 
 <a id="k201"></a>
 

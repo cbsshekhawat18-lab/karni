@@ -19,6 +19,7 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 - `ResourceForm` — role `resource-form`
 - `ResourceDetail` — role `detail-view`
 - `ResourceSelect` — role `async-select`
+- `ChangeHistory` — role `change-history`
 
 ## App shell and pages
 
@@ -49,6 +50,7 @@ Styled Radix parts and basics; `className` always merges, refs are forwarded.
 ## Hooks
 
 - `useAuth` — `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.
+- `useChangeHistory` — One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useKarniClient` — The `KarniClient` behind every hook: `client.request(path, { method, body, query })` for custom actions.
 - `usePermission` — `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem` — One row by id, optionally expanded.
@@ -66,6 +68,7 @@ role another component holds (compose it instead), and `karni context` lists the
 |---|---|
 | `async-select` | `ResourceSelect` |
 | `auth-guard` | `AuthGuard` |
+| `change-history` | `ChangeHistory` |
 | `chart` | `DataChart` |
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |

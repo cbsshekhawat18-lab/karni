@@ -142,6 +142,7 @@ BASE: dict[str, Any] = {
         "django_celery_results",
         "django_structlog",
         "karni.accounts",
+        "karni.audit",
         "karni",
         # Last on purpose: karni.admin's ready() autodiscovers *unregistered*
         # models, so every explicit registration (project admin.py files,
@@ -421,6 +422,12 @@ BASE: dict[str, Any] = {
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
+    # --- Change history (karni.audit) -------------------------------------
+    "KARNI_AUDIT_ASYNC": env.bool("KARNI_AUDIT_ASYNC", default=False),
+    "KARNI_AUDIT_RETENTION_DAYS": env.int("KARNI_AUDIT_RETENTION_DAYS", default=None),
+    "KARNI_AUDIT_REDACT": env.list(
+        "KARNI_AUDIT_REDACT", default=["password", "token", "secret", "key"]
+    ),
     # --- Events & schedules (karni.events / karni.schedule) -----------------
     # <app>/listeners.py, <app>/events.py and <app>/schedules.py are
     # autodiscovered at startup; set False to wire them yourself.

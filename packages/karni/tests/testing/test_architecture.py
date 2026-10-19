@@ -96,6 +96,37 @@ def test_raw_sql_optout(tmp_path, as_project) -> None:
     assert architecture.check_raw_sql() == []
 
 
+# audited-bulk-write (P4)
+
+BULK_WRITE = """
+from shop.models import Price, Tag
+
+def reprice(rows):
+    Price.objects.filter(currency="EUR").update(amount=0)
+    Price.objects.bulk_update(rows, ["amount"])
+    Tag.objects.filter(name="x").update(name="y")
+    Price.objects.filter(pk=1).update(note="")  # karni: allow(audited-bulk-write): backfill
+"""
+
+
+def test_bulk_writes_on_audited_models_detected(tmp_path, as_project, monkeypatch) -> None:
+    as_project(fake_app(tmp_path, {"services.py": BULK_WRITE}))
+    monkeypatch.setattr(architecture, "_audited_model_names", lambda: {"Price"})
+    violations = architecture.check_audited_bulk_write()
+    assert [v.rule for v in violations] == ["audited-bulk-write", "audited-bulk-write"]
+    assert [v.location.rsplit(":", 1)[1] for v in violations] == ["5", "6"]
+    assert "Price.…update()" in violations[0].message
+    assert "Price.…bulk_update()" in violations[1].message
+
+
+def test_bulk_writes_without_audited_models_are_not_scanned(
+    tmp_path, as_project, monkeypatch
+) -> None:
+    as_project(fake_app(tmp_path, {"services.py": BULK_WRITE}))
+    monkeypatch.setattr(architecture, "_audited_model_names", lambda: set())
+    assert architecture.check_audited_bulk_write() == []
+
+
 # http-client
 
 

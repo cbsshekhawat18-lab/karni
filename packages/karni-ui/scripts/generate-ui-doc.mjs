@@ -18,7 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const GROUPS = [
   [
     "Resource components (schema-driven)",
-    ["ResourceTable", "ResourceForm", "ResourceDetail", "ResourceSelect"],
+    ["ResourceTable", "ResourceForm", "ResourceDetail", "ResourceSelect", "ChangeHistory"],
   ],
   [
     "App shell and pages",
@@ -42,6 +42,8 @@ const HOOKS = {
   useResourceList:
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
+  useChangeHistory:
+    "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
   useResourceMutations:
     "`create`, `update`, `remove` for a resource; they invalidate the resource's queries on success.",
   useSchema: "The parsed OpenAPI schema of one resource (fields, operations, access).",

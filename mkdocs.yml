@@ -63,6 +63,7 @@ nav:
       - API: api.md
       - Accounts: accounts.md
       - Admin: admin.md
+      - Change history: change-history.md
       - Events and listeners: events.md
       - Scheduling: scheduling.md
       - Testing: testing.md

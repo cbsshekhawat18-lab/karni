@@ -255,6 +255,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Add the scope's name to KARNI_SCOPES (or unset KARNI_SCOPES to run every scope). "
         "If switching it off is deliberate, add 'karni.W001' to SILENCED_SYSTEM_CHECKS.",
     ),
+    _e(
+        "E007",
+        "Karni.audit or Karni.sensitive is malformed",
+        "exception",
+        "karni.audit.capture",
+        "Change history is opted into per model as True or a list of that model's field "
+        "names, and sensitive fields are named the same way; a name the model does not have "
+        "would audit or redact nothing silently.",
+        "Write `class Karni: audit = True` (or a list of field names) and "
+        "`sensitive = [...]` with field names of the model.",
+    ),
     # E1xx API: access
     _e(
         "E101",

@@ -425,6 +425,24 @@ RULES: tuple[Rule, ...] = (
         enforced_by=("unpaginated-action", "query-scaling"),
     ),
     Rule(
+        code="K113",
+        category="backend",
+        severity="error",
+        summary="Audited models: no update()/bulk_update().",
+        rule=(
+            "A model with `class Karni: audit = True` keeps field-level change history "
+            "through save() and delete(); `QuerySet.update()` and `bulk_update()` bypass it "
+            "and leave no entry. Save the instances instead, or opt out with "
+            "`# karni: allow(audited-bulk-write): <reason>`."
+        ),
+        rationale=(
+            "A silent gap in the history is exactly the bug someone discovers during an "
+            "audit; the rule names every bulk write on an audited model at build time."
+        ),
+        fix="Loop and save(), or add the allow marker with the reason.",
+        enforced_by=("audited-bulk-write",),
+    ),
+    Rule(
         code="K103",
         category="backend",
         severity="error",

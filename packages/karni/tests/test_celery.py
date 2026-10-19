@@ -8,6 +8,7 @@ Django itself.
 from __future__ import annotations
 
 import os
+import sys
 from unittest import mock
 
 import pytest
@@ -98,9 +99,21 @@ class TestFactoryBehaviour:
         autodiscover.assert_called_once_with()
 
     def test_registers_no_karni_tasks(self) -> None:
+        """Creating the app imports no Karni task module; the project's autodiscovery does.
+
+        ``shared_task`` registers globally, so a Karni task module another
+        test already imported (``karni.audit.tasks``) shows up in every app;
+        only modules this call imported count.
+        """
+        imported_before = {name for name in sys.modules if name.startswith("karni.")}
         app = create_celery_app()
         app.finalize()
-        assert not [name for name in app.tasks if name.startswith("karni.")]
+        fresh = [
+            name
+            for name in app.tasks
+            if name.startswith("karni.") and name.rsplit(".", 1)[0] not in imported_before
+        ]
+        assert not fresh
 
     def test_does_not_touch_django_settings_module(self) -> None:
         before = os.environ.get("DJANGO_SETTINGS_MODULE")

@@ -71,6 +71,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
 from django.http import Http404, HttpRequest
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import BasePagination
 from rest_framework.permissions import BasePermission
@@ -483,6 +484,28 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                         f"{exc} Rows are limited by {type(self).__name__}.access {shown}."
                     ) from exc
             raise
+
+    # change history (ADR 0002, P4)
+
+    @action(detail=True, methods=["get"], url_path="history")
+    def history(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/history/``: the row's field-level changes, newest first.
+
+        Answers only for models that opt in with ``class Karni: audit = True``
+        (404 otherwise, saying so). The row is looked up through the read
+        scope, so an unreadable row is a 404 like everywhere else, and each
+        entry's diff omits the fields ``Karni.field_roles`` hides from the
+        requester.
+        """
+        from karni.audit.serializers import ChangeLogSerializer
+        from karni.audit.services import audited, history_for
+
+        if not audited(self.get_model()):
+            raise NotFound(
+                f"No history is kept for {self.get_model().__name__}: opt in with "
+                "`class Karni: audit = True` on the model."
+            )
+        return self.paginated_response(history_for(self.get_object()), ChangeLogSerializer)
 
     # writes & serializers
 

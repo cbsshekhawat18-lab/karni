@@ -74,7 +74,13 @@ def test_bases_line_matches_real_exports() -> None:
 
 @pytest.mark.django_db
 def test_models_section_covers_testapp_and_skips_framework() -> None:
-    output = build_context()
+    from django.test import override_settings
+
+    from karni.introspect import CONTEXT_SKIP_APPS
+
+    # The other test apps push the suite past MODEL_CAP; this test is about testapp.
+    with override_settings(KARNI_CONTEXT_SKIP_APPS=CONTEXT_SKIP_APPS | {"adminapp", "perfapp"}):
+        output = build_context()
     models_line = _sections(output)["MODELS"]
     assert "Event(" in models_line
     assert "Venue(" in models_line

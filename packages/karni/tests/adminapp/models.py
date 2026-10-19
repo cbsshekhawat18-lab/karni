@@ -240,6 +240,7 @@ class Hidden(BaseModel):
         return self.body[:20]
 
 
+# karni: allow(model-base): the plain-Django derivation case the admin tests need
 class Metric(models.Model):
     """Plain-Django FK target with no searchable fields.
 
@@ -263,6 +264,7 @@ class Reading(BaseModel):
         return f"reading {self.pk}"
 
 
+# karni: allow(model-base): an AbstractBaseUser fixture for the autodiscovery tests
 class Operator(AbstractBaseUser):
     """``AbstractBaseUser`` subclass with no opt-in: autodiscovery skips it."""
 
@@ -271,6 +273,7 @@ class Operator(AbstractBaseUser):
     handle = models.CharField(max_length=100, unique=True)
 
 
+# karni: allow(model-base): an AbstractBaseUser fixture for the autodiscovery tests
 class Bot(AbstractBaseUser):
     """``AbstractBaseUser`` subclass opted in via ``AdminMeta.register``.
 

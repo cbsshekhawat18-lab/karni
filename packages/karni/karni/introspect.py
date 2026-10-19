@@ -18,6 +18,7 @@ from django.db import models
 #: App labels whose models are framework noise, not domain inventory.
 CONTEXT_SKIP_APPS: frozenset[str] = frozenset(
     {
+        "karni_audit",
         "admin",
         "auth",
         "contenttypes",

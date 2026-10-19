@@ -208,6 +208,23 @@ class Ticket(BaseModel):
         return self.subject
 
 
+class Price(BaseModel):
+    """Change history (tests/test_audit.py): every field audited, ``note`` recorded redacted."""
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default="EUR")
+    note = models.TextField(blank=True, default="")
+    api_token = models.CharField(max_length=64, blank=True, default="")
+
+    class Karni:
+        audit = True
+        sensitive = ["note"]
+        field_roles = {"amount": {"read": ["staff"]}}
+
+    def __str__(self) -> str:
+        return f"{self.amount} {self.currency}"
+
+
 class Review(SoftDeleteModel):
     """``SoftDeleteModel`` alone: integer pk, ``CASCADE`` child of ``Book``."""
 

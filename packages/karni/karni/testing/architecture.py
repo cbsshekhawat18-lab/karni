@@ -389,6 +389,71 @@ def check_redundant_serializer() -> list[Violation]:
 
 # aggregation
 
+# audited-bulk-write (ADR 0002, P4)
+
+
+def _audited_model_names() -> set[str]:
+    """Class names of every model that keeps change history (``Karni.audit``)."""
+    from django.apps import apps
+
+    from karni.meta import karni_option
+
+    return {model.__name__ for model in apps.get_models() if karni_option(model, "audit", False)}
+
+
+def _receiver_root(node: ast.expr) -> str | None:
+    """The leftmost name of an attribute/call chain (``Price`` in ``Price.objects.filter()``)."""
+    current: ast.expr = node
+    while True:
+        if isinstance(current, ast.Attribute):
+            current = current.value
+        elif isinstance(current, ast.Call):
+            current = current.func
+        elif isinstance(current, ast.Name):
+            return current.id
+        else:
+            return None
+
+
+def check_audited_bulk_write() -> list[Violation]:
+    """``QuerySet.update()`` / ``bulk_update()`` on an audited model bypass its history."""
+    audited = _audited_model_names()
+    if not audited:
+        return []
+    violations: list[Violation] = []
+    for cfg in project_app_configs():
+        for path in project_sources(cfg):
+            try:
+                tree = ast.parse(path.read_text())
+            except (OSError, SyntaxError):
+                continue
+            for node in ast.walk(tree):
+                if not (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr in {"update", "bulk_update"}
+                ):
+                    continue
+                root = _receiver_root(node.func.value)
+                if root not in audited:
+                    continue
+                violations += check_optout(
+                    path,
+                    "audited-bulk-write",
+                    [node.lineno],
+                    Violation(
+                        rule="audited-bulk-write",
+                        location=f"{relative(path)}:{node.lineno}",
+                        message=(
+                            f"{root}.…{node.func.attr}() bypasses the change history "
+                            f"{root} keeps (Karni.audit): no entry is written"
+                        ),
+                        hint="save() each instance instead, or add an allow marker with the reason",
+                    ),
+                )
+    return violations
+
+
 ALL_CHECKS = (
     check_model_base,
     check_viewset_base,
@@ -399,6 +464,7 @@ ALL_CHECKS = (
     check_raw_sql,
     check_http_client,
     check_redundant_serializer,
+    check_audited_bulk_write,
 )
 
 
@@ -453,3 +519,7 @@ def test_no_direct_http_clients() -> None:
 
 def test_no_redundant_serializers() -> None:
     _assert_clean(check_redundant_serializer())
+
+
+def test_audited_models_are_not_bulk_written() -> None:
+    _assert_clean(check_audited_bulk_write())

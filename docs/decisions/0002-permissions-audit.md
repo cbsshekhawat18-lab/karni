@@ -7,9 +7,11 @@ description: ADR 0002: the audit of Karni's permission and admin surface that pr
 *Status: accepted 2026-10-18 (P0 of the Permissions & Admin sequence). No code
 changed in this session. Since then: P1 (roles as data), P2 (row-level
 scoping — `Granted()`, the admin's row scope, `scope_exempt`, the `grant`
-isolation dimension) and P3 (field-level visibility — `Karni.field_roles`,
+isolation dimension), P3 (field-level visibility — `Karni.field_roles`,
 per-role serializer, schema and admin, the ordering/filter/search oracles
-closed) have shipped; §2 below describes the state before them.*
+closed) and P4 (change history — `karni.audit`, `Karni.audit`, the History
+tab, `/history/`, `<ChangeHistory/>`, `audited-bulk-write`) have shipped;
+§2 below describes the state before them.*
 
 This audits Karni's permission surface before the six retrofits (P1 roles as
 data, P2 row-level scoping, P3 field-level visibility, P4 change history, P5

@@ -12,6 +12,7 @@ from django.contrib import admin
 from tests.adminapp.models import Explicit
 
 
+# karni: allow(admin-convention): a stock admin, to prove explicit registration wins
 @admin.register(Explicit)
 class ExplicitAdmin(admin.ModelAdmin):
     """Stock hand-written admin: explicit registration always wins."""

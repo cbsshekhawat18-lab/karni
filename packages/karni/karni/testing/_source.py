@@ -75,11 +75,14 @@ def project_root() -> Path:
     return Path.cwd().resolve()
 
 
-def project_app_configs(*, infer_root: bool = False) -> list[AppConfig]:
+def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
     """Installed apps whose code lives in the project tree (see module docstring).
 
-    Without ``BASE_DIR`` the result is empty, unless ``infer_root`` asks for
-    :func:`project_root`'s fallback (seeding and the API test helpers do).
+    The tree is ``BASE_DIR`` when the settings define it, else
+    :func:`project_root`'s fallback (the parent of the settings package — a
+    Karni scaffold defines no ``BASE_DIR``), so every rule scans the project
+    by default. ``infer_root=False`` keeps the strict ``BASE_DIR``-only
+    behaviour and returns nothing without it.
     """
     base_dir = getattr(settings, "BASE_DIR", None)
     if base_dir is None and infer_root:

@@ -18,8 +18,10 @@ fast single-file subset of these checks. See [Karni for AI agents](agents.md).
 Run in CI as `pytest --pyargs karni.testing.architecture`, and on every
 `karni check` via the `karni.checks` entry points (`architecture`,
 `duplication`). Only project code is scanned — apps whose source lives under
-`BASE_DIR`; installed packages (including Karni modules) are never scanned
-and must pass these rules in their own CI. `query-scaling` needs a database,
+the project root (`BASE_DIR` when the settings define it, else the parent of
+the settings package, which is where a Karni scaffold keeps `config/`);
+installed packages (including Karni modules) are never scanned and must
+pass these rules in their own CI. `query-scaling` needs a database,
 so it runs only under pytest (the architecture suite carries it; `pytest
 --pyargs karni.testing.performance` runs it alone), never in `karni check`.
 
@@ -35,6 +37,7 @@ so it runs only under pytest (the architecture suite carries it; `pytest
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
 | `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it — `BaseViewSet(model=X)` generates it |
+| `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code — signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 

@@ -220,3 +220,28 @@ longer order the list), and search_fields may not name a write-only field \
 (karni.E131)."""
 mechanical = false
 migration = "migrations/0.2.md#field-level-visibility"
+
+[[change]]
+id = "change-history"
+kind = "behaviour"
+symbol = "karni.audit"
+replacement = "class Karni: audit = True on the models to record"
+summary = """\
+Change history (ADR 0002, P4): the new karni.audit app (run migrate once) records \
+field-level diffs for models that opt in, surfaced on the admin History tab, \
+GET /<resource>/<id>/history/ and <ChangeHistory/>; QuerySet.update()/bulk_update() \
+on an audited model is flagged by karni check (audited-bulk-write)."""
+mechanical = false
+migration = "migrations/0.2.md#change-history"
+
+[[change]]
+id = "architecture-scans-without-base-dir"
+kind = "behaviour"
+symbol = "BASE_DIR"
+replacement = "nothing: discovery infers the project root"
+summary = """\
+karni check and the architecture suite now scan the project's apps without \
+settings.BASE_DIR (they infer the root from the settings package); projects \
+that scanned nothing before may see violations on the next karni check."""
+mechanical = false
+migration = "migrations/0.2.md#architecture-rules-scan-the-project-without-base_dir"

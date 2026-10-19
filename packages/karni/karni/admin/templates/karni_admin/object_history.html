@@ -1,0 +1,40 @@
+{% extends "admin/object_history.html" %}
+{% load i18n %}
+
+{% block content %}
+    {% if karni_change_logs is not None %}
+        <h2 class="font-semibold mb-4 text-base-900 dark:text-base-100">{% translate "Field changes" %}</h2>
+        {% if karni_change_logs %}
+            <table class="border-base-200 border-spacing-none border-separate mb-6 w-full lg:border lg:rounded-default lg:shadow-xs lg:dark:border-base-800">
+                <thead class="hidden lg:table-header-group text-base-900 dark:text-base-100">
+                    <tr>
+                        <th class="align-middle font-medium px-3 py-2 text-left">{% translate "Date/time" %}</th>
+                        <th class="align-middle font-medium px-3 py-2 text-left">{% translate "User" %}</th>
+                        <th class="align-middle font-medium px-3 py-2 text-left">{% translate "Action" %}</th>
+                        <th class="align-middle font-medium px-3 py-2 text-left">{% translate "Changes" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in karni_change_logs %}
+                        <tr class="block border mb-3 rounded-default shadow-xs lg:table-row lg:border-none lg:mb-0 lg:shadow-none dark:border-base-800">
+                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{{ entry.timestamp|date:"DATETIME_FORMAT" }}</td>
+                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{% if entry.actor %}{{ entry.actor.get_username }}{% else %}—{% endif %}</td>
+                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{{ entry.get_action_display }}</td>
+                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">
+                                {% for name, change in entry.visible.items %}
+                                    <div><code>{{ name }}</code>: <span class="text-base-500">{{ change.0|default:"—" }}</span> → <span>{{ change.1|default:"—" }}</span></div>
+                                {% empty %}
+                                    <span class="text-base-500">{% translate "no visible field changed" %}</span>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="mb-6 text-base-500">{% translate "No field changes recorded yet." %}</p>
+        {% endif %}
+        <h2 class="font-semibold mb-4 text-base-900 dark:text-base-100">{% translate "Admin actions" %}</h2>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

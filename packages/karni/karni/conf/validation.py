@@ -100,6 +100,9 @@ class KarniSettingsModel(BaseModel):
     KARNI_HEALTH_CHECKS: list[str] = Field(default_factory=list)
     KARNI_HEALTH_CELERY_TIMEOUT: float = 1.0
     KARNI_THUMBNAILER: str = "karni.storage.thumbnails.make_thumbnail"
+    KARNI_AUDIT_ASYNC: bool = False
+    KARNI_AUDIT_RETENTION_DAYS: int | None = None
+    KARNI_AUDIT_REDACT: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:

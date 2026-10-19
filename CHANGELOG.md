@@ -35,6 +35,15 @@ change and its migration note.
   change; `assert_crud` checks visibility. `?ordering=` now accepts only
   serializer-visible fields; `search_fields` may not name a write-only
   field (`E131`); `E212` validates `field_roles`.
+- Change history (ADR 0002, P4): the `karni.audit` app records, for models
+  that opt in with `class Karni: audit = True`, who changed what from what
+  to what, captured at the model layer so the API, admin, commands and the
+  shell all leave the same entry; sensitive fields are redacted; surfaced on
+  the admin History tab, `GET /<resource>/<id>/history/` and
+  `<ChangeHistory/>`; retention pruning off by default; `karni check` flags
+  `update()`/`bulk_update()` on audited models (`audited-bulk-write`, `K113`).
+- `karni check` and the architecture suite now scan a project's apps
+  without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

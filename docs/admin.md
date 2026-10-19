@@ -146,6 +146,13 @@ admin class needs to know; the hooks (`get_list_display`, `get_fields`,
 `lookup_allowed`, …) call `super()` and then drop what the user's roles do
 not reach, so an explicit `AdminMeta` or subclass still works.
 
+## Change history
+
+A model that opts in with `class Karni: audit = True` gets its field-level
+changes on the History tab of its change page — date, user, action and each
+field's old → new, above Django's own admin-action log — with the same
+visibility rules applied. See [change history](change-history.md).
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

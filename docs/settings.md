@@ -61,6 +61,10 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_HEALTH_CELERY_TIMEOUT` | — | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
 | `KARNI_THUMBNAILER` | — | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` | — | `True` | Validate the merged settings at startup (`karni.conf.validation`); `False` skips it. |
+| **Change history (karni.audit)** | | | |
+| `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
+| `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |
+| `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
 | **Events & schedules (karni.events / karni.schedule)** | | | |
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |

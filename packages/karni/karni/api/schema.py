@@ -88,6 +88,8 @@ class KarniAutoSchema(AutoSchema):
         registry: Any,
     ) -> dict[str, Any] | None:
         """Stock operation plus ``x-karni-resource`` (routed list ops) and ``x-karni-access``."""
+        if self._karni_action() == "history" and not self._karni_audited():
+            return None  # no history is kept for this resource: no operation to document
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
         if operation is None:
             return None
@@ -100,6 +102,30 @@ class KarniAutoSchema(AutoSchema):
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
         return operation
+
+    def get_response_serializers(self) -> Any:
+        """The history action answers with change-log entries, not the resource."""
+        if self._karni_action() == "history":
+            from karni.audit.serializers import ChangeLogSerializer
+
+            return ChangeLogSerializer
+        return super().get_response_serializers()
+
+    def _is_list_view(self, serializer: Any = None) -> bool:
+        """The history action is a paginated list (``paginated_response``)."""
+        if self._karni_action() == "history":
+            return True
+        return bool(super()._is_list_view(serializer))
+
+    def _karni_audited(self) -> bool:
+        """Whether the view's model keeps change history (``Karni.audit``)."""
+        from karni.audit.services import audited
+
+        view = self._karni_view()
+        model = getattr(view, "model", None) if view is not None else None
+        if model is None and view is not None:
+            model = getattr(getattr(view, "queryset", None), "model", None)
+        return model is not None and audited(model)
 
     def get_auth(self) -> list[Any]:
         """Stock security requirements, optional (``{}``) where access admits anonymous."""

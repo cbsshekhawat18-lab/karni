@@ -81,7 +81,7 @@ Numbers come from commands in this repository; nothing is estimated.
 | The reference app, [EventHub](examples/eventhub/README.md): an event ticketing platform with payments, a Celery e-mail, an organizer dashboard with CSV export and four roles | **582 lines of project code** (models 83, viewsets 87, pages 291, other 121) — `python examples/eventhub/scripts/loc.py --pristine <karni new output>`; the first build was 656 lines, and the [friction it found](examples/eventhub/FRICTION.md) became framework fixes |
 | EventHub's tests | 14 backend tests (`assert_crud`, `assert_isolated`, the book → pay → webhook → e-mail path) and 3 Playwright journeys against the running stack, in CI on every push |
 | Karni's own suites | `karni` 1,150, `karni-cli` 375, `karni-payments` 127, `@karni/ui` 442, `@karni/payments-ui` 14 tests; ruff, mypy, ESLint and tsc clean |
-| `karni rules` (the conventions an agent reads first) | 396 cl100k tokens for 32 rules |
+| `karni rules` (the conventions an agent reads first) | 409 cl100k tokens for 33 rules |
 | Token cost of building an app with an agent | not measured yet — this README states no figure until it is |
 
 ## How Karni compares
