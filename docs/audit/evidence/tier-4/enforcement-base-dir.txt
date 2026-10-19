@@ -22,7 +22,7 @@ exit=0
 $ python -m pytest --pyargs karni.testing.architecture -q -p no:cacheprovider -rs
 s.........                                                               [100%]
 =========================== short test summary info ============================
-SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+SKIPPED [1] ../../../../../../../../..<REDACTED>/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
 9 passed, 1 skipped in 0.12s
 exit=0
 
@@ -51,7 +51,7 @@ _______________________ test_list_actions_are_paginated ________________________
     def test_list_actions_are_paginated() -> None:
 >       _assert_clean(check_unpaginated_action())
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:439: 
+<REDACTED>/packages/karni/karni/testing/architecture.py:439: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 violations = [Violation(rule='unpaginated-action', location='events/viewsets.py:62', message='list-returning action serialises many=True without pagination', hint='return self.paginated_response(queryset), or add an allow marker with the reason')]
@@ -67,13 +67,13 @@ E           karni.exceptions.KarniAssertionError: E702: 1 architecture violation
 E           [unpaginated-action] events/viewsets.py:62: list-returning action serialises many=True without pagination (return self.paginated_response(queryset), or add an allow marker with the reason)
 E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
+<REDACTED>/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
 ________________________ test_no_redundant_serializers _________________________
 
     def test_no_redundant_serializers() -> None:
 >       _assert_clean(check_redundant_serializer())
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:455: 
+<REDACTED>/packages/karni/karni/testing/architecture.py:455: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 violations = [Violation(rule='redundant-serializer', location='events/serializers.py:6', message='BookingSerializer is identical to the auto-generated serializer', hint='delete it — BaseViewSet(model=Booking) generates this')]
@@ -89,7 +89,7 @@ E           karni.exceptions.KarniAssertionError: E702: 1 architecture violation
 E           [redundant-serializer] events/serializers.py:6: BookingSerializer is identical to the auto-generated serializer (delete it — BaseViewSet(model=Booking) generates this)
 E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
+<REDACTED>/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
 2 failed, 19 passed in 2.07s
 exit=1
 
@@ -105,7 +105,7 @@ exit=0
 $ python -m pytest --pyargs karni.testing.performance -p no:cacheprovider -rs -q
 s                                                                        [100%]
 =========================== short test summary info ============================
-SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+SKIPPED [1] ../../../../../../../../..<REDACTED>/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
 1 skipped in 0.07s
 exit=0
 restored: viewsets.py and settings.py identical to originals

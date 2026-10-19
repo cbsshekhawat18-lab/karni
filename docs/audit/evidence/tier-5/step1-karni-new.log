@@ -1,5 +1,5 @@
-Created /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t5/timing/timing_app (24 agent adapter files)
-@karni/ui: file:/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui (local checkout)
+Created <REDACTED>/audit/t5/timing/timing_app (24 agent adapter files)
+@karni/ui: file:<REDACTED>/packages/karni-ui (local checkout)
 Next steps:
   cd timing_app
   cp .env.example .env

@@ -1,8 +1,8 @@
 ## 2026-10-19 08:49:57
 $ karni doctor
-project     /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp
+project     <REDACTED>/audit/t1/stack/testapp
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054 │
+│ <REDACTED> │
 │ 02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/lib/python3.1 │
 │ 2/site-packages/karni_cli/commands/doctor.py:116 in doctor                   │
 │                                                                              │
@@ -14,7 +14,7 @@ project     /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Ka
 │   118 │   typer.echo(_line("ui", _manifest(project)))                        │
 │   119 │   typer.echo(_line("adapters", _adapters(project)))                  │
 │                                                                              │
-│ /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054 │
+│ <REDACTED> │
 │ 02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/lib/python3.1 │
 │ 2/site-packages/karni_cli/commands/doctor.py:58 in _interpreter              │
 │                                                                              │
@@ -41,10 +41,10 @@ project     /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Ka
 │    685 │   │   else:                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ValueError: 
-'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+'<REDACTED>
 9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/bin/python' is not 
 in the subpath of 
-'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+'<REDACTED>
 9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp'
 exit=1
 ## 2026-10-19 08:50:45 karni doctor on the quickstart project (venv at ../.venv as the page creates it)
@@ -52,10 +52,10 @@ $ karni doctor
 │    685 │   │   else:                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ValueError: 
-'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+'<REDACTED>
 9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/bin/python' 
 is not in the subpath of 
-'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+'<REDACTED>
 9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/ticket_shop'
 exit=1
 

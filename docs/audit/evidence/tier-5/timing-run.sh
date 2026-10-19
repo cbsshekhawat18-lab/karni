@@ -4,8 +4,8 @@
 # appended) and examples/eventhub/scripts/e2e.sh (Django + Celery worker, poll
 # /health/ready/). Ports 8551 (Django) / 8552 (Vite) only.
 set -u
-S=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t5
-K=/Users/chandrabhanshekhawat/Documents/www/Karni
+S=<REDACTED>/audit/t5
+K=<REDACTED>
 export VIRTUAL_ENV=$S/qsvenv
 export PATH=$S/qsvenv/bin:$PATH
 export KARNI_UI_SRC=$K/packages/karni-ui

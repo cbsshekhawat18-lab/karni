@@ -8,7 +8,7 @@ E           karni.performance.QueryBudgetExceeded: E117: BookingViewSet.list ran
 E           3 queries, 0 duplicated, 2.0 ms in SQL
 E           Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on BookingViewSet), or declare query_budget = Budget(list=N, reason=...).
 E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
+<REDACTED>/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
 │ │          exc = QueryBudgetExceeded('BookingViewSet.list ran 3 queries;   │ │
 │ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
 QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.

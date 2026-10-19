@@ -1,5 +1,5 @@
  
- -------------- audit4-worker@Chandrabhans-MacBook.local v5.6.3 (recovery)
+ -------------- audit4-worker@<REDACTED> v5.6.3 (recovery)
 --- ***** ----- 
 -- ******* ---- macOS-26.6.2-arm64-arm-64bit 2026-10-18 17:17:38
 - *** --- * --- 
@@ -22,16 +22,16 @@
 [2026-10-18 17:17:38,480: INFO/MainProcess] mingle: searching for neighbors
 [2026-10-18 17:17:38,720: INFO/SpawnPoolWorker-1] child process 88714 calling self.run()
 [2026-10-18 17:17:39,486: INFO/MainProcess] mingle: all alone
-[2026-10-18 17:17:39,494: INFO/MainProcess] audit4-worker@Chandrabhans-MacBook.local ready.
+[2026-10-18 17:17:39,494: INFO/MainProcess] audit4-worker@<REDACTED> ready.
 [2026-10-19 03:19:35,640: INFO/MainProcess] Task karni_payments.tasks.process_webhook_event[13851af7-8572-4bcd-84e8-0b6938a0d4a5] received
 [2026-10-19 03:19:35,666: ERROR/MainProcess] Task handler raised error: ValueError('not enough values to unpack (expected 3, got 0)')
 billiard.einfo.RemoteTraceback: 
 """
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
     result = (True, prepare_result(fun(*args, **kwargs)))
                                    ^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
     tasks, accept, hostname = _loc
     ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: not enough values to unpack (expected 3, got 0)
@@ -40,10 +40,10 @@ ValueError: not enough values to unpack (expected 3, got 0)
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
     result = (True, prepare_result(fun(*args, **kwargs)))
                                    ^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
     tasks, accept, hostname = _loc
     ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: not enough values to unpack (expected 3, got 0)
@@ -52,10 +52,10 @@ ValueError: not enough values to unpack (expected 3, got 0)
 billiard.einfo.RemoteTraceback: 
 """
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
     result = (True, prepare_result(fun(*args, **kwargs)))
                                    ^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
     tasks, accept, hostname = _loc
     ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: not enough values to unpack (expected 3, got 0)
@@ -64,10 +64,10 @@ ValueError: not enough values to unpack (expected 3, got 0)
 The above exception was the direct cause of the following exception:
 
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/billiard/pool.py", line 364, in workloop
     result = (True, prepare_result(fun(*args, **kwargs)))
                                    ^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/celery/app/trace.py", line 762, in fast_trace_task
     tasks, accept, hostname = _loc
     ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: not enough values to unpack (expected 3, got 0)

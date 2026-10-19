@@ -4,7 +4,7 @@
 [2m2026-10-19T03:16:27.503160Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/schema/'[0m [36mrequest_id[0m=[35m41285ea6-126f-4019-9d4f-98683631f79c[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
 [2m2026-10-19T03:16:27.571430Z[0m [[31m[1merror    [0m] [1mrequest_failed                [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m500[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/schema/'[0m [36mrequest_id[0m=[35m41285ea6-126f-4019-9d4f-98683631f79c[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -22,7 +22,7 @@
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -39,7 +39,7 @@
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b3fb5c0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -55,7 +55,7 @@
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -98,7 +98,7 @@
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -119,7 +119,7 @@
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/schema/'[0m[1m>[0m                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -143,7 +143,7 @@
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -161,7 +161,7 @@
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/schema/'[0m[1m>[0m [34m│[0m                              [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────╯[0m                              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -182,7 +182,7 @@
 [31m│[0m [34m│[0m              [1;36m0x10b1b9dc0[0m[1m>[0m                                                [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -202,7 +202,7 @@
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -230,7 +230,7 @@
 [31m│[0m [34m│[0m            [1;36m0x10b1b9dc0[0m[1m>[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -255,7 +255,7 @@
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -275,7 +275,7 @@
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -302,7 +302,7 @@
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -324,7 +324,7 @@
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -344,7 +344,7 @@
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -364,7 +364,7 @@
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -385,7 +385,7 @@
 [31m│[0m [34m│[0m           [1;36m0x10b1b9880[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -403,7 +403,7 @@
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -422,7 +422,7 @@
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -444,7 +444,7 @@
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -472,7 +472,7 @@
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -493,7 +493,7 @@
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -509,7 +509,7 @@
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -532,7 +532,7 @@ provided, or not known.
 
 [2m2026-10-19T03:16:30.125824Z[0m [[31m[1merror    [0m] [1mInternal Server Error: /api/schema/[0m [[0m[1m[34mdjango.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest_id[0m=[35m41285ea6-126f-4019-9d4f-98683631f79c[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -550,7 +550,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -567,7 +567,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b3fb5c0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -583,7 +583,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -626,7 +626,7 @@ provided, or not known.
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -647,7 +647,7 @@ provided, or not known.
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/schema/'[0m[1m>[0m                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -671,7 +671,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -689,7 +689,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/schema/'[0m[1m>[0m [34m│[0m                              [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────╯[0m                              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -710,7 +710,7 @@ provided, or not known.
 [31m│[0m [34m│[0m              [1;36m0x10b1b9dc0[0m[1m>[0m                                                [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -730,7 +730,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -758,7 +758,7 @@ provided, or not known.
 [31m│[0m [34m│[0m            [1;36m0x10b1b9dc0[0m[1m>[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -783,7 +783,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -803,7 +803,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -830,7 +830,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -852,7 +852,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -872,7 +872,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b1b9dc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -892,7 +892,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -913,7 +913,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b1b9880[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -931,7 +931,7 @@ provided, or not known.
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -950,7 +950,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -972,7 +972,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1000,7 +1000,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1021,7 +1021,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1037,7 +1037,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1066,7 +1066,7 @@ provided, or not known.
 [2m2026-10-19T03:16:31.364787Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/venues/'[0m [36mrequest_id[0m=[35mc3bf9875-e3d4-4f11-8e70-dcfb14e8044d[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
 [2m2026-10-19T03:16:31.368054Z[0m [[31m[1merror    [0m] [1mrequest_failed                [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m500[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/venues/'[0m [36mrequest_id[0m=[35mc3bf9875-e3d4-4f11-8e70-dcfb14e8044d[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1084,7 +1084,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1101,7 +1101,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b5b7da0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1117,7 +1117,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1160,7 +1160,7 @@ provided, or not known.
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1181,7 +1181,7 @@ provided, or not known.
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/venues/'[0m[1m>[0m                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1205,7 +1205,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1223,7 +1223,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/venues/'[0m[1m>[0m [34m│[0m                              [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────╯[0m                              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviewsets.py[0m:125 in view                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1252,7 +1252,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m        [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/karni/api/[0m[1mviewsets.py[0m:559 in dispatch                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1273,7 +1273,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m    [34m│[0m       [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────────╯[0m       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1292,7 +1292,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m [34m│[0m           [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────╯[0m           [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1319,7 +1319,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m          [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -1344,7 +1344,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1363,7 +1363,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m [34m│[0m           [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────╯[0m           [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1389,7 +1389,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1411,7 +1411,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1430,7 +1430,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1450,7 +1450,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1471,7 +1471,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b782d20[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1489,7 +1489,7 @@ provided, or not known.
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1508,7 +1508,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1530,7 +1530,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1558,7 +1558,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1579,7 +1579,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1595,7 +1595,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1618,7 +1618,7 @@ provided, or not known.
 
 [2m2026-10-19T03:16:32.076945Z[0m [[31m[1merror    [0m] [1mInternal Server Error: /api/venues/[0m [[0m[1m[34mdjango.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest_id[0m=[35mc3bf9875-e3d4-4f11-8e70-dcfb14e8044d[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1636,7 +1636,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1653,7 +1653,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b5b7da0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1669,7 +1669,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1712,7 +1712,7 @@ provided, or not known.
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1733,7 +1733,7 @@ provided, or not known.
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/venues/'[0m[1m>[0m                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1757,7 +1757,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1775,7 +1775,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/venues/'[0m[1m>[0m [34m│[0m                              [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────╯[0m                              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviewsets.py[0m:125 in view                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1804,7 +1804,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m        [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/karni/api/[0m[1mviewsets.py[0m:559 in dispatch                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1825,7 +1825,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m    [34m│[0m       [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────────╯[0m       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1844,7 +1844,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m [34m│[0m           [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────╯[0m           [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1871,7 +1871,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m          [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -1896,7 +1896,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1915,7 +1915,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m [34m│[0m           [31m│[0m
 [31m│[0m [34m╰────────────────────────────────────────────────────────────────╯[0m           [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1941,7 +1941,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1963,7 +1963,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -1982,7 +1982,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mevents.viewsets.VenueViewSet[0m[39m object at [0m[1;36m0x10b782990[0m[1m>[0m           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2002,7 +2002,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2023,7 +2023,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b782d20[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2041,7 +2041,7 @@ provided, or not known.
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2060,7 +2060,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2082,7 +2082,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2110,7 +2110,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2131,7 +2131,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2147,7 +2147,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2180,7 +2180,7 @@ provided, or not known.
 [2m2026-10-19T03:16:32.790861Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/auth/login/'[0m [36mrequest_id[0m=[35m1195c1b4-bbeb-4089-b02e-5926a19f8730[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
 [2m2026-10-19T03:16:32.794594Z[0m [[31m[1merror    [0m] [1mrequest_failed                [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m500[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/auth/login/'[0m [36mrequest_id[0m=[35m1195c1b4-bbeb-4089-b02e-5926a19f8730[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2198,7 +2198,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2215,7 +2215,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b5cf9e0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2231,7 +2231,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2274,7 +2274,7 @@ provided, or not known.
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2295,7 +2295,7 @@ provided, or not known.
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m POST [0m[32m'/api/auth/login/'[0m[1m>[0m                    [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2319,7 +2319,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2337,7 +2337,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m POST [0m[32m'/api/auth/login/'[0m[1m>[0m [34m│[0m                         [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────╯[0m                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2357,7 +2357,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m  [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────────────╯[0m  [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:48 in _wrapper             [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2380,7 +2380,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:188 in _view_wrapper       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2401,7 +2401,7 @@ provided, or not known.
 [31m│[0m [34m│[0m             [39m<karni.accounts.api.views.LoginView object at [0m[1;36m0x10b82e510[0m[39m>[0m[1m>[0m[1m)[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:186 in _view_wrapper       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2422,7 +2422,7 @@ provided, or not known.
 [31m│[0m [34m│[0m             [39m<karni.accounts.api.views.LoginView object at [0m[1;36m0x10b82e510[0m[39m>[0m[1m>[0m[1m)[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2441,7 +2441,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────╯[0m     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2468,7 +2468,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m    [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -2493,7 +2493,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2512,7 +2512,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────╯[0m     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2538,7 +2538,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2560,7 +2560,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:233 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2579,7 +2579,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m     [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2598,7 +2598,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m     [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2618,7 +2618,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2639,7 +2639,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b82e900[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2657,7 +2657,7 @@ provided, or not known.
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2676,7 +2676,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2698,7 +2698,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2726,7 +2726,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2747,7 +2747,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2763,7 +2763,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2786,7 +2786,7 @@ provided, or not known.
 
 [2m2026-10-19T03:16:33.519406Z[0m [[31m[1merror    [0m] [1mInternal Server Error: /api/auth/login/[0m [[0m[1m[34mdjango.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest_id[0m=[35m1195c1b4-bbeb-4089-b02e-5926a19f8730[0m [36muser_id[0m=[35mNone[0m
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2804,7 +2804,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2821,7 +2821,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x10b5cf9e0[0m[1m>[0m [34m│[0m                     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2837,7 +2837,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2880,7 +2880,7 @@ provided, or not known.
 [3mDuring handling of the above exception, another exception occurred:[0m
 
 [31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2901,7 +2901,7 @@ provided, or not known.
 [31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m POST [0m[32m'/api/auth/login/'[0m[1m>[0m                    [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2925,7 +2925,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                     [1;36m0x10b0704d0[0m[1m>[0m                                         [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2943,7 +2943,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m POST [0m[32m'/api/auth/login/'[0m[1m>[0m [34m│[0m                         [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────╯[0m                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2963,7 +2963,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m  [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────────────╯[0m  [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:48 in _wrapper             [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -2986,7 +2986,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:188 in _view_wrapper       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3007,7 +3007,7 @@ provided, or not known.
 [31m│[0m [34m│[0m             [39m<karni.accounts.api.views.LoginView object at [0m[1;36m0x10b82e510[0m[39m>[0m[1m>[0m[1m)[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/utils/[0m[1mdecorators.py[0m:186 in _view_wrapper       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3028,7 +3028,7 @@ provided, or not known.
 [31m│[0m [34m│[0m             [39m<karni.accounts.api.views.LoginView object at [0m[1;36m0x10b82e510[0m[39m>[0m[1m>[0m[1m)[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3047,7 +3047,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────╯[0m     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3074,7 +3074,7 @@ provided, or not known.
 [31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m    [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
 [31m│[0m raise_uncaught_exception                                                     [31m│[0m
@@ -3099,7 +3099,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;92mTrue[0m                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3118,7 +3118,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m [34m│[0m     [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────╯[0m     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3144,7 +3144,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3166,7 +3166,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:233 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3185,7 +3185,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m     [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3204,7 +3204,7 @@ provided, or not known.
 [31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mkarni.accounts.api.views.LoginView[0m[39m object at [0m[1;36m0x10b82e510[0m[1m>[0m     [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3224,7 +3224,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3245,7 +3245,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [1;36m0x10b82e900[0m[1m>[0m                                                   [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3263,7 +3263,7 @@ provided, or not known.
 [31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3282,7 +3282,7 @@ provided, or not known.
 [31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3304,7 +3304,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3332,7 +3332,7 @@ provided, or not known.
 [31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3353,7 +3353,7 @@ provided, or not known.
 [31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
 [31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
 [31m│[0m                                                                              [31m│[0m
@@ -3369,7 +3369,7 @@ provided, or not known.
 [31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
 [31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
 [31m│[0m                                                                              [31m│[0m
-[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m<REDACTED>[0m [31m│[0m
 [31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
 [31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
 [31m│[0m                                                                              [31m│[0m

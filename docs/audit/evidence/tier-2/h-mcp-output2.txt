@@ -1,4 +1,4 @@
-$ VIRTUAL_ENV=$T2/.venv /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/.venv/bin/karni mcp (cwd = project)
+$ VIRTUAL_ENV=$T2/.venv <REDACTED>/audit/t2/.venv/bin/karni mcp (cwd = project)
 >>> {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "tier2-audit", "version": "0"}}}
 <<< {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"prompts":{"listChanged":false},"resources":{"listChanged":false,"subscribe":false},"tools":{"listChanged":false}},"instructions":"Karni project tools. Call `context` and `rules` before any work and follow what they return; call `check` on every file you write.","protocolVersion":"2025-06-18","serverInfo":{"name":"karni","version":""}}}
 >>> {"jsonrpc": "2.0", "method": "notifications/initialized"}

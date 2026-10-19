@@ -1,6 +1,6 @@
 $ npx eslint src/components/EventTable.tsx   # the @karni/ui preset via frontend/eslint.config.js
 
-/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t4/audit4/frontend/src/components/EventTable.tsx
+<REDACTED>/audit/t4/audit4/frontend/src/components/EventTable.tsx
   510:12  error  Raw <table> is Karni boilerplate — compose ResourceTable from @karni/ui instead. Opt out only with an explained disable: // eslint-disable-next-line karni/no-raw-elements -- <reason>  karni/no-raw-elements
 
 ✖ 1 problem (1 error, 0 warnings)

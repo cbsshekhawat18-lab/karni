@@ -1,6 +1,6 @@
 // Screenshot + console/network capture. Usage: node shoot.mjs <spec.json>
 // spec: { login?: {url, user, pass}, pages: [{name, url, out, waitFor?, extract?}] }
-import { chromium } from "/Users/chandrabhanshekhawat/Documents/www/Karni/examples/eventhub/frontend/node_modules/playwright/index.mjs";
+import { chromium } from "<REDACTED>/examples/eventhub/frontend/node_modules/playwright/index.mjs";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const spec = JSON.parse(readFileSync(process.argv[2], "utf8"));

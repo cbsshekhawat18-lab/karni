@@ -1,4 +1,4 @@
-# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-cli && /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python -m pytest -q
+# cmd: cd <REDACTED>/packages/karni-cli && <REDACTED>/.venv/bin/python -m pytest -q
 1792379867.569967000
 ........................................................................ [ 19%]
 ........................................................................ [ 38%]

@@ -1,5 +1,5 @@
 ## karni wheel
-Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni-0.1.0-py3-none-any.whl
+Archive:  <REDACTED>/audit/t1/dist/karni-0.1.0-py3-none-any.whl
   Length      Date    Time    Name
 ---------  ---------- -----   ----
      1028  02-02-2020 00:00   karni/__init__.py
@@ -366,7 +366,7 @@ karni-0.1.0/pyproject.toml
 karni-0.1.0/PKG-INFO
 
 ## karni_cli wheel
-Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_cli-0.1.0-py3-none-any.whl
+Archive:  <REDACTED>/audit/t1/dist/karni_cli-0.1.0-py3-none-any.whl
   Length      Date    Time    Name
 ---------  ---------- -----   ----
        66  02-02-2020 00:00   karni_cli/__init__.py
@@ -691,7 +691,7 @@ karni_cli-0.1.0/pyproject.toml
 karni_cli-0.1.0/PKG-INFO
 
 ## karni_payments wheel
-Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_payments-0.1.0-py3-none-any.whl
+Archive:  <REDACTED>/audit/t1/dist/karni_payments-0.1.0-py3-none-any.whl
   Length      Date    Time    Name
 ---------  ---------- -----   ----
       909  02-02-2020 00:00   karni_payments/AGENTS.fragment.md

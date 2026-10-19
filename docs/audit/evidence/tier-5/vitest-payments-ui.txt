@@ -1,7 +1,7 @@
-# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments/ui && npx vitest run
+# cmd: cd <REDACTED>/modules/karni-payments/ui && npx vitest run
 1792379908.915863000
 
- RUN  v2.1.9 /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments/ui
+ RUN  v2.1.9 <REDACTED>/modules/karni-payments/ui
 
  ✓ src/roles.test.ts (4 tests) 10ms
  ✓ src/CheckoutButton.test.tsx (4 tests) 202ms

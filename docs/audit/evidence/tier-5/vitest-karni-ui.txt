@@ -1,7 +1,7 @@
-# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui && npx vitest run
+# cmd: cd <REDACTED>/packages/karni-ui && npx vitest run
 1792379773.781207000
 
- RUN  v2.1.9 /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui
+ RUN  v2.1.9 <REDACTED>/packages/karni-ui
 
  ✓ src/schema/parse.test.ts (18 tests) 34ms
  ✓ tests/msw/handlers.test.ts (19 tests) 332ms

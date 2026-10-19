@@ -6,5 +6,5 @@ collected 1 item
 . s                                                                      [100%]
 
 =========================== short test summary info ============================
-SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+SKIPPED [1] ../../../../../../../../..<REDACTED>/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
 ============================== 1 skipped in 0.09s ==============================

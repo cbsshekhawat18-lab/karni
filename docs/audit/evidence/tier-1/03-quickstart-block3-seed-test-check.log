@@ -9,7 +9,7 @@ exit=0
 
 ## 2026-10-18 22:45:36
 $ karni test
-/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/bin/python: No module named pytest
+<REDACTED>/audit/t1/quickstart/.venv/bin/python: No module named pytest
 exit=1
 
 ## 2026-10-18 22:45:36

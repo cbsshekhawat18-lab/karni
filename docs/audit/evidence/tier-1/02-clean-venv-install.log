@@ -1,7 +1,7 @@
 2026-10-18 22:41:06
-Processing /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni-0.1.0-py3-none-any.whl
-Processing /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_cli-0.1.0-py3-none-any.whl
-Processing /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_payments-0.1.0-py3-none-any.whl
+Processing <REDACTED>/audit/t1/dist/karni-0.1.0-py3-none-any.whl
+Processing <REDACTED>/audit/t1/dist/karni_cli-0.1.0-py3-none-any.whl
+Processing <REDACTED>/audit/t1/dist/karni_payments-0.1.0-py3-none-any.whl
 Collecting celery>=5.3 (from celery[redis]>=5.3->karni==0.1.0)
   Using cached celery-5.6.3-py3-none-any.whl.metadata (23 kB)
 Collecting django-celery-beat>=2.6 (from karni==0.1.0)

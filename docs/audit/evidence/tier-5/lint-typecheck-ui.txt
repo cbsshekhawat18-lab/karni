@@ -1,4 +1,4 @@
-# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni && make lint-ui ; make typecheck-ui
+# cmd: cd <REDACTED> && make lint-ui ; make typecheck-ui
 ==> make lint-ui  start=1792380044.706650000
 exit=0  end=1792380054.622196000
 > eslint .

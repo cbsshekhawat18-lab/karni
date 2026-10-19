@@ -1,21 +1,21 @@
-{"reportOut": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-shoot-report3.json",
+{"reportOut": "<REDACTED>/audit/t2/d-shoot-report3.json",
  "pages": [
-  {"name": "events-list-interactions", "url": "http://127.0.0.1:8522/events", "out": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-tmp-list.png", "waitFor": "table tbody tr", "settle": 1200,
+  {"name": "events-list-interactions", "url": "http://127.0.0.1:8522/events", "out": "<REDACTED>/audit/t2/d-tmp-list.png", "waitFor": "table tbody tr", "settle": 1200,
    "actions": [
      {"name": "open Status filter combobox", "click": "[role=combobox] >> nth=0", "wait": 800, "text": "() => [...document.querySelectorAll('[role=option]')].map(e=>e.textContent.trim())"},
-     {"name": "choose Published", "click": "[role=option]:has-text('Published')", "wait": 1500, "out": "/Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-2/d-ui-events-list-filter-published.png", "text": "() => ({rows: [...document.querySelectorAll('table tbody tr')].map(r=>r.textContent.trim().slice(0,60)), bodyHint: (document.body.innerText.match(/No [^\\n]*|Page [^\\n]*/)||[])[0]})"},
+     {"name": "choose Published", "click": "[role=option]:has-text('Published')", "wait": 1500, "out": "<REDACTED>/docs/audit/evidence/tier-2/d-ui-events-list-filter-published.png", "text": "() => ({rows: [...document.querySelectorAll('table tbody tr')].map(r=>r.textContent.trim().slice(0,60)), bodyHint: (document.body.innerText.match(/No [^\\n]*|Page [^\\n]*/)||[])[0]})"},
      {"name": "open Status filter again", "click": "[role=combobox] >> nth=0", "wait": 600},
      {"name": "choose Draft", "click": "[role=option]:has-text('Draft')", "wait": 1500, "text": "() => [...document.querySelectorAll('table tbody tr')].length"},
      {"name": "sort: click inside Title header (button if any)", "click": "table thead th:has-text('Title') >> button, table thead th:has-text('Title') >> [role=button], table thead th:has-text('Title') >> div >> nth=0", "wait": 1500, "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), firstRow: document.querySelector('table tbody tr')?.textContent.trim().slice(0,40), headerHtml: document.querySelector('table thead th')?.outerHTML.slice(0,300)})"},
      {"name": "sort: click Title header again", "click": "table thead th:has-text('Title') >> button, table thead th:has-text('Title') >> [role=button], table thead th:has-text('Title') >> div >> nth=0", "wait": 1500, "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), firstRow: document.querySelector('table tbody tr')?.textContent.trim().slice(0,40)})"}
    ]},
-  {"name": "event-new-form-submit", "url": "http://127.0.0.1:8522/events/new", "out": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-tmp-form.png", "waitFor": "form", "settle": 1200,
+  {"name": "event-new-form-submit", "url": "http://127.0.0.1:8522/events/new", "out": "<REDACTED>/audit/t2/d-tmp-form.png", "waitFor": "form", "settle": 1200,
    "actions": [
      {"name": "submit the untouched form", "click": "form button[type=submit]", "wait": 1500, "text": "() => document.querySelector('form').innerText"},
      {"name": "fill Title", "fill": {"sel": "form input[type=text] >> nth=0", "value": "Audit created event"}, "wait": 200},
      {"name": "fill Starts at", "fill": {"sel": "form input[type=datetime-local]", "value": "2026-12-01T10:00"}, "wait": 200},
      {"name": "open Venue combobox", "click": "form input[role=combobox]", "wait": 1500, "text": "() => [...document.querySelectorAll('[role=option]')].map(e=>e.textContent.trim())"},
      {"name": "pick Hall B", "click": "[role=option]:has-text('Hall B')", "wait": 800, "text": "() => document.querySelector('form input[role=combobox]')?.value"},
-     {"name": "submit with required fields filled, optional ones untouched", "click": "form button[type=submit]", "wait": 2500, "out": "/Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-2/d-ui-event-new-form-after-submit.png", "text": "() => ({form: document.querySelector('form').innerText, path: location.pathname, toasts: [...document.querySelectorAll('[role=status], [data-sonner-toast], [class*=toast]')].map(e=>e.innerText.trim()).filter(Boolean).slice(0,5)})"}
+     {"name": "submit with required fields filled, optional ones untouched", "click": "form button[type=submit]", "wait": 2500, "out": "<REDACTED>/docs/audit/evidence/tier-2/d-ui-event-new-form-after-submit.png", "text": "() => ({form: document.querySelector('form').innerText, path: location.pathname, toasts: [...document.querySelectorAll('[role=status], [data-sonner-toast], [class*=toast]')].map(e=>e.innerText.trim()).filter(Boolean).slice(0,5)})"}
    ]}
  ]}

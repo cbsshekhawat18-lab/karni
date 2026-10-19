@@ -1,6 +1,6 @@
 # Tier 1 audit — build, install, quickstart, boot
 
-Repo `/Users/chandrabhanshekhawat/Documents/www/Karni`, branch `main`, commit `0873e51`.
+Repo `<REDACTED>`, branch `main`, commit `0873e51`.
 Run 2026-10-18 22:38 → 2026-10-19 08:52 (interrupted once by an API rate limit; every venv, database and port was re-verified before resuming, see `evidence/tier-1/`).
 Report only: no tracked file was modified; `git status` shows only `docs/audit/` as new.
 

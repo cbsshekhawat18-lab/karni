@@ -1,4 +1,4 @@
-# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments && /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python -m pytest -q
+# cmd: cd <REDACTED>/modules/karni-payments && <REDACTED>/.venv/bin/python -m pytest -q
 1792379905.979066000
 ........................................................................ [ 55%]
 ......................................ss.................                [100%]

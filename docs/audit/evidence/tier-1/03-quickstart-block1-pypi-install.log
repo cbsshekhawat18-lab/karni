@@ -1,6 +1,6 @@
-## 2026-10-18 22:42:07 cwd=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart active venv before: /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv ; python3=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/bin/python3 Python 3.12.12
+## 2026-10-18 22:42:07 cwd=<REDACTED>/audit/t1/quickstart active venv before: <REDACTED>/audit/t1/cleanvenv ; python3=<REDACTED>/audit/t1/cleanvenv/bin/python3 Python 3.12.12
 $ python3 -m venv .venv && . .venv/bin/activate
-exit=0 ; now VIRTUAL_ENV=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv ; pip=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/bin/pip
+exit=0 ; now VIRTUAL_ENV=<REDACTED>/audit/t1/quickstart/.venv ; pip=<REDACTED>/audit/t1/quickstart/.venv/bin/pip
 
 $ pip install karni karni-cli
 ERROR: Could not find a version that satisfies the requirement karni (from versions: none)

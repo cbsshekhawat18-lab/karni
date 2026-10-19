@@ -79,10 +79,10 @@ step "B16 options / allowed methods" "OPTIONS /api/venues/"
 curl -s -i -X OPTIONS $B/api/venues/ -H "$A" | grep -i '^Allow'
 
 step "B17 schema: component, enum, vendor extensions" "GET /api/schema/"
-curl -s $B/api/schema/ -H 'Accept: application/json' > /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/b-schema.json
+curl -s $B/api/schema/ -H 'Accept: application/json' > <REDACTED>/audit/t2/b-schema.json
 python3 - <<'PY'
 import json
-s=json.load(open("/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/b-schema.json"))
+s=json.load(open("<REDACTED>/audit/t2/b-schema.json"))
 print("openapi", s["openapi"], "| x-karni-auth-mode:", s.get("x-karni-auth-mode"))
 print("paths:", [p for p in s["paths"] if p.startswith("/api/venues") or p.startswith("/api/events")])
 g=s["paths"]["/api/venues/"]["get"]

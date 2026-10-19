@@ -1,6 +1,6 @@
 # Tier 3 — adversarial access audit
 
-Repo `/Users/chandrabhanshekhawat/Documents/www/Karni`, branch `main`, commit `0873e51`.
+Repo `<REDACTED>`, branch `main`, commit `0873e51`.
 Report only — no tracked file was modified. `git status` at the end shows only
 new files under `docs/audit/` (plus the pre-existing untracked `.chronicle/`,
 `.claude/worktrees/`, `.gitattributes`).

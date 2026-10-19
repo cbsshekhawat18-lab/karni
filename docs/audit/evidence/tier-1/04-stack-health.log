@@ -58,8 +58,8 @@ $ curl -s http://127.0.0.1:8512/health/ready/   (via vite proxy)
 
 --- listeners ---
 COMMAND   PID                 USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
-node    95218 chandrabhanshekhawat   23u  IPv6 0x2619208a0307d12d      0t0  TCP *:8512 (LISTEN)
-Python  95228 chandrabhanshekhawat    5u  IPv4 0x93cde414b5cff2de      0t0  TCP 127.0.0.1:8511 (LISTEN)
+node    95218 <REDACTED>   23u  IPv6 0x2619208a0307d12d      0t0  TCP *:8512 (LISTEN)
+Python  95228 <REDACTED>    5u  IPv4 0x93cde414b5cff2de      0t0  TCP 127.0.0.1:8511 (LISTEN)
 --- timeline so far ---
 ## 2026-10-19 08:47:51.387468000 $ karni serve --local --port 8511
 ## 2026-10-19 08:47:51.548608000 $ karni worker --pool=solo
@@ -85,11 +85,11 @@ Python  95228 chandrabhanshekhawat    5u  IPv4 0x93cde414b5cff2de      0t0  TCP 
 2026-10-19T03:17:58.538565Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/ready/' request_id=ef8ace05-9cfe-4635-b85b-4c5b68583318 user_id=None
 2026-10-19T03:17:58.538827Z [info     ] GET /health/ready/ 200 — 1 queries, 0 duplicated, 0.1 ms in SQL, 1009.0 ms total [karni.queries]
 --- worker log (key lines) ---
- -------------- celery@Chandrabhans-MacBook.local v5.6.3 (recovery)
+ -------------- celery@<REDACTED> v5.6.3 (recovery)
 - ** ---------- .> transport:   redis://127.0.0.1:6379/5
 - *** --- * --- .> concurrency: 10 (solo)
 [2026-10-19 03:17:53,437: INFO/MainProcess] Connected to redis://127.0.0.1:6379/5
-[2026-10-19 03:17:54,452: INFO/MainProcess] celery@Chandrabhans-MacBook.local ready.
+[2026-10-19 03:17:54,452: INFO/MainProcess] celery@<REDACTED> ready.
 --- vite log ---
 
 > testapp-frontend@0.1.0 dev

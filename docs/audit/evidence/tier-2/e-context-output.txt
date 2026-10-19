@@ -1,4 +1,4 @@
-### snapshot 1 (before): /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/e-context-1-with-manifest.txt
+### snapshot 1 (before): <REDACTED>/audit/t2/e-context-1-with-manifest.txt
 ### karni make model Coupon code:str:20 percent:int 'expires_on:date?' --app shop
 modified shop/models.py
 next: karni make migration --app shop
@@ -48,7 +48,7 @@ exit=0
 (diff exit=1)
 
 ### size
-    1189 /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/e-context-2-after-coupon.txt
+    1189 <REDACTED>/audit/t2/e-context-2-after-coupon.txt
 e-context-1-with-manifest.txt | cl100k tokens: 244 | chars: 1148 | chars/4: 287
 e-context-2-after-coupon.txt | cl100k tokens: 254 | chars: 1189 | chars/4: 297
 
@@ -67,11 +67,11 @@ e-context-2-after-coupon.txt | cl100k tokens: 254 | chars: 1189 | chars/4: 297
 179:        getattr(settings, "KARNI_API_ROUTER", "karni.api.routers.get_default_router")
 
 ### documented budget
-/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:59:**~300 tokens**, measured as characters ÷ 4 (the same approximation the
-/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:60:`karni rules` 400-token budget test uses; about 1,200 characters). With the
-/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:61:inventory (under ~200 tokens for a typical project) the combined output stays
-/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:62:within a few hundred tokens. The cap is enforced by Karni, not by providers:
-/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:67:… truncated at ~300 tokens; full brief: chronicle context apps/events/models.py
+<REDACTED>/docs/concepts/history-providers.md:59:**~300 tokens**, measured as characters ÷ 4 (the same approximation the
+<REDACTED>/docs/concepts/history-providers.md:60:`karni rules` 400-token budget test uses; about 1,200 characters). With the
+<REDACTED>/docs/concepts/history-providers.md:61:inventory (under ~200 tokens for a typical project) the combined output stays
+<REDACTED>/docs/concepts/history-providers.md:62:within a few hundred tokens. The cap is enforced by Karni, not by providers:
+<REDACTED>/docs/concepts/history-providers.md:67:… truncated at ~300 tokens; full brief: chronicle context apps/events/models.py
 def test_budget_for_ten_model_project() -> None:
     models = " ".join(f"Model{i}(alpha,beta,gamma,delta)" for i in range(10))
     output = assemble(

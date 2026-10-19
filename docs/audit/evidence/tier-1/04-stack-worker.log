@@ -1,5 +1,5 @@
  
- -------------- celery@Chandrabhans-MacBook.local v5.6.3 (recovery)
+ -------------- celery@<REDACTED> v5.6.3 (recovery)
 --- ***** ----- 
 -- ******* ---- macOS-26.6.2-arm64-arm-64bit 2026-10-19 03:17:53
 - *** --- * --- 
@@ -20,6 +20,6 @@
 [2026-10-19 03:17:53,437: INFO/MainProcess] Connected to redis://127.0.0.1:6379/5
 [2026-10-19 03:17:53,438: INFO/MainProcess] mingle: searching for neighbors
 [2026-10-19 03:17:54,445: INFO/MainProcess] mingle: all alone
-[2026-10-19 03:17:54,452: INFO/MainProcess] celery@Chandrabhans-MacBook.local ready.
+[2026-10-19 03:17:54,452: INFO/MainProcess] celery@<REDACTED> ready.
 
 worker: Warm shutdown (MainProcess)

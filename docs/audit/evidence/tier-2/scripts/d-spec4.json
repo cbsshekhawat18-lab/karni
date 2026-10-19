@@ -1,10 +1,10 @@
-{"reportOut": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-shoot-report4.json",
+{"reportOut": "<REDACTED>/audit/t2/d-shoot-report4.json",
  "pages": [
-  {"name": "events-list-sort", "url": "http://127.0.0.1:8522/events", "out": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-tmp-list2.png", "waitFor": "table tbody tr", "settle": 1200,
+  {"name": "events-list-sort", "url": "http://127.0.0.1:8522/events", "out": "<REDACTED>/audit/t2/d-tmp-list2.png", "waitFor": "table tbody tr", "settle": 1200,
    "extract": "() => ({headerHtml: [...document.querySelectorAll('table thead th')].map(t=>t.outerHTML.slice(0,260))})",
    "actions": [
      {"name": "click Title header text", "click": "table thead th:text-is('Title')", "wait": 1500, "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), firstRow: document.querySelector('table tbody tr')?.textContent.trim().slice(0,40)})"},
-     {"name": "click Title header text again", "click": "table thead th:text-is('Title')", "wait": 1500, "out": "/Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-2/d-ui-events-list-sorted.png", "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), firstRow: document.querySelector('table tbody tr')?.textContent.trim().slice(0,40)})"},
+     {"name": "click Title header text again", "click": "table thead th:text-is('Title')", "wait": 1500, "out": "<REDACTED>/docs/audit/evidence/tier-2/d-ui-events-list-sorted.png", "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), firstRow: document.querySelector('table tbody tr')?.textContent.trim().slice(0,40)})"},
      {"name": "click Starts at header", "click": "table thead th:text-is('Starts at')", "wait": 1500, "text": "() => [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||''))"}
    ]}
  ]}

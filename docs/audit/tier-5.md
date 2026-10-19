@@ -1,11 +1,11 @@
 # Tier 5 — Measurement audit
 
-- Repo: `/Users/chandrabhanshekhawat/Documents/www/Karni`, branch `main`, commit `0873e51` (2026-10-18 22:34 +0530)
+- Repo: `<REDACTED>`, branch `main`, commit `0873e51` (2026-10-18 22:34 +0530)
 - Audited: 2026-10-18 / 2026-10-19 (local time)
 - Machine: Apple M4, 10 cores, 24 GiB RAM (`sysctl -n machdep.cpu.brand_string hw.memsize hw.ncpu` → `Apple M4`, `25769803776`, `10`), macOS 26.6.2
 - Tools: Python 3.12.12 (repo `.venv`), Node v20.20.1, npm 10.8.2, PostgreSQL 17.9 server on 127.0.0.1:5432, Redis on 127.0.0.1:6379 (db 9), no Docker
 - Token counts: tiktoken 0.14.0, `cl100k_base`, in a throwaway venv
-- Scratch: `/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t5/`
+- Scratch: `<REDACTED>/audit/t5/`
 - Raw outputs: `docs/audit/evidence/tier-5/` (file names in the Evidence column)
 - Report only: no tracked file was modified; the audit DB `karni_audit_t5` was dropped and Redis db 9 flushed afterwards; servers on 8551/8552 were stopped.
 

@@ -1,8 +1,8 @@
 $ pytest events/tests/test_audit_nplus1.py events/tests/test_audit_oneliners.py -s -v -p no:cacheprovider --create-db
 ============================= test session starts ==============================
-platform darwin -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0 -- /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python
+platform darwin -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0 -- <REDACTED>/.venv/bin/python
 django: version: 5.1.15, settings: config.settings (from ini)
-rootdir: /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t4/audit4
+rootdir: <REDACTED>/audit/t4/audit4
 configfile: pyproject.toml
 plugins: platformdirs-4.12.4, karni-0.1.0, Faker-40.43.0, django-4.14.0
 collecting ... collected 11 items
@@ -22,7 +22,7 @@ first row: {'id': '50e5f25c-bee9-4de2-9f38-d8f4f61dde1f', 'created_at': '2026-10
 FAILED
 events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the_budget 2026-10-19T03:15:23.702321Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/slow-bookings/?expand=event.venue,event.organizer' request_id=47859773-2207-474f-b91e-418d1e4a3051 user_agent=None user_id=None
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/exception.py:55 in inner                         │
 │                                                                              │
 │    52 │   │   @wraps(get_response)                                           │
@@ -57,7 +57,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the
 │ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/base.py:197 in _get_response                     │
 │                                                                              │
 │   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
@@ -81,7 +81,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the
 │ │                     at 0x10bc6af30>                                      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
 │                                                                              │
 │   62 │   else:                                                               │
@@ -99,7 +99,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the
 │ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/rest_framework/viewsets.py:125 in view                                │
 │                                                                              │
 │   122 │   │   │   self.kwargs = kwargs                                       │
@@ -128,7 +128,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the
 │ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>  │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:560 in dispatch                                                     │
 │                                                                              │
 │   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
@@ -151,7 +151,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the
 │ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:583 in check_query_budget                                           │
 │                                                                              │
 │   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
@@ -189,7 +189,7 @@ SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
 See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/exception.py:55 in inner                         │
 │                                                                              │
 │    52 │   │   @wraps(get_response)                                           │
@@ -224,7 +224,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/base.py:197 in _get_response                     │
 │                                                                              │
 │   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
@@ -248,7 +248,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │                     at 0x10bc6af30>                                      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
 │                                                                              │
 │   62 │   else:                                                               │
@@ -266,7 +266,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/rest_framework/viewsets.py:125 in view                                │
 │                                                                              │
 │   122 │   │   │   self.kwargs = kwargs                                       │
@@ -295,7 +295,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>  │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:560 in dispatch                                                     │
 │                                                                              │
 │   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
@@ -318,7 +318,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:583 in check_query_budget                                           │
 │                                                                              │
 │   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
@@ -378,7 +378,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 PASSED
 events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_one_unguarded 2026-10-19T03:15:24.065260Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/slow-bookings/?expand=event.venue,event.organizer' request_id=2a72ad9d-f9d6-40b2-a771-6133aa118764 user_agent=None user_id=None
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/exception.py:55 in inner                         │
 │                                                                              │
 │    52 │   │   @wraps(get_response)                                           │
@@ -413,7 +413,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_on
 │ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/base.py:197 in _get_response                     │
 │                                                                              │
 │   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
@@ -437,7 +437,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_on
 │ │                     at 0x10bd034a0>                                      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
 │                                                                              │
 │   62 │   else:                                                               │
@@ -455,7 +455,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_on
 │ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/rest_framework/viewsets.py:125 in view                                │
 │                                                                              │
 │   122 │   │   │   self.kwargs = kwargs                                       │
@@ -484,7 +484,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_on
 │ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>  │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:560 in dispatch                                                     │
 │                                                                              │
 │   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
@@ -507,7 +507,7 @@ events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_on
 │ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:583 in check_query_budget                                           │
 │                                                                              │
 │   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
@@ -545,7 +545,7 @@ SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
 See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 
 ╭───────────────────── Traceback (most recent call last) ──────────────────────╮
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/exception.py:55 in inner                         │
 │                                                                              │
 │    52 │   │   @wraps(get_response)                                           │
@@ -580,7 +580,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/core/handlers/base.py:197 in _get_response                     │
 │                                                                              │
 │   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
@@ -604,7 +604,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │                     at 0x10bd034a0>                                      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
 │                                                                              │
 │   62 │   else:                                                               │
@@ -622,7 +622,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ <REDACTED>/.venv/lib/python3.12/site-pa │
 │ ckages/rest_framework/viewsets.py:125 in view                                │
 │                                                                              │
 │   122 │   │   │   self.kwargs = kwargs                                       │
@@ -651,7 +651,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>  │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:560 in dispatch                                                     │
 │                                                                              │
 │   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
@@ -674,7 +674,7 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 │ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
 │ ╰──────────────────────────────────────────────────────────────────────────╯ │
 │                                                                              │
-│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ <REDACTED>/packages/karni/karni/api/vie │
 │ wsets.py:583 in check_query_budget                                           │
 │                                                                              │
 │   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
@@ -719,8 +719,8 @@ See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
       ← EventsEvent_Organizer_VenueExpandedSerializer.venue [karni.queries]
 FAILED
 events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_crud_one_line 2026-10-19T03:15:24.504928Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/' request_id=9086d24e-bc98-46ed-beb4-51bf31b01c32 user_agent=None user_id=None
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+<REDACTED>/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+<REDACTED>/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
 Warning: enum naming encountered a non-optimally resolvable collision for fields named "status". The same name has been used for multiple choice sets in multiple components. The collision was resolved with "Status469Enum". add an entry to ENUM_NAME_OVERRIDES to fix the naming.
 PASSED
 events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_isolated_catches_the_leaky_viewset 2026-10-19T03:15:24.830340Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/leaky-events/' request_id=fab7df98-9142-4ae9-8fbd-f74b7c005ad0 user_agent=None user_id=None
@@ -783,40 +783,40 @@ ___________ test_hand_viewset_without_optimiser_n_plus_one_unguarded ___________
 
 events/tests/test_audit_nplus1.py:93: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:276: in get
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/test.py:276: in get
     response = super().get(path, data=data, **extra)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:193: in get
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/test.py:193: in get
     return self.generic('GET', path, **r)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:221: in generic
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/test.py:221: in generic
     return super().generic(
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:676: in generic
+<REDACTED>/.venv/lib/python3.12/site-packages/django/test/client.py:676: in generic
     return self.request(**r)
            ^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:273: in request
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/test.py:273: in request
     return super().request(**kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:225: in request
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/test.py:225: in request
     request = super().request(**kwargs)
               ^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:1092: in request
+<REDACTED>/.venv/lib/python3.12/site-packages/django/test/client.py:1092: in request
     self.check_exception(response)
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:805: in check_exception
+<REDACTED>/.venv/lib/python3.12/site-packages/django/test/client.py:805: in check_exception
     raise exc_value
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
+<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
     response = get_response(request)
                ^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
+<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
     response = wrapped_callback(request, *callback_args, **callback_kwargs)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:65: in _view_wrapper
+<REDACTED>/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:65: in _view_wrapper
     return view_func(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py:125: in view
+<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py:125: in view
     return self.dispatch(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:560: in dispatch
+<REDACTED>/packages/karni/karni/api/viewsets.py:560: in dispatch
     self.check_query_budget(recorder, response, mode)
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
@@ -857,26 +857,26 @@ E                 ← EventsEvent_Organizer_VenueExpandedSerializer.venue
 E           Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
 E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
+<REDACTED>/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
 ------------------------------ Captured log call -------------------------------
 INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/slow-bookings/?expand=event.venue,event.organizer', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '2a72ad9d-f9d6-40b2-a771-6133aa118764', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.065260Z'}
 ERROR    django_structlog.middlewares.request:request.py:283 {'code': 500, 'request': 'GET /api/slow-bookings/?expand=event.venue,event.organizer', 'exc_info': True, 'event': 'request_failed', 'ip': '127.0.0.1', 'request_id': '2a72ad9d-f9d6-40b2-a771-6133aa118764', 'user_id': '6c781f0b-e707-45a6-886e-cc19dfddb3ec', 'logger': 'django_structlog.middlewares.request', 'level': 'error', 'timestamp': '2026-10-19T03:15:24.132572Z'}
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
     response = get_response(request)
                ^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
     response = wrapped_callback(request, *callback_args, **callback_kwargs)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
     return view_func(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
     return self.dispatch(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 560, in dispatch
+  File "<REDACTED>/packages/karni/karni/api/viewsets.py", line 560, in dispatch
     self.check_query_budget(recorder, response, mode)
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
+  File "<REDACTED>/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
     raise QueryBudgetExceeded(message)
 karni.performance.QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
 38 queries, 36 duplicated, 8.8 ms in SQL
@@ -890,21 +890,21 @@ Fix the repeated query (the optimiser derives select_related/prefetch_related fr
 See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
 ERROR    django.request:log.py:253 Internal Server Error: /api/slow-bookings/
 Traceback (most recent call last):
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
     response = get_response(request)
                ^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
     response = wrapped_callback(request, *callback_args, **callback_kwargs)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
     return view_func(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
+  File "<REDACTED>/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
     return self.dispatch(request, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 560, in dispatch
+  File "<REDACTED>/packages/karni/karni/api/viewsets.py", line 560, in dispatch
     self.check_query_budget(recorder, response, mode)
-  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
+  File "<REDACTED>/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
     raise QueryBudgetExceeded(message)
 karni.performance.QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
 38 queries, 36 duplicated, 8.8 ms in SQL
@@ -933,7 +933,7 @@ self = <events.tests.test_audit_oneliners.OneLinerTests testMethod=test_assert_i
 
 events/tests/test_audit_oneliners.py:24: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/api.py:1055: in assert_isolated
+<REDACTED>/packages/karni/karni/testing/api.py:1055: in assert_isolated
     return assert_isolated(resource, role, **options)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
@@ -993,7 +993,7 @@ E             - owner: DELETE /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a6
 E             - owner: another owner's row was deleted by mine
 E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e606
 
-/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/isolation.py:305: KarniAssertionError
+<REDACTED>/packages/karni/karni/testing/isolation.py:305: KarniAssertionError
 ------------------------------ Captured log call -------------------------------
 INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/leaky-events/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': 'fab7df98-9142-4ae9-8fbd-f74b7c005ad0', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.830340Z'}
 INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/leaky-events/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': 'fab7df98-9142-4ae9-8fbd-f74b7c005ad0', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.833205Z'}

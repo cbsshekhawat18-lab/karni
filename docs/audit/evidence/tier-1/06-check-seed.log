@@ -1,4 +1,4 @@
-## 2026-10-19 08:49:25 cwd=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp
+## 2026-10-19 08:49:25 cwd=<REDACTED>/audit/t1/stack/testapp
 $ karni check
 System check identified no issues (0 silenced).
 karni check: ok

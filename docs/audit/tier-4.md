@@ -1,6 +1,6 @@
 # Tier 4 audit — the quiet promises
 
-*Repo `/Users/chandrabhanshekhawat/Documents/www/Karni`, branch `main`, commit `0873e51`. Audited 2026-10-19 against a scratch project made with `karni new audit4` (local PostgreSQL 17 `karni_audit_t4`, Redis db 8, no Docker, the repo's `.venv`). Report only: no tracked file was changed; everything below is observed output, kept under `docs/audit/evidence/tier-4/`. Verdicts: PASS / PARTIAL / FAIL / UNVERIFIED.*
+*Repo `<REDACTED>`, branch `main`, commit `0873e51`. Audited 2026-10-19 against a scratch project made with `karni new audit4` (local PostgreSQL 17 `karni_audit_t4`, Redis db 8, no Docker, the repo's `.venv`). Report only: no tracked file was changed; everything below is observed output, kept under `docs/audit/evidence/tier-4/`. Verdicts: PASS / PARTIAL / FAIL / UNVERIFIED.*
 
 How the scratch project was built (`evidence/tier-4/karni-new.log`, `scratch-project/`): `karni new audit4` → `karni make app events` → `Venue`, `Event(organizer, venue)`, `Booking(event, attendee, quantity)` each `--with viewset,test` → `karni add payments` → one `.env` edit for the local Postgres/Redis. Three deliberately broken viewsets were added for the audit and registered through the documented `KARNI_API_ROUTER` escape hatch (`scratch-project/config_api.py`): `SlowBookingViewSet` (`optimize = False`), `LeakyEventViewSet` (`filter_queryset_for_user` returns every row) and `CanVenueViewSet` (`Can(...)` predicate).
 
