@@ -561,6 +561,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write field_roles = {'phone': {'read': ['staff', 'support'], 'write': ['staff']}} (or 'phone': ['staff'] for read and write) with field names of the model and role slugs declared in KARNI_ROLES.
 
+<a id="e213"></a>
+
+#### E213 — The permission matrix refused a change
+
+*API 400 response* · from `karni.accounts.matrix.apply_changes`
+
+**Why Karni objects.** A guard rail stopped the request and nothing was written: a system role's declared grant is locked, the operator does not hold the permission (or holds it at a narrower scope than the one granted), the change would remove the operator's own last permission to change permissions, or the role, permission or scope is unknown.
+
+**Fix.** Change KARNI_ROLES for a system role's grants; ask someone who holds the permission at that scope; keep one of your roles able to change permissions; check the role slug, the 'app.model:action' key and the scope value against GET permissions/matrix/.
+
 ### 3xx · Admin
 
 <a id="e301"></a>

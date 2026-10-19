@@ -242,6 +242,76 @@ Asking the question:
 Nothing in Karni compares a role to a string: `staff`, `user` and `customer`
 exist only as the default value of `KARNI_ROLES`.
 
+### Permission matrix
+
+`KARNI_ROLES` is the baseline; the **permission matrix** is how it changes
+after the project ships, with no deploy and no developer. In the admin it is
+Roles → *Permission matrix*: roles across, models down (every model the
+project has, minus the framework internals in `KARNI_MATRIX_EXCLUDE`), one
+selector per action — `view`, `add`, `change`, `delete` and the model's own
+`Karni.actions` — holding the scope that role reaches (`all`, `own`,
+`related:<key>`, `custom:<name>`, or nothing). Bulk selectors set a whole
+row or column. Nothing is saved until the confirmation page has shown the
+diff.
+
+What the matrix writes and what the declaration writes share one table, and
+`origin` says which is which:
+
+- a grant set in the matrix is `origin = "matrix"`: `karni sync-roles` keeps
+  it whatever the declaration says and lists it as *overridden*;
+- a declared grant revoked in the matrix stays as a row with scope `none`,
+  so the next sync does not quietly restore it;
+- a cell set to the value the declaration gives (the *Declared (…)* option)
+  is handed back: `origin = "declared"`, managed by the sync again.
+
+Four guard rails, in `karni.accounts.matrix.plan_changes`, refuse a change
+with the reason shown on the confirmation page (and as a 400 with code
+`E213` on the API); a refused batch writes nothing:
+
+1. **A system role keeps its declared grants.** Cells `KARNI_ROLES` gives a
+   `system: True` role are locked; change the declaration.
+2. **Nobody grants what they do not hold.** Touching `app.model:action` needs
+   the operator to hold that permission; granting a scope needs them to hold
+   it at that scope (`all` covers every scope).
+3. **Nobody removes their own last permission to change permissions**
+   (`karni_accounts.rolepermission:change`) — locking yourself out of
+   production is a support ticket, not a feature.
+4. **The diff comes first.** The admin confirms; the API has `dry_run`.
+
+Every change is history: `Role` and `RolePermission` are audited
+(`karni.audit`), so the matrix page lists who changed which grant from what,
+and the `RolePermission` admin's History tab has the rest. The `Permission`
+and `RolePermission` admins are read-only — a grant row edited by hand would
+skip the rails.
+
+**Effective permissions** — Roles → *Effective permissions*, or the button on
+a user's change page — is the read-only answer to "why can this person see
+this?": every permission, the rows it reaches, and each role that grants it
+with its scope and origin (a superuser holds everything; a revoked cell is
+shown as revoked). Anyone may look at their own; someone else's needs
+`karni_accounts.rolepermission:view`.
+
+The same thing as an API, for a project's own UI and for fixtures and tests:
+
+| route | does |
+|---|---|
+| `GET api/auth/permissions/matrix/` | `roles`, `models` (each with its `actions` and the `scopes` it may take) and `grants[role][permission]` → `{scope, origin, declared, locked}` |
+| `POST api/auth/permissions/matrix/` | `{"changes": [{"role", "permission", "scope"}], "dry_run": false}` — `scope` is a value, `null` to revoke or `"declared"` to hand the cell back; the answer is the plan (`changes`, `refusals`), a refused request is a 400 `E213` and nothing is written |
+| `GET api/auth/permissions/effective/` | the requester's own effective permissions |
+| `GET api/auth/permissions/effective/<user id>/` | anyone's (needs `rolepermission:view`) |
+
+In code: `build_matrix()`, `plan_changes(operator, changes)`,
+`apply_changes(operator, changes)` (raises `MatrixRefused`, whose `.plan`
+says why) and `effective_permissions(user)` in `karni.accounts.matrix` take
+the operator explicitly, so a seed script or a test can drive them without
+a request:
+
+```python
+from karni.accounts.matrix import apply_changes
+
+apply_changes(admin, [("support", "shop.order:view", "related:branch")])
+```
+
 ### Role helpers and object permissions
 
 Membership helpers in `karni.accounts.permissions`: `assign_role(user, slug)`,

@@ -1,0 +1,73 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .karni-diff { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .karni-diff th, .karni-diff td { border-bottom: 1px solid var(--color-base-200); padding: 0.5rem; text-align: left; vertical-align: top; }
+  .karni-refusal td { color: #b91c1c; }
+  html.dark .karni-refusal td { color: #fca5a5; }
+  html.dark .karni-diff th, html.dark .karni-diff td { border-color: var(--color-base-800); }
+  .karni-button { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 1.25rem; border-radius: 6px; background: var(--color-primary-600); color: #fff; font-weight: 600; border: 0; cursor: pointer; }
+  .karni-button-secondary { background: transparent; color: var(--color-primary-600); border: 1px solid var(--color-base-300); }
+  .karni-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; }
+  .karni-note { color: var(--color-base-500); font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if plan.refusals %}
+  <h2 class="font-semibold mb-2">{% translate "Refused" %}</h2>
+  <p class="karni-note">{% translate "Nothing has been saved. Fix these and review again." %}</p>
+  <table class="karni-diff mb-6">
+    <thead><tr><th>{% translate "Role" %}</th><th>{% translate "Permission" %}</th><th>{% translate "Requested" %}</th><th>{% translate "Why not" %}</th></tr></thead>
+    <tbody>
+      {% for refusal in plan.refusals %}
+        <tr class="karni-refusal">
+          <td>{{ refusal.role }}</td>
+          <td><code>{{ refusal.permission }}</code></td>
+          <td>{{ refusal.requested|default:"—" }}</td>
+          <td>{{ refusal.reason }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+<h2 class="font-semibold mb-2">{% translate "Changes" %}</h2>
+{% if plan.changes %}
+  <table class="karni-diff">
+    <thead><tr><th>{% translate "Role" %}</th><th>{% translate "Permission" %}</th><th>{% translate "Before" %}</th><th>{% translate "After" %}</th></tr></thead>
+    <tbody>
+      {% for change in plan.changes %}
+        <tr>
+          <td>{{ change.role }}</td>
+          <td><code>{{ change.permission }}</code></td>
+          <td>{{ change.before|default:"—" }}{% if change.before_origin %} <span class="karni-note">({{ change.before_origin }})</span>{% endif %}</td>
+          <td>{{ change.after|default:"—" }}{% if change.after_origin %} <span class="karni-note">({{ change.after_origin }})</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="karni-note">{% translate "No change would be applied." %}</p>
+{% endif %}
+
+<form method="post" action="{{ matrix_url }}" class="karni-toolbar">
+  {% csrf_token %}
+  <input type="hidden" name="confirm" value="1">
+  {% for name, value in replay %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  {% if plan.changes and not plan.refusals %}
+    <button type="submit" class="karni-button">
+      {% blocktranslate count counter=plan.changes|length trimmed %}
+        Apply {{ counter }} change
+      {% plural %}
+        Apply {{ counter }} changes
+      {% endblocktranslate %}
+    </button>
+  {% endif %}
+  <a class="karni-button karni-button-secondary" href="{{ matrix_url }}">{% translate "Back to the matrix" %}</a>
+</form>
+{% endblock %}

@@ -55,6 +55,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_API_CACHE_ALIAS": "The Django cache alias responses are stored in.",
     "KARNI_ADMIN_AUTODISCOVER": "Register every unregistered model in the admin at startup (`karni.admin`).",
     "KARNI_ADMIN_EXCLUDE": "App labels or `app_label.ModelName` entries the admin leaves out.",
+    "KARNI_MATRIX_EXCLUDE": "App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default).",
     "KARNI_ADMIN_LIST_DISPLAY_MAX": "Columns a derived admin changelist shows at most.",
     "KARNI_ADMIN_LIST_FILTER_MAX": "Sidebar filters a derived admin shows at most.",
     "KARNI_ADMIN_SEARCH_MAX": "Fields a derived admin searches at most.",

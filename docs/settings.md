@@ -56,6 +56,7 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_ADMIN_SEARCH_MAX` | — | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` | — | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` | — | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 | **Karni knobs** | | | |
 | `KARNI_HEALTH_CHECKS` | — | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default). |
 | `KARNI_HEALTH_CELERY_TIMEOUT` | — | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |

@@ -413,6 +413,29 @@ BASE: dict[str, Any] = {
     "KARNI_ADMIN_SEARCH_MAX": 5,
     "KARNI_ADMIN_SITE": "django.contrib.admin.site",
     "KARNI_ADMIN_BASE": "unfold.admin.ModelAdmin",
+    # Apps or models the permission matrix leaves out: framework internals
+    # nobody grants by role (kept in sync with karni.accounts.matrix).
+    "KARNI_MATRIX_EXCLUDE": env.list(
+        "KARNI_MATRIX_EXCLUDE",
+        default=[
+            "admin",
+            "auth",
+            "contenttypes",
+            "sessions",
+            "sites",
+            "django_celery_beat",
+            "django_celery_results",
+            "token_blacklist",
+            "django_otp",
+            "otp_totp",
+            "otp_static",
+            "account",
+            "socialaccount",
+            "karni_audit",
+            "karni_accounts.OneTimeToken",
+            "karni_accounts.Permission",
+        ],
+    ),
     # --- Karni knobs --------------------------------------------------------
     "KARNI_HEALTH_CHECKS": [
         "karni.health.checks.check_database",

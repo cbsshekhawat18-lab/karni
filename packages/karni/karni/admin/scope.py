@@ -45,8 +45,14 @@ def scope_queryset(
 
 
 def within_scope(model_admin: Any, request: HttpRequest, obj: Any, action: str) -> bool:
-    """Whether ``obj`` is inside the user's ``action`` scope (``True`` without an object)."""
-    if obj is None or _exempt(model_admin):
+    """Whether ``obj`` is inside the user's ``action`` scope (``True`` without an object).
+
+    Anything that is not a model instance counts as "no object": django-unfold
+    asks ``has_<action>_permission(request, object_id)`` with the raw id when
+    it decides which detail buttons to show, and the view behind a button
+    looks the row up through the scoped queryset anyway.
+    """
+    if obj is None or not isinstance(obj, Model) or _exempt(model_admin):
         return True
     rows = admin_rows(request, type(obj), action)
     if rows is True:

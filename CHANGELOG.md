@@ -42,6 +42,16 @@ change and its migration note.
   the admin History tab, `GET /<resource>/<id>/history/` and
   `<ChangeHistory/>`; retention pruning off by default; `karni check` flags
   `update()`/`bulk_update()` on audited models (`audited-bulk-write`, `K113`).
+- Permission matrix (ADR 0002, P5): Roles → *Permission matrix* in the
+  admin changes who may do what with no deploy — roles across, models down,
+  a scope selector per action, bulk selectors, a confirmation diff — with
+  the guard rails (system roles keep their declared grants, nobody grants
+  what they do not hold, nobody removes their own last permission to change
+  permissions) and the matrix's own change history; *Effective permissions*
+  answers "why can this person see this?" per user; the same as an API
+  under `api/auth/permissions/` for custom UIs, fixtures and tests
+  (`E213`). `RolePermission.origin` tells the sync which grants the matrix
+  owns; `KARNI_MATRIX_EXCLUDE`.
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`

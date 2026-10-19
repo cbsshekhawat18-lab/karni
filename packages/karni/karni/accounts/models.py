@@ -203,6 +203,11 @@ class Role(BaseModel):
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["slug"]
 
+    class Karni:
+        """Every change to a role is history (``karni.audit``, ADR 0002 P5)."""
+
+        audit = True
+
     def __str__(self) -> str:
         return self.name
 
@@ -239,8 +244,15 @@ class RolePermission(BaseModel):
 
     ``scope`` is ``all``, ``own`` (rows whose ``Karni.owner_field`` is the
     user), ``related`` (rows whose ``Karni.scope_paths[scope_path]`` equals
-    ``user.<scope_path>``) or ``custom`` (``scope_path`` names a scope
-    registered with :func:`karni.accounts.roles.register_scope`).
+    ``user.<scope_path>``), ``custom`` (``scope_path`` names a scope
+    registered with :func:`karni.accounts.roles.register_scope`) or ``none``
+    — a declared grant the permission matrix revoked, kept as a row so the
+    next ``karni sync-roles`` does not quietly restore it.
+
+    ``origin`` says who owns the row: ``declared`` rows are written by the
+    sync from ``KARNI_ROLES`` and follow the declaration; ``matrix`` rows
+    were set in the permission matrix (or its API) and the sync leaves them
+    alone. Every change is recorded by ``karni.audit``.
     """
 
     class Scope(models.TextChoices):
@@ -248,11 +260,17 @@ class RolePermission(BaseModel):
         OWN = "own", "Own rows"
         RELATED = "related", "Rows related through a scope path"
         CUSTOM = "custom", "Rows a registered scope returns"
+        NONE = "none", "No rows (revoked in the permission matrix)"
+
+    class Origin(models.TextChoices):
+        DECLARED = "declared", "Declared in KARNI_ROLES"
+        MATRIX = "matrix", "Set in the permission matrix"
 
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="grants")
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE, related_name="grants")
     scope = models.CharField(max_length=16, choices=Scope.choices, default=Scope.ALL)
     scope_path = models.CharField(max_length=100, blank=True, default="")
+    origin = models.CharField(max_length=16, choices=Origin.choices, default=Origin.DECLARED)
 
     class Meta(BaseModel.Meta):
         ordering: ClassVar[list[str]] = ["role__slug", "permission__action"]
@@ -261,6 +279,11 @@ class RolePermission(BaseModel):
                 fields=["role", "permission"], name="karni_rolepermission_role_permission"
             )
         ]
+
+    class Karni:
+        """The permission system's own audit trail: who changed which grant, from what."""
+
+        audit = True
 
     def __str__(self) -> str:
         suffix = f":{self.scope_path}" if self.scope_path else ""

@@ -130,6 +130,89 @@
         },
         "type": "object"
       },
+      "MatrixChange": {
+        "description": "One requested cell: ``scope`` is a value, ``null`` (revoke) or ``\"declared\"``.",
+        "properties": {
+          "permission": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "scope": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission",
+          "role",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "MatrixChangeRequest": {
+        "description": "One requested cell: ``scope`` is a value, ``null`` (revoke) or ``\"declared\"``.",
+        "properties": {
+          "permission": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "role": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "scope": {
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission",
+          "role",
+          "scope"
+        ],
+        "type": "object"
+      },
+      "MatrixChanges": {
+        "description": "The ``POST`` body: the cells to change and whether to only plan.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/MatrixChange"
+            },
+            "type": "array"
+          },
+          "dry_run": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "type": "object"
+      },
+      "MatrixChangesRequest": {
+        "description": "The ``POST`` body: the cells to change and whether to only plan.",
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/MatrixChangeRequest"
+            },
+            "type": "array"
+          },
+          "dry_run": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changes"
+        ],
+        "type": "object"
+      },
       "Me": {
         "description": "The authenticated user's profile \u2014 the payload of ``me/`` and login.\n\nOnly the safe fields ``first_name`` / ``last_name`` are writable (the\n``me/`` PATCH surface); ``email`` changes exclusively through the\nemail-change flow and everything else is audit data. ``roles`` (amendment\nA15) lists the user's Django group names via\n:func:`karni.accounts.permissions.user_roles` \u2014 the ``@karni/ui``\n``usePermission`` hook consumes it.\n\nOverride / escape hatch: subclass and redeclare ``Meta.fields`` to expose\nextra fields of a swapped user model, then point a subclassed view (or\n``KARNI_ACCOUNTS_AUTO_LOGIN`` consumers) at your serializer.",
         "properties": {
@@ -1535,6 +1618,136 @@
             "cookieAuth": []
           },
           {}
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/permissions/effective/": {
+      "get": {
+        "description": "``GET permissions/effective/[<user id>/]`` \u2014 what a user may do, and why.",
+        "operationId": "auth_permissions_effective_retrieve",
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/permissions/effective/{user_id}/": {
+      "get": {
+        "description": "``GET permissions/effective/[<user id>/]`` \u2014 what a user may do, and why.",
+        "operationId": "auth_permissions_effective_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/permissions/matrix/": {
+      "get": {
+        "description": "``GET``/``POST permissions/matrix/`` \u2014 the matrix, and changes to it.",
+        "operationId": "auth_permissions_matrix_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrixChanges"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "auth"
+        ]
+      },
+      "post": {
+        "description": "``GET``/``POST permissions/matrix/`` \u2014 the matrix, and changes to it.",
+        "operationId": "auth_permissions_matrix_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrixChangesRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrixChangesRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/MatrixChangesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatrixChanges"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
         ],
         "tags": [
           "auth"

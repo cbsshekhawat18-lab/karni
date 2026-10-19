@@ -91,6 +91,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_ADMIN_LOGO: Any = None
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"
@@ -384,6 +385,12 @@ class KarniSettingsModel(BaseModel):
             if not isinstance(entry, str):
                 errors.append(
                     f"KARNI_ADMIN_EXCLUDE entry {entry!r} must be a string "
+                    "(an app_label or 'app_label.ModelName')"
+                )
+        for entry in self.KARNI_MATRIX_EXCLUDE:
+            if not isinstance(entry, str):
+                errors.append(
+                    f"KARNI_MATRIX_EXCLUDE entry {entry!r} must be a string "
                     "(an app_label or 'app_label.ModelName')"
                 )
         for name in (

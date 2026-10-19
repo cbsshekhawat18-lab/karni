@@ -698,6 +698,20 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "set `model = ...` on the viewset, or evaluate through action_predicate(view, "
         "access).",
     ),
+    _e(
+        "E213",
+        "The permission matrix refused a change",
+        "api",
+        "karni.accounts.matrix.apply_changes",
+        "A guard rail stopped the request and nothing was written: a system role's declared "
+        "grant is locked, the operator does not hold the permission (or holds it at a "
+        "narrower scope than the one granted), the change would remove the operator's own "
+        "last permission to change permissions, or the role, permission or scope is unknown.",
+        "Change KARNI_ROLES for a system role's grants; ask someone who holds the permission "
+        "at that scope; keep one of your roles able to change permissions; check the role "
+        "slug, the 'app.model:action' key and the scope value against GET "
+        "permissions/matrix/.",
+    ),
     # E3xx admin
     _e(
         "E301",

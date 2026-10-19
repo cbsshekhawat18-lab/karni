@@ -36,11 +36,27 @@ from importlib import import_module
 from django.conf import settings
 from django.urls import URLPattern, URLResolver, include, path
 
+from karni.accounts.api import matrix as matrix_views
 from karni.accounts.api import views
 
 __all__ = ["urlpatterns"]
 
 urlpatterns: list[URLPattern | URLResolver] = [
+    path(
+        "permissions/matrix/",
+        matrix_views.PermissionMatrixView.as_view(),
+        name="karni-accounts-permission-matrix",
+    ),
+    path(
+        "permissions/effective/",
+        matrix_views.EffectivePermissionsView.as_view(),
+        name="karni-accounts-effective-permissions",
+    ),
+    path(
+        "permissions/effective/<str:user_id>/",
+        matrix_views.EffectivePermissionsView.as_view(),
+        name="karni-accounts-effective-permissions-user",
+    ),
     path("register/", views.RegisterView.as_view(), name="karni-accounts-register"),
     path("login/", views.LoginView.as_view(), name="karni-accounts-login"),
     path("logout/", views.LogoutView.as_view(), name="karni-accounts-logout"),

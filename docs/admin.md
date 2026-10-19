@@ -153,6 +153,19 @@ changes on the History tab of its change page — date, user, action and each
 field's old → new, above Django's own admin-action log — with the same
 visibility rules applied. See [change history](change-history.md).
 
+## Permission matrix
+
+Roles → **Permission matrix** is the screen that changes who may do what
+without a deploy: roles across, models down, one scope selector per action,
+bulk selectors per row and column, a confirmation diff before anything is
+saved, and the matrix's own change history underneath. **Effective
+permissions** (on the same changelist, and as a button on every user's change
+page) answers "why can this person see this?" — every permission a user
+holds, with the role that grants it and at which scope. Both pages are gated
+on the grants (`karni_accounts.rolepermission:view` to look, `:change` to
+edit) and work at tablet width. The rules, the guard rails and the API are in
+[accounts](accounts.md#permission-matrix).
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

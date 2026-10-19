@@ -235,6 +235,21 @@ mechanical = false
 migration = "migrations/0.2.md#change-history"
 
 [[change]]
+id = "permission-matrix"
+kind = "behaviour"
+symbol = "karni.accounts.matrix"
+replacement = "the Permission matrix admin page / POST api/auth/permissions/matrix/"
+summary = """\
+Permission matrix (ADR 0002, P5): grants change in the admin (Roles → Permission \
+matrix) or through api/auth/permissions/matrix/ with guard rails and a confirmation \
+diff, and every change is history. RolePermission gains `origin` (run migrate once); \
+a grant set in the matrix is kept by karni sync-roles and reported as overridden; a \
+revoked declared grant stays as a `none` row. Dropped declared grants are now removed \
+outright instead of soft-deleted."""
+mechanical = false
+migration = "migrations/0.2.md#permission-matrix"
+
+[[change]]
 id = "architecture-scans-without-base-dir"
 kind = "behaviour"
 symbol = "BASE_DIR"

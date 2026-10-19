@@ -25,7 +25,10 @@ against every model and its actions (the standard four plus
 :class:`~karni.accounts.models.Permission` and
 :class:`~karni.accounts.models.RolePermission` rows — creating and updating,
 reporting what the database holds that the declaration no longer does, and
-never deleting. The sync also runs after ``migrate`` (``KARNI_ROLES_AUTOSYNC``).
+never deleting a role. The sync also runs after ``migrate``
+(``KARNI_ROLES_AUTOSYNC``). A grant the permission matrix set
+(``origin = "matrix"``, :mod:`karni.accounts.matrix`) is the operator's
+decision: the sync keeps it and reports it as overridden.
 
 At request time :func:`grants_for` resolves a user's grants once (cached on
 the user instance, so once per request); :func:`user_can` answers the gate
@@ -55,6 +58,7 @@ __all__ = [
     "Grant",
     "SCOPES",
     "SyncReport",
+    "custom_scopes",
     "declared_roles",
     "grants_for",
     "permission_keys",
@@ -68,6 +72,10 @@ __all__ = [
 SETTING: Final = "KARNI_ROLES"
 SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom")
 
+#: The scope of a declared grant the permission matrix revoked: a row that
+#: grants nothing, kept so the sync does not restore the declaration.
+NONE_SCOPE: Final = "none"
+
 #: ``custom:<name>`` scopes: name → ``fn(user, model) -> Q | bool``.
 _custom_scopes: dict[str, Callable[[Any, type[models.Model]], Q | bool]] = {}
 
@@ -75,6 +83,11 @@ _custom_scopes: dict[str, Callable[[Any, type[models.Model]], Q | bool]] = {}
 def register_scope(name: str, fn: Callable[[Any, type[models.Model]], Q | bool]) -> None:
     """Register the callable behind ``custom:<name>``; it returns a ``Q`` (or a bool)."""
     _custom_scopes[name] = fn
+
+
+def custom_scopes() -> tuple[str, ...]:
+    """The names registered with :func:`register_scope`, sorted."""
+    return tuple(sorted(_custom_scopes))
 
 
 # the declaration
@@ -229,6 +242,7 @@ class SyncReport:
     created_permissions: int = 0
     grants: dict[str, int] = field(default_factory=dict)
     undeclared_roles: list[str] = field(default_factory=list)
+    overridden: list[str] = field(default_factory=list)
     dry_run: bool = False
 
     def render(self) -> str:
@@ -250,6 +264,11 @@ class SyncReport:
                 "In the database but not in KARNI_ROLES (kept; remove them yourself if unwanted): "
                 + ", ".join(self.undeclared_roles)
             )
+        if self.overridden:
+            lines.append(
+                "Set in the permission matrix, so the declaration does not apply (kept): "
+                + ", ".join(self.overridden)
+            )
         return "\n".join(lines)
 
     def to_dict(self) -> dict[str, Any]:
@@ -259,14 +278,36 @@ class SyncReport:
             "created_permissions": self.created_permissions,
             "grants": self.grants,
             "undeclared_roles": self.undeclared_roles,
+            "overridden": self.overridden,
             "dry_run": self.dry_run,
         }
+
+
+def _overridden(specs: list[RoleSpec]) -> list[str]:
+    """``"<role> <permission>"`` for every declared role's grant the matrix owns."""
+    from karni.accounts.models import RolePermission
+
+    rows = (
+        RolePermission.objects.filter(
+            role__slug__in=[spec.slug for spec in specs], origin=RolePermission.Origin.MATRIX
+        )
+        .select_related("role", "permission__content_type")
+        .order_by("role__slug")
+    )
+    return [f"{row.role.slug} {row.permission.key}" for row in rows]
 
 
 def sync_roles(
     declaration: Mapping[str, Any] | None = None, *, dry_run: bool = False
 ) -> SyncReport:
-    """Reconcile the database with the declared roles: create, update, report; never delete."""
+    """Reconcile the database with the declared roles: create, update, report; never delete a role.
+
+    A grant with ``origin = "matrix"`` (set in the permission matrix) is left
+    exactly as it is — whatever the declaration says for that cell — and
+    listed in the report. A declared grant the declaration dropped is
+    removed outright (a soft-deleted row would still hold the unique
+    constraint and block a later re-grant).
+    """
     from django.contrib.auth.models import Group
     from django.contrib.contenttypes.models import ContentType
 
@@ -284,8 +325,10 @@ def sync_roles(
         report.undeclared_roles = sorted(
             set(Role.objects.values_list("slug", flat=True)) - {spec.slug for spec in specs}
         )
+        report.overridden = _overridden(specs)
         return report
 
+    matrix_origin = RolePermission.Origin.MATRIX
     with transaction.atomic():
         permissions: dict[str, Permission] = {}
         for key, model in keys.items():
@@ -322,9 +365,13 @@ def sync_roles(
             if created:
                 report.created_roles.append(spec.slug)
             wanted = {grant.permission: grant for grant in expanded[spec.slug]}
+            # The base manager: a soft-deleted row still holds the unique
+            # constraint, so it is revived rather than duplicated.
             existing = {
                 rp.permission_id: rp
-                for rp in RolePermission.objects.filter(role=role).select_related("permission")
+                for rp in RolePermission._base_manager.filter(role=role).select_related(
+                    "permission"
+                )
             }
             for key, grant in wanted.items():
                 permission = permissions[key]
@@ -338,17 +385,33 @@ def sync_roles(
                     )
                     if not created and spec.slug not in report.updated_roles:
                         report.updated_roles.append(spec.slug)
-                elif (row.scope, row.scope_path) != (grant.scope, grant.scope_path):
+                elif row.origin == matrix_origin and row.deleted_at is None:
+                    report.overridden.append(f"{spec.slug} {key}")
+                elif (row.scope, row.scope_path, row.origin, row.deleted_at) != (
+                    grant.scope,
+                    grant.scope_path,
+                    RolePermission.Origin.DECLARED,
+                    None,
+                ):
                     row.scope, row.scope_path = grant.scope, grant.scope_path
-                    row.save(update_fields=["scope", "scope_path", "updated_at"])
+                    row.origin, row.deleted_at = RolePermission.Origin.DECLARED, None
+                    row.save(
+                        update_fields=["scope", "scope_path", "origin", "deleted_at", "updated_at"]
+                    )
                     if spec.slug not in report.updated_roles:
                         report.updated_roles.append(spec.slug)
+            wanted_pks = {permissions[k].pk for k in wanted}
             stale = [
-                rp for pid, rp in existing.items() if pid not in {permissions[k].pk for k in wanted}
+                rp
+                for pid, rp in existing.items()
+                if pid not in wanted_pks
+                and not (rp.origin == matrix_origin and rp.deleted_at is None)
             ]
             if stale:
-                RolePermission.objects.filter(pk__in=[rp.pk for rp in stale]).delete()
-                if spec.slug not in report.updated_roles:
+                RolePermission._base_manager.filter(pk__in=[rp.pk for rp in stale]).delete()
+                if spec.slug not in report.updated_roles and any(
+                    rp.deleted_at is None for rp in stale
+                ):
                     report.updated_roles.append(spec.slug)
             report.grants[spec.slug] = len(wanted)
         report.undeclared_roles = sorted(
@@ -385,6 +448,8 @@ def grants_for(user: Any) -> dict[str, list[Grant]]:
             "permission", "permission__content_type"
         )
         for row in rows:
+            if row.scope == NONE_SCOPE:
+                continue  # revoked in the permission matrix: grants nothing
             key = row.permission.key
             found.setdefault(key, []).append(Grant(key, row.scope, row.scope_path))
     setattr(user, _CACHE_ATTR, found)

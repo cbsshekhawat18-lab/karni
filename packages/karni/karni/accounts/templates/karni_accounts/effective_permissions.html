@@ -1,0 +1,81 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .karni-effective { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  .karni-effective th, .karni-effective td { border-bottom: 1px solid var(--color-base-200); padding: 0.45rem 0.5rem; text-align: left; vertical-align: top; }
+  .karni-effective .karni-group td { background: var(--color-base-100); font-weight: 600; }
+  .karni-effective .karni-none { color: var(--color-base-500); }
+  html.dark .karni-effective th, html.dark .karni-effective td { border-color: var(--color-base-800); }
+  html.dark .karni-effective .karni-group td { background: var(--color-base-800); }
+  .karni-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+  .karni-picker input { min-height: 44px; font-size: 16px; padding: 0 0.6rem; border: 1px solid var(--color-base-300); border-radius: 6px; min-width: 16rem; background: transparent; color: inherit; }
+  .karni-button { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 1.25rem; border-radius: 6px; background: var(--color-primary-600); color: #fff; font-weight: 600; border: 0; cursor: pointer; }
+  .karni-note { color: var(--color-base-500); font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="karni-picker">
+  <label for="karni-effective-user">{% translate "User (email or id)" %}</label>
+  <input id="karni-effective-user" type="text" name="user" value="{{ query }}" autocomplete="off" inputmode="email">
+  <button type="submit" class="karni-button">{% translate "Show" %}</button>
+</form>
+
+{% if report %}
+  <p>
+    <strong>{{ report.username }}</strong>
+    {% if report.superuser %}
+      — {% translate "superuser: every permission on every row, whatever the roles say." %}
+    {% elif report.roles %}
+      — {% translate "roles:" %} {{ report.roles|join:", " }}
+    {% else %}
+      — {% translate "holds no role, so no grant applies." %}
+    {% endif %}
+  </p>
+  <table class="karni-effective">
+    <thead>
+      <tr>
+        <th>{% translate "Action" %}</th>
+        <th>{% translate "Rows" %}</th>
+        <th>{% translate "Why" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for group in grouped %}
+        <tr class="karni-group"><td colspan="3">{{ group.model }}</td></tr>
+        {% for entry in group.entries %}
+          <tr>
+            <td>{{ entry.action }}</td>
+            <td>{% if entry.scope %}{{ entry.scope }}{% else %}<span class="karni-none">—</span>{% endif %}</td>
+            <td>
+              {% for source in entry.sources %}
+                <div>
+                  {% if source.origin == "superuser" %}
+                    {% translate "superuser" %}
+                  {% elif source.scope %}
+                    {% blocktranslate with role=source.role scope=source.scope origin=source.origin trimmed %}
+                      role {{ role }} grants {{ scope }} ({{ origin }})
+                    {% endblocktranslate %}
+                  {% else %}
+                    {% blocktranslate with role=source.role trimmed %}
+                      role {{ role }}: revoked in the permission matrix
+                    {% endblocktranslate %}
+                  {% endif %}
+                </div>
+              {% empty %}
+                <span class="karni-none">{% translate "no role grants it" %}</span>
+              {% endfor %}
+            </td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+{% elif not query %}
+  <p class="karni-note">{% translate "Pick a user to see exactly what they may do, and which role grants it at which scope." %}</p>
+{% endif %}
+{% endblock %}
