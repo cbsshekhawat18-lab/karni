@@ -89,6 +89,10 @@ resource through its routed URLs as that role and checks:
   declared. A denial that *should* happen is a pass.
 - **Pagination and filtering:** a list page has the paginator's shape, and
   declared filters actually narrow the result.
+- **Visibility:** when `Karni.field_roles` hides fields from the role, they
+  are absent from list and detail payloads and from the role's serializer
+  (so from its schema), and a field the role may read but not write is
+  refused on input naming the field. Skipped when nothing is hidden.
 - **Contract:** every response is validated against the OpenAPI schema
   (types, enums, nullability, required fields, no undeclared properties).
 

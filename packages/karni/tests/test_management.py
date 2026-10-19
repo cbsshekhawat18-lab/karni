@@ -31,7 +31,17 @@ def test_context_command_shape() -> None:
     assert "MODELS" in sections and "BASES" in sections
     # section order is fixed
     keys = [line.split(":", 1)[0] for line in out.getvalue().strip().split("\n")]
-    order = ("MODELS", "SCOPES", "VIEWSETS", "ROLES", "ACTIONS", "PERF", "MODULES", "BASES")
+    order = (
+        "MODELS",
+        "SCOPES",
+        "VIEWSETS",
+        "ROLES",
+        "ACTIONS",
+        "VISIBILITY",
+        "PERF",
+        "MODULES",
+        "BASES",
+    )
     assert keys == [k for k in order if k in keys]
 
 

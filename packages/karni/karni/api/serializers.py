@@ -135,6 +135,64 @@ class KarniModelSerializer(serializers.ModelSerializer):
 
     serializer_related_field = KarniPrimaryKeyRelatedField
 
+    # field-level visibility (ADR 0002, P3)
+
+    def visibility_user(self) -> Any | None:
+        """The requesting user, or ``None`` outside a request (server-side use: every field)."""
+        request = self.context.get("request") if isinstance(self.context, dict) else None
+        return getattr(request, "user", None) if request is not None else None
+
+    def get_fields(self) -> dict[str, Any]:
+        """The generated fields minus what ``Karni.field_roles`` hides from this user.
+
+        A field the user may not read is **absent** (never ``null``: that
+        would say the field exists). A field the user may read but not write
+        is published read-only, and :meth:`to_internal_value` still rejects
+        an explicit attempt to send it, naming the roles that may.
+        """
+        from karni.accounts.visibility import hidden_fields, protected_fields
+
+        fields = super().get_fields()
+        user = self.visibility_user()
+        if user is None:
+            return fields
+        model = self.Meta.model
+        hidden = hidden_fields(model, user)
+        protected = protected_fields(model, user)
+        for name in list(fields):
+            if name in hidden:
+                if name in protected or fields[name].read_only:
+                    del fields[name]
+                else:
+                    fields[name].write_only = True  # may write, may not read back
+            elif name in protected and not fields[name].read_only:
+                fields[name].read_only = True
+                fields[name].required = False
+        return fields
+
+    def to_internal_value(self, data: Any) -> Any:
+        from karni.accounts.visibility import allowed_roles, hidden_fields, protected_fields
+
+        user = self.visibility_user()
+        if user is not None and isinstance(data, dict):
+            model = self.Meta.model
+            hidden = hidden_fields(model, user)
+            refused = {
+                name
+                for name in protected_fields(model, user)
+                if name in data and name not in hidden and name in self.fields
+            }
+            if refused:
+                raise serializers.ValidationError(
+                    {
+                        name: [
+                            f"Only roles {', '.join(allowed_roles(model, name))} may change {name}."
+                        ]
+                        for name in sorted(refused)
+                    }
+                )
+        return super().to_internal_value(data)
+
     def build_standard_field(self, field_name: str, model_field: Any) -> tuple[Any, dict[str, Any]]:
         """Publish a model field's plain default in the schema (``default:``).
 

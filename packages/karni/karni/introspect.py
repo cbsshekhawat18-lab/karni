@@ -275,6 +275,27 @@ def roles_section() -> str | None:
     return line
 
 
+VISIBILITY_CAP = 6
+
+
+def visibility_section() -> str | None:
+    """Models with ``Karni.field_roles``: which fields only some roles see (ADR 0002, P3)."""
+    from karni.meta import field_roles
+
+    parts: list[str] = []
+    for shown, model in _domain_models():
+        try:
+            rules = field_roles(model)
+        except Exception:  # noqa: BLE001 - inventory must degrade, never crash
+            continue
+        if not rules:
+            continue
+        fields = [f"{name}:{','.join(rule.read)}" for name, rule in rules.items()]
+        extra = f",+{len(fields) - VISIBILITY_CAP}" if len(fields) > VISIBILITY_CAP else ""
+        parts.append(f"{shown}({'; '.join(fields[:VISIBILITY_CAP])}{extra})")
+    return "VISIBILITY: " + " ".join(parts) if parts else None
+
+
 def build_context() -> str:
     """The full inventory, one section per line, empty sections omitted."""
     sections = [
@@ -282,6 +303,7 @@ def build_context() -> str:
         scopes_section(),
         viewsets_section(),
         roles_section(),
+        visibility_section(),
         performance_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),

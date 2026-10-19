@@ -20,6 +20,12 @@
  * `csrfCookieName` / `csrfHeaderName` re-pin the session CSRF names (A4),
  * and `authBasePath` moves the auth endpoints off `/auth`.
  *
+ * The OpenAPI document is generated per role (`Karni.field_roles`, ADR 0002
+ * P3): a field a role may not read is absent from its schema. When the
+ * identity changes (login, logout, a refresh that lands on another user) the
+ * provider invalidates the cached schema, so tables, forms and detail views
+ * follow the new user's field set without any per-role component code.
+ *
  * Known limitations (D6): browser tabs do not coordinate refreshes — with
  * refresh-token rotation, a refresh in one tab can log another tab out on
  * its next refresh. Identity changes also do not auto-invalidate resource
@@ -32,6 +38,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useSyncExternalStore,
   type ReactElement,
   type ReactNode,
@@ -114,6 +121,15 @@ export function AuthProvider({
   }, [engine]);
 
   const snapshot = useSyncExternalStore(engine.subscribe, engine.getSnapshot, engine.getSnapshot);
+
+  // The schema is per role: a new identity (or none) means a new field set.
+  const identity = snapshot.user?.id ?? null;
+  const previousIdentity = useRef(identity);
+  useEffect(() => {
+    if (previousIdentity.current === identity) return;
+    previousIdentity.current = identity;
+    void queryClient.invalidateQueries({ queryKey: karniKeys.schema() });
+  }, [identity, queryClient]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

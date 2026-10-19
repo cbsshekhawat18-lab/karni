@@ -166,6 +166,77 @@ def check_viewsets(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
             messages.append(_as_check(exc, viewset))
         if model is not None:
             messages.extend(_duplicate_serializer(viewset, model))
+            messages.extend(_write_only_search(viewset, model))
+    return messages
+
+
+def _write_only_search(viewset: type[Any], model: type[Any]) -> list[checks.CheckMessage]:
+    """E131 when ``search_fields`` names a field the API never reads back."""
+    write_only = frozenset(getattr(getattr(model, "APIMeta", None), "write_only", None) or ())
+    offenders = sorted(
+        name
+        for name in (getattr(viewset, "search_fields", None) or ())
+        if str(name).lstrip("^=@$").split("__", 1)[0] in write_only
+    )
+    if not offenders:
+        return []
+    return [
+        check_error(
+            "E131",
+            f"{viewset.__name__}.search_fields names {', '.join(offenders)}, which "
+            f"{model.__name__}.APIMeta.write_only keeps out of every response: searching it "
+            "would reveal the hidden values by membership.",
+            hint=_fix("E131"),
+            obj=viewset,
+        )
+    ]
+
+
+@checks.register(checks.Tags.models)
+def check_field_roles(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E212: every ``Karni.field_roles`` entry names a real field and declared roles."""
+    from karni.accounts.roles import declared_roles
+    from karni.meta import field_roles
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    try:
+        slugs = {spec.slug for spec in declared_roles()}
+    except KarniError:
+        slugs = set()  # KARNI_ROLES itself is reported by the settings validation
+    for config in configs:
+        for model in config.get_models():
+            try:
+                rules = field_roles(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+                continue
+            if not rules:
+                continue
+            names = {field.name for field in model._meta.get_fields()}
+            for name, rule in rules.items():
+                if name not in names:
+                    messages.append(
+                        check_error(
+                            "E212",
+                            f"{model.__name__}.Karni.field_roles names {name!r}, which is not a "
+                            f"field of {model.__name__}.",
+                            hint=_fix("E212"),
+                            obj=model,
+                        )
+                    )
+                unknown = sorted({*rule.read, *rule.write} - slugs) if slugs else []
+                if unknown:
+                    messages.append(
+                        check_error(
+                            "E212",
+                            f"{model.__name__}.Karni.field_roles[{name!r}] names roles not in "
+                            f"KARNI_ROLES: {', '.join(unknown)}. A role nobody holds hides the "
+                            "field from everyone.",
+                            hint=_fix("E212"),
+                            obj=model,
+                        )
+                    )
     return messages
 
 

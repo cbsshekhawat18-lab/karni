@@ -134,6 +134,18 @@ exemption in the project on each run. Viewsets have the same switch
 cannot reach another scope's rows through the admin is
 [`assert_isolated`](testing.md#isolation-the-test-people-forget).
 
+## Field visibility
+
+`Karni.field_roles` ([API reference](api.md#field-visibility)) applies to
+the admin too: a field the staff user may not read is absent from the
+changelist columns, the change form (fields and fieldsets), search, list
+filters and sortable columns, and a changelist lookup on it (`?salary__gte=`)
+is refused. A field they may read but not change is shown read-only. No
+admin class needs to know; the hooks (`get_list_display`, `get_fields`,
+`get_search_fields`, `get_sortable_by`, `get_readonly_fields`,
+`lookup_allowed`, …) call `super()` and then drop what the user's roles do
+not reach, so an explicit `AdminMeta` or subclass still works.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

@@ -72,7 +72,6 @@ from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.expressions import Combinable
 from django.http import Http404, HttpRequest
 from rest_framework.exceptions import NotFound
-from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import BasePagination
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
@@ -98,7 +97,7 @@ from karni.api.access import (
 )
 from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
 from karni.api.expansion import collect_expand_param, validate_expand
-from karni.api.filters import KarniFilterBackend, KarniSearchFilter
+from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
@@ -239,9 +238,11 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     # Pinned explicitly (not just via conf defaults) so BaseViewSet behaves
     # the same even if a project overrides REST_FRAMEWORK defaults. Search
     # runs LAST so an explicit ?ordering= wins while search-rank ordering
-    # survives when no ordering was requested.
-    filter_backends = [KarniFilterBackend, OrderingFilter, KarniSearchFilter]
-    ordering_fields = "__all__"
+    # survives when no ordering was requested. ordering_fields stays unset:
+    # OrderingFilter then accepts exactly the fields this request's serializer
+    # reads back, so neither a write-only field nor one Karni.field_roles hides
+    # from the requester can order the list (an ordering oracle, ADR 0002 P3).
+    filter_backends = [KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Wrap ``get_queryset`` (Q2.7); validate access and the performance declarations."""

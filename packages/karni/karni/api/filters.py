@@ -24,6 +24,28 @@ from karni.api.search import get_search_provider
 __all__ = ["KarniFilterBackend", "KarniSearchFilter"]
 
 _FILTERSET_CACHE: dict[tuple[type, type[models.Model]], type[FilterSet]] = {}
+_NARROWED_CACHE: dict[tuple[type[FilterSet], frozenset[str]], type[FilterSet]] = {}
+
+
+def searchable_fields(view: Any, request: Any) -> tuple[str, ...]:
+    """``view.search_fields`` minus write-only fields and fields hidden from the requester.
+
+    Search over a field the API never reads back is a membership oracle, so
+    ``APIMeta.write_only`` fields never search (``karni.E131`` reports them
+    at boot) and ``Karni.field_roles`` fields search only for a role that may
+    read them.
+    """
+    from karni.accounts.visibility import visible
+
+    fields = tuple(getattr(view, "search_fields", None) or ())
+    model = getattr(view, "model", None)
+    if model is None:
+        model = getattr(getattr(view, "queryset", None), "model", None)
+    if model is None or not fields:
+        return fields
+    write_only = frozenset(getattr(getattr(model, "APIMeta", None), "write_only", None) or ())
+    kept = [name for name in fields if str(name).lstrip("^=@$").split("__", 1)[0] not in write_only]
+    return tuple(visible(model, getattr(request, "user", None), kept))
 
 
 def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
@@ -117,7 +139,9 @@ class KarniFilterBackend(DjangoFilterBackend):
             return super().get_filterset_class(view, queryset)
         if queryset is None or not self._auto_derivation_enabled(view):
             return super().get_filterset_class(view, queryset)
-        return self.derive_filterset_class(queryset.model)
+        derived = self.derive_filterset_class(queryset.model)
+        request = getattr(view, "request", None)
+        return self.narrow_filterset_class(derived, queryset.model, getattr(request, "user", None))
 
     def derive_filterset_class(self, model: type[models.Model]) -> type[FilterSet]:
         """Return the derived FilterSet for ``model``, cached per backend class."""
@@ -125,6 +149,32 @@ class KarniFilterBackend(DjangoFilterBackend):
         cached = _FILTERSET_CACHE.get(cache_key)
         if cached is None:
             cached = _FILTERSET_CACHE[cache_key] = self._build_filterset(model)
+        return cached
+
+    def narrow_filterset_class(
+        self, filterset: type[FilterSet], model: type[models.Model], user: Any
+    ) -> type[FilterSet]:
+        """``filterset`` without the filters on fields ``Karni.field_roles`` hides from ``user``.
+
+        A filter on a hidden field is a value oracle (``?salary__gte=`` tells
+        the ranking even when the column is absent), so the request's user
+        decides which filters exist and which the schema documents.
+        """
+        from karni.accounts.visibility import hidden_fields
+
+        hidden = hidden_fields(model, user)
+        if not hidden:
+            return filterset
+        key = (filterset, hidden)
+        cached = _NARROWED_CACHE.get(key)
+        if cached is None:
+            narrowed = type(filterset.__name__, (filterset,), {})
+            narrowed.base_filters = {  # type: ignore[attr-defined]
+                name: declared
+                for name, declared in filterset.base_filters.items()
+                if str(declared.field_name).split("__", 1)[0] not in hidden
+            }
+            cached = _NARROWED_CACHE[key] = narrowed
         return cached
 
     def filterable_fields(self, model: type[models.Model]) -> frozenset[str]:
@@ -181,6 +231,40 @@ class KarniFilterBackend(DjangoFilterBackend):
         )
 
 
+class KarniOrderingFilter(OrderingFilter):
+    """``OrderingFilter`` whose valid fields are what this request's serializer reads back.
+
+    Without ``ordering_fields`` on the view, DRF derives the orderable fields
+    from the serializer but scans the model class with ``dir()``/``getattr``
+    to skip properties — which touches every descriptor, deprecated managers
+    included. This derivation reads the serializer's fields only (write-only
+    fields and fields ``Karni.field_roles`` hides from the requester are not
+    there, so neither can order the list) and detects properties statically.
+    An explicit ``ordering_fields`` on the view is honoured as DRF does.
+    """
+
+    def get_default_valid_fields(
+        self, queryset: models.QuerySet[Any], view: Any, context: dict[str, Any] | None = None
+    ) -> list[tuple[str, str]]:
+        import inspect
+
+        serializer_class = getattr(view, "get_serializer_class", None)
+        klass = serializer_class() if callable(serializer_class) else view.serializer_class
+        if klass is None:
+            return []
+        model_class = queryset.model
+        valid: list[tuple[str, str]] = []
+        for field_name, field in klass(context=context or {}).fields.items():
+            source = getattr(field, "source", None) or field_name
+            if getattr(field, "write_only", False) or source == "*":
+                continue
+            head = source.split(".", 1)[0]
+            if isinstance(inspect.getattr_static(model_class, head, None), property):
+                continue
+            valid.append((source.replace(".", "__"), str(getattr(field, "label", field_name))))
+        return valid
+
+
 class KarniSearchFilter(BaseFilterBackend):
     """Backend delegating ``?search=`` to the configured search provider.
 
@@ -209,7 +293,7 @@ class KarniSearchFilter(BaseFilterBackend):
     ) -> models.QuerySet[Any]:
         """Delegate to the provider, or pass through when there is no search."""
         query = self.get_search_query(request)
-        fields = tuple(getattr(view, "search_fields", None) or ())
+        fields = searchable_fields(view, request)
         if not query or not fields:
             return queryset
         return get_search_provider().search(

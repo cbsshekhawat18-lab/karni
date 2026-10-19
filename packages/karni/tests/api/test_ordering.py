@@ -87,14 +87,16 @@ def test_explicit_ordering_overrides_the_default() -> None:
 
 
 def test_write_only_fields_are_not_orderable() -> None:
-    """B11: ordering_fields="__all__" is serializer-driven; write_only is invalid.
+    """B11: ordering is serializer-driven, so a write-only field is not orderable.
 
     An invalid ordering parameter is dropped by OrderingFilter, so the default
-    ordering applies — if ``internal_note`` were orderable, "aaa" would sort
-    first here instead.
+    ordering (newest first) applies. The notes are arranged so that ordering
+    by them would put the older row first — the opposite of the default — so
+    this test fails if the field ever becomes orderable (an ordering oracle
+    over a value the API never returns).
     """
-    older = _event("Older", created_offset=-300, internal_note="zzz")
-    newer = _event("Newer", internal_note="aaa")
+    older = _event("Older", created_offset=-300, internal_note="aaa")
+    newer = _event("Newer", internal_note="zzz")
     default_order = [
         str(pk) for pk in Event.objects.order_by(*_default_ordering()).values_list("pk", flat=True)
     ]

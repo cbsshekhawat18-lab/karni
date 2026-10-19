@@ -263,6 +263,77 @@ class KarniAdminMixin(admin.ModelAdmin):
             self, request, obj, "delete"
         )
 
+    # -- field-level visibility (ADR 0002, P3) --------------------------------
+
+    def hidden_fields(self, request: HttpRequest) -> frozenset[str]:
+        """Fields ``Karni.field_roles`` hides from the requesting user."""
+        from karni.accounts.visibility import hidden_fields
+
+        return hidden_fields(self.model, getattr(request, "user", None))
+
+    def protected_fields(self, request: HttpRequest) -> frozenset[str]:
+        """Fields the requesting user may read but not change (shown read-only)."""
+        from karni.accounts.visibility import protected_fields
+
+        return protected_fields(self.model, getattr(request, "user", None))
+
+    @staticmethod
+    def _head(name: Any) -> str:
+        return str(name).lstrip("^=@$").split("__", 1)[0]
+
+    def get_list_display(self, request: HttpRequest) -> Any:
+        hidden = self.hidden_fields(request)
+        shown = [n for n in super().get_list_display(request) if self._head(n) not in hidden]
+        return shown or ["__str__"]
+
+    def get_list_filter(self, request: HttpRequest) -> Any:
+        hidden = self.hidden_fields(request)
+        kept = []
+        for entry in super().get_list_filter(request):
+            name = entry[0] if isinstance(entry, tuple | list) else entry
+            if isinstance(name, str) and self._head(name) in hidden:
+                continue
+            kept.append(entry)
+        return kept
+
+    def get_search_fields(self, request: HttpRequest) -> Any:
+        hidden = self.hidden_fields(request)
+        return [n for n in super().get_search_fields(request) if self._head(n) not in hidden]
+
+    def get_sortable_by(self, request: HttpRequest) -> Any:
+        hidden = self.hidden_fields(request)
+        return [n for n in super().get_sortable_by(request) if self._head(n) not in hidden]
+
+    def get_fields(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
+        hidden = self.hidden_fields(request)
+        return [n for n in super().get_fields(request, obj) if self._head(n) not in hidden]
+
+    def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
+        hidden = self.hidden_fields(request)
+        if not hidden:
+            return super().get_fieldsets(request, obj)
+        kept = []
+        for title, options in super().get_fieldsets(request, obj):
+            fields = [
+                n
+                for n in options.get("fields", ())
+                if not (isinstance(n, str) and self._head(n) in hidden)
+            ]
+            kept.append((title, {**options, "fields": fields}))
+        return kept
+
+    def get_readonly_fields(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
+        protected = self.protected_fields(request) - self.hidden_fields(request)
+        names = list(super().get_readonly_fields(request, obj))
+        names.extend(sorted(n for n in protected if n not in names))
+        return names
+
+    def lookup_allowed(self, lookup: str, value: Any, request: HttpRequest | None = None) -> bool:
+        """A changelist lookup on a hidden field is a value oracle; refuse it."""
+        if request is not None and self._head(lookup) in self.hidden_fields(request):
+            return False
+        return bool(super().lookup_allowed(lookup, value, request))
+
     def formfield_for_manytomany(
         self, db_field: models.ManyToManyField, request: HttpRequest, **kwargs: Any
     ) -> Any:

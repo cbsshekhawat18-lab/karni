@@ -27,6 +27,14 @@ change and its migration note.
   links, modules, seven status checks each with the command that fixes a
   cross, the `karni context` output and the first agent prompt. `DEBUG`
   only, gone once the project owns `/`; `karni.E505` guards production.
+- Field-level visibility (ADR 0002, P3): `class Karni: field_roles` hides
+  fields per role on the API (absent, never `null`), in `?expand=`, in the
+  per-role OpenAPI schema and in the admin; write-protected fields are
+  refused naming the roles that may; `?ordering=`, filters and `?search=`
+  ignore hidden fields; `@karni/ui` refetches the schema on identity
+  change; `assert_crud` checks visibility. `?ordering=` now accepts only
+  serializer-visible fields; `search_fields` may not name a write-only
+  field (`E131`); `E212` validates `field_roles`.
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

@@ -537,6 +537,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write the reason after the colon: `# karni: allow(<rule>): <why>`.",
     ),
     _e(
+        "E131",
+        "search_fields names a write-only field",
+        "check",
+        "karni.checks.check_viewsets",
+        "A field in APIMeta.write_only never appears in a response, but ?search= over it "
+        "answers whether a row contains a value — a membership oracle on a hidden column.",
+        "Remove the field from search_fields, or take it out of APIMeta.write_only if it "
+        "may be read.",
+    ),
+    _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",
         "warning",
@@ -638,6 +648,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "permissions.",
         "Write Can('events.event:approve'); on EventViewSet it must be an events.event "
         "permission. To gate on another model's permission use HasRole(...).",
+    ),
+    _e(
+        "E212",
+        "Karni.field_roles is malformed, names a missing field or an undeclared role",
+        "check",
+        "karni.meta.field_roles; karni.checks.check_field_roles",
+        "Field-level visibility is declared once on the model as field -> roles; a typo in "
+        "a field name hides nothing, and a role nobody holds hides the field from everyone, "
+        "so both are refused at boot.",
+        "Write field_roles = {'phone': {'read': ['staff', 'support'], 'write': ['staff']}} "
+        "(or 'phone': ['staff'] for read and write) with field names of the model and role "
+        "slugs declared in KARNI_ROLES.",
     ),
     _e(
         "E210",

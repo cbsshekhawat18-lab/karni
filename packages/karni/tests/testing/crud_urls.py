@@ -20,7 +20,29 @@ from rest_framework.permissions import BasePermission
 from karni.api import Access, Authenticated, BaseViewSet, Granted, HasRole, Owned, Public
 from karni.api.routers import KarniRouter
 from karni.pagination import KarniPageNumberPagination
-from tests.testapp.models import Event, Venue
+from tests.testapp.models import Customer, Event, Venue
+
+
+class CustomerViewSet(BaseViewSet):
+    """Field roles on the model (P3): the generated serializer hides per role."""
+
+    model = Customer
+    access = Access(read=Authenticated(), write=Authenticated())
+
+
+class LeakyCustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ["id", "name", "phone", "internal_note", "salary"]
+
+    def validate_name(self, value: str) -> str:  # a real serializer, not a W101 copy
+        return value.strip()
+
+
+class LeakyCustomerViewSet(CustomerViewSet):
+    """A hand-written serializer that ignores the model's field roles."""
+
+    serializer_class = LeakyCustomerSerializer
 
 
 class EventViewSet(BaseViewSet):
@@ -142,6 +164,8 @@ class LeakyEventViewSet(EventViewSet):
 ROUTES = {
     "events": EventViewSet,
     "granted-events": GrantedEventViewSet,
+    "customers": CustomerViewSet,
+    "leaky-customers": LeakyCustomerViewSet,
     "venues": VenueViewSet,
     "public-venues": PublicVenueViewSet,
     "staff-venues": StaffVenueViewSet,

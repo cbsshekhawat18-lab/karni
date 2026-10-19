@@ -206,3 +206,17 @@ but no grant sees nothing. scope_exempt opts a viewset or admin out, with a \
 reason that karni check lists."""
 mechanical = false
 migration = "migrations/0.2.md#row-level-scoping"
+
+[[change]]
+id = "field-visibility"
+kind = "behaviour"
+symbol = 'ordering_fields = "__all__"'
+replacement = "class Karni: field_roles = {...} on the model; ordering_fields on a viewset that needs more"
+summary = """\
+Field-level visibility (ADR 0002, P3): Karni.field_roles hides fields per role on \
+the API, in ?expand=, in the schema and in the admin. ?ordering= now accepts only \
+the fields the request's serializer reads back (write-only and hidden fields no \
+longer order the list), and search_fields may not name a write-only field \
+(karni.E131)."""
+mechanical = false
+migration = "migrations/0.2.md#field-level-visibility"

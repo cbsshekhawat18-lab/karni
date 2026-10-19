@@ -213,6 +213,27 @@ def test_the_client_as_fixture(client_as: Any) -> None:
     assert organizer.get("/api/events/").status_code == 200
 
 
+def test_visibility_passes_for_the_generated_serializer() -> None:
+    """Customer hides note and salary from ``user`` and protects phone (P3)."""
+    report = assert_crud(crud_urls.CustomerViewSet, "user")
+    assert "visibility" in report.passed
+
+
+def test_visibility_catches_a_serializer_that_ignores_field_roles() -> None:
+    message = _fails(
+        crud_urls.LeakyCustomerViewSet,
+        "user",
+        "visibility: GET /api/leaky-customers/ returns internal_note, salary",
+        "field_roles hides from role 'user'",
+    )
+    assert "PATCH phone as role 'user' answered 200" in message
+
+
+def test_visibility_is_skipped_without_field_roles() -> None:
+    report = assert_crud(crud_urls.VenueViewSet, "staff")
+    assert any(entry.startswith("visibility") for entry in report.skipped)
+
+
 def test_generated_values_are_reseeded_per_test() -> None:
     from karni.testing.factories import build
 

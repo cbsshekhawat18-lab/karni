@@ -179,6 +179,35 @@ class LooseSlot(BaseModel):
             raise ValidationError({"ends_at": "ends_at must be after starts_at."})
 
 
+class Customer(BaseModel):
+    """Field-level visibility (tests/api/test_field_roles.py): roles see different fields."""
+
+    name = models.CharField(max_length=100)
+    phone = models.CharField(max_length=30, blank=True, default="")
+    internal_note = models.TextField(blank=True, default="")
+    salary = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    class Karni:
+        field_roles = {
+            "phone": {"read": ["staff", "user"], "write": ["staff"]},
+            "internal_note": ["staff"],
+            "salary": {"read": ["staff"]},
+        }
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Ticket(BaseModel):
+    """Points at ``Customer`` so ``?expand=customer`` is tested under field roles."""
+
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="tickets")
+    subject = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.subject
+
+
 class Review(SoftDeleteModel):
     """``SoftDeleteModel`` alone: integer pk, ``CASCADE`` child of ``Book``."""
 

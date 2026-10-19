@@ -65,21 +65,45 @@ _CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}
 _IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
-def generate_schema(urlconf: str | None = None, *, cached: bool = False) -> dict[str, Any]:
+def _identity(user: Any) -> tuple[str, ...] | None:
+    """What decides a user's view of the schema: superuser, else their roles."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    if getattr(user, "is_superuser", False):
+        return ("*",)
+    from karni.accounts.visibility import role_names
+
+    return tuple(sorted(role_names(user)))
+
+
+def generate_schema(
+    urlconf: str | None = None, *, cached: bool = False, user: Any = None
+) -> dict[str, Any]:
     """The project's OpenAPI document as plain JSON data (what ``/api/schema/`` serves).
 
-    ``cached=True`` reuses the document within the process for the same
-    URLconf and router (the API test helpers validate many responses).
+    The document is generated for ``user`` — anonymous when ``None`` — because
+    ``Karni.field_roles`` makes the schema per role (ADR 0002, P3): a field a
+    role may not read is absent from its document. ``cached=True`` reuses the
+    document within the process for the same URLconf, router and role set
+    (the API test helpers validate many responses).
     """
     from django.conf import settings
     from drf_spectacular.generators import SchemaGenerator
 
     from karni.api.routers import resolve_router
 
-    key = (urlconf or settings.ROOT_URLCONF, id(resolve_router()))
+    key = (urlconf or settings.ROOT_URLCONF, id(resolve_router()), _identity(user))
     if cached and key in _CACHE:
         return _CACHE[key]
-    schema = SchemaGenerator(urlconf=urlconf).get_schema(request=None, public=True)
+    request = None
+    if _identity(user) is not None:
+        from rest_framework.request import Request
+        from rest_framework.test import APIRequestFactory
+
+        request = Request(APIRequestFactory().get("/api/schema/"))
+        request.user = user
+        request.auth = None  # resolved, as after real authentication; the generator reads it
+    schema = SchemaGenerator(urlconf=urlconf).get_schema(request=request, public=True)
     data: dict[str, Any] = json.loads(json.dumps(schema, default=str))
     _CACHE[key] = data
     return data

@@ -200,7 +200,12 @@ class Event(BaseModel):
         owner_field = "organizer"          # the `own` scope (default: created_by)
         scope_paths = {"venue": "venue"}   # keys `related:` may use
         actions = ["approve"]              # permissions besides view/add/change/delete
+        field_roles = {"internal_note": ["staff"]}   # who sees / changes a field
 ```
+
+`field_roles` is field-level visibility ([API reference](api.md#field-visibility)):
+a role can see a row without seeing every field of it, on the API, in
+`?expand=`, in the schema and in the admin.
 
 The defaults are deliberately boring: a model with no `Karni` class is owned
 by whoever created it, has no scope paths and the four standard actions. The

@@ -8,6 +8,7 @@ import { http, HttpResponse } from "msw";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { server } from "../../tests/msw/server";
+import { karniKeys } from "../hooks/keys";
 import { createKarniClient } from "../schema/client";
 import { KarniProvider } from "../schema/provider";
 import { AuthProvider, useAuth } from "./provider";
@@ -84,6 +85,36 @@ describe("AuthProvider + useAuth", () => {
     });
     expect(result.current.status).toBe("anonymous");
     expect(result.current.user).toBeNull();
+  });
+
+  it("invalidates the cached schema when the identity changes (per-role schema)", async () => {
+    server.use(
+      http.post(`${BASE}/auth/login/`, () => HttpResponse.json({ access: "a1", refresh: "r1" })),
+      http.get(`${BASE}/auth/me/`, () => HttpResponse.json(USER)),
+      http.post(`${BASE}/auth/logout/`, () => new HttpResponse(null, { status: 204 })),
+    );
+    const { wrapper, queryClient } = setup();
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("anonymous"));
+    const stale = { resources: {}, authMode: "jwt" };
+    queryClient.setQueryData(karniKeys.schema(), stale);
+    expect(queryClient.getQueryState(karniKeys.schema())?.isInvalidated).toBe(false);
+
+    await act(async () => {
+      await result.current.login("ada@example.com", "pw");
+    });
+    await waitFor(() =>
+      expect(queryClient.getQueryState(karniKeys.schema())?.isInvalidated).toBe(true),
+    );
+
+    queryClient.setQueryData(karniKeys.schema(), stale); // "fresh" again for this user
+    expect(queryClient.getQueryState(karniKeys.schema())?.isInvalidated).toBe(false);
+    await act(async () => {
+      await result.current.logout();
+    });
+    await waitFor(() =>
+      expect(queryClient.getQueryState(karniKeys.schema())?.isInvalidated).toBe(true),
+    );
   });
 
   it("throws a descriptive error outside <AuthProvider>", () => {

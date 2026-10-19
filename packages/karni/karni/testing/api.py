@@ -99,6 +99,7 @@ CHECKS: Final = (
     "denials",
     "pagination",
     "filtering",
+    "visibility",
     "schema",
 )
 """Every check :func:`assert_crud` runs (names accepted by ``skip=``)."""
@@ -613,7 +614,7 @@ class _Crud:
         if "schema" in self.skip:
             return
         path = url.split("?", 1)[0]
-        document = generate_schema(cached=True)
+        document = generate_schema(cached=True, user=self.user)  # the schema this role is served
         operation = find_operation(document, path, method)
         if operation is None:
             self.schema_errors.append(f"{method} {path} is not in the OpenAPI schema")
@@ -697,6 +698,7 @@ class _Crud:
                 ("denials", lambda: self.check_denials(row)),
                 ("pagination", self.check_pagination),
                 ("filtering", self.check_filtering),
+                ("visibility", self.check_visibility),
                 ("schema", self.check_schema),
             ):
                 if name in self.skip:
@@ -911,10 +913,64 @@ class _Crud:
                 if str(first.pk) not in _ids(response.json()):
                     self.fail(f"filtering: GET {url}?search={token} did not find row {first.pk}")
 
+    def check_visibility(self) -> None:
+        """Fields ``Karni.field_roles`` hides from the role are absent everywhere (P3)."""
+        from karni.accounts.visibility import hidden_fields, protected_fields
+
+        model = self.resource.model
+        hidden = hidden_fields(model, self.user)
+        protected = protected_fields(model, self.user) - hidden
+        if not hidden and not protected:
+            self.report.skipped.append("visibility (field_roles hides nothing from this role)")
+            return
+        row = self.row()
+        who = f"role {self.role!r}" if self.role else "this user"
+        for action, url in (
+            ("list", self.resource.list_url()),
+            ("retrieve", self.resource.detail_url(row.pk)),
+        ):
+            target = row if action == "retrieve" else None
+            if not self.expected(action, self.user, target).allowed:
+                continue
+            response = self.call("visibility", self.user, "GET", url)
+            if response.status_code != 200:
+                continue
+            body = response.json()
+            items = body.get("results", []) if action == "list" else [body]
+            for item in items:
+                leaked = sorted(hidden & set(item))
+                if leaked:
+                    self.fail(
+                        f"visibility: GET {url} returns {', '.join(leaked)}, which "
+                        f"field_roles hides from {who} (hidden fields must be absent)"
+                    )
+                    break
+        view = _view(self.resource, "retrieve", self.user)
+        published = set(view.get_serializer_class()(context=view.get_serializer_context()).fields)
+        documented = sorted(hidden & published)
+        if documented:
+            self.fail(
+                f"visibility: the serializer (and so the schema) for {who} still lists "
+                f"{', '.join(documented)}"
+            )
+        if protected and self.expected("partial_update", self.user, row).allowed:
+            name = sorted(protected)[0]
+            current = getattr(row, name, None)
+            sent = _json_value(current) if current is not None else ""
+            response = self.call(
+                "visibility", self.user, "PATCH", self.resource.detail_url(row.pk), {name: sent}
+            )
+            if response.status_code != 400 or name not in response.json():
+                self.fail(
+                    f"visibility: PATCH {name} as {who} answered {response.status_code}; "
+                    f"field_roles lets only {', '.join(protected_roles(model, name))} change "
+                    "it, so the request must be refused naming the field"
+                )
+
     def check_schema(self) -> None:
         from karni.testing.schema import find_operation, generate_schema
 
-        document = generate_schema(cached=True)
+        document = generate_schema(cached=True, user=self.user)
         list_path = self.resource.list_url()
         probe = self.resource.detail_url(uuid.UUID(int=0))
         for method, path, action in (
@@ -945,6 +1001,12 @@ class _Crud:
 
 def _field_value(row: Any, name: str) -> Any:
     return getattr(row, name, None) if row is not None else None
+
+
+def protected_roles(model: type[models.Model], name: str) -> tuple[str, ...]:
+    from karni.accounts.visibility import allowed_roles
+
+    return allowed_roles(model, name, "write")
 
 
 def _filter_candidate(

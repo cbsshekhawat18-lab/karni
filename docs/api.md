@@ -197,6 +197,47 @@ lists every viewset that sets it). `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
 (see [accounts](accounts.md#roles-and-object-permissions)).
 
+## Field visibility
+
+A role can see a record without seeing every field of it (ADR 0002, P3).
+Declare it once on the model; no serializer per role anywhere:
+
+```python
+class Customer(BaseModel):
+    ...
+
+    class Karni:
+        field_roles = {
+            "phone": {"read": ["staff", "support"], "write": ["staff"]},
+            "internal_note": ["staff"],            # shorthand: read and write
+        }
+```
+
+The role slugs are the project's own (`KARNI_ROLES`); a field not listed
+stays visible to whoever may read the row, and superusers see everything.
+The generated serializer applies the rule per request:
+
+- a field the user may not **read** is **absent** from the payload, never
+  `null` (a `null` would say the field exists). It is absent from `?expand=`
+  embeddings too, because nested serializers are generated the same way;
+- a field the user may read but not **write** is published read-only, and an
+  explicit attempt to send it is refused with a 400 naming the field and
+  the roles that may: `{"phone": ["Only roles staff may change phone."]}`;
+- `?ordering=`, filters and `?search=` on a hidden field are ignored — a
+  ranking or a match is a value oracle on a column the user cannot see. The
+  same applies to `APIMeta.write_only` fields, which never order and never
+  search (`karni.E131` refuses a `search_fields` entry that names one).
+
+The OpenAPI document follows: `/api/schema/` describes the fields *the
+requesting user* may see, and marks the ones they may not write read-only,
+so `ResourceTable`, `ResourceForm` and `ResourceDetail` render only those.
+`@karni/ui` invalidates its cached schema when the identity changes, so a
+login or logout refetches the right document. The [admin](admin.md#field-visibility)
+honours the same rules. `karni check` refuses a `field_roles` entry naming
+a field the model does not have or a role `KARNI_ROLES` does not declare
+(`E212`): a role nobody holds would hide the field from everyone.
+`assert_crud(ViewSet, "role")` checks all of it in its `visibility` step.
+
 ## APIMeta — model-side API metadata
 
 ```python

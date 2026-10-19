@@ -419,6 +419,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the reason after the colon: `# karni: allow(<rule>): <why>`.
 
+<a id="e131"></a>
+
+#### E131 — search_fields names a write-only field
+
+*system check (error)* · from `karni.checks.check_viewsets`
+
+**Why Karni objects.** A field in APIMeta.write_only never appears in a response, but ?search= over it answers whether a row contains a value — a membership oracle on a hidden column.
+
+**Fix.** Remove the field from search_fields, or take it out of APIMeta.write_only if it may be read.
+
 ### 2xx · Accounts
 
 <a id="e201"></a>
@@ -530,6 +540,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Granted() resolves to the viewset's model and the current action; an unsafe custom @action the model never declared has no permission to check, and a viewset without a model has nothing to resolve against. Evaluating it outside a viewset is the same error.
 
 **Fix.** Add the action to `class Karni: actions = [...]` on the model and grant 'app.model:<action>' in KARNI_ROLES, give the action its own @action(access=...), set `model = ...` on the viewset, or evaluate through action_predicate(view, access).
+
+<a id="e212"></a>
+
+#### E212 — Karni.field_roles is malformed, names a missing field or an undeclared role
+
+*system check (error)* · from `karni.meta.field_roles; karni.checks.check_field_roles`
+
+**Why Karni objects.** Field-level visibility is declared once on the model as field -> roles; a typo in a field name hides nothing, and a role nobody holds hides the field from everyone, so both are refused at boot.
+
+**Fix.** Write field_roles = {'phone': {'read': ['staff', 'support'], 'write': ['staff']}} (or 'phone': ['staff'] for read and write) with field names of the model and role slugs declared in KARNI_ROLES.
 
 ### 3xx · Admin
 
