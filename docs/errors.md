@@ -697,6 +697,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix every setting the message lists. KARNI_VALIDATE = False skips validation (not recommended).
 
+<a id="e505"></a>
+
+#### E505 — The welcome page is reachable with DEBUG off
+
+*system check (error)* · from `karni.checks.check_welcome_route`
+
+**Why Karni objects.** The welcome page (karni.welcome) introspects the project at request time — models, modules, status checks, the agent context — for first boot in development; served in production it would describe the deployment to anyone who opens the site.
+
+**Fix.** Mount it only through `*karni.welcome.welcome_urls()` at the end of urlpatterns (it returns no route when DEBUG is False) and remove any hand-written path('', WelcomeView.as_view()).
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>

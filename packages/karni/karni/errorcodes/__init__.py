@@ -809,6 +809,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "(not recommended).",
     ),
     _e(
+        "E505",
+        "The welcome page is reachable with DEBUG off",
+        "check",
+        "karni.checks.check_welcome_route",
+        "The welcome page (karni.welcome) introspects the project at request time — models, "
+        "modules, status checks, the agent context — for first boot in development; served "
+        "in production it would describe the deployment to anyone who opens the site.",
+        "Mount it only through `*karni.welcome.welcome_urls()` at the end of urlpatterns "
+        "(it returns no route when DEBUG is False) and remove any hand-written "
+        "path('', WelcomeView.as_view()).",
+    ),
+    _e(
         "W501",
         "The throttle cache is private to each process",
         "warning",

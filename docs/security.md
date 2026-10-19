@@ -65,6 +65,12 @@ P2): a staff user with permissions but no grant sees nothing, and an admin
 that opts out needs a reason that `karni check` lists. No logo unless
 `KARNI_ADMIN_LOGO` says so.
 
+**Welcome page.** `/` on first boot (`karni.welcome`) is served only while
+`DEBUG` is on and only until the project defines its own root route; with
+`DEBUG` off the route is not mounted, the view answers 404, and system check
+`karni.E505` fails the boot if it is reachable anyway. It shows the presence
+or absence of configuration (a database, Redis, a worker), never a value.
+
 **Modules.** `karni-payments` verifies every webhook signature before it
 touches a payment and treats replays as no-ops.
 

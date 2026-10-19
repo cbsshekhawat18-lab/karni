@@ -205,6 +205,36 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
     ]
 
 
+@checks.register(checks.Tags.urls)
+def check_welcome_route(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E505: the welcome page must be unreachable with ``DEBUG`` off.
+
+    ``karni.welcome.welcome_urls()`` returns no route when ``DEBUG`` is
+    false; this catches a hand-written ``path("", WelcomeView.as_view())``.
+    """
+    from django.conf import settings
+    from django.urls import Resolver404, resolve
+
+    if settings.DEBUG:
+        return []
+    try:
+        match = resolve("/")
+    except Resolver404:
+        return []
+    from karni.welcome.views import WelcomeView
+
+    if getattr(match.func, "view_class", None) is not WelcomeView:
+        return []
+    return [
+        check_error(
+            "E505",
+            "The Karni welcome page answers / while DEBUG is False: it describes the "
+            "project (models, modules, status) to anyone who opens the site.",
+            hint=_fix("E505"),
+        )
+    ]
+
+
 @checks.register(checks.Tags.admin)
 def check_admin_scope(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E210: an admin that opts out of row scope must say why.

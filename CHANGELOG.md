@@ -22,6 +22,11 @@ change and its migration note.
   admin shows only the rows the user's grants reach; `scope_exempt` with a
   reason that `karni check` lists; `assert_isolated` gains the `grant`
   dimension and probes expansion, filters, search, ordering and the admin.
+- Welcome page: `/` on first boot (`karni.welcome.welcome_urls()`, mounted
+  last by the scaffold) shows the project live — models with admin and API
+  links, modules, seven status checks each with the command that fixes a
+  cross, the `karni context` output and the first agent prompt. `DEBUG`
+  only, gone once the project owns `/`; `karni.E505` guards production.
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

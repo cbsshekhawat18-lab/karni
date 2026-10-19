@@ -1,17 +1,20 @@
 """URL configuration for {{ cookiecutter.project_name }}.
 
 Routes: Django admin, the OpenAPI schema and Swagger UI (drf-spectacular),
-Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), and
-Karni's health endpoints (/health/ liveness, /health/ready/ readiness).
-Add project routes to ``urlpatterns`` below; to replace a single Karni
-endpoint, declare your ``path(...)`` for it BEFORE the include — first
-match wins.
+Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), Karni's
+health endpoints (/health/ liveness, /health/ready/ readiness) and, last,
+the welcome page at "/" while DEBUG is on. Add project routes to
+``urlpatterns`` below; to replace a single Karni endpoint, declare your
+``path(...)`` for it BEFORE the include — first match wins. Your own
+``path("", ...)`` replaces the welcome page the same way.
 """
 
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from karni.welcome import welcome_urls
 
 urlpatterns = [
     # KARNI_ADMIN_PATH (env, default "admin/"): move the admin off the guessable path.
@@ -21,4 +24,6 @@ urlpatterns = [
     path("api/auth/", include("karni.accounts.urls")),
     path("api/", include("karni.api.urls")),
     path("health/", include("karni.health.urls")),
+    # Only while DEBUG is on, and only until a route above answers "/".
+    *welcome_urls(),
 ]

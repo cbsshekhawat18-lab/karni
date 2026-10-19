@@ -69,6 +69,14 @@ karni serve --local                  # Django on http://127.0.0.1:8000
 cd frontend && npm install && npm run dev   # the app on http://localhost:5173
 ```
 
+Open `http://127.0.0.1:8000/` first: Karni's welcome page, generated from
+the project as it is right now — your models with their admin and API
+links, seven status checks (database, migrations, superuser, seed data,
+Redis, worker, frontend) each with the command that fixes a cross, the live
+`karni context` output and the first prompt to hand an agent. It is served
+only while `DEBUG` is on and disappears the moment you define your own
+`/` route.
+
 Sign in with the demo login `karni seed` printed (`demo@example.com` /
 `karni-password`), open **Events**, create one, and look at
 `http://127.0.0.1:8000/api/docs/` for the OpenAPI document everything was
