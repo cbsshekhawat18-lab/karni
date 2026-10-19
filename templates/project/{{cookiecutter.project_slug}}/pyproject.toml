@@ -24,3 +24,8 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 testpaths = ["tests", "*/tests"]
 # Karni's architecture rules run as a SEPARATE invocation (never via addopts):
 #   pytest --pyargs karni.testing.architecture
+
+[tool.karni]
+# The Karni release this project was generated for. `karni upgrade` starts
+# from here (or from the installed karni, whichever is newer).
+baseline = "{{ cookiecutter.karni_baseline }}"

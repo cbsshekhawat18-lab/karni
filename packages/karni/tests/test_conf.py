@@ -425,3 +425,24 @@ def test_karni_settings_creates_the_sqlite_folder_of_a_preset_database(tmp_path)
     ns = {"DATABASES": {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": str(target)}}}
     karni_settings(ns, env_name="dev")
     assert target.parent.is_dir() and not target.exists()
+
+
+def test_karni_cache_picks_redis_or_locmem(monkeypatch: pytest.MonkeyPatch) -> None:
+    import environ
+
+    from karni.conf.base import _caches
+    from karni.exceptions import KarniImproperlyConfigured
+
+    monkeypatch.setenv("KARNI_CACHE", "locmem")
+    assert _caches(environ.Env())["default"]["BACKEND"].endswith("LocMemCache")
+    monkeypatch.setenv("KARNI_CACHE", "redis")
+    monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:6379/3")
+    redis = _caches(environ.Env())["default"]
+    assert redis["BACKEND"].endswith("RedisCache")
+    monkeypatch.setenv("KARNI_CACHE", "memcached")
+    with pytest.raises(KarniImproperlyConfigured, match="E507: KARNI_CACHE"):
+        _caches(environ.Env())
+
+
+def test_login_lands_on_the_admin(make_settings) -> None:
+    assert make_settings("dev")["LOGIN_REDIRECT_URL"] == "/admin/"

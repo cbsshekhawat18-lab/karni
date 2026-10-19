@@ -191,3 +191,19 @@ def test_the_production_check_catches_a_hand_mounted_route(settings: Any) -> Non
     assert check_welcome_route() == []  # welcome_urls() mounted nothing
     settings.DEBUG = True
     assert check_welcome_route() == []  # development: nothing to report
+
+
+def test_media_urls_serve_uploads_only_in_debug_with_local_storage(settings: Any) -> None:
+    from karni.welcome import media_urls
+
+    local = {"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"}}
+    settings.STORAGES = local
+    settings.MEDIA_URL = "/media/"
+    settings.MEDIA_ROOT = "/nonexistent/media"
+    settings.DEBUG = False
+    assert media_urls() == []
+    settings.DEBUG = True
+    (route,) = media_urls()
+    assert route.pattern.regex.match("media/covers/pic.png")
+    settings.STORAGES = {"default": {"BACKEND": "karni.storage.S3Storage"}}
+    assert media_urls() == []

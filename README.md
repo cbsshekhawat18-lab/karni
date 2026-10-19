@@ -78,9 +78,9 @@ Numbers come from commands in this repository; nothing is estimated.
 
 | | Measured |
 |---|---|
-| The reference app, [EventHub](examples/eventhub/README.md): an event ticketing platform with payments, a Celery e-mail, an organizer dashboard with CSV export and four roles | **582 lines of project code** (models 83, viewsets 87, pages 291, other 121) — `python examples/eventhub/scripts/loc.py --pristine <karni new output>`; the first build was 656 lines, and the [friction it found](examples/eventhub/FRICTION.md) became framework fixes |
+| The reference app, [EventHub](examples/eventhub/README.md): an event ticketing platform with payments, a Celery e-mail, an organizer dashboard with CSV export and four roles | **593 lines of project code** (models 83, viewsets 87, pages 291, other 132) — `python examples/eventhub/scripts/loc.py --pristine <karni new output>`; the first build was 656 lines, and the [friction it found](examples/eventhub/FRICTION.md) became framework fixes |
 | EventHub's tests | 14 backend tests (`assert_crud`, `assert_isolated`, the book → pay → webhook → e-mail path) and 3 Playwright journeys against the running stack, in CI on every push |
-| Karni's own suites | `karni` 1,150, `karni-cli` 375, `karni-payments` 127, `@karni/ui` 442, `@karni/payments-ui` 14 tests; ruff, mypy, ESLint and tsc clean |
+| Karni's own suites | `karni` 1,310, `karni-cli` 378, `karni-payments` 127, `karni-approvals` 28, `karni-impersonation` 22, `@karni/ui` 454, `@karni/payments-ui` 14, `@karni/approvals-ui` 7, `@karni/impersonation-ui` 5 tests; ruff, mypy, ESLint and tsc clean |
 | `karni rules` (the conventions an agent reads first) | 409 cl100k tokens for 33 rules |
 | Token cost of building an app with an agent | not measured yet — this README states no figure until it is |
 
@@ -163,7 +163,7 @@ the project with an AI agent — and accept a younger framework for it.
 **How much code do I actually write per model?**
 The model, an `access` declaration, and whatever is specific to your domain.
 The reference application, an event ticketing platform with payments, a
-Celery e-mail, an organizer dashboard and four roles, is 582 lines of
+Celery e-mail, an organizer dashboard and four roles, is 593 lines of
 project code in total (models 83, viewsets 87, pages 291, other 121);
 everything else — serializers, permission checks, admin, forms, tables,
 tests, seed data — comes from the framework.

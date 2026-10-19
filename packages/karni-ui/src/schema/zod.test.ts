@@ -182,3 +182,47 @@ describe("zodFor — synthetic corners", () => {
     expect(schema.safeParse({}).success).toBe(true);
   });
 });
+
+describe("relation inputs left empty", () => {
+  const REQUIRED = "This field is required.";
+  function relationSchema(overrides: Partial<FieldDef>): ResourceSchema {
+    return {
+      resource: "events",
+      fields: [
+        makeField({
+          name: "venue",
+          kind: "relation",
+          relation: { resource: "venues", many: false },
+          relationValueType: "uuid",
+          required: true,
+          nullable: false,
+          ...overrides,
+        }),
+      ],
+    } as unknown as ResourceSchema;
+  }
+
+  it("a required relation says required instead of 'Invalid uuid'", () => {
+    const schema = zodFor(relationSchema({}), "create");
+    for (const empty of ["", null, undefined]) {
+      const result = schema.safeParse({ venue: empty });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0]?.message).toBe(REQUIRED);
+    }
+    expect(schema.safeParse({ venue: "3f1c3a8e-4a8b-4e1e-9c7a-9d0f0f6b5a21" }).success).toBe(true);
+  });
+
+  it("an optional nullable relation clears, an optional non-nullable one is omitted", () => {
+    const nullable = zodFor(relationSchema({ required: false, nullable: true }), "create");
+    expect(nullable.parse({ venue: "" })).toEqual({ venue: null });
+    expect(nullable.parse({ venue: null })).toEqual({ venue: null });
+    const plain = zodFor(relationSchema({ required: false, nullable: false }), "create");
+    expect(plain.parse({ venue: "" })).toEqual({});
+  });
+
+  it("coerces integer ids typed as strings", () => {
+    const schema = zodFor(relationSchema({ relationValueType: "integer" }), "create");
+    expect(schema.parse({ venue: "42" })).toEqual({ venue: 42 });
+    expect(schema.safeParse({ venue: "forty" }).success).toBe(false);
+  });
+});

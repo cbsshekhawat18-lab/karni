@@ -49,7 +49,11 @@ def _no_ambient_templates_env(monkeypatch: pytest.MonkeyPatch):
 @pytest.fixture(autouse=True)
 def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite's expectations are for a project without an interpreter around it."""
+    from karni_cli import project as project_mod
+
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
+    # The suite's own interpreter has Django and karni; tests of that fallback restore it.
+    monkeypatch.setattr(project_mod, "_running_interpreter", lambda: None)
 
 
 @pytest.fixture(autouse=True)

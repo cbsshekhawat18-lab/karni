@@ -62,7 +62,7 @@ When a provider detects a store for the project:
 Everything `--with-history` appends — headings included — is capped at
 **~300 tokens**, measured as characters ÷ 4 (the same approximation the
 `karni rules` 400-token budget test uses; about 1,200 characters). With the
-inventory (under ~200 tokens for a typical project) the combined output stays
+inventory (a few hundred tokens for a typical project) the combined output stays
 within a few hundred tokens. The cap is enforced by Karni, not by providers:
 a longer brief is cut at a line boundary and ends with a line naming the
 command that prints the full brief, e.g.

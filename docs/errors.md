@@ -747,6 +747,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Mount it only through `*karni.welcome.welcome_urls()` at the end of urlpatterns (it returns no route when DEBUG is False) and remove any hand-written path('', WelcomeView.as_view()).
 
+<a id="e506"></a>
+
+#### E506 — A setting names a dotted path that cannot be imported
+
+*exception* · from `karni.imports.import_setting (KARNI_SEARCH_PROVIDER, KARNI_API_ROUTER, KARNI_ADMIN_SITE, KARNI_THUMBNAILER, ...)`
+
+**Why Karni objects.** Settings that name a class or function by dotted path are resolved when first used; a typo or a package missing from the environment would otherwise surface as a bare ModuleNotFoundError far from the setting.
+
+**Fix.** Fix the path the message names ('package.module.Object') or install the package that provides it.
+
+<a id="e507"></a>
+
+#### E507 — KARNI_CACHE names an unknown cache backend
+
+*exception* · from `karni.conf (KARNI_CACHE)`
+
+**Why Karni objects.** The default cache (throttle counters, response cache, locks) is Redis at REDIS_URL; `locmem` is the in-process alternative for a host run without Redis.
+
+**Fix.** Set KARNI_CACHE to `redis` (the default) or `locmem`; for anything else define CACHES yourself in settings.py.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>
@@ -1318,6 +1338,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** These commands read files of the current project only.
 
 **Fix.** Pass an existing file path inside the project.
+
+<a id="c011"></a>
+
+### C011 — pytest is not installed in the project interpreter
+
+*karni command* · from `karni test`
+
+**Why Karni objects.** karni test runs `python -m pytest` through the project's interpreter (its .venv, the active virtualenv, or the compose service); pytest and pytest-django are in the project's dev dependency group, not in karni.
+
+**Fix.** Install them there: pip install pytest pytest-django (or `uv sync` for the dev group), then run karni test again.
 
 <a id="c101"></a>
 

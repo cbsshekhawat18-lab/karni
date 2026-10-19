@@ -39,6 +39,8 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import update_last_login
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.exceptions import AuthenticationFailed, MethodNotAllowed, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -426,6 +428,7 @@ class EmailVerifyView(APIView):
         return Response({"detail": "Email address verified."})
 
 
+@extend_schema(request=None, responses={200: OpenApiTypes.OBJECT})
 class EmailVerifyResendView(APIView):
     """``POST email/verify/resend/`` — email a fresh verification link.
 
@@ -493,6 +496,7 @@ class EmailChangeConfirmView(APIView):
         return Response({"detail": "Email address updated."})
 
 
+@extend_schema(request=None, responses={204: None})
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class CsrfView(APIView):
     """``GET csrf/`` — CSRF cookie bootstrap for SPAs (amendment A4).

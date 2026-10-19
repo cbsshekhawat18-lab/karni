@@ -50,6 +50,7 @@ packages = ["karni_impersonation"]
 artifacts = ["karni_impersonation/AGENTS.fragment.md", "karni_impersonation/templates/**"]
 
 [tool.hatch.build.targets.sdist]
+exclude = ["ui/", "tests/"]
 artifacts = ["karni_impersonation/AGENTS.fragment.md", "karni_impersonation/templates/**"]
 
 [tool.ruff]

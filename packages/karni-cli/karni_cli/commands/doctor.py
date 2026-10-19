@@ -52,10 +52,21 @@ def tool_version(name: str) -> str | None:
     return out[0] if proc.returncode == 0 and out else None
 
 
+def _display(path: Path, project: Path) -> str:
+    """``path`` relative to the project when it lives inside it, else as given.
+
+    The quickstart's layout keeps the venv one level above the project.
+    """
+    try:
+        return str(path.relative_to(project))
+    except ValueError:
+        return str(path)
+
+
 def _interpreter(project: Path, service: str) -> str:
     python = project_mod.venv_python(project)
     if python is not None:
-        return f"{python.relative_to(project)} (project commands run here)"
+        return f"{_display(python, project)} (project commands run here)"
     if project_mod.compose_service_running(project, service):
         return f'docker compose service "{service}" (running)'
     return (
@@ -76,7 +87,7 @@ def _manifest(project: Path) -> str:
     found = find_manifest(project, None)
     if found is None:
         return "@karni/ui manifest absent — `npm install` in frontend/ (COMPONENTS/HOOKS hidden)"
-    return f"@karni/ui manifest: {found.relative_to(project)}"
+    return f"@karni/ui manifest: {_display(found, project)}"
 
 
 def _adapters(project: Path) -> str:

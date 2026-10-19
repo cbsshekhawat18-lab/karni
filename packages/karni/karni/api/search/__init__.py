@@ -23,7 +23,8 @@ from typing import TYPE_CHECKING, Any
 from django.conf import settings
 from django.core.signals import setting_changed
 from django.dispatch import receiver
-from django.utils.module_loading import import_string
+
+from karni.imports import import_setting
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -87,7 +88,7 @@ def get_search_provider() -> SearchProvider:
     global _provider
     if _provider is None:
         path: str = getattr(settings, "KARNI_SEARCH_PROVIDER", DEFAULT_SEARCH_PROVIDER)
-        _provider = import_string(path)()
+        _provider = import_setting("KARNI_SEARCH_PROVIDER", path)()
     return _provider
 
 

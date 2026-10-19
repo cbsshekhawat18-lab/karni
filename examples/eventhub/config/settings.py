@@ -29,3 +29,13 @@ MIDDLEWARE += [  # noqa: F821
 # REST_FRAMEWORK["PAGE_SIZE"] = 25
 # CELERY_TASK_TIME_LIMIT = 600
 KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "events.payments.validate_checkout"
+
+# The four roles (anonymous is the absence of one). EventHub gates with
+# HasRole(...) in events/viewsets.py, so organizer and attendee carry no
+# grants; declaring them makes `migrate` create the groups and `karni context`
+# report them.
+KARNI_ROLES = {
+    "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+    "organizer": {"name": "Organizer", "description": "Creates events and sells tickets"},
+    "attendee": {"name": "Attendee", "description": "Browses, books and pays"},
+}

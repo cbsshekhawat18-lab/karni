@@ -41,6 +41,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ACCOUNTS_LINKS": "Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders.",
     "KARNI_AUTH_THROTTLE_RATES": "Per-scope auth throttle overrides as a JSON object; `null` disables a scope.",
     "KARNI_STORAGE": "`local` (filesystem) or `s3` (any S3-compatible service; needs `karni[s3]`).",
+    "KARNI_CACHE": "`redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process).",
     "KARNI_SEARCH_PROVIDER": "Dotted path of the `SearchProvider` behind `?search=`; the PostgreSQL provider falls back to portable search on other databases.",
     "KARNI_API_MAX_EXPAND_DEPTH": "Deepest `?expand=` path allowed (levels of nesting).",
     "KARNI_API_ROUTER": "Zero-argument factory returning the router `karni.api.urls` exposes.",

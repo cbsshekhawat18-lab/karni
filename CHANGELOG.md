@@ -90,6 +90,22 @@ change and its migration note.
   (`<ImpersonationBanner/>`); `useAuth().adoptTokens` in `@karni/ui`.
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
+- The launch audit's remaining findings: `karni migrate` creates `pg_trgm`
+  (`?search=` no longer 500s on a fresh PostgreSQL); `KARNI_CACHE=locmem`
+  runs a project without Redis and the quickstart uses it, with pytest in
+  its install line; `karni.welcome.media_urls()` serves uploads in
+  development; `karni --version`; `karni doctor` with the venv outside the
+  project; `karni context` (and the MCP `context` tool) from the interpreter
+  running karni-cli; `karni serve`/`karni worker` pass SIGTERM on to the
+  server; `karni test` says when pytest is missing (`C011`); `karni check`
+  runs the frontend's ESLint next to jscpd; the scaling check also measures
+  every list with `?expand=`; a `KARNI_*` dotted path that cannot be imported
+  is `E506` naming the setting (`E507` for `KARNI_CACHE`); generated detail
+  pages expand their relations; a required relation left empty says
+  "Required" and an optional one clears; `[tool.karni] baseline` in a new
+  project's pyproject, so `karni upgrade` never reports changes a fresh
+  scaffold already satisfies; `LOGIN_REDIRECT_URL` defaults to the admin;
+  the seed login says "superuser"; the two schema warnings are gone.
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

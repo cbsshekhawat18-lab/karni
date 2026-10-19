@@ -13,7 +13,10 @@ Ctrl-C work; scripted and agent runs (no TTY) keep ``-T``.
 
 from __future__ import annotations
 
+import contextlib
+import importlib.util
 import os
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -66,11 +69,14 @@ def require_project(start: Path | None = None) -> Path:
 
 
 def venv_python(project: Path) -> Path | None:
-    """The project's interpreter: its ``.venv``, else the active virtualenv.
+    """The project's interpreter: its ``.venv``, else the active virtualenv, else this one.
 
     ``VIRTUAL_ENV`` covers the host setup where one activated venv holds
-    karni-cli and the project's dependencies (the quickstart); a pipx-installed
-    ``karni`` sets no such variable and keeps looking for the project's own.
+    karni-cli and the project's dependencies (the quickstart). The interpreter
+    running karni-cli counts when it has Django and karni installed — the
+    quickstart's venv invoked by path, an MCP host that inherited no
+    ``VIRTUAL_ENV``. A pipx-installed ``karni`` has neither and keeps looking
+    for the project's own.
     """
     python = project / ".venv" / "bin" / "python"
     if python.exists():
@@ -80,7 +86,14 @@ def venv_python(project: Path) -> Path | None:
         candidate = Path(active) / "bin" / "python"
         if candidate.exists():
             return candidate
-    return None
+    return _running_interpreter()
+
+
+def _running_interpreter() -> Path | None:
+    """``sys.executable`` when it can import Django and karni (never imported here)."""
+    if importlib.util.find_spec("django") is None or importlib.util.find_spec("karni") is None:
+        return None
+    return Path(sys.executable)
 
 
 def compose_service_running(project: Path, service: str) -> bool:
@@ -168,7 +181,39 @@ def run_python(
     always inherited); ``interactive=True`` also asks docker for a TTY.
     """
     cmd = python_command(project, args, docker=docker, service=service, interactive=interactive)
-    return subprocess.run(cmd, cwd=project, text=True, capture_output=capture, check=False)
+    return run_process(cmd, cwd=project, capture=capture)
+
+
+def run_process(
+    cmd: list[str], *, cwd: Path, capture: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """``subprocess.run`` that passes SIGTERM on to the child.
+
+    ``karni serve`` and ``karni worker`` wrap a real server: a script or an
+    agent that stops the wrapper must stop the server too, not leak it.
+    Ctrl-C needs no forwarding (the terminal signals the whole group).
+    """
+    pipe = subprocess.PIPE if capture else None
+    with subprocess.Popen(cmd, cwd=cwd, text=True, stdout=pipe, stderr=pipe) as proc:
+
+        def forward(signum: int, _frame: Any) -> None:
+            with contextlib.suppress(ProcessLookupError):
+                proc.send_signal(signum)
+
+        previous: Any = None
+        try:
+            previous = signal.signal(signal.SIGTERM, forward)
+        except ValueError:  # not the main thread: no forwarding, same run
+            previous = None
+        try:
+            out, err = proc.communicate()
+        except KeyboardInterrupt:
+            proc.wait()
+            raise
+        finally:
+            if previous is not None:
+                signal.signal(signal.SIGTERM, previous)
+    return subprocess.CompletedProcess(cmd, proc.returncode, out, err)
 
 
 def run_manage(
@@ -194,7 +239,7 @@ def run_manage(
 def run_compose(project: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
     """Run ``docker compose <args>`` in the project, streaming to the terminal."""
     try:
-        return subprocess.run(["docker", "compose", *args], cwd=project, text=True, check=False)
+        return run_process(["docker", "compose", *args], cwd=project)
     except FileNotFoundError:
         raise CliError(
             "docker not found — install Docker with the compose plugin, "

@@ -24,9 +24,12 @@ class ScopeExemption:
 def admin_site() -> Any:
     """The admin site ``KARNI_ADMIN_SITE`` names (default ``django.contrib.admin.site``)."""
     from django.conf import settings
-    from django.utils.module_loading import import_string
 
-    return import_string(getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site"))
+    from karni.imports import import_setting
+
+    return import_setting(
+        "KARNI_ADMIN_SITE", getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
+    )
 
 
 def scope_exemptions() -> list[ScopeExemption]:

@@ -110,11 +110,17 @@ KARNI_ARCHITECTURE = {
 
 ## Frontend rules
 
-`karni check` also runs jscpd (pinned in the scaffold's frontend
-devDependencies, configured by `frontend/.jscpd.json`) — duplication above
-the threshold fails with the full clone report. Opt-out:
+`karni check` also runs the frontend's ESLint (the scaffold's
+`eslint.config.js` with the `@karni/ui` preset below, warnings counted as
+failures) and jscpd (pinned in the scaffold's frontend devDependencies,
+configured by `frontend/.jscpd.json`) — duplication above the threshold
+fails with the full clone report. Opt-out:
 `// jscpd:ignore-start -- <reason>` … `// jscpd:ignore-end`; a bare
-`ignore-start` without a reason fails.
+`ignore-start` without a reason fails. jscpd compares the project's files
+with each other: a `@karni/ui` component copied into the project is not a
+clone of anything in `src/`, so it is the ESLint rules (`no-raw-elements`,
+`no-deep-imports`) that catch it, and a reasoned disable directive is the
+deliberate way past them — review those directives, not the clone report.
 
 The `@karni/ui` ESLint plugin (`@karni/ui/eslint-plugin`, flat config only —
 ESLint >= 9 — via `configs.recommended`) ships four rules, all `"error"`:

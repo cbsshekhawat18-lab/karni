@@ -489,7 +489,7 @@ def recorder(project: Path, monkeypatch: pytest.MonkeyPatch) -> Recorder:
     python.write_text("")
     monkeypatch.setattr(project_mod, "compose_service_running", lambda p, s: False)
     rec = Recorder()
-    monkeypatch.setattr(project_mod.subprocess, "run", rec)
+    monkeypatch.setattr(project_mod, "run_process", rec)
     return rec
 
 
@@ -514,3 +514,12 @@ def test_model_migrate_flag_runs_makemigrations(project: Path, recorder: Recorde
     assert recorder.calls == [
         [str(project / ".venv" / "bin" / "python"), "manage.py", "makemigrations", "events"]
     ]
+
+
+def test_detail_pages_expand_the_model_relations(project: Path) -> None:
+    """Relations render as labels, not raw ids (audit item 16); user FKs stay ids."""
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str")
+    ok("make", "model", "Show", "title:str", "venue:fk:Venue", "organizer:fk:User", "-a")
+    page = (project / "frontend" / "src" / "pages" / "show-detail.tsx").read_text()
+    assert 'expand={["venue"]}' in page

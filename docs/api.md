@@ -595,6 +595,11 @@ names.
 ### Postgres setup (pg_trgm)
 
 The trigram leg needs the `pg_trgm` extension and, for speed, a GIN index.
+`karni migrate` creates the extension (`karni.accounts` migration
+`0004_pg_trgm`, a no-op on other databases); `pg_trgm` is a trusted
+extension since PostgreSQL 13, so the database owner may. If your role may
+not, create it once as a superuser and migrate again — the migration says
+so when it is refused.
 One migration does both — `karni.api.search.postgres` re-exports the pieces:
 
 ```python

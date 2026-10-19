@@ -34,6 +34,8 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     assert "# karni:apps" in (project / "config" / "settings.py").read_text()
     # next steps must print the SLUG, not the input name
     assert "cd my_app" in result.output
+    # the release the scaffold is written for: `karni upgrade` starts there
+    assert 'baseline = "0.2.0"' in (project / "pyproject.toml").read_text()
 
 
 def test_slug_rules() -> None:

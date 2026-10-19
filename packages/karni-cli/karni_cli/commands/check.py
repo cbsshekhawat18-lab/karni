@@ -59,6 +59,25 @@ def _frontend_duplication(project: Path) -> int:
     return proc.returncode
 
 
+def _frontend_lint(project: Path) -> int:
+    """``eslint .`` in frontend/ with the project's own binary (the @karni/ui rules live there)."""
+    frontend = project / "frontend"
+    if not frontend.is_dir():
+        return 0
+    eslint = frontend / "node_modules" / ".bin" / "eslint"
+    if not eslint.exists():
+        typer.echo(
+            "karni check: eslint not installed — run `npm install` in frontend/ "
+            "(or pass --no-frontend to skip the frontend checks).",
+            err=True,
+        )
+        return 1
+    proc = subprocess.run(
+        [str(eslint), ".", "--max-warnings", "0"], cwd=frontend, text=True, check=False
+    )
+    return proc.returncode
+
+
 def check(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
@@ -70,7 +89,8 @@ def check(
         project, ["karni_check"], docker=docker, service=service, capture=False
     ).returncode
     dup = _frontend_duplication(project) if frontend else 0
-    if backend or dup:
+    lint = _frontend_lint(project) if frontend else 0
+    if backend or dup or lint:
         sys.stderr.write("karni check: FAILED\n")
     else:
         # Only after a clean run (failures deserve the attention), never in CI,

@@ -67,7 +67,7 @@ def test_a_run_creates_connected_realistic_rows_and_a_demo_login() -> None:
     assert demo.check_password(DEFAULT_PASSWORD) and demo.is_staff and demo.is_superuser
     assert report.demo == DEMO_LOGIN and report.demo_password == DEFAULT_PASSWORD
     assert "staff" in report.roles and demo.groups.filter(name="staff").exists()
-    assert "Log in as demo@example.com / karni-password" in report.render()
+    assert "Log in as demo@example.com / karni-password (superuser, roles:" in report.render()
     others = user_model.objects.exclude(pk=demo.pk)
     assert all(user.email.split("@")[1] in SAFE_DOMAINS for user in others)
     events = list(Event.objects.all())

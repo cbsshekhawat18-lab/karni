@@ -16,17 +16,20 @@ You need Python 3.12+ and Node 20+.
 <!-- karni:quickstart -->
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
-pip install karni karni-cli
+pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
-printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
 ```
 
 `karni new` wrote a Django project configured by one call
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
-docker-compose stack, CI, and the guidance files AI coding agents read.
-The three `.env` lines point it at SQLite and a local media folder for this
-walk-through; the defaults expect the compose stack's PostgreSQL.
+docker-compose stack with a Makefile, and the guidance files AI coding
+agents read. The four `.env` lines point it at SQLite, an in-process cache
+and a local media folder for this walk-through, so nothing on this page
+needs PostgreSQL or Redis; the defaults expect the compose stack's. pytest
+and pytest-django are the project's dev dependencies (`karni test` runs
+them); they go into the same venv.
 
 ## 2. Add a domain
 
@@ -75,7 +78,10 @@ links, seven status checks (database, migrations, superuser, seed data,
 Redis, worker, frontend) each with the command that fixes a cross, the live
 `karni context` output and the first prompt to hand an agent. It is served
 only while `DEBUG` is on and disappears the moment you define your own
-`/` route.
+`/` route. The Redis and worker checks stay crosses on this page's `.env`:
+nothing here needs them. When you want Celery (e-mails, scheduled tasks,
+`/health/ready/` all green), point `REDIS_URL` at a Redis, drop the
+`KARNI_CACHE` line and run `karni worker` in a third shell.
 
 Sign in with the demo login `karni seed` printed (`demo@example.com` /
 `karni-password`), open **Events**, create one, and look at
@@ -89,7 +95,7 @@ no factory and no test scaffolding; the two commands in step 2 declared the
 domain and the framework did the rest. From here:
 
 - the [tutorial](tutorial.md) builds the reference app, EventHub, with
-  payments, a Celery email and four roles, in 582 lines of project code;
+  payments, a Celery email and four roles, in 593 lines of project code;
 - [Building with an AI agent](guide/with-ai.md) shows the same workflow
   driven by Claude Code or Cursor;
 - [Building without one](guide/without-ai.md) lists every `karni make`

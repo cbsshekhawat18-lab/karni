@@ -29,9 +29,9 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
-from django.utils.module_loading import import_string
 
 from karni.exceptions import KarniImproperlyConfigured
+from karni.imports import import_setting
 
 __all__ = [
     "DEFAULT_EMAIL_BACKEND",
@@ -178,7 +178,7 @@ def get_email_backend() -> AccountsEmailBackend:
     dotted path of any :class:`AccountsEmailBackend` subclass.
     """
     path: str = getattr(settings, "KARNI_ACCOUNTS_EMAIL_BACKEND", DEFAULT_EMAIL_BACKEND)
-    backend_cls = import_string(path)
+    backend_cls = import_setting("KARNI_ACCOUNTS_EMAIL_BACKEND", path, code="E201")
     backend = backend_cls()
     if not isinstance(backend, AccountsEmailBackend):
         raise KarniImproperlyConfigured(

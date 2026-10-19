@@ -1,7 +1,7 @@
 """Runner commands: each must run exactly the documented command, through the
 project interpreter, streaming output and propagating the exit code.
 
-The subprocess layer is mocked (``project.subprocess.run``), so these tests
+The subprocess layer is mocked (``project.run_process``), so these tests
 assert the precise argv each runner would execute.
 """
 
@@ -21,13 +21,15 @@ from karni_cli.project import CliError
 
 
 class Recorder:
-    """Stands in for ``subprocess.run``; records every call."""
+    """Stands in for ``project.run_process``; records every call."""
 
     def __init__(self, returncode: int = 0) -> None:
         self.calls: list[dict[str, Any]] = []
         self.returncode = returncode
 
     def __call__(self, cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if cmd[-2:] == ["-c", "import pytest"]:  # `karni test`'s probe: pytest is there
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         self.calls.append({"cmd": cmd, **kwargs})
         return subprocess.CompletedProcess(cmd, self.returncode, stdout="", stderr="")
 
@@ -61,7 +63,7 @@ def docker_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 @pytest.fixture
 def run(monkeypatch: pytest.MonkeyPatch) -> Recorder:
     recorder = Recorder()
-    monkeypatch.setattr(project_mod.subprocess, "run", recorder)
+    monkeypatch.setattr(project_mod, "run_process", recorder)
     return recorder
 
 
@@ -170,7 +172,7 @@ def test_runner_runs_the_documented_command(
     assert run.cmd == [_py(project), *expected]
     call = run.calls[0]
     assert call["cwd"] == project
-    assert call["capture_output"] is False  # output streams to the terminal
+    assert call["capture"] is False  # output streams to the terminal
 
 
 @pytest.mark.parametrize(
@@ -179,7 +181,7 @@ def test_runner_runs_the_documented_command(
 def test_runner_propagates_the_exit_code(
     runner: CliRunner, project: Path, monkeypatch: pytest.MonkeyPatch, argv: list[str]
 ) -> None:
-    monkeypatch.setattr(project_mod.subprocess, "run", Recorder(returncode=3))
+    monkeypatch.setattr(project_mod, "run_process", Recorder(returncode=3))
     assert _invoke(runner, *argv).exit_code == 3
 
 
@@ -284,7 +286,7 @@ def test_serve_without_docker_names_the_alternative(
     def missing(*args: Any, **kwargs: Any) -> None:
         raise FileNotFoundError("docker")
 
-    monkeypatch.setattr(project_mod.subprocess, "run", missing)
+    monkeypatch.setattr(project_mod, "run_process", missing)
     result = _invoke(runner, "serve")
     assert isinstance(result.exception, CliError)
     assert "karni serve --local" in str(result.exception)

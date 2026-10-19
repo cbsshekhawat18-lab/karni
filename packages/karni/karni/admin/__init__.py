@@ -142,7 +142,6 @@ def autodiscover(site: AdminSite | None = None) -> None:
     """
     from django.apps import apps as django_apps
     from django.conf import settings
-    from django.utils.module_loading import import_string
 
     from karni.admin.base import build_model_admin
     from karni.admin.derive import derive_autocomplete_fields
@@ -150,7 +149,9 @@ def autodiscover(site: AdminSite | None = None) -> None:
 
     if site is None:
         site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
-        site = import_string(site_path)
+        from karni.imports import import_setting
+
+        site = import_setting("KARNI_ADMIN_SITE", site_path)
 
     exclude = frozenset(getattr(settings, "KARNI_ADMIN_EXCLUDE", DEFAULT_ADMIN_EXCLUDE))
     all_models = django_apps.get_models()

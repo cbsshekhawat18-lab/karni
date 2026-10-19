@@ -878,6 +878,28 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Point CACHES['default'] at a backend every worker shares (Redis — Karni's default "
         "— or the database cache), or silence karni.W501 for a single-process deployment.",
     ),
+    _e(
+        "E506",
+        "A setting names a dotted path that cannot be imported",
+        "exception",
+        "karni.imports.import_setting (KARNI_SEARCH_PROVIDER, KARNI_API_ROUTER, "
+        "KARNI_ADMIN_SITE, KARNI_THUMBNAILER, ...)",
+        "Settings that name a class or function by dotted path are resolved when first used; "
+        "a typo or a package missing from the environment would otherwise surface as a bare "
+        "ModuleNotFoundError far from the setting.",
+        "Fix the path the message names ('package.module.Object') or install the package "
+        "that provides it.",
+    ),
+    _e(
+        "E507",
+        "KARNI_CACHE names an unknown cache backend",
+        "exception",
+        "karni.conf (KARNI_CACHE)",
+        "The default cache (throttle counters, response cache, locks) is Redis at REDIS_URL; "
+        "`locmem` is the in-process alternative for a host run without Redis.",
+        "Set KARNI_CACHE to `redis` (the default) or `locmem`; for anything else define "
+        "CACHES yourself in settings.py.",
+    ),
     # E6xx testing and seeding
     _e(
         "E601",

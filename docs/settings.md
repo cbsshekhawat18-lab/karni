@@ -30,6 +30,8 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_ACCOUNTS_TOKEN_TTL` | — | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` | — | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` | — | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object; `null` disables a scope. |
+| **Database & cache** | | | |
+| `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | **Files & storage** | | | |
 | `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service; needs `karni[s3]`). |
 | **API (karni.api)** | | | |

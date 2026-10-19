@@ -3,5 +3,6 @@
     "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '_').replace('-', '_') }}",
     "domain": "example.com",
     "karni_ui": "^0.1.0",
-    "karni_ui_mount": ""
+    "karni_ui_mount": "",
+    "karni_baseline": "0.0.0"
 }

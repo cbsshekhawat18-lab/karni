@@ -50,6 +50,18 @@ def prepare_ui_source(source: Path) -> None:
         )
 
 
+def _baseline_release() -> str:
+    """The newest release this karni-cli's changelog knows: what the scaffold is written for."""
+    from karni_cli.upgrades import changelog
+
+    try:
+        return changelog.newest_release(changelog.load())
+    except Exception:  # noqa: BLE001 - a missing changelog never blocks `karni new`
+        from karni_cli import __version__
+
+        return __version__
+
+
 def new(
     name: str = typer.Argument(..., help="Project name (slug is derived from it)"),
     output_dir: Path = typer.Option(Path("."), "--output-dir", "-o"),
@@ -71,6 +83,7 @@ def new(
             "domain": domain,
             "karni_ui": (ui_spec := scaffold.ui_spec(ui_source, output_dir / slug)),
             "karni_ui_mount": scaffold.ui_mount_target(ui_spec),
+            "karni_baseline": _baseline_release(),
         },
         output_dir=str(output_dir),
     )

@@ -12,7 +12,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from karni.welcome import welcome_urls
+from karni.welcome import media_urls, welcome_urls
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -22,6 +22,8 @@ urlpatterns = [
     path("api/", include("karni.api.urls")),
     path("payments/", include("karni_payments.urls")),
     path("health/", include("karni.health.urls")),
+    # Uploads (event cover images) under MEDIA_URL while DEBUG is on.
+    *media_urls(),
     # Only while DEBUG is on, and only until a route above answers "/".
     *welcome_urls(),
 ]

@@ -129,6 +129,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "These commands read files of the current project only.",
         "Pass an existing file path inside the project.",
     ),
+    _c(
+        "C011",
+        "pytest is not installed in the project interpreter",
+        "karni test",
+        "karni test runs `python -m pytest` through the project's interpreter (its .venv, the "
+        "active virtualenv, or the compose service); pytest and pytest-django are in the "
+        "project's dev dependency group, not in karni.",
+        "Install them there: pip install pytest pytest-django (or `uv sync` for the dev "
+        "group), then run karni test again.",
+    ),
     # C1xx karni make
     _c(
         "C101",

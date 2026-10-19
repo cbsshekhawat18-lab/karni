@@ -38,7 +38,6 @@ from typing import Any
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path
-from django.utils.module_loading import import_string
 
 __all__ = ["KarniUserAdmin", "RoleAdmin"]  # noqa: F822 - provided lazily via module __getattr__
 
@@ -347,7 +346,9 @@ def _register_role_admins() -> None:
     from karni.accounts.models import Permission, Role, RolePermission
 
     site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
-    site: admin.AdminSite = import_string(site_path)
+    from karni.imports import import_setting
+
+    site: admin.AdminSite = import_setting("KARNI_ADMIN_SITE", site_path)
     classes = _get_role_admin_classes()
     for model, model_admin in zip((Role, Permission, RolePermission), classes, strict=True):
         if not site.is_registered(model):
@@ -368,7 +369,9 @@ def _register_default_user_admin() -> None:
     from django.contrib.auth import get_user_model
 
     site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
-    site: admin.AdminSite = import_string(site_path)
+    from karni.imports import import_setting
+
+    site: admin.AdminSite = import_setting("KARNI_ADMIN_SITE", site_path)
     user_model = get_user_model()
     if not site.is_registered(user_model):
         site.register(user_model, _get_user_admin_class())

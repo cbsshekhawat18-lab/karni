@@ -102,10 +102,13 @@ class ScalingCase:
     action: str
     #: Set when the opt-out marker has no reason (the case then fails).
     optout_error: str = ""
+    #: ``?expand=`` values the request carries (a list measured with every expansion).
+    expand: tuple[str, ...] = ()
 
     @property
     def id(self) -> str:
-        return f"{self.viewset.__name__}.{self.action}"
+        suffix = f"?expand={','.join(self.expand)}" if self.expand else ""
+        return f"{self.viewset.__name__}.{self.action}{suffix}"
 
 
 @dataclass(frozen=True)
@@ -177,7 +180,23 @@ def scaling_cases() -> list[ScalingCase]:
         for action in ("list", "retrieve"):
             if callable(getattr(viewset, action, None)):
                 cases.append(ScalingCase(viewset, action, error))
+        expand = expansions(viewset)
+        if expand and callable(getattr(viewset, "list", None)):
+            cases.append(ScalingCase(viewset, "list", error, expand=expand))
     return cases
+
+
+def expansions(viewset: type[Any]) -> tuple[str, ...]:
+    """Every ``?expand=`` key the viewset accepts (its own mapping, else the forward relations)."""
+    from collections.abc import Mapping
+
+    from karni.api.expansion import auto_expandable_fields
+
+    explicit = getattr(viewset, "expandable_fields", None)
+    if isinstance(explicit, Mapping):
+        return tuple(sorted(explicit))
+    model = viewset.model if viewset.model is not None else viewset.queryset.model
+    return tuple(sorted(auto_expandable_fields(model)))
 
 
 def _role_names(predicate: Any) -> set[str]:
@@ -272,13 +291,15 @@ def _seed_children(row: Any, plan: Any, fanout: int, depth: int) -> None:
             _seed_children(target, one.plan, FANOUT, depth + 1)
 
 
-def _view(viewset: type[Any], action: str, user: Any) -> tuple[Any, Any]:
+def _view(
+    viewset: type[Any], action: str, user: Any, query: dict[str, Any] | None = None
+) -> tuple[Any, Any]:
     from rest_framework.request import Request
     from rest_framework.test import APIRequestFactory
 
     view = viewset()
     view.action = action
-    view.request = Request(APIRequestFactory().get("/"))
+    view.request = Request(APIRequestFactory().get("/", query or {}))
     view.request.user = user
     view.format_kwarg = None
     view.args, view.kwargs = (), {}
@@ -327,12 +348,13 @@ def check_scaling(case: ScalingCase) -> ScalingResult:
     model = viewset.model if viewset.model is not None else viewset.queryset.model
     with override_settings(KARNI_QUERY_BUDGET_MODE="off", KARNI_API_CACHE=False):
         user, owner = _requester(viewset, model)
-        view, serializer_class = _view(viewset, action, user)
+        expand = {"expand": ",".join(case.expand)} if case.expand else {}
+        view, serializer_class = _view(viewset, action, user, expand)
         plan = plan_for(serializer_class, model, view.get_serializer_context())
         if action == "list":
             # Rows already present (other fixtures, the requester itself) render in
             # both runs; one page must hold them plus every seeded row.
-            page = {"page_size": model._default_manager.count() + SCALING_LARGE}
+            page = {"page_size": model._default_manager.count() + SCALING_LARGE, **expand}
             if page["page_size"] > hard_max_page_size():
                 return ScalingResult(
                     case, skipped=f"{case.id}: too many rows exist before seeding to compare pages"

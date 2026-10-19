@@ -61,6 +61,8 @@ class PageSpec:
     resource: str | None
     base: str
     title: str
+    #: Relation fields a detail page asks the API to expand (labels, not raw ids).
+    expand: tuple[str, ...] = ()
 
     @property
     def component(self) -> str:
@@ -87,6 +89,7 @@ def spec_for(
     kind: str | None,
     path: str | None,
     title: str | None = None,
+    expand: tuple[str, ...] | list[str] | None = None,
 ) -> PageSpec:
     require_kebab(name, "Page name")
     if kind is not None and kind not in KINDS:
@@ -115,7 +118,7 @@ def spec_for(
             f"--title {title!r}: plain text only (no quotes, braces or angle brackets).",
             code="C106",
         )
-    return PageSpec(name, kind, resource, base, title)
+    return PageSpec(name, kind, resource, base, title, tuple(expand or ()))
 
 
 def known_routes(ws: Workspace) -> set[str]:
@@ -199,6 +202,9 @@ def render(spec: PageSpec, routes: set[str]) -> str:
         if edit in routes:
             actions = f"<Button onClick={{() => {_go(edit, 'id')}}}>\n    Edit\n</Button>"
         props = [f'resource="{resource}"', "id={id}"]
+        if spec.expand:
+            names = ", ".join(f'"{name}"' for name in spec.expand)
+            props.append(f"expand={{[{names}]}}")
         return _shell(spec, "ResourceDetail", props, actions, hooks=hooks, ui={"ResourceDetail"})
     hooks = ["const { id } = useParams({ strict: false });"]
     props = [f'resource="{resource}"', "id={id}"]

@@ -65,15 +65,38 @@ function numberSchema(field: FieldDef, integer: boolean): ZodTypeAny {
   return schema;
 }
 
-function relationValueSchema(field: FieldDef): ZodTypeAny {
+function relationValueSchema(field: FieldDef, coerce: boolean): ZodTypeAny {
   switch (field.relationValueType) {
     case "uuid":
-      return z.string().uuid();
+      return z.string({ required_error: REQUIRED_MESSAGE }).uuid();
     case "integer":
-      return z.coerce.number().int();
+      return coerce
+        ? z.coerce.number().int()
+        : z.number({ required_error: REQUIRED_MESSAGE }).int();
     default:
-      return z.string().min(1, REQUIRED_MESSAGE);
+      return z.string({ required_error: REQUIRED_MESSAGE }).min(1, REQUIRED_MESSAGE);
   }
+}
+
+/**
+ * A single relation input left empty arrives as "" (an untouched select) or
+ * null (a cleared one). A nullable relation then carries null (DRF's
+ * allow_null); a required non-nullable one fails with REQUIRED_MESSAGE
+ * instead of "Invalid uuid" / "Expected string, received null"; an optional
+ * non-nullable one is omitted. Integer ids typed as strings are coerced.
+ */
+function singleRelationSchema(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {
+  const value = relationValueSchema(field, false);
+  let target: ZodTypeAny = field.nullable ? value.nullable() : value;
+  if (!requireNonEmpty) target = target.optional();
+  return z.preprocess((raw) => {
+    if (raw === "" || raw === null || raw === undefined) return field.nullable ? null : undefined;
+    if (field.relationValueType === "integer" && typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
+      return Number.isNaN(parsed) ? raw : parsed;
+    }
+    return raw;
+  }, target);
 }
 
 function fileSchema(): ZodTypeAny {
@@ -103,8 +126,8 @@ function baseSchemaFor(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {
     case "enum":
       return enumSchema(field.enumValues ?? []);
     case "relation": {
-      const value = relationValueSchema(field);
-      return field.relation?.many === true ? z.array(value) : value;
+      if (field.relation?.many === true) return z.array(relationValueSchema(field, true));
+      return singleRelationSchema(field, requireNonEmpty);
     }
     case "file":
       return fileSchema();

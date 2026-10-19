@@ -328,6 +328,8 @@ class SeedReport:
     reused: dict[str, int] = field(default_factory=dict)
     demo: str | None = None
     demo_password: str | None = None
+    #: "superuser" or "staff": what the demo account is.
+    demo_kind: str = "staff"
     roles: list[str] = field(default_factory=list)
     #: ``KARNI_SEED_LOGINS`` users that exist after the run: login -> roles.
     logins: dict[str, list[str]] = field(default_factory=dict)
@@ -350,7 +352,7 @@ class SeedReport:
         if self.demo:
             roles = f", roles: {', '.join(self.roles)}" if self.roles else ""
             secret = f" / {self.demo_password}" if self.demo_password else " (existing user)"
-            lines.append(f"Log in as {self.demo}{secret} (staff{roles}).")
+            lines.append(f"Log in as {self.demo}{secret} ({self.demo_kind}{roles}).")
         for login, login_roles in self.logins.items():
             held = f" (roles: {', '.join(login_roles)})" if login_roles else ""
             lines.append(f"Also {login} / {DEFAULT_PASSWORD}{held}.")
@@ -669,6 +671,9 @@ class _Run:
         for role in roles:
             assign_role(self.demo, role)
         self.report.demo = getattr(self.demo, self.user_model.USERNAME_FIELD)
+        self.report.demo_kind = (
+            "superuser" if getattr(self.demo, "is_superuser", False) else "staff"
+        )
         reused = getattr(self.demo, "_karni_seed_reused", False)
         self.report.demo_password = None if reused else DEFAULT_PASSWORD
         self.report.roles = roles

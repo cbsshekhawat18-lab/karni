@@ -8,7 +8,7 @@ EventHub is Karni's reference application: an event ticketing platform where
 organizers create events with venues, ticket tiers and capacity, attendees
 browse, search, book and pay, organizers read a dashboard and export their
 attendees, a confirmation email goes out through Celery, and four roles decide
-who sees what. It is 582 lines of project code, it lives in the repository
+who sees what. It is 593 lines of project code, it lives in the repository
 under `examples/eventhub`, and CI builds, seeds, tests and drives it with
 Playwright on every change.
 

@@ -215,3 +215,24 @@ def test_the_architecture_suite_carries_the_scaling_check() -> None:
     name = "test_list_and_retrieve_queries_do_not_grow_with_rows"
     assert getattr(architecture, name) is getattr(performance, name)
     assert architecture.pytest_generate_tests is performance.pytest_generate_tests
+
+
+@pytest.mark.django_db
+def test_the_list_is_also_measured_with_every_expansion() -> None:
+    """A flat list can still be N+1 once ``?expand=`` nests the relations (audit item 12)."""
+    assert "genres" in performance.expansions(NovelViewSet)
+    expanded = ScalingCase(NovelViewSet, "list", expand=performance.expansions(NovelViewSet))
+    assert expanded.id.startswith("NovelViewSet.list?expand=")
+    flat = check_scaling(expanded)
+    assert not flat.skipped and not flat.grows, flat.report
+    leaky = check_scaling(ScalingCase(LeakyNovelViewSet, "list", expand=("genres",)))
+    assert leaky.grows
+
+
+@pytest.mark.django_db
+def test_scaling_cases_carry_an_expanded_list_case(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        _source, "project_app_configs", lambda: [django_apps.get_app_config("testapp")]
+    )
+    ids = {case.id for case in scaling_cases()}
+    assert any(case_id.startswith("EventViewSet.list?expand=") for case_id in ids), ids

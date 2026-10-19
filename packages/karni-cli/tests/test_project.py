@@ -87,7 +87,7 @@ def test_run_manage_docker_command_shape(tmp_path: Path, monkeypatch) -> None:
         captured["cwd"] = kwargs["cwd"]
         return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
-    monkeypatch.setattr(project_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(project_mod, "run_process", fake_run)
     run_manage(project, ["karni_context"], docker=True, service="web")
     assert captured["cmd"][:6] == ["docker", "compose", "exec", "-T", "web", "python"]
     assert captured["cmd"][-1] == "karni_context"

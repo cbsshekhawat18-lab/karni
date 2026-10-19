@@ -38,6 +38,7 @@ Validation refuses to start a project with ``DEBUG = False`` while
 """
 
 _REDIS_URL: str = env("REDIS_URL", default="redis://redis:6379/0")
+_ADMIN_PATH: str = env("KARNI_ADMIN_PATH", default="admin/")
 _PROJECT_NAME: str = env("PROJECT_NAME", default="karni-project")
 _ADMIN_TITLE: str = env("KARNI_ADMIN_TITLE", default=f"{_PROJECT_NAME} admin")
 
@@ -114,6 +115,39 @@ def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
         "default": default,
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
+
+
+def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
+    """Build ``CACHES`` from ``KARNI_CACHE``: ``redis`` (at ``REDIS_URL``) or ``locmem``.
+
+    ``locmem`` is for a host run without Redis (the quickstart): throttle
+    counters then live per process, which ``karni.W501`` flags with DEBUG off.
+
+    Override / escape hatch: define ``CACHES`` yourself in ``settings.py``
+    before calling ``karni_settings()``.
+    """
+    choice = env("KARNI_CACHE", default="redis")
+    if choice == "locmem":
+        return {
+            "default": {
+                "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+                "LOCATION": "karni",
+            }
+        }
+    if choice == "redis":
+        return {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": _REDIS_URL,
+            }
+        }
+    from karni.exceptions import KarniImproperlyConfigured
+
+    raise KarniImproperlyConfigured(
+        f"KARNI_CACHE={choice!r}: use 'redis' (REDIS_URL, the default) or 'locmem'; "
+        "define CACHES yourself for anything else.",
+        code="E507",
+    )
 
 
 BASE: dict[str, Any] = {
@@ -245,12 +279,11 @@ BASE: dict[str, Any] = {
     "DATABASES": {
         "default": env.db_url("DATABASE_URL", default="postgres://karni:karni@db:5432/karni"),
     },
-    "CACHES": {
-        "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": _REDIS_URL,
-        },
-    },
+    # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
+    "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
+    "CACHES": _caches(env),
+    # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
+    "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------
     "REST_FRAMEWORK": {
         # Both authenticators in every KARNI_AUTH_MODE: views branch on the

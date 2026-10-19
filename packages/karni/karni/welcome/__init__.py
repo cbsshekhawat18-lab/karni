@@ -27,7 +27,28 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["welcome_urls"]
+__all__ = ["media_urls", "welcome_urls"]
+
+
+def media_urls() -> list[Any]:
+    """Serve ``MEDIA_URL`` from ``MEDIA_ROOT`` while ``DEBUG`` is on and storage is local.
+
+    ``karni serve --local`` has no proxy in front of Django, so without this
+    every upload, admin image preview and file link is a 404 in development.
+    Returns ``[]`` with ``DEBUG`` off or ``KARNI_STORAGE=s3`` (the bucket
+    serves its own files). Mount it like :func:`welcome_urls`::
+
+        urlpatterns = [..., *media_urls(), *welcome_urls()]
+    """
+    from django.conf import settings
+    from django.conf.urls.static import static
+
+    if not settings.DEBUG:
+        return []
+    backend = str(getattr(settings, "STORAGES", {}).get("default", {}).get("BACKEND", ""))
+    if backend != "django.core.files.storage.FileSystemStorage":
+        return []
+    return list(static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT))
 
 
 def welcome_urls() -> list[Any]:

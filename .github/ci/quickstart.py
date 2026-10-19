@@ -6,7 +6,8 @@ from the page is the install: CI installs the checkout's packages instead of
 PyPI's (``--install`` names the command), which the page documents too.
 After the blocks, the app is started and its liveness URL must answer.
 
-    python .github/ci/quickstart.py --install "pip install -e packages/karni -e packages/karni-cli"
+    python .github/ci/quickstart.py \
+        --install "pip install -e packages/karni -e packages/karni-cli pytest pytest-django"
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PAGE = ROOT / "docs" / "quickstart.md"
 BLOCK = re.compile(r"<!-- karni:quickstart -->\s*```sh\n(.*?)```", re.S)
-INSTALL_LINE = "pip install karni karni-cli"
+INSTALL_LINE = "pip install karni karni-cli pytest pytest-django"
 
 
 def blocks() -> list[str]:

@@ -164,7 +164,8 @@ def get_thumbnailer() -> Callable[..., str]:
         project's ``settings.py`` to swap the implementation globally.
     """
     from django.conf import settings
-    from django.utils.module_loading import import_string
+
+    from karni.imports import import_setting
 
     dotted_path: str = getattr(settings, "KARNI_THUMBNAILER", DEFAULT_THUMBNAILER)
-    return import_string(dotted_path)
+    return import_setting("KARNI_THUMBNAILER", dotted_path)

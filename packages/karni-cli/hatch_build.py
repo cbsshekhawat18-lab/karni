@@ -34,7 +34,11 @@ class TemplateBundleHook(BuildHookInterface):
         if repo_source.is_dir():
             if bundled.exists():
                 shutil.rmtree(bundled)
-            shutil.copytree(repo_source, bundled)
+            shutil.copytree(
+                repo_source,
+                bundled,
+                ignore=shutil.ignore_patterns("__pycache__", "node_modules", ".DS_Store"),
+            )
         elif not bundled.is_dir():
             raise RuntimeError(
                 "No project template available: neither the monorepo templates/ "

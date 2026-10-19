@@ -40,7 +40,9 @@ TTLs; an email-verification gate; optional TOTP 2FA and social login. See
 
 **Abuse.** Per-IP throttles on every auth endpoint plus a per-account
 throttle on login (`KARNI_AUTH_THROTTLE_RATES`); `NUM_PROXIES` set for the
-shipped Caddy; the password-reset endpoint never reveals whether an address
+shipped Caddy (`KARNI_NUM_PROXIES`, default 1) — set it to `0` whenever
+Django is exposed without a proxy that rewrites `X-Forwarded-For`, or a
+spoofed header defeats the per-IP throttles; the password-reset endpoint never reveals whether an address
 exists; a registration honeypot (`KARNI_ACCOUNTS_HONEYPOT_FIELD`); and
 `karni.W501` warns when the throttle counters would live in a per-process
 cache in production.

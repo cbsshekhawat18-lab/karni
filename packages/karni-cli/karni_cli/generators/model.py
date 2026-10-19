@@ -130,8 +130,13 @@ def plan_chain(
     *,
     access: str | None,
     search: list[str],
+    expand: list[str] | None = None,
 ) -> None:
-    """The ``--with`` steps after the model, in :data:`CHAINABLE` order."""
+    """The ``--with`` steps after the model, in :data:`CHAINABLE` order.
+
+    ``expand``: relation fields the detail page asks the API to expand, so it
+    shows the related rows' labels instead of raw ids.
+    """
     if "viewset" in chain:
         viewset_gen.plan(ws, app, model, access=access, search=search)
     if "page" in chain:
@@ -139,7 +144,9 @@ def plan_chain(
         singular = kebab(model)
         specs = [
             page_gen.spec_for(f"{singular}-form", resource=resource, kind="form", path=None),
-            page_gen.spec_for(f"{singular}-detail", resource=resource, kind="detail", path=None),
+            page_gen.spec_for(
+                f"{singular}-detail", resource=resource, kind="detail", path=None, expand=expand
+            ),
             page_gen.spec_for(resource, resource=resource, kind="list", path=None),
         ]
         planned = {path for spec in specs for path in spec.paths}
@@ -213,7 +220,12 @@ def command(
         chain = [item for item in chain if item != "page"]
         ws.note("note: no frontend/ directory — pages skipped.")
     model = plan(ws, target, name, fields or [])
-    plan_chain(ws, target, model, chain, access=access, search=split_csv(search))
+    expand = [
+        spec.name
+        for spec in parse_fields(fields or [])
+        if spec.is_relation and not is_user_target(relation_name(spec))
+    ]
+    plan_chain(ws, target, model, chain, access=access, search=split_csv(search), expand=expand)
     if not migrate:
         ws.note(f"next: karni make migration --app {target.label}")
     ws.commit(dry_run=dry_run)

@@ -19,15 +19,17 @@ tests should build fresh ``KarniRouter`` instances instead.
 from __future__ import annotations
 
 from django.conf import settings
-from django.utils.module_loading import import_string
 
 from karni.api.routers import KarniRouter
+from karni.imports import import_setting
 
 __all__ = ["router", "urlpatterns"]
 
 DEFAULT_ROUTER_FACTORY = "karni.api.routers.get_default_router"
 """Factory used when the ``KARNI_API_ROUTER`` setting is absent."""
 
-router: KarniRouter = import_string(getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY))()
+router: KarniRouter = import_setting(
+    "KARNI_API_ROUTER", getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY)
+)()
 
 urlpatterns = router.urls

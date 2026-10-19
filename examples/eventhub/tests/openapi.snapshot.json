@@ -1757,7 +1757,7 @@
         "description": "``GET csrf/`` \u2014 CSRF cookie bootstrap for SPAs (amendment A4).\n\nReturns 204 with the CSRF cookie set; a session-mode SPA calls this once\nbefore its first credentialed POST and sends the cookie's value back in\nthe ``X-CSRFToken`` header. Harmless (and unnecessary) in JWT mode.",
         "operationId": "auth_csrf_retrieve",
         "responses": {
-          "200": {
+          "204": {
             "description": "No response body"
           }
         },
@@ -1916,7 +1916,15 @@
         "operationId": "auth_email_verify_resend_create",
         "responses": {
           "200": {
-            "description": "No response body"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
           }
         },
         "security": [

@@ -67,6 +67,7 @@ class KarniSettingsModel(BaseModel):
     REST_FRAMEWORK: dict[str, Any] = Field(default_factory=dict)
     CELERY_BROKER_URL: str = ""
     KARNI_STORAGE: str = "local"
+    KARNI_CACHE: str = "redis"
     AWS_STORAGE_BUCKET_NAME: str = ""
     KARNI_AUTH_MODE: str = "jwt"
     KARNI_SOCIAL_AUTH: bool = False

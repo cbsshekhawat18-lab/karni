@@ -51,6 +51,26 @@ def _installed_version(project: Path, docker: bool | None, service: str) -> str:
     return proc.stdout.strip()
 
 
+def _baseline(project: Path) -> str | None:
+    """``[tool.karni] baseline`` from pyproject.toml: the release ``karni new`` generated for.
+
+    A fresh project already follows every change up to that release, whatever
+    karni version its environment happens to hold (a checkout still reports
+    the previous release's number while the next one is in development).
+    """
+    import tomllib
+
+    pyproject = project / "pyproject.toml"
+    if not pyproject.is_file():
+        return None
+    try:
+        data = tomllib.loads(pyproject.read_text())
+    except (tomllib.TOMLDecodeError, OSError):
+        return None
+    value = data.get("tool", {}).get("karni", {}).get("baseline")
+    return str(value) if value else None
+
+
 def _git_status(project: Path) -> list[str] | None:
     """Uncommitted paths under ``project`` (untracked included); None outside git."""
     try:
@@ -170,6 +190,9 @@ def upgrade(
         changelog.parse(current, "The project's karni version"),
         changelog.parse(target, "--to"),
     )
+    baseline = _baseline(project) if from_version is None else None
+    if baseline is not None and changelog.parse(baseline, "[tool.karni] baseline") > now:
+        current, now = baseline, changelog.parse(baseline, "[tool.karni] baseline")
     if then < now:
         raise CliError(
             f"--to {target} is older than the project's karni {current}; "

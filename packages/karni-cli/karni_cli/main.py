@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import typer
 
+from karni_cli import __version__
 from karni_cli.commands.add import add
 from karni_cli.commands.beat import beat
 from karni_cli.commands.check import check
@@ -36,6 +37,27 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+
+
+def _show_version(value: bool) -> None:
+    if value:
+        typer.echo(f"karni-cli {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        callback=_show_version,
+        is_eager=True,
+        help="Print the karni-cli version and exit (the project's karni: karni doctor).",
+    ),
+) -> None:
+    """The Karni framework CLI."""
+
 
 app.command(help="Scaffold a project from templates/project")(new)
 app.command(help="Install an optional module and wire it into settings")(add)
