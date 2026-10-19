@@ -1080,11 +1080,31 @@ class AccessPermission(BasePermission):
             _log_missing(type(view))
             raise PermissionDenied(detail=missing_access_message(type(view)), code="E101")
         if isinstance(declaration, Unscoped):
-            return True
+            return self._not_vetoed(request, view)
         predicate = action_predicate(view, declaration)
         if predicate.allows(request):
-            return True
+            return self._not_vetoed(request, view)
         self.message = f"Access denied: this action requires {predicate!r}."
+        return False
+
+    def _not_vetoed(self, request: Request, view: Any) -> bool:
+        """Consult :mod:`karni.vetoes` for the current action (the gate's last word)."""
+        from karni.vetoes import VetoContext, check_vetoes
+
+        model = _view_model(view)
+        action = str(getattr(view, "action", None) or request.method or "").lower()
+        permission: str | None = None
+        if model is not None:
+            try:
+                permission = permission_key(model, granted_action(view))
+            except KarniImproperlyConfigured:
+                permission = None
+        reason = check_vetoes(
+            VetoContext(request, "api", action, model=model, permission=permission, view=view)
+        )
+        if reason is None:
+            return True
+        self.message = reason
         return False
 
     def has_object_permission(self, request: Request, view: Any, obj: Any) -> bool:

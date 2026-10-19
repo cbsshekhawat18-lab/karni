@@ -462,6 +462,21 @@ export class AuthEngine {
   }
 
   /**
+   * Adopts tokens issued out of band — what `@karni/impersonation-ui` does
+   * when a support user starts or stops impersonating (the backend answers
+   * with tokens for the other identity). JWT mode only; in session mode the
+   * server-side session already changed, so this just re-syncs `/me/`.
+   */
+  async adoptTokens(access: string | null, refresh: string | null): Promise<void> {
+    await this.ensureInitialized();
+    if (this.mode === "jwt") {
+      if (typeof refresh === "string" && refresh !== "") this.tokenStorage.set(refresh);
+      if (typeof access === "string" && access !== "") this.accessToken = access;
+    }
+    await this.syncUser();
+  }
+
+  /**
    * Re-syncs the session: rotates the tokens in JWT mode (A3: /refresh/ is
    * 405 in session mode, so session mode only re-fetches /me/).
    */

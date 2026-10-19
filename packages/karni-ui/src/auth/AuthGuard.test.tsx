@@ -19,6 +19,7 @@ function contextValue(partial: Partial<AuthContextValue>): AuthContextValue {
     login: () => Promise.resolve({ ok: true, user: USER } satisfies LoginResult),
     logout: () => Promise.resolve(),
     refresh: () => Promise.resolve(),
+    adoptTokens: () => Promise.resolve(),
     ...partial,
   };
 }

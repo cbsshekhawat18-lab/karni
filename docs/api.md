@@ -259,6 +259,26 @@ a guarded change), `create`, `update`, `partial_update` and `destroy` answer
 writing. `BaseViewSet.deferred_response(exc)` shapes that answer; see
 [write interception](models.md#write-interception).
 
+## Vetoes
+
+A veto refuses an action at the gate *after* the access declaration admitted
+it — for a reason that is not about who the user is but about the state the
+request runs in. `karni.vetoes.register_veto(fn, name=...)` registers a
+callable that receives a `VetoContext` (`request`, `kind` — `"api"` or
+`"admin"` — the `action`, the `model`, the resolved `permission` key and the
+view) and returns a reason string to refuse, or `None`. `AccessPermission`
+consults every registered veto after the predicate passes (the refusal is
+the 403's `detail`); the admin consults them in `has_add/change/delete_permission`,
+drops vetoed names from the actions menu and hides *Import*. `context.names()`
+is every name a pattern may match: the action, the permission, the model
+label and `model:action`.
+
+The [`karni-impersonation`](modules.md#modules-in-this-repository) module is
+built on it: while a support user acts as someone else, deleting, exporting
+and payment changes are refused whatever the target may do. Projects use the
+same hook for a maintenance freeze or a read-only tenant; `unregister_veto`
+and `vetoes()` manage the registry.
+
 ## APIMeta — model-side API metadata
 
 ```python

@@ -1043,6 +1043,88 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** requires_approval = True or a list of field names; approvals_required a positive int; approver_roles / approval_escalation_roles lists of KARNI_ROLES slugs; approval_timeout a timedelta or hours; approval_on_timeout 'expire' or 'escalate'.
 
+## IMP (`IMP`)
+
+<a id="imp001"></a>
+
+### IMP001 — Impersonation needs the explicit impersonate permission
+
+*API 400 response* · from `karni_impersonation.services.start`
+
+**Why Karni objects.** Acting as someone else is never implied by staff or admin status; only a role granted karni_impersonation.impersonationsession:impersonate may start a session.
+
+**Fix.** Grant the permission to the support role in KARNI_ROLES (or the permission matrix).
+
+<a id="imp002"></a>
+
+### IMP002 — The target holds something the impersonator does not
+
+*API 400 response* · from `karni_impersonation.services.privilege_gap`
+
+**Why Karni objects.** Impersonation must never escalate privileges: a target who is a superuser, is staff, or holds any grant or Django permission the impersonator lacks cannot be impersonated.
+
+**Fix.** Impersonate from an account that holds at least everything the target holds, or ask such a person to.
+
+<a id="imp003"></a>
+
+### IMP003 — A reason is required to impersonate
+
+*API 400 response* · from `karni_impersonation.services.start`
+
+**Why Karni objects.** KARNI_IMPERSONATION_REQUIRE_REASON is on (the default for customer data): the reason is recorded with the session and sent to the impersonated user.
+
+**Fix.** Give a reason, or set KARNI_IMPERSONATION_REQUIRE_REASON = False for a project that does not need one.
+
+<a id="imp004"></a>
+
+### IMP004 — This user cannot be impersonated now
+
+*API 400 response* · from `karni_impersonation.services.start`
+
+**Why Karni objects.** You cannot impersonate yourself or an inactive account, or start a second session while one is running.
+
+**Fix.** Stop the current session first, or pick another user.
+
+<a id="imp005"></a>
+
+### IMP005 — This request is not part of an impersonated session
+
+*API 400 response* · from `karni_impersonation.viewsets.ImpersonationSessionViewSet.stop`
+
+**Why Karni objects.** stop/ ends the session the request belongs to; there is none (it ended, expired or never started).
+
+**Fix.** Nothing to do: you are yourself.
+
+<a id="imp006"></a>
+
+### IMP006 — This action is blocked while impersonating
+
+*API 400 response* · from `karni_impersonation.vetoes, karni_impersonation.middleware`
+
+**Why Karni objects.** KARNI_IMPERSONATION_BLOCKED names what an impersonator may never do (deleting, exporting, payment changes, credential changes by default), whatever the target may.
+
+**Fix.** Stop impersonating and do it as yourself, or ask the user to; a project narrows the list in KARNI_IMPERSONATION_BLOCKED.
+
+<a id="imp007"></a>
+
+### IMP007 — karni-impersonation is installed but not wired
+
+*system check (error)* · from `karni_impersonation.checks`
+
+**Why Karni objects.** The middleware resolves the impersonated session, enforces the limit and injects the banner; the URL include serves the banner's exit. Without them sessions start but nothing acts on them.
+
+**Fix.** Add 'karni_impersonation.middleware.ImpersonationMiddleware' after AuthenticationMiddleware in MIDDLEWARE and path('impersonation/', include('karni_impersonation.urls')) to config/urls.py.
+
+<a id="imp008"></a>
+
+### IMP008 — KARNI_IMPERSONATION_BLOCKED is malformed
+
+*system check (error)* · from `karni_impersonation.checks`
+
+**Why Karni objects.** The blocked list is matched on every gate; a non-string entry would silently match nothing.
+
+**Fix.** Use strings: action names, 'app.model', 'app.model:action' patterns, or '/path/*'.
+
 ## karni-payments (`PAY`)
 
 <a id="pay001"></a>

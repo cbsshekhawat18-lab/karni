@@ -119,7 +119,7 @@ jobs:
       - name: Build sdists and wheels
         run: |
           set -euo pipefail
-          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals; do
+          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation; do
             python -m build --outdir dist "$d"
           done
           python -m twine check --strict dist/*
@@ -156,7 +156,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p npm-dist
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --dry-run --access public)
             npm pack --pack-destination npm-dist "./$d"
           done
@@ -208,7 +208,7 @@ jobs:
       - name: Build and publish (@karni/ui first; payments-ui peers on it)
         run: |
           set -euo pipefail
-          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui; do
+          for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
           done
 

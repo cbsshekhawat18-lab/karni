@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block content %}
+<form method="post" style="max-width:40rem">
+  {% csrf_token %}
+  <p>
+    {% blocktranslate with minutes=max_minutes trimmed %}
+      You will act as this user for at most {{ minutes }} minutes, with a banner on every page.
+      Deleting, exporting and payment changes stay blocked; the user is notified; everything you do is recorded against both identities.
+    {% endblocktranslate %}
+  </p>
+  {% if refusal %}
+    <p role="alert" style="color:#b91c1c"><strong>{{ refusal }}</strong></p>
+  {% endif %}
+  <p>
+    <label for="karni-impersonation-user">{% translate "User (email or id)" %}</label><br>
+    {% if target %}
+      <strong>{{ target.get_username }}</strong>
+    {% else %}
+      <input id="karni-impersonation-user" type="text" name="user" required inputmode="email" style="min-height:44px;font-size:16px;min-width:20rem">
+    {% endif %}
+  </p>
+  <p>
+    <label for="karni-impersonation-reason">{% translate "Reason" %}{% if require_reason %} *{% endif %}</label><br>
+    <textarea id="karni-impersonation-reason" name="reason" rows="3" cols="60" {% if require_reason %}required{% endif %} style="min-height:88px;font-size:16px"></textarea>
+  </p>
+  {% if not refusal %}
+    <button type="submit" style="min-height:44px;padding:0 1.25rem">{% translate "Start impersonating" %}</button>
+  {% endif %}
+</form>
+{% endblock %}

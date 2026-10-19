@@ -175,6 +175,18 @@ preview the dry run, commit — on one page, with progress for large files and
 a downloadable template. `karni_transfer = False` on an admin class removes
 both. See [import and export](import-export.md).
 
+## Vetoes
+
+The admin honours [`karni.vetoes`](api.md#vetoes) the way the API gate does:
+`has_add_permission`, `has_change_permission` and `has_delete_permission`
+also require that no registered veto refuses the action, `get_actions`
+drops vetoed action names (`delete_selected`, `export_csv`, …) from the
+menu, and the *Import* page refuses when `import` is vetoed.
+`KarniAdminMixin.vetoed(request, action)` is the one call behind all of
+them — use it in a custom view. The `karni-impersonation` module registers
+the veto that blocks dangerous actions while a support user acts as someone
+else.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

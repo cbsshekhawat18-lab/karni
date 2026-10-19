@@ -74,6 +74,20 @@ change and its migration note.
   approver roles and timeouts, an admin queue, `/api/pending-changes/`,
   Celery notifications, every decision in `karni.audit`, and
   `@karni/approvals-ui` (`<ApprovalsQueue/>`, `<ApprovalsBadge/>`).
+- Vetoes: `karni.vetoes.register_veto` refuses an action at the API and
+  admin gates after the access declaration admitted it (a maintenance
+  freeze, a read-only tenant); `KarniAdminMixin.vetoed()`. The hook behind
+  the new `karni-impersonation` module (M2): "log in as user" for support
+  with an explicit `impersonate` permission never implied by staff status,
+  no privilege escalation (a target holding anything the actor lacks is
+  refused), a banner naming both identities with a one-click exit, a
+  session record, every write attributed to both identities in
+  `karni.audit` (the row's actor is the target, the batch's actor the
+  impersonator), a configurable time limit, a hard block on deleting,
+  exporting and payment changes while impersonating, the target notified
+  and a reason required by default, a threat model in the README;
+  `karni.audit.capture.within_batch`; `@karni/impersonation-ui`
+  (`<ImpersonationBanner/>`); `useAuth().adoptTokens` in `@karni/ui`.
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`

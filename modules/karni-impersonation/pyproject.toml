@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-impersonation"
+version = "0.1.0"
+description = "Impersonation module for the Karni Django + React framework: 'log in as user' for support, done safely — an explicit permission, no privilege escalation, a banner, a session record, both identities in the audit trail, blocked actions and a time limit."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["django", "karni", "impersonation", "login-as", "support", "audit", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md).
+dependencies = ["karni>=0.1,<0.2"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+
+[project.entry-points."karni.settings"]
+impersonation = "karni_impersonation.conf:DEFAULTS"
+
+[project.entry-points."karni.errorcodes"]
+impersonation = "karni_impersonation.errorcodes:CODES"
+
+[project.entry-points."karni.checks"]
+impersonation = "karni_impersonation.checks:run_checks"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_impersonation"]
+artifacts = ["karni_impersonation/AGENTS.fragment.md", "karni_impersonation/templates/**"]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["karni_impersonation/AGENTS.fragment.md", "karni_impersonation/templates/**"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_impersonation/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+django_find_project = false
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

@@ -289,3 +289,16 @@ settings.BASE_DIR (they infer the root from the settings package); projects \
 that scanned nothing before may see violations on the next karni check."""
 mechanical = false
 migration = "migrations/0.2.md#architecture-rules-scan-the-project-without-base_dir"
+
+[[change]]
+id = "vetoes"
+kind = "behaviour"
+symbol = "karni.vetoes"
+replacement = "call super() (or self.vetoed(request, action)) in admin permission overrides"
+summary = """\
+The API gate and the admin consult karni.vetoes after the access declaration \
+admitted an action. Nothing changes without a registered veto; a Karni admin \
+that overrides has_delete_permission or get_actions without super() skips the \
+check there."""
+mechanical = false
+migration = "migrations/0.2.md#vetoes-at-the-gates"

@@ -74,6 +74,11 @@ export interface AuthContextValue {
   login(email: string, password: string): Promise<LoginResult>;
   logout(): Promise<void>;
   refresh(): Promise<void>;
+  /**
+   * Adopts tokens issued out of band (JWT mode; session mode re-syncs `/me/`),
+   * e.g. after starting or stopping an impersonated session.
+   */
+  adoptTokens(access: string | null, refresh: string | null): Promise<void>;
 }
 
 /**
@@ -139,6 +144,7 @@ export function AuthProvider({
       login: (email, password) => engine.login(email, password),
       logout: () => engine.logout(),
       refresh: () => engine.refresh(),
+      adoptTokens: (access, refresh) => engine.adoptTokens(access, refresh),
     }),
     [engine, snapshot],
   );

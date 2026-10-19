@@ -165,6 +165,9 @@ class TransferAdminMixin(admin.ModelAdmin):
     def _may_import(self, request: HttpRequest) -> bool:
         if not (self.has_add_permission(request) or self.has_change_permission(request)):
             return False
+        vetoed = getattr(self, "vetoed", None)
+        if vetoed is not None and vetoed(request, "import") is not None:
+            return False
         importer = self._importer(request)
         return bool(importer.may_create() or importer.may_update())
 

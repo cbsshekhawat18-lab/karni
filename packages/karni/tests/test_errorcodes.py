@@ -30,7 +30,8 @@ PACKAGE = Path(errorcodes.__file__).resolve().parents[1]
 REPO = PACKAGE.parents[2]
 PAYMENTS = REPO / "modules" / "karni-payments" / "karni_payments"
 APPROVALS = REPO / "modules" / "karni-approvals" / "karni_approvals"
-SOURCES = [PACKAGE, PAYMENTS, APPROVALS]
+IMPERSONATION = REPO / "modules" / "karni-impersonation" / "karni_impersonation"
+SOURCES = [PACKAGE, PAYMENTS, APPROVALS, IMPERSONATION]
 
 #: Constructing these directly would let an uncoded error escape Karni code.
 BARE = {
@@ -163,7 +164,7 @@ def _codes_in_source() -> dict[str, list[str]]:
                 isinstance(t, ast.Name) and t.id == "code" for t in node.targets
             ):
                 found = _literal(node.value)
-            if found and re.match(r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3})$", found):
+            if found and re.match(r"^(?:[EW]\d{3}|PAY\d{3}|APR\d{3}|IMP\d{3})$", found):
                 used.setdefault(found, []).append(f"{_rel(path)}:{node.lineno}")  # type: ignore[attr-defined]
     return used
 

@@ -38,6 +38,7 @@ __all__ = [
     "json_value",
     "record",
     "sensitive_fields",
+    "within_batch",
 ]
 
 _SNAPSHOT: str = "_karni_audit_before"
@@ -61,6 +62,21 @@ _BATCH: ContextVar[int | None] = ContextVar("karni_audit_batch", default=None)
 def current_batch_id() -> int | None:
     """The pk of the batch entries are being written into, or ``None``."""
     return _BATCH.get()
+
+
+@contextmanager
+def within_batch(batch_id: int | None) -> Iterator[None]:
+    """Write every entry recorded in the block into the existing batch ``batch_id``.
+
+    What an impersonated session uses: one batch for the whole session,
+    re-entered on every request, so every change made while impersonating
+    points at the batch that names both people.
+    """
+    token = _BATCH.set(int(batch_id) if batch_id is not None else None)
+    try:
+        yield
+    finally:
+        _BATCH.reset(token)
 
 
 @contextmanager

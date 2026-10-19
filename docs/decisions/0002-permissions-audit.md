@@ -14,9 +14,11 @@ tab, `/history/`, `<ChangeHistory/>`, `audited-bulk-write`), P5 (the
 permission matrix — the admin page, its guard rails, effective permissions,
 `api/auth/permissions/`, `RolePermission.origin`), P6 (import and export
 — `karni.transfer`, `/export/`, the four-step import with its mandatory dry
-run, audit batches, `<ResourceImport/>`) and M1 (the `karni-approvals`
-module on the new `karni.signals.pre_write` hook) have shipped; §2 below
-describes the state before them.*
+run, audit batches, `<ResourceImport/>`), M1 (the `karni-approvals`
+module on the new `karni.signals.pre_write` hook) and M2 (the
+`karni-impersonation` module on the new `karni.vetoes` registry) have
+shipped — the sequence is complete; §2 below describes the state before
+them.*
 
 This audits Karni's permission surface before the six retrofits (P1 roles as
 data, P2 row-level scoping, P3 field-level visibility, P4 change history, P5

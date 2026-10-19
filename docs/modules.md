@@ -334,8 +334,12 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 |---|---|---|
 | `karni-payments` (`modules/karni-payments/`) | hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider; `@karni/payments-ui` | `pip install karni-payments && karni add payments` |
 | `karni-approvals` (`modules/karni-approvals/`) | maker-checker approvals: a model opts in with `class Karni: requires_approval = [...]` and a guarded change becomes a pending change a second person applies or rejects — queue in the admin, `/api/pending-changes/`, notifications, timeouts, every decision in `karni.audit`; `@karni/approvals-ui` | `pip install karni-approvals && karni add approvals` |
+| `karni-impersonation` (`modules/karni-impersonation/`) | "log in as user" for support, done safely: an explicit `impersonate` permission (never implied by staff), no privilege escalation, a banner naming both identities with a one-click exit, a session record, every write attributed to both identities in `karni.audit`, a time limit and a hard block on deleting, exporting and payment changes; the threat model is in its README; `@karni/impersonation-ui` | `pip install karni-impersonation && karni add impersonation` |
 
 Each module's README is its reference (settings table, wiring, escape
 hatches). `karni-approvals` is built on one core hook — every `BaseModel`
 write sends [`karni.signals.pre_write`](models.md#write-interception) and a
 receiver may defer it — which any module can use the same way.
+`karni-impersonation` is built on another — [`karni.vetoes`](api.md#vetoes),
+a registry the API and admin gates consult after the access declaration
+admitted an action — and on `karni.audit`'s batches.

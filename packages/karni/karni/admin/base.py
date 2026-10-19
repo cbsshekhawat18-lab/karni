@@ -58,6 +58,7 @@ from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
 from karni.admin.transfer import TransferAdminMixin
 from karni.exceptions import KarniImproperlyConfigured, KarniWriteDeferred
+from karni.meta import STANDARD_ACTIONS
 from karni.models import SoftDeleteModel
 from karni.signals import pre_write
 
@@ -260,15 +261,42 @@ class KarniAdminMixin(admin.ModelAdmin):
             within_scope(self, request, obj, "view") or within_scope(self, request, obj, "change")
         )
 
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return super().has_add_permission(request) and self.vetoed(request, "add") is None
+
     def has_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        return super().has_change_permission(request, obj) and within_scope(
-            self, request, obj, "change"
+        return (
+            super().has_change_permission(request, obj)
+            and within_scope(self, request, obj, "change")
+            and self.vetoed(request, "change") is None
         )
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        return super().has_delete_permission(request, obj) and within_scope(
-            self, request, obj, "delete"
+        return (
+            super().has_delete_permission(request, obj)
+            and within_scope(self, request, obj, "delete")
+            and self.vetoed(request, "delete") is None
         )
+
+    def vetoed(self, request: HttpRequest, action: str) -> str | None:
+        """Why a registered veto (:mod:`karni.vetoes`) refuses ``action`` here, or ``None``."""
+        from karni.meta import permission_key
+        from karni.vetoes import VetoContext, check_vetoes
+
+        permission = permission_key(self.model, action) if action in STANDARD_ACTIONS else None
+        return check_vetoes(
+            VetoContext(
+                request, "admin", action, model=self.model, permission=permission, view=self
+            )
+        )
+
+    def get_actions(self, request: HttpRequest) -> Any:
+        """Django's actions minus the ones a veto refuses (``delete_selected``, ``export_csv``)."""
+        found = super().get_actions(request)
+        for name in list(found):
+            if self.vetoed(request, name) is not None:
+                found.pop(name, None)
+        return found
 
     # -- field-level visibility (ADR 0002, P3) --------------------------------
 

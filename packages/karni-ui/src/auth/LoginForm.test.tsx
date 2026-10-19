@@ -19,6 +19,7 @@ function contextValue(login: AuthContextValue["login"]): AuthContextValue {
     login,
     logout: () => Promise.resolve(),
     refresh: () => Promise.resolve(),
+    adoptTokens: () => Promise.resolve(),
   };
 }
 
