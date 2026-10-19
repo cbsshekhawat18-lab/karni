@@ -1,0 +1,9 @@
+
+> ticket_shop-frontend@0.1.0 dev
+> vite --port 8512 --strictPort
+
+
+  VITE v5.4.21  ready in 365 ms
+
+  ➜  Local:   http://localhost:8512/
+  ➜  Network: http://192.168.29.208:8512/

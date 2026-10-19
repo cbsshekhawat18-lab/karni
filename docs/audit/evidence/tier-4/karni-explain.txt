@@ -1,0 +1,39 @@
+$ karni explain E104
+E104  Owned() does not name a path to the user  (exception)
+
+Why:   Owned('path') filters rows to those whose path leads to request.user, and stamps the owner on create; a path that does not end at the user model would match nothing or the wrong rows.
+Fix:   Name the owner relation as a string, following relations with __ and ending at the user model: Owned('organizer') or Owned('event__organizer').
+From:  karni.api.access.Owned; karni.api.access.validate_access
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e104
+
+$ karni explain E205
+E205  KARNI_ROLES is malformed  (exception)
+
+Why:   The role declaration is the single source of what each role may do; a malformed entry cannot be reconciled into the role tables.
+Fix:   Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone); a scope is 'all', 'own', 'related:<key>' or 'custom:<name>'.
+From:  karni.accounts.roles.declared_roles
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e205
+
+$ karni explain E101
+E101  A viewset declares no access  (check)
+
+Why:   Access is mandatory (ADR 0001 Q2.1): without a declaration Karni cannot know which rows a user may see or change, so the viewset denies every request.
+Fix:   Declare `access = Access(read=..., write=...)` on the viewset (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`.
+From:  karni.checks.check_viewsets; karni.api.access.KarniAccessPermission
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e101
+
+$ karni explain E209
+E209  Can() was given a bad permission, or one for another model  (exception)
+
+Why:   Can() names permissions as 'app_label.model:action', and its row filter is built against that model, so a viewset's declaration can only use its own model's permissions.
+Fix:   Write Can('events.event:approve'); on EventViewSet it must be an events.event permission. To gate on another model's permission use HasRole(...).
+From:  karni.api.access.Can
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e209
+
+$ karni explain E501
+E501  An optional dependency is not installed  (exception)
+
+Why:   Optional features (Sentry, S3 storage, thumbnails, 2FA, PostgreSQL search) need extra packages that a minimal install leaves out.
+Fix:   Install the extra the message names, e.g. pip install 'karni[sentry]', 'karni[s3]', 'karni[images]', 'karni[2fa]' or 'psycopg[binary]'.
+From:  karni.conf.sentry, karni.storage, karni.accounts.twofa, karni.api.search.postgres
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e501

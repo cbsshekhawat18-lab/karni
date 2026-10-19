@@ -1,0 +1,55 @@
+Content-Type: multipart/alternative;
+ boundary="===============3525748790793264055=="
+MIME-Version: 1.0
+Subject: Verify your email address
+From: webmaster@localhost
+To: verify1792380018@example.com
+Date: Mon, 19 Oct 2026 03:20:18 -0000
+Message-ID: 
+ <179238001837.86285.9837961830944513195@1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa>
+
+--===============3525748790793264055==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+Hi,
+
+Thanks for signing up. Please confirm that verify1792380018@example.com is your email
+address by opening the link below:
+
+http://localhost:5173/auth/verify-email?token=1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I
+
+If you did not create this account, you can safely ignore this email.
+
+--===============3525748790793264055==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f6f7f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px;">
+      <p style="margin:0 0 16px;">Hi,</p>
+      <p style="margin:0 0 16px;">
+        Thanks for signing up. Please confirm that <strong>verify1792380018@example.com</strong>
+        is your email address.
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="http://localhost:5173/auth/verify-email?token=1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I" style="display:inline-block;padding:10px 20px;background:#1f2933;color:#ffffff;text-decoration:none;border-radius:6px;">Verify email address</a>
+      </p>
+      <p style="margin:0 0 8px;font-size:13px;color:#52606d;">
+        Or copy this link into your browser:<br>
+        <a href="http://localhost:5173/auth/verify-email?token=1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I" style="color:#3b5bdb;word-break:break-all;">http://localhost:5173/auth/verify-email?token=1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I</a>
+      </p>
+      <p style="margin:16px 0 0;font-size:13px;color:#52606d;">
+        If you did not create this account, you can safely ignore this email.
+      </p>
+    </div>
+  </body>
+</html>
+
+--===============3525748790793264055==--
+
+-------------------------------------------------------------------------------

@@ -1,0 +1,29 @@
+thon3.12/site-packages/redis/connection.py:389 in connect_check_health
+thon3.12/site-packages/redis/retry.py:105 in call_with_retry
+thon3.12/site-packages/redis/connection.py:390 in <lambda>
+thon3.12/site-packages/redis/connection.py:767 in _connect
+s/3.12/lib/python3.12/socket.py:978 in getaddrinfo
+thon3.12/site-packages/django/core/handlers/exception.py:55 in inner
+exc = ConnectionError('Error 8 connecting to redis:6379.
+thon3.12/site-packages/django/core/handlers/base.py:197 in _get_response
+thon3.12/site-packages/django/views/decorators/csrf.py:65 in _view_wrapper
+thon3.12/site-packages/django/views/generic/base.py:105 in view
+thon3.12/site-packages/rest_framework/views.py:515 in dispatch
+thon3.12/site-packages/rest_framework/views.py:475 in handle_exception
+exc = ConnectionError('Error 8 connecting to redis:6379. nodename
+thon3.12/site-packages/rest_framework/views.py:486 in
+exc = ConnectionError('Error 8 connecting to
+thon3.12/site-packages/rest_framework/views.py:503 in dispatch
+thon3.12/site-packages/rest_framework/views.py:422 in initial
+thon3.12/site-packages/rest_framework/views.py:365 in check_throttles
+thon3.12/site-packages/rest_framework/throttling.py:123 in allow_request
+thon3.12/site-packages/django/core/cache/backends/redis.py:187 in get
+thon3.12/site-packages/django/core/cache/backends/redis.py:99 in get
+thon3.12/site-packages/redis/commands/core.py:1829 in get
+thon3.12/site-packages/redis/client.py:621 in execute_command
+thon3.12/site-packages/redis/client.py:627 in _execute_command
+thon3.12/site-packages/redis/utils.py:195 in wrapper
+thon3.12/site-packages/redis/connection.py:1533 in get_connection
+thon3.12/site-packages/redis/connection.py:380 in connect
+thon3.12/site-packages/redis/connection.py:397 in connect_check_health
+ConnectionError: Error 8 connecting to redis:6379. nodename nor servname

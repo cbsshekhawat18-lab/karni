@@ -1,0 +1,6 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/examples/eventhub && .venv/bin/python -m pytest -q   (project .venv, .env -> sqlite)
+1792379985.880626000
+..............                                                           [100%]
+14 passed in 2.73s
+exit=0
+1792379990.260522000

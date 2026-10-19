@@ -1,0 +1,751 @@
+
+#1 [manager_a list employees]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#2 [manager_a list reviews]
+  GET http://127.0.0.1:8531/api/reviews/
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","rating":4,"note":"good A"}]}
+
+#3 [manager_a retrieve B row]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#4 [manager_a retrieve B row (emp_b2)]
+  GET http://127.0.0.1:8531/api/employees/bfdbbe3c-fad3-48c2-9fc8-6909b436c1b3/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#5 [manager_a HEAD B row]
+  HEAD http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  
+
+#6 [manager_a PATCH B row]
+  PATCH http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  json={"name": "pwned"}
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#7 [manager_a PUT B row]
+  PUT http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  json={"name": "pwned", "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "salary": "1.00"}
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#8 [manager_a DELETE B row]
+  DELETE http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#9 [manager_a approve B row (custom action)]
+  POST http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/approve/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#10 [manager_a retrieve B review]
+  GET http://127.0.0.1:8531/api/reviews/a8eefac6-8fbf-4e15-8c7d-83a6699e0871/
+  -> 404 application/json
+  {"detail":"No Review matches the given query. Rows are limited by ReviewViewSet.access read=Can('hr.review:view')."}
+
+#11 [manager_a PATCH B review]
+  PATCH http://127.0.0.1:8531/api/reviews/a8eefac6-8fbf-4e15-8c7d-83a6699e0871/
+  json={"rating": 1}
+  -> 404 application/json
+  {"detail":"No Review matches the given query. Rows are limited by ReviewViewSet.access read=Can('hr.review:view')."}
+
+#12 [manager_a filter ?branch=B]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'branch': 'b96524ca-0526-4673-b9c9-02f248910ede'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#13 [manager_a filter ?created_by=clerk_b]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'created_by': 'd37e9c08-15e8-4290-8f23-005cf53f24a5'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#14 [manager_a filter ?created_by=manager_b]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'created_by': 'dddb829c-9498-47a9-b953-f1aa563cebd5'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#15 [manager_a filter ?salary__gte=5000 (only B has it)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'salary__gte': '5000'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#16 [manager_a filter on write-only ?secret_note__icontains=needle]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'secret_note__icontains': 'needle'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#17 [manager_a filter ?secret_note=B-SECRET-ZZZ-needle]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'secret_note': 'B-SECRET-ZZZ-needle'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#18 [manager_a filter traversal ?branch__name=Branch B]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'branch__name': 'Branch B'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#19 [manager_a reviews filter ?employee=B]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'employee': 'b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#20 [manager_a reviews filter ?employee__branch=B]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'employee__branch': 'b96524ca-0526-4673-b9c9-02f248910ede'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","rating":4,"note":"good A"}]}
+
+#21 [manager_a search 'needle' (only B)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'needle'}
+  -> 500 text/html
+  <html 237094 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#22 [manager_a search 'Beta' (only B names)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Beta'}
+  -> 500 text/html
+  <html 237081 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#23 [manager_a search write-only value on A row 'A-SECRET-one' (oracle on hidden field)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-one'}
+  -> 500 text/html
+  <html 237326 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#24 [manager_a search write-only value 'A-SECRET-two']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-two'}
+  -> 500 text/html
+  <html 237326 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#25 [manager_a search write-only value 'A-SECRET-nope']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-nope'}
+  -> 500 text/html
+  <html 237382 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#26 [manager_a ordering=salary]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'salary'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"},{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"}]}
+
+#27 [manager_a ordering=-salary]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': '-salary'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#28 [manager_a ordering=secret_note (write-only)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'secret_note'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"},{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"}]}
+
+#29 [manager_a ordering=-secret_note (write-only)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': '-secret_note'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#30 [manager_a ordering=created_by__email (traverse to user)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'created_by__email'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#31 [manager_a ordering=created_by__password]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'created_by__password'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#32 [manager_a ordering=deleted_at]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'deleted_at'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"},{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"}]}
+
+#33 [manager_a expand=branch]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'expand': 'branch'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","created_by":null,"updated_by":null,"name":"Branch A"},"salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","created_by":null,"updated_by":null,"name":"Branch 
+
+#34 [manager_a expand=created_by (user model, no routed viewset)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'expand': 'created_by'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'created_by' in 'created_by'. Allowed keys at this level: branch. See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#35 [manager_a reviews expand=employee]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":null,"rating":4,"note":"good A"}]}
+
+#36 [manager_a reviews expand=employee.branch]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee.branch'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":null,"rating":4,"note":"good A"}]}
+
+#37 [manager_a reviews expand=employee.created_by]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee.created_by'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'created_by' in 'employee.created_by'. Allowed keys at this level: branch. See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#38 [manager_a retrieve REV_X (clerk_a's review of a B employee) expand=employee]
+  GET http://127.0.0.1:8531/api/reviews/2e539279-0371-41c1-a62b-00f465c202bc/
+  params={'expand': 'employee'}
+  -> 404 application/json
+  {"detail":"No Review matches the given query. Rows are limited by ReviewViewSet.access read=Can('hr.review:view')."}
+
+#39 [manager_a retrieve REV_X unexpanded (does the FK pk of the unreadable row show?)]
+  GET http://127.0.0.1:8531/api/reviews/2e539279-0371-41c1-a62b-00f465c202bc/
+  -> 404 application/json
+  {"detail":"No Review matches the given query. Rows are limited by ReviewViewSet.access read=Can('hr.review:view')."}
+
+#40 [manager_a branches expand=users (reverse, not listed)]
+  GET http://127.0.0.1:8531/api/branches/
+  params={'expand': 'users'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'users' in 'users'. Allowed keys at this level: (none). See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#41 [manager_a branches expand=employees (reverse, not listed)]
+  GET http://127.0.0.1:8531/api/branches/
+  params={'expand': 'employees'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'employees' in 'employees'. Allowed keys at this level: (none). See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#42 [manager_a random uuid]
+  GET http://127.0.0.1:8531/api/employees/22f29b53-9c01-49b2-bab1-53f4b3c449cd/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#43 [manager_a malformed id 'abc']
+  GET http://127.0.0.1:8531/api/employees/abc/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#44 [manager_a malformed id '1 OR 1=1']
+  GET http://127.0.0.1:8531/api/employees/1%20OR%201=1/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#45 [manager_a id with trailing junk]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3aex/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#46 [manager_a id uppercase B row]
+  GET http://127.0.0.1:8531/api/employees/B8FFEB64-3001-40E2-9CAE-AA81B3CDC3AE/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#47 [manager_a id without dashes B row]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64300140e29caeaa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#48 [manager_a empty id]
+  GET http://127.0.0.1:8531/api/employees//
+  -> 404 text/html
+  <html 8844 bytes; title=Page not found at /api/employees//>
+
+#49 [manager_a POST review on B employee (relation PK out of scope)]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae", "rating": 1, "note": "x"}
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.review:add')."}
+
+#50 [manager_a POST review on random employee uuid]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "2f9c419c-e6ed-4e68-be2d-b9a0ea9013f5", "rating": 1, "note": "x"}
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.review:add')."}
+
+#51 [manager_a POST review on A employee (control)]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb", "rating": 3, "note": "control"}
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.review:add')."}
+
+#52 [manager_a POST employee into branch B (create scope)]
+  POST http://127.0.0.1:8531/api/employees/
+  json={"name": "Planted by manager_a", "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "salary": "1.00", "secret_note": "planted"}
+  -> 201 application/json
+  {"id":"7b4ed8ff-58b3-422f-9c7d-484b50034615","created_at":"2026-10-19T03:15:29.753058Z","updated_at":"2026-10-19T03:15:29.753068Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Planted by manager_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"}
+
+#53 [manager_a POST employee with created_by=manager_b (body chooses owner?)]
+  POST http://127.0.0.1:8531/api/employees/
+  json={"name": "Owner-spoof by manager_a", "branch": "597355d1-a2a4-48b2-a991-c7a7d564cc42", "salary": "1.00", "created_by": "dddb829c-9498-47a9-b953-f1aa563cebd5"}
+  -> 201 application/json
+  {"id":"0b4833c5-1a27-437b-9f55-05ded2dcae1d","created_at":"2026-10-19T03:15:29.771332Z","updated_at":"2026-10-19T03:15:29.771341Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Owner-spoof by manager_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"}
+
+#54 [manager_a page_size=1000]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'page_size': 1000}
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"0b4833c5-1a27-437b-9f55-05ded2dcae1d","created_at":"2026-10-19T03:15:29.771332Z","updated_at":"2026-10-19T03:15:29.771341Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Owner-spoof by manager_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":null,"name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","bra
+
+#55 [manager_a OPTIONS employees]
+  OPTIONS http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"name":"Employee List","description":"Roles as data: the grants in KARNI_ROLES decide the rows.","renders":["application/json","text/html"],"parses":["application/json","application/x-www-form-urlencoded","multipart/form-data"],"actions":{"POST":{"id":{"type":"string","required":false,"read_only":true,"label":"Id"},"created_at":{"type":"datetime","required":false,"read_only":true,"label":"Created
+
+#56 [manager_a my-employees list (Owned|HasRole route)]
+  GET http://127.0.0.1:8531/api/my-employees/
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"0b4833c5-1a27-437b-9f55-05ded2dcae1d","created_at":"2026-10-19T03:15:29.771332Z","updated_at":"2026-10-19T03:15:29.771341Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Owner-spoof by manager_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"7b4ed8ff-58b3-422f-9c7d-484b50034615","created_at":"2026-10-19T03:15:29.753058Z","updated_at":"2026-10-19T03:15:29.753068Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Planted by manager_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"},{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-18T17:11:39.632518Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","up
+
+#57 [manager_a my-employees retrieve A row created by the other A user]
+  GET http://127.0.0.1:8531/api/my-employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by MyEmployeeViewSet.access read=Owned('created_by') | HasRole('staff')."}
+
+#58 [manager_a my-employees retrieve B row]
+  GET http://127.0.0.1:8531/api/my-employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by MyEmployeeViewSet.access read=Owned('created_by') | HasRole('staff')."}
+
+#59 [clerk_a list employees]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#60 [clerk_a list reviews]
+  GET http://127.0.0.1:8531/api/reviews/
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae","rating":5,"note":"cross-branch review owned by clerk_a"},{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","rating":4,"note":"good A"}]}
+
+#61 [clerk_a retrieve B row]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#62 [clerk_a retrieve B row (emp_b2)]
+  GET http://127.0.0.1:8531/api/employees/bfdbbe3c-fad3-48c2-9fc8-6909b436c1b3/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#63 [clerk_a HEAD B row]
+  HEAD http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  
+
+#64 [clerk_a PATCH B row]
+  PATCH http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  json={"name": "pwned"}
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#65 [clerk_a PUT B row]
+  PUT http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  json={"name": "pwned", "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "salary": "1.00"}
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#66 [clerk_a DELETE B row]
+  DELETE http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#67 [clerk_a approve B row (custom action)]
+  POST http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/approve/
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.employee:approve')."}
+
+#68 [clerk_a retrieve B review]
+  GET http://127.0.0.1:8531/api/reviews/a8eefac6-8fbf-4e15-8c7d-83a6699e0871/
+  -> 404 application/json
+  {"detail":"No Review matches the given query. Rows are limited by ReviewViewSet.access read=Can('hr.review:view')."}
+
+#69 [clerk_a PATCH B review]
+  PATCH http://127.0.0.1:8531/api/reviews/a8eefac6-8fbf-4e15-8c7d-83a6699e0871/
+  json={"rating": 1}
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.review:change')."}
+
+#70 [clerk_a filter ?branch=B]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'branch': 'b96524ca-0526-4673-b9c9-02f248910ede'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#71 [clerk_a filter ?created_by=clerk_b]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'created_by': 'd37e9c08-15e8-4290-8f23-005cf53f24a5'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#72 [clerk_a filter ?created_by=manager_b]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'created_by': 'dddb829c-9498-47a9-b953-f1aa563cebd5'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#73 [clerk_a filter ?salary__gte=5000 (only B has it)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'salary__gte': '5000'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#74 [clerk_a filter on write-only ?secret_note__icontains=needle]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'secret_note__icontains': 'needle'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#75 [clerk_a filter ?secret_note=B-SECRET-ZZZ-needle]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'secret_note': 'B-SECRET-ZZZ-needle'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#76 [clerk_a filter traversal ?branch__name=Branch B]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'branch__name': 'Branch B'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#77 [clerk_a reviews filter ?employee=B]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'employee': 'b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae","rating":5,"note":"cross-branch review owned by clerk_a"}]}
+
+#78 [clerk_a reviews filter ?employee__branch=B]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'employee__branch': 'b96524ca-0526-4673-b9c9-02f248910ede'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae","rating":5,"note":"cross-branch review owned by clerk_a"},{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","rating":4,"note":"good A"}]}
+
+#79 [clerk_a search 'needle' (only B)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'needle'}
+  -> 500 text/html
+  <html 237138 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#80 [clerk_a search 'Beta' (only B names)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Beta'}
+  -> 500 text/html
+  <html 237123 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#81 [clerk_a search write-only value on A row 'A-SECRET-one' (oracle on hidden field)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-one'}
+  -> 500 text/html
+  <html 237367 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#82 [clerk_a search write-only value 'A-SECRET-two']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-two'}
+  -> 500 text/html
+  <html 237368 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#83 [clerk_a search write-only value 'A-SECRET-nope']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-nope'}
+  -> 500 text/html
+  <html 237423 bytes; title=ProgrammingError
+          at /api/employees/>
+
+#84 [clerk_a ordering=salary]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'salary'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#85 [clerk_a ordering=-salary]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': '-salary'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#86 [clerk_a ordering=secret_note (write-only)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'secret_note'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#87 [clerk_a ordering=-secret_note (write-only)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': '-secret_note'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#88 [clerk_a ordering=created_by__email (traverse to user)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'created_by__email'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#89 [clerk_a ordering=created_by__password]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'created_by__password'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#90 [clerk_a ordering=deleted_at]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'deleted_at'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}]}
+
+#91 [clerk_a expand=branch]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'expand': 'branch'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","created_by":null,"updated_by":null,"name":"Branch A"},"salary":"1000.00"}]}
+
+#92 [clerk_a expand=created_by (user model, no routed viewset)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'expand': 'created_by'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'created_by' in 'created_by'. Allowed keys at this level: branch. See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#93 [clerk_a reviews expand=employee]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":null,"rating":5,"note":"cross-branch review owned by clerk_a"},{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"},"rating":4,"note":"good A"}]}
+
+#94 [clerk_a reviews expand=employee.branch]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee.branch'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":null,"rating":5,"note":"cross-branch review owned by clerk_a"},{"id":"657fd565-3d95-442a-834c-13c32ac7673e","created_at":"2026-10-18T17:11:39.637476Z","updated_at":"2026-10-18T17:11:39.637491Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"name":"Alice Alpha","branch":{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","
+
+#95 [clerk_a reviews expand=employee.created_by]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'expand': 'employee.created_by'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'created_by' in 'employee.created_by'. Allowed keys at this level: branch. See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#96 [clerk_a retrieve REV_X (clerk_a's review of a B employee) expand=employee]
+  GET http://127.0.0.1:8531/api/reviews/2e539279-0371-41c1-a62b-00f465c202bc/
+  params={'expand': 'employee'}
+  -> 200 application/json
+  {"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":null,"rating":5,"note":"cross-branch review owned by clerk_a"}
+
+#97 [clerk_a retrieve REV_X unexpanded (does the FK pk of the unreadable row show?)]
+  GET http://127.0.0.1:8531/api/reviews/2e539279-0371-41c1-a62b-00f465c202bc/
+  -> 200 application/json
+  {"id":"2e539279-0371-41c1-a62b-00f465c202bc","created_at":"2026-10-18T17:16:28.165865Z","updated_at":"2026-10-18T17:16:28.166034Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":null,"employee":"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae","rating":5,"note":"cross-branch review owned by clerk_a"}
+
+#98 [clerk_a branches expand=users (reverse, not listed)]
+  GET http://127.0.0.1:8531/api/branches/
+  params={'expand': 'users'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'users' in 'users'. Allowed keys at this level: (none). See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#99 [clerk_a branches expand=employees (reverse, not listed)]
+  GET http://127.0.0.1:8531/api/branches/
+  params={'expand': 'employees'}
+  -> 400 application/json
+  {"expand":["E126: Unknown expand key 'employees' in 'employees'. Allowed keys at this level: (none). See https://cbsshekhawat18-lab.github.io/karni/errors/#e126"]}
+
+#100 [clerk_a random uuid]
+  GET http://127.0.0.1:8531/api/employees/a4c8af84-b0ca-460c-9df8-7198620254e1/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#101 [clerk_a malformed id 'abc']
+  GET http://127.0.0.1:8531/api/employees/abc/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#102 [clerk_a malformed id '1 OR 1=1']
+  GET http://127.0.0.1:8531/api/employees/1%20OR%201=1/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#103 [clerk_a id with trailing junk]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3aex/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#104 [clerk_a id uppercase B row]
+  GET http://127.0.0.1:8531/api/employees/B8FFEB64-3001-40E2-9CAE-AA81B3CDC3AE/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#105 [clerk_a id without dashes B row]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64300140e29caeaa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#106 [clerk_a empty id]
+  GET http://127.0.0.1:8531/api/employees//
+  -> 404 text/html
+  <html 8844 bytes; title=Page not found at /api/employees//>
+
+#107 [clerk_a POST review on B employee (relation PK out of scope)]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae", "rating": 1, "note": "x"}
+  -> 400 application/json
+  {"employee":["Invalid pk \"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae\" - object does not exist."]}
+
+#108 [clerk_a POST review on random employee uuid]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "1effcc53-a266-4915-a27d-36598855e274", "rating": 1, "note": "x"}
+  -> 400 application/json
+  {"employee":["Invalid pk \"1effcc53-a266-4915-a27d-36598855e274\" - object does not exist."]}
+
+#109 [clerk_a POST review on A employee (control)]
+  POST http://127.0.0.1:8531/api/reviews/
+  json={"employee": "3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb", "rating": 3, "note": "control"}
+  -> 201 application/json
+  {"id":"8b26f824-771e-4524-9a9f-ac20bb237baf","created_at":"2026-10-19T03:15:37.087792Z","updated_at":"2026-10-19T03:15:37.087801Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","employee":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","rating":3,"note":"control"}
+
+#110 [clerk_a POST employee into branch B (create scope)]
+  POST http://127.0.0.1:8531/api/employees/
+  json={"name": "Planted by clerk_a", "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "salary": "1.00", "secret_note": "planted"}
+  -> 201 application/json
+  {"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","created_at":"2026-10-19T03:15:37.107113Z","updated_at":"2026-10-19T03:15:37.107124Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Planted by clerk_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"}
+
+#111 [clerk_a POST employee with created_by=manager_b (body chooses owner?)]
+  POST http://127.0.0.1:8531/api/employees/
+  json={"name": "Owner-spoof by clerk_a", "branch": "597355d1-a2a4-48b2-a991-c7a7d564cc42", "salary": "1.00", "created_by": "dddb829c-9498-47a9-b953-f1aa563cebd5"}
+  -> 201 application/json
+  {"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","created_at":"2026-10-19T03:15:37.124395Z","updated_at":"2026-10-19T03:15:37.124402Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Owner-spoof by clerk_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"}
+
+#112 [clerk_a page_size=1000]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'page_size': 1000}
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","created_at":"2026-10-19T03:15:37.124395Z","updated_at":"2026-10-19T03:15:37.124402Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Owner-spoof by clerk_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","created_at":"2026-10-19T03:15:37.107113Z","updated_at":"2026-10-19T03:15:37.107124Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Planted by clerk_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","update
+
+#113 [clerk_a OPTIONS employees]
+  OPTIONS http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"name":"Employee List","description":"Roles as data: the grants in KARNI_ROLES decide the rows.","renders":["application/json","text/html"],"parses":["application/json","application/x-www-form-urlencoded","multipart/form-data"],"actions":{"POST":{"id":{"type":"string","required":false,"read_only":true,"label":"Id"},"created_at":{"type":"datetime","required":false,"read_only":true,"label":"Created
+
+#114 [clerk_a my-employees list (Owned|HasRole route)]
+  GET http://127.0.0.1:8531/api/my-employees/
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","created_at":"2026-10-19T03:15:37.124395Z","updated_at":"2026-10-19T03:15:37.124402Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Owner-spoof by clerk_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","created_at":"2026-10-19T03:15:37.107113Z","updated_at":"2026-10-19T03:15:37.107124Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Planted by clerk_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-18T17:11:39.629769Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","update
+
+#115 [clerk_a my-employees retrieve A row created by the other A user]
+  GET http://127.0.0.1:8531/api/my-employees/cbb58793-31f5-4ff0-ae34-b21c11478966/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by MyEmployeeViewSet.access read=Owned('created_by') | HasRole('staff')."}
+
+#116 [clerk_a my-employees retrieve B row]
+  GET http://127.0.0.1:8531/api/my-employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by MyEmployeeViewSet.access read=Owned('created_by') | HasRole('staff')."}
+
+#117 [manager_a PATCH own-branch row emp_a2 -> branch B]
+  PATCH http://127.0.0.1:8531/api/employees/cbb58793-31f5-4ff0-ae34-b21c11478966/
+  json={"branch": "b96524ca-0526-4673-b9c9-02f248910ede"}
+  -> 200 application/json
+  {"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.227560Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Aaron Alpha","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"3000.00"}
+
+#118 [manager_a retrieve emp_a2 after move]
+  GET http://127.0.0.1:8531/api/employees/cbb58793-31f5-4ff0-ae34-b21c11478966/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#119 [manager_b retrieve emp_a2 after move (now in B)]
+  GET http://127.0.0.1:8531/api/employees/cbb58793-31f5-4ff0-ae34-b21c11478966/
+  -> 200 application/json
+  {"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.227560Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","name":"Aaron Alpha","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"3000.00"}
+
+#120 [manager_b PATCH emp_a2 back to branch A]
+  PATCH http://127.0.0.1:8531/api/employees/cbb58793-31f5-4ff0-ae34-b21c11478966/
+  json={"branch": "597355d1-a2a4-48b2-a991-c7a7d564cc42"}
+  -> 200 application/json
+  {"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06b7b-bc1c-4168-84b0-de8cf0c9ea4e","updated_by":"dddb829c-9498-47a9-b953-f1aa563cebd5","name":"Aaron Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"3000.00"}
+
+#121 [clerk_a PATCH own row emp_a1 created_by=clerk_b (re-own?)]
+  PATCH http://127.0.0.1:8531/api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/
+  json={"created_by": "d37e9c08-15e8-4290-8f23-005cf53f24a5"}
+  -> 200 application/json
+  {"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}
+
+#122 [clerk_a retrieve emp_a1 after re-own attempt]
+  GET http://127.0.0.1:8531/api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/
+  -> 200 application/json
+  {"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Alice Alpha","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1000.00"}
+
+#123 [blind (view all, no change) PATCH emp_a1 -> expect 403]
+  PATCH http://127.0.0.1:8531/api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/
+  json={"name": "x"}
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.employee:change')."}
+
+#124 [blind DELETE emp_b1 -> expect 403]
+  DELETE http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.employee:change')."}
+
+#125 [blind approve emp_b1 (no approve grant) -> expect 403]
+  POST http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/approve/
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.employee:approve')."}
+
+#126 [blind sees salary in list (no field hiding)]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"count":8,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","created_at":"2026-10-19T03:15:37.124395Z","updated_at":"2026-10-19T03:15:37.124402Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Owner-spoof by clerk_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","created_at":"2026-10-19T03:15:37.107113Z","updated_at":"2026-10-19T03:15:37.107124Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be
+
+#127 [staff PATCH my-employees emp_a1 (readable via HasRole, write=Owned) -> expect 403]
+  PATCH http://127.0.0.1:8531/api/my-employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/
+  json={"name": "x"}
+  -> 403 application/json
+  {"detail":"Access denied: this row is readable but the action requires Owned('created_by')."}
+
+#128 [manager_a retrieve emp_b1 -> expect 404 not 403]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 404 application/json
+  {"detail":"No Employee matches the given query. Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#129 [manager_a approve own-branch row emp_a1 (control)]
+  POST http://127.0.0.1:8531/api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/approve/
+  -> 200 application/json
+  {"approved":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb"}
+
+#130 [anonymous list employees]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 401 application/json
+  {"detail":"Authentication credentials were not provided."}
+
+#131 [anonymous retrieve B row]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/
+  -> 401 application/json
+  {"detail":"Authentication credentials were not provided."}
+
+#132 [anonymous list branches]
+  GET http://127.0.0.1:8531/api/branches/
+  -> 401 application/json
+  {"detail":"Authentication credentials were not provided."}

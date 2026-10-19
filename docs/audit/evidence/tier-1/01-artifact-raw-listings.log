@@ -1,0 +1,888 @@
+## karni wheel
+Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni-0.1.0-py3-none-any.whl
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     1028  02-02-2020 00:00   karni/__init__.py
+     1904  02-02-2020 00:00   karni/apps.py
+     9946  02-02-2020 00:00   karni/celery.py
+     9937  02-02-2020 00:00   karni/checks.py
+     2805  02-02-2020 00:00   karni/deprecation.py
+     1752  02-02-2020 00:00   karni/dotenv.py
+    15864  02-02-2020 00:00   karni/events.py
+     3964  02-02-2020 00:00   karni/exceptions.py
+    10092  02-02-2020 00:00   karni/introspect.py
+     7721  02-02-2020 00:00   karni/links.py
+    11141  02-02-2020 00:00   karni/managers.py
+     2880  02-02-2020 00:00   karni/meta.py
+     6164  02-02-2020 00:00   karni/middleware.py
+     8127  02-02-2020 00:00   karni/models.py
+     9160  02-02-2020 00:00   karni/pagination.py
+    13948  02-02-2020 00:00   karni/performance.py
+    20284  02-02-2020 00:00   karni/schedule.py
+    16464  02-02-2020 00:00   karni/scopes.py
+    29030  02-02-2020 00:00   karni/seeding.py
+      490  02-02-2020 00:00   karni/accounts/__init__.py
+     5286  02-02-2020 00:00   karni/accounts/admin.py
+     2407  02-02-2020 00:00   karni/accounts/apps.py
+     8756  02-02-2020 00:00   karni/accounts/emails.py
+     3127  02-02-2020 00:00   karni/accounts/managers.py
+    10374  02-02-2020 00:00   karni/accounts/models.py
+     9028  02-02-2020 00:00   karni/accounts/permissions.py
+    20080  02-02-2020 00:00   karni/accounts/roles.py
+    11528  02-02-2020 00:00   karni/accounts/services.py
+     1950  02-02-2020 00:00   karni/accounts/tasks.py
+     5637  02-02-2020 00:00   karni/accounts/tokens.py
+    18249  02-02-2020 00:00   karni/accounts/twofa.py
+     4400  02-02-2020 00:00   karni/accounts/urls.py
+      756  02-02-2020 00:00   karni/accounts/api/__init__.py
+     8555  02-02-2020 00:00   karni/accounts/api/serializers.py
+     4948  02-02-2020 00:00   karni/accounts/api/throttles.py
+    21354  02-02-2020 00:00   karni/accounts/api/views.py
+     4879  02-02-2020 00:00   karni/accounts/migrations/0001_initial.py
+     6464  02-02-2020 00:00   karni/accounts/migrations/0002_roles.py
+        0  02-02-2020 00:00   karni/accounts/migrations/__init__.py
+     1247  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/change_email_body.html
+      386  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/change_email_body.txt
+       31  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/change_email_subject.txt
+     1257  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/reset_password_body.html
+      403  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/reset_password_body.txt
+       20  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/reset_password_subject.txt
+     1150  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/verify_email_body.html
+      293  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/verify_email_body.txt
+       26  02-02-2020 00:00   karni/accounts/templates/karni_accounts/email/verify_email_subject.txt
+     8103  02-02-2020 00:00   karni/admin/__init__.py
+     1476  02-02-2020 00:00   karni/admin/apps.py
+    16742  02-02-2020 00:00   karni/admin/base.py
+     8903  02-02-2020 00:00   karni/admin/derive.py
+     5249  02-02-2020 00:00   karni/admin/inlines.py
+    11894  02-02-2020 00:00   karni/admin/soft_delete.py
+     3218  02-02-2020 00:00   karni/admin/static/karni/brand/karni-mark-light.svg
+      698  02-02-2020 00:00   karni/admin/static/karni/brand/karni-mark-simple.svg
+     3218  02-02-2020 00:00   karni/admin/static/karni/brand/karni-mark.svg
+     2930  02-02-2020 00:00   karni/admin/templates/karni_admin/hard_delete_selected_confirmation.html
+     2866  02-02-2020 00:00   karni/agent/__init__.py
+     1409  02-02-2020 00:00   karni/agent/__main__.py
+    24634  02-02-2020 00:00   karni/agent/check.py
+    13063  02-02-2020 00:00   karni/agent/history.py
+     9516  02-02-2020 00:00   karni/agent/history_chronicle.py
+     8267  02-02-2020 00:00   karni/agent/overrides.py
+    28984  02-02-2020 00:00   karni/agent/rules.py
+     2836  02-02-2020 00:00   karni/api/__init__.py
+    36657  02-02-2020 00:00   karni/api/access.py
+    12263  02-02-2020 00:00   karni/api/caching.py
+    14345  02-02-2020 00:00   karni/api/expansion.py
+    11561  02-02-2020 00:00   karni/api/filters.py
+    16233  02-02-2020 00:00   karni/api/optimizer.py
+    11908  02-02-2020 00:00   karni/api/routers.py
+    11937  02-02-2020 00:00   karni/api/schema.py
+    19377  02-02-2020 00:00   karni/api/serializers.py
+     1256  02-02-2020 00:00   karni/api/urls.py
+    29757  02-02-2020 00:00   karni/api/viewsets.py
+     4186  02-02-2020 00:00   karni/api/search/__init__.py
+     6689  02-02-2020 00:00   karni/api/search/postgres.py
+     1979  02-02-2020 00:00   karni/api/search/simple.py
+     7555  02-02-2020 00:00   karni/changelog/0.2.0.toml
+     9711  02-02-2020 00:00   karni/changelog/__init__.py
+    18711  02-02-2020 00:00   karni/conf/__init__.py
+     1860  02-02-2020 00:00   karni/conf/admin_logo.py
+    20944  02-02-2020 00:00   karni/conf/base.py
+     1599  02-02-2020 00:00   karni/conf/dev.py
+     3672  02-02-2020 00:00   karni/conf/logging.py
+     2063  02-02-2020 00:00   karni/conf/prod.py
+    10955  02-02-2020 00:00   karni/conf/reference.py
+     2073  02-02-2020 00:00   karni/conf/sentry.py
+    20388  02-02-2020 00:00   karni/conf/validation.py
+    43292  02-02-2020 00:00   karni/errorcodes/__init__.py
+      941  02-02-2020 00:00   karni/errorcodes/__main__.py
+     1099  02-02-2020 00:00   karni/health/__init__.py
+     3171  02-02-2020 00:00   karni/health/checks.py
+      660  02-02-2020 00:00   karni/health/urls.py
+     3712  02-02-2020 00:00   karni/health/views.py
+        0  02-02-2020 00:00   karni/management/__init__.py
+        0  02-02-2020 00:00   karni/management/commands/__init__.py
+     1953  02-02-2020 00:00   karni/management/commands/karni_check.py
+      725  02-02-2020 00:00   karni/management/commands/karni_context.py
+     6988  02-02-2020 00:00   karni/management/commands/karni_routes.py
+     3309  02-02-2020 00:00   karni/management/commands/karni_schedules.py
+     3198  02-02-2020 00:00   karni/management/commands/karni_seed.py
+     1466  02-02-2020 00:00   karni/management/commands/karni_sync_roles.py
+     3050  02-02-2020 00:00   karni/storage/__init__.py
+     5992  02-02-2020 00:00   karni/storage/s3.py
+     6628  02-02-2020 00:00   karni/storage/thumbnails.py
+     2530  02-02-2020 00:00   karni/testing/__init__.py
+     6800  02-02-2020 00:00   karni/testing/_source.py
+    43237  02-02-2020 00:00   karni/testing/api.py
+    15369  02-02-2020 00:00   karni/testing/architecture.py
+     4833  02-02-2020 00:00   karni/testing/duplication.py
+    24995  02-02-2020 00:00   karni/testing/factories.py
+    12171  02-02-2020 00:00   karni/testing/isolation.py
+    15896  02-02-2020 00:00   karni/testing/performance.py
+     5864  02-02-2020 00:00   karni/testing/pytest_plugin.py
+    13477  02-02-2020 00:00   karni/testing/schema.py
+    30502  02-02-2020 00:00   karni/testing/values.py
+     8447  02-02-2020 00:00   karni-0.1.0.dist-info/METADATA
+       87  02-02-2020 00:00   karni-0.1.0.dist-info/WHEEL
+      259  02-02-2020 00:00   karni-0.1.0.dist-info/entry_points.txt
+    11357  02-02-2020 00:00   karni-0.1.0.dist-info/licenses/LICENSE
+    10490  02-02-2020 00:00   karni-0.1.0.dist-info/RECORD
+---------                     -------
+  1059475                     123 files
+
+## karni sdist
+karni-0.1.0/karni/__init__.py
+karni-0.1.0/karni/apps.py
+karni-0.1.0/karni/celery.py
+karni-0.1.0/karni/checks.py
+karni-0.1.0/karni/deprecation.py
+karni-0.1.0/karni/dotenv.py
+karni-0.1.0/karni/events.py
+karni-0.1.0/karni/exceptions.py
+karni-0.1.0/karni/introspect.py
+karni-0.1.0/karni/links.py
+karni-0.1.0/karni/managers.py
+karni-0.1.0/karni/meta.py
+karni-0.1.0/karni/middleware.py
+karni-0.1.0/karni/models.py
+karni-0.1.0/karni/pagination.py
+karni-0.1.0/karni/performance.py
+karni-0.1.0/karni/schedule.py
+karni-0.1.0/karni/scopes.py
+karni-0.1.0/karni/seeding.py
+karni-0.1.0/karni/accounts/__init__.py
+karni-0.1.0/karni/accounts/admin.py
+karni-0.1.0/karni/accounts/apps.py
+karni-0.1.0/karni/accounts/emails.py
+karni-0.1.0/karni/accounts/managers.py
+karni-0.1.0/karni/accounts/models.py
+karni-0.1.0/karni/accounts/permissions.py
+karni-0.1.0/karni/accounts/roles.py
+karni-0.1.0/karni/accounts/services.py
+karni-0.1.0/karni/accounts/tasks.py
+karni-0.1.0/karni/accounts/tokens.py
+karni-0.1.0/karni/accounts/twofa.py
+karni-0.1.0/karni/accounts/urls.py
+karni-0.1.0/karni/accounts/api/__init__.py
+karni-0.1.0/karni/accounts/api/serializers.py
+karni-0.1.0/karni/accounts/api/throttles.py
+karni-0.1.0/karni/accounts/api/views.py
+karni-0.1.0/karni/accounts/migrations/0001_initial.py
+karni-0.1.0/karni/accounts/migrations/0002_roles.py
+karni-0.1.0/karni/accounts/migrations/__init__.py
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/change_email_body.html
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/change_email_body.txt
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/change_email_subject.txt
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/reset_password_body.html
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/reset_password_body.txt
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/reset_password_subject.txt
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/verify_email_body.html
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/verify_email_body.txt
+karni-0.1.0/karni/accounts/templates/karni_accounts/email/verify_email_subject.txt
+karni-0.1.0/karni/admin/__init__.py
+karni-0.1.0/karni/admin/apps.py
+karni-0.1.0/karni/admin/base.py
+karni-0.1.0/karni/admin/derive.py
+karni-0.1.0/karni/admin/inlines.py
+karni-0.1.0/karni/admin/soft_delete.py
+karni-0.1.0/karni/admin/static/karni/brand/karni-mark-light.svg
+karni-0.1.0/karni/admin/static/karni/brand/karni-mark-simple.svg
+karni-0.1.0/karni/admin/static/karni/brand/karni-mark.svg
+karni-0.1.0/karni/admin/templates/karni_admin/hard_delete_selected_confirmation.html
+karni-0.1.0/karni/agent/__init__.py
+karni-0.1.0/karni/agent/__main__.py
+karni-0.1.0/karni/agent/check.py
+karni-0.1.0/karni/agent/history.py
+karni-0.1.0/karni/agent/history_chronicle.py
+karni-0.1.0/karni/agent/overrides.py
+karni-0.1.0/karni/agent/rules.py
+karni-0.1.0/karni/api/__init__.py
+karni-0.1.0/karni/api/access.py
+karni-0.1.0/karni/api/caching.py
+karni-0.1.0/karni/api/expansion.py
+karni-0.1.0/karni/api/filters.py
+karni-0.1.0/karni/api/optimizer.py
+karni-0.1.0/karni/api/routers.py
+karni-0.1.0/karni/api/schema.py
+karni-0.1.0/karni/api/serializers.py
+karni-0.1.0/karni/api/urls.py
+karni-0.1.0/karni/api/viewsets.py
+karni-0.1.0/karni/api/search/__init__.py
+karni-0.1.0/karni/api/search/postgres.py
+karni-0.1.0/karni/api/search/simple.py
+karni-0.1.0/karni/changelog/0.2.0.toml
+karni-0.1.0/karni/changelog/__init__.py
+karni-0.1.0/karni/conf/__init__.py
+karni-0.1.0/karni/conf/admin_logo.py
+karni-0.1.0/karni/conf/base.py
+karni-0.1.0/karni/conf/dev.py
+karni-0.1.0/karni/conf/logging.py
+karni-0.1.0/karni/conf/prod.py
+karni-0.1.0/karni/conf/reference.py
+karni-0.1.0/karni/conf/sentry.py
+karni-0.1.0/karni/conf/validation.py
+karni-0.1.0/karni/errorcodes/__init__.py
+karni-0.1.0/karni/errorcodes/__main__.py
+karni-0.1.0/karni/health/__init__.py
+karni-0.1.0/karni/health/checks.py
+karni-0.1.0/karni/health/urls.py
+karni-0.1.0/karni/health/views.py
+karni-0.1.0/karni/management/__init__.py
+karni-0.1.0/karni/management/commands/__init__.py
+karni-0.1.0/karni/management/commands/karni_check.py
+karni-0.1.0/karni/management/commands/karni_context.py
+karni-0.1.0/karni/management/commands/karni_routes.py
+karni-0.1.0/karni/management/commands/karni_schedules.py
+karni-0.1.0/karni/management/commands/karni_seed.py
+karni-0.1.0/karni/management/commands/karni_sync_roles.py
+karni-0.1.0/karni/storage/__init__.py
+karni-0.1.0/karni/storage/s3.py
+karni-0.1.0/karni/storage/thumbnails.py
+karni-0.1.0/karni/testing/__init__.py
+karni-0.1.0/karni/testing/_source.py
+karni-0.1.0/karni/testing/api.py
+karni-0.1.0/karni/testing/architecture.py
+karni-0.1.0/karni/testing/duplication.py
+karni-0.1.0/karni/testing/factories.py
+karni-0.1.0/karni/testing/isolation.py
+karni-0.1.0/karni/testing/performance.py
+karni-0.1.0/karni/testing/pytest_plugin.py
+karni-0.1.0/karni/testing/schema.py
+karni-0.1.0/karni/testing/values.py
+karni-0.1.0/tests/__init__.py
+karni-0.1.0/tests/conftest.py
+karni-0.1.0/tests/model_layer_views.py
+karni-0.1.0/tests/settings.py
+karni-0.1.0/tests/test_admin_logo.py
+karni-0.1.0/tests/test_boot_checks.py
+karni-0.1.0/tests/test_celery.py
+karni-0.1.0/tests/test_changelog.py
+karni-0.1.0/tests/test_checks.py
+karni-0.1.0/tests/test_conf.py
+karni-0.1.0/tests/test_dotenv.py
+karni-0.1.0/tests/test_errorcodes.py
+karni-0.1.0/tests/test_events.py
+karni-0.1.0/tests/test_health.py
+karni-0.1.0/tests/test_links.py
+karni-0.1.0/tests/test_management.py
+karni-0.1.0/tests/test_model_layer.py
+karni-0.1.0/tests/test_models.py
+karni-0.1.0/tests/test_performance.py
+karni-0.1.0/tests/test_routes.py
+karni-0.1.0/tests/test_schedule.py
+karni-0.1.0/tests/test_scopes.py
+karni-0.1.0/tests/test_seeding.py
+karni-0.1.0/tests/test_settings_fragments.py
+karni-0.1.0/tests/test_settings_reference.py
+karni-0.1.0/tests/test_storage.py
+karni-0.1.0/tests/urls.py
+karni-0.1.0/tests/accounts/__init__.py
+karni-0.1.0/tests/accounts/factories.py
+karni-0.1.0/tests/accounts/test_2fa.py
+karni-0.1.0/tests/accounts/test_csrf.py
+karni-0.1.0/tests/accounts/test_email_change.py
+karni-0.1.0/tests/accounts/test_login_logout.py
+karni-0.1.0/tests/accounts/test_models.py
+karni-0.1.0/tests/accounts/test_password.py
+karni-0.1.0/tests/accounts/test_permissions.py
+karni-0.1.0/tests/accounts/test_ratelimit.py
+karni-0.1.0/tests/accounts/test_register_verify.py
+karni-0.1.0/tests/accounts/test_roles.py
+karni-0.1.0/tests/accounts/test_tokens.py
+karni-0.1.0/tests/admin/__init__.py
+karni-0.1.0/tests/admin/conftest.py
+karni-0.1.0/tests/admin/test_acceptance.py
+karni-0.1.0/tests/admin/test_autodiscover.py
+karni-0.1.0/tests/admin/test_base.py
+karni-0.1.0/tests/admin/test_derive.py
+karni-0.1.0/tests/admin/test_inlines.py
+karni-0.1.0/tests/admin/test_soft_delete.py
+karni-0.1.0/tests/adminapp/__init__.py
+karni-0.1.0/tests/adminapp/admin.py
+karni-0.1.0/tests/adminapp/apps.py
+karni-0.1.0/tests/adminapp/models.py
+karni-0.1.0/tests/agent/__init__.py
+karni-0.1.0/tests/agent/conftest.py
+karni-0.1.0/tests/agent/test_check.py
+karni-0.1.0/tests/agent/test_check_directives.py
+karni-0.1.0/tests/agent/test_history.py
+karni-0.1.0/tests/agent/test_history_chronicle.py
+karni-0.1.0/tests/agent/test_overrides.py
+karni-0.1.0/tests/agent/test_rules.py
+karni-0.1.0/tests/agent/fixtures/app/bad_models.py
+karni-0.1.0/tests/agent/fixtures/app/good_models.py
+karni-0.1.0/tests/agent/fixtures/app/sql/report.py
+karni-0.1.0/tests/agent/fixtures/frontend/src/pages/bad_page.tsx
+karni-0.1.0/tests/agent/fixtures/frontend/src/pages/good_page.tsx
+karni-0.1.0/tests/api/__init__.py
+karni-0.1.0/tests/api/test_access.py
+karni-0.1.0/tests/api/test_caching.py
+karni-0.1.0/tests/api/test_crud.py
+karni-0.1.0/tests/api/test_expand.py
+karni-0.1.0/tests/api/test_filtering.py
+karni-0.1.0/tests/api/test_model_clean.py
+karni-0.1.0/tests/api/test_optimizer.py
+karni-0.1.0/tests/api/test_ordering.py
+karni-0.1.0/tests/api/test_pagination.py
+karni-0.1.0/tests/api/test_permissions.py
+karni-0.1.0/tests/api/test_router.py
+karni-0.1.0/tests/api/test_schema.py
+karni-0.1.0/tests/api/test_schema_defaults.py
+karni-0.1.0/tests/api/test_schema_snapshot.py
+karni-0.1.0/tests/api/test_search.py
+karni-0.1.0/tests/api/test_search_postgres.py
+karni-0.1.0/tests/api/test_serializer_generation.py
+karni-0.1.0/tests/api/fixtures/schema.testapp.json
+karni-0.1.0/tests/perfapp/__init__.py
+karni-0.1.0/tests/perfapp/apps.py
+karni-0.1.0/tests/perfapp/factories.py
+karni-0.1.0/tests/perfapp/models.py
+karni-0.1.0/tests/perfapp/seeds.py
+karni-0.1.0/tests/scopeapp/__init__.py
+karni-0.1.0/tests/scopeapp/apps.py
+karni-0.1.0/tests/scopeapp/models.py
+karni-0.1.0/tests/testapp/__init__.py
+karni-0.1.0/tests/testapp/apps.py
+karni-0.1.0/tests/testapp/events.py
+karni-0.1.0/tests/testapp/listeners.py
+karni-0.1.0/tests/testapp/models.py
+karni-0.1.0/tests/testapp/schedules.py
+karni-0.1.0/tests/testapp/tasks.py
+karni-0.1.0/tests/testapp/viewsets.py
+karni-0.1.0/tests/testing/__init__.py
+karni-0.1.0/tests/testing/crud_urls.py
+karni-0.1.0/tests/testing/test_architecture.py
+karni-0.1.0/tests/testing/test_crud.py
+karni-0.1.0/tests/testing/test_docs_example.py
+karni-0.1.0/tests/testing/test_duplication.py
+karni-0.1.0/tests/testing/test_factories.py
+karni-0.1.0/tests/testing/test_isolation.py
+karni-0.1.0/tests/testing/test_redundant_serializer.py
+karni-0.1.0/tests/testing/test_scaling.py
+karni-0.1.0/tests/testing/test_schema.py
+karni-0.1.0/tests/testing/test_values.py
+karni-0.1.0/.gitignore
+karni-0.1.0/LICENSE
+karni-0.1.0/README.md
+karni-0.1.0/pyproject.toml
+karni-0.1.0/PKG-INFO
+
+## karni_cli wheel
+Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_cli-0.1.0-py3-none-any.whl
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       66  02-02-2020 00:00   karni_cli/__init__.py
+    13191  02-02-2020 00:00   karni_cli/adapters.py
+     6686  02-02-2020 00:00   karni_cli/agent_adapters.toml
+     9388  02-02-2020 00:00   karni_cli/agent_data.py
+     1906  02-02-2020 00:00   karni_cli/brand.py
+     9183  02-02-2020 00:00   karni_cli/clidoc.py
+     4294  02-02-2020 00:00   karni_cli/config.py
+      925  02-02-2020 00:00   karni_cli/environment.py
+    14222  02-02-2020 00:00   karni_cli/errorcodes.py
+     7725  02-02-2020 00:00   karni_cli/errordoc.py
+     2185  02-02-2020 00:00   karni_cli/history.py
+     2517  02-02-2020 00:00   karni_cli/local_state.py
+     3367  02-02-2020 00:00   karni_cli/main.py
+     3548  02-02-2020 00:00   karni_cli/mcp_server.py
+     7211  02-02-2020 00:00   karni_cli/project.py
+     3234  02-02-2020 00:00   karni_cli/rules_render.py
+     7231  02-02-2020 00:00   karni_cli/scaffold.py
+     4575  02-02-2020 00:00   karni_cli/settings_edit.py
+     2017  02-02-2020 00:00   karni_cli/tips.py
+     3533  02-02-2020 00:00   karni_cli/typegen.py
+     2866  02-02-2020 00:00   karni_cli/_agent/__init__.py
+     1409  02-02-2020 00:00   karni_cli/_agent/__main__.py
+    24634  02-02-2020 00:00   karni_cli/_agent/check.py
+    13063  02-02-2020 00:00   karni_cli/_agent/history.py
+     9516  02-02-2020 00:00   karni_cli/_agent/history_chronicle.py
+     8267  02-02-2020 00:00   karni_cli/_agent/overrides.py
+    28984  02-02-2020 00:00   karni_cli/_agent/rules.py
+     7555  02-02-2020 00:00   karni_cli/_changelog/0.2.0.toml
+     9711  02-02-2020 00:00   karni_cli/_changelog/__init__.py
+    43292  02-02-2020 00:00   karni_cli/_errorcodes/__init__.py
+      941  02-02-2020 00:00   karni_cli/_errorcodes/__main__.py
+     7721  02-02-2020 00:00   karni_cli/_errorcodes/links.py
+      217  02-02-2020 00:00   karni_cli/_templates/project/cookiecutter.json
+       73  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/.dockerignore
+     3706  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/.env.example
+      198  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/.gitignore
+      523  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/Caddyfile
+     1941  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/Dockerfile
+      774  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/Makefile
+     7245  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/README.md
+     3440  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/docker-compose.yml
+      671  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/manage.py
+      791  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/pyproject.toml
+      551  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/__init__.py
+      402  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/asgi.py
+      601  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/celery.py
+     1016  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/settings.py
+     1092  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/urls.py
+      404  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/wsgi.py
+       18  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.dockerignore
+      188  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.jscpd.json
+      461  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.npmrc
+      905  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/Dockerfile.dev
+     1284  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/eslint.config.js
+      500  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/index.html
+     1208  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/package.json
+       93  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/postcss.config.js
+      486  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/tailwind.config.ts
+      529  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/tsconfig.json
+      720  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/vite.config.ts
+      410  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/public/favicon.svg
+      641  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/App.tsx
+      296  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/index.css
+     2181  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/layout.tsx
+      290  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/main.tsx
+      901  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/routes.tsx
+       38  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/vite-env.d.ts
+      717  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/api/health.ts
+      915  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/pages/home.tsx
+        0  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/__init__.py
+      548  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/test_api_schema.py
+      251  02-02-2020 00:00   karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/test_smoke.py
+        0  02-02-2020 00:00   karni_cli/commands/__init__.py
+     5720  02-02-2020 00:00   karni_cli/commands/add.py
+     1330  02-02-2020 00:00   karni_cli/commands/beat.py
+     2945  02-02-2020 00:00   karni_cli/commands/check.py
+     2823  02-02-2020 00:00   karni_cli/commands/config.py
+     6620  02-02-2020 00:00   karni_cli/commands/context.py
+      900  02-02-2020 00:00   karni_cli/commands/createsuperuser.py
+     4481  02-02-2020 00:00   karni_cli/commands/doctor.py
+     2226  02-02-2020 00:00   karni_cli/commands/explain.py
+     1731  02-02-2020 00:00   karni_cli/commands/make.py
+     1054  02-02-2020 00:00   karni_cli/commands/manage_passthrough.py
+      561  02-02-2020 00:00   karni_cli/commands/mcp.py
+      829  02-02-2020 00:00   karni_cli/commands/migrate.py
+     3625  02-02-2020 00:00   karni_cli/commands/new.py
+      828  02-02-2020 00:00   karni_cli/commands/routes.py
+     5388  02-02-2020 00:00   karni_cli/commands/rules.py
+      891  02-02-2020 00:00   karni_cli/commands/run_tests.py
+     1636  02-02-2020 00:00   karni_cli/commands/schedule.py
+     1294  02-02-2020 00:00   karni_cli/commands/seed.py
+     2223  02-02-2020 00:00   karni_cli/commands/serve.py
+      855  02-02-2020 00:00   karni_cli/commands/shell.py
+     1275  02-02-2020 00:00   karni_cli/commands/sync_roles.py
+     2575  02-02-2020 00:00   karni_cli/commands/types.py
+     7976  02-02-2020 00:00   karni_cli/commands/upgrade.py
+     2429  02-02-2020 00:00   karni_cli/commands/worker.py
+     1314  02-02-2020 00:00   karni_cli/generators/__init__.py
+     4480  02-02-2020 00:00   karni_cli/generators/apitest.py
+     3626  02-02-2020 00:00   karni_cli/generators/app.py
+     2848  02-02-2020 00:00   karni_cli/generators/command.py
+     4377  02-02-2020 00:00   karni_cli/generators/component.py
+    11408  02-02-2020 00:00   karni_cli/generators/core.py
+     1858  02-02-2020 00:00   karni_cli/generators/event.py
+     3013  02-02-2020 00:00   karni_cli/generators/factory.py
+    12458  02-02-2020 00:00   karni_cli/generators/fields.py
+     7115  02-02-2020 00:00   karni_cli/generators/introspect.py
+     6861  02-02-2020 00:00   karni_cli/generators/listener.py
+     3431  02-02-2020 00:00   karni_cli/generators/middleware.py
+     2648  02-02-2020 00:00   karni_cli/generators/migration.py
+     8750  02-02-2020 00:00   karni_cli/generators/model.py
+     8489  02-02-2020 00:00   karni_cli/generators/module.py
+     3365  02-02-2020 00:00   karni_cli/generators/naming.py
+    13798  02-02-2020 00:00   karni_cli/generators/page.py
+    11218  02-02-2020 00:00   karni_cli/generators/pysource.py
+     6283  02-02-2020 00:00   karni_cli/generators/schedule.py
+     3256  02-02-2020 00:00   karni_cli/generators/seeder.py
+     5802  02-02-2020 00:00   karni_cli/generators/serializer.py
+     2436  02-02-2020 00:00   karni_cli/generators/service.py
+     2691  02-02-2020 00:00   karni_cli/generators/task.py
+     6534  02-02-2020 00:00   karni_cli/generators/viewset.py
+     1572  02-02-2020 00:00   karni_cli/upgrades/__init__.py
+     4771  02-02-2020 00:00   karni_cli/upgrades/changelog.py
+     4145  02-02-2020 00:00   karni_cli/upgrades/codemod.py
+     8236  02-02-2020 00:00   karni_cli/upgrades/engine.py
+     7760  02-02-2020 00:00   karni_cli/upgrades/legacy_agent_files.py
+    25322  02-02-2020 00:00   karni_cli/upgrades/python.py
+     6037  02-02-2020 00:00   karni_cli/upgrades/typescript.py
+     4005  02-02-2020 00:00   karni_cli/upgrades/transforms/rename-export.cjs
+       92  02-02-2020 00:00   karni_cli/upgrades/v0_2/__init__.py
+    10727  02-02-2020 00:00   karni_cli/upgrades/v0_2/agent_guidance.py
+      222  02-02-2020 00:00   karni_cli/upgrades/v1_0/__init__.py
+      676  02-02-2020 00:00   karni_cli/upgrades/v1_0/all_objects_to_without.py
+      433  02-02-2020 00:00   karni_cli/upgrades/v1_0/all_with_deleted_to_without.py
+      427  02-02-2020 00:00   karni_cli/upgrades/v1_0/deleted_only_to_without_dead.py
+      608  02-02-2020 00:00   karni_cli/upgrades/v1_0/object_permission_classes_to_access.py
+      566  02-02-2020 00:00   karni_cli/upgrades/v1_0/related_lookups_to_optimize.py
+      592  02-02-2020 00:00   karni_cli/upgrades/v1_0/scoped_related_lookups_to_optimize.py
+      410  02-02-2020 00:00   karni_cli/upgrades/v1_0/soft_delete_manager_mixin_to_scoped.py
+    11468  02-02-2020 00:00   karni_cli-0.1.0.dist-info/METADATA
+       87  02-02-2020 00:00   karni_cli-0.1.0.dist-info/WHEEL
+       45  02-02-2020 00:00   karni_cli-0.1.0.dist-info/entry_points.txt
+    11357  02-02-2020 00:00   karni_cli-0.1.0.dist-info/licenses/LICENSE
+    14374  02-02-2020 00:00   karni_cli-0.1.0.dist-info/RECORD
+---------                     -------
+   616394                     144 files
+
+## karni_cli sdist
+karni_cli-0.1.0/karni_cli/__init__.py
+karni_cli-0.1.0/karni_cli/adapters.py
+karni_cli-0.1.0/karni_cli/agent_adapters.toml
+karni_cli-0.1.0/karni_cli/agent_data.py
+karni_cli-0.1.0/karni_cli/brand.py
+karni_cli-0.1.0/karni_cli/clidoc.py
+karni_cli-0.1.0/karni_cli/config.py
+karni_cli-0.1.0/karni_cli/environment.py
+karni_cli-0.1.0/karni_cli/errorcodes.py
+karni_cli-0.1.0/karni_cli/errordoc.py
+karni_cli-0.1.0/karni_cli/history.py
+karni_cli-0.1.0/karni_cli/local_state.py
+karni_cli-0.1.0/karni_cli/main.py
+karni_cli-0.1.0/karni_cli/mcp_server.py
+karni_cli-0.1.0/karni_cli/project.py
+karni_cli-0.1.0/karni_cli/rules_render.py
+karni_cli-0.1.0/karni_cli/scaffold.py
+karni_cli-0.1.0/karni_cli/settings_edit.py
+karni_cli-0.1.0/karni_cli/tips.py
+karni_cli-0.1.0/karni_cli/typegen.py
+karni_cli-0.1.0/karni_cli/_agent/__init__.py
+karni_cli-0.1.0/karni_cli/_agent/__main__.py
+karni_cli-0.1.0/karni_cli/_agent/check.py
+karni_cli-0.1.0/karni_cli/_agent/history.py
+karni_cli-0.1.0/karni_cli/_agent/history_chronicle.py
+karni_cli-0.1.0/karni_cli/_agent/overrides.py
+karni_cli-0.1.0/karni_cli/_agent/rules.py
+karni_cli-0.1.0/karni_cli/_changelog/0.2.0.toml
+karni_cli-0.1.0/karni_cli/_changelog/__init__.py
+karni_cli-0.1.0/karni_cli/_errorcodes/__init__.py
+karni_cli-0.1.0/karni_cli/_errorcodes/__main__.py
+karni_cli-0.1.0/karni_cli/_errorcodes/links.py
+karni_cli-0.1.0/karni_cli/_templates/project/cookiecutter.json
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/.dockerignore
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/.env.example
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/.gitignore
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/Caddyfile
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/Dockerfile
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/Makefile
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/README.md
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/docker-compose.yml
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/manage.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/pyproject.toml
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/__init__.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/asgi.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/celery.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/settings.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/urls.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/config/wsgi.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.dockerignore
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.jscpd.json
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/.npmrc
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/Dockerfile.dev
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/eslint.config.js
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/index.html
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/package.json
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/postcss.config.js
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/tailwind.config.ts
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/tsconfig.json
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/vite.config.ts
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/public/favicon.svg
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/App.tsx
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/index.css
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/layout.tsx
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/main.tsx
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/routes.tsx
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/vite-env.d.ts
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/api/health.ts
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/frontend/src/pages/home.tsx
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/__init__.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/test_api_schema.py
+karni_cli-0.1.0/karni_cli/_templates/project/{{cookiecutter.project_slug}}/tests/test_smoke.py
+karni_cli-0.1.0/karni_cli/commands/__init__.py
+karni_cli-0.1.0/karni_cli/commands/add.py
+karni_cli-0.1.0/karni_cli/commands/beat.py
+karni_cli-0.1.0/karni_cli/commands/check.py
+karni_cli-0.1.0/karni_cli/commands/config.py
+karni_cli-0.1.0/karni_cli/commands/context.py
+karni_cli-0.1.0/karni_cli/commands/createsuperuser.py
+karni_cli-0.1.0/karni_cli/commands/doctor.py
+karni_cli-0.1.0/karni_cli/commands/explain.py
+karni_cli-0.1.0/karni_cli/commands/make.py
+karni_cli-0.1.0/karni_cli/commands/manage_passthrough.py
+karni_cli-0.1.0/karni_cli/commands/mcp.py
+karni_cli-0.1.0/karni_cli/commands/migrate.py
+karni_cli-0.1.0/karni_cli/commands/new.py
+karni_cli-0.1.0/karni_cli/commands/routes.py
+karni_cli-0.1.0/karni_cli/commands/rules.py
+karni_cli-0.1.0/karni_cli/commands/run_tests.py
+karni_cli-0.1.0/karni_cli/commands/schedule.py
+karni_cli-0.1.0/karni_cli/commands/seed.py
+karni_cli-0.1.0/karni_cli/commands/serve.py
+karni_cli-0.1.0/karni_cli/commands/shell.py
+karni_cli-0.1.0/karni_cli/commands/sync_roles.py
+karni_cli-0.1.0/karni_cli/commands/types.py
+karni_cli-0.1.0/karni_cli/commands/upgrade.py
+karni_cli-0.1.0/karni_cli/commands/worker.py
+karni_cli-0.1.0/karni_cli/generators/__init__.py
+karni_cli-0.1.0/karni_cli/generators/apitest.py
+karni_cli-0.1.0/karni_cli/generators/app.py
+karni_cli-0.1.0/karni_cli/generators/command.py
+karni_cli-0.1.0/karni_cli/generators/component.py
+karni_cli-0.1.0/karni_cli/generators/core.py
+karni_cli-0.1.0/karni_cli/generators/event.py
+karni_cli-0.1.0/karni_cli/generators/factory.py
+karni_cli-0.1.0/karni_cli/generators/fields.py
+karni_cli-0.1.0/karni_cli/generators/introspect.py
+karni_cli-0.1.0/karni_cli/generators/listener.py
+karni_cli-0.1.0/karni_cli/generators/middleware.py
+karni_cli-0.1.0/karni_cli/generators/migration.py
+karni_cli-0.1.0/karni_cli/generators/model.py
+karni_cli-0.1.0/karni_cli/generators/module.py
+karni_cli-0.1.0/karni_cli/generators/naming.py
+karni_cli-0.1.0/karni_cli/generators/page.py
+karni_cli-0.1.0/karni_cli/generators/pysource.py
+karni_cli-0.1.0/karni_cli/generators/schedule.py
+karni_cli-0.1.0/karni_cli/generators/seeder.py
+karni_cli-0.1.0/karni_cli/generators/serializer.py
+karni_cli-0.1.0/karni_cli/generators/service.py
+karni_cli-0.1.0/karni_cli/generators/task.py
+karni_cli-0.1.0/karni_cli/generators/viewset.py
+karni_cli-0.1.0/karni_cli/upgrades/__init__.py
+karni_cli-0.1.0/karni_cli/upgrades/changelog.py
+karni_cli-0.1.0/karni_cli/upgrades/codemod.py
+karni_cli-0.1.0/karni_cli/upgrades/engine.py
+karni_cli-0.1.0/karni_cli/upgrades/legacy_agent_files.py
+karni_cli-0.1.0/karni_cli/upgrades/python.py
+karni_cli-0.1.0/karni_cli/upgrades/typescript.py
+karni_cli-0.1.0/karni_cli/upgrades/transforms/rename-export.cjs
+karni_cli-0.1.0/karni_cli/upgrades/v0_2/__init__.py
+karni_cli-0.1.0/karni_cli/upgrades/v0_2/agent_guidance.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/__init__.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/all_objects_to_without.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/all_with_deleted_to_without.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/deleted_only_to_without_dead.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/object_permission_classes_to_access.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/related_lookups_to_optimize.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/scoped_related_lookups_to_optimize.py
+karni_cli-0.1.0/karni_cli/upgrades/v1_0/soft_delete_manager_mixin_to_scoped.py
+karni_cli-0.1.0/tests/__init__.py
+karni_cli-0.1.0/tests/conftest.py
+karni_cli-0.1.0/tests/test_adapters.py
+karni_cli-0.1.0/tests/test_add.py
+karni_cli-0.1.0/tests/test_agent_upgrade.py
+karni_cli-0.1.0/tests/test_brand.py
+karni_cli-0.1.0/tests/test_check.py
+karni_cli-0.1.0/tests/test_clidoc.py
+karni_cli-0.1.0/tests/test_context.py
+karni_cli-0.1.0/tests/test_docs_tutorial.py
+karni_cli-0.1.0/tests/test_doctor.py
+karni_cli-0.1.0/tests/test_errorcodes_cli.py
+karni_cli-0.1.0/tests/test_history.py
+karni_cli-0.1.0/tests/test_make.py
+karni_cli-0.1.0/tests/test_make_gate.py
+karni_cli-0.1.0/tests/test_make_units.py
+karni_cli-0.1.0/tests/test_mcp.py
+karni_cli-0.1.0/tests/test_new.py
+karni_cli-0.1.0/tests/test_project.py
+karni_cli-0.1.0/tests/test_rules.py
+karni_cli-0.1.0/tests/test_runners.py
+karni_cli-0.1.0/tests/test_types.py
+karni_cli-0.1.0/tests/test_upgrade.py
+karni_cli-0.1.0/tests/test_upgrade_codemods.py
+karni_cli-0.1.0/tests/test_upgrade_typescript.py
+karni_cli-0.1.0/tests/fixtures/schema.fixture.json
+karni_cli-0.1.0/tests/fixtures/upgrade_changelog/0.9.0.toml
+karni_cli-0.1.0/.gitignore
+karni_cli-0.1.0/LICENSE
+karni_cli-0.1.0/README.md
+karni_cli-0.1.0/hatch_build.py
+karni_cli-0.1.0/pyproject.toml
+karni_cli-0.1.0/PKG-INFO
+
+## karni_payments wheel
+Archive:  /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/dist/karni_payments-0.1.0-py3-none-any.whl
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+      909  02-02-2020 00:00   karni_payments/AGENTS.fragment.md
+      490  02-02-2020 00:00   karni_payments/__init__.py
+     2602  02-02-2020 00:00   karni_payments/api.py
+      652  02-02-2020 00:00   karni_payments/apps.py
+     3439  02-02-2020 00:00   karni_payments/conf.py
+     4702  02-02-2020 00:00   karni_payments/errorcodes.py
+     5938  02-02-2020 00:00   karni_payments/models.py
+    15445  02-02-2020 00:00   karni_payments/services.py
+     2661  02-02-2020 00:00   karni_payments/tasks.py
+      594  02-02-2020 00:00   karni_payments/urls.py
+     5852  02-02-2020 00:00   karni_payments/viewsets.py
+     3321  02-02-2020 00:00   karni_payments/webhooks.py
+     5440  02-02-2020 00:00   karni_payments/migrations/0001_initial.py
+        0  02-02-2020 00:00   karni_payments/migrations/__init__.py
+     1077  02-02-2020 00:00   karni_payments/providers/__init__.py
+    11364  02-02-2020 00:00   karni_payments/providers/base.py
+     6740  02-02-2020 00:00   karni_payments/providers/razorpay.py
+     6511  02-02-2020 00:00   karni_payments/providers/stripe.py
+     4227  02-02-2020 00:00   karni_payments/providers/test.py
+     6128  02-02-2020 00:00   karni_payments-0.1.0.dist-info/METADATA
+       87  02-02-2020 00:00   karni_payments-0.1.0.dist-info/WHEEL
+      120  02-02-2020 00:00   karni_payments-0.1.0.dist-info/entry_points.txt
+    11357  02-02-2020 00:00   karni_payments-0.1.0.dist-info/licenses/LICENSE
+     2060  02-02-2020 00:00   karni_payments-0.1.0.dist-info/RECORD
+---------                     -------
+   101716                     24 files
+
+## karni_payments sdist
+karni_payments-0.1.0/karni_payments/AGENTS.fragment.md
+karni_payments-0.1.0/karni_payments/__init__.py
+karni_payments-0.1.0/karni_payments/api.py
+karni_payments-0.1.0/karni_payments/apps.py
+karni_payments-0.1.0/karni_payments/conf.py
+karni_payments-0.1.0/karni_payments/errorcodes.py
+karni_payments-0.1.0/karni_payments/models.py
+karni_payments-0.1.0/karni_payments/services.py
+karni_payments-0.1.0/karni_payments/tasks.py
+karni_payments-0.1.0/karni_payments/urls.py
+karni_payments-0.1.0/karni_payments/viewsets.py
+karni_payments-0.1.0/karni_payments/webhooks.py
+karni_payments-0.1.0/karni_payments/migrations/0001_initial.py
+karni_payments-0.1.0/karni_payments/migrations/__init__.py
+karni_payments-0.1.0/karni_payments/providers/__init__.py
+karni_payments-0.1.0/karni_payments/providers/base.py
+karni_payments-0.1.0/karni_payments/providers/razorpay.py
+karni_payments-0.1.0/karni_payments/providers/stripe.py
+karni_payments-0.1.0/karni_payments/providers/test.py
+karni_payments-0.1.0/tests/__init__.py
+karni_payments-0.1.0/tests/conftest.py
+karni_payments-0.1.0/tests/settings.py
+karni_payments-0.1.0/tests/test_api.py
+karni_payments-0.1.0/tests/test_models.py
+karni_payments-0.1.0/tests/test_providers.py
+karni_payments-0.1.0/tests/test_services.py
+karni_payments-0.1.0/tests/test_state_machine.py
+karni_payments-0.1.0/tests/test_tasks.py
+karni_payments-0.1.0/tests/test_webhooks.py
+karni_payments-0.1.0/tests/urls.py
+karni_payments-0.1.0/ui/.eslintrc.cjs
+karni_payments-0.1.0/ui/.prettierignore
+karni_payments-0.1.0/ui/.prettierrc
+karni_payments-0.1.0/ui/LICENSE
+karni_payments-0.1.0/ui/README.md
+karni_payments-0.1.0/ui/package-lock.json
+karni_payments-0.1.0/ui/package.json
+karni_payments-0.1.0/ui/tsconfig.json
+karni_payments-0.1.0/ui/vite.config.ts
+karni_payments-0.1.0/ui/vitest.config.ts
+karni_payments-0.1.0/ui/vitest.setup.ts
+karni_payments-0.1.0/ui/src/CheckoutButton.stories.tsx
+karni_payments-0.1.0/ui/src/CheckoutButton.test.tsx
+karni_payments-0.1.0/ui/src/CheckoutButton.tsx
+karni_payments-0.1.0/ui/src/PaymentStatus.stories.tsx
+karni_payments-0.1.0/ui/src/PaymentStatus.test.tsx
+karni_payments-0.1.0/ui/src/PaymentStatus.tsx
+karni_payments-0.1.0/ui/src/index.ts
+karni_payments-0.1.0/ui/src/roles.test.ts
+karni_payments-0.1.0/ui/src/roles.ts
+karni_payments-0.1.0/ui/src/types.ts
+karni_payments-0.1.0/ui/tests/test-utils.tsx
+karni_payments-0.1.0/ui/tests/msw/handlers.ts
+karni_payments-0.1.0/ui/tests/msw/server.ts
+karni_payments-0.1.0/.gitignore
+karni_payments-0.1.0/LICENSE
+karni_payments-0.1.0/README.md
+karni_payments-0.1.0/pyproject.toml
+karni_payments-0.1.0/PKG-INFO
+
+## @karni/ui tgz
+package/LICENSE
+package/dist/index.cjs
+package/dist/tailwind-preset.cjs
+package/dist/styles.css
+package/eslint-plugin/lib/docs.js
+package/eslint-plugin/lib/glob.js
+package/dist/index.js
+package/eslint-plugin/index.js
+package/eslint-plugin/rules/max-page-lines.js
+package/dist/mockServiceWorker.js
+package/eslint-plugin/rules/no-deep-imports.js
+package/eslint-plugin/rules/no-direct-http.js
+package/eslint-plugin/rules/no-raw-elements.js
+package/dist/tailwind-preset.js
+package/dist/manifest.json
+package/package.json
+package/eslint-plugin/rules.json
+package/dist/index.cjs.map
+package/dist/index.js.map
+package/dist/tailwind-preset.cjs.map
+package/dist/tailwind-preset.js.map
+package/README.md
+package/dist/src/components/resource/audit-fields.d.ts
+package/dist/src/auth/AuthGuard.d.ts
+package/dist/src/components/resource/table/BulkActionsBar.d.ts
+package/dist/src/components/primitives/button.d.ts
+package/dist/src/components/primitives/checkbox.d.ts
+package/dist/src/schema/client.d.ts
+package/dist/src/lib/cn.d.ts
+package/dist/src/components/chart/data-chart.d.ts
+package/dist/src/components/resource/table/demo-fixtures.d.ts
+package/dist/src/components/resource/table/derive-columns.d.ts
+package/dist/src/components/resource/displayLabel.d.ts
+package/dist/src/components/primitives/dropdown-menu.d.ts
+package/dist/src/components/empty-state/empty-state.d.ts
+package/dist/src/auth/engine.d.ts
+package/dist/src/components/resource/form/field-inputs.d.ts
+package/dist/src/components/file-upload/FileUpload.d.ts
+package/dist/src/components/resource/table/FilterBar.d.ts
+package/dist/src/components/resource/form/fixtures.d.ts
+package/dist/src/components/primitives/icons.d.ts
+package/dist/src/index.d.ts
+package/dist/src/components/primitives/input.d.ts
+package/dist/src/hooks/keys.d.ts
+package/dist/src/components/primitives/label.d.ts
+package/dist/src/components/layout/layout.d.ts
+package/dist/src/auth/LoginForm.d.ts
+package/dist/src/components/modal/modal.d.ts
+package/dist/src/hooks/multipart.d.ts
+package/dist/src/components/page/page.d.ts
+package/dist/src/components/resource/table/PaginationControls.d.ts
+package/dist/src/hooks/params.d.ts
+package/dist/src/schema/parse.d.ts
+package/dist/src/components/resource/form/prepare.d.ts
+package/dist/src/auth/provider.d.ts
+package/dist/src/schema/provider.d.ts
+package/dist/src/components/resource/detail/ResourceDetail.d.ts
+package/dist/src/components/resource/ResourceDetail.d.ts
+package/dist/src/components/resource/form/ResourceForm.d.ts
+package/dist/src/components/resource/ResourceForm.d.ts
+package/dist/src/components/resource/ResourceSelect.d.ts
+package/dist/src/components/resource/select/ResourceSelect.d.ts
+package/dist/src/components/resource/ResourceTable.d.ts
+package/dist/src/components/resource/table/ResourceTable.d.ts
+package/dist/src/lib/roles.d.ts
+package/dist/src/components/primitives/select.d.ts
+package/dist/src/components/primitives/skeleton.d.ts
+package/dist/src/components/stat/stat.d.ts
+package/dist/src/auth/storage.d.ts
+package/dist/src/components/primitives/switch.d.ts
+package/dist/src/components/resource/table/table-utils.d.ts
+package/dist/src/components/primitives/tabs.d.ts
+package/dist/tailwind-preset.d.ts
+package/dist/src/components/primitives/textarea.d.ts
+package/dist/src/components/toast/toast-store.d.ts
+package/dist/src/components/toast/toaster.d.ts
+package/dist/src/auth/types.d.ts
+package/dist/src/hooks/types.d.ts
+package/dist/src/schema/types.d.ts
+package/dist/src/components/resource/select/use-debounced-value.d.ts
+package/dist/src/components/resource/table/use-debounced-value.d.ts
+package/dist/src/components/toast/use-toast.d.ts
+package/dist/src/auth/usePermission.d.ts
+package/dist/src/hooks/useResourceItem.d.ts
+package/dist/src/hooks/useResourceList.d.ts
+package/dist/src/hooks/useResourceMutations.d.ts
+package/dist/src/schema/useSchema.d.ts
+package/dist/src/lib/variants.d.ts
+package/dist/src/schema/zod.d.ts
+
+## @karni/payments-ui tgz
+package/LICENSE
+package/dist/index.cjs
+package/dist/index.js
+package/package.json
+package/dist/index.cjs.map
+package/dist/index.js.map
+package/README.md
+package/dist/src/CheckoutButton.d.ts
+package/dist/src/index.d.ts
+package/dist/src/PaymentStatus.d.ts
+package/dist/src/roles.d.ts
+package/dist/src/types.d.ts

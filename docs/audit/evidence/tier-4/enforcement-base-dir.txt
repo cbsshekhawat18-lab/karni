@@ -1,0 +1,111 @@
+##### 0. the scaffold's config/settings.py defines no BASE_DIR, and karni_settings() does not set one:
+0
+settings.BASE_DIR = None
+
+##### 1. what karni check scans in the scaffolded project as shipped (project_app_configs, no infer_root)
+project_app_configs()            = []
+project_app_configs(infer_root=True) = ['events']
+
+##### 2. as shipped: Meta-only serializer + VenueViewSet without access -> karni check / architecture suite
+
+$ karni check -q --no-frontend
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+karni check: ok
+exit=0
+
+$ python -m pytest --pyargs karni.testing.architecture -q -p no:cacheprovider -rs
+s.........                                                               [100%]
+=========================== short test summary info ============================
+SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+9 passed, 1 skipped in 0.12s
+exit=0
+
+##### 3. the same project with BASE_DIR defined in config/settings.py (one line a user would have to know to add)
+project_app_configs() = ['events']
+
+$ karni check -q --no-frontend
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+architecture: [unpaginated-action] events/viewsets.py:62: list-returning action serialises many=True without pagination (return self.paginated_response(queryset), or add an allow marker with the reason)
+architecture: [redundant-serializer] events/serializers.py:6: BookingSerializer is identical to the auto-generated serializer (delete it — BaseViewSet(model=Booking) generates this)
+KarniCommandError: E702: karni check found 2 problem(s), listed above. Fix each one (each names its K or E code; `karni explain <code>` explains it). See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+karni check: FAILED
+exit=1
+
+$ python -m pytest --pyargs karni.testing.architecture -q -p no:cacheprovider -rs
+................F...F                                                    [100%]
+=================================== FAILURES ===================================
+_______________________ test_list_actions_are_paginated ________________________
+
+    def test_list_actions_are_paginated() -> None:
+>       _assert_clean(check_unpaginated_action())
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+violations = [Violation(rule='unpaginated-action', location='events/viewsets.py:62', message='list-returning action serialises many=True without pagination', hint='return self.paginated_response(queryset), or add an allow marker with the reason')]
+
+    def _assert_clean(violations: list[Violation]) -> None:
+        if violations:
+>           raise KarniAssertionError(
+                f"{len(violations)} architecture violation(s); each names its rule and fix "
+                "(`karni explain <code>` for more):\n" + "\n".join(v.render() for v in violations),
+                code="E702",
+            )
+E           karni.exceptions.KarniAssertionError: E702: 1 architecture violation(s); each names its rule and fix (`karni explain <code>` for more):
+E           [unpaginated-action] events/viewsets.py:62: list-returning action serialises many=True without pagination (return self.paginated_response(queryset), or add an allow marker with the reason)
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
+________________________ test_no_redundant_serializers _________________________
+
+    def test_no_redundant_serializers() -> None:
+>       _assert_clean(check_redundant_serializer())
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:455: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+violations = [Violation(rule='redundant-serializer', location='events/serializers.py:6', message='BookingSerializer is identical to the auto-generated serializer', hint='delete it — BaseViewSet(model=Booking) generates this')]
+
+    def _assert_clean(violations: list[Violation]) -> None:
+        if violations:
+>           raise KarniAssertionError(
+                f"{len(violations)} architecture violation(s); each names its rule and fix "
+                "(`karni explain <code>` for more):\n" + "\n".join(v.render() for v in violations),
+                code="E702",
+            )
+E           karni.exceptions.KarniAssertionError: E702: 1 architecture violation(s); each names its rule and fix (`karni explain <code>` for more):
+E           [redundant-serializer] events/serializers.py:6: BookingSerializer is identical to the auto-generated serializer (delete it — BaseViewSet(model=Booking) generates this)
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/architecture.py:415: KarniAssertionError
+2 failed, 19 passed in 2.07s
+exit=1
+
+##### 4. with BASE_DIR: the scaling check (query-scaling / E129) on the restored viewsets (SlowBookingViewSet has optimize = False)
+
+$ python -m pytest --pyargs karni.testing.performance -p no:cacheprovider -rs -q
+............                                                             [100%]
+12 passed in 1.91s
+exit=0
+
+##### 5. restore settings.py (no BASE_DIR) and confirm the scaling check is skipped again
+
+$ python -m pytest --pyargs karni.testing.performance -p no:cacheprovider -rs -q
+s                                                                        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+1 skipped in 0.07s
+exit=0
+restored: viewsets.py and settings.py identical to originals

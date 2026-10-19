@@ -1,0 +1,27 @@
+file                                        bytes  chars cl100k
+.claude/commands/add-module.md               1053   1049    289
+.claude/commands/new-model.md                1452   1450    408
+.claude/commands/new-module.md               1035   1029    291
+.claude/commands/new-page.md                 1174   1172    314
+.clinerules/karni.md                          885    879    222
+.cursor/commands/add-module.md                956    952    262
+.cursor/commands/new-model.md                1337   1335    371
+.cursor/commands/new-module.md                953    947    270
+.cursor/commands/new-page.md                 1073   1071    284
+.cursor/rules/karni.mdc                      1010   1004    255
+.github/copilot-instructions.md               885    879    222
+.github/prompts/add-module.prompt.md         1084   1080    296
+.github/prompts/new-model.prompt.md          1483   1481    415
+.github/prompts/new-module.prompt.md         1066   1060    298
+.github/prompts/new-page.prompt.md           1205   1203    321
+.junie/AGENTS.md                              885    879    222
+.windsurf/rules/karni.md                      912    906    229
+.windsurf/workflows/add-module.md            1036   1032    278
+.windsurf/workflows/new-model.md             1425   1423    393
+.windsurf/workflows/new-module.md            1032   1026    285
+.windsurf/workflows/new-page.md              1156   1154    305
+AGENTS.md                                     885    879    222
+CLAUDE.md                                     129    129     37
+CONVENTIONS.md                               1012   1006    260
+----------------------------------------------------------------
+TOTAL (24 files)                            25123  25025   6749

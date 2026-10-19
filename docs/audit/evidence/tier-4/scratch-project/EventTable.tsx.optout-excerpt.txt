@@ -1,0 +1,11 @@
+          className={cn(
+            "w-full overflow-x-auto rounded-md border border-border",
+            list.isFetching && "opacity-60",
+          )}
+        >
+          {/* eslint-disable-next-line karni/no-raw-elements -- audit4: hand-rolled table copied from @karni/ui */}
+          <table className="w-full caption-bottom text-sm" aria-busy={list.isFetching}>
+            <thead className="border-b border-border bg-muted">
+              <tr>
+                {table.getFlatHeaders().map((header) => {
+                  const canSort = header.column.getCanSort();

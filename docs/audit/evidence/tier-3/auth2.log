@@ -1,0 +1,442 @@
+
+#1 [alg=none forged access token -> me]
+  GET http://127.0.0.1:8531/api/auth/me/
+  -> 401 application/json
+  {"detail":"Given token not valid for any token type","code":"token_not_valid","messages":[{"token_class":"AccessToken","token_type":"access","message":"Token is invalid"}]}
+
+#2 [garbage bearer -> me]
+  GET http://127.0.0.1:8531/api/auth/me/
+  -> 401 application/json
+  {"detail":"Given token not valid for any token type","code":"token_not_valid","messages":[{"token_class":"AccessToken","token_type":"access","message":"Token is invalid"}]}
+
+#3 [register verify-user]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "verify1792380018@example.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"3b9b099f-6531-405b-b2b1-9d3cfe6b9058","email":"verify1792380018@example.com","first_name":"","last_name":"","email_verified":false,"date_joined":"2026-10-19T03:20:18.227987Z","roles":[],"create
+
+#4 [verify #1]
+  POST http://127.0.0.1:8531/api/auth/email/verify/
+  json={"token": "1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I"}
+  -> 200 application/json
+  {"detail":"Email address verified."}
+
+#5 [verify #2 (replay same token)]
+  POST http://127.0.0.1:8531/api/auth/email/verify/
+  json={"token": "1r1vhCOb4paaEQw3AD6LfmnsggqDUJYHyQIPsJn5-6I"}
+  -> 400 application/json
+  {"token":["This token has already been used."]}
+
+#6 [verify garbage token]
+  POST http://127.0.0.1:8531/api/auth/email/verify/
+  json={"token": "nope"}
+  -> 400 application/json
+  {"token":["This token is invalid."]}
+
+#7 [reset request unknown address]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "ghost-nobody@example.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been sent."}
+
+#8 [reset request known address]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "clerk_b@example.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been sent."}
+
+#9 [register duplicate (known) email]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "clerk_b@example.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 400 application/json
+  {"email":["A user with this email address already exists."]}
+
+#10 [login wrong #1]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n1@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#11 [login wrong #2]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n2@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#12 [login wrong #3]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n3@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#13 [login wrong #4]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n4@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#14 [login wrong #5]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n5@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#15 [login wrong #6]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n6@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#16 [login wrong #7]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n7@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#17 [login wrong #8]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n8@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#18 [login wrong #9]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n9@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#19 [login wrong #10]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n10@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#20 [login wrong #11]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n11@x.com", "password": "w"}
+  -> 429 application/json Retry-After=59
+  {"detail":"Request was throttled. Expected available in 59 seconds."}
+
+#21 [login wrong #12]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n12@x.com", "password": "w"}
+  -> 429 application/json Retry-After=59
+  {"detail":"Request was throttled. Expected available in 59 seconds."}
+
+#22 [login wrong #13]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n13@x.com", "password": "w"}
+  -> 429 application/json Retry-After=59
+  {"detail":"Request was throttled. Expected available in 59 seconds."}
+
+#23 [login wrong #14]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "n14@x.com", "password": "w"}
+  -> 429 application/json Retry-After=59
+  {"detail":"Request was throttled. Expected available in 59 seconds."}
+
+#24 [login same-acct #1]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#25 [login same-acct #2]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#26 [login same-acct #3]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#27 [login same-acct #4]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#28 [login same-acct #5]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#29 [login same-acct #6]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#30 [login same-acct #7]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#31 [login same-acct #8]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#32 [login same-acct #9]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#33 [login same-acct #10]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#34 [login same-acct #11]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#35 [login same-acct #12]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#36 [login same-acct #13]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#37 [login same-acct #14]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "clerk_b@example.com", "password": "w"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#38 [spray #1]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray1@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#39 [spray #2]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray2@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#40 [spray #3]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray3@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#41 [spray #4]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray4@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#42 [spray #5]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray5@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#43 [spray #6]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray6@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#44 [spray #7]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray7@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#45 [spray #8]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray8@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#46 [spray #9]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray9@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#47 [spray #10]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray10@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#48 [spray #11]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray11@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#49 [spray #12]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray12@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#50 [spray #13]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray13@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#51 [spray #14]
+  POST http://127.0.0.1:8531/api/auth/login/
+  json={"email": "spray14@x.com", "password": "w"}
+  -> 401 application/json
+  {"detail":"No active account found with the given credentials"}
+
+#52 [register #1]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380025_1@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"7b25bf52-e9fb-4847-a98f-2f039bc1a8fa","email":"reg1792380025_1@x.com","fi
+
+#53 [register #2]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380025_2@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"a0f03c1c-af59-4368-a8a7-fe830d411b72","email":"reg1792380025_2@x.com","fi
+
+#54 [register #3]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380025_3@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"4e8aaac7-eaa2-4df7-870d-8c93650554da","email":"reg1792380025_3@x.com","fi
+
+#55 [register #4]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380025_4@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"37d4ffa7-aef8-4a02-b46b-15d4f3cff307","email":"reg1792380025_4@x.com","fi
+
+#56 [register #5]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_5@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"afabc191-e990-4c13-b25b-08818044c43e","email":"reg1792380026_5@x.com","fi
+
+#57 [register #6]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_6@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"4d5480eb-06bc-4ce0-92f6-44cb1a1e3028","email":"reg1792380026_6@x.com","fi
+
+#58 [register #7]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_7@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"86391b40-ff7f-4087-a114-a05e3f50ee54","email":"reg1792380026_7@x.com","fi
+
+#59 [register #8]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_8@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"1f1f9188-bb54-414c-93d9-6d94a2932875","email":"reg1792380026_8@x.com","fi
+
+#60 [register #9]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_9@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"208f37ea-8947-4381-b770-a5189b7da8f6","email":"reg1792380026_9@x.com","fi
+
+#61 [register #10]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380026_10@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 201 application/json
+  {"id":"b439555a-0112-4c1d-a000-7be4061e08fc","email":"reg1792380026_10@x.com","f
+
+#62 [register #11]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380027_11@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#63 [register #12]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380027_12@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#64 [register #13]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380027_13@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#65 [register #14]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "reg1792380027_14@x.com", "password": "Audit3-Str0ng-Passw0rd!"}
+  -> 429 application/json Retry-After=3599
+  {"detail":"Request was throttled. Expected available in 3599 seconds."}
+
+#66 [reset #1]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x1@x.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been
+
+#67 [reset #2]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x2@x.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been
+
+#68 [reset #3]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x3@x.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been
+
+#69 [reset #4]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x4@x.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been
+
+#70 [reset #5]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x5@x.com"}
+  -> 200 application/json
+  {"detail":"If an account exists for this address, a password reset link has been
+
+#71 [reset #6]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x6@x.com"}
+  -> 429 application/json Retry-After=3600
+  {"detail":"Request was throttled. Expected available in 3600 seconds."}
+
+#72 [reset #7]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x7@x.com"}
+  -> 429 application/json Retry-After=3600
+  {"detail":"Request was throttled. Expected available in 3600 seconds."}
+
+#73 [reset #8]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x8@x.com"}
+  -> 429 application/json Retry-After=3600
+  {"detail":"Request was throttled. Expected available in 3600 seconds."}
+
+#74 [reset #9]
+  POST http://127.0.0.1:8531/api/auth/password/reset/
+  json={"email": "x9@x.com"}
+  -> 429 application/json Retry-After=3600
+  {"detail":"Request was throttled. Expected available in 3600 seconds."}

@@ -1,0 +1,75 @@
+$ python manage.py shell -c "exec(open(\"audit_errors.py\").read())"
+
+### 1. Owned() without a field (expect E104)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E104
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e104
+str(exc):
+E104: Owned() needs the owner field: name the relation to the user model, e.g. Owned("organizer") or Owned("event__organizer"). Use Owned("created_by") only when whoever created the row is its owner (ADR 0001 Q2.6). See https://cbsshekhawat18-lab.github.io/karni/errors/#e104
+is KarniError: True
+
+### 2. Can('x') (expect E209)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E209
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e209
+str(exc):
+E209: Can() needs one or more permissions as 'app_label.model:action', e.g. Can('events.event:approve'). Extra actions come from `class Karni: actions = [...]` on the model. See https://cbsshekhawat18-lab.github.io/karni/errors/#e209
+is KarniError: True
+
+### 3. KARNI_ROLES grant with a typo: 'events.evnt:view' (expect E206)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E206
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e206
+str(exc):
+E206: KARNI_ROLES['staff']: grant pattern 'events.evnt:view' matches no permission. Keys look like 'events.event:view'; a model's extra actions come from `class Karni: actions = [...]`. See https://cbsshekhawat18-lab.github.io/karni/errors/#e206
+is KarniError: True
+
+### 3b. KARNI_ROLES with an unknown scope 'everything' (expect E205)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E205
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e205
+str(exc):
+E205: KARNI_ROLES: role 'staff', grant 'events.event:view' has scope 'everything'; a scope is 'all', 'own', 'related:<scope path key>' or 'custom:<registered name>'. See https://cbsshekhawat18-lab.github.io/karni/errors/#e205
+is KarniError: True
+
+### 4. KARNI_ACCOUNTS_EMAIL_BACKEND points at a module that does not exist (expect E201)
+type: builtins.ModuleNotFoundError
+code: <none>
+docs: <none>
+str(exc):
+No module named 'myproject'
+is KarniError: False
+
+### 4b. KARNI_ACCOUNTS_EMAIL_BACKEND names a Django mail backend, not an AccountsEmailBackend (expect E201)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E201
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e201
+str(exc):
+E201: KARNI_ACCOUNTS_EMAIL_BACKEND ('django.core.mail.backends.locmem.EmailBackend') must name an AccountsEmailBackend subclass. See https://cbsshekhawat18-lab.github.io/karni/errors/#e201
+is KarniError: True
+
+### 4c. KARNI_SEARCH_PROVIDER points at a module that does not exist
+type: builtins.ModuleNotFoundError
+code: <none>
+docs: <none>
+str(exc):
+No module named 'nowhere'
+is KarniError: False
+
+### 5. HasRole() with no role names (expect E105)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E105
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e105
+str(exc):
+E105: HasRole() needs one or more role (group) names, e.g. HasRole('staff'). See https://cbsshekhawat18-lab.github.io/karni/errors/#e105
+is KarniError: True
+
+### 6. Unscoped(reason='') (expect E107)
+type: karni.exceptions.KarniImproperlyConfigured
+code: E107
+docs: https://cbsshekhawat18-lab.github.io/karni/errors/#e107
+str(exc):
+E107: Unscoped(reason="...") needs a non-empty reason saying why this viewset opts out of access control (e.g. reason='public catalogue'). See https://cbsshekhawat18-lab.github.io/karni/errors/#e107
+is KarniError: True
+
+### 7. A viewset without access (E101) — see enforcement evidence (manage.py check output)

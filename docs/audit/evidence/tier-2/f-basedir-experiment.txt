@@ -1,0 +1,45 @@
+### 1. add a violation into a module the rules DO scan: 'import urllib.request' at the top of shop/viewsets.py (http-client / K105)
+import urllib.request  # audit: K105 http-client violation
+"""shop API: BaseViewSet subclasses, auto-routed: `karni make viewset <Model>`."""
+
+
+### 2. karni check --no-frontend with BASE_DIR unset (the scaffold default)
+0
+System check identified no issues (0 silenced).
+karni check: ok
+exit=0
+s.........                                                               [100%]
+9 passed, 1 skipped in 0.10s
+
+### 3. define BASE_DIR in config/settings.py (what the rules expect) and re-run
+
+from pathlib import Path  # audit: root-cause experiment
+BASE_DIR = Path(__file__).resolve().parent.parent
+System check identified no issues (0 silenced).
+architecture: [access-override] shop/bad_viewsets.py:28: filter_queryset_for_user is overridden (express the row rule in access (Where(...)), or add an allow marker with the reason)
+architecture: [unpaginated-action] shop/bad_viewsets.py:33: list-returning action serialises many=True without pagination (return self.paginated_response(queryset), or add an allow marker with the reason)
+architecture: [raw-sql] shop/bad_viewsets.py:37: raw SQL via .execute(...) outside an allowed directory (move it under a sql_allowed path or add an allow marker)
+architecture: [http-client] shop/bad_viewsets.py:1: direct HTTP client import: requests (call it from a */services/* module instead)
+architecture: [http-client] shop/viewsets.py:1: direct HTTP client import: urllib.request (call it from a */services/* module instead)
+KarniCommandError: E702: karni check found 5 problem(s), listed above. Fix each one (each names its K or E code; `karni explain <code>` explains it). See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+karni check: FAILED
+exit=1
+violations = [Violation(rule='access-override', location='shop/bad_viewsets.py:28', message='filter_queryset_for_user is overridden', hint='express the row rule in access (Where(...)), or add an allow marker with the reason')]
+E           [access-override] shop/bad_viewsets.py:28: filter_queryset_for_user is overridden (express the row rule in access (Where(...)), or add an allow marker with the reason)
+violations = [Violation(rule='unpaginated-action', location='shop/bad_viewsets.py:33', message='list-returning action serialises many=True without pagination', hint='return self.paginated_response(queryset), or add an allow marker with the reason')]
+E           [unpaginated-action] shop/bad_viewsets.py:33: list-returning action serialises many=True without pagination (return self.paginated_response(queryset), or add an allow marker with the reason)
+violations = [Violation(rule='raw-sql', location='shop/bad_viewsets.py:37', message='raw SQL via .execute(...) outside an allowed directory', hint='move it under a sql_allowed path or add an allow marker')]
+E           [raw-sql] shop/bad_viewsets.py:37: raw SQL via .execute(...) outside an allowed directory (move it under a sql_allowed path or add an allow marker)
+violations = [Violation(rule='http-client', location='shop/bad_viewsets.py:1', message='direct HTTP client import: requests', hint=...iewsets.py:1', message='direct HTTP client import: urllib.request', hint='call it from a */services/* module instead')]
+E           [http-client] shop/bad_viewsets.py:1: direct HTTP client import: requests (call it from a */services/* module instead)
+E           [http-client] shop/viewsets.py:1: direct HTTP client import: urllib.request (call it from a */services/* module instead)
+FAILED ::test_access_overrides_state_a_reason - karni.exceptions.KarniAsserti...
+FAILED ::test_list_actions_are_paginated - karni.exceptions.KarniAssertionErr...
+FAILED ::test_no_raw_sql_outside_allowed_dirs - karni.exceptions.KarniAsserti...
+FAILED ::test_no_direct_http_clients - karni.exceptions.KarniAssertionError: ...
+4 failed, 9 passed in 1.89s
+
+### 4. revert both experiment edits
+"""shop API: BaseViewSet subclasses, auto-routed: `karni make viewset <Model>`."""
+0
+(reverted)

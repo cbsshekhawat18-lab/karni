@@ -1,0 +1,2 @@
+context-scaffold.txt     chars=  868 bytes=  868 cl100k= 173 lines=5
+context-eventhub.txt     chars= 1388 bytes= 1388 cl100k= 285 lines=9

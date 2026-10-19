@@ -1,0 +1,70 @@
+## 2026-10-19 08:49:57
+$ karni doctor
+project     /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054 │
+│ 02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/lib/python3.1 │
+│ 2/site-packages/karni_cli/commands/doctor.py:116 in doctor                   │
+│                                                                              │
+│   113 │   │   typer.echo(_line("node", _node()))                             │
+│   114 │   │   return                                                         │
+│   115 │   typer.echo(_line("project", str(project)))                         │
+│ ❱ 116 │   typer.echo(_line("interpreter", _interpreter(project, service)))   │
+│   117 │   typer.echo(_line("node", _node()))                                 │
+│   118 │   typer.echo(_line("ui", _manifest(project)))                        │
+│   119 │   typer.echo(_line("adapters", _adapters(project)))                  │
+│                                                                              │
+│ /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054 │
+│ 02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/lib/python3.1 │
+│ 2/site-packages/karni_cli/commands/doctor.py:58 in _interpreter              │
+│                                                                              │
+│    55 def _interpreter(project: Path, service: str) -> str:                  │
+│    56 │   python = project_mod.venv_python(project)                          │
+│    57 │   if python is not None:                                             │
+│ ❱  58 │   │   return f"{python.relative_to(project)} (project commands run   │
+│       here)"                                                                 │
+│    59 │   if project_mod.compose_service_running(project, service):          │
+│    60 │   │   return f'docker compose service "{service}" (running)'         │
+│    61 │   return (                                                           │
+│                                                                              │
+│ /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Version │
+│ s/3.12/lib/python3.12/pathlib.py:682 in relative_to                          │
+│                                                                              │
+│    679 │   │   │   if self.is_relative_to(path):                             │
+│    680 │   │   │   │   break                                                 │
+│    681 │   │   │   elif not walk_up:                                         │
+│ ❱  682 │   │   │   │   raise ValueError(f"{str(self)!r} is not in the        │
+│        subpath of {str(other)!r}")                                           │
+│    683 │   │   │   elif path.name == '..':                                   │
+│    684 │   │   │   │   raise ValueError(f"'..' segment in {str(other)!r}     │
+│        cannot be walked")                                                    │
+│    685 │   │   else:                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ValueError: 
+'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/bin/python' is not 
+in the subpath of 
+'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp'
+exit=1
+## 2026-10-19 08:50:45 karni doctor on the quickstart project (venv at ../.venv as the page creates it)
+$ karni doctor
+│    685 │   │   else:                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ValueError: 
+'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/bin/python' 
+is not in the subpath of 
+'/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c
+9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/ticket_shop'
+exit=1
+
+## same project with a .venv INSIDE the project dir would not hit this path; the quickstart layout does. Source:
+def _interpreter(project: Path, service: str) -> str:
+    python = project_mod.venv_python(project)
+    if python is not None:
+        return f"{python.relative_to(project)} (project commands run here)"
+    if project_mod.compose_service_running(project, service):
+        return f'docker compose service "{service}" (running)'
+    return (
+        "none — create .venv (python -m venv .venv && .venv/bin/pip install -e .), activate a "

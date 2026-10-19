@@ -1,0 +1,23 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni && make lint-ui ; make typecheck-ui
+==> make lint-ui  start=1792380044.706650000
+exit=0  end=1792380054.622196000
+> eslint .
+> @karni/ui@0.1.0 format:check
+> prettier --check .
+Checking formatting...
+All matched files use Prettier code style!
+==> eslint + prettier (modules/karni-payments/ui)
+> @karni/payments-ui@0.1.0 lint
+> eslint . --ext .ts,.tsx,.cjs,.mjs
+> @karni/payments-ui@0.1.0 format:check
+> prettier --check .
+Checking formatting...
+All matched files use Prettier code style!
+==> make typecheck-ui  start=1792380054.638406000
+exit=0  end=1792380066.457487000
+==> tsc (packages/karni-ui)
+> @karni/ui@0.1.0 typecheck
+> tsc --noEmit
+==> tsc (modules/karni-payments/ui)
+> @karni/payments-ui@0.1.0 typecheck
+> tsc --noEmit

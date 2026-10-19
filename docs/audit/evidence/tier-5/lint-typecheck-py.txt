@@ -1,0 +1,25 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni && PYTHON=/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python make lint-py ; make typecheck-py
+==> make lint-py  start=1792380041.233581000
+exit=0  end=1792380041.653912000
+==> ruff (packages/karni)
+All checks passed!
+210 files already formatted
+==> ruff (packages/karni-cli)
+All checks passed!
+110 files already formatted
+==> ruff (modules/karni-payments)
+All checks passed!
+28 files already formatted
+==> ruff (.github/ci, root ruff.toml)
+All checks passed!
+3 files already formatted
+==> make typecheck-py  start=1792380041.659990000
+exit=2  end=1792380044.321765000
+==> mypy (packages/karni)
+tests/test_links.py:75: error: Need type annotation for "prose" (hint: "prose: set[<type>] = ...")  [var-annotated]
+Found 1 error in 1 file (checked 210 source files)
+==> mypy (packages/karni-cli)
+Success: no issues found in 121 source files
+==> mypy (modules/karni-payments)
+Success: no issues found in 27 source files
+make: *** [typecheck-py] Error 1

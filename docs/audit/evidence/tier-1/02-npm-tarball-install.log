@@ -1,0 +1,21 @@
+
+added 142 packages in 4s
+npm exit=0
+LICENSE
+README.md
+dist
+eslint-plugin
+package.json
+index.cjs
+index.cjs.map
+index.js
+index.js.map
+manifest.json
+mockServiceWorker.js
+src
+styles.css
+tailwind-preset.cjs
+tailwind-preset.cjs.map
+manifest keys: [ 'components', 'hooks', 'roles' ]
+cjs exports: 69 AUDIT_FIELDS, AuthGuard, AuthProvider, Button, Checkbox, DataChart, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel ...
+esm exports: 69

@@ -1,0 +1,25 @@
+## 2026-10-19 08:49:13
+$ npx playwright screenshot --browser chromium --full-page --wait-for-timeout 4000 http://127.0.0.1:8512/ app.png
+Navigating to http://127.0.0.1:8512/
+Waiting for timeout 4000...
+Capturing screenshot into /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/app.png
+exit=0
+$ npx playwright screenshot --browser chromium --full-page --wait-for-timeout 2000 http://127.0.0.1:8511/admin/ admin-login.png
+Navigating to http://127.0.0.1:8511/admin/
+Waiting for timeout 2000...
+Capturing screenshot into /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/admin-login.png
+exit=0
+$ curl -si http://127.0.0.1:8511/admin/ | head -5
+HTTP/1.1 302 Found
+Date: Mon, 19 Oct 2026 03:19:21 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: text/html; charset=utf-8
+Location: /admin/login/?next=/admin/
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8511/admin/login/
+200
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8511/api/docs/
+200
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8511/api/schema/
+200
+-rw-r--r--@ 1 chandrabhanshekhawat  staff  16175 Oct 19 08:49 /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/admin-login.png
+-rw-r--r--@ 1 chandrabhanshekhawat  staff  20498 Oct 19 08:49 /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/app.png

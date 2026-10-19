@@ -1,0 +1,46 @@
+## 2026-10-19 08:49:22
+--- user model identity fields ---
+62:    USERNAME_FIELD = "email"
+64:    REQUIRED_FIELDS: ClassVar[list[str]] = []
+$ DJANGO_SUPERUSER_PASSWORD=<redacted> DJANGO_SUPERUSER_EMAIL=admin@example.com DJANGO_SUPERUSER_USERNAME=admin karni createsuperuser --noinput
+Superuser created successfully.
+exit=0
+--- headless admin login via Playwright (chromium) ---
+@playwright
+playwright
+playwright-core
+node:internal/modules/cjs/loader:1210
+  throw err;
+  ^
+
+Error: Cannot find module '@playwright/test'
+Require stack:
+- /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/admin_login.cjs
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+    at Module._load (node:internal/modules/cjs/loader:1038:27)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/admin_login.cjs:1:58)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/admin_login.cjs'
+  ]
+}
+
+Node.js v20.20.1
+exit=1
+## 2026-10-19 08:49:24
+## 2026-10-19 08:49:52 retry with NODE_PATH=/Users/chandrabhanshekhawat/Documents/www/Karni/examples/eventhub/frontend/node_modules (module resolution, not a product issue)
+login page: status 200 title: Log in | testapp admin
+after submit: url http://127.0.0.1:8511/admin/ title: Site administration | testapp admin
+error notes: []
+header text: []
+admin links: ["/admin/","/admin/auth/","/admin/auth/group/","/admin/django_celery_results/","/admin/django_celery_results/groupresult/","/admin/django_celery_results/taskresult/","/admin/karni_accounts/","/admin/karni_accounts/onetimetoken/","/admin/karni_accounts/permission/","/admin/karni_accounts/rolepermission/","/admin/karni_accounts/role/","/admin/karni_accounts/user/","/admin/django_celery_beat/","/admin/django_celery_beat/clockedschedule/","/admin/django_celery_beat/crontabschedule/","/admin/django_celery_beat/intervalschedule/","/admin/django_celery_beat/periodictasks/","/admin/django_celery_beat/periodictask/","/admin/django_celery_beat/solarschedule/","/admin/token_blacklist/","/admin/token_blacklist/blacklistedtoken/","/admin/token_blacklist/outstandingtoken/","/admin/password_change/","/admin/auth/group/add/","/admin/django_celery_results/groupresult/add/","/admin/django_celery_results/taskresult/add/","/admin/karni_accounts/onetimetoken/add/","/admin/karni_accounts/permission/add/","/admin/karni_accounts/rolepermission/add/","/admin/karni_accounts/role/add/","/admin/karni_accounts/user/add/","/admin/django_celery_beat/clockedschedule/add/","/admin/django_celery_beat/crontabschedule/add/","/admin/django_celery_beat/intervalschedule/add/","/admin/django_celery_beat/periodictasks/add/","/admin/django_celery_beat/periodictask/add/","/admin/django_celery_beat/solarschedule/add/","/admin/token_blacklist/blacklistedtoken/add/"]
+screenshot written: /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/admin-home.png
+exit=0
+-rw-r--r--@ 1 chandrabhanshekhawat  staff  87932 Oct 19 08:49 /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/admin-home.png

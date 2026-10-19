@@ -1,0 +1,12 @@
+2026-10-18T17:13:51.501963Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-18T17:13:52.178321Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=f872efe6-05f5-497c-a12f-a6b9ae7d4fc9 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:13:53.233973Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/ready/' request_id=f872efe6-05f5-497c-a12f-a6b9ae7d4fc9 user_id=None
+2026-10-18T17:13:53.234557Z [info     ] GET /health/ready/ 200 — 1 queries, 0 duplicated, 0.2 ms in SQL, 1062.7 ms total [karni.queries]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 18, 2026 - 17:13:51
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8551/
+Quit the server with CONTROL-C.
+

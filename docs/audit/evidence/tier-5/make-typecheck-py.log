@@ -1,0 +1,8 @@
+==> mypy (packages/karni)
+tests/test_links.py:75: error: Need type annotation for "prose" (hint: "prose: set[<type>] = ...")  [var-annotated]
+Found 1 error in 1 file (checked 210 source files)
+==> mypy (packages/karni-cli)
+Success: no issues found in 121 source files
+==> mypy (modules/karni-payments)
+Success: no issues found in 27 source files
+make: *** [typecheck-py] Error 1

@@ -1,0 +1,186 @@
+
+=== karni wheel vs packages/karni/karni ===
+artifact files: 118   source files compared: 118
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+dist-info files: ['karni-0.1.0.dist-info/METADATA', 'karni-0.1.0.dist-info/RECORD', 'karni-0.1.0.dist-info/WHEEL', 'karni-0.1.0.dist-info/entry_points.txt', 'karni-0.1.0.dist-info/licenses/LICENSE']
+
+=== karni sdist vs packages/karni (whole dir) ===
+(sdist is expected to drop test caches; tests/ and config may be included)
+artifact files: 235   source files compared: 233
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 2
+  + .gitignore
+  + PKG-INFO
+
+=== karni-cli wheel vs packages/karni-cli/karni_cli (post-build working tree, incl. bundled _templates/_agent/_changelog/_errorcodes) ===
+artifact files: 139   source files compared: 139
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+
+=== karni-cli wheel bundles vs their ORIGINAL sources (templates/project, karni/agent, karni/changelog, karni/errorcodes, karni/links.py) ===
+artifact files: 52   source files compared: 52
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+dist-info files: ['karni_cli-0.1.0.dist-info/METADATA', 'karni_cli-0.1.0.dist-info/RECORD', 'karni_cli-0.1.0.dist-info/WHEEL', 'karni_cli-0.1.0.dist-info/entry_points.txt', 'karni_cli-0.1.0.dist-info/licenses/LICENSE']
+entry_points.txt:
+[console_scripts]
+karni = karni_cli.main:run
+
+
+=== karni-cli sdist vs packages/karni-cli (whole dir) ===
+artifact files: 172   source files compared: 170
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 2
+  + .gitignore
+  + PKG-INFO
+
+=== karni-payments wheel vs modules/karni-payments/karni_payments ===
+artifact files: 19   source files compared: 19
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+dist-info files: ['karni_payments-0.1.0.dist-info/METADATA', 'karni_payments-0.1.0.dist-info/RECORD', 'karni_payments-0.1.0.dist-info/WHEEL', 'karni_payments-0.1.0.dist-info/entry_points.txt', 'karni_payments-0.1.0.dist-info/licenses/LICENSE']
+
+=== karni-payments sdist vs modules/karni-payments (excluding ui/) ===
+artifact files: 59   source files compared: 33
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 26
+  + .gitignore
+  + PKG-INFO
+  + ui/.eslintrc.cjs
+  + ui/.prettierignore
+  + ui/.prettierrc
+  + ui/LICENSE
+  + ui/README.md
+  + ui/package-lock.json
+  + ui/package.json
+  + ui/src/CheckoutButton.stories.tsx
+  + ui/src/CheckoutButton.test.tsx
+  + ui/src/CheckoutButton.tsx
+  + ui/src/PaymentStatus.stories.tsx
+  + ui/src/PaymentStatus.test.tsx
+  + ui/src/PaymentStatus.tsx
+  + ui/src/index.ts
+  + ui/src/roles.test.ts
+  + ui/src/roles.ts
+  + ui/src/types.ts
+  + ui/tests/msw/handlers.ts
+  + ui/tests/msw/server.ts
+  + ui/tests/test-utils.tsx
+  + ui/tsconfig.json
+  + ui/vite.config.ts
+  + ui/vitest.config.ts
+  + ui/vitest.setup.ts
+
+=== @karni/ui tgz vs packages/karni-ui {dist, eslint-plugin, README, LICENSE, package.json} ===
+artifact files: 89   source files compared: 89
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+ALL tgz members:
+    LICENSE
+    README.md
+    dist/index.cjs
+    dist/index.cjs.map
+    dist/index.js
+    dist/index.js.map
+    dist/manifest.json
+    dist/mockServiceWorker.js
+    dist/src/auth/AuthGuard.d.ts
+    dist/src/auth/LoginForm.d.ts
+    dist/src/auth/engine.d.ts
+    dist/src/auth/provider.d.ts
+    dist/src/auth/storage.d.ts
+    dist/src/auth/types.d.ts
+    dist/src/auth/usePermission.d.ts
+    dist/src/components/chart/data-chart.d.ts
+    dist/src/components/empty-state/empty-state.d.ts
+    dist/src/components/file-upload/FileUpload.d.ts
+    dist/src/components/layout/layout.d.ts
+    dist/src/components/modal/modal.d.ts
+    dist/src/components/page/page.d.ts
+    dist/src/components/primitives/button.d.ts
+    dist/src/components/primitives/checkbox.d.ts
+    dist/src/components/primitives/dropdown-menu.d.ts
+    dist/src/components/primitives/icons.d.ts
+    dist/src/components/primitives/input.d.ts
+    dist/src/components/primitives/label.d.ts
+    dist/src/components/primitives/select.d.ts
+    dist/src/components/primitives/skeleton.d.ts
+    dist/src/components/primitives/switch.d.ts
+    dist/src/components/primitives/tabs.d.ts
+    dist/src/components/primitives/textarea.d.ts
+    dist/src/components/resource/ResourceDetail.d.ts
+    dist/src/components/resource/ResourceForm.d.ts
+    dist/src/components/resource/ResourceSelect.d.ts
+    dist/src/components/resource/ResourceTable.d.ts
+    dist/src/components/resource/audit-fields.d.ts
+    dist/src/components/resource/detail/ResourceDetail.d.ts
+    dist/src/components/resource/displayLabel.d.ts
+    dist/src/components/resource/form/ResourceForm.d.ts
+    dist/src/components/resource/form/field-inputs.d.ts
+    dist/src/components/resource/form/fixtures.d.ts
+    dist/src/components/resource/form/prepare.d.ts
+    dist/src/components/resource/select/ResourceSelect.d.ts
+    dist/src/components/resource/select/use-debounced-value.d.ts
+    dist/src/components/resource/table/BulkActionsBar.d.ts
+    dist/src/components/resource/table/FilterBar.d.ts
+    dist/src/components/resource/table/PaginationControls.d.ts
+    dist/src/components/resource/table/ResourceTable.d.ts
+    dist/src/components/resource/table/demo-fixtures.d.ts
+    dist/src/components/resource/table/derive-columns.d.ts
+    dist/src/components/resource/table/table-utils.d.ts
+    dist/src/components/resource/table/use-debounced-value.d.ts
+    dist/src/components/stat/stat.d.ts
+    dist/src/components/toast/toast-store.d.ts
+    dist/src/components/toast/toaster.d.ts
+    dist/src/components/toast/use-toast.d.ts
+    dist/src/hooks/keys.d.ts
+    dist/src/hooks/multipart.d.ts
+    dist/src/hooks/params.d.ts
+    dist/src/hooks/types.d.ts
+    dist/src/hooks/useResourceItem.d.ts
+    dist/src/hooks/useResourceList.d.ts
+    dist/src/hooks/useResourceMutations.d.ts
+    dist/src/index.d.ts
+    dist/src/lib/cn.d.ts
+    dist/src/lib/roles.d.ts
+    dist/src/lib/variants.d.ts
+    dist/src/schema/client.d.ts
+    dist/src/schema/parse.d.ts
+    dist/src/schema/provider.d.ts
+    dist/src/schema/types.d.ts
+    dist/src/schema/useSchema.d.ts
+    dist/src/schema/zod.d.ts
+    dist/styles.css
+    dist/tailwind-preset.cjs
+    dist/tailwind-preset.cjs.map
+    dist/tailwind-preset.d.ts
+    dist/tailwind-preset.js
+    dist/tailwind-preset.js.map
+    eslint-plugin/index.js
+    eslint-plugin/lib/docs.js
+    eslint-plugin/lib/glob.js
+    eslint-plugin/rules.json
+    eslint-plugin/rules/max-page-lines.js
+    eslint-plugin/rules/no-deep-imports.js
+    eslint-plugin/rules/no-direct-http.js
+    eslint-plugin/rules/no-raw-elements.js
+    package.json
+
+=== @karni/payments-ui tgz vs modules/karni-payments/ui {dist, README, LICENSE, package.json} ===
+artifact files: 12   source files compared: 12
+MISSING from artifact (present in repo): 0
+EXTRA in artifact (not in repo tree): 0
+ALL tgz members:
+    LICENSE
+    README.md
+    dist/index.cjs
+    dist/index.cjs.map
+    dist/index.js
+    dist/index.js.map
+    dist/src/CheckoutButton.d.ts
+    dist/src/PaymentStatus.d.ts
+    dist/src/index.d.ts
+    dist/src/roles.d.ts
+    dist/src/types.d.ts
+    package.json

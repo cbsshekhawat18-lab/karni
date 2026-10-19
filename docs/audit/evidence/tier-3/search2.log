@@ -1,0 +1,185 @@
+
+#1 [manager_a search 'needle']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'needle'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#2 [manager_a search 'Beta']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Beta'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#3 [manager_a search 'Bianca']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Bianca'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#4 [manager_a search 'B-SECRET-ZZZ-needle']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'B-SECRET-ZZZ-needle'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#5 [manager_a search 'A-SECRET-one']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-one'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#6 [manager_a search 'A-SECRET-two']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-two'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06
+
+#7 [manager_a search 'A-SECRET-nope']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-nope'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06
+
+#8 [manager_a search 'SECRET']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'SECRET'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06
+
+#9 [manager_a search reviews 'needle' (B review note)]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'search': 'needle'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"8b26f824-771e-4524-9a9f-ac20bb237baf","created_at":"2026-10-19T03:15:37.087792Z","updated_at":"2026-10-19T03:15:37.087801Z","created_by":"166ee
+
+#10 [clerk_a search 'needle']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'needle'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#11 [clerk_a search 'Beta']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Beta'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#12 [clerk_a search 'Bianca']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'Bianca'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#13 [clerk_a search 'B-SECRET-ZZZ-needle']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'B-SECRET-ZZZ-needle'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}
+
+#14 [clerk_a search 'A-SECRET-one']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-one'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#15 [clerk_a search 'A-SECRET-two']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-two'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#16 [clerk_a search 'A-SECRET-nope']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-nope'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#17 [clerk_a search 'SECRET']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'SECRET'}
+  -> 200 application/json
+  {"count":1,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#18 [clerk_a search reviews 'needle' (B review note)]
+  GET http://127.0.0.1:8531/api/reviews/
+  params={'search': 'needle'}
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"8b26f824-771e-4524-9a9f-ac20bb237baf","created_at":"2026-10-19T03:15:37.087792Z","updated_at":"2026-10-19T03:15:37.087801Z","created_by":"166ee
+
+#19 [blind search write-only value 'A-SECRET-one']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-one'}
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee
+
+#20 [blind search write-only value 'A-SECRET-two']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-two'}
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06
+
+#21 [blind search write-only value 'B-SECRET-ZZZ-needle']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'B-SECRET-ZZZ-needle'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"bfdbbe3c-fad3-48c2-9fc8-6909b436c1b3","created_at":"2026-10-18T17:11:39.636125Z","updated_at":"2026-10-18T17:11:39.636141Z","created_by":"dddb8
+
+#22 [blind search write-only value 'B-SECRET-one']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'B-SECRET-one'}
+  -> 200 application/json
+  {"count":4,"next":null,"previous":null,"results":[{"id":"b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae","created_at":"2026-10-18T17:11:39.634837Z","updated_at":"2026-10-18T17:11:39.634856Z","created_by":"d37e9
+
+#23 [blind search write-only value 'A-SECRET-nope']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'A-SECRET-nope'}
+  -> 200 application/json
+  {"count":4,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","created_at":"2026-10-18T17:11:39.632497Z","updated_at":"2026-10-19T03:15:37.284641Z","created_by":"0ee06
+
+#24 [blind search write-only value 'planted']
+  GET http://127.0.0.1:8531/api/employees/
+  params={'search': 'planted'}
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"7b4ed8ff-58b3-422f-9c7d-484b50034615","created_at":"2026-10-19T03:15:29.753058Z","updated_at":"2026-10-19T03:15:29.753068Z","created_by":"0ee06
+
+#25 [blind default ordering]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'page_size': 100}
+  -> 200 application/json
+  {"count":9,"next":null,"previous":null,"results":[{"id":"f34fcd74-42ee-4f1c-83bb-ba78007e0aac","crea
+
+#26 [blind ordering=secret_note]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'secret_note', 'page_size': 100}
+  -> 200 application/json
+  {"count":9,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","crea
+
+#27 [blind ordering=-secret_note]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': '-secret_note', 'page_size': 100}
+  -> 200 application/json
+  {"count":9,"next":null,"previous":null,"results":[{"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","crea
+
+#28 [blind ordering=name (control)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'name', 'page_size': 100}
+  -> 200 application/json
+  {"count":9,"next":null,"previous":null,"results":[{"id":"cbb58793-31f5-4ff0-ae34-b21c11478966","crea
+
+#29 [blind ordering=secret_note,name (secondary)]
+  GET http://127.0.0.1:8531/api/employees/
+  params={'ordering': 'secret_note,name', 'page_size': 100}
+  -> 200 application/json
+  {"count":9,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","crea
+
+#30 [clerk_a branches list (Authenticated -> every branch)]
+  GET http://127.0.0.1:8531/api/branches/
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"b96524ca-0526-4673-b9c9-02f248910ede","created_at":"2026-10-18T17:11:38.163901Z","updated_at":"2026-10-18T17:11:38.163914Z","created_by":null,"updated_by":null,"name":"Branch B"},{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","created_by":null,"updated_by":nu
+
+#31 [clerk_a branches ?created_by=]
+  GET http://127.0.0.1:8531/api/branches/
+  params={'created_by': 'e62d7ccb-868c-46ef-92cb-980bfeccb04f'}
+  -> 200 application/json
+  {"count":0,"next":null,"previous":null,"results":[]}

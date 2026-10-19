@@ -1,0 +1,69 @@
+### karni rules --check shop/serializers.py
+shop/serializers.py:7: K106 [redundant-serializer] VenueSerializer is a Meta-only ModelSerializer — BaseViewSet(model=X) already generates it
+  fix: Delete it; customise via APIMeta or override get_serializer_class().
+exit=1
+
+### karni rules --check shop/bad_viewsets.py
+shop/bad_viewsets.py:1: K105 [http-client] direct HTTP client import: requests
+  fix: Move the call into a services module and call that.
+shop/bad_viewsets.py:12: K101 [model-base] Plain inherits django.db.models.Model directly
+  fix: Inherit karni.models.BaseModel (or compose its mixins).
+shop/bad_viewsets.py:16: K109 [viewset-access] VenueViewSet declares no `access` — every request is denied
+  fix: Add `access = Access(read=..., write=...)` (e.g. write=Authenticated()).
+shop/bad_viewsets.py:20: K102 [viewset-base] LegacyViewSet bypasses BaseViewSet
+  fix: Inherit karni.api.BaseViewSet and set `model = X`.
+shop/bad_viewsets.py:28: K110 [access-override] filter_queryset_for_user overridden — express row rules in `access`
+  fix: Move the condition into access (Where(lambda request: Q(...))), or add the marker.
+shop/bad_viewsets.py:33: K111 [unpaginated-action] list-returning action serialises many=True without pagination
+  fix: Return self.paginated_response(qs); hint opaque fields with prefetch_related.
+shop/bad_viewsets.py:37: K104 [raw-sql] raw SQL via .execute(...) outside a sql/ directory
+  fix: Use the ORM, or move the query into a `sql/` module.
+shop/bad_viewsets.py:41: K103 [admin-convention] VenueAdmin is a plain ModelAdmin, not derived from AdminMeta
+  fix: Delete the admin class and use AdminMeta, or subclass KarniModelAdmin.
+exit=1
+
+### karni rules --check frontend/src/pages/bad-page.tsx
+frontend/src/pages/bad-page.tsx:2: K203 [karni/no-deep-imports] deep import from @karni/ui internals
+  fix: Import from "@karni/ui".
+frontend/src/pages/bad-page.tsx:8: K204 [karni/no-direct-http] direct fetch() outside src/api/
+  fix: Use the generated typed hook or useKarniClient().
+frontend/src/pages/bad-page.tsx:12: K201 [karni/no-raw-elements] raw <table> — compose ResourceTable from @karni/ui
+  fix: Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.
+frontend/src/pages/bad-page.tsx:21: K201 [karni/no-raw-elements] raw <form> — compose ResourceForm from @karni/ui
+  fix: Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.
+frontend/src/pages/bad-page.tsx:22: K201 [karni/no-raw-elements] raw <input> — compose Input (or ResourceForm) from @karni/ui
+  fix: Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.
+exit=1
+
+### clean file: karni rules --check shop/viewsets.py
+ok: no violations in 1 file(s)
+exit=0
+
+### karni rules --check shop/serializers.py --json
+[
+  {
+    "path": "shop/serializers.py",
+    "code": "K106",
+    "rule_id": "redundant-serializer",
+    "line": 7,
+    "message": "VenueSerializer is a Meta-only ModelSerializer \u2014 BaseViewSet(model=X) already generates it",
+    "fix": "Delete it; customise via APIMeta or override get_serializer_class()."
+  }
+]
+exit=0
+
+### karni explain K106
+K106 [backend, error] Never write a Meta-only `ModelSerializer`; `BaseViewSet(model=X)` generates it.
+Why: A redundant serializer silently diverges from the generated one.
+Fix: Delete it; customise via APIMeta or override get_serializer_class().
+Enforced by: redundant-serializer
+
+### karni check --no-frontend (whole project, with the violating files in place)
+System check identified no issues (0 silenced).
+karni check: ok
+
+tip: no prompt-history store found. `karni context --with-history` can brief
+     an agent with what was already asked about a file. Works with Gigai
+     Chronicle (MIT, local-only, by Karni's author).
+     Silence this: karni config set suggest_tools false
+exit=

@@ -1,0 +1,30 @@
+ 
+ -------------- audit4-worker-solo@Chandrabhans-MacBook.local v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- macOS-26.6.2-arm64-arm-64bit 2026-10-19 03:21:22
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         audit4:0x10ba68ad0
+- ** ---------- .> transport:   redis://127.0.0.1:6379/8
+- ** ---------- .> results:     
+- *** --- * --- .> concurrency: 10 (solo)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . karni.accounts.tasks.flush_expired_tokens
+  . karni_payments.tasks.process_webhook_event
+
+[2026-10-19 03:21:22,746: INFO/MainProcess] Connected to redis://127.0.0.1:6379/8
+[2026-10-19 03:21:22,748: INFO/MainProcess] mingle: searching for neighbors
+[2026-10-19 03:21:23,758: INFO/MainProcess] mingle: all alone
+[2026-10-19 03:21:23,772: INFO/MainProcess] audit4-worker-solo@Chandrabhans-MacBook.local ready.
+[2026-10-19 03:22:22,137: INFO/MainProcess] Task karni_payments.tasks.process_webhook_event[849bdd0b-4020-4801-a923-4871336f72b6] received
+[2026-10-19 03:22:22,157: INFO/MainProcess] Task karni_payments.tasks.process_webhook_event[849bdd0b-4020-4801-a923-4871336f72b6] succeeded in 0.019455291039776057s: None
+[2026-10-19 03:22:30,597: INFO/MainProcess] Task karni_payments.tasks.process_webhook_event[709face1-1f8f-421b-ab1f-78a5ceee1df9] received
+[2026-10-19 03:22:30,614: INFO/MainProcess] Task karni_payments.tasks.process_webhook_event[709face1-1f8f-421b-ab1f-78a5ceee1df9] succeeded in 0.016061791975516826s: None
+
+worker: Warm shutdown (MainProcess)

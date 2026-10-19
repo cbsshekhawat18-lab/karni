@@ -1,0 +1,111 @@
+
+### B1 unauthenticated list (read=Public)
+$ GET /api/venues/
+{"count":1,"next":null,"previous":null,"results":[{"id":"69cb50b1-c7b8-4021-8d80-9ba33f3b569c","created_at":"2026-10-18T17:13:33.061139Z","updated_at":"2026-10-18T17:13:33.061168Z","created_by":null,"updated_by":null,"name":"Hall B","city":"Delhi","capacity":50}]}
+[HTTP 200]
+
+### B2 unauthenticated create is refused (write=Authenticated)
+$ POST /api/venues/
+{"detail":"Authentication credentials were not provided."}
+[HTTP 401]
+
+### B3 login (jwt mode)
+$ POST /api/auth/login/
+access token: eyJhbGciOiJIUzI1NiIsInR5...
+
+### B4 create
+$ POST /api/venues/ (Bearer)
+{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.563271Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall","city":"Jaipur","capacity":300}
+[HTTP 201]
+[HTTP 201]
+
+### B5 validation error shape
+$ POST /api/venues/ with missing fields
+{"city":["This field is required."],"capacity":["This field is required."]}
+[HTTP 400]
+
+### B6 retrieve
+$ GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/
+{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.563271Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall","city":"Jaipur","capacity":300}
+[HTTP 200]
+
+### B7 partial update
+$ PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/
+{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.711545Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall","city":"Jaipur","capacity":350}
+[HTTP 200]
+
+### B8 full update
+$ PUT /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/
+{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.736906Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall (PUT)","city":"Jaipur","capacity":360}
+[HTTP 200]
+
+### B9 read-only audit fields ignored on write
+$ PATCH created_by/id
+{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.763751Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall (PUT)","city":"Jaipur","capacity":361}
+[HTTP 200]
+
+### B10 filtering exact / icontains / gte / lte
+$ GET ?city=Jaipur ; ?name__icontains=hall ; ?capacity__gte=300 ; ?capacity__lte=25
+?city=Jaipur -> 2 ['Small Room', 'Grand Hall (PUT)']
+?name__icontains=hall -> 2 ['Grand Hall (PUT)', 'Hall B']
+?capacity__gte=300 -> 2 ['Open Air', 'Grand Hall (PUT)']
+?capacity__lte=25 -> 1 ['Small Room']
+?city=Nowhere -> 0 []
+unknown param ignored? ?bogus=1 -> 4
+bad type ?capacity__gte=abc -> {"capacity__gte":["Enter a number."]} [HTTP 400]
+
+### B11 ordering
+$ GET ?ordering=capacity ; ?ordering=-capacity ; ?ordering=name
+?ordering=capacity -> [('Small Room', 20), ('Hall B', 50), ('Grand Hall (PUT)', 361), ('Open Air', 5000)]
+?ordering=-capacity -> [('Open Air', 5000), ('Grand Hall (PUT)', 361), ('Hall B', 50), ('Small Room', 20)]
+?ordering=name -> [('Grand Hall (PUT)', 361), ('Hall B', 50), ('Open Air', 5000), ('Small Room', 20)]
+?ordering=-created_at -> [('Open Air', 5000), ('Small Room', 20), ('Grand Hall (PUT)', 361), ('Hall B', 50)]
+default order (no param) -> ['Open Air', 'Small Room', 'Grand Hall (PUT)', 'Hall B']
+
+### B12 pagination
+$ GET ?page_size=2 ; ?page_size=2&page=2 ; ?page=99 ; ?page_size=1000
+{"count":4,"next":"http://127.0.0.1:8521/api/venues/?page=2&page_size=2","previous":null,"results":[{"id":"4eeb3ba2-9a14-48a0-8214-83da19bbd624","created_at":"2026-10-18T17:15:14.643551Z","updated_at":"2026-10-18T17:15:14.643558Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Open Air","city":"Mumbai","capacity":5000},{"id":"c6f77e89-91fe-4881-b8c5-33f8b0c40879","created_at":"2026-10-18T17:15:14.619927Z","updated_at":"2026-10-18T17:15:14.619935Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Small Room","city":"Jaipur","capacity":20}]}
+[HTTP 200]
+{"count":4,"next":null,"previous":"http://127.0.0.1:8521/api/venues/?page_size=2","results":[{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.763751Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall (PUT)","city":"Jaipur","capacity":361},{"id":"69cb50b1-c7b8-4021-8d80-9ba33f3b569c","created_at":"2026-10-18T17:13:33.061139Z","updated_at":"2026-10-18T17:13:33.061168Z","created_by":null,"updated_by":null,"name":"Hall B","city":"Delhi","capacity":50}]}
+[HTTP 200]
+{"detail":"Invalid page."}
+[HTTP 404]
+?page_size=1000 -> results: 4 of 4
+
+### B13 search WITHOUT search_fields declared
+$ GET ?search=Grand
+{"count":4,"next":null,"previous":null,"results":[{"id":"4eeb3ba2-9a14-48a0-8214-83da19bbd624","created_at":"2026-10-18T17:15:14.643551Z","updated_at":"2026-10-18T17:15:14.643558Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Open Air","city":"Mumbai","capacity":5000},{"id":"c6f77e89-91fe-4881-b8c5-33f8b0c40879","created_at":"2026-10-18T17:15:14.619927Z","updated_at":"2026-10-18T17:15:14.619935Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Small Room","city":"Jaipur","capacity":20},{"id":"0b41ca0b-abbd-413a-9829-307af287bfe6","created_at":"2026-10-18T17:15:14.563263Z","updated_at":"2026-10-18T17:15:14.763751Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","name":"Grand Hall (PUT)","city":"Jaipur","capacity":361},{"id":"69cb50b1-c7b8-4021-8d80-9ba33f3b569c","created_at":"2026-10-18T17:13:33.061139Z","updated_at":"2026-10-18T17:13:33.061168Z","created_by":null,"updated_by":null,"name":"Hall B","city":"Delhi","capacity":50}]}
+[HTTP 200]
+OpenAPI list parameters for /api/venues/:
+['capacity', 'capacity__gte', 'capacity__lte', 'city', 'city__icontains', 'created_at', 'created_at__gte', 'created_at__lte', 'created_by', 'name', 'name__icontains', 'ordering', 'page', 'page_size', 'updated_at', 'updated_at__gte', 'updated_at__lte', 'updated_by']
+
+### B14 expand a relation on events
+$ GET /api/events/?expand=venue
+{"count":3,"next":"http://127.0.0.1:8521/api/events/?expand=venue&page=2&page_size=1","previous":null,"results":[{"id":"288e3839-00e4-4ec3-b130-f2ed390058d8","created_at":"2026-10-18T17:13:33.615152Z","updated_at":"2026-10-18T17:13:33.615176Z","created_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","updated_by":"a55ddd0a-0a8b-447f-bbd0-e103a64a0079","title":"Kept event","description":"","starts_at":"2026-10-18T17:13:33.614680Z","status":"draft","venue":{"id":"69cb50b1-c7b8-4021-8d80-9ba33f3b569c","created_at":"2026-10-18T17:13:33.061139Z","updated_at":"2026-10-18T17:13:33.061168Z","created_by":null,"updated_by":null,"name":"Hall B","city":"Delhi","capacity":50},"organizer":null}]}
+[HTTP 200]
+
+### B15 delete (soft) then 404
+$ DELETE /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ ; GET
+
+[HTTP 204]
+{"detail":"No Venue matches the given query."}
+[HTTP 404]
+row in DB (deleted_at set)? -> Grand Hall (PUT)|t
+
+### B16 options / allowed methods
+$ OPTIONS /api/venues/
+Allow: GET, POST, HEAD, OPTIONS
+
+### B17 schema: component, enum, vendor extensions
+$ GET /api/schema/
+openapi 3.0.3 | x-karni-auth-mode: jwt
+paths: ['/api/events/', '/api/events/{id}/', '/api/venues/', '/api/venues/{id}/']
+GET /api/venues/: operationId venues_list | x-karni-resource venues | x-karni-access {'public': True} | security [{'jwtAuth': []}, {'cookieAuth': []}, {}]
+  params: [('capacity', 'query', 'integer', None), ('capacity__gte', 'query', 'integer', None), ('capacity__lte', 'query', 'integer', None), ('city', 'query', 'string', None), ('city__icontains', 'query', 'string', None), ('created_at', 'query', 'string', None), ('created_at__gte', 'query', 'string', None), ('created_at__lte', 'query', 'string', None), ('created_by', 'query', 'string', None), ('name', 'query', 'string', None), ('name__icontains', 'query', 'string', None), ('ordering', 'query', 'string', None), ('page', 'query', 'integer', None), ('page_size', 'query', 'integer', None), ('updated_at', 'query', 'string', None), ('updated_at__gte', 'query', 'string', None), ('updated_at__lte', 'query', 'string', None), ('updated_by', 'query', 'string', None)]
+POST /api/venues/: x-karni-access {'authenticated': True} | security [{'jwtAuth': []}, {'cookieAuth': []}] | requestBody schema {'$ref': '#/components/schemas/ShopVenueRequest'}
+responses: {'200': {'$ref': '#/components/schemas/PaginatedShopVenueList'}}
+components: ['PaginatedShopEventList', 'PaginatedShopVenueList', 'PatchedShopEventRequest', 'PatchedShopVenueRequest', 'ShopEvent', 'ShopEventRequest', 'ShopVenue', 'ShopVenueRequest', 'StatusEnum']
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+KeyError: 'Venue'
+DONE B

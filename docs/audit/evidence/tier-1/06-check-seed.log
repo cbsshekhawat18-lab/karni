@@ -1,0 +1,41 @@
+## 2026-10-19 08:49:25 cwd=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp
+$ karni check
+System check identified no issues (0 silenced).
+karni check: ok
+Using config from .jscpd.json
+[90mNo duplicates found.[39m
+[90m┌────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐[39m
+[90m│[39m[31m Format [39m[90m│[39m[31m Files analyzed [39m[90m│[39m[31m Total lines [39m[90m│[39m[31m Total tokens [39m[90m│[39m[31m Clones found [39m[90m│[39m[31m Duplicated lines [39m[90m│[39m[31m Duplicated tokens [39m[90m│[39m
+[90m├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m tsx    [90m│[39m 4              [90m│[39m 121         [90m│[39m 627          [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[90m├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m [1mTotal:[22m [90m│[39m 4              [90m│[39m 121         [90m│[39m 627          [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[90m└────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘[39m
+[90mFound 0 clones.[39m
+[90mtime: 6.617ms[39m
+
+tip: no prompt-history store found. `karni context --with-history` can brief
+     an agent with what was already asked about a file. Works with Gigai
+     Chronicle (MIT, local-only, by Karni's author).
+     Silence this: karni config set suggest_tools false
+exit=0
+
+## 2026-10-19 08:49:28
+$ karni seed
+Seeded 1 model(s) with seed 0 (count 10) in 0.2s:
+  karni_accounts.User     3
+Log in as demo@example.com / karni-password (staff).
+exit=0
+
+## 2026-10-19 08:49:29
+$ karni seed   (second run, same seed: idempotent?)
+Seeded 1 model(s) with seed 0 (count 10) in 0.2s:
+  karni_accounts.User     3  (3 existing)
+Log in as demo@example.com (existing user) (staff).
+exit=0
+## 2026-10-19 08:49:31
+--- rows in karni_accounts_user ---
+admin@example.com|t|t
+demo@example.com|t|t
+tammy.howard1@example.com|f|f
+john.browning2@example.net|f|f

@@ -1,0 +1,46 @@
+## 2026-10-19 08:47:51.387468000 $ karni serve --local --port 8511
+## 2026-10-19 08:47:51.548608000 $ karni worker --pool=solo
+## 2026-10-19 08:47:51.715601000 $ npm run dev -- --port 8512 --strictPort   (KARNI_API_PROXY=http://127.0.0.1:8511)
+## 2026-10-19 08:50:48.174256000 stopping my servers (only processes whose command line carries my scratch path or my ports)
+--- before ---
+95110 17800 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/bin/karni serve --local --port 8511
+95140 17800 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/cleanvenv/bin/karni worker --pool=solo
+95144 95110 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+95218 95169 node /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp/frontend/node_modules/.bin/vite --port 8512 --strictPort
+95228 95144 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+95230 95218 /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp/frontend/node_modules/@esbuild/darwin-arm64/bin/esbuild --service=0.21.5 --ping
+--- after ---
+95144     1 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+95228 95144 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+(end)
+--- listeners on 8511/8512 ---
+COMMAND   PID                 USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+Python  95228 chandrabhanshekhawat    5u  IPv4 0x93cde414b5cff2de      0t0  TCP 127.0.0.1:8511 (LISTEN)
+(end)
+--- user's own ports untouched (8000, 5173, 8765, 8431 listeners still present?) ---
+Python 12570 127.0.0.1:8000
+node 32703 [::1]:5173
+## 2026-10-19 08:50:51.878450000 done
+## 2026-10-19 08:52:02.592640000 OBSERVATION: SIGTERM to the 'karni serve --local' wrapper did not stop its runserver child (orphaned to ppid 1, still LISTENing on 8511). Killing by my port/PID.
+kill listener 95228: /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+kill 95144: /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python manage.py runserver 127.0.0.1:8511
+kill 95228: (Python)
+--- remaining ---
+95172 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m celery -A config worker -l info --pool=solo
+98822 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m celery -A config worker -l info --pool=solo -n audit4-worker-solo@%h
+(end)
+--- listeners on 8511/8512 ---
+(end)
+--- user's own listeners still present ---
+Python 12570 127.0.0.1:8000
+node 32703 [::1]:5173
+## 2026-10-19 08:52:04.861033000 all my servers stopped
+## 2026-10-19 08:54:14.729555000 orphaned celery child from my 'karni worker' wrapper
+pid 95172 cwd=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/stack/testapp
+killed 95172 (mine)
+--- celery processes still running (none should be mine) ---
+pid 98822 cwd=/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t4/audit4 cmd=/opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/P
+(end)
+--- anything of mine left? ---
+(end)
+## 2026-10-19 08:54:16.936934000

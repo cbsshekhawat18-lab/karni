@@ -1,0 +1,10 @@
+$ pytest --pyargs karni.testing.performance -rs -p no:cacheprovider
+exit=0
+plugins: platformdirs-4.12.4, karni-0.1.0, Faker-40.43.0, django-4.14.0
+collected 1 item
+
+. s                                                                      [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] ../../../../../../../../../Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/performance.py: got empty parameter set for (karni_scaling_case)
+============================== 1 skipped in 0.09s ==============================

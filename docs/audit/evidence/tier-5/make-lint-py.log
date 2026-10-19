@@ -1,0 +1,12 @@
+==> ruff (packages/karni)
+All checks passed!
+210 files already formatted
+==> ruff (packages/karni-cli)
+All checks passed!
+110 files already formatted
+==> ruff (modules/karni-payments)
+All checks passed!
+28 files already formatted
+==> ruff (.github/ci, root ruff.toml)
+All checks passed!
+3 files already formatted

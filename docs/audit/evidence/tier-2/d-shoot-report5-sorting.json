@@ -1,0 +1,83 @@
+[
+  {
+    "step": "events-list-sort",
+    "url": "http://127.0.0.1:8522/events",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/",
+      "GET /api/events/?page=1&page_size=25&expand=venue",
+      "  -> 200 /api/events/?page=1&page_size=25&expand=venue"
+    ],
+    "actions": [
+      {
+        "name": "click the Title header button",
+        "api": [
+          "GET /api/events/?page=1&page_size=25&ordering=title&expand=venue",
+          "  -> 200 /api/events/?page=1&page_size=25&ordering=title&expand=venue"
+        ],
+        "console": [],
+        "failed": [],
+        "text": {
+          "ariaSort": [
+            "Title:ascending",
+            "Description:",
+            "Starts at:",
+            "Status:",
+            "Venue:",
+            "Organizer:"
+          ],
+          "rows": [
+            "Gig 3",
+            "Gone event",
+            "Kept event"
+          ]
+        }
+      },
+      {
+        "name": "click the Title header button again",
+        "api": [
+          "GET /api/events/?page=1&page_size=25&ordering=-title&expand=venue",
+          "  -> 200 /api/events/?page=1&page_size=25&ordering=-title&expand=venue"
+        ],
+        "console": [],
+        "failed": [],
+        "text": {
+          "ariaSort": [
+            "Title:descending",
+            "Description:",
+            "Starts at:",
+            "Status:",
+            "Venue:",
+            "Organizer:"
+          ],
+          "rows": [
+            "Kept event",
+            "Gone event",
+            "Gig 3"
+          ]
+        }
+      },
+      {
+        "name": "is the Venue (relation) header a button?",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": [
+          "Title:button",
+          "Description:button",
+          "Starts at:button",
+          "Status:button",
+          "Venue:plain",
+          "Organizer:button"
+        ]
+      }
+    ]
+  }
+]

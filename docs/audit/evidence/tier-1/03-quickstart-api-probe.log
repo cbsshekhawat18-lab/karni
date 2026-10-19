@@ -1,0 +1,52 @@
+## 2026-10-19 08:46:20 PROBE: quickstart app API with the .env exactly as the page leaves it (REDIS_URL=redis://redis:6379/0 from .env.example)
+15:DATABASE_URL=postgres://karni:karni@db:5432/karni
+16:REDIS_URL=redis://redis:6379/0
+83:DATABASE_URL=sqlite:///data/db.sqlite3
+--- auth routes ---
+6:        path("api/auth/", include("karni.accounts.urls")),
+27:``path("api/auth/<endpoint>/", YourView.as_view())`` *before* the include —
+44:    path("register/", views.RegisterView.as_view(), name="karni-accounts-register"),
+45:    path("login/", views.LoginView.as_view(), name="karni-accounts-login"),
+46:    path("logout/", views.LogoutView.as_view(), name="karni-accounts-logout"),
+47:    path("refresh/", views.RefreshView.as_view(), name="karni-accounts-refresh"),
+48:    path("csrf/", views.CsrfView.as_view(), name="karni-accounts-csrf"),
+49:    path("me/", views.MeView.as_view(), name="karni-accounts-me"),
+django up after 7s
+GET /api/schema/   -> HTTP 500
+GET /api/docs/     -> HTTP 406
+GET /api/venues/   -> HTTP 500
+GET /api/events/   -> HTTP 401
+GET /api/auth/me/  -> HTTP 401
+POST /api/auth/login/ -> HTTP 500
+login body: <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="robots" content="NONE,NOARCHIVE">
+  <title>ConnectionError
+          at /api/auth/login/</title>
+  <style>
+    html * { padding:0; margin:0; }
+    body * { padding:10px 20px; }
+
+## 2026-10-19 08:46:36 DIAGNOSTIC: same app, REDIS_URL=redis://127.0.0.1:6379/5 exported (env wins over .env)
+django up after 3s
+GET /api/schema/   -> HTTP 200
+GET /api/docs/     -> HTTP 406
+GET /api/venues/   -> HTTP 200
+GET /api/events/   -> HTTP 401
+GET /api/auth/me/  -> HTTP 401
+POST /api/auth/login/ -> HTTP 200
+login body keys: ['access', 'refresh', 'user']
+GET /health/ready/: {"status": "fail", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": false, "detail": "no Celery worker replied within 1s"}}}
+listeners left on 8511: 0
+## 2026-10-19 08:46:41 done
+--- 500s in log A ---
+2026-10-19T03:16:30.125824Z [error    ] Internal Server Error: /api/schema/ [django.request] ip=127.0.0.1 request_id=41285ea6-126f-4019-9d4f-98683631f79c user_id=None
+"GET /api/schema/ HTTP/1.1" 500 32086
+2026-10-19T03:16:32.076945Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=c3bf9875-e3d4-4f11-8e70-dcfb14e8044d user_id=None
+"GET /api/venues/ HTTP/1.1" 500 32417
+2026-10-19T03:16:33.519406Z [error    ] Internal Server Error: /api/auth/login/ [django.request] ip=127.0.0.1 request_id=1195c1b4-bbeb-4089-b02e-5926a19f8730 user_id=None
+"POST /api/auth/login/ HTTP/1.1" 500 207174
+--- 500s in log B ---
+(end)

@@ -1,0 +1,25 @@
+models    events/models.py                          83
+viewsets  events/viewsets.py                        87
+pages     frontend/src/pages/login.tsx              14
+pages     frontend/src/pages/events.tsx             42
+pages     frontend/src/pages/event-detail.tsx       41
+pages     frontend/src/pages/event-form.tsx         17
+pages     frontend/src/pages/event-dashboard.tsx    36
+pages     frontend/src/pages/bookings.tsx           23
+pages     frontend/src/pages/booking-detail.tsx     39
+pages     frontend/src/pages/booking-form.tsx       26
+pages     frontend/src/components/TierList.tsx      35
+other     events/apps.py                             4
+other     events/listeners.py                       28
+other     events/payments.py                         9
+other     events/seeds.py                           65
+other     events/factories.py                       11
+other     config/settings.py (added)                 3
+other     config/urls.py (added)                     2
+pages     frontend/src/routes.tsx (added)           18
+------------------------------------------------------
+models                                              83
+viewsets                                            87
+pages                                              291
+other                                              122
+total                                              583

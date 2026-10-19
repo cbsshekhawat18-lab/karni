@@ -1,0 +1,137 @@
+[
+  {
+    "step": "events-list-interactions",
+    "url": "http://127.0.0.1:8522/events",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/",
+      "GET /api/events/?page=1&page_size=25&expand=venue",
+      "  -> 200 /api/events/?page=1&page_size=25&expand=venue"
+    ],
+    "actions": [
+      {
+        "name": "open Status filter combobox",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": [
+          "All",
+          "Draft",
+          "Published"
+        ]
+      },
+      {
+        "name": "choose Published",
+        "api": [
+          "GET /api/events/?status=published&page=1&page_size=25&expand=venue",
+          "  -> 200 /api/events/?status=published&page=1&page_size=25&expand=venue"
+        ],
+        "console": [],
+        "failed": [],
+        "text": {
+          "rows": [],
+          "bodyHint": "No results"
+        }
+      },
+      {
+        "name": "open Status filter again",
+        "api": [],
+        "console": [],
+        "failed": []
+      },
+      {
+        "name": "choose Draft",
+        "api": [
+          "GET /api/events/?status=draft&page=1&page_size=25&expand=venue",
+          "  -> 200 /api/events/?status=draft&page=1&page_size=25&expand=venue"
+        ],
+        "console": [],
+        "failed": [],
+        "text": 3
+      },
+      {
+        "name": "sort: click inside Title header (button if any)",
+        "error": "TimeoutError: page.click: Timeout 30000ms exceeded."
+      },
+      {
+        "name": "sort: click Title header again",
+        "error": "TimeoutError: page.click: Timeout 30000ms exceeded."
+      }
+    ]
+  },
+  {
+    "step": "event-new-form-submit",
+    "url": "http://127.0.0.1:8522/events/new",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/"
+    ],
+    "actions": [
+      {
+        "name": "submit the untouched form",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": "Title *\n\nThis field is required.\n\nDescription\nStarts at *\n\nThis field is required.\n\nStatus\nDraft\nDraft\nPublished\n\n* `draft` - Draft * `published` - Published\n\nVenue *\n\nExpected string, received null\n\nOrganizer\n\nInvalid uuid\n\nCreate"
+      },
+      {
+        "name": "fill Title",
+        "api": [],
+        "console": [],
+        "failed": []
+      },
+      {
+        "name": "fill Starts at",
+        "api": [],
+        "console": [],
+        "failed": []
+      },
+      {
+        "name": "open Venue combobox",
+        "api": [
+          "GET /api/venues/?page=1",
+          "  -> 200 /api/venues/?page=1"
+        ],
+        "console": [],
+        "failed": [],
+        "text": [
+          "Open Air",
+          "Small Room",
+          "Hall B"
+        ]
+      },
+      {
+        "name": "pick Hall B",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": "Hall B"
+      },
+      {
+        "name": "submit with required fields filled, optional ones untouched",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": {
+          "form": "Title *\nDescription\nStarts at *\nStatus\nDraft\nDraft\nPublished\n\n* `draft` - Draft * `published` - Published\n\nVenue *\nOrganizer\n\nInvalid uuid\n\nCreate",
+          "path": "/events/new",
+          "toasts": []
+        }
+      }
+    ]
+  }
+]

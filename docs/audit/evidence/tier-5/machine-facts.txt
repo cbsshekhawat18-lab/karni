@@ -1,0 +1,26 @@
+# Tier-5 audit machine facts (2026-10-19T03:20:14Z)
+# cmd: sysctl -n machdep.cpu.brand_string hw.memsize hw.ncpu
+Apple M4
+25769803776
+10
+# RAM GiB: 24
+# cmd: sw_vers
+ProductName:		macOS
+ProductVersion:		26.6.2
+BuildVersion:		25G83
+# node/npm
+v20.20.1
+10.8.2
+# repo venv python
+Python 3.12.12
+# postgres server: psql -h 127.0.0.1 -Atc 'select version()'
+PostgreSQL 17.9 (Homebrew) on aarch64-apple-darwin25.2.0, compiled by Apple clang version 17.0.0 (clang-1700.6.3.2), 64-bit
+# redis: redis-cli -n 9 ping
+PONG
+# docker: not installed
+# git HEAD: 0873e51 2026-10-18 22:34:53 +0530
+# npm cache dir size before the timed run (du -sh ~/.npm/_cacache, measured 2026-10-18 before karni new): 13G
+# npm cache now:  13G
+# cache index entries written/refreshed during or after the timed npm install (find ~/.npm/_cacache/index-v5 -type f -newer qsvenv/bin/karni | wc -l): 377
+# tiktoken: 0.14.0 cl100k_base
+# pre-step (outside the timed window): python -m venv qsvenv = 3.02 s; pip install -e packages/karni -e packages/karni-cli 'psycopg[binary]' = 22.33 s

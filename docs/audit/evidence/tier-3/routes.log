@@ -1,0 +1,189 @@
+
+#1 [probe /api/employees/export/]
+  GET http://127.0.0.1:8531/api/employees/export/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#2 [probe /api/employees/export/?format=csv]
+  GET http://127.0.0.1:8531/api/employees/export/?format=csv
+  -> 404 application/json
+  {"detail":"Not found."}
+
+#3 [probe /api/employees/?format=csv]
+  GET http://127.0.0.1:8531/api/employees/?format=csv
+  -> 404 application/json
+  {"detail":"Not found."}
+
+#4 [probe /api/employees.csv]
+  GET http://127.0.0.1:8531/api/employees.csv
+  -> 404 application/json
+  {"detail":"Not found."}
+
+#5 [probe /api/employees/?format=xlsx]
+  GET http://127.0.0.1:8531/api/employees/?format=xlsx
+  -> 404 application/json
+  {"detail":"Not found."}
+
+#6 [probe /api/employees.xlsx]
+  GET http://127.0.0.1:8531/api/employees.xlsx
+  -> 404 application/json
+  {"detail":"Not found."}
+
+#7 [probe /api/employees/csv/]
+  GET http://127.0.0.1:8531/api/employees/csv/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#8 [probe /api/employees/download/]
+  GET http://127.0.0.1:8531/api/employees/download/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#9 [probe /api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/history/]
+  GET http://127.0.0.1:8531/api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/history/
+  -> 404 text/html
+  <html 8976 bytes; title=Page not found at /api/employees/3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb/history/>
+
+#10 [probe /api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/history/]
+  GET http://127.0.0.1:8531/api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/history/
+  -> 404 text/html
+  <html 8976 bytes; title=Page not found at /api/employees/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/history/>
+
+#11 [probe /api/employees/history/]
+  GET http://127.0.0.1:8531/api/employees/history/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#12 [probe /api/history/]
+  GET http://127.0.0.1:8531/api/history/
+  -> 404 text/html
+  <html 8835 bytes; title=Page not found at /api/history/>
+
+#13 [probe /api/audit/]
+  GET http://127.0.0.1:8531/api/audit/
+  -> 404 text/html
+  <html 8829 bytes; title=Page not found at /api/audit/>
+
+#14 [probe /api/employees/import/]
+  GET http://127.0.0.1:8531/api/employees/import/
+  -> 404 application/json
+  {"detail":" Rows are limited by EmployeeViewSet.access read=Can('hr.employee:view')."}
+
+#15 [probe /api/import/]
+  GET http://127.0.0.1:8531/api/import/
+  -> 404 text/html
+  <html 8832 bytes; title=Page not found at /api/import/>
+
+#16 [probe /api/roles/]
+  GET http://127.0.0.1:8531/api/roles/
+  -> 404 text/html
+  <html 8829 bytes; title=Page not found at /api/roles/>
+
+#17 [probe /api/permissions/]
+  GET http://127.0.0.1:8531/api/permissions/
+  -> 404 text/html
+  <html 8847 bytes; title=Page not found at /api/permissions/>
+
+#18 [probe /api/role-permissions/]
+  GET http://127.0.0.1:8531/api/role-permissions/
+  -> 404 text/html
+  <html 8862 bytes; title=Page not found at /api/role-permissions/>
+
+#19 [probe /api/users/]
+  GET http://127.0.0.1:8531/api/users/
+  -> 404 text/html
+  <html 8829 bytes; title=Page not found at /api/users/>
+
+#20 [probe /api/auth/users/]
+  GET http://127.0.0.1:8531/api/auth/users/
+  -> 404 text/html
+  <html 12455 bytes; title=Page not found at /api/auth/users/>
+
+#21 [probe /api/auth/roles/]
+  GET http://127.0.0.1:8531/api/auth/roles/
+  -> 404 text/html
+  <html 12455 bytes; title=Page not found at /api/auth/roles/>
+
+#22 [probe /api/auth/sync-roles/]
+  GET http://127.0.0.1:8531/api/auth/sync-roles/
+  -> 404 text/html
+  <html 12470 bytes; title=Page not found at /api/auth/sync-roles/>
+
+#23 [POST import]
+  POST http://127.0.0.1:8531/api/employees/import/
+  -> 405 application/json
+  {"detail":"Method \"POST\" not allowed."}
+
+#24 [POST roles]
+  POST http://127.0.0.1:8531/api/roles/
+  json={"slug": "god", "grants": {"*": "all"}}
+  -> 404 text/html
+  <html 8830 bytes; title=Page not found at /api/roles/>
+
+#25 [schema anonymous]
+  GET http://127.0.0.1:8531/api/schema/
+  -> 200 application/vnd.oai.openapi
+  openapi: 3.0.3
+info:
+  title: audit3 API
+  version: 0.1.0
+paths:
+  /api/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      description: |-
+        ``GET csrf/`` — CSRF cookie bootstrap for SPAs (amendment A4).
+
+        Returns 204 with the CSRF cookie set; a session-mode SPA calls this
+
+#26 [schema as manager_a]
+  GET http://127.0.0.1:8531/api/schema/
+  params={'format': 'json'}
+  -> 200 application/vnd.oai.openapi+json
+  {
+    "openapi": "3.0.3",
+    "info": {
+        "title": "audit3 API",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/api/auth/csrf/": {
+            "get": {
+                "operationId":
+
+#27 [schema as blind]
+  GET http://127.0.0.1:8531/api/schema/
+  params={'format': 'json'}
+  -> 200 application/vnd.oai.openapi+json
+  {
+    "openapi": "3.0.3",
+    "info": {
+        "title": "audit3 API",
+        "version": "0.1.0"
+  
+
+#28 [schema as clerk_a]
+  GET http://127.0.0.1:8531/api/schema/
+  params={'format': 'json'}
+  -> 200 application/vnd.oai.openapi+json
+  {
+    "openapi": "3.0.3",
+    "info": {
+        "title": "audit3 API",
+        "version": "0.1.0"
+  
+
+#29 [swagger ui anonymous]
+  GET http://127.0.0.1:8531/api/docs/
+  -> 200 text/html
+  <html 4643 bytes; title=audit3 API>
+
+#30 [api root anonymous]
+  GET http://127.0.0.1:8531/api/
+  -> 401 application/json
+  {"detail":"Authentication credentials were not provided."}
+
+#31 [api root manager_a]
+  GET http://127.0.0.1:8531/api/
+  -> 200 application/json
+  {"my-employees":"http://127.0.0.1:8531/api/my-employees/","branches":"http://127.0.0.1:8531/api/branches/","employees":"http://127.0.0.1:8531/api/employees/","reviews":"http://127.0.0.1:8531/api/reviews/"}

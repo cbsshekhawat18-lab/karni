@@ -1,0 +1,225 @@
+[
+  {
+    "step": "events-list",
+    "url": "http://127.0.0.1:8522/events",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/",
+      "GET /api/events/?page=1&page_size=25&expand=venue",
+      "  -> 200 /api/events/?page=1&page_size=25&expand=venue"
+    ],
+    "extract": {
+      "headers": [
+        "Title",
+        "Description",
+        "Starts at",
+        "Status",
+        "VENUE",
+        "Organizer"
+      ],
+      "rows": [
+        "Kept event |  | 10/18/2026, 10:43:33 PM | Draft | Hall B | –",
+        "Gone event |  | 10/18/2026, 10:43:33 PM | Draft | Hall B | –",
+        "Gig 3 |  | 10/18/2026, 10:43:33 PM | Draft | Hall B | 16e1424a-ce3f-4fce-a9ea-54e911d0356d"
+      ],
+      "searchBox": false,
+      "selects": [],
+      "combos": [
+        "Status",
+        ":r3:"
+      ],
+      "paginationText": "Page 1 of 1 · 3 items"
+    },
+    "actions": [
+      {
+        "name": "filter status=published via first select",
+        "error": "TimeoutError: page.selectOption: Timeout 30000ms exceeded."
+      },
+      {
+        "name": "filter status back to all",
+        "error": "TimeoutError: page.selectOption: Timeout 30000ms exceeded."
+      },
+      {
+        "name": "sort by Title header click",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": {
+          "ariaSort": [
+            "Title:",
+            "Description:",
+            "Starts at:",
+            "Status:",
+            "VENUE:",
+            "Organizer:"
+          ],
+          "firstRow": "Kept event\t\n\t10/18/2026, 10:43:33 PM\tDraft\tHall B\t–"
+        }
+      },
+      {
+        "name": "click first row",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": "/events"
+      }
+    ]
+  },
+  {
+    "step": "event-detail",
+    "url": "http://127.0.0.1:8522/events/288e3839-00e4-4ec3-b130-f2ed390058d8",
+    "title": "auditapp",
+    "console": [],
+    "failed": [
+      "GET http://127.0.0.1:8522/api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ -> net::ERR_ABORTED"
+    ],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "  -> 200 /api/schema/"
+    ],
+    "extract": {
+      "pairs": [
+        "Title = Kept event",
+        "Description = —",
+        "Starts at = 10/18/2026, 10:43:33 PM",
+        "Status = Draft",
+        "Venue = 69cb50b1-c7b8-4021-8d80-9ba33f3b569c",
+        "Organizer = —",
+        "Id = 288e3839-00e4-4ec3-b130-f2ed390058d8",
+        "Created at = 10/18/2026, 10:43:33 PM",
+        "Updated at = 10/18/2026, 10:43:33 PM",
+        "Created by = a55ddd0a-0a8b-447f-bbd0-e103a64a0079",
+        "Updated by = a55ddd0a-0a8b-447f-bbd0-e103a64a0079"
+      ]
+    }
+  },
+  {
+    "step": "event-new-form",
+    "url": "http://127.0.0.1:8522/events/new",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 304 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/"
+    ],
+    "extract": {
+      "labels": [
+        "Title *",
+        "Description",
+        "Starts at *",
+        "Status",
+        "Venue *",
+        "Organizer"
+      ],
+      "controls": [
+        ":r1::input/text",
+        ":r3::textarea/textarea",
+        ":r5::input/datetime-local",
+        ":r7::button/button/combobox",
+        "Draft\nPublished:select/select-one",
+        ":rb::input/text/combobox",
+        ":rl::input/text",
+        "Create:button/submit"
+      ],
+      "statusOptions": [
+        "draft=Draft",
+        "published=Published"
+      ],
+      "helpTexts": [
+        "* `draft` - Draft * `published` - Published"
+      ]
+    },
+    "actions": [
+      {
+        "name": "fill title and submit while anonymous (write=Authenticated)",
+        "api": [],
+        "console": [],
+        "failed": []
+      },
+      {
+        "name": "open venue combobox",
+        "error": "Error: page.evaluate: TypeError: Cannot read properties of undefined (reading 'trim')"
+      },
+      {
+        "name": "pick first venue option",
+        "api": [],
+        "console": [],
+        "failed": []
+      },
+      {
+        "name": "submit",
+        "api": [],
+        "console": [],
+        "failed": [],
+        "text": {
+          "alerts": [
+            "*",
+            "*",
+            "This field is required.",
+            "*",
+            "Expected string, received null",
+            "Invalid uuid"
+          ],
+          "path": "/events/new"
+        }
+      }
+    ]
+  },
+  {
+    "step": "event-edit-form",
+    "url": "http://127.0.0.1:8522/events/288e3839-00e4-4ec3-b130-f2ed390058d8/edit",
+    "title": "auditapp",
+    "console": [],
+    "failed": [
+      "GET http://127.0.0.1:8522/api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ -> net::ERR_ABORTED",
+      "GET http://127.0.0.1:8522/api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/ -> net::ERR_ABORTED"
+    ],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/",
+      "  -> 200 /api/schema/",
+      "GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/",
+      "GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/",
+      "  -> 200 /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/"
+    ],
+    "extract": {
+      "values": {
+        ":r1:": "Kept event",
+        ":r3:": "",
+        ":r5:": "2026-10-18T22:43",
+        "": "Draft",
+        ":rb:": "Hall B",
+        ":rl:": ""
+      },
+      "combos": [
+        ":r7:=Draft",
+        ":rb:="
+      ]
+    }
+  }
+]

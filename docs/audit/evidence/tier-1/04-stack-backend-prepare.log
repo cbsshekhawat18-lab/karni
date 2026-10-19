@@ -1,0 +1,44 @@
+## 2026-10-18 22:47:37.898822000 EXTRA (not in docs): the scaffold's pyproject declares psycopg[binary] as a project dependency but no documented host command installs it; installing it into the clean venv so DATABASE_URL=postgres:// works
+$ pip install "psycopg[binary]"
+
+Successfully installed psycopg-3.3.6 psycopg-binary-3.3.6
+exit=0
+## 2026-10-18 22:47:38.913958000
+$ cp .env.example .env
+exit=0
+$ edit .env: DATABASE_URL, REDIS_URL, KARNI_FRONTEND_URL, MEDIA_ROOT, STATIC_ROOT
+exit=0
+--- diff .env.example .env ---
+15,16c15,16
+< DATABASE_URL=postgres://karni:karni@db:5432/karni
+< REDIS_URL=redis://redis:6379/0
+---
+> DATABASE_URL=postgres://localhost/karni_audit_t1
+> REDIS_URL=redis://127.0.0.1:6379/5
+36c36
+< KARNI_FRONTEND_URL=http://localhost:5173
+---
+> KARNI_FRONTEND_URL=http://127.0.0.1:8512
+62,63c62,63
+< MEDIA_ROOT=/data/media
+< STATIC_ROOT=/data/static
+---
+> MEDIA_ROOT=data/media
+> STATIC_ROOT=data/static
+## 2026-10-18 22:47:38.929413000
+$ karni migrate
+  Applying token_blacklist.0005_remove_outstandingtoken_jti... OK
+  Applying token_blacklist.0006_auto_20171017_2113... OK
+  Applying token_blacklist.0007_auto_20171017_2214... OK
+  Applying token_blacklist.0008_migrate_to_bigautofield... OK
+  Applying token_blacklist.0010_fix_migrate_to_bigautofield... OK
+  Applying token_blacklist.0011_linearizes_history... OK
+  Applying token_blacklist.0012_alter_outstandingtoken_user... OK
+  Applying token_blacklist.0013_alter_blacklistedtoken_options_and_more... OK
+Synced 3 role(s), 84 new permission(s).
+  staff                  84 grant(s)  new
+  user                   20 grant(s)  new
+  customer               20 grant(s)  new
+exit=0
+## 2026-10-18 22:47:43.733885000 migrate done
+tables in karni_audit_t1: 25

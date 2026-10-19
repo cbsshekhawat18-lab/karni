@@ -1,0 +1,43 @@
+2026-10-19T03:18:30.326146Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/' request_id=f41280b4-4f81-4815-a031-22aee8918a2c user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:18:30.326947Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/' request_id=f41280b4-4f81-4815-a031-22aee8918a2c user_id=None
+2026-10-19T03:19:35.566923Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=98dd0294-0efb-4d5f-9122-321ce7a4b583 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:35.639212Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=98dd0294-0efb-4d5f-9122-321ce7a4b583 user_id=None
+2026-10-19T03:19:35.639618Z [info     ] POST /payments/webhook/test/ 200 — 4 queries, 0 duplicated, 5.2 ms in SQL, 73.1 ms total [karni.queries]
+2026-10-19T03:19:39.453332Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=bd3309f3-4c3d-4226-807e-613f259d2859 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:39.469844Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=bd3309f3-4c3d-4226-807e-613f259d2859 user_id=None
+2026-10-19T03:19:39.470085Z [info     ] POST /payments/webhook/test/ 200 — 1 queries, 0 duplicated, 2.4 ms in SQL, 17.3 ms total [karni.queries]
+2026-10-19T03:19:43.292159Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=92164717-02e7-40ef-a7e8-54d80add4cd3 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:43.292463Z [warning  ] Payment webhook rejected: provider=test ip=127.0.0.1 reason=PAY006: test webhook signature mismatch See https://cbsshekhawat18-lab.github.io/karni/errors/#pay006 [karni_payments.webhooks] ip=127.0.0.1 request_id=92164717-02e7-40ef-a7e8-54d80add4cd3 user_id=None
+2026-10-19T03:19:43.292580Z [warning  ] request_finished               [django_structlog.middlewares.request] code=400 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=92164717-02e7-40ef-a7e8-54d80add4cd3 user_id=None
+2026-10-19T03:19:43.293783Z [warning  ] Bad Request: /payments/webhook/test/ [django.request]
+"POST /payments/webhook/test/ HTTP/1.1" 400 0
+2026-10-19T03:20:02.734694Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/auth/login/' request_id=352ae9d1-e5ce-4ed6-8999-abebdbb33ee5 user_agent=curl/8.7.1 user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/jwt/api_jwt.py:149: InsecureKeyLengthWarning: The HMAC key is 22 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+  return self._jws.encode(
+2026-10-19T03:20:02.952391Z [info     ] accounts.login.ok              [karni.accounts] ip=127.0.0.1 mode=jwt request_id=352ae9d1-e5ce-4ed6-8999-abebdbb33ee5 user_id=3d4d95ff-c601-423d-a58a-4bf24fc056a2
+2026-10-19T03:20:02.959046Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /api/auth/login/' request_id=352ae9d1-e5ce-4ed6-8999-abebdbb33ee5 user_id=None
+2026-10-19T03:20:02.959379Z [info     ] POST /api/auth/login/ 200 — 3 queries, 0 duplicated, 10.7 ms in SQL, 225.4 ms total [karni.queries]
+2026-10-19T03:20:02.982203Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='PATCH /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/' request_id=c2919b39-51b1-4fbe-ad7c-5f1ad4be65e6 user_agent=curl/8.7.1 user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/jwt/api_jwt.py:370: InsecureKeyLengthWarning: The HMAC key is 22 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+  decoded = self.decode_complete(
+2026-10-19T03:20:03.003157Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='PATCH /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/' request_id=c2919b39-51b1-4fbe-ad7c-5f1ad4be65e6 user_id=3d4d95ff-c601-423d-a58a-4bf24fc056a2
+2026-10-19T03:20:03.003537Z [info     ] PATCH /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/ 200 — 3 queries, 0 duplicated, 4.5 ms in SQL, 21.8 ms total [karni.queries]
+2026-10-19T03:20:03.028176Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/?expand=updated_by,created_by' request_id=2a551fa8-bc6d-4fe7-8c8b-7359ae0d7430 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:20:03.061435Z [warning  ] request_finished               [django_structlog.middlewares.request] code=400 ip=127.0.0.1 request='GET /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/?expand=updated_by,created_by' request_id=2a551fa8-bc6d-4fe7-8c8b-7359ae0d7430 user_id=3d4d95ff-c601-423d-a58a-4bf24fc056a2
+2026-10-19T03:20:03.062110Z [info     ] GET /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/?expand=updated_by,created_by 400 — 1 queries, 0 duplicated, 7.1 ms in SQL, 34.4 ms total [karni.queries]
+2026-10-19T03:20:03.062331Z [warning  ] Bad Request: /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/ [django.request]
+"GET /api/venues/d1893b32-1414-484c-8c87-52e81db849b9/?expand=updated_by,created_by HTTP/1.1" 400 165
+2026-10-19T03:22:22.118849Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=552b71b8-8d40-422e-a74f-60fab69513e2 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:22:22.136974Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=552b71b8-8d40-422e-a74f-60fab69513e2 user_id=None
+2026-10-19T03:22:22.137265Z [info     ] POST /payments/webhook/test/ 200 — 4 queries, 0 duplicated, 3.2 ms in SQL, 18.8 ms total [karni.queries]
+2026-10-19T03:22:25.931785Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=94cd1524-091b-484c-a282-b7cc783b0993 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:22:25.940703Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=94cd1524-091b-484c-a282-b7cc783b0993 user_id=None
+2026-10-19T03:22:25.940911Z [info     ] POST /payments/webhook/test/ 200 — 1 queries, 0 duplicated, 2.3 ms in SQL, 9.5 ms total [karni.queries]
+2026-10-19T03:22:30.579325Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=9440d095-c021-4bec-bac2-9c84fd1389d6 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:22:30.597361Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=9440d095-c021-4bec-bac2-9c84fd1389d6 user_id=None
+2026-10-19T03:22:30.597611Z [info     ] POST /payments/webhook/test/ 200 — 4 queries, 0 duplicated, 3.0 ms in SQL, 18.7 ms total [karni.queries]
+2026-10-19T03:22:34.390459Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=427a3a98-e58f-4686-a0a6-b254ba07a9e3 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:22:34.390740Z [warning  ] Payment webhook rejected: provider=test ip=127.0.0.1 reason=PAY006: test webhook signature mismatch See https://cbsshekhawat18-lab.github.io/karni/errors/#pay006 [karni_payments.webhooks] ip=127.0.0.1 request_id=427a3a98-e58f-4686-a0a6-b254ba07a9e3 user_id=None
+2026-10-19T03:22:34.390852Z [warning  ] request_finished               [django_structlog.middlewares.request] code=400 ip=127.0.0.1 request='POST /payments/webhook/test/' request_id=427a3a98-e58f-4686-a0a6-b254ba07a9e3 user_id=None
+2026-10-19T03:22:34.391023Z [warning  ] Bad Request: /payments/webhook/test/ [django.request]
+"POST /payments/webhook/test/ HTTP/1.1" 400 0

@@ -1,0 +1,12 @@
+created  frontend/src/pages/events.tsx
+modified frontend/src/routes.tsx
+page: /events -> EventsPage
+exit=0
+created  frontend/src/pages/event-detail.tsx
+modified frontend/src/routes.tsx
+page: /events/$id -> EventDetailPage
+exit=0
+created  frontend/src/pages/event-form.tsx
+modified frontend/src/routes.tsx
+page: /events/new, /events/$id/edit -> EventFormPage
+exit=0

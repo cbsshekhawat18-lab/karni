@@ -1,0 +1,22 @@
+==> eslint + prettier (packages/karni-ui)
+
+> @karni/ui@0.1.0 lint
+> eslint .
+
+
+> @karni/ui@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+==> eslint + prettier (modules/karni-payments/ui)
+
+> @karni/payments-ui@0.1.0 lint
+> eslint . --ext .ts,.tsx,.cjs,.mjs
+
+
+> @karni/payments-ui@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!

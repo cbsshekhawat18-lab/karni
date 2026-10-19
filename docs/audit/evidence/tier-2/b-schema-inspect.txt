@@ -1,0 +1,96 @@
+components: ['PaginatedShopEventList', 'PaginatedShopVenueList', 'PatchedShopEventRequest', 'PatchedShopVenueRequest', 'ShopEvent', 'ShopEventRequest', 'ShopVenue', 'ShopVenueRequest', 'StatusEnum']
+ShopVenue schema: {
+ "type": "object",
+ "description": "Auto-generated serializer for shop.Venue. See karni.api.serializers.build_serializer.",
+ "properties": {
+  "id": {
+   "type": "string",
+   "format": "uuid",
+   "readOnly": true
+  },
+  "created_at": {
+   "type": "string",
+   "format": "date-time",
+   "readOnly": true
+  },
+  "updated_at": {
+   "type": "string",
+   "format": "date-time",
+   "readOnly": true
+  },
+  "created_by": {
+   "type": "string",
+   "format": "uuid",
+   "readOnly": true,
+   "nullable": true
+  },
+  "updated_by": {
+   "type": "string",
+   "format": "uuid",
+   "readOnly": true,
+   "nullable": true
+  },
+  "name": {
+   "type": "string",
+   "maxLength": 200
+  },
+  "city": {
+   "type": "string",
+   "maxLength": 100
+  },
+  "capacity": {
+   "type": "integer",
+   "maximum": 2147483647,
+   "minimum": -2147483648
+  }
+ },
+ "required": [
+  "capacity",
+  "city",
+  "created_at",
+  "created_by",
+  "id",
+  "name",
+  "updated_at",
+  "updated_by"
+ ]
+}
+ShopVenueRequest schema: {
+ "type": "object",
+ "description": "Auto-generated serializer for shop.Venue. See karni.api.serializers.build_serializer.",
+ "properties": {
+  "name": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 200
+  },
+  "city": {
+   "type": "string",
+   "minLength": 1,
+   "maxLength": 100
+  },
+  "capacity": {
+   "type": "integer",
+   "maximum": 2147483647,
+   "minimum": -2147483648
+  }
+ },
+ "required": [
+  "capacity",
+  "city",
+  "name"
+ ]
+}
+ShopEvent.venue field: {'type': 'string', 'format': 'uuid', 'x-karni-relation': {'resource': 'venues', 'many': False}}
+ShopEvent.organizer field: {'type': 'string', 'format': 'uuid', 'nullable': True}
+ShopEvent.status field: {'allOf': [{'$ref': '#/components/schemas/StatusEnum'}], 'default': 'draft'}
+StatusEnum: {'enum': ['draft', 'published'], 'type': 'string', 'description': '* `draft` - Draft\n* `published` - Published'}
+ShopEvent required: ['created_at', 'created_by', 'id', 'starts_at', 'title', 'updated_at', 'updated_by', 'venue'] | ShopEventRequest required: ['starts_at', 'title', 'venue']
+deleted_at exposed anywhere? False
+GET /api/events/ params: [('created_at', 'string', None), ('created_at__gte', 'string', None), ('created_at__lte', 'string', None), ('created_by', 'string', None), ('expand', 'array', None), ('ordering', 'string', None), ('organizer', 'string', None), ('page', 'integer', None), ('page_size', 'integer', None), ('starts_at', 'string', None), ('starts_at__gte', 'string', None), ('starts_at__lte', 'string', None), ('status', 'string', ['draft', 'published']), ('title', 'string', None), ('title__icontains', 'string', None), ('updated_at', 'string', None), ('updated_at__gte', 'string', None), ('updated_at__lte', 'string', None), ('updated_by', 'string', None), ('venue', 'string', None)]
+GET /api/events/{id}/ params: [('expand', None), ('id', None)]
+GET /api/venues/{id}/: operationId=venues_retrieve x-karni-access={'public': True} responses=['200']
+PUT /api/venues/{id}/: operationId=venues_update x-karni-access={'authenticated': True} responses=['200']
+PATCH /api/venues/{id}/: operationId=venues_partial_update x-karni-access={'authenticated': True} responses=['200']
+DELETE /api/venues/{id}/: operationId=venues_destroy x-karni-access={'authenticated': True} responses=['204']
+securitySchemes: ['cookieAuth', 'jwtAuth']

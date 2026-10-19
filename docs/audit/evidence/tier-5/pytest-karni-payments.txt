@@ -1,0 +1,10 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments && /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python -m pytest -q
+1792379905.979066000
+........................................................................ [ 55%]
+......................................ss.................                [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_providers.py:317: could not import 'stripe': No module named 'stripe'
+SKIPPED [1] tests/test_providers.py:322: could not import 'razorpay': No module named 'razorpay'
+127 passed, 2 skipped in 1.30s
+exit=0
+1792379908.477198000

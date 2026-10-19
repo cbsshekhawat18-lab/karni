@@ -1,0 +1,212 @@
+##### A. karni check on the frontend copy of ResourceTable WITHOUT the eslint opt-out (EventTable.tsx = verbatim @karni/ui ResourceTable.tsx, 617 lines)
+0
+
+$ karni check -q
+System check identified no issues (0 silenced).
+karni check: ok
+Using config from .jscpd.json
+No duplicates found.
+┌────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐
+│ Format │ Files analyzed │ Total lines │ Total tokens │ Clones found │ Duplicated lines │ Duplicated tokens │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ tsx    │ 5              │ 738         │ 4109         │ 0            │ 0 (0.00%)        │ 0 (0.00%)         │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ Total: │ 5              │ 738         │ 4109         │ 0            │ 0 (0.00%)        │ 0 (0.00%)         │
+└────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘
+Found 0 clones.
+time: 10.671ms
+exit=
+
+##### A2. same, with a SECOND copy in src (VenueTable.tsx) so jscpd has something inside src/ to compare
+
+$ karni check -q
+System check identified no issues (0 silenced).
+karni check: ok
+Using config from .jscpd.json
+Clone found (tsx)
+ - components/EventTable.tsx [23:1 - 617:2]
+   components/VenueTable.tsx [23:1 - 617:2]
+  23 │ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+  24 │ import {
+  25 │   flexRender,
+  26 │   getCoreRowModel,
+  27 │   useReactTable,
+  28 │   type ColumnDef,
+  29 │   type RowSelectionState,
+  30 │   type SortingState,
+  31 │   type Updater,
+  32 │ } from "@tanstack/react-table";
+  33 │ import * as React from "react";
+  34 │ import { karniKeys } from "../../../hooks/keys";
+  35 │ import type { FilterValue, ResourceListParams } from "../../../hooks/types";
+  36 │ import { useResourceList } from "../../../hooks/useResourceList";
+  37 │ import type { KarniQueryValue } from "../../../schema/client";
+  38 │ import { useResourceMutations } from "../../../hooks/useResourceMutations";
+  39 │ import { cn } from "../../../lib/cn";
+  40 │ import type { FieldDef } from "../../../schema/types";
+  41 │ import { useSchema } from "../../../schema/useSchema";
+  42 │ import { EmptyState } from "../../empty-state/empty-state";
+     … 575 more lines
+  23 │ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+  24 │ import {
+  25 │   flexRender,
+  26 │   getCoreRowModel,
+  27 │   useReactTable,
+  28 │   type ColumnDef,
+  29 │   type RowSelectionState,
+  30 │   type SortingState,
+  31 │   type Updater,
+  32 │ } from "@tanstack/react-table";
+  33 │ import * as React from "react";
+  34 │ import { karniKeys } from "../../../hooks/keys";
+  35 │ import type { FilterValue, ResourceListParams } from "../../../hooks/types";
+  36 │ import { useResourceList } from "../../../hooks/useResourceList";
+  37 │ import type { KarniQueryValue } from "../../../schema/client";
+  38 │ import { useResourceMutations } from "../../../hooks/useResourceMutations";
+  39 │ import { cn } from "../../../lib/cn";
+  40 │ import type { FieldDef } from "../../../schema/types";
+  41 │ import { useSchema } from "../../../schema/useSchema";
+  42 │ import { EmptyState } from "../../empty-state/empty-state";
+     … 575 more lines
+
+┌────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐
+│ Format │ Files analyzed │ Total lines │ Total tokens │ Clones found │ Duplicated lines │ Duplicated tokens │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ tsx    │ 6              │ 1355        │ 7591         │ 1            │ 595 (43.91%)     │ 3482 (45.87%)     │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ Total: │ 6              │ 1355        │ 7591         │ 1            │ 595 (43.91%)     │ 3482 (45.87%)     │
+└────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘
+Found 1 clones.
+ERROR: jscpd found too many duplicates (43.9%) over threshold (2.0%)
+time: 6.158ms
+karni check: FAILED
+exit=
+
+##### B. a hand-written Meta-only ModelSerializer for Booking, fields='__all__', wired as serializer_class
+
+$ karni check -q --no-frontend
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+karni check: ok
+exit=
+
+$ karni rules --check events/serializers.py
+events/serializers.py:6: K106 [redundant-serializer] BookingSerializer is a Meta-only ModelSerializer — BaseViewSet(model=X) already generates it
+  fix: Delete it; customise via APIMeta or override get_serializer_class().
+exit=
+
+##### B2. the same serializer with the generated field list spelled out (id, created_at, updated_at, created_by, updated_by, event, attendee, quantity)
+
+$ karni check -q --no-frontend
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+karni check: ok
+exit=
+
+$ karni rules --check events/serializers.py
+events/serializers.py:6: K106 [redundant-serializer] BookingSerializer is a Meta-only ModelSerializer — BaseViewSet(model=X) already generates it
+  fix: Delete it; customise via APIMeta or override get_serializer_class().
+exit=
+
+##### B3. documented opt-out: # karni: allow(redundant-serializer): <reason> above the class
+
+$ karni check -q --no-frontend
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+karni check: ok
+exit=
+
+$ python manage.py check
+System check identified some issues:
+
+WARNINGS:
+<class 'events.viewsets.BookingViewSet'>: (karni.W101) BookingSerializer duplicates the serializer Karni generates from Booking: it declares no fields or methods of its own.
+	HINT: Delete it and the serializer_class line on BookingViewSet; tune the generated serializer with APIMeta on Booking. Keep serializer_class only for custom fields or validation. See https://cbsshekhawat18-lab.github.io/karni/errors/#w101
+
+System check identified 1 issue (0 silenced).
+exit=
+
+##### C. VenueViewSet without access (serializer restored first)
+
+$ python manage.py check
+SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'events.viewsets.VenueViewSet'>: (karni.E101) VenueViewSet declares no `access`, so every request is denied: access is mandatory (ADR 0001 Q2.1). Declare one on the viewset, e.g. `access = Access(read=Authenticated(), write=Owned('owner'))`, or opt out explicitly with `access = Unscoped(reason=...)`.
+	HINT: Declare `access = Access(read=..., write=...)` on the viewset (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`. See https://cbsshekhawat18-lab.github.io/karni/errors/#e101
+
+System check identified 1 issue (0 silenced).
+exit=
+
+$ karni check -q --no-frontend
+django: system checks failed (see output above)
+KarniCommandError: E702: karni check found 1 problem(s), listed above. Fix each one (each names its K or E code; `karni explain <code>` explains it). See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+karni check: FAILED
+exit=
+
+$ karni rules --check events/viewsets.py
+events/viewsets.py:8: K109 [viewset-access] VenueViewSet declares no `access` — every request is denied
+  fix: Add `access = Access(read=..., write=...)` (e.g. write=Authenticated()).
+exit=
+
+##### C2. opt-out marker only: # karni: allow(viewset-access): <reason> (still no access at runtime)
+
+$ karni check -q --no-frontend
+django: system checks failed (see output above)
+KarniCommandError: E702: karni check found 1 problem(s), listed above. Fix each one (each names its K or E code; `karni explain <code>` explains it). See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+karni check: FAILED
+exit=
+
+$ python manage.py check
+SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'events.viewsets.VenueViewSet'>: (karni.E101) VenueViewSet declares no `access`, so every request is denied: access is mandatory (ADR 0001 Q2.1). Declare one on the viewset, e.g. `access = Access(read=Authenticated(), write=Owned('owner'))`, or opt out explicitly with `access = Unscoped(reason=...)`.
+	HINT: Declare `access = Access(read=..., write=...)` on the viewset (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`. See https://cbsshekhawat18-lab.github.io/karni/errors/#e101
+
+System check identified 1 issue (0 silenced).
+exit=
+
+##### C3. the documented fix: access = Unscoped(reason=...)
+
+$ karni check -q --no-frontend
+System check identified no issues (0 silenced).
+karni check: ok
+exit=
+
+$ python manage.py check
+System check identified no issues (0 silenced).
+exit=
+
+##### D. restore the original viewsets.py and run karni check once more (full, with frontend)
+
+$ karni check -q
+System check identified no issues (0 silenced).
+karni check: ok
+Using config from .jscpd.json
+No duplicates found.
+┌────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐
+│ Format │ Files analyzed │ Total lines │ Total tokens │ Clones found │ Duplicated lines │ Duplicated tokens │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ tsx    │ 5              │ 739         │ 4112         │ 0            │ 0 (0.00%)        │ 0 (0.00%)         │
+├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤
+│ Total: │ 5              │ 739         │ 4112         │ 0            │ 0 (0.00%)        │ 0 (0.00%)         │
+└────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘
+Found 0 clones.
+time: 6.518ms
+exit=

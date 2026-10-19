@@ -1,0 +1,9 @@
+{"reportOut": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-shoot-report5.json",
+ "pages": [
+  {"name": "events-list-sort", "url": "http://127.0.0.1:8522/events", "out": "/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/d-tmp-list3.png", "waitFor": "table tbody tr", "settle": 1200,
+   "actions": [
+     {"name": "click the Title header button", "click": "table thead th >> nth=0 >> button", "wait": 1500, "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), rows: [...document.querySelectorAll('table tbody tr td:first-child')].map(t=>t.textContent.trim())})"},
+     {"name": "click the Title header button again", "click": "table thead th >> nth=0 >> button", "wait": 1500, "out": "/Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-2/d-ui-events-list-sorted.png", "text": "() => ({ariaSort: [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.getAttribute('aria-sort')||'')), rows: [...document.querySelectorAll('table tbody tr td:first-child')].map(t=>t.textContent.trim())})"},
+     {"name": "is the Venue (relation) header a button?", "wait": 100, "text": "() => [...document.querySelectorAll('table thead th')].map(t=>t.textContent.trim()+':'+(t.querySelector('button')?'button':'plain'))"}
+   ]}
+ ]}

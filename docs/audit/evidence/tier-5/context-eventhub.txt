@@ -1,0 +1,9 @@
+APPS: events(events/)
+MODELS: Booking(event,tier,attendee,quantity) Event(title,description,starts_at,ends_at) TicketTier(event,name,price,quantity) Venue(name,address,city,capacity) Payment(amount,currency,status,provider) Refund(payment,amount,status,provider_refund_id) WebhookEvent(provider,event_id,event_type,payload)
+VIEWSETS: BookingViewSet EventViewSet PaymentViewSet RefundViewSet TicketTierViewSet VenueViewSet
+ROLES: staff![*=all] user[*=own] customer[*=own]
+COMPONENTS: AuthGuard AuthProvider Button Checkbox DataChart DropdownMenu DropdownMenuCheckboxItem DropdownMenuContent DropdownMenuGroup DropdownMenuItem DropdownMenuLabel DropdownMenuPortal DropdownMenuSeparator DropdownMenuTrigger EmptyState FileUpload Input KarniProvider Label Layout LoginForm Modal ModalClose Page ResourceDetail ResourceForm ResourceSelect ResourceTable Select SelectContent SelectGroup SelectItem SelectLabel SelectRoot SelectSeparator SelectTrigger SelectValue Skeleton Stat Switch Tabs TabsContent TabsList TabsTrigger Textarea Toaster
+HOOKS: useAuth useKarniClient usePermission useResourceItem useResourceList useResourceMutations useSchema useToast
+PAGES: booking-detail booking-form bookings event-dashboard event-detail event-form events home login
+MODULES: payments
+BASES: BaseModel UUIDModel TimestampedModel SoftDeleteModel AuditedModel BaseViewSet KarniModelAdmin AbstractKarniUser

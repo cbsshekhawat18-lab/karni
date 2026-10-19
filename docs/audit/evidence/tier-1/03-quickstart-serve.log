@@ -1,0 +1,1318 @@
+## 2026-10-18 22:47:13 'Now serve it' line 1 verbatim is: karni serve --local   # Django on http://127.0.0.1:8000
+## DIVERGENCE: port 8000 is reserved on this machine; ran instead: karni serve --local --port 8511
+## 2026-10-18 22:47:15 django answered after 3s (pid 88245)
+$ curl -si http://127.0.0.1:8511/health/
+HTTP/1.1 200 OK
+Date: Sun, 18 Oct 2026 17:17:15 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: application/json
+X-Frame-Options: DENY
+Content-Length: 16
+Vary: origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+{"status": "ok"}
+$ curl -si http://127.0.0.1:8511/health/ready/
+HTTP/1.1 503 Service Unavailable
+Date: Sun, 18 Oct 2026 17:17:21 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: application/json
+X-Frame-Options: DENY
+Content-Length: 324
+Vary: origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+{"status": "fail", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": false, "detail": "Error 8 connecting to redis:6379. nodename nor servname provided, or not known."}, "celery": {"ok": false, "detail": "Error 8 connecting to redis:6379. nodename nor servname provided, or not known."}}}
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8511/api/docs/
+500
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8511/admin/
+302
+
+## 2026-10-18 22:47:23 line 2 verbatim: cd frontend && npm install && npm run dev   # the app on http://localhost:5173
+## DIVERGENCE: port 5173 is reserved on this machine; ran: npm run dev -- --port 8512 --strictPort
+## 2026-10-18 22:47:24 vite answered after 2s
+$ curl -si http://127.0.0.1:8512/ | head -12
+HTTP/1.1 200 OK
+Vary: Origin
+Content-Type: text/html
+Cache-Control: no-cache
+Etag: W/"2e3-xmvRgj0Pvam32xclucFzwXSHgos"
+Date: Sun, 18 Oct 2026 17:17:24 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Content-Length: 739
+
+<!doctype html>
+<html lang="en">
+
+$ curl -s http://127.0.0.1:8512/health/ready/   (through the vite proxy)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>Page not found at /health/ready/</title>
+  <meta name="robots" content="NONE,NOARCHIVE">
+  <style>
+    html * { padding:0; margin:0; }
+    body * { padding:10px 20px; }
+    body * * { padding:0; }
+    body { font-family: sans-serif; background:#eee; color:#000; }
+    body > :where(header, main, footer) { border-bottom:1px solid #ddd; }
+    h1 { font-weight:normal; margin-bottom:.4em; }
+    h1 small { font-size:60%; color:#666; font-weight:normal; }
+    table { border:none; border-collapse: collapse; width:100%; }
+    td, th { vertical-align:top; padding:2px 3px; }
+    th { width:12em; text-align:right; color:#666; padding-right:.5em; }
+    #info { background:#f6f6f6; }
+    #info ol { margin: 0.5em 4em; }
+    #info ol li { font-family: monospace; }
+    #summary { background: #ffc; }
+    #explanation { background:#eee; border-bottom: 0px none; }
+    pre.exception_value { font-family: sans-serif; color: #575757; font-size: 1.5em; margin: 10px 0 10px 0; }
+  </style>
+</head>
+<body>
+  <header id="summary">
+    <h1>Page not found <small>(404)</small></h1>
+    
+    <table class="meta">
+      <tr>
+        <th scope="row">Request Method:</th>
+        <td>GET</td>
+      </tr>
+      <tr>
+        <th scope="row">Request URL:</th>
+        <td>http://127.0.0.1:8000/health/ready/</td>
+      </tr>
+      
+    </table>
+  </header>
+
+  <main id="info">
+    
+      <p>
+      Using the URLconf defined in <code>config.urls</code>,
+      Django tried these URL patterns, in this order:
+      </p>
+      <ol>
+        
+          <li>
+            
+              <code>
+                django-admin/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/auth/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/account/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/catalog/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/quotes/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/appointments/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/billing/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/content/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                api/admin/
+                
+              </code>
+            
+          </li>
+        
+          <li>
+            
+              <code>
+                ^media/(?P&lt;path&gt;.*)$
+                
+              </code>
+            
+          </li>
+        
+      </ol>
+      <p>
+        
+          The current path, <code>health/ready/</code>,
+        
+        didn’t match any of these.
+      </p>
+    
+  </main>
+
+  <footer id="explanation">
+    <p>
+      You’re seeing this error because you have <code>DEBUG = True</code> in
+      your Django settings file. Change that to <code>False</code>, and Django
+      will display a standard 404 page.
+    </p>
+  </footer>
+</body>
+</html>
+
+## screenshots
+Navigating to http://127.0.0.1:8512/
+Waiting for timeout 4000...
+Capturing screenshot into /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/quickstart-app-home.png
+Navigating to http://127.0.0.1:8512/events
+Waiting for timeout 4000...
+Capturing screenshot into /Users/chandrabhanshekhawat/Documents/www/Karni/docs/audit/evidence/tier-1/quickstart-app-events.png
+screenshot exit=0
+## 2026-10-18 22:47:35 stopping my servers on 8511/8512
+listeners left on 8511/8512: 0 (header line counts as 1 if any)
+--- django log ---
+[2m2026-10-18T17:17:15.148561Z[0m [[32m[1minfo     [0m] [1mWatching for file changes with StatReloader[0m [[0m[1m[34mdjango.utils.autoreload[0m][0m
+[2m2026-10-18T17:17:15.804153Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/'[0m [36mrequest_id[0m=[35mae1d17ae-5970-45ab-ae2e-1bc4e3137bc6[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:15.804790Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/'[0m [36mrequest_id[0m=[35mae1d17ae-5970-45ab-ae2e-1bc4e3137bc6[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:15.820729Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/'[0m [36mrequest_id[0m=[35mc0591599-72c0-42cc-90a6-ab2d45d1466e[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:15.821045Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/'[0m [36mrequest_id[0m=[35mc0591599-72c0-42cc-90a6-ab2d45d1466e[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:15.833095Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/ready/'[0m [36mrequest_id[0m=[35m628ff768-fe18-49bc-bcba-20ff00350972[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:21.916637Z[0m [[31m[1merror    [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m503[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /health/ready/'[0m [36mrequest_id[0m=[35m628ff768-fe18-49bc-bcba-20ff00350972[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:21.917099Z[0m [[32m[1minfo     [0m] [1mGET /health/ready/ 503 — 1 queries, 0 duplicated, 0.0 ms in SQL, 6084.3 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:17:21.917632Z[0m [[31m[1merror    [0m] [1mService Unavailable: /health/ready/[0m [[0m[1m[34mdjango.request[0m][0m
+"GET /health/ready/ HTTP/1.1" 503 324
+[2m2026-10-18T17:17:21.931032Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/docs/'[0m [36mrequest_id[0m=[35md87b6686-dadb-403b-8883-ef4a6664d2fc[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:21.934285Z[0m [[31m[1merror    [0m] [1mrequest_failed                [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m500[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/docs/'[0m [36mrequest_id[0m=[35md87b6686-dadb-403b-8883-ef4a6664d2fc[0m [36muser_id[0m=[35mNone[0m
+[31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 386 [0m[2m│   │   │   [0m[94mreturn[0m                                                    [31m│[0m
+[31m│[0m   [2m 387 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m 388 [0m[2m│   │   │   [0m[94mif[0m retry_socket_connect:                                  [31m│[0m
+[31m│[0m [31m❱ [0m 389 [2m│   │   │   │   [0msock = [96mself[0m.retry.call_with_retry(                    [31m│[0m
+[31m│[0m   [2m 390 [0m[2m│   │   │   │   │   [0m[94mlambda[0m: [96mself[0m._connect(), [94mlambda[0m error: [96mself[0m.disco [31m│[0m
+[31m│[0m   [2m 391 [0m[2m│   │   │   │   [0m)                                                     [31m│[0m
+[31m│[0m   [2m 392 [0m[2m│   │   │   [0m[94melse[0m:                                                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mcheck_health[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mretry_socket_connect[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   │   [0mfailures = [94m0[0m                                                   [31m│[0m
+[31m│[0m   [2m103 [0m[2m│   │   [0m[94mwhile[0m [94mTrue[0m:                                                    [31m│[0m
+[31m│[0m   [2m104 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m105 [2m│   │   │   │   [0m[94mreturn[0m do()                                            [31m│[0m
+[31m│[0m   [2m106 [0m[2m│   │   │   [0m[1;4;94mexcept[0m[1;4m [0m[1;4;96mself[0m[1;4m._supported_errors [0m[1;4;94mas[0m[1;4m error:[0m                    [31m│[0m
+[31m│[0m   [2m107 [0m[2m│   │   │   │   [0m[1;4mfailures += [0m[1;4;94m1[0m                                          [31m│[0m
+[31m│[0m   [2m108 [0m[2m│   │   │   │   [0m[1;4mfail(error)[0m                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m──────────────────────[0m[34m locals [0m[34m──────────────────────[0m[34m─╮[0m                     [31m│[0m
+[31m│[0m [34m│[0m [3;33mfailures[0m[31m =[0m [1;36m0[0m                                         [34m│[0m                     [31m│[0m
+[31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x1097fea80[0m[1m>[0m [34m│[0m                     [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 387 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m 388 [0m[2m│   │   │   [0m[94mif[0m retry_socket_connect:                                  [31m│[0m
+[31m│[0m   [2m 389 [0m[2m│   │   │   │   [0msock = [96mself[0m.retry.call_with_retry(                    [31m│[0m
+[31m│[0m [31m❱ [0m 390 [2m│   │   │   │   │   [0m[94mlambda[0m: [1;4;96mself[0m[1;4m._connect()[0m, [94mlambda[0m error: [96mself[0m.disco [31m│[0m
+[31m│[0m   [2m 391 [0m[2m│   │   │   │   [0m)                                                     [31m│[0m
+[31m│[0m   [2m 392 [0m[2m│   │   │   [0m[94melse[0m:                                                     [31m│[0m
+[31m│[0m   [2m 393 [0m[2m│   │   │   │   [0msock = [96mself[0m._connect()                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 764 [0m[2m│   │   [0m[2m# ipv4/ipv6, but we want to set options prior to calling[0m      [31m│[0m
+[31m│[0m   [2m 765 [0m[2m│   │   [0m[2m# socket.connect()[0m                                            [31m│[0m
+[31m│[0m   [2m 766 [0m[2m│   │   [0merr = [94mNone[0m                                                    [31m│[0m
+[31m│[0m [31m❱ [0m 767 [2m│   │   [0m[94mfor[0m res [95min[0m [1;4msocket.getaddrinfo([0m                                [31m│[0m
+[31m│[0m   [2m 768 [0m[2m│   │   │   [0m[1;4;96mself[0m[1;4m.host, [0m[1;4;96mself[0m[1;4m.port, [0m[1;4;96mself[0m[1;4m.socket_type, socket.SOCK_STREA[0m [31m│[0m
+[31m│[0m   [2m 769 [0m[2m│   │   [0m[1;4m)[0m:                                                            [31m│[0m
+[31m│[0m   [2m 770 [0m[2m│   │   │   [0mfamily, socktype, proto, canonname, socket_address = res  [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m  [3;33merr[0m[31m =[0m [3;35mNone[0m                                                     [34m│[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Version[0m [31m│[0m
+[31m│[0m [2ms/3.12/lib/python3.12/[0m[1msocket.py[0m:978 in getaddrinfo                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m975 [0m[2m│   [0m[2m# We override this function since we want to translate the numeric[0m [31m│[0m
+[31m│[0m   [2m976 [0m[2m│   [0m[2m# and socket type values to enum constants.[0m                        [31m│[0m
+[31m│[0m   [2m977 [0m[2m│   [0maddrlist = []                                                      [31m│[0m
+[31m│[0m [31m❱ [0m978 [2m│   [0m[94mfor[0m res [95min[0m [1;4m_socket.getaddrinfo(host, port, family, [0m[1;4;96mtype[0m[1;4m, proto, fl[0m [31m│[0m
+[31m│[0m   [2m979 [0m[2m│   │   [0maf, socktype, proto, canonname, sa = res                       [31m│[0m
+[31m│[0m   [2m980 [0m[2m│   │   [0maddrlist.append((_intenum_converter(af, AddressFamily),        [31m│[0m
+[31m│[0m   [2m981 [0m[2m│   │   │   │   │   │    [0m_intenum_converter(socktype, SocketKind),     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────[0m[34m locals [0m[34m───────────────[0m[34m─╮[0m                                   [31m│[0m
+[31m│[0m [34m│[0m [3;33maddrlist[0m[31m =[0m [1m[[0m[1m][0m                          [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m   [3;33mfamily[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m    [3;33mflags[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mhost[0m[31m =[0m [32m'redis'[0m                     [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mport[0m[31m =[0m [1;36m6379[0m                        [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m    [3;33mproto[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mtype[0m[31m =[0m [1m<[0m[1;95mSocketKind.SOCK_STREAM:[0m[39m [0m[1;36m1[0m[1m>[0m [34m│[0m                                   [31m│[0m
+[31m│[0m [34m╰────────────────────────────────────────╯[0m                                   [31m│[0m
+[31m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+[1;91mgaierror: [0m[1m[[0mErrno [1;36m8[0m[1m][0m nodename nor servname provided, or not known
+
+[3mDuring handling of the above exception, another exception occurred:[0m
+
+[31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 52 [0m[2m│   │   [0m[1;95m@wraps[0m(get_response)                                           [31m│[0m
+[31m│[0m   [2m 53 [0m[2m│   │   [0m[94mdef[0m[90m [0m[92minner[0m(request):                                            [31m│[0m
+[31m│[0m   [2m 54 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m 55 [2m│   │   │   │   [0mresponse = get_response(request)                       [31m│[0m
+[31m│[0m   [2m 56 [0m[2m│   │   │   [0m[94mexcept[0m [96mException[0m [94mas[0m exc:                                   [31m│[0m
+[31m│[0m   [2m 57 [0m[2m│   │   │   │   [0mresponse = [1;4mresponse_for_exception(request, exc)[0m        [31m│[0m
+[31m│[0m   [2m 58 [0m[2m│   │   │   [0m[94mreturn[0m response                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to redis:6379. [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32mnodename nor servname provided, or not known.'[0m[1m)[0m           [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mget_response[0m[31m =[0m [1m<[0m[1;95mbound[0m[39m method BaseHandler._get_response of [0m               [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [39m<django.core.handlers.wsgi.WSGIHandler object at [0m         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [1;36m0x10913ee10[0m[39m>[0m[1m>[0m                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m194 [0m[2m│   │   │   [0m[94mif[0m iscoroutinefunction(wrapped_callback):                  [31m│[0m
+[31m│[0m   [2m195 [0m[2m│   │   │   │   [0mwrapped_callback = async_to_sync(wrapped_callback)     [31m│[0m
+[31m│[0m   [2m196 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m197 [2m│   │   │   │   [0mresponse = wrapped_callback(request, *callback_args, * [31m│[0m
+[31m│[0m   [2m198 [0m[2m│   │   │   [0m[94mexcept[0m [96mException[0m [94mas[0m e:                                     [31m│[0m
+[31m│[0m   [2m199 [0m[2m│   │   │   │   [0mresponse = [96mself[0m.process_exception_by_middleware(e, req [31m│[0m
+[31m│[0m   [2m200 [0m[2m│   │   │   │   [0m[94mif[0m response [95mis[0m [94mNone[0m:                                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mcallback_args[0m[31m =[0m [1m([0m[1m)[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m   [3;33mcallback_kwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mmiddleware_method[0m[31m =[0m [1m<[0m[1;95mbound[0m[39m method CsrfViewMiddleware.process_view of [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [39m<CsrfViewMiddleware [0m                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [33mget_response[0m[39m=[0m[35mconvert_exception_to_response[0m[39m.<locals>…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33mresponse[0m[31m =[0m [3;35mNone[0m                                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m              [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.handlers.wsgi.WSGIHandler[0m[39m object at [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [1;36m0x10913ee10[0m[1m>[0m                                         [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m62 [0m[2m│   [0m[94melse[0m:                                                               [31m│[0m
+[31m│[0m   [2m63 [0m[2m│   │   [0m                                                                [31m│[0m
+[31m│[0m   [2m64 [0m[2m│   │   [0m[94mdef[0m[90m [0m[92m_view_wrapper[0m(request, *args, **kwargs):                    [31m│[0m
+[31m│[0m [31m❱ [0m65 [2m│   │   │   [0m[94mreturn[0m [1;4mview_func(request, *args, **kwargs)[0m                  [31m│[0m
+[31m│[0m   [2m66 [0m[2m│   [0m                                                                    [31m│[0m
+[31m│[0m   [2m67 [0m[2m│   [0m_view_wrapper.csrf_exempt = [94mTrue[0m                                    [31m│[0m
+[31m│[0m   [2m68 [0m                                                                        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────[0m[34m locals [0m[34m─────────────────[0m[34m─╮[0m                                [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                              [34m│[0m                                [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                              [34m│[0m                                [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m [34m│[0m                                [31m│[0m
+[31m│[0m [34m╰───────────────────────────────────────────╯[0m                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   │   │   │   │   [0m[33m"[0m[33m%s[0m[33m instance has no [0m[33m'[0m[33mrequest[0m[33m'[0m[33m attribute. Did you o[0m [31m│[0m
+[31m│[0m   [2m103 [0m[2m│   │   │   │   │   [0m[33m"[0m[33msetup() and forget to call super()?[0m[33m"[0m % [96mcls[0m.[91m__name[0m [31m│[0m
+[31m│[0m   [2m104 [0m[2m│   │   │   │   [0m)                                                      [31m│[0m
+[31m│[0m [31m❱ [0m105 [2m│   │   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m.dispatch(request, *args, **kwargs)[0m             [31m│[0m
+[31m│[0m   [2m106 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m107 [0m[2m│   │   [0mview.view_class = [96mcls[0m                                          [31m│[0m
+[31m│[0m   [2m108 [0m[2m│   │   [0mview.view_initkwargs = initkwargs                              [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33minitkwargs[0m[31m =[0m [1m{[0m[32m'url_name'[0m: [32m'schema'[0m[1m}[0m                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m              [1;36m0x1098124b0[0m[1m>[0m                                                [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m512 [0m[2m│   │   │   [0mresponse = handler(request, *args, **kwargs)               [31m│[0m
+[31m│[0m   [2m513 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m514 [0m[2m│   │   [0m[94mexcept[0m [96mException[0m [94mas[0m exc:                                       [31m│[0m
+[31m│[0m [31m❱ [0m515 [2m│   │   │   [0mresponse = [1;4;96mself[0m[1;4m.handle_exception(exc)[0m                      [31m│[0m
+[31m│[0m   [2m516 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m517 [0m[2m│   │   [0m[96mself[0m.response = [96mself[0m.finalize_response(request, response, *arg [31m│[0m
+[31m│[0m   [2m518 [0m[2m│   │   [0m[94mreturn[0m [96mself[0m.response                                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m472 [0m[2m│   │   [0mresponse = exception_handler(exc, context)                     [31m│[0m
+[31m│[0m   [2m473 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m474 [0m[2m│   │   [0m[94mif[0m response [95mis[0m [94mNone[0m:                                           [31m│[0m
+[31m│[0m [31m❱ [0m475 [2m│   │   │   [0m[1;4;96mself[0m[1;4m.raise_uncaught_exception(exc)[0m                         [31m│[0m
+[31m│[0m   [2m476 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m477 [0m[2m│   │   [0mresponse.exception = [94mTrue[0m                                      [31m│[0m
+[31m│[0m   [2m478 [0m[2m│   │   [0m[94mreturn[0m response                                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mcontext[0m[31m =[0m [1m{[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'view'[0m: [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [39mobject at [0m[1;36m0x1098124b0[0m[39m>,[0m                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'args'[0m[39m: [0m[1;39m([0m[1;39m)[0m[39m,[0m                                               [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'kwargs'[0m[39m: [0m[1;39m{[0m[1;39m}[0m[39m,[0m                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'request'[0m[39m: <rest_framework.request.Request: GET [0m          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [32m'/api/docs/'[0m[1m>[0m                                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to redis:6379. nodename [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [32mnor servname provided, or not known.'[0m[1m)[0m                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mresponse[0m[31m =[0m [3;35mNone[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [1;36m0x1098124b0[0m[1m>[0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
+[31m│[0m raise_uncaught_exception                                                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m483 [0m[2m│   │   │   [0mrenderer_format = [96mgetattr[0m(request.accepted_renderer, [33m'[0m[33mform[0m [31m│[0m
+[31m│[0m   [2m484 [0m[2m│   │   │   [0muse_plaintext_traceback = renderer_format [95mnot[0m [95min[0m ([33m'[0m[33mhtml[0m[33m'[0m,  [31m│[0m
+[31m│[0m   [2m485 [0m[2m│   │   │   [0mrequest.force_plaintext_errors(use_plaintext_traceback)    [31m│[0m
+[31m│[0m [31m❱ [0m486 [2m│   │   [0m[1;4;94mraise[0m[1;4m exc[0m                                                      [31m│[0m
+[31m│[0m   [2m487 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m488 [0m[2m│   [0m[2m# Note: Views are made CSRF exempt from within `as_view` as to pre[0m [31m│[0m
+[31m│[0m   [2m489 [0m[2m│   [0m[2m# accidental removal of this exemption in cases where `dispatch` n[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m                     [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to [0m        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32mredis:6379. nodename nor servname provided, or[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32mnot known.'[0m[1m)[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mrenderer_format[0m[31m =[0m [32m'html'[0m                                         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32m'/api/docs/'[0m[1m>[0m                                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [39mobject at [0m[1;36m0x1098124b0[0m[1m>[0m                         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;91mFalse[0m                                          [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m500 [0m[2m│   │   [0m[96mself[0m.headers = [96mself[0m.default_response_headers  [2m# deprecate?[0m     [31m│[0m
+[31m│[0m   [2m501 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m502 [0m[2m│   │   [0m[94mtry[0m:                                                           [31m│[0m
+[31m│[0m [31m❱ [0m503 [2m│   │   │   [0m[96mself[0m.initial(request, *args, **kwargs)                     [31m│[0m
+[31m│[0m   [2m504 [0m[2m│   │   │   [0m                                                           [31m│[0m
+[31m│[0m   [2m505 [0m[2m│   │   │   [0m[2m# Get the appropriate handler method[0m                       [31m│[0m
+[31m│[0m   [2m506 [0m[2m│   │   │   [0m[94mif[0m request.method.lower() [95min[0m [96mself[0m.http_method_names:       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m419 [0m[2m│   │   [0m[2m# Ensure that the incoming request is permitted[0m                [31m│[0m
+[31m│[0m   [2m420 [0m[2m│   │   [0m[96mself[0m.perform_authentication(request)                           [31m│[0m
+[31m│[0m   [2m421 [0m[2m│   │   [0m[96mself[0m.check_permissions(request)                                [31m│[0m
+[31m│[0m [31m❱ [0m422 [2m│   │   [0m[1;4;96mself[0m[1;4m.check_throttles(request)[0m                                  [31m│[0m
+[31m│[0m   [2m423 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m424 [0m[2m│   [0m[94mdef[0m[90m [0m[92mfinalize_response[0m([96mself[0m, request, response, *args, **kwargs):   [31m│[0m
+[31m│[0m   [2m425 [0m[2;90m│   │   [0m[33m"""[0m                                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mneg[0m[31m =[0m [1m([0m                                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [2;32m│   [0m[1m<[0m[1;95mrest_framework.renderers.TemplateHTMLRenderer[0m[39m object at [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109812030[0m[1m>[0m,                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [2;32m│   [0m[32m'text/html'[0m                                                [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1m)[0m                                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mscheme[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m362 [0m[2;33m│   │   [0m[33m"""[0m                                                            [31m│[0m
+[31m│[0m   [2m363 [0m[2m│   │   [0mthrottle_durations = []                                        [31m│[0m
+[31m│[0m   [2m364 [0m[2m│   │   [0m[94mfor[0m throttle [95min[0m [96mself[0m.get_throttles():                          [31m│[0m
+[31m│[0m [31m❱ [0m365 [2m│   │   │   [0m[94mif[0m [95mnot[0m [1;4mthrottle.allow_request(request, [0m[1;4;96mself[0m[1;4m)[0m:              [31m│[0m
+[31m│[0m   [2m366 [0m[2m│   │   │   │   [0mthrottle_durations.append(throttle.wait())             [31m│[0m
+[31m│[0m   [2m367 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m368 [0m[2m│   │   [0m[94mif[0m throttle_durations:                                         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m            [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m               [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                      [39mobject at [0m[1;36m0x1098124b0[0m[1m>[0m                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33mthrottle[0m[31m =[0m [1m<[0m[1;95mrest_framework.throttling.AnonRateThrottle[0m[39m object [0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                      [39mat [0m[1;36m0x109813fb0[0m[1m>[0m                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m120 [0m[2m│   │   [0m[94mif[0m [96mself[0m.key [95mis[0m [94mNone[0m:                                           [31m│[0m
+[31m│[0m   [2m121 [0m[2m│   │   │   [0m[94mreturn[0m [94mTrue[0m                                                [31m│[0m
+[31m│[0m   [2m122 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m [31m❱ [0m123 [2m│   │   [0m[96mself[0m.history = [1;4;96mself[0m[1;4m.cache.get([0m[1;4;96mself[0m[1;4m.key, [])[0m                    [31m│[0m
+[31m│[0m   [2m124 [0m[2m│   │   [0m[96mself[0m.now = [96mself[0m.timer()                                        [31m│[0m
+[31m│[0m   [2m125 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m126 [0m[2m│   │   [0m[2m# Drop any requests from the history which have now passed the[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mrest_framework.throttling.AnonRateThrottle[0m[39m object at [0m         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109813fb0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m184 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m185 [0m[2m│   [0m[94mdef[0m[90m [0m[92mget[0m([96mself[0m, key, default=[94mNone[0m, version=[94mNone[0m):                    [31m│[0m
+[31m│[0m   [2m186 [0m[2m│   │   [0mkey = [96mself[0m.make_and_validate_key(key, version=version)         [31m│[0m
+[31m│[0m [31m❱ [0m187 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m._cache.get(key, default)[0m                           [31m│[0m
+[31m│[0m   [2m188 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m189 [0m[2m│   [0m[94mdef[0m[90m [0m[92mset[0m([96mself[0m, key, value, timeout=DEFAULT_TIMEOUT, version=[94mNone[0m):  [31m│[0m
+[31m│[0m   [2m190 [0m[2m│   │   [0mkey = [96mself[0m.make_and_validate_key(key, version=version)         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mdefault[0m[31m =[0m [1m[[0m[1m][0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkey[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.cache.backends.redis.RedisCache[0m[39m object at [0m        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109813bc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 96 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m 97 [0m[2m│   [0m[94mdef[0m[90m [0m[92mget[0m([96mself[0m, key, default):                                       [31m│[0m
+[31m│[0m   [2m 98 [0m[2m│   │   [0mclient = [96mself[0m.get_client(key)                                  [31m│[0m
+[31m│[0m [31m❱ [0m 99 [2m│   │   [0mvalue = [1;4mclient.get(key)[0m                                        [31m│[0m
+[31m│[0m   [2m100 [0m[2m│   │   [0m[94mreturn[0m default [94mif[0m value [95mis[0m [94mNone[0m [94melse[0m [96mself[0m._serializer.loads(va [31m│[0m
+[31m│[0m   [2m101 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   [0m[94mdef[0m[90m [0m[92mset[0m([96mself[0m, key, value, timeout):                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mclient[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.c…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mdefault[0m[31m =[0m [1m[[0m[1m][0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkey[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.cache.backends.redis.RedisCacheClient[0m[39m object at [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109811c70[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m1826 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m1827 [0m[2;33m│   │   [0m[33mFor more information see https://redis.io/commands/get[0m        [31m│[0m
+[31m│[0m   [2m1828 [0m[2;33m│   │   [0m[33m"""[0m                                                           [31m│[0m
+[31m│[0m [31m❱ [0m1829 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m.execute_command([0m[1;4;33m"[0m[1;4;33mGET[0m[1;4;33m"[0m[1;4m, name, keys=[name])[0m         [31m│[0m
+[31m│[0m   [2m1830 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m1831 [0m[2m│   [0m[94mdef[0m[90m [0m[92mgetdel[0m([96mself[0m, name: KeyT) -> ResponseT:                        [31m│[0m
+[31m│[0m   [2m1832 [0m[2;90m│   │   [0m[33m"""[0m                                                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mname[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.conn…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 618 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 619 [0m[2m│   [0m[2m# COMMAND EXECUTION AND PROTOCOL PARSING[0m                          [31m│[0m
+[31m│[0m   [2m 620 [0m[2m│   [0m[94mdef[0m[90m [0m[92mexecute_command[0m([96mself[0m, *args, **options):                      [31m│[0m
+[31m│[0m [31m❱ [0m 621 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m._execute_command(*args, **options)[0m                [31m│[0m
+[31m│[0m   [2m 622 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 623 [0m[2m│   [0m[94mdef[0m[90m [0m[92m_execute_command[0m([96mself[0m, *args, **options):                     [31m│[0m
+[31m│[0m   [2m 624 [0m[2;90m│   │   [0m[33m"""Execute a command and return a parsed response"""[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[32m'GET'[0m, [32m':1:throttle_anon_127.0.0.1'[0m[1m)[0m                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33moptions[0m[31m =[0m [1m{[0m[32m'keys'[0m: [1m[[0m[32m':1:throttle_anon_127.0.0.1'[0m[1m][0m[1m}[0m                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.c…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 624 [0m[2;90m│   │   [0m[33m"""Execute a command and return a parsed response"""[0m          [31m│[0m
+[31m│[0m   [2m 625 [0m[2m│   │   [0mpool = [96mself[0m.connection_pool                                   [31m│[0m
+[31m│[0m   [2m 626 [0m[2m│   │   [0mcommand_name = args[[94m0[0m]                                        [31m│[0m
+[31m│[0m [31m❱ [0m 627 [2m│   │   [0mconn = [96mself[0m.connection [95mor[0m [1;4mpool.get_connection()[0m               [31m│[0m
+[31m│[0m   [2m 628 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m 629 [0m[2m│   │   [0m[94mif[0m [96mself[0m._single_connection_client:                            [31m│[0m
+[31m│[0m   [2m 630 [0m[2m│   │   │   [0m[96mself[0m.single_connection_lock.acquire()                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33margs[0m[31m =[0m [1m([0m[32m'GET'[0m, [32m':1:throttle_anon_127.0.0.1'[0m[1m)[0m                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mcommand_name[0m[31m =[0m [32m'GET'[0m                                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33moptions[0m[31m =[0m [1m{[0m[32m'keys'[0m: [1m[[0m[32m':1:throttle_anon_127.0.0.1'[0m[1m][0m[1m}[0m                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mpool[0m[31m =[0m [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conne…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mre…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m192 [0m[2m│   │   │   │   │   │   [0marg, func.[91m__name__[0m, reason, version, stackleve [31m│[0m
+[31m│[0m   [2m193 [0m[2m│   │   │   │   │   [0m)                                                  [31m│[0m
+[31m│[0m   [2m194 [0m[2m│   │   │   [0m                                                           [31m│[0m
+[31m│[0m [31m❱ [0m195 [2m│   │   │   [0m[94mreturn[0m [1;4mfunc(*args, **kwargs)[0m                               [31m│[0m
+[31m│[0m   [2m196 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m197 [0m[2m│   │   [0m[94mreturn[0m wrapper                                                 [31m│[0m
+[31m│[0m   [2m198 [0m                                                                       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mallowed_args[0m[31m =[0m [1m[[0m[1m][0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33marg[0m[31m =[0m [32m'*'[0m                                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33marg_names[0m[31m =[0m [1m([0m[32m'self'[0m, [32m'command_name'[0m[1m)[0m                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33margs[0m[31m =[0m [1m([0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [2;32m│   [0m                                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conn…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m63…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [1m)[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33margs_to_warn[0m[31m =[0m [1m[[0m[32m'*'[0m[1m][0m                                                    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mprovided_args[0m[31m =[0m [1m{[0m[1m}[0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [3;33mreason[0m[31m =[0m [32m'Use get_connection[0m[32m([0m[32m)[0m[32m without args instead'[0m              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m1530 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m1531 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m1532 [0m[2m│   │   │   [0m[2m# ensure this connection is connected to Redis[0m            [31m│[0m
+[31m│[0m [31m❱ [0m1533 [2m│   │   │   [0mconnection.connect()                                      [31m│[0m
+[31m│[0m   [2m1534 [0m[2m│   │   │   [0m[2m# connections that the pool provides should be ready to s[0m [31m│[0m
+[31m│[0m   [2m1535 [0m[2m│   │   │   [0m[2m# a command. if not, the connection was either returned t[0m [31m│[0m
+[31m│[0m   [2m1536 [0m[2m│   │   │   [0m[2m# pool before all data has been read or the socket has be[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mcommand_name[0m[31m =[0m [3;35mNone[0m                                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m   [3;33mconnection[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mkeys[0m[31m =[0m [1m([0m[1m)[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33moptions[0m[31m =[0m [1m{[0m[1m}[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conne…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 377 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 378 [0m[2m│   [0m[94mdef[0m[90m [0m[92mconnect[0m([96mself[0m):                                                [31m│[0m
+[31m│[0m   [2m 379 [0m[2m│   │   [0m[33m"[0m[33mConnects to the Redis server if not already connected[0m[33m"[0m       [31m│[0m
+[31m│[0m [31m❱ [0m 380 [2m│   │   [0m[1;4;96mself[0m[1;4m.connect_check_health(check_health=[0m[1;4;94mTrue[0m[1;4m)[0m                  [31m│[0m
+[31m│[0m   [2m 381 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 382 [0m[2m│   [0m[94mdef[0m[90m [0m[92mconnect_check_health[0m(                                         [31m│[0m
+[31m│[0m   [2m 383 [0m[2m│   │   [0m[96mself[0m, check_health: [96mbool[0m = [94mTrue[0m, retry_socket_connect: [96mbool[0m = [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 394 [0m[2m│   │   [0m[94mexcept[0m socket.timeout:                                        [31m│[0m
+[31m│[0m   [2m 395 [0m[2m│   │   │   [0m[94mraise[0m [96mTimeoutError[0m([33m"[0m[33mTimeout connecting to server[0m[33m"[0m)        [31m│[0m
+[31m│[0m   [2m 396 [0m[2m│   │   [0m[94mexcept[0m [96mOSError[0m [94mas[0m e:                                          [31m│[0m
+[31m│[0m [31m❱ [0m 397 [2m│   │   │   [0m[1;4;94mraise[0m[1;4m [0m[1;4;96mConnectionError[0m[1;4m([0m[1;4;96mself[0m[1;4m._error_message(e))[0m             [31m│[0m
+[31m│[0m   [2m 398 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m 399 [0m[2m│   │   [0m[96mself[0m._sock = sock                                             [31m│[0m
+[31m│[0m   [2m 400 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mcheck_health[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mretry_socket_connect[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+[1;91mConnectionError: [0mError [1;36m8[0m connecting to redis:[1;36m6379[0m. nodename nor servname 
+provided, or not known.
+
+[2m2026-10-18T17:17:22.633454Z[0m [[31m[1merror    [0m] [1mInternal Server Error: /api/docs/[0m [[0m[1m[34mdjango.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest_id[0m=[35md87b6686-dadb-403b-8883-ef4a6664d2fc[0m [36muser_id[0m=[35mNone[0m
+[31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:389 in connect_check_health       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 386 [0m[2m│   │   │   [0m[94mreturn[0m                                                    [31m│[0m
+[31m│[0m   [2m 387 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m 388 [0m[2m│   │   │   [0m[94mif[0m retry_socket_connect:                                  [31m│[0m
+[31m│[0m [31m❱ [0m 389 [2m│   │   │   │   [0msock = [96mself[0m.retry.call_with_retry(                    [31m│[0m
+[31m│[0m   [2m 390 [0m[2m│   │   │   │   │   [0m[94mlambda[0m: [96mself[0m._connect(), [94mlambda[0m error: [96mself[0m.disco [31m│[0m
+[31m│[0m   [2m 391 [0m[2m│   │   │   │   [0m)                                                     [31m│[0m
+[31m│[0m   [2m 392 [0m[2m│   │   │   [0m[94melse[0m:                                                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mcheck_health[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mretry_socket_connect[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mretry.py[0m:105 in call_with_retry                 [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   │   [0mfailures = [94m0[0m                                                   [31m│[0m
+[31m│[0m   [2m103 [0m[2m│   │   [0m[94mwhile[0m [94mTrue[0m:                                                    [31m│[0m
+[31m│[0m   [2m104 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m105 [2m│   │   │   │   [0m[94mreturn[0m do()                                            [31m│[0m
+[31m│[0m   [2m106 [0m[2m│   │   │   [0m[1;4;94mexcept[0m[1;4m [0m[1;4;96mself[0m[1;4m._supported_errors [0m[1;4;94mas[0m[1;4m error:[0m                    [31m│[0m
+[31m│[0m   [2m107 [0m[2m│   │   │   │   [0m[1;4mfailures += [0m[1;4;94m1[0m                                          [31m│[0m
+[31m│[0m   [2m108 [0m[2m│   │   │   │   [0m[1;4mfail(error)[0m                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m──────────────────────[0m[34m locals [0m[34m──────────────────────[0m[34m─╮[0m                     [31m│[0m
+[31m│[0m [34m│[0m [3;33mfailures[0m[31m =[0m [1;36m0[0m                                         [34m│[0m                     [31m│[0m
+[31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mredis.retry.Retry[0m[39m object at [0m[1;36m0x1097fea80[0m[1m>[0m [34m│[0m                     [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────╯[0m                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:390 in <lambda>                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 387 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m 388 [0m[2m│   │   │   [0m[94mif[0m retry_socket_connect:                                  [31m│[0m
+[31m│[0m   [2m 389 [0m[2m│   │   │   │   [0msock = [96mself[0m.retry.call_with_retry(                    [31m│[0m
+[31m│[0m [31m❱ [0m 390 [2m│   │   │   │   │   [0m[94mlambda[0m: [1;4;96mself[0m[1;4m._connect()[0m, [94mlambda[0m error: [96mself[0m.disco [31m│[0m
+[31m│[0m   [2m 391 [0m[2m│   │   │   │   [0m)                                                     [31m│[0m
+[31m│[0m   [2m 392 [0m[2m│   │   │   [0m[94melse[0m:                                                     [31m│[0m
+[31m│[0m   [2m 393 [0m[2m│   │   │   │   [0msock = [96mself[0m._connect()                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:767 in _connect                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 764 [0m[2m│   │   [0m[2m# ipv4/ipv6, but we want to set options prior to calling[0m      [31m│[0m
+[31m│[0m   [2m 765 [0m[2m│   │   [0m[2m# socket.connect()[0m                                            [31m│[0m
+[31m│[0m   [2m 766 [0m[2m│   │   [0merr = [94mNone[0m                                                    [31m│[0m
+[31m│[0m [31m❱ [0m 767 [2m│   │   [0m[94mfor[0m res [95min[0m [1;4msocket.getaddrinfo([0m                                [31m│[0m
+[31m│[0m   [2m 768 [0m[2m│   │   │   [0m[1;4;96mself[0m[1;4m.host, [0m[1;4;96mself[0m[1;4m.port, [0m[1;4;96mself[0m[1;4m.socket_type, socket.SOCK_STREA[0m [31m│[0m
+[31m│[0m   [2m 769 [0m[2m│   │   [0m[1;4m)[0m:                                                            [31m│[0m
+[31m│[0m   [2m 770 [0m[2m│   │   │   [0mfamily, socktype, proto, canonname, socket_address = res  [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m  [3;33merr[0m[31m =[0m [3;35mNone[0m                                                     [34m│[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Version[0m [31m│[0m
+[31m│[0m [2ms/3.12/lib/python3.12/[0m[1msocket.py[0m:978 in getaddrinfo                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m975 [0m[2m│   [0m[2m# We override this function since we want to translate the numeric[0m [31m│[0m
+[31m│[0m   [2m976 [0m[2m│   [0m[2m# and socket type values to enum constants.[0m                        [31m│[0m
+[31m│[0m   [2m977 [0m[2m│   [0maddrlist = []                                                      [31m│[0m
+[31m│[0m [31m❱ [0m978 [2m│   [0m[94mfor[0m res [95min[0m [1;4m_socket.getaddrinfo(host, port, family, [0m[1;4;96mtype[0m[1;4m, proto, fl[0m [31m│[0m
+[31m│[0m   [2m979 [0m[2m│   │   [0maf, socktype, proto, canonname, sa = res                       [31m│[0m
+[31m│[0m   [2m980 [0m[2m│   │   [0maddrlist.append((_intenum_converter(af, AddressFamily),        [31m│[0m
+[31m│[0m   [2m981 [0m[2m│   │   │   │   │   │    [0m_intenum_converter(socktype, SocketKind),     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────[0m[34m locals [0m[34m───────────────[0m[34m─╮[0m                                   [31m│[0m
+[31m│[0m [34m│[0m [3;33maddrlist[0m[31m =[0m [1m[[0m[1m][0m                          [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m   [3;33mfamily[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m    [3;33mflags[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mhost[0m[31m =[0m [32m'redis'[0m                     [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mport[0m[31m =[0m [1;36m6379[0m                        [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m    [3;33mproto[0m[31m =[0m [1;36m0[0m                           [34m│[0m                                   [31m│[0m
+[31m│[0m [34m│[0m     [3;33mtype[0m[31m =[0m [1m<[0m[1;95mSocketKind.SOCK_STREAM:[0m[39m [0m[1;36m1[0m[1m>[0m [34m│[0m                                   [31m│[0m
+[31m│[0m [34m╰────────────────────────────────────────╯[0m                                   [31m│[0m
+[31m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+[1;91mgaierror: [0m[1m[[0mErrno [1;36m8[0m[1m][0m nodename nor servname provided, or not known
+
+[3mDuring handling of the above exception, another exception occurred:[0m
+
+[31m╭─[0m[31m────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────[0m[31m─╮[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mexception.py[0m:55 in inner         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 52 [0m[2m│   │   [0m[1;95m@wraps[0m(get_response)                                           [31m│[0m
+[31m│[0m   [2m 53 [0m[2m│   │   [0m[94mdef[0m[90m [0m[92minner[0m(request):                                            [31m│[0m
+[31m│[0m   [2m 54 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m 55 [2m│   │   │   │   [0mresponse = get_response(request)                       [31m│[0m
+[31m│[0m   [2m 56 [0m[2m│   │   │   [0m[94mexcept[0m [96mException[0m [94mas[0m exc:                                   [31m│[0m
+[31m│[0m   [2m 57 [0m[2m│   │   │   │   [0mresponse = [1;4mresponse_for_exception(request, exc)[0m        [31m│[0m
+[31m│[0m   [2m 58 [0m[2m│   │   │   [0m[94mreturn[0m response                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to redis:6379. [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32mnodename nor servname provided, or not known.'[0m[1m)[0m           [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mget_response[0m[31m =[0m [1m<[0m[1;95mbound[0m[39m method BaseHandler._get_response of [0m               [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [39m<django.core.handlers.wsgi.WSGIHandler object at [0m         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [1;36m0x10913ee10[0m[39m>[0m[1m>[0m                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/handlers/[0m[1mbase.py[0m:197 in _get_response     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m194 [0m[2m│   │   │   [0m[94mif[0m iscoroutinefunction(wrapped_callback):                  [31m│[0m
+[31m│[0m   [2m195 [0m[2m│   │   │   │   [0mwrapped_callback = async_to_sync(wrapped_callback)     [31m│[0m
+[31m│[0m   [2m196 [0m[2m│   │   │   [0m[94mtry[0m:                                                       [31m│[0m
+[31m│[0m [31m❱ [0m197 [2m│   │   │   │   [0mresponse = wrapped_callback(request, *callback_args, * [31m│[0m
+[31m│[0m   [2m198 [0m[2m│   │   │   [0m[94mexcept[0m [96mException[0m [94mas[0m e:                                     [31m│[0m
+[31m│[0m   [2m199 [0m[2m│   │   │   │   [0mresponse = [96mself[0m.process_exception_by_middleware(e, req [31m│[0m
+[31m│[0m   [2m200 [0m[2m│   │   │   │   [0m[94mif[0m response [95mis[0m [94mNone[0m:                                   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mcallback_args[0m[31m =[0m [1m([0m[1m)[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m   [3;33mcallback_kwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mmiddleware_method[0m[31m =[0m [1m<[0m[1;95mbound[0m[39m method CsrfViewMiddleware.process_view of [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [39m<CsrfViewMiddleware [0m                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [33mget_response[0m[39m=[0m[35mconvert_exception_to_response[0m[39m.<locals>…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33mresponse[0m[31m =[0m [3;35mNone[0m                                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m              [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.handlers.wsgi.WSGIHandler[0m[39m object at [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                     [1;36m0x10913ee10[0m[1m>[0m                                         [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/views/decorators/[0m[1mcsrf.py[0m:65 in _view_wrapper   [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m62 [0m[2m│   [0m[94melse[0m:                                                               [31m│[0m
+[31m│[0m   [2m63 [0m[2m│   │   [0m                                                                [31m│[0m
+[31m│[0m   [2m64 [0m[2m│   │   [0m[94mdef[0m[90m [0m[92m_view_wrapper[0m(request, *args, **kwargs):                    [31m│[0m
+[31m│[0m [31m❱ [0m65 [2m│   │   │   [0m[94mreturn[0m [1;4mview_func(request, *args, **kwargs)[0m                  [31m│[0m
+[31m│[0m   [2m66 [0m[2m│   [0m                                                                    [31m│[0m
+[31m│[0m   [2m67 [0m[2m│   [0m_view_wrapper.csrf_exempt = [94mTrue[0m                                    [31m│[0m
+[31m│[0m   [2m68 [0m                                                                        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────[0m[34m locals [0m[34m─────────────────[0m[34m─╮[0m                                [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                              [34m│[0m                                [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                              [34m│[0m                                [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m [34m│[0m                                [31m│[0m
+[31m│[0m [34m╰───────────────────────────────────────────╯[0m                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/views/generic/[0m[1mbase.py[0m:105 in view              [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   │   │   │   │   [0m[33m"[0m[33m%s[0m[33m instance has no [0m[33m'[0m[33mrequest[0m[33m'[0m[33m attribute. Did you o[0m [31m│[0m
+[31m│[0m   [2m103 [0m[2m│   │   │   │   │   [0m[33m"[0m[33msetup() and forget to call super()?[0m[33m"[0m % [96mcls[0m.[91m__name[0m [31m│[0m
+[31m│[0m   [2m104 [0m[2m│   │   │   │   [0m)                                                      [31m│[0m
+[31m│[0m [31m❱ [0m105 [2m│   │   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m.dispatch(request, *args, **kwargs)[0m             [31m│[0m
+[31m│[0m   [2m106 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m107 [0m[2m│   │   [0mview.view_class = [96mcls[0m                                          [31m│[0m
+[31m│[0m   [2m108 [0m[2m│   │   [0mview.view_initkwargs = initkwargs                              [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33minitkwargs[0m[31m =[0m [1m{[0m[32m'url_name'[0m: [32m'schema'[0m[1m}[0m                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mWSGIRequest:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m              [1;36m0x1098124b0[0m[1m>[0m                                                [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:515 in dispatch               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m512 [0m[2m│   │   │   [0mresponse = handler(request, *args, **kwargs)               [31m│[0m
+[31m│[0m   [2m513 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m514 [0m[2m│   │   [0m[94mexcept[0m [96mException[0m [94mas[0m exc:                                       [31m│[0m
+[31m│[0m [31m❱ [0m515 [2m│   │   │   [0mresponse = [1;4;96mself[0m[1;4m.handle_exception(exc)[0m                      [31m│[0m
+[31m│[0m   [2m516 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m517 [0m[2m│   │   [0m[96mself[0m.response = [96mself[0m.finalize_response(request, response, *arg [31m│[0m
+[31m│[0m   [2m518 [0m[2m│   │   [0m[94mreturn[0m [96mself[0m.response                                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:475 in handle_exception       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m472 [0m[2m│   │   [0mresponse = exception_handler(exc, context)                     [31m│[0m
+[31m│[0m   [2m473 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m474 [0m[2m│   │   [0m[94mif[0m response [95mis[0m [94mNone[0m:                                           [31m│[0m
+[31m│[0m [31m❱ [0m475 [2m│   │   │   [0m[1;4;96mself[0m[1;4m.raise_uncaught_exception(exc)[0m                         [31m│[0m
+[31m│[0m   [2m476 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m477 [0m[2m│   │   [0mresponse.exception = [94mTrue[0m                                      [31m│[0m
+[31m│[0m   [2m478 [0m[2m│   │   [0m[94mreturn[0m response                                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mcontext[0m[31m =[0m [1m{[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'view'[0m: [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [39mobject at [0m[1;36m0x1098124b0[0m[39m>,[0m                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'args'[0m[39m: [0m[1;39m([0m[1;39m)[0m[39m,[0m                                               [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'kwargs'[0m[39m: [0m[1;39m{[0m[1;39m}[0m[39m,[0m                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [2;32m│   [0m[32m'request'[0m[39m: <rest_framework.request.Request: GET [0m          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [32m'/api/docs/'[0m[1m>[0m                                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to redis:6379. nodename [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [32mnor servname provided, or not known.'[0m[1m)[0m                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mresponse[0m[31m =[0m [3;35mNone[0m                                                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m            [1;36m0x1098124b0[0m[1m>[0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:486 in                        [31m│[0m
+[31m│[0m raise_uncaught_exception                                                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m483 [0m[2m│   │   │   [0mrenderer_format = [96mgetattr[0m(request.accepted_renderer, [33m'[0m[33mform[0m [31m│[0m
+[31m│[0m   [2m484 [0m[2m│   │   │   [0muse_plaintext_traceback = renderer_format [95mnot[0m [95min[0m ([33m'[0m[33mhtml[0m[33m'[0m,  [31m│[0m
+[31m│[0m   [2m485 [0m[2m│   │   │   [0mrequest.force_plaintext_errors(use_plaintext_traceback)    [31m│[0m
+[31m│[0m [31m❱ [0m486 [2m│   │   [0m[1;4;94mraise[0m[1;4m exc[0m                                                      [31m│[0m
+[31m│[0m   [2m487 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m488 [0m[2m│   [0m[2m# Note: Views are made CSRF exempt from within `as_view` as to pre[0m [31m│[0m
+[31m│[0m   [2m489 [0m[2m│   [0m[2m# accidental removal of this exemption in cases where `dispatch` n[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m                     [3;33mexc[0m[31m =[0m [1;35mConnectionError[0m[1m([0m[32m'Error 8 connecting to [0m        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32mredis:6379. nodename nor servname provided, or[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32mnot known.'[0m[1m)[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mrenderer_format[0m[31m =[0m [32m'html'[0m                                         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [32m'/api/docs/'[0m[1m>[0m                                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                           [39mobject at [0m[1;36m0x1098124b0[0m[1m>[0m                         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33muse_plaintext_traceback[0m[31m =[0m [3;91mFalse[0m                                          [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:503 in dispatch               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m500 [0m[2m│   │   [0m[96mself[0m.headers = [96mself[0m.default_response_headers  [2m# deprecate?[0m     [31m│[0m
+[31m│[0m   [2m501 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m502 [0m[2m│   │   [0m[94mtry[0m:                                                           [31m│[0m
+[31m│[0m [31m❱ [0m503 [2m│   │   │   [0m[96mself[0m.initial(request, *args, **kwargs)                     [31m│[0m
+[31m│[0m   [2m504 [0m[2m│   │   │   [0m                                                           [31m│[0m
+[31m│[0m   [2m505 [0m[2m│   │   │   [0m[2m# Get the appropriate handler method[0m                       [31m│[0m
+[31m│[0m   [2m506 [0m[2m│   │   │   [0m[94mif[0m request.method.lower() [95min[0m [96mself[0m.http_method_names:       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:422 in initial                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m419 [0m[2m│   │   [0m[2m# Ensure that the incoming request is permitted[0m                [31m│[0m
+[31m│[0m   [2m420 [0m[2m│   │   [0m[96mself[0m.perform_authentication(request)                           [31m│[0m
+[31m│[0m   [2m421 [0m[2m│   │   [0m[96mself[0m.check_permissions(request)                                [31m│[0m
+[31m│[0m [31m❱ [0m422 [2m│   │   [0m[1;4;96mself[0m[1;4m.check_throttles(request)[0m                                  [31m│[0m
+[31m│[0m   [2m423 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m424 [0m[2m│   [0m[94mdef[0m[90m [0m[92mfinalize_response[0m([96mself[0m, request, response, *args, **kwargs):   [31m│[0m
+[31m│[0m   [2m425 [0m[2;90m│   │   [0m[33m"""[0m                                                            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[1m)[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mneg[0m[31m =[0m [1m([0m                                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [2;32m│   [0m[1m<[0m[1;95mrest_framework.renderers.TemplateHTMLRenderer[0m[39m object at [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109812030[0m[1m>[0m,                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [2;32m│   [0m[32m'text/html'[0m                                                [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1m)[0m                                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mscheme[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mviews.py[0m:365 in check_throttles        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m362 [0m[2;33m│   │   [0m[33m"""[0m                                                            [31m│[0m
+[31m│[0m   [2m363 [0m[2m│   │   [0mthrottle_durations = []                                        [31m│[0m
+[31m│[0m   [2m364 [0m[2m│   │   [0m[94mfor[0m throttle [95min[0m [96mself[0m.get_throttles():                          [31m│[0m
+[31m│[0m [31m❱ [0m365 [2m│   │   │   [0m[94mif[0m [95mnot[0m [1;4mthrottle.allow_request(request, [0m[1;4;96mself[0m[1;4m)[0m:              [31m│[0m
+[31m│[0m   [2m366 [0m[2m│   │   │   │   [0mthrottle_durations.append(throttle.wait())             [31m│[0m
+[31m│[0m   [2m367 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m368 [0m[2m│   │   [0m[94mif[0m throttle_durations:                                         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m            [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m               [3;33mself[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m [0m      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                      [39mobject at [0m[1;36m0x1098124b0[0m[1m>[0m                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33mthrottle[0m[31m =[0m [1m<[0m[1;95mrest_framework.throttling.AnonRateThrottle[0m[39m object [0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                      [39mat [0m[1;36m0x109813fb0[0m[1m>[0m                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mthrottle_durations[0m[31m =[0m [1m[[0m[1m][0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/rest_framework/[0m[1mthrottling.py[0m:123 in allow_request     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m120 [0m[2m│   │   [0m[94mif[0m [96mself[0m.key [95mis[0m [94mNone[0m:                                           [31m│[0m
+[31m│[0m   [2m121 [0m[2m│   │   │   [0m[94mreturn[0m [94mTrue[0m                                                [31m│[0m
+[31m│[0m   [2m122 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m [31m❱ [0m123 [2m│   │   [0m[96mself[0m.history = [1;4;96mself[0m[1;4m.cache.get([0m[1;4;96mself[0m[1;4m.key, [])[0m                    [31m│[0m
+[31m│[0m   [2m124 [0m[2m│   │   [0m[96mself[0m.now = [96mself[0m.timer()                                        [31m│[0m
+[31m│[0m   [2m125 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m126 [0m[2m│   │   [0m[2m# Drop any requests from the history which have now passed the[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mrequest[0m[31m =[0m [1m<[0m[1;95mrest_framework.request.Request:[0m[39m GET [0m[32m'/api/docs/'[0m[1m>[0m             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mrest_framework.throttling.AnonRateThrottle[0m[39m object at [0m         [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109813fb0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mview[0m[31m =[0m [1m<[0m[1;95mdrf_spectacular.views.SpectacularSwaggerView[0m[39m object at [0m       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x1098124b0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:187 in get        [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m184 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m185 [0m[2m│   [0m[94mdef[0m[90m [0m[92mget[0m([96mself[0m, key, default=[94mNone[0m, version=[94mNone[0m):                    [31m│[0m
+[31m│[0m   [2m186 [0m[2m│   │   [0mkey = [96mself[0m.make_and_validate_key(key, version=version)         [31m│[0m
+[31m│[0m [31m❱ [0m187 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m._cache.get(key, default)[0m                           [31m│[0m
+[31m│[0m   [2m188 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m189 [0m[2m│   [0m[94mdef[0m[90m [0m[92mset[0m([96mself[0m, key, value, timeout=DEFAULT_TIMEOUT, version=[94mNone[0m):  [31m│[0m
+[31m│[0m   [2m190 [0m[2m│   │   [0mkey = [96mself[0m.make_and_validate_key(key, version=version)         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mdefault[0m[31m =[0m [1m[[0m[1m][0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkey[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.cache.backends.redis.RedisCache[0m[39m object at [0m        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109813bc0[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mversion[0m[31m =[0m [3;35mNone[0m                                                           [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/django/core/cache/backends/[0m[1mredis.py[0m:99 in get         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 96 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m 97 [0m[2m│   [0m[94mdef[0m[90m [0m[92mget[0m([96mself[0m, key, default):                                       [31m│[0m
+[31m│[0m   [2m 98 [0m[2m│   │   [0mclient = [96mself[0m.get_client(key)                                  [31m│[0m
+[31m│[0m [31m❱ [0m 99 [2m│   │   [0mvalue = [1;4mclient.get(key)[0m                                        [31m│[0m
+[31m│[0m   [2m100 [0m[2m│   │   [0m[94mreturn[0m default [94mif[0m value [95mis[0m [94mNone[0m [94melse[0m [96mself[0m._serializer.loads(va [31m│[0m
+[31m│[0m   [2m101 [0m[2m│   [0m                                                                   [31m│[0m
+[31m│[0m   [2m102 [0m[2m│   [0m[94mdef[0m[90m [0m[92mset[0m([96mself[0m, key, value, timeout):                                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mclient[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.c…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mdefault[0m[31m =[0m [1m[[0m[1m][0m                                                             [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33mkey[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                   [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;95mdjango.core.cache.backends.redis.RedisCacheClient[0m[39m object at [0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [1;36m0x109811c70[0m[1m>[0m                                                   [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/commands/[0m[1mcore.py[0m:1829 in get                    [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m1826 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m1827 [0m[2;33m│   │   [0m[33mFor more information see https://redis.io/commands/get[0m        [31m│[0m
+[31m│[0m   [2m1828 [0m[2;33m│   │   [0m[33m"""[0m                                                           [31m│[0m
+[31m│[0m [31m❱ [0m1829 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m.execute_command([0m[1;4;33m"[0m[1;4;33mGET[0m[1;4;33m"[0m[1;4m, name, keys=[name])[0m         [31m│[0m
+[31m│[0m   [2m1830 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m1831 [0m[2m│   [0m[94mdef[0m[90m [0m[92mgetdel[0m([96mself[0m, name: KeyT) -> ResponseT:                        [31m│[0m
+[31m│[0m   [2m1832 [0m[2;90m│   │   [0m[33m"""[0m                                                           [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mname[0m[31m =[0m [32m':1:throttle_anon_127.0.0.1'[0m                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.conn…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[39m>[0m[1;39m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:621 in execute_command                [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 618 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 619 [0m[2m│   [0m[2m# COMMAND EXECUTION AND PROTOCOL PARSING[0m                          [31m│[0m
+[31m│[0m   [2m 620 [0m[2m│   [0m[94mdef[0m[90m [0m[92mexecute_command[0m([96mself[0m, *args, **options):                      [31m│[0m
+[31m│[0m [31m❱ [0m 621 [2m│   │   [0m[94mreturn[0m [1;4;96mself[0m[1;4m._execute_command(*args, **options)[0m                [31m│[0m
+[31m│[0m   [2m 622 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 623 [0m[2m│   [0m[94mdef[0m[90m [0m[92m_execute_command[0m([96mself[0m, *args, **options):                     [31m│[0m
+[31m│[0m   [2m 624 [0m[2;90m│   │   [0m[33m"""Execute a command and return a parsed response"""[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33margs[0m[31m =[0m [1m([0m[32m'GET'[0m, [32m':1:throttle_anon_127.0.0.1'[0m[1m)[0m                          [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33moptions[0m[31m =[0m [1m{[0m[32m'keys'[0m: [1m[[0m[32m':1:throttle_anon_127.0.0.1'[0m[1m][0m[1m}[0m                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m    [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.c…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mclient.py[0m:627 in _execute_command               [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 624 [0m[2;90m│   │   [0m[33m"""Execute a command and return a parsed response"""[0m          [31m│[0m
+[31m│[0m   [2m 625 [0m[2m│   │   [0mpool = [96mself[0m.connection_pool                                   [31m│[0m
+[31m│[0m   [2m 626 [0m[2m│   │   [0mcommand_name = args[[94m0[0m]                                        [31m│[0m
+[31m│[0m [31m❱ [0m 627 [2m│   │   [0mconn = [96mself[0m.connection [95mor[0m [1;4mpool.get_connection()[0m               [31m│[0m
+[31m│[0m   [2m 628 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m 629 [0m[2m│   │   [0m[94mif[0m [96mself[0m._single_connection_client:                            [31m│[0m
+[31m│[0m   [2m 630 [0m[2m│   │   │   [0m[96mself[0m.single_connection_lock.acquire()                     [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33margs[0m[31m =[0m [1m([0m[32m'GET'[0m, [32m':1:throttle_anon_127.0.0.1'[0m[1m)[0m                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mcommand_name[0m[31m =[0m [32m'GET'[0m                                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33moptions[0m[31m =[0m [1m{[0m[32m'keys'[0m: [1m[[0m[32m':1:throttle_anon_127.0.0.1'[0m[1m][0m[1m}[0m                  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mpool[0m[31m =[0m [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conne…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.client.Redis[0m[1;39m([0m[39m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mre…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mutils.py[0m:195 in wrapper                         [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m192 [0m[2m│   │   │   │   │   │   [0marg, func.[91m__name__[0m, reason, version, stackleve [31m│[0m
+[31m│[0m   [2m193 [0m[2m│   │   │   │   │   [0m)                                                  [31m│[0m
+[31m│[0m   [2m194 [0m[2m│   │   │   [0m                                                           [31m│[0m
+[31m│[0m [31m❱ [0m195 [2m│   │   │   [0m[94mreturn[0m [1;4mfunc(*args, **kwargs)[0m                               [31m│[0m
+[31m│[0m   [2m196 [0m[2m│   │   [0m                                                               [31m│[0m
+[31m│[0m   [2m197 [0m[2m│   │   [0m[94mreturn[0m wrapper                                                 [31m│[0m
+[31m│[0m   [2m198 [0m                                                                       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33mallowed_args[0m[31m =[0m [1m[[0m[1m][0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m           [3;33marg[0m[31m =[0m [32m'*'[0m                                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m     [3;33marg_names[0m[31m =[0m [1m([0m[32m'self'[0m, [32m'command_name'[0m[1m)[0m                                 [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m          [3;33margs[0m[31m =[0m [1m([0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [2;32m│   [0m                                                     [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conn…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m63…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [1m)[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m  [3;33margs_to_warn[0m[31m =[0m [1m[[0m[32m'*'[0m[1m][0m                                                    [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [3;33mkwargs[0m[31m =[0m [1m{[0m[1m}[0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mprovided_args[0m[31m =[0m [1m{[0m[1m}[0m                                                       [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m        [3;33mreason[0m[31m =[0m [32m'Use get_connection[0m[32m([0m[32m)[0m[32m without args instead'[0m              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m       [3;33mversion[0m[31m =[0m [32m'5.3.0'[0m                                                  [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:1533 in get_connection            [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m1530 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m1531 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m   [2m1532 [0m[2m│   │   │   [0m[2m# ensure this connection is connected to Redis[0m            [31m│[0m
+[31m│[0m [31m❱ [0m1533 [2m│   │   │   [0mconnection.connect()                                      [31m│[0m
+[31m│[0m   [2m1534 [0m[2m│   │   │   [0m[2m# connections that the pool provides should be ready to s[0m [31m│[0m
+[31m│[0m   [2m1535 [0m[2m│   │   │   [0m[2m# a command. if not, the connection was either returned t[0m [31m│[0m
+[31m│[0m   [2m1536 [0m[2m│   │   │   [0m[2m# pool before all data has been read or the socket has be[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mcommand_name[0m[31m =[0m [3;35mNone[0m                                                      [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m   [3;33mconnection[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m  [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mkeys[0m[31m =[0m [1m([0m[1m)[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m      [3;33moptions[0m[31m =[0m [1m{[0m[1m}[0m                                                        [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.ConnectionPool[0m[1;39m([0m[39m<[0m[1;35mredis.connection.Conne…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                [32m'redis._parsers.resp2._RESP2Parser'[0m[39m>,[0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:380 in connect                    [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 377 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 378 [0m[2m│   [0m[94mdef[0m[90m [0m[92mconnect[0m([96mself[0m):                                                [31m│[0m
+[31m│[0m   [2m 379 [0m[2m│   │   [0m[33m"[0m[33mConnects to the Redis server if not already connected[0m[33m"[0m       [31m│[0m
+[31m│[0m [31m❱ [0m 380 [2m│   │   [0m[1;4;96mself[0m[1;4m.connect_check_health(check_health=[0m[1;4;94mTrue[0m[1;4m)[0m                  [31m│[0m
+[31m│[0m   [2m 381 [0m[2m│   [0m                                                                  [31m│[0m
+[31m│[0m   [2m 382 [0m[2m│   [0m[94mdef[0m[90m [0m[92mconnect_check_health[0m(                                         [31m│[0m
+[31m│[0m   [2m 383 [0m[2m│   │   [0m[96mself[0m, check_health: [96mbool[0m = [94mTrue[0m, retry_socket_connect: [96mbool[0m = [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m───────────────────────────[0m[34m locals [0m[34m────────────────────────────[0m[34m─╮[0m          [31m│[0m
+[31m│[0m [34m│[0m [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m6379[0m[39m,[0m[33mdb[0m[39m=[0m[1;36m0[0m[1;39m)[0m[1m>[0m [34m│[0m          [31m│[0m
+[31m│[0m [34m╰─────────────────────────────────────────────────────────────────╯[0m          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [2m/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/0054[0m [31m│[0m
+[31m│[0m [2m02c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/lib/py[0m [31m│[0m
+[31m│[0m [2mthon3.12/site-packages/redis/[0m[1mconnection.py[0m:397 in connect_check_health       [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m   [2m 394 [0m[2m│   │   [0m[94mexcept[0m socket.timeout:                                        [31m│[0m
+[31m│[0m   [2m 395 [0m[2m│   │   │   [0m[94mraise[0m [96mTimeoutError[0m([33m"[0m[33mTimeout connecting to server[0m[33m"[0m)        [31m│[0m
+[31m│[0m   [2m 396 [0m[2m│   │   [0m[94mexcept[0m [96mOSError[0m [94mas[0m e:                                          [31m│[0m
+[31m│[0m [31m❱ [0m 397 [2m│   │   │   [0m[1;4;94mraise[0m[1;4m [0m[1;4;96mConnectionError[0m[1;4m([0m[1;4;96mself[0m[1;4m._error_message(e))[0m             [31m│[0m
+[31m│[0m   [2m 398 [0m[2m│   │   [0m                                                              [31m│[0m
+[31m│[0m   [2m 399 [0m[2m│   │   [0m[96mself[0m._sock = sock                                             [31m│[0m
+[31m│[0m   [2m 400 [0m[2m│   │   [0m[94mtry[0m:                                                          [31m│[0m
+[31m│[0m                                                                              [31m│[0m
+[31m│[0m [34m╭─[0m[34m────────────────────────────────[0m[34m locals [0m[34m────────────────────────────────[0m[34m─╮[0m [31m│[0m
+[31m│[0m [34m│[0m         [3;33mcheck_health[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m [3;33mretry_socket_connect[0m[31m =[0m [3;92mTrue[0m                                              [34m│[0m [31m│[0m
+[31m│[0m [34m│[0m                 [3;33mself[0m[31m =[0m [1m<[0m[1;35mredis.connection.Connection[0m[1;39m([0m[33mhost[0m[39m=[0m[35mredis[0m[39m,[0m[33mport[0m[39m=[0m[1;36m637…[0m [34m│[0m [31m│[0m
+[31m│[0m [34m╰──────────────────────────────────────────────────────────────────────────╯[0m [31m│[0m
+[31m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+[1;91mConnectionError: [0mError [1;36m8[0m connecting to redis:[1;36m6379[0m. nodename nor servname 
+provided, or not known.
+
+"GET /api/docs/ HTTP/1.1" 500 185411
+[2m2026-10-18T17:17:23.286907Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/'[0m [36mrequest_id[0m=[35m0cad3cb9-0a9f-41a1-a8a2-573b2a0c89f9[0m [36muser_agent[0m=[35mcurl/8.7.1[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-18T17:17:23.303532Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m302[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/'[0m [36mrequest_id[0m=[35m0cad3cb9-0a9f-41a1-a8a2-573b2a0c89f9[0m [36muser_id[0m=[35mNone[0m
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 18, 2026 - 17:17:15
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8511/
+Quit the server with CONTROL-C.
+
+--- vite log ---
+
+> ticket_shop-frontend@0.1.0 dev
+> vite --port 8512 --strictPort
+
+
+  VITE v5.4.21  ready in 365 ms
+
+  ➜  Local:   http://localhost:8512/
+  ➜  Network: http://192.168.29.208:8512/

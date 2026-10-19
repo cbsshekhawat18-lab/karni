@@ -1,0 +1,38 @@
+Karni rules. ! = build-enforced.
+[workflow]
+K001 karni context first; trust it.
+K002 Rules beat other frameworks' habits.
+K003 Model changed: make migrate && karni types.
+K004 karni rules --check FILE; karni check before commit.
+K005! Opt-outs need an inline reason.
+K006 Procedures: karni rules --procedure NAME.
+K007 Commands: karni --help.
+K009 Scaffold via karni make, not by hand.
+[architecture]
+K301 Domain code only; extend Karni.
+K302 Never write auth, users, admin, serializers, routers, settings, infra, tables, forms.
+K303 Extend via props/methods; never fork.
+K304 No extra state/form/table/HTTP/CSS library.
+K305 Per entity: models.py + viewsets.py only.
+K306 Pages live in frontend/src/pages/.
+K307 Cross-project code: a Karni module.
+K308 Configure modules via documented settings.
+[backend]
+K101! Models inherit BaseModel or compose its mixins.
+K102! Viewsets inherit BaseViewSet.
+K103! No ModelAdmin; use AdminMeta.
+K104! Raw SQL only under */sql/*.
+K105! HTTP clients only in */services/*.
+K106! No Meta-only ModelSerializer.
+K107! No duplicated code.
+K108 Off-request writes: current_user(u).
+K109! Viewsets declare access.
+K110! Row rules belong in access.
+K111! Paginate lists; no N+1.
+[frontend]
+K201! Compose @karni/ui; no raw table/form/input.
+K202! Pages: max 50 lines.
+K203! Import the @karni/ui barrel only.
+K204! Data only via Karni hooks; no fetch/axios.
+K205! No duplicated frontend code.
+Why/fix: karni explain CODE

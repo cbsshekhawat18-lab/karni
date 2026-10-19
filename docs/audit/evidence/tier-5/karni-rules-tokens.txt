@@ -1,0 +1,3 @@
+karni-rules-emptydir.txt               chars= 1447 bytes= 1447 cl100k= 396 chars/4= 361.8 lines= 38 K-codes=32
+karni-rules-eventhub.txt               chars= 1447 bytes= 1447 cl100k= 396 chars/4= 361.8 lines= 38 K-codes=32
+karni-rules-eventhub-example.txt       chars= 2433 bytes= 2437 cl100k= 667 chars/4= 608.2 lines= 54 K-codes=33

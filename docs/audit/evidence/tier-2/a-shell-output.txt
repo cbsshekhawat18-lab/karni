@@ -1,0 +1,116 @@
+[2m2026-10-18T17:13:33.645568Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/'[0m [36mrequest_id[0m=[35mb6fb54d6-3cad-4e4c-a324-09497cbb0b6c[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:33.877825Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/'[0m [36mrequest_id[0m=[35mb6fb54d6-3cad-4e4c-a324-09497cbb0b6c[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:33.878636Z[0m [[32m[1minfo     [0m] [1mGET /admin/shop/event/ 200 — 9 queries, 0 duplicated, 12.7 ms in SQL, 245.0 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:33.886571Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=all'[0m [36mrequest_id[0m=[35mf1bc54d9-d397-42a8-8507-cb480af6e833[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:33.954077Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=all'[0m [36mrequest_id[0m=[35mf1bc54d9-d397-42a8-8507-cb480af6e833[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:33.954789Z[0m [[33m[1mwarning  [0m] [1mGET /admin/shop/event/?deleted=all 200 — 9 queries, 2 duplicated, 15.1 ms in SQL, 73.8 ms total
+  2× SELECT … FROM "shop_event"
+      ← manage.py:19 in main[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:33.960219Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35m2ffef09c-87d3-4d10-acaa-c6279346ac37[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.004698Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35m2ffef09c-87d3-4d10-acaa-c6279346ac37[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.005127Z[0m [[32m[1minfo     [0m] [1mGET /admin/shop/event/?deleted=deleted 200 — 9 queries, 0 duplicated, 8.4 ms in SQL, 49.4 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:34.011779Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/b10ceeb4-962d-430d-bd44-3fe0b139ec5a/change/'[0m [36mrequest_id[0m=[35m26e6293e-6080-441e-872e-492d7a3fd639[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.087399Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/b10ceeb4-962d-430d-bd44-3fe0b139ec5a/change/'[0m [36mrequest_id[0m=[35m26e6293e-6080-441e-872e-492d7a3fd639[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.087909Z[0m [[33m[1mwarning  [0m] [1mGET /admin/shop/event/b10ceeb4-962d-430d-bd44-3fe0b139ec5a/change/ 200 — 7 queries, 2 duplicated, 7.5 ms in SQL, 82.1 ms total
+  2× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← manage.py:19 in main[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:34.093851Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35mc82bc673-456f-4200-b4c8-d9c2ca2aec89[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.112011Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m302[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35mc82bc673-456f-4200-b4c8-d9c2ca2aec89[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.112748Z[0m [[33m[1mwarning  [0m] [1mPOST /admin/shop/event/?deleted=deleted 302 — 9 queries, 4 duplicated, 6.9 ms in SQL, 23.9 ms total
+  2× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND "shop_venue"."id" IN (SELECT DISTINCT U0."venue_id" FROM "shop_even…
+      ← manage.py:19 in main
+  2× SELECT … FROM "karni_accounts_user" WHERE ("karni_accounts_user"."deleted_at" IS NULL AND "karni_accounts_user"."id" IN (SELECT DISTINCT U0…
+      ← manage.py:19 in main[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:34.116692Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35mb28dec91-31c1-4a61-838d-fa25c7b3089f[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.151584Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/?deleted=deleted'[0m [36mrequest_id[0m=[35mb28dec91-31c1-4a61-838d-fa25c7b3089f[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.152070Z[0m [[32m[1minfo     [0m] [1mGET /admin/shop/event/?deleted=deleted 200 — 9 queries, 0 duplicated, 5.0 ms in SQL, 38.5 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-18T17:13:34.156337Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/add/'[0m [36mrequest_id[0m=[35mbc3dd53c-10d5-4ed0-a168-ed2dc9a97df8[0m [36muser_agent[0m=[35mNone[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.185088Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /admin/shop/event/add/'[0m [36mrequest_id[0m=[35mbc3dd53c-10d5-4ed0-a168-ed2dc9a97df8[0m [36muser_id[0m=[35m11a83e4b-0836-463e-9de9-1443aa7fae2a[0m
+[2m2026-10-18T17:13:34.185496Z[0m [[32m[1minfo     [0m] [1mGET /admin/shop/event/add/ 200 — 2 queries, 0 duplicated, 0.9 ms in SQL, 31.6 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+======================================================================
+A1. BaseModel fields: UUID pk, created_at/updated_at, created_by/updated_by
+
+--- SQL for: Venue.objects.create() under current_user(alice) (1 queries)
+    INSERT INTO "shop_venue" ("id", "created_at", "updated_at", "deleted_at", "created_by_id", "updated_by_id", "name", "city", "capacity") VALUES ('86150b3f0ca04c0caf50e3ccf595079a'::uuid, '2026-10-18 17:13:33.038884+00:00'::timestamptz, '2026-10-18 17:13:33.038914+00:00'::timestamptz, NULL, 'a55ddd0a0
+Venue: id=UUID('86150b3f-0ca0-4c0c-af50-e3ccf595079a'), created_at=datetime.datetime(2026, 10, 18, 17, 13, 33, 38884, tzinfo=datetime.timezone.utc), updated_at=datetime.datetime(2026, 10, 18, 17, 13, 33, 38914, tzinfo=datetime.timezone.utc), deleted_at=None, created_by=<User: alice@example.com>, updated_by=<User: alice@example.com>
+pk is uuid.UUID: True | version: 4
+Venue columns: ['id', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'name', 'city', 'capacity']
+Venue: created_by=<User: alice@example.com>, updated_by=<User: bob@example.com>
+created_by stays alice, updated_by becomes bob: True
+updated_at > created_at: True
+
+A2. Outside a request/current_user: nothing stamped
+Venue: created_by=None, updated_by=None
+======================================================================
+A3. Soft delete
+
+--- SQL for: e1.delete() (1 queries)
+    UPDATE "shop_event" SET "updated_at" = '2026-10-18 17:13:33.086669+00:00'::timestamptz, "deleted_at" = '2026-10-18 17:13:33.086430+00:00'::timestamptz WHERE "shop_event"."id" = '75d311bcf8b848d7b3810c35b003640b'::uuid
+delete() returned: (1, {'shop.Event': 1})
+Event: deleted_at=datetime.datetime(2026, 10, 18, 17, 13, 33, 86430, tzinfo=datetime.timezone.utc), is_deleted=True
+Event.objects.count(): 2
+without('soft_delete').count(): 3
+without('soft_delete').dead(): ['Gig 1']
+raw table rows: [('Gig 1', True), ('Gig 2', False), ('Gig 3', False)]
+Event.objects.all() SQL: SELECT "shop_event"."id", "shop_event"."created_at", "shop_event"."updated_at", "shop_event"."deleted_at", "shop_event"."created_by_id", "shop_event"."updated_by_id", "shop_event"."title", "shop_event
+
+A4. Related lookups with soft delete
+venue.event_set.all() titles: ['Gig 2']
+
+--- SQL for: venue.event_set.all() (1 queries)
+    SELECT "shop_event"."title" FROM "shop_event" WHERE ("shop_event"."deleted_at" IS NULL AND "shop_event"."venue_id" = '86150b3f0ca04c0caf50e3ccf595079a'::uuid)
+venue.event_set.without('soft_delete'): ['Gig 2', 'Gig 1']
+prefetch_related('event_set') on venue: ['Gig 2']
+e2.venue after venue soft-deleted: <Venue: Hall A (renamed)> deleted_at set: True
+
+--- SQL for: e2.venue (forward FK after parent soft delete) (1 queries)
+    SELECT "shop_venue"."id", "shop_venue"."created_at", "shop_venue"."updated_at", "shop_venue"."deleted_at", "shop_venue"."created_by_id", "shop_venue"."updated_by_id", "shop_venue"."name", "shop_venue"."city", "shop_venue"."capacity" FROM "shop_venue" WHERE "shop_venue"."id" = '86150b3f0ca04c0caf50e3
+Venue.objects.filter(pk=venue.pk).exists(): False
+Event.objects.count() after venue soft-delete (no cascade): 2
+Event.objects.filter(venue=venue).count(): 1
+after venue.restore(): Venue alive count: 1
+after e1.restore(): Event.objects.count(): 3
+
+A5. CASCADE on hard_delete (including soft-deleted children)
+before hard_delete: events total (with deleted): 2
+
+--- SQL for: venue.hard_delete() (5 queries)
+    BEGIN
+    DELETE FROM "shop_event" WHERE "shop_event"."venue_id" IN ('86150b3f0ca04c0caf50e3ccf595079a'::uuid)
+    UPDATE "shop_product" SET "venue_id" = NULL WHERE "shop_product"."venue_id" IN ('86150b3f0ca04c0caf50e3ccf595079a'::uuid)
+    DELETE FROM "shop_venue" WHERE "shop_venue"."id" IN ('86150b3f0ca04c0caf50e3ccf595079a'::uuid)
+    COMMIT
+hard_delete() returned: (3, {'shop.Event': 2, 'shop.Venue': 1})
+rows left in shop_event (raw): 1 (expected 1: Gig 3 at Hall B)
+rows left in shop_venue (raw): 1
+
+A6. Queryset delete is soft; queryset hard_delete is real
+bulk soft: (3, {'shop.Event': 3})
+alive bulk: 0 | dead bulk: 3
+bulk hard: (3, {'shop.Event': 3})
+raw rows left for Bulk*: 0
+
+A7. Deprecated alias still works and warns
+Event.all_objects.count(): 1 | warnings: ['Event.all_objects is deprecated; use Event.objects.without("soft_delete", reason=...) instead. It will be removed in Karni 1.0. See https://cbsshekhawat18-lab.g']
+======================================================================
+A8. Each mixin standalone
+OnlyUuid: pk UUID('870824bf-8d5c-4911-a34c-38e374ebcdde') type UUID | fields: ['id', 'label']
+OnlyTimestamped: pk 1 | fields: ['id', 'created_at', 'updated_at', 'label'] | created_at 2026-10-18 17:13:33.214032+00:00 | queryset: TimestampedQuerySet
+   created_since works: 1
+OnlySoftDelete: pk 1 | fields: ['id', 'deleted_at', 'label']
+   after delete: objects.count() 0 | without: 1 | is_deleted True
+   after restore: objects.count() 1
+   after hard_delete: without count 0
+OnlyAudited: pk 1 | fields: ['id', 'created_by', 'updated_by', 'label'] | created_by bob@example.com | updated_by bob@example.com | created_by(bob).count() 1
+   hasattr delete-soft? False (expected False: not a SoftDeleteModel)
+======================================================================
+A9. Admin with soft-deleted rows (Django test client, superuser)
+changelist status: 200 | shows Kept: True | shows Gone: False
+deleted filter present: True | filter links: ['all', 'deleted']
+  ?deleted=all: status 200 | Kept: True | Gone: True
+  ?deleted=deleted: status 200 | Kept: False | Gone: True
+change form of a soft-deleted row: 200
+actions offered: ['delete_selected', 'restore_selected', 'hard_delete_selected']
+restore_selected status: 200 | gone alive now: True
+venue change form (add) for Event: 200
+DONE A

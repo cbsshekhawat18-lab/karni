@@ -1,0 +1,29 @@
+# Environment for auditapp. Copy to .env:
+#   cp .env.example .env
+# Every value has a sane dev default baked into karni; this file makes them
+# explicit. Commented-out vars are optional — leave them commented rather
+# than empty (an empty value overrides the karni default with "").
+
+# --- Core --------------------------------------------------------------------
+DJANGO_ENV=dev
+DEBUG=True
+ALLOWED_HOSTS=*
+PROJECT_NAME=auditapp
+
+# --- Services (docker-compose hostnames) -------------------------------------
+DATABASE_URL=postgres://karni:karni@db:5432/karni
+REDIS_URL=redis://redis:6379/0
+
+# --- API ---------------------------------------------------------------------
+KARNI_PAGE_SIZE=50
+THROTTLE_ANON=100/min
+THROTTLE_USER=1000/min
+# Comma-separated origins; dev allows all origins regardless.
+# CORS_ALLOWED_ORIGINS=https://app.example.com
+# Proxies between clients and Django (Caddy = 1) for throttle IP resolution.
+# KARNI_NUM_PROXIES=1
+# Max ?expand= nesting depth on auto-generated endpoints.
+# KARNI_API_MAX_EXPAND_DEPTH=2
+# Swap the search backend (dotted path to a karni SearchProvider subclass).
+# KARNI_SEARCH_PROVIDER=karni.api.search.postgres.PostgresSearchProvider
+

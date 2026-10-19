@@ -1,0 +1,36 @@
+products: [('Steel Kettle', 'physical', Decimal('1299.50'), True, datetime.date(2026, 3, 1), 'shop/product/manuals/kettle-manual.txt', 'shop/product/photos/kettle.png'), ('E-book: Django Patterns', 'digital', Decimal('499.00'), True, datetime.date(2025, 11, 20), '', ''), ('Venue cleaning', 'service', Decimal('2500.00'), False, None, '', '')]
+tags per product: {'Steel Kettle': ['bulky', 'sale'], 'E-book: Django Patterns': ['new'], 'Venue cleaning': []}
+
+Derived admin options for Product (karni.admin.derive):
+  list_display       : ['name', 'sku', 'kind', 'price', 'in_stock', 'released_on']
+  list_filter        : ['SoftDeleteListFilter', 'in_stock', 'kind', ('venue', 'RelatedOnlyFieldListFilter'), 'released_on']
+  search_fields      : ['name', 'sku']
+  date_hierarchy     : released_on
+  readonly_fields    : ('id', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by')
+  list_select_related: ()
+
+Registered admin class: ProductAdmin MRO: ['ProductAdmin', 'SoftDeleteAdminMixin', 'KarniModelAdmin', 'KarniAdminMixin', 'ModelAdmin']
+  live list_display       : ['name', 'sku', 'kind', 'price', 'in_stock', 'released_on']
+  live list_filter        : ['SoftDeleteListFilter', 'in_stock', 'kind', ('venue', 'RelatedOnlyFieldListFilter'), 'released_on']
+  live search_fields      : ['name', 'sku']
+  live date_hierarchy     : released_on
+  live readonly_fields    : ['id', 'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by']
+  live list_select_related: False
+  live autocomplete_fields: ['venue', 'tags']
+  live actions            : ['restore_selected', 'hard_delete_selected']
+  admin.py in shop/?      : False
+  any admin.py in project : []
+
+Add-form widgets (field -> widget class):
+  name         -> UnfoldAdminTextInputWidget
+  sku          -> UnfoldAdminTextInputWidget
+  kind         -> UnfoldAdminSelectWidget  [choices=3]
+  price        -> UnfoldAdminDecimalFieldWidget
+  in_stock     -> UnfoldBooleanSwitchWidget
+  released_on  -> UnfoldAdminSingleDateWidget
+  attributes   -> UnfoldAdminTextareaWidget
+  venue        -> RelatedFieldWidgetWrapper
+  tags         -> RelatedFieldWidgetWrapper
+  manual       -> UnfoldAdminFileFieldWidget
+  photo        -> UnfoldAdminImageFieldWidget
+DONE C-data

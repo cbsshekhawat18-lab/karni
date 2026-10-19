@@ -1,0 +1,720 @@
+2026-10-18T17:14:02.185028Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-18T17:14:06.570519Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/' request_id=e8b7859e-3ac8-42b7-88f9-cf3351621661 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:14:06.571168Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/' request_id=e8b7859e-3ac8-42b7-88f9-cf3351621661 user_id=None
+2026-10-18T17:14:21.936531Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/' request_id=436583ae-df37-4dc5-9e82-b83c97274955 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:14:21.981407Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/' request_id=436583ae-df37-4dc5-9e82-b83c97274955 user_id=None
+2026-10-18T17:14:21.981717Z [info     ] GET /api/venues/ 200 — 2 queries, 0 duplicated, 2.8 ms in SQL, 45.6 ms total [karni.queries]
+2026-10-18T17:14:21.993390Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/auth/login/' request_id=a6df64e1-7af8-4d01-a7d7-9c9250cc7a7b user_agent=curl/8.7.1 user_id=None
+/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/.venv/lib/python3.12/site-packages/jwt/api_jwt.py:149: InsecureKeyLengthWarning: The HMAC key is 22 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+  return self._jws.encode(
+2026-10-18T17:14:22.153360Z [info     ] accounts.login.ok              [karni.accounts] ip=127.0.0.1 mode=jwt request_id=a6df64e1-7af8-4d01-a7d7-9c9250cc7a7b user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:14:22.157459Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /api/auth/login/' request_id=a6df64e1-7af8-4d01-a7d7-9c9250cc7a7b user_id=None
+2026-10-18T17:14:22.157693Z [info     ] POST /api/auth/login/ 200 — 3 queries, 0 duplicated, 8.7 ms in SQL, 164.7 ms total [karni.queries]
+2026-10-18T17:15:14.341333Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/' request_id=3ffcfd30-fbe9-41df-a05a-deb9b5582c15 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.354465Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/' request_id=3ffcfd30-fbe9-41df-a05a-deb9b5582c15 user_id=None
+2026-10-18T17:15:14.354744Z [info     ] GET /api/venues/ 200 — 2 queries, 0 duplicated, 2.4 ms in SQL, 13.9 ms total [karni.queries]
+2026-10-18T17:15:14.367314Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/venues/' request_id=650ce421-9dbc-4e7a-a221-560b0afe262d user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.367855Z [warning  ] request_finished               [django_structlog.middlewares.request] code=401 ip=127.0.0.1 request='POST /api/venues/' request_id=650ce421-9dbc-4e7a-a221-560b0afe262d user_id=None
+2026-10-18T17:15:14.368600Z [warning  ] Unauthorized: /api/venues/     [django.request]
+"POST /api/venues/ HTTP/1.1" 401 58
+2026-10-18T17:15:14.381194Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/auth/login/' request_id=3ca50a81-6cee-4c7b-9300-6e8c33eb8f2e user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.532626Z [info     ] accounts.login.ok              [karni.accounts] ip=127.0.0.1 mode=jwt request_id=3ca50a81-6cee-4c7b-9300-6e8c33eb8f2e user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.536249Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='POST /api/auth/login/' request_id=3ca50a81-6cee-4c7b-9300-6e8c33eb8f2e user_id=None
+2026-10-18T17:15:14.536478Z [info     ] POST /api/auth/login/ 200 — 3 queries, 0 duplicated, 7.4 ms in SQL, 155.7 ms total [karni.queries]
+2026-10-18T17:15:14.552689Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/venues/' request_id=fd900f62-67b7-4cee-ac05-f2af77a452d8 user_agent=curl/8.7.1 user_id=None
+/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/.venv/lib/python3.12/site-packages/jwt/api_jwt.py:370: InsecureKeyLengthWarning: The HMAC key is 22 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+  decoded = self.decode_complete(
+2026-10-18T17:15:14.564856Z [info     ] request_finished               [django_structlog.middlewares.request] code=201 ip=127.0.0.1 request='POST /api/venues/' request_id=fd900f62-67b7-4cee-ac05-f2af77a452d8 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.565077Z [info     ] POST /api/venues/ 201 — 2 queries, 0 duplicated, 3.1 ms in SQL, 12.8 ms total [karni.queries]
+2026-10-18T17:15:14.609131Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/venues/' request_id=15dd05ce-329c-4cf6-92d4-d958602e5713 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.621816Z [info     ] request_finished               [django_structlog.middlewares.request] code=201 ip=127.0.0.1 request='POST /api/venues/' request_id=15dd05ce-329c-4cf6-92d4-d958602e5713 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.622037Z [info     ] POST /api/venues/ 201 — 2 queries, 0 duplicated, 3.6 ms in SQL, 13.3 ms total [karni.queries]
+2026-10-18T17:15:14.633100Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/venues/' request_id=c365cb43-2c76-4234-b8fa-a9106803dda2 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.645142Z [info     ] request_finished               [django_structlog.middlewares.request] code=201 ip=127.0.0.1 request='POST /api/venues/' request_id=c365cb43-2c76-4234-b8fa-a9106803dda2 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.645344Z [info     ] POST /api/venues/ 201 — 2 queries, 0 duplicated, 3.2 ms in SQL, 12.6 ms total [karni.queries]
+2026-10-18T17:15:14.656228Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /api/venues/' request_id=4d17501a-ed3d-4efd-a58f-8f1e68640a4f user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.666251Z [warning  ] request_finished               [django_structlog.middlewares.request] code=400 ip=127.0.0.1 request='POST /api/venues/' request_id=4d17501a-ed3d-4efd-a58f-8f1e68640a4f user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.666435Z [info     ] POST /api/venues/ 400 — 1 queries, 0 duplicated, 1.8 ms in SQL, 10.6 ms total [karni.queries]
+2026-10-18T17:15:14.666503Z [warning  ] Bad Request: /api/venues/      [django.request]
+"POST /api/venues/ HTTP/1.1" 400 75
+2026-10-18T17:15:14.677233Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=5e6eb9bc-13bd-4214-af05-9ed8c35fcdea user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.688454Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=5e6eb9bc-13bd-4214-af05-9ed8c35fcdea user_id=None
+2026-10-18T17:15:14.688653Z [info     ] GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 200 — 1 queries, 0 duplicated, 1.5 ms in SQL, 11.8 ms total [karni.queries]
+2026-10-18T17:15:14.699467Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=29d5c1f5-6982-4e44-9f33-deaf3f8f6d3a user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.713292Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=29d5c1f5-6982-4e44-9f33-deaf3f8f6d3a user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.713494Z [info     ] PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 200 — 3 queries, 0 duplicated, 4.4 ms in SQL, 14.3 ms total [karni.queries]
+2026-10-18T17:15:14.724265Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='PUT /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=7220caa4-a1a8-4069-a740-8dfd43bbce95 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.738320Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='PUT /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=7220caa4-a1a8-4069-a740-8dfd43bbce95 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.738532Z [info     ] PUT /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 200 — 3 queries, 0 duplicated, 3.9 ms in SQL, 14.6 ms total [karni.queries]
+2026-10-18T17:15:14.751081Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=b7d637ed-0690-49d4-aa94-077851cbf852 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.765005Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=b7d637ed-0690-49d4-aa94-077851cbf852 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:14.765233Z [info     ] PATCH /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 200 — 3 queries, 0 duplicated, 3.7 ms in SQL, 14.5 ms total [karni.queries]
+2026-10-18T17:15:14.777481Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?city=Jaipur' request_id=83072c6a-514c-400a-8de9-4e56ef8753c4 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.790642Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?city=Jaipur' request_id=83072c6a-514c-400a-8de9-4e56ef8753c4 user_id=None
+2026-10-18T17:15:14.790895Z [info     ] GET /api/venues/?city=Jaipur 200 — 2 queries, 0 duplicated, 2.7 ms in SQL, 13.8 ms total [karni.queries]
+2026-10-18T17:15:14.810325Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?name__icontains=hall' request_id=79517058-a539-438b-abd5-0867e4ca0dc1 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.824611Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?name__icontains=hall' request_id=79517058-a539-438b-abd5-0867e4ca0dc1 user_id=None
+2026-10-18T17:15:14.824897Z [info     ] GET /api/venues/?name__icontains=hall 200 — 2 queries, 0 duplicated, 2.2 ms in SQL, 15.1 ms total [karni.queries]
+2026-10-18T17:15:14.849104Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?capacity__gte=300' request_id=38d8c756-e36b-4645-8843-83fd828d21c5 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.862191Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?capacity__gte=300' request_id=38d8c756-e36b-4645-8843-83fd828d21c5 user_id=None
+2026-10-18T17:15:14.862846Z [info     ] GET /api/venues/?capacity__gte=300 200 — 2 queries, 0 duplicated, 1.5 ms in SQL, 14.2 ms total [karni.queries]
+2026-10-18T17:15:14.895122Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?capacity__lte=25' request_id=17f86d2a-7c76-487a-877b-bd0f2c8ced66 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.907459Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?capacity__lte=25' request_id=17f86d2a-7c76-487a-877b-bd0f2c8ced66 user_id=None
+2026-10-18T17:15:14.907876Z [info     ] GET /api/venues/?capacity__lte=25 200 — 2 queries, 0 duplicated, 1.8 ms in SQL, 13.5 ms total [karni.queries]
+2026-10-18T17:15:14.954755Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?city=Nowhere' request_id=1e4e9a24-bb8d-481a-b4ef-0d5b19d538dc user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:14.967105Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?city=Nowhere' request_id=1e4e9a24-bb8d-481a-b4ef-0d5b19d538dc user_id=None
+2026-10-18T17:15:14.967537Z [info     ] GET /api/venues/?city=Nowhere 200 — 1 queries, 0 duplicated, 2.0 ms in SQL, 13.5 ms total [karni.queries]
+2026-10-18T17:15:15.015146Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?bogus=1' request_id=8ebbeb59-84e8-4d5c-977e-6242ba137326 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.031180Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?bogus=1' request_id=8ebbeb59-84e8-4d5c-977e-6242ba137326 user_id=None
+2026-10-18T17:15:15.031592Z [info     ] GET /api/venues/?bogus=1 200 — 2 queries, 0 duplicated, 1.9 ms in SQL, 17.1 ms total [karni.queries]
+2026-10-18T17:15:15.057414Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?capacity__gte=abc' request_id=6505e508-ec31-420a-8814-80dbc725c44e user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.061703Z [warning  ] request_finished               [django_structlog.middlewares.request] code=400 ip=127.0.0.1 request='GET /api/venues/?capacity__gte=abc' request_id=6505e508-ec31-420a-8814-80dbc725c44e user_id=None
+2026-10-18T17:15:15.061975Z [warning  ] Bad Request: /api/venues/      [django.request]
+"GET /api/venues/?capacity__gte=abc HTTP/1.1" 400 37
+2026-10-18T17:15:15.080871Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?ordering=capacity' request_id=367b4e42-6db5-49c7-842b-4831b34e1637 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.096931Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?ordering=capacity' request_id=367b4e42-6db5-49c7-842b-4831b34e1637 user_id=None
+2026-10-18T17:15:15.097271Z [info     ] GET /api/venues/?ordering=capacity 200 — 2 queries, 0 duplicated, 2.6 ms in SQL, 17.0 ms total [karni.queries]
+2026-10-18T17:15:15.124976Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?ordering=-capacity' request_id=81dfc76a-dabd-4744-ab3e-ce61f97ed713 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.139582Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?ordering=-capacity' request_id=81dfc76a-dabd-4744-ab3e-ce61f97ed713 user_id=None
+2026-10-18T17:15:15.139877Z [info     ] GET /api/venues/?ordering=-capacity 200 — 2 queries, 0 duplicated, 2.1 ms in SQL, 15.4 ms total [karni.queries]
+2026-10-18T17:15:15.162474Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?ordering=name' request_id=ff37382b-eb88-451f-815a-22facc01b634 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.175257Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?ordering=name' request_id=ff37382b-eb88-451f-815a-22facc01b634 user_id=None
+2026-10-18T17:15:15.175546Z [info     ] GET /api/venues/?ordering=name 200 — 2 queries, 0 duplicated, 2.2 ms in SQL, 13.5 ms total [karni.queries]
+2026-10-18T17:15:15.199109Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?ordering=-created_at' request_id=f5fb77c7-69b0-4386-b2a1-39a6695327a9 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.211434Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?ordering=-created_at' request_id=f5fb77c7-69b0-4386-b2a1-39a6695327a9 user_id=None
+2026-10-18T17:15:15.211679Z [info     ] GET /api/venues/?ordering=-created_at 200 — 2 queries, 0 duplicated, 2.3 ms in SQL, 12.9 ms total [karni.queries]
+2026-10-18T17:15:15.235742Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/' request_id=1236ce4e-ab4b-43c9-8fff-9a27fc7677a0 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.248125Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/' request_id=1236ce4e-ab4b-43c9-8fff-9a27fc7677a0 user_id=None
+2026-10-18T17:15:15.248401Z [info     ] GET /api/venues/ 200 — 2 queries, 0 duplicated, 2.1 ms in SQL, 14.7 ms total [karni.queries]
+2026-10-18T17:15:15.271735Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?page_size=2' request_id=fff919ef-e377-4b1c-a658-7c143413e0c8 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.284972Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?page_size=2' request_id=fff919ef-e377-4b1c-a658-7c143413e0c8 user_id=None
+2026-10-18T17:15:15.285226Z [info     ] GET /api/venues/?page_size=2 200 — 2 queries, 0 duplicated, 2.4 ms in SQL, 13.9 ms total [karni.queries]
+2026-10-18T17:15:15.297071Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?page_size=2&page=2' request_id=d784f086-6a6c-4512-ba34-6dc009223ed3 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.308812Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?page_size=2&page=2' request_id=d784f086-6a6c-4512-ba34-6dc009223ed3 user_id=None
+2026-10-18T17:15:15.309023Z [info     ] GET /api/venues/?page_size=2&page=2 200 — 2 queries, 0 duplicated, 2.2 ms in SQL, 12.3 ms total [karni.queries]
+2026-10-18T17:15:15.320359Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?page=99' request_id=8de7fa7e-9ffb-46e0-844c-bc722e3cf3bf user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.331439Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /api/venues/?page=99' request_id=8de7fa7e-9ffb-46e0-844c-bc722e3cf3bf user_id=None
+2026-10-18T17:15:15.331657Z [info     ] GET /api/venues/?page=99 404 — 1 queries, 0 duplicated, 1.5 ms in SQL, 11.7 ms total [karni.queries]
+2026-10-18T17:15:15.331728Z [warning  ] Not Found: /api/venues/        [django.request]
+"GET /api/venues/?page=99 HTTP/1.1" 404 26
+2026-10-18T17:15:15.344006Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?page_size=1000' request_id=047c1f14-f6e5-4918-9a8f-394580eb5226 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.356169Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?page_size=1000' request_id=047c1f14-f6e5-4918-9a8f-394580eb5226 user_id=None
+2026-10-18T17:15:15.356442Z [info     ] GET /api/venues/?page_size=1000 200 — 2 queries, 0 duplicated, 2.1 ms in SQL, 12.8 ms total [karni.queries]
+2026-10-18T17:15:15.378057Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=907276f1-0635-4ce2-b0ba-6c9df4692aad user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.390410Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=907276f1-0635-4ce2-b0ba-6c9df4692aad user_id=None
+2026-10-18T17:15:15.390690Z [info     ] GET /api/venues/?search=Grand 200 — 2 queries, 0 duplicated, 1.7 ms in SQL, 13.1 ms total [karni.queries]
+2026-10-18T17:15:15.403778Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=3cb14ebe-84a5-48f9-99ff-afa90943efc9 user_agent=curl/8.7.1 user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-18T17:15:15.930784Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=3cb14ebe-84a5-48f9-99ff-afa90943efc9 user_id=None
+2026-10-18T17:15:15.948238Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?expand=venue&page_size=1' request_id=5142d339-52a0-4e2a-9266-4c77094f8593 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.964313Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?expand=venue&page_size=1' request_id=5142d339-52a0-4e2a-9266-4c77094f8593 user_id=None
+2026-10-18T17:15:15.964566Z [info     ] GET /api/events/?expand=venue&page_size=1 200 — 2 queries, 0 duplicated, 3.9 ms in SQL, 16.7 ms total [karni.queries]
+2026-10-18T17:15:15.976565Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='DELETE /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=06be8ab4-e097-4803-a69c-9741a893f85b user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:15.992518Z [info     ] request_finished               [django_structlog.middlewares.request] code=204 ip=127.0.0.1 request='DELETE /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=06be8ab4-e097-4803-a69c-9741a893f85b user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:15.992820Z [info     ] DELETE /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 204 — 3 queries, 0 duplicated, 4.4 ms in SQL, 16.6 ms total [karni.queries]
+2026-10-18T17:15:16.004321Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=1befa563-1ebd-45b7-8d2a-3c3737959149 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:16.015810Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/' request_id=1befa563-1ebd-45b7-8d2a-3c3737959149 user_id=None
+2026-10-18T17:15:16.016026Z [info     ] GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ 404 — 1 queries, 0 duplicated, 1.7 ms in SQL, 12.1 ms total [karni.queries]
+2026-10-18T17:15:16.016097Z [warning  ] Not Found: /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ [django.request]
+"GET /api/venues/0b41ca0b-abbd-413a-9829-307af287bfe6/ HTTP/1.1" 404 46
+2026-10-18T17:15:16.058208Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='OPTIONS /api/venues/' request_id=64546475-24ad-46d5-82cc-84851effa765 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:15:16.068632Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='OPTIONS /api/venues/' request_id=64546475-24ad-46d5-82cc-84851effa765 user_id=a55ddd0a-0a8b-447f-bbd0-e103a64a0079
+2026-10-18T17:15:16.068878Z [info     ] OPTIONS /api/venues/ 200 — 1 queries, 0 duplicated, 2.0 ms in SQL, 11.2 ms total [karni.queries]
+2026-10-18T17:15:16.080646Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=0e06b67a-b4d4-40d6-a699-6df3a2f33b50 user_agent=curl/8.7.1 user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-18T17:15:16.116720Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=0e06b67a-b4d4-40d6-a699-6df3a2f33b50 user_id=None
+2026-10-18T17:16:14.554247Z [info     ] /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/auditapp/shop/viewsets.py changed, reloading. [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 18, 2026 - 17:14:02
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+
+2026-10-18T17:16:15.493010Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-18T17:16:17.757427Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/' request_id=29351d29-d936-47f3-a50f-c19acfddf6f0 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:16:17.758060Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/' request_id=29351d29-d936-47f3-a50f-c19acfddf6f0 user_id=None
+2026-10-18T17:16:17.771255Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=3a01a1ca-c783-4c9d-99dc-86a24637bd64 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:16:17.815576Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=3a01a1ca-c783-4c9d-99dc-86a24637bd64 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:18.524250Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=3a01a1ca-c783-4c9d-99dc-86a24637bd64 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:19.194563Z [warning  ] GET /api/venues/?search=Grand 500 — 16 queries, 15 duplicated, 6.9 ms in SQL, 1423.6 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=Grand HTTP/1.1" 500 244220
+2026-10-18T17:16:19.236582Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=1a025e4a-39cd-419f-96f9-85d866593d31 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:16:19.248146Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=1a025e4a-39cd-419f-96f9-85d866593d31 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:19.957845Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=1a025e4a-39cd-419f-96f9-85d866593d31 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:20.703303Z [warning  ] GET /api/venues/?search=jaipur 500 — 16 queries, 15 duplicated, 7.2 ms in SQL, 1467.1 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=jaipur HTTP/1.1" 500 244206
+2026-10-18T17:16:20.740825Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=55db4407-7c4e-4e9b-b38e-fecaa9e60854 user_agent=curl/8.7.1 user_id=None
+2026-10-18T17:16:20.751476Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=55db4407-7c4e-4e9b-b38e-fecaa9e60854 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:21.523817Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=55db4407-7c4e-4e9b-b38e-fecaa9e60854 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-18T17:16:22.249240Z [warning  ] GET /api/venues/?search=zzz 500 — 16 queries, 15 duplicated, 6.8 ms in SQL, 1508.7 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=zzz HTTP/1.1" 500 244153
+2026-10-18T17:16:22.289688Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=42bc9b45-d83c-4257-a9da-eb905d34f5cb user_agent=curl/8.7.1 user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-18T17:16:22.355773Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=42bc9b45-d83c-4257-a9da-eb905d34f5cb user_id=None
+2026-10-19T03:15:32.255052Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=3e34912f-d7c9-4ee1-bd48-3d07a31f4dbb user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:15:32.264991Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=3e34912f-d7c9-4ee1-bd48-3d07a31f4dbb user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:32.906522Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=3e34912f-d7c9-4ee1-bd48-3d07a31f4dbb user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...", '')) @@ (plainto_tsquery('Grand')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:33.530839Z [warning  ] GET /api/venues/?search=Grand 500 — 16 queries, 15 duplicated, 5.0 ms in SQL, 1276.1 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=Grand HTTP/1.1" 500 244221
+2026-10-19T03:15:33.546299Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=a0b21102-351c-4b3c-a97b-7fac3c1ac3bd user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:15:33.555995Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=a0b21102-351c-4b3c-a97b-7fac3c1ac3bd user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:34.206430Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=a0b21102-351c-4b3c-a97b-7fac3c1ac3bd user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ..., '')) @@ (plainto_tsquery('jaipur')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:34.808183Z [warning  ] GET /api/venues/?search=jaipur 500 — 16 queries, 15 duplicated, 5.0 ms in SQL, 1262.1 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=jaipur HTTP/1.1" 500 244207
+2026-10-19T03:15:34.822765Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=441ad222-bd7f-4b6f-93c0-55f9a384f107 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:15:34.831607Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=441ad222-bd7f-4b6f-93c0-55f9a384f107 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:35.497595Z [error    ] Internal Server Error: /api/venues/ [django.request] ip=127.0.0.1 request_id=441ad222-bd7f-4b6f-93c0-55f9a384f107 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+The above exception was the direct cause of the following exception:
+
+ProgrammingError: function similarity(character varying, unknown) does not exist
+LINE 1: ...ty", '')) @@ (plainto_tsquery('zzz')) OR GREATEST(SIMILARITY...
+                                                             ^
+HINT:  No function matches the given name and argument types. You might need to 
+add explicit type casts.
+
+2026-10-19T03:15:36.166399Z [warning  ] GET /api/venues/?search=zzz 500 — 16 queries, 15 duplicated, 4.8 ms in SQL, 1343.9 ms total
+  15× SELECT … FROM "shop_venue" WHERE ("shop_venue"."deleted_at" IS NULL AND (to_tsvector(COALESCE("shop_venue"."name", %s) || ' ' || COALESCE("…
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/logging/__init__.py:999 in format [karni.queries]
+"GET /api/venues/?search=zzz HTTP/1.1" 500 244155
+2026-10-19T03:19:02.673561Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=2d14ea2d-e525-435f-a55f-783d17eb9e41 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:02.689515Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=2d14ea2d-e525-435f-a55f-783d17eb9e41 user_id=None
+2026-10-19T03:19:02.689766Z [info     ] GET /api/venues/?search=Grand 200 — 1 queries, 0 duplicated, 6.2 ms in SQL, 16.6 ms total [karni.queries]
+2026-10-19T03:19:02.740729Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=6a1da52c-02f0-418f-8f09-345a14fed119 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:02.758479Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=jaipur' request_id=6a1da52c-02f0-418f-8f09-345a14fed119 user_id=None
+2026-10-19T03:19:02.758721Z [info     ] GET /api/venues/?search=jaipur 200 — 2 queries, 0 duplicated, 7.5 ms in SQL, 18.4 ms total [karni.queries]
+2026-10-19T03:19:02.802644Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=hal' request_id=dbd0f822-1b91-465f-8fee-0a93e9ce0dd9 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:02.819352Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=hal' request_id=dbd0f822-1b91-465f-8fee-0a93e9ce0dd9 user_id=None
+2026-10-19T03:19:02.819616Z [info     ] GET /api/venues/?search=hal 200 — 2 queries, 0 duplicated, 5.7 ms in SQL, 17.4 ms total [karni.queries]
+2026-10-19T03:19:02.865296Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=a7cf7b7d-0a50-4c12-be0f-9ae62817ca94 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:02.882318Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=zzz' request_id=a7cf7b7d-0a50-4c12-be0f-9ae62817ca94 user_id=None
+2026-10-19T03:19:02.882552Z [info     ] GET /api/venues/?search=zzz 200 — 1 queries, 0 duplicated, 6.5 ms in SQL, 17.6 ms total [karni.queries]
+2026-10-19T03:19:02.927176Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?search=Grand&ordering=name' request_id=71f702c8-a1a8-45e5-a362-6c28a2349c78 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:19:02.942322Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?search=Grand&ordering=name' request_id=71f702c8-a1a8-45e5-a362-6c28a2349c78 user_id=None
+2026-10-19T03:19:02.942601Z [info     ] GET /api/venues/?search=Grand&ordering=name 200 — 1 queries, 0 duplicated, 5.0 ms in SQL, 15.8 ms total [karni.queries]
+2026-10-19T03:20:49.954497Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/login/' request_id=883135e8-b6a5-426d-a7c5-ea4e284962c2 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:20:50.079712Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/login/' request_id=883135e8-b6a5-426d-a7c5-ea4e284962c2 user_id=None
+2026-10-19T03:20:50.959993Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /admin/login/' request_id=b9a6b7ff-6163-47bf-9ccd-1e5312ec0d2b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:20:51.192323Z [info     ] request_finished               [django_structlog.middlewares.request] code=302 ip=127.0.0.1 request='POST /admin/login/' request_id=b9a6b7ff-6163-47bf-9ccd-1e5312ec0d2b user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.195258Z [info     ] POST /admin/login/ 302 — 5 queries, 0 duplicated, 15.5 ms in SQL, 236.3 ms total [karni.queries]
+2026-10-19T03:20:51.212585Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /accounts/profile/' request_id=d87c88ef-0aab-4bca-bee6-213869df2d67 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.217427Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /accounts/profile/' request_id=d87c88ef-0aab-4bca-bee6-213869df2d67 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.217857Z [info     ] GET /accounts/profile/ 404 — 2 queries, 0 duplicated, 4.4 ms in SQL, 19.5 ms total [karni.queries]
+2026-10-19T03:20:51.218003Z [warning  ] Not Found: /accounts/profile/  [django.request]
+"GET /accounts/profile/ HTTP/1.1" 404 3015
+2026-10-19T03:20:51.751873Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/' request_id=51ccc14b-8262-4730-a5f1-ac7e76ae81e4 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.831763Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/' request_id=51ccc14b-8262-4730-a5f1-ac7e76ae81e4 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.832412Z [info     ] GET /admin/shop/product/ 200 — 8 queries, 0 duplicated, 6.3 ms in SQL, 88.7 ms total [karni.queries]
+2026-10-19T03:20:51.887282Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=ddfb83ef-cd60-4ec5-bf3a-d463edb1e97e user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.890510Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=ddfb83ef-cd60-4ec5-bf3a-d463edb1e97e user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:51.891212Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 6.0 ms in SQL, 44.6 ms total [karni.queries]
+2026-10-19T03:20:53.387687Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book' request_id=cf013788-7580-47c9-9c61-99fa473c5ee8 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:53.422115Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book' request_id=cf013788-7580-47c9-9c61-99fa473c5ee8 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:53.422768Z [info     ] GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book 200 — 8 queries, 0 duplicated, 8.0 ms in SQL, 44.7 ms total [karni.queries]
+2026-10-19T03:20:53.452837Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=fe530941-9dd2-44d1-9c39-9ac10d61f8d3 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:53.454327Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=fe530941-9dd2-44d1-9c39-9ac10d61f8d3 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:53.454700Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 3.2 ms in SQL, 15.4 ms total [karni.queries]
+2026-10-19T03:20:54.886506Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/add/' request_id=5a00e0bb-a2b4-4974-9d0a-ff1eb383deae user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:54.941572Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/add/' request_id=5a00e0bb-a2b4-4974-9d0a-ff1eb383deae user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:54.941945Z [info     ] GET /admin/shop/product/add/ 200 — 3 queries, 0 duplicated, 4.4 ms in SQL, 65.8 ms total [karni.queries]
+2026-10-19T03:20:55.020235Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=464d1a43-fc04-4506-bbcf-c45774cd49d1 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:55.022151Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=464d1a43-fc04-4506-bbcf-c45774cd49d1 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:55.022541Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 5.4 ms in SQL, 46.0 ms total [karni.queries]
+2026-10-19T03:20:56.583906Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/' request_id=c7fc99a3-e762-47a7-b13f-04bc8b9ba1d3 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.636109Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/' request_id=c7fc99a3-e762-47a7-b13f-04bc8b9ba1d3 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.636684Z [warning  ] GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/ 200 — 8 queries, 2 duplicated, 12.1 ms in SQL, 66.6 ms total
+  2× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/wsgiref/handlers.py:137 in run [karni.queries]
+2026-10-19T03:20:56.663620Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=1818eccb-a20a-4f3c-a714-edd07100a134 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.664296Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=5a475a3d-b8e6-447d-b371-3cc1c2f7acb7 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.668800Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=5a475a3d-b8e6-447d-b371-3cc1c2f7acb7 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.669374Z [info     ] GET /media/shop/product/photos/kettle.png 404 — 2 queries, 0 duplicated, 4.3 ms in SQL, 23.1 ms total [karni.queries]
+2026-10-19T03:20:56.669494Z [warning  ] Not Found: /media/shop/product/photos/kettle.png [django.request]
+2026-10-19T03:20:56.670467Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=1818eccb-a20a-4f3c-a714-edd07100a134 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:56.671008Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 3.9 ms in SQL, 25.3 ms total [karni.queries]
+"GET /media/shop/product/photos/kettle.png HTTP/1.1" 404 3072
+2026-10-19T03:20:58.260580Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/venue/' request_id=8539fb00-d216-4f8d-a928-ebb43dff79c8 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:58.296473Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/venue/' request_id=8539fb00-d216-4f8d-a928-ebb43dff79c8 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:58.297016Z [info     ] GET /admin/shop/venue/ 200 — 7 queries, 0 duplicated, 9.2 ms in SQL, 50.8 ms total [karni.queries]
+2026-10-19T03:20:58.334852Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=ffed8652-78ab-4c66-9217-8f86de510116 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:58.336848Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=ffed8652-78ab-4c66-9217-8f86de510116 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:58.337326Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 4.2 ms in SQL, 20.0 ms total [karni.queries]
+2026-10-19T03:20:59.783470Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/' request_id=176542d6-a204-494e-aec2-4914ac0f31de user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:59.809633Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/' request_id=176542d6-a204-494e-aec2-4914ac0f31de user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:20:59.810112Z [info     ] GET /admin/ 200 — 3 queries, 0 duplicated, 7.2 ms in SQL, 41.8 ms total [karni.queries]
+2026-10-19T03:21:02.560925Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=093508f3-cfd1-4e45-8d16-ceea974cd178 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:02.621208Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=093508f3-cfd1-4e45-8d16-ceea974cd178 user_id=None
+2026-10-19T03:21:02.627955Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=354078ec-a765-4e5b-b6ce-0226fb69bd06 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:02.696953Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=354078ec-a765-4e5b-b6ce-0226fb69bd06 user_id=None
+2026-10-19T03:21:02.720458Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=c10f6946-0c7c-4bc0-9e85-b50bd70f9559 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:02.752880Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=c10f6946-0c7c-4bc0-9e85-b50bd70f9559 user_id=None
+2026-10-19T03:21:02.753523Z [info     ] GET /api/events/?page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 11.4 ms in SQL, 33.9 ms total [karni.queries]
+2026-10-19T03:21:04.958049Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=b86b7a5d-0e26-436a-a7e4-bc05ceb050db user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:04.963229Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=40de4ea2-0df1-4f13-91e6-ccb60d79c313 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:04.998259Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=70d1cc41-8dfd-4703-8409-810c40e49039 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:05.018091Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=40de4ea2-0df1-4f13-91e6-ccb60d79c313 user_id=None
+2026-10-19T03:21:05.018830Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 2.3 ms in SQL, 56.4 ms total [karni.queries]
+2026-10-19T03:21:05.026142Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=70d1cc41-8dfd-4703-8409-810c40e49039 user_id=None
+2026-10-19T03:21:05.026765Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 5.3 ms in SQL, 29.4 ms total [karni.queries]
+2026-10-19T03:21:05.064477Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=b86b7a5d-0e26-436a-a7e4-bc05ceb050db user_id=None
+2026-10-19T03:21:05.071060Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=7ac95ec8-d31c-489a-b0d9-c156040a0d1a user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:05.133920Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=7ac95ec8-d31c-489a-b0d9-c156040a0d1a user_id=None
+2026-10-19T03:21:07.241774Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=3fbf6925-dc08-4cb1-aa16-3a72f4e36b03 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:07.279808Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=3fbf6925-dc08-4cb1-aa16-3a72f4e36b03 user_id=None
+2026-10-19T03:21:07.283109Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=4047eecb-3a5c-4b6e-baf2-7b36d8c77524 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:07.317748Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=4047eecb-3a5c-4b6e-baf2-7b36d8c77524 user_id=None
+2026-10-19T03:21:09.429561Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=8881828e-8962-4797-86a8-d6c5ca401150 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:09.435893Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=6820f5f0-a964-4b9b-9124-b89f216e9075 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:09.437534Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b50f4ac4-191e-4766-80aa-5c69abf950df user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:09.477438Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=8881828e-8962-4797-86a8-d6c5ca401150 user_id=None
+2026-10-19T03:21:09.480590Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=14f451aa-52cc-4176-baaf-f804e205607e user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:09.488053Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b50f4ac4-191e-4766-80aa-5c69abf950df user_id=None
+2026-10-19T03:21:09.496008Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 5.2 ms in SQL, 58.8 ms total [karni.queries]
+2026-10-19T03:21:09.497051Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=6820f5f0-a964-4b9b-9124-b89f216e9075 user_id=None
+2026-10-19T03:21:09.497331Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 14.1 ms in SQL, 62.2 ms total [karni.queries]
+2026-10-19T03:21:09.520134Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=14f451aa-52cc-4176-baaf-f804e205607e user_id=None
+2026-10-19T03:21:09.531237Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=7c7bd02b-a1ae-47b9-9943-e1d4403a4432 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:09.542872Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=7c7bd02b-a1ae-47b9-9943-e1d4403a4432 user_id=None
+2026-10-19T03:21:09.543247Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=dc1c3bf9-4c0b-4ee0-affe-11228a70f5d8 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:09.543892Z [info     ] GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/ 200 — 1 queries, 0 duplicated, 3.3 ms in SQL, 12.8 ms total [karni.queries]
+2026-10-19T03:21:09.555088Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=dc1c3bf9-4c0b-4ee0-affe-11228a70f5d8 user_id=None
+2026-10-19T03:21:09.555355Z [info     ] GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/ 200 — 1 queries, 0 duplicated, 1.7 ms in SQL, 15.0 ms total [karni.queries]
+2026-10-19T03:21:11.646622Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=8b34bb2a-562f-489c-b5da-428d2c97f709 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:11.648663Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=e8c1cc68-c583-4521-813a-7bfd723b4129 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:21:11.685834Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=8b34bb2a-562f-489c-b5da-428d2c97f709 user_id=None
+2026-10-19T03:21:12.720252Z [error    ] request_finished               [django_structlog.middlewares.request] code=503 ip=127.0.0.1 request='GET /health/ready/' request_id=e8c1cc68-c583-4521-813a-7bfd723b4129 user_id=None
+2026-10-19T03:21:12.720624Z [info     ] GET /health/ready/ 503 — 1 queries, 0 duplicated, 5.2 ms in SQL, 1072.3 ms total [karni.queries]
+2026-10-19T03:21:12.720716Z [error    ] Service Unavailable: /health/ready/ [django.request]
+"GET /health/ready/ HTTP/1.1" 503 215
+2026-10-19T03:21:12.723998Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=fd79aead-ffe9-4c45-a375-f05fb1326007 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:21:13.734817Z [error    ] request_finished               [django_structlog.middlewares.request] code=503 ip=127.0.0.1 request='GET /health/ready/' request_id=fd79aead-ffe9-4c45-a375-f05fb1326007 user_id=None
+2026-10-19T03:21:13.735130Z [info     ] GET /health/ready/ 503 — 1 queries, 0 duplicated, 0.2 ms in SQL, 1011.9 ms total [karni.queries]
+2026-10-19T03:21:13.735219Z [error    ] Service Unavailable: /health/ready/ [django.request]
+"GET /health/ready/ HTTP/1.1" 503 215
+2026-10-19T03:22:43.817471Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=850072c8-50d5-4303-8ce6-a5314825e638 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:22:44.829681Z [error    ] request_finished               [django_structlog.middlewares.request] code=503 ip=127.0.0.1 request='GET /health/ready/' request_id=850072c8-50d5-4303-8ce6-a5314825e638 user_id=None
+2026-10-19T03:22:44.829991Z [info     ] GET /health/ready/ 503 — 1 queries, 0 duplicated, 0.2 ms in SQL, 1013.0 ms total [karni.queries]
+2026-10-19T03:22:44.830075Z [error    ] Service Unavailable: /health/ready/ [django.request]
+"GET /health/ready/ HTTP/1.1" 503 215
+2026-10-19T03:22:45.831920Z [info     ] /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/auditapp/shop/models.py changed, reloading. [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 18, 2026 - 17:16:15
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+
+2026-10-19T03:22:46.963735Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-19T03:24:58.085239Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/login/' request_id=1599112d-2a0b-4617-aff3-744e2b551fac user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:24:58.134371Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/login/' request_id=1599112d-2a0b-4617-aff3-744e2b551fac user_id=None
+2026-10-19T03:24:58.883763Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='POST /admin/login/' request_id=85326677-8518-4f4f-991d-6b97f2432175 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:24:59.037164Z [info     ] request_finished               [django_structlog.middlewares.request] code=302 ip=127.0.0.1 request='POST /admin/login/' request_id=85326677-8518-4f4f-991d-6b97f2432175 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.038557Z [info     ] POST /admin/login/ 302 — 5 queries, 0 duplicated, 5.9 ms in SQL, 155.3 ms total [karni.queries]
+2026-10-19T03:24:59.050507Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /accounts/profile/' request_id=ef12ab54-1e73-4553-8b19-12db8e5b3590 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.053512Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /accounts/profile/' request_id=ef12ab54-1e73-4553-8b19-12db8e5b3590 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.053729Z [info     ] GET /accounts/profile/ 404 — 2 queries, 0 duplicated, 3.6 ms in SQL, 13.6 ms total [karni.queries]
+2026-10-19T03:24:59.054155Z [warning  ] Not Found: /accounts/profile/  [django.request]
+"GET /accounts/profile/ HTTP/1.1" 404 3015
+2026-10-19T03:24:59.591042Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/' request_id=3ab9f823-56c5-4dec-a33e-b2762e665be3 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.646788Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/' request_id=3ab9f823-56c5-4dec-a33e-b2762e665be3 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.647186Z [info     ] GET /admin/shop/product/ 200 — 8 queries, 0 duplicated, 9.0 ms in SQL, 70.0 ms total [karni.queries]
+2026-10-19T03:24:59.666836Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=b5a90acd-6bfb-4bf4-a870-3f1980f0d3b8 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.668460Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=b5a90acd-6bfb-4bf4-a870-3f1980f0d3b8 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:24:59.668701Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 3.4 ms in SQL, 14.8 ms total [karni.queries]
+2026-10-19T03:25:01.086333Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book' request_id=4a3eb173-be00-4a41-9d40-e04df6d0d5f8 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:01.108932Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book' request_id=4a3eb173-be00-4a41-9d40-e04df6d0d5f8 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:01.109257Z [info     ] GET /admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book 200 — 8 queries, 0 duplicated, 9.5 ms in SQL, 34.8 ms total [karni.queries]
+2026-10-19T03:25:01.122446Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=8dce2849-12c5-4e9e-af46-4d5f32386f12 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:01.123545Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=8dce2849-12c5-4e9e-af46-4d5f32386f12 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:01.123781Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 1.8 ms in SQL, 9.4 ms total [karni.queries]
+2026-10-19T03:25:02.529942Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/add/' request_id=24ed7b31-8ec9-4f07-a028-d44dc31a60b3 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:02.565087Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/add/' request_id=24ed7b31-8ec9-4f07-a028-d44dc31a60b3 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:02.565385Z [info     ] GET /admin/shop/product/add/ 200 — 3 queries, 0 duplicated, 4.8 ms in SQL, 46.9 ms total [karni.queries]
+2026-10-19T03:25:02.588314Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=8694b77d-c4a5-4b2e-831e-a53c8e37ea6b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:02.589311Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=8694b77d-c4a5-4b2e-831e-a53c8e37ea6b user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:02.589561Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 2.5 ms in SQL, 14.2 ms total [karni.queries]
+2026-10-19T03:25:04.030703Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/' request_id=55ea9338-f210-42b3-a7c0-717aeaa910aa user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.065279Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/' request_id=55ea9338-f210-42b3-a7c0-717aeaa910aa user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.065630Z [warning  ] GET /admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/ 200 — 8 queries, 2 duplicated, 10.5 ms in SQL, 46.3 ms total
+  2× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/lib/python3.12/wsgiref/handlers.py:137 in run [karni.queries]
+2026-10-19T03:25:04.086221Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=a4871d2a-33ba-4fb7-b8bf-450a8bd4d4ae user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.086711Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=d55d3641-6e59-4c47-a387-2887ed444dc2 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.089956Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=d55d3641-6e59-4c47-a387-2887ed444dc2 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.090325Z [info     ] GET /media/shop/product/photos/kettle.png 404 — 2 queries, 0 duplicated, 3.1 ms in SQL, 13.2 ms total [karni.queries]
+2026-10-19T03:25:04.090637Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=a4871d2a-33ba-4fb7-b8bf-450a8bd4d4ae user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:04.090917Z [warning  ] Not Found: /media/shop/product/photos/kettle.png [django.request]
+2026-10-19T03:25:04.091091Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 2.5 ms in SQL, 14.3 ms total [karni.queries]
+"GET /media/shop/product/photos/kettle.png HTTP/1.1" 404 3072
+2026-10-19T03:25:05.572659Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/shop/venue/' request_id=badc9c32-75f5-400c-89b5-81832d83d363 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:05.592054Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/shop/venue/' request_id=badc9c32-75f5-400c-89b5-81832d83d363 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:05.592374Z [info     ] GET /admin/shop/venue/ 200 — 7 queries, 0 duplicated, 7.0 ms in SQL, 31.3 ms total [karni.queries]
+2026-10-19T03:25:05.613810Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=0020ffbd-f9ce-499a-bc71-9c4d3502f547 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:05.614779Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/jsi18n/' request_id=0020ffbd-f9ce-499a-bc71-9c4d3502f547 user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:05.615007Z [info     ] GET /admin/jsi18n/ 200 — 2 queries, 0 duplicated, 3.1 ms in SQL, 10.9 ms total [karni.queries]
+2026-10-19T03:25:07.017563Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /admin/' request_id=ce7d1876-1668-45bf-aad1-b1072f7f7f2e user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:07.033462Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /admin/' request_id=ce7d1876-1668-45bf-aad1-b1072f7f7f2e user_id=11a83e4b-0836-463e-9de9-1443aa7fae2a
+2026-10-19T03:25:07.033739Z [info     ] GET /admin/ 200 — 3 queries, 0 duplicated, 6.3 ms in SQL, 27.6 ms total [karni.queries]
+2026-10-19T03:25:09.152234Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=f38c3657-9b4f-4bd5-b928-499afa19a250 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:25:09.270587Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=f38c3657-9b4f-4bd5-b928-499afa19a250 user_id=None
+2026-10-19T03:25:09.273517Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=65e5611b-60da-4de3-8fb5-5a177e545ad3 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:25:09.307116Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=65e5611b-60da-4de3-8fb5-5a177e545ad3 user_id=None
+2026-10-19T03:25:09.319279Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=82382a9a-553e-409e-affc-b26b3de49398 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:25:09.332392Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=82382a9a-553e-409e-affc-b26b3de49398 user_id=None
+2026-10-19T03:25:09.333078Z [info     ] GET /api/events/?page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 2.2 ms in SQL, 14.2 ms total [karni.queries]
+2026-10-19T03:26:14.571647Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=a845870c-6e14-4014-9082-9a58b31e8bba user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:14.574702Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=a69ba6b2-a0b5-41cb-9dd1-a56d98bada7b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:14.590919Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=75c5e776-97be-46ef-88ee-2a05934f8226 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:14.615881Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=a845870c-6e14-4014-9082-9a58b31e8bba user_id=None
+2026-10-19T03:26:14.620342Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=30bd8107-4678-4aac-8208-def921cf336f user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:14.628427Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=a69ba6b2-a0b5-41cb-9dd1-a56d98bada7b user_id=None
+2026-10-19T03:26:14.635884Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 5.8 ms in SQL, 61.5 ms total [karni.queries]
+2026-10-19T03:26:14.642386Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=75c5e776-97be-46ef-88ee-2a05934f8226 user_id=None
+2026-10-19T03:26:14.642637Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 4.4 ms in SQL, 52.2 ms total [karni.queries]
+2026-10-19T03:26:14.660131Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=30bd8107-4678-4aac-8208-def921cf336f user_id=None
+2026-10-19T03:26:16.757284Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=054118c7-f6c3-4ab8-b1ae-8434c048be14 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:16.793459Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=054118c7-f6c3-4ab8-b1ae-8434c048be14 user_id=None
+2026-10-19T03:26:16.796653Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=11d9aeca-4795-4d95-a7d8-a0e365c33baa user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:16.831725Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=11d9aeca-4795-4d95-a7d8-a0e365c33baa user_id=None
+2026-10-19T03:26:24.291879Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=e7f0127a-b48d-4be0-94c6-9d5f0ec82b39 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:24.294511Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b530a34b-df9a-49e9-bf44-abe064bdb6ea user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:24.310162Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b06f75dc-d990-4711-9d75-b4c40e800e9b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:24.335908Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=e7f0127a-b48d-4be0-94c6-9d5f0ec82b39 user_id=None
+2026-10-19T03:26:24.340087Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=a40acb8f-3c74-4f39-83c4-b0bc6f5586ef user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:24.345942Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b530a34b-df9a-49e9-bf44-abe064bdb6ea user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:26:24.347937Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 4.9 ms in SQL, 53.8 ms total [karni.queries]
+2026-10-19T03:26:24.360785Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/' request_id=b06f75dc-d990-4711-9d75-b4c40e800e9b user_id=None
+2026-10-19T03:26:24.361061Z [info     ] GET /api/events/288e3839-00e4-4ec3-b130-f2ed390058d8/ 200 — 1 queries, 0 duplicated, 4.6 ms in SQL, 61.1 ms total [karni.queries]
+2026-10-19T03:26:24.379402Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=a40acb8f-3c74-4f39-83c4-b0bc6f5586ef user_id=None
+2026-10-19T03:26:24.390311Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=1de13f18-4c8a-4ed1-857e-a70ceddac68b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:24.399755Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=8101f081-f2da-4f73-82ae-67142c1e8e7b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:26:24.402442Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=1de13f18-4c8a-4ed1-857e-a70ceddac68b user_id=None
+2026-10-19T03:26:24.402892Z [info     ] GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/ 200 — 1 queries, 0 duplicated, 1.6 ms in SQL, 13.2 ms total [karni.queries]
+2026-10-19T03:26:24.412017Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/' request_id=8101f081-f2da-4f73-82ae-67142c1e8e7b user_id=None
+2026-10-19T03:26:24.412333Z [info     ] GET /api/venues/69cb50b1-c7b8-4021-8d80-9ba33f3b569c/ 200 — 1 queries, 0 duplicated, 1.5 ms in SQL, 13.2 ms total [karni.queries]
+2026-10-19T03:28:06.813488Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=667ff89b-0b7a-474d-8a4d-70d7c22bd1fa user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:28:06.816757Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /media/shop/product/photos/kettle.png' request_id=667ff89b-0b7a-474d-8a4d-70d7c22bd1fa user_id=None
+2026-10-19T03:28:06.817015Z [warning  ] Not Found: /media/shop/product/photos/kettle.png [django.request]
+"GET /media/shop/product/photos/kettle.png HTTP/1.1" 404 3072
+2026-10-19T03:28:06.853481Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /accounts/profile/' request_id=41724724-d220-40c6-8dc5-292d7995922c user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:28:06.856590Z [warning  ] request_finished               [django_structlog.middlewares.request] code=404 ip=127.0.0.1 request='GET /accounts/profile/' request_id=41724724-d220-40c6-8dc5-292d7995922c user_id=None
+2026-10-19T03:28:06.856813Z [warning  ] Not Found: /accounts/profile/  [django.request]
+"GET /accounts/profile/ HTTP/1.1" 404 3015
+2026-10-19T03:28:08.305386Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=160429d4-a888-477d-a82f-dea9e7fdd8bb user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:28:08.355474Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=160429d4-a888-477d-a82f-dea9e7fdd8bb user_id=None
+2026-10-19T03:28:08.358711Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=b835d284-b1c5-4f58-98c9-c6c7bfa960f6 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:28:08.398584Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=b835d284-b1c5-4f58-98c9-c6c7bfa960f6 user_id=None
+2026-10-19T03:28:08.412636Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=e7929c4c-190c-401c-94c4-13df76ec8312 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:28:08.426602Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=e7929c4c-190c-401c-94c4-13df76ec8312 user_id=None
+2026-10-19T03:28:08.427029Z [info     ] GET /api/events/?page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 2.4 ms in SQL, 14.8 ms total [karni.queries]
+2026-10-19T03:28:11.131139Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?status=published&page=1&page_size=25&expand=venue' request_id=b476c93d-ba7a-4a10-8bc7-d36a4a2992ac user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:28:11.142999Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?status=published&page=1&page_size=25&expand=venue' request_id=b476c93d-ba7a-4a10-8bc7-d36a4a2992ac user_id=None
+2026-10-19T03:28:11.143346Z [info     ] GET /api/events/?status=published&page=1&page_size=25&expand=venue 200 — 1 queries, 0 duplicated, 1.5 ms in SQL, 12.6 ms total [karni.queries]
+2026-10-19T03:28:13.349715Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?status=draft&page=1&page_size=25&expand=venue' request_id=39ec720d-2b0a-49e1-9922-3427d48f318a user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:28:13.366723Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?status=draft&page=1&page_size=25&expand=venue' request_id=39ec720d-2b0a-49e1-9922-3427d48f318a user_id=None
+2026-10-19T03:28:13.367050Z [info     ] GET /api/events/?status=draft&page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 4.7 ms in SQL, 18.0 ms total [karni.queries]
+2026-10-19T03:29:14.900917Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=2ee4d682-0eaa-40f2-a141-04df22851986 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:29:14.943483Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=2ee4d682-0eaa-40f2-a141-04df22851986 user_id=None
+2026-10-19T03:29:14.946794Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=d6c0e316-ba95-4224-81fc-23c88f91054b user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:29:14.985641Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=d6c0e316-ba95-4224-81fc-23c88f91054b user_id=None
+2026-10-19T03:29:18.753018Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/venues/?page=1' request_id=599230e6-8fb9-4647-a2ed-91271439b74a user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:29:18.765155Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/venues/?page=1' request_id=599230e6-8fb9-4647-a2ed-91271439b74a user_id=None
+2026-10-19T03:29:18.765554Z [info     ] GET /api/venues/?page=1 200 — 2 queries, 0 duplicated, 1.7 ms in SQL, 13.3 ms total [karni.queries]
+2026-10-19T03:30:30.568379Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=980f0161-8f97-401b-abe7-8708a300c768 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:30:30.620541Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=980f0161-8f97-401b-abe7-8708a300c768 user_id=None
+2026-10-19T03:30:30.623683Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=ec4c8170-92d1-4943-b5ee-c8d9c2675ab2 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:30:30.662546Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=ec4c8170-92d1-4943-b5ee-c8d9c2675ab2 user_id=None
+2026-10-19T03:30:30.676925Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=3fc84da9-3cb0-4245-9af4-04f663db23a4 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:30:30.690854Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=3fc84da9-3cb0-4245-9af4-04f663db23a4 user_id=None
+2026-10-19T03:30:30.691234Z [info     ] GET /api/events/?page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 2.5 ms in SQL, 14.8 ms total [karni.queries]
+2026-10-19T03:33:10.026971Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=3be266cc-e791-463e-87a2-86ff61bf95e2 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:33:10.070789Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=3be266cc-e791-463e-87a2-86ff61bf95e2 user_id=None
+2026-10-19T03:33:10.073827Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/schema/' request_id=f15b88a2-de2d-4b44-bc50-a0c2faf6e964 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+2026-10-19T03:33:10.113565Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/schema/' request_id=f15b88a2-de2d-4b44-bc50-a0c2faf6e964 user_id=None
+2026-10-19T03:33:10.127099Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=682f992c-ea88-4dda-a2a5-3fd3d2fdba5f user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:33:10.140579Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&expand=venue' request_id=682f992c-ea88-4dda-a2a5-3fd3d2fdba5f user_id=None
+2026-10-19T03:33:10.140917Z [info     ] GET /api/events/?page=1&page_size=25&expand=venue 200 — 2 queries, 0 duplicated, 2.6 ms in SQL, 14.3 ms total [karni.queries]
+2026-10-19T03:33:11.960844Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&ordering=title&expand=venue' request_id=e7d101b1-7487-4519-b603-dc744b42af91 user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:33:11.974058Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&ordering=title&expand=venue' request_id=e7d101b1-7487-4519-b603-dc744b42af91 user_id=None
+2026-10-19T03:33:11.974361Z [info     ] GET /api/events/?page=1&page_size=25&ordering=title&expand=venue 200 — 2 queries, 0 duplicated, 3.2 ms in SQL, 14.0 ms total [karni.queries]
+2026-10-19T03:33:13.493963Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&ordering=-title&expand=venue' request_id=3aacd3e2-468e-459f-9775-3c7d59bfd92e user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36' user_id=None
+2026-10-19T03:33:13.508729Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /api/events/?page=1&page_size=25&ordering=-title&expand=venue' request_id=3aacd3e2-468e-459f-9775-3c7d59bfd92e user_id=None
+2026-10-19T03:33:13.509047Z [info     ] GET /api/events/?page=1&page_size=25&ordering=-title&expand=venue 200 — 2 queries, 0 duplicated, 3.9 ms in SQL, 15.9 ms total [karni.queries]
+2026-10-19T03:33:15.941130Z [info     ] /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/auditapp/shop/viewsets.py changed, reloading. [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): shop.
+Run 'python manage.py migrate' to apply them.
+October 19, 2026 - 03:22:47
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+
+2026-10-19T03:33:16.734124Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-19T03:33:18.068461Z [info     ] /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/auditapp/config/settings.py changed, reloading. [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 19, 2026 - 03:33:16
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+
+2026-10-19T03:33:18.903300Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-19T03:33:23.438153Z [info     ] /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/auditapp/shop/viewsets.py changed, reloading. [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 19, 2026 - 03:33:19
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+
+2026-10-19T03:33:24.820136Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+Performing system checks...
+
+System check identified no issues (0 silenced).
+October 19, 2026 - 03:33:24
+Django version 5.1.15, using settings 'config.settings'
+Starting development server at http://127.0.0.1:8521/
+Quit the server with CONTROL-C.
+

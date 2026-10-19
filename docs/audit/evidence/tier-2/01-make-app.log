@@ -1,0 +1,8 @@
+created  shop/__init__.py
+created  shop/apps.py
+created  shop/models.py
+created  shop/viewsets.py
+created  shop/migrations/__init__.py
+created  shop/tests/__init__.py
+modified config/settings.py
+next: karni make model <Name> [field:type ...] --app shop

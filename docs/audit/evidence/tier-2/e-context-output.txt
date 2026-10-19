@@ -1,0 +1,96 @@
+### snapshot 1 (before): /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/e-context-1-with-manifest.txt
+### karni make model Coupon code:str:20 percent:int 'expires_on:date?' --app shop
+modified shop/models.py
+next: karni make migration --app shop
+exit=0
+
+
+class OnlyAudited(AuditedModel):
+    label = models.CharField(max_length=50)
+
+
+class Coupon(BaseModel):
+    code = models.CharField(max_length=20)
+    percent = models.IntegerField()
+    expires_on = models.DateField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return self.code
+
+### karni make migration --app shop && karni migrate
+Migrations for 'shop':
+  shop/migrations/0002_coupon.py
+    + Create model Coupon
+  Apply all migrations: admin, auth, contenttypes, django_celery_beat, django_celery_results, karni_accounts, sessions, shop, token_blacklist
+  Applying shop.0002_coupon... OK
+Synced 3 role(s), 4 new permission(s).
+
+### karni context (snapshot 2)
+APPS: shop(shop/)
+MODELS: Coupon(code,percent,expires_on) Event(title,description,starts_at,status) OnlyAudited(label) OnlySoftDelete(label) OnlyTimestamped(label) OnlyUuid(label) Product(name,sku,kind,price) Tag(name) Venue(name,city,capacity)
+VIEWSETS: EventViewSet VenueViewSet
+ROLES: staff![*=all] user[*=own] customer[*=own]
+COMPONENTS: AuthGuard AuthProvider Button Checkbox DataChart DropdownMenu DropdownMenuCheckboxItem DropdownMenuContent DropdownMenuGroup DropdownMenuItem DropdownMenuLabel DropdownMenuPortal DropdownMenuSeparator DropdownMenuTrigger EmptyState FileUpload Input KarniMark KarniProvider Label Layout LoginForm Modal ModalClose Page ResourceDetail ResourceForm ResourceSelect ResourceTable Select SelectContent SelectGroup SelectItem SelectLabel SelectRoot SelectSeparator SelectTrigger SelectValue Skeleton Stat Switch Tabs TabsContent TabsList TabsTrigger Textarea Toaster
+HOOKS: useAuth useKarniClient usePermission useResourceItem useResourceList useResourceMutations useSchema useToast
+PAGES: bad-page event-detail event-form events home
+BASES: BaseModel UUIDModel TimestampedModel SoftDeleteModel AuditedModel BaseViewSet KarniModelAdmin AbstractKarniUser
+exit=0
+
+### diff snapshot1 snapshot2
+2c2
+< MODELS: Event(title,description,starts_at,status) OnlyAudited(label) OnlySoftDelete(label) OnlyTimestamped(label) OnlyUuid(label) Product(name,sku,kind,price) Tag(name) Venue(name,city,capacity)
+---
+> MODELS: Coupon(code,percent,expires_on) Event(title,description,starts_at,status) OnlyAudited(label) OnlySoftDelete(label) OnlyTimestamped(label) OnlyUuid(label) Product(name,sku,kind,price) Tag(name) Venue(name,city,capacity)
+7c7
+< PAGES: event-detail event-form events home
+---
+> PAGES: bad-page event-detail event-form events home
+(diff exit=1)
+
+### size
+    1189 /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t2/e-context-2-after-coupon.txt
+e-context-1-with-manifest.txt | cl100k tokens: 244 | chars: 1148 | chars/4: 287
+e-context-2-after-coupon.txt | cl100k tokens: 254 | chars: 1189 | chars/4: 297
+
+### is it introspection? (karni_context command -> karni.introspect.build_context; models from the app registry)
+3:Everything printed is derived from the live Django app registry and router at
+93:    for cfg in apps.get_app_configs():
+129:    from karni.scopes import SOFT_DELETE, registry
+132:        active = registry.active()
+133:        registered = registry.names()
+144:        covered = [shown for shown, model in entries if scope in registry.for_model(model)]
+145:        skipped = [shown for shown, model in entries if scope not in registry.for_model(model)]
+160:    """Viewset class names from the configured router; omitted entirely on failure."""
+165:            getattr(settings, "KARNI_API_ROUTER", "karni.api.routers.get_default_router")
+167:        router = factory()
+168:        names = sorted({viewset.__name__ for _, viewset, _ in router.registry})
+179:        getattr(settings, "KARNI_API_ROUTER", "karni.api.routers.get_default_router")
+
+### documented budget
+/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:59:**~300 tokens**, measured as characters ÷ 4 (the same approximation the
+/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:60:`karni rules` 400-token budget test uses; about 1,200 characters). With the
+/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:61:inventory (under ~200 tokens for a typical project) the combined output stays
+/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:62:within a few hundred tokens. The cap is enforced by Karni, not by providers:
+/Users/chandrabhanshekhawat/Documents/www/Karni/docs/concepts/history-providers.md:67:… truncated at ~300 tokens; full brief: chronicle context apps/events/models.py
+def test_budget_for_ten_model_project() -> None:
+    models = " ".join(f"Model{i}(alpha,beta,gamma,delta)" for i in range(10))
+    output = assemble(
+        f"MODELS: {models}\nVIEWSETS: "
+        + " ".join(f"Model{i}ViewSet" for i in range(10))
+        + "\nBASES: BaseModel SoftDeleteModel BaseViewSet KarniModelAdmin AbstractKarniUser",
+        [],
+    )
+    assert len(output) < 800
+
+def test_token_budget(runner, tmp_path, monkeypatch) -> None:
+    out = _rules_output(runner, monkeypatch, tmp_path)
+    assert len(out) / 4 < TOKEN_BUDGET
+    tiktoken = pytest.importorskip("tiktoken")
+    for name in ("cl100k_base", "o200k_base"):
+        try:
+            encoding = tiktoken.get_encoding(name)
+        except Exception:  # noqa: BLE001 - encodings download on first use
+            pytest.skip("tiktoken encodings unavailable offline")
+        assert len(encoding.encode(out)) < TOKEN_BUDGET, name
+
+

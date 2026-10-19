@@ -1,0 +1,10 @@
+==> tsc (packages/karni-ui)
+
+> @karni/ui@0.1.0 typecheck
+> tsc --noEmit
+
+==> tsc (modules/karni-payments/ui)
+
+> @karni/payments-ui@0.1.0 typecheck
+> tsc --noEmit
+

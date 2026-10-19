@@ -1,0 +1,26 @@
+npm notice
+npm notice 📦  @karni/payments-ui@0.1.0
+npm notice Tarball Contents
+npm notice 11.4kB LICENSE
+npm notice 6.6kB README.md
+npm notice 3.8kB dist/index.cjs
+npm notice 17.0kB dist/index.cjs.map
+npm notice 4.7kB dist/index.js
+npm notice 17.5kB dist/index.js.map
+npm notice 1.0kB dist/src/CheckoutButton.d.ts
+npm notice 470B dist/src/index.d.ts
+npm notice 1.2kB dist/src/PaymentStatus.d.ts
+npm notice 447B dist/src/roles.d.ts
+npm notice 1.2kB dist/src/types.d.ts
+npm notice 2.5kB package.json
+npm notice Tarball Details
+npm notice name: @karni/payments-ui
+npm notice version: 0.1.0
+npm notice filename: karni-payments-ui-0.1.0.tgz
+npm notice package size: 17.0 kB
+npm notice unpacked size: 67.8 kB
+npm notice shasum: 4e29ecc80a5d7c1bc1f146dcf898fc0578bf347c
+npm notice integrity: sha512-IdxkcQpecYh2D[...]g8LMTWezga/eQ==
+npm notice total files: 12
+npm notice
+karni-payments-ui-0.1.0.tgz

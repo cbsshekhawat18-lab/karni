@@ -1,0 +1,6 @@
+# cmd: grep -c 'test(' frontend/e2e/*.spec.ts ; grep -n 'test(' frontend/e2e/*.spec.ts
+3
+29:test("anonymous visitors browse and search published events", async ({ page }) => {
+41:test("an attendee books, pays, and is confirmed by the provider webhook", async ({ page }) => {
+91:test("an organizer creates an event and reads the dashboard", async ({ page }) => {
+# NOT executed: e2e.sh binds 8431 (taken on this machine) and needs Playwright browsers

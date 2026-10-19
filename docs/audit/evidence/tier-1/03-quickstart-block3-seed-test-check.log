@@ -1,0 +1,61 @@
+## 2026-10-18 22:45:34
+$ karni seed
+Seeded 3 model(s) with seed 0 (count 10) in 0.2s:
+  karni_accounts.User     3
+  events.Venue           10
+  events.Event           10
+Log in as demo@example.com / karni-password (staff).
+exit=0
+
+## 2026-10-18 22:45:36
+$ karni test
+/private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t1/quickstart/.venv/bin/python: No module named pytest
+exit=1
+
+## 2026-10-18 22:45:36
+$ karni check --no-frontend
+System check identified no issues (0 silenced).
+karni check: ok
+
+tip: no prompt-history store found. `karni context --with-history` can brief
+     an agent with what was already asked about a file. Works with Gigai
+     Chronicle (MIT, local-only, by Karni's author).
+     Silence this: karni config set suggest_tools false
+exit=0
+
+## 2026-10-18 22:45:38 done block 3
+
+## 'Now serve it' section, line 2 verbatim: cd frontend && npm install && npm run dev  (npm run dev deferred: it binds 5173 which is reserved; see later log)
+## 2026-10-18 22:45:38
+$ cd frontend && npm install
+npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+added 327 packages, and audited 328 packages in 19s
+
+81 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (3 moderate, 6 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+exit=0
+## 2026-10-18 22:45:57
+LICENSE
+README.md
+dist
+eslint-plugin
+package.json
+@karni/ui resolved: real dir (packed copy)
+# A local @karni/ui ("file:<path>" in package.json, written by `karni new`
+# from a Karni checkout) installs as a packed COPY, exactly like the npm
+# release: its dependencies and peers land in this node_modules, so there is
+# one React and one QueryClient, never the checkout's own node_modules.
+# The copy is a snapshot: after rebuilding the checkout (npm run build there),
+# refresh it with `rm -rf node_modules/@karni/ui && npm install`.
+install-links=true

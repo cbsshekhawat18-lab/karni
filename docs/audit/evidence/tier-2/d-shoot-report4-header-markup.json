@@ -1,0 +1,43 @@
+[
+  {
+    "step": "events-list-sort",
+    "url": "http://127.0.0.1:8522/events",
+    "title": "auditapp",
+    "console": [],
+    "failed": [],
+    "api": [
+      "GET /src/api/health.ts",
+      "  -> 200 /src/api/health.ts",
+      "GET /api/schema/",
+      "GET /api/schema/",
+      "  -> 200 /api/schema/",
+      "  -> 200 /api/schema/",
+      "GET /api/events/?page=1&page_size=25&expand=venue",
+      "  -> 200 /api/events/?page=1&page_size=25&expand=venue"
+    ],
+    "extract": {
+      "headerHtml": [
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\"><button type=\"button\" class=\"inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:rin",
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\"><button type=\"button\" class=\"inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:rin",
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\"><button type=\"button\" class=\"inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:rin",
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\"><button type=\"button\" class=\"inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:rin",
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\">Venue</th>",
+        "<th scope=\"col\" class=\"h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground\"><button type=\"button\" class=\"inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:rin"
+      ]
+    },
+    "actions": [
+      {
+        "name": "click Title header text",
+        "error": "TimeoutError: page.click: Timeout 30000ms exceeded."
+      },
+      {
+        "name": "click Title header text again",
+        "error": "TimeoutError: page.click: Timeout 30000ms exceeded."
+      },
+      {
+        "name": "click Starts at header",
+        "error": "TimeoutError: page.click: Timeout 30000ms exceeded."
+      }
+    ]
+  }
+]

@@ -1,0 +1,39 @@
+== machine: Apple M4, RAM 25769803776 bytes, node v20.20.1, npm 10.8.2, python Python 3.12.12
+== which karni: /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t5/qsvenv/bin/karni
+NOTICE:  database "karni_audit_t5" does not exist, skipping
+Created /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t5/timing/timing_app (24 agent adapter files)
+@karni/ui: file:/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui (local checkout)
+Next steps:
+  cd timing_app
+  cp .env.example .env
+  docker compose up -d
+  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on the host
+  karni check
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+  staff                  84 grant(s)  new
+  user                   20 grant(s)  new
+  customer               20 grant(s)  new
+Seeded 1 model(s) with seed 0 (count 10) in 0.2s:
+  karni_accounts.User     3
+Log in as demo@example.com / karni-password (staff).
+== health body:
+{"status": "ok", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": true, "detail": "1 worker(s) replied"}}}
+== health last code: 200 ; vite last code: 200
+== steps:
+step	start_epoch	end_epoch	seconds	exit
+pre:createdb	1792343603.945277000	1792343604.215187000	.269910000	0
+1:karni_new	1792343604.232135000	1792343606.251036000	2.018901000	0
+2:env	1792343606.264375000	1792343606.272665000	.008290000	0
+3:npm_install	1792343606.280489000	1792343620.764010000	14.483521000	0
+4:karni_migrate	1792343620.783448000	1792343626.967636000	6.184188000	0
+5:karni_seed	1792343626.981643000	1792343628.666776000	1.685133000	0
+6b:vite_200	1792343628.680921000	1792343630.555485000	1.874564000	0
+6a:health_ready_200	1792343628.680921000	1792343633.241701000	4.560780000	0
+TOTAL(karni_new..health_ready_200)	1792343604.227719000	1792343633.241701000	29.013982000	0
+TOTAL(karni_new..both_200)	1792343604.227719000	1792343633.251999000	29.024280000	0
+
+[killed]

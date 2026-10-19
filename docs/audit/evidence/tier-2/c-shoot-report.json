@@ -1,0 +1,258 @@
+[
+  {
+    "step": "login",
+    "url": "http://127.0.0.1:8521/accounts/profile/",
+    "title": "Page not found at /accounts/profile/",
+    "console": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failed": [
+      "GET http://127.0.0.1:8521/accounts/profile/ -> HTTP 404"
+    ]
+  },
+  {
+    "step": "product-changelist",
+    "url": "http://127.0.0.1:8521/admin/shop/product/",
+    "title": "Select product to change | auditapp admin",
+    "console": [],
+    "failed": [],
+    "api": [],
+    "extract": {
+      "headers": [
+        "Name",
+        "Sku",
+        "Kind",
+        "Price",
+        "In stock",
+        "Released on"
+      ],
+      "rows": [
+        " | Venue cleaning | svc-clean | Service | 2500.00 | close_small | -",
+        " | Steel Kettle | kettle-01 | Physical | 1299.50 | check_small | March 1, 2026",
+        " | E-book: Django Patterns | ebook-dj | Digital | 499.00 | check_small | Nov. 20, 2025"
+      ],
+      "filters": [
+        "By deleted",
+        "By in stock",
+        "By kind",
+        "By venue",
+        "By released on"
+      ],
+      "filterLinks": [
+        "?deleted=deleted",
+        "?deleted=all",
+        "?in_stock__exact=1",
+        "?in_stock__exact=0",
+        "?kind__exact=physical",
+        "?kind__exact=digital",
+        "?kind__exact=service",
+        "?venue__id__exact=69cb50b1-c7b8-4021-8d80-9ba33f3b569c",
+        "?venue__isnull=True",
+        "?released_on__gte=2026-10-19&released_on__lt=2026-10-20",
+        "?released_on__gte=2026-10-12&released_on__lt=2026-10-20",
+        "?released_on__gte=2026-10-01&released_on__lt=2026-11-01",
+        "?released_on__gte=2026-01-01&released_on__lt=2027-01-01",
+        "?released_on__isnull=True",
+        "?released_on__isnull=False",
+        "?_facets=True"
+      ],
+      "searchBox": true,
+      "searchPlaceholder": "Type to search",
+      "dateHierarchy": [],
+      "actions": [
+        "",
+        "delete_selected",
+        "restore_selected",
+        "hard_delete_selected"
+      ]
+    }
+  },
+  {
+    "step": "product-changelist-filtered",
+    "url": "http://127.0.0.1:8521/admin/shop/product/?kind__exact=digital&in_stock__exact=1&q=book",
+    "title": "Select product to change | auditapp admin",
+    "console": [],
+    "failed": [],
+    "api": [],
+    "extract": {
+      "rows": [
+        " | E-book: Django Patterns | ebook-dj | Digital | 499.00 | check_small | Nov. 20, 2025"
+      ]
+    }
+  },
+  {
+    "step": "product-add",
+    "url": "http://127.0.0.1:8521/admin/shop/product/add/",
+    "title": "Add product | auditapp admin",
+    "console": [],
+    "failed": [],
+    "api": [],
+    "extract": {
+      "fields": [
+        "field-row",
+        "field-line,field-name",
+        "field-row",
+        "field-line,field-sku",
+        "field-row",
+        "field-line,field-kind",
+        "field-row",
+        "field-price,field-line",
+        "field-row",
+        "field-line,field-in_stock",
+        "field-row",
+        "field-released_on,field-line",
+        "field-row",
+        "field-attributes,field-line",
+        "field-row",
+        "field-line,field-venue",
+        "field-row",
+        "field-tags,field-line",
+        "field-row",
+        "field-line,field-manual",
+        "field-row",
+        "field-photo,field-line",
+        "field-row",
+        "field-line",
+        "field-row",
+        "field-line",
+        "field-row",
+        "field-line",
+        "field-row",
+        "field-line",
+        "field-row",
+        "field-line",
+        "field-row",
+        "field-line"
+      ],
+      "widgets": [
+        "name:input/text",
+        "sku:input/text",
+        "kind:select/select-one",
+        "price:input/number",
+        "in_stock:input/checkbox",
+        "released_on:input/text",
+        "attributes:textarea/textarea",
+        "venue:select/select-one/autocomplete",
+        "tags:select/select-multiple/autocomplete",
+        ":input/search",
+        ":input/text",
+        "manual:input/file",
+        ":input/text",
+        "photo:input/file"
+      ],
+      "kindOptions": [
+        "physical=Physical",
+        "digital=Digital",
+        "service=Service"
+      ],
+      "readonly": [
+        "field-line",
+        "field-line",
+        "field-line",
+        "field-line",
+        "field-line",
+        "field-line"
+      ]
+    }
+  },
+  {
+    "step": "product-change",
+    "url": "http://127.0.0.1:8521/admin/shop/product/81c82269-07c2-44b9-af76-b7681ef75765/change/",
+    "title": "Steel Kettle | Change product | auditapp admin",
+    "console": [
+      "[error] Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failed": [
+      "GET http://127.0.0.1:8521/media/shop/product/photos/kettle.png -> HTTP 404"
+    ],
+    "api": [],
+    "extract": {
+      "values": {
+        "name": "Steel Kettle",
+        "sku": "kettle-01",
+        "kind": "Physical",
+        "price": "1299.50",
+        "in_stock": true,
+        "released_on": "2026-03-01",
+        "attributes": "{\"color\": \"silver\", \"litres\": 1.7}",
+        "venue": "Hall B",
+        "tags": "sale,bulky",
+        "": "/media/shop/product/photos/kettle.png",
+        "manual-clear": false,
+        "photo-clear": false
+      },
+      "fileLinks": [
+        "/media/shop/product/manuals/kettle-manual.txt",
+        "/media/shop/product/photos/kettle.png",
+        "/media/shop/product/photos/kettle.png"
+      ],
+      "readonlyValues": [
+        "81c82269-07c2-44b9-af76-b7681ef75765",
+        "Oct. 19, 2026, 3:15 a.m.",
+        "Oct. 19, 2026, 3:15 a.m.",
+        "-",
+        "alice@example.com",
+        "alice@example.com"
+      ],
+      "imgPreview": true
+    }
+  },
+  {
+    "step": "venue-changelist",
+    "url": "http://127.0.0.1:8521/admin/shop/venue/",
+    "title": "Select venue to change | auditapp admin",
+    "console": [],
+    "failed": [],
+    "api": [],
+    "extract": {
+      "headers": [
+        "Name",
+        "City",
+        "Capacity"
+      ],
+      "rows": 3,
+      "filterLinks": [
+        "?deleted=deleted",
+        "?deleted=all",
+        "?_facets=True"
+      ]
+    }
+  },
+  {
+    "step": "admin-index",
+    "url": "http://127.0.0.1:8521/admin/",
+    "title": "Site administration | auditapp admin",
+    "console": [],
+    "failed": [],
+    "api": [],
+    "extract": {
+      "models": [
+        "/admin/auth/group/",
+        "/admin/django_celery_results/groupresult/",
+        "/admin/django_celery_results/taskresult/",
+        "/admin/karni_accounts/onetimetoken/",
+        "/admin/karni_accounts/permission/",
+        "/admin/karni_accounts/rolepermission/",
+        "/admin/karni_accounts/role/",
+        "/admin/karni_accounts/user/",
+        "/admin/django_celery_beat/clockedschedule/",
+        "/admin/django_celery_beat/crontabschedule/",
+        "/admin/django_celery_beat/intervalschedule/",
+        "/admin/django_celery_beat/periodictasks/",
+        "/admin/django_celery_beat/periodictask/",
+        "/admin/django_celery_beat/solarschedule/",
+        "/admin/shop/coupon/",
+        "/admin/shop/event/",
+        "/admin/shop/onlyaudited/",
+        "/admin/shop/onlysoftdelete/",
+        "/admin/shop/onlytimestamped/",
+        "/admin/shop/onlyuuid/",
+        "/admin/shop/product/",
+        "/admin/shop/tag/",
+        "/admin/shop/venue/",
+        "/admin/token_blacklist/blacklistedtoken/",
+        "/admin/token_blacklist/outstandingtoken/"
+      ]
+    }
+  }
+]

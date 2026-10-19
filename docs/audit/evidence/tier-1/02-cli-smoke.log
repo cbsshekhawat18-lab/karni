@@ -1,0 +1,84 @@
+$ karni --version
+Usage: karni [OPTIONS] COMMAND [ARGS]...
+Try 'karni --help' for help.
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ No such option: --version                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+exit=2
+
+$ karni --help
+                                                                                
+ Usage: karni [OPTIONS] COMMAND [ARGS]...                                       
+                                                                                
+ The Karni framework CLI.                                                       
+                                                                                
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --help          Show this message and exit.                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ───────────────────────────────────────────────────────────────────╮
+│ new              Scaffold a project from templates/project                   │
+│ add              Install an optional module and wire it into settings        │
+│ types            Generate TS types and typed hooks from the backend OpenAPI  │
+│ context          Print a compact machine-readable project inventory          │
+│ check            Run architecture and system checks                          │
+│ upgrade          Upgrade across Karni versions: codemods, diff,              │
+│                  manual-change report                                        │
+│ mcp              Serve context, rules and check as MCP tools (needs          │
+│                  karni-cli)                                                  │
+│ doctor           Report the environment: project, interpreter, Node,         │
+│                  adapters, history                                           │
+│ explain          Explain an error code (E104, C101, PAY004, K106): why and   │
+│                  the fix                                                     │
+│ serve            Start the dev stack — wraps `docker compose up` (or         │
+│                  `manage.py runserver` with --local).                        │
+│ migrate          Apply migrations — wraps `manage.py migrate [ARGS]`.        │
+│ test             Run the test suite — wraps `python -m pytest [ARGS]`.       │
+│ shell            Open a Django shell — wraps `manage.py shell [ARGS]`.       │
+│ routes           List every URL: methods, name, view, model, access — wraps  │
+│                  `manage.py karni_routes`.                                   │
+│ worker           Run a Celery worker — wraps `python -m celery -A config     │
+│                  worker -l info [ARGS]`.                                     │
+│ beat             Run Celery beat — wraps `python -m celery -A config beat -l │
+│                  info [ARGS]`.                                               │
+│ seed             Fill every model with realistic demo data — wraps           │
+│                  `manage.py karni_seed [ARGS]`.                              │
+│ sync-roles       Create or update the roles KARNI_ROLES declares — wraps     │
+│                  `manage.py karni_sync_roles [ARGS]`.                        │
+│ createsuperuser  Create an admin user — wraps `manage.py createsuperuser     │
+│                  [ARGS]`.                                                    │
+│ manage           Run any management command — wraps `manage.py ARGS` (raw    │
+│                  passthrough).                                               │
+│ rules            Karni's conventions for humans and AI agents (no Django     │
+│                  needed).                                                    │
+│ config           Read and write Karni settings: project .karni/config.toml   │
+│                  (committed) or --global ~/.config/karni/config.toml; the    │
+│                  project wins.                                               │
+│ schedule         Celery beat schedules — wraps `manage.py karni_schedules`.  │
+│ make             Generate project code: apps, models, viewsets, tasks,       │
+│                  schedules, listeners, pages ... (`karni make --list`).      │
+│                  Never overwrites without --force; --dry-run previews.       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+exit=0
+
+$ karni explain E104
+E104  Owned() does not name a path to the user  (exception)
+
+Why:   Owned('path') filters rows to those whose path leads to request.user, and stamps the owner on create; a path that does not end at the user model would match nothing or the wrong rows.
+Fix:   Name the owner relation as a string, following relations with __ and ending at the user model: Owned('organizer') or Owned('event__organizer').
+From:  karni.api.access.Owned; karni.api.access.validate_access
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e104
+exit=0
+
+$ python -c "import karni, karni.links; print(karni.links.DOCS_BASE_URL)"
+https://cbsshekhawat18-lab.github.io/karni/
+exit=0
+
+$ karni explain PAY004
+PAY004  The payment provider's API credentials are not set  (exception)
+
+Why:   The provider cannot create checkouts or refunds without its API keys.
+Fix:   Set STRIPE_SECRET_KEY (Stripe) or RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET (Razorpay) in the environment (.env in development). Use the 'test' provider for local work without keys.
+From:  karni_payments.providers (stripe, razorpay)
+Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#pay004
+exit=0

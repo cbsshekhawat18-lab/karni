@@ -1,0 +1,28 @@
+--- config/settings.py: +3 / -0
+  +     "events",
+  +     "karni_payments",
+  + KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "events.payments.validate_checkout"
+--- config/urls.py: +2 / -2
+  +     path("admin/", admin.site.urls),
+  +     path("payments/", include("karni_payments.urls")),
+  - from django.conf import settings
+  -     path(settings.KARNI_ADMIN_PATH, admin.site.urls),
+--- frontend/src/routes.tsx: +18 / -0
+  + import EventFormPage from "./pages/event-form";
+  + import EventDetailPage from "./pages/event-detail";
+  + import EventsPage from "./pages/events";
+  + import BookingFormPage from "./pages/booking-form";
+  + import BookingDetailPage from "./pages/booking-detail";
+  + import BookingsPage from "./pages/bookings";
+  + import LoginPage from "./pages/login";
+  + import EventDashboardPage from "./pages/event-dashboard";
+  +     createRoute({ getParentRoute: () => root, path: "/events/new", component: EventFormPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/events/$id/edit", component: EventFormPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/events/$id", component: EventDetailPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/events", component: EventsPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/bookings/new", component: BookingFormPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/bookings/$id/edit", component: BookingFormPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/bookings/$id", component: BookingDetailPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/bookings", component: BookingsPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/login", component: LoginPage }),
+  +     createRoute({ getParentRoute: () => root, path: "/events/$id/dashboard", component: EventDashboardPage }),

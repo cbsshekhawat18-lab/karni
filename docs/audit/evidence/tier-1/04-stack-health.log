@@ -1,0 +1,102 @@
+## 2026-10-19 08:47:54.173662000 django /health/ answered (poll 3s)
+$ curl -si http://127.0.0.1:8511/health/
+HTTP/1.1 200 OK
+Date: Mon, 19 Oct 2026 03:17:54 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: application/json
+X-Frame-Options: DENY
+Content-Length: 16
+Vary: origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+{"status": "ok"}
+
+$ curl -si http://127.0.0.1:8511/health/ready/   (first look, worker may still be starting)
+HTTP/1.1 503 Service Unavailable
+Date: Mon, 19 Oct 2026 03:17:55 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: application/json
+X-Frame-Options: DENY
+Content-Length: 215
+Vary: origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+{"status": "fail", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": false, "detail": "no Celery worker replied within 1s"}}}
+
+## 2026-10-19 08:47:56.273098000 readiness poll for celery ok: 1 attempts
+$ curl -si http://127.0.0.1:8511/health/ready/
+HTTP/1.1 200 OK
+Date: Mon, 19 Oct 2026 03:17:57 GMT
+Server: WSGIServer/0.2 CPython/3.12.12
+Content-Type: application/json
+X-Frame-Options: DENY
+Content-Length: 197
+Vary: origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
+{"status": "ok", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": true, "detail": "1 worker(s) replied"}}}
+
+## 2026-10-19 08:47:57.335588000 vite answered (poll 1s)
+$ curl -si http://127.0.0.1:8512/ | head -8
+HTTP/1.1 200 OK
+Vary: Origin
+Content-Type: text/html
+Cache-Control: no-cache
+Etag: W/"2df-JFesPTmcTj5ziYODgeWs06M5O9U"
+Date: Mon, 19 Oct 2026 03:17:57 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+$ curl -s http://127.0.0.1:8512/health/ready/   (via vite proxy)
+{"status": "ok", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": true, "detail": "1 worker(s) replied"}}}
+
+--- listeners ---
+COMMAND   PID                 USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+node    95218 chandrabhanshekhawat   23u  IPv6 0x2619208a0307d12d      0t0  TCP *:8512 (LISTEN)
+Python  95228 chandrabhanshekhawat    5u  IPv4 0x93cde414b5cff2de      0t0  TCP 127.0.0.1:8511 (LISTEN)
+--- timeline so far ---
+## 2026-10-19 08:47:51.387468000 $ karni serve --local --port 8511
+## 2026-10-19 08:47:51.548608000 $ karni worker --pool=solo
+## 2026-10-19 08:47:51.715601000 $ npm run dev -- --port 8512 --strictPort   (KARNI_API_PROXY=http://127.0.0.1:8511)
+--- django log head ---
+2026-10-19T03:17:53.633667Z [info     ] Watching for file changes with StatReloader [django.utils.autoreload]
+2026-10-19T03:17:54.169054Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/' request_id=231952d8-f826-4688-9e5f-976920b7ba31 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:54.169623Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/' request_id=231952d8-f826-4688-9e5f-976920b7ba31 user_id=None
+2026-10-19T03:17:54.183984Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/' request_id=c544e593-1f36-4bc0-8a8c-a5b1c8d2d691 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:54.184262Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/' request_id=c544e593-1f36-4bc0-8a8c-a5b1c8d2d691 user_id=None
+2026-10-19T03:17:54.194638Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=7f85a3b9-6ba6-4e61-8d6d-8bc71b9e473b user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:55.243237Z [error    ] request_finished               [django_structlog.middlewares.request] code=503 ip=127.0.0.1 request='GET /health/ready/' request_id=7f85a3b9-6ba6-4e61-8d6d-8bc71b9e473b user_id=None
+2026-10-19T03:17:55.243546Z [info     ] GET /health/ready/ 503 — 1 queries, 0 duplicated, 0.1 ms in SQL, 1049.2 ms total [karni.queries]
+2026-10-19T03:17:55.243984Z [error    ] Service Unavailable: /health/ready/ [django.request]
+"GET /health/ready/ HTTP/1.1" 503 215
+2026-10-19T03:17:55.258017Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=34b2e3a2-7896-4380-8131-333c7162da64 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:56.268357Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/ready/' request_id=34b2e3a2-7896-4380-8131-333c7162da64 user_id=None
+2026-10-19T03:17:56.268639Z [info     ] GET /health/ready/ 200 — 1 queries, 0 duplicated, 0.2 ms in SQL, 1011.0 ms total [karni.queries]
+2026-10-19T03:17:56.284225Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=b5640d7d-fce9-4f0f-9065-9540fc45d914 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:57.294937Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/ready/' request_id=b5640d7d-fce9-4f0f-9065-9540fc45d914 user_id=None
+2026-10-19T03:17:57.295282Z [info     ] GET /health/ready/ 200 — 1 queries, 0 duplicated, 0.2 ms in SQL, 1011.4 ms total [karni.queries]
+2026-10-19T03:17:57.530212Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /health/ready/' request_id=ef8ace05-9cfe-4635-b85b-4c5b68583318 user_agent=curl/8.7.1 user_id=None
+2026-10-19T03:17:58.538565Z [info     ] request_finished               [django_structlog.middlewares.request] code=200 ip=127.0.0.1 request='GET /health/ready/' request_id=ef8ace05-9cfe-4635-b85b-4c5b68583318 user_id=None
+2026-10-19T03:17:58.538827Z [info     ] GET /health/ready/ 200 — 1 queries, 0 duplicated, 0.1 ms in SQL, 1009.0 ms total [karni.queries]
+--- worker log (key lines) ---
+ -------------- celery@Chandrabhans-MacBook.local v5.6.3 (recovery)
+- ** ---------- .> transport:   redis://127.0.0.1:6379/5
+- *** --- * --- .> concurrency: 10 (solo)
+[2026-10-19 03:17:53,437: INFO/MainProcess] Connected to redis://127.0.0.1:6379/5
+[2026-10-19 03:17:54,452: INFO/MainProcess] celery@Chandrabhans-MacBook.local ready.
+--- vite log ---
+
+> testapp-frontend@0.1.0 dev
+> vite --port 8512 --strictPort
+
+
+  VITE v5.4.21  ready in 1081 ms
+
+  ➜  Local:   http://localhost:8512/
+  ➜  Network: http://192.168.29.208:8512/

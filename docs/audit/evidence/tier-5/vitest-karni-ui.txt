@@ -1,0 +1,86 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui && npx vitest run
+1792379773.781207000
+
+ RUN  v2.1.9 /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni-ui
+
+ ✓ src/schema/parse.test.ts (18 tests) 34ms
+ ✓ tests/msw/handlers.test.ts (19 tests) 332ms
+ ✓ src/schema/client.test.ts (16 tests) 256ms
+ ✓ src/auth/engine.test.ts (21 tests) 335ms
+ ✓ src/components/resource/detail/resource-detail.test.tsx (9 tests) 562ms
+ ✓ src/components/resource/select/resource-select.test.tsx (14 tests) 1347ms
+   ✓ ResourceSelect ARIA combobox pattern (D8) > wires combobox → listbox with activedescendant and keeps focus in the input 312ms
+ ✓ src/hooks/multipart.test.tsx (13 tests) 295ms
+ ✓ src/components/resource/form/prepare.test.ts (19 tests) 21ms
+ ✓ src/components/resource/audit-fields.test.tsx (9 tests) 2252ms
+   ✓ audit fields against the msw fixture (full stack) > ResourceTable hides Id/Created at/Updated at; rows still act by id 898ms
+   ✓ audit fields against the msw fixture (full stack) > ResourceTable showAuditFields appends them after the domain columns 306ms
+   ✓ audit fields against the msw fixture (full stack) > ResourceTable columns={[{ field: 'created_at' }]} shows just that one 335ms
+   ✓ audit fields against the generated testapp snapshot (D9; schema.testapp.json absent? see tests/fixtures/README.md) > ResourceTable leads with domain fields; no audit column or filter 370ms
+ ✓ src/components/chart/data-chart.test.tsx (15 tests) 864ms
+   ✓ DataChart accessibility (contract D10) > exposes the data through a visually-hidden table as the accessible surface 348ms
+ ✓ src/schema/zod.test.ts (19 tests) 34ms
+ ✓ src/hooks/useResource.test.tsx (9 tests) 509ms
+ ✓ src/components/resource/form/resource-form.test.tsx (12 tests) 3806ms
+   ✓ ResourceForm rendering > renders the contract's input per field kind and skips readOnly/unknown fields 617ms
+   ✓ ResourceForm create mode > submits coerced values per kind (D3 coercions) and reports success 978ms
+   ✓ ResourceForm create mode > maps DRF 400 field errors via setError and non_field_errors to the root alert 338ms
+   ✓ ResourceForm edit mode (D3/D10) > loads the unexpanded item and PATCHes only dirty fields 430ms
+   ✓ ResourceForm edit mode (D3/D10) > sends null for emptied nullable fields and [] for cleared many relations 332ms
+ ✓ src/schema/useSchema.test.tsx (7 tests) 669ms
+ ✓ src/components/file-upload/file-upload.test.tsx (12 tests) 793ms
+ ✓ src/auth/provider.test.tsx (5 tests) 492ms
+generate-manifest: duplicate component role "widget" registered at src/bar.ts:1 ("Bar"), src/foo.ts:1 ("Foo") — compose the existing component, or pass { replace: true, reason: "<why>" }.
+generate-manifest: src/foo.ts:2 registerComponentRole's first argument must be a string literal (F11) — the role registry is statically scanned.
+ ✓ tests/manifest-roles.test.ts (5 tests) 724ms
+ ✓ src/lib/roles.test.ts (10 tests) 1285ms
+   ✓ package self-registrations > registers every top-level component role on import of the barrel 1216ms
+ ✓ src/components/primitives/primitives.test.tsx (8 tests) 863ms
+ ✓ eslint-plugin/recommended-config.test.mjs (6 tests) 157ms
+ ✓ src/components/toast/toast.test.tsx (9 tests) 926ms
+   ✓ Toaster + useToast > success() renders a success-variant toast with title and description 305ms
+ ✓ src/components/resource/table/resource-table.test.tsx (48 tests) 7918ms
+   ✓ derived columns > renders domain fields in declaration order, skipping writeOnly/json/unknown/audit 398ms
+   ✓ audit fields (BaseModel) > rows stay keyed by id while the Id column is hidden 773ms
+   ✓ sorting (server mode) > maps header clicks to the DRF ordering param with aria-sort feedback 310ms
+   ✓ search box and filter bar (D5) > enum filter sends the raw member value and clears to no filter 625ms
+   ✓ search box and filter bar (D5) > boolean filter sends a real boolean 434ms
+ ✓ src/auth/AuthGuard.test.tsx (5 tests) 210ms
+ ✓ src/components/resource/table/resource-table.integration.test.tsx (3 tests) 4471ms
+   ✓ ResourceTable target usage (full stack) > renders a populated sortable paginated table from <Page><ResourceTable/></Page> 2297ms
+   ✓ ResourceTable target usage (full stack) > narrows through the declared search param end to end 1129ms
+   ✓ ResourceTable target usage (full stack) > recovers from an out-of-range page via the D5 404 clamp 1040ms
+ ✓ src/components/layout/layout.test.tsx (8 tests) 784ms
+ ✓ src/hooks/keys.test.ts (11 tests) 16ms
+ ✓ src/components/primitives/no-color-literals.test.ts (2 tests) 27ms
+ ✓ src/auth/LoginForm.test.tsx (3 tests) 1030ms
+   ✓ LoginForm > signs in with the typed credentials and reports the user 455ms
+   ✓ LoginForm > hands the 2FA gate to on2FA, or explains it when there is no handler 337ms
+ ✓ src/auth/storage.test.ts (4 tests) 18ms
+ ✓ src/components/primitives/button.test.tsx (7 tests) 403ms
+ ✓ src/components/stat/stat.test.tsx (7 tests) 295ms
+ ✓ src/components/resource/table/table-utils.test.ts (5 tests) 9ms
+ ✓ eslint-plugin/no-direct-http.test.mjs (18 tests) 399ms
+ ✓ src/components/modal/modal.test.tsx (7 tests) 857ms
+   ✓ Modal > opens from the trigger slot and labels the dialog with the title 488ms
+ ✓ src/components/primitives/select.test.tsx (6 tests) 1278ms
+   ✓ Select (contract D8) > shows the placeholder when empty and not clearable 321ms
+   ✓ Select (contract D8) > emits the option value through onValueChange 388ms
+   ✓ Select (contract D8) > renders a clear item when clearable, and choosing it emits null 331ms
+ ✓ eslint-plugin/no-raw-elements.test.mjs (11 tests) 184ms
+ ✓ src/components/brand/karni-mark.test.tsx (4 tests) 291ms
+ ✓ src/components/page/page.test.tsx (5 tests) 229ms
+ ✓ eslint-plugin/max-page-lines.test.mjs (7 tests) 183ms
+ ✓ tests/ui-doc.test.ts (2 tests) 142ms
+ ✓ eslint-plugin/no-deep-imports.test.mjs (14 tests) 120ms
+ ✓ eslint-plugin/docs-manifest.test.mjs (3 tests) 14ms
+ ✓ src/components/empty-state/empty-state.test.tsx (4 tests) 224ms
+ ✓ src/components/resource/table/display-label.test.ts (3 tests) 15ms
+
+ Test Files  44 passed (44)
+      Tests  442 passed (442)
+   Start at  08:46:14
+   Duration  16.33s (transform 2.75s, setup 30.39s, collect 11.34s, tests 35.67s, environment 44.93s, prepare 8.79s)
+
+exit=0
+1792379790.811876000

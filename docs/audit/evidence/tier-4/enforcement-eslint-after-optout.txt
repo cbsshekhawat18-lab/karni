@@ -1,0 +1,5 @@
+$ npx eslint src/components/EventTable.tsx   # after the documented opt-out comment
+exit=0
+
+$ npx eslint .   # whole frontend
+exit=0

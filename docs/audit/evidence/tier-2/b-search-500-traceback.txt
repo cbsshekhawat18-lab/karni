@@ -1,0 +1,22 @@
+GET /api/venues/?search=Grand (VenueViewSet.search_fields = ['name','city'], PostgreSQL 17, default KARNI_SEARCH_PROVIDER)
+
+2026-10-18T17:16:17.815576Z [error    ] request_failed                 [django_structlog.middlewares.request] code=500 ip=127.0.0.1 request='GET /api/venues/?search=Grand' request_id=3a01a1ca-c783-4c9d-99dc-86a24637bd64 user_id=None
+UndefinedFunction: function similarity(character varying, unknown) does not 
+│ │          exc = ProgrammingError('function similarity(character varying,  │ │
+│ │      exc = ProgrammingError('function similarity(character varying,      │ │
+│ │                           similarity(character varying, unknown) does    │ │
+│   38 │   │   queryset = self.filter_queryset(self.get_queryset())            │
+│ │ queryset = <repr-error 'function similarity(character varying, unknown)  │ │
+│ │ queryset = <repr-error 'function similarity(character varying, unknown)  │ │
+│ │    queryset = <repr-error 'function similarity(character varying,        │ │
+│ │    c = <repr-error 'function similarity(character varying, unknown) does │ │
+│ │ self = <repr-error 'function similarity(character varying, unknown) does │ │
+│ │                            GreaterThan(Greatest(TrigramSimilarity(Col(s… │ │
+│ │                            TrigramSimilarity(Col(shop_venue,             │ │
+│ │                            Greatest(TrigramSimilarity(Col(shop_venue,    │ │
+│ │                            TrigramSimilarity(Col(shop_venue,             │ │
+│ │                            Greatest(TrigramSimilarity(Col(shop_venue,    │ │
+│ │                            TrigramSimilarity(Col(shop_venue,             │ │
+│ │ dj_exc_value = ProgrammingError('function similarity(character varying,  │ │
+│ │    exc_value = UndefinedFunction('function similarity(character varying, │ │
+ProgrammingError: function similarity(character varying, unknown) does not exist

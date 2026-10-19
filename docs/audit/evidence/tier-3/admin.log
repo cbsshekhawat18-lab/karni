@@ -1,0 +1,189 @@
+
+#1 [admin login manager_a@example.com]
+  POST http://127.0.0.1:8531/admin/login/?next=/admin/
+  -> 302 text/html Location=/admin/
+  <html 0 bytes; title=?>
+
+#2 [manager_a admin index]
+  GET http://127.0.0.1:8531/admin/
+  -> 200 text/html
+  <html 20953 bytes; title=Site administration | audit3 admin>
+
+#3 [manager_a admin employee changelist]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#4 [manager_a admin change page B row]
+  GET http://127.0.0.1:8531/admin/hr/employee/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/change/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#5 [manager_a admin review changelist]
+  GET http://127.0.0.1:8531/admin/hr/review/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#6 [manager_a admin role changelist]
+  GET http://127.0.0.1:8531/admin/karni_accounts/role/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#7 [manager_a admin rolepermission add]
+  GET http://127.0.0.1:8531/admin/karni_accounts/rolepermission/add/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#8 [manager_a admin user changelist]
+  GET http://127.0.0.1:8531/admin/hr/user/
+  -> 404 text/html
+  <html 10039 bytes; title=Page not found at /admin/hr/user/>
+
+#9 [manager_a admin group changelist]
+  GET http://127.0.0.1:8531/admin/auth/group/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#10 [manager_a admin employee search 'needle']
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'q': 'needle'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#11 [manager_a admin employee ordering by salary]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'o': '3'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#12 [manager_a admin autocomplete employees]
+  GET http://127.0.0.1:8531/admin/autocomplete/
+  params={'app_label': 'hr', 'model_name': 'review', 'field_name': 'employee', 'term': 'Beta'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#13 [admin login staff@example.com]
+  POST http://127.0.0.1:8531/admin/login/?next=/admin/
+  -> 302 text/html Location=/admin/
+  <html 0 bytes; title=?>
+
+#14 [staff admin index]
+  GET http://127.0.0.1:8531/admin/
+  -> 200 text/html
+  <html 20945 bytes; title=Site administration | audit3 admin>
+
+#15 [staff admin employee changelist]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#16 [staff admin change page B row]
+  GET http://127.0.0.1:8531/admin/hr/employee/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/change/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#17 [staff admin review changelist]
+  GET http://127.0.0.1:8531/admin/hr/review/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#18 [staff admin role changelist]
+  GET http://127.0.0.1:8531/admin/karni_accounts/role/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#19 [staff admin rolepermission add]
+  GET http://127.0.0.1:8531/admin/karni_accounts/rolepermission/add/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#20 [staff admin user changelist]
+  GET http://127.0.0.1:8531/admin/hr/user/
+  -> 404 text/html
+  <html 10039 bytes; title=Page not found at /admin/hr/user/>
+
+#21 [staff admin group changelist]
+  GET http://127.0.0.1:8531/admin/auth/group/
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#22 [staff admin employee search 'needle']
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'q': 'needle'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#23 [staff admin employee ordering by salary]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'o': '3'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#24 [staff admin autocomplete employees]
+  GET http://127.0.0.1:8531/admin/autocomplete/
+  params={'app_label': 'hr', 'model_name': 'review', 'field_name': 'employee', 'term': 'Beta'}
+  -> 403 text/html
+  <html 135 bytes; title=403 Forbidden>
+
+#25 [admin login root@example.com]
+  POST http://127.0.0.1:8531/admin/login/?next=/admin/
+  -> 302 text/html Location=/admin/
+  <html 0 bytes; title=?>
+
+#26 [root admin index]
+  GET http://127.0.0.1:8531/admin/
+  -> 200 text/html
+  <html 64990 bytes; title=Site administration | audit3 admin>
+
+#27 [root admin employee changelist]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  -> 200 text/html
+  <html 92838 bytes; title=Select employee to change | audit3 admin>
+
+#28 [root admin change page B row]
+  GET http://127.0.0.1:8531/admin/hr/employee/b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae/change/
+  -> 200 text/html
+  <html 61209 bytes; title=Bob Beta | Change employee | audit3 admin>
+
+#29 [root admin review changelist]
+  GET http://127.0.0.1:8531/admin/hr/review/
+  -> 200 text/html
+  <html 71220 bytes; title=Select review to change | audit3 admin>
+
+#30 [root admin role changelist]
+  GET http://127.0.0.1:8531/admin/karni_accounts/role/
+  -> 200 text/html
+  <html 78249 bytes; title=Select role to change | audit3 admin>
+
+#31 [root admin rolepermission add]
+  GET http://127.0.0.1:8531/admin/karni_accounts/rolepermission/add/
+  -> 200 text/html
+  <html 61856 bytes; title=Add role permission | audit3 admin>
+
+#32 [root admin user changelist]
+  GET http://127.0.0.1:8531/admin/hr/user/
+  -> 404 text/html
+  <html 10039 bytes; title=Page not found at /admin/hr/user/>
+
+#33 [root admin group changelist]
+  GET http://127.0.0.1:8531/admin/auth/group/
+  -> 200 text/html
+  <html 54481 bytes; title=Select group to change | audit3 admin>
+
+#34 [root admin employee search 'needle']
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'q': 'needle'}
+  -> 200 text/html
+  <html 62494 bytes; title=Select employee to change | audit3 admin>
+
+#35 [root admin employee ordering by salary]
+  GET http://127.0.0.1:8531/admin/hr/employee/
+  params={'o': '3'}
+  -> 200 text/html
+  <html 94182 bytes; title=Select employee to change | audit3 admin>
+
+#36 [root admin autocomplete employees]
+  GET http://127.0.0.1:8531/admin/autocomplete/
+  params={'app_label': 'hr', 'model_name': 'review', 'field_name': 'employee', 'term': 'Beta'}
+  -> 200 application/json
+  {"results": [{"id": "b8ffeb64-3001-40e2-9cae-aa81b3cdc3ae", "text": "Bob Beta"}, {"id": "bfdbbe3c-fad3-48c2-9fc8-6909b436c1b3", "text": "Bianca Beta"}], "pagination": {"more": false}}

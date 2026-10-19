@@ -1,0 +1,32 @@
+$ python manage.py shell -c "exec(open(\"audit_trail.py\").read())"   # dev DB karni_audit_t4
+  2× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← manage.py:19 in main [karni.queries]
+POST /api/venues/ -> 201
+after API create (api-user)                      name='Audit Hall'           created_by=api-user@example.com   updated_by=api-user@example.com   updated_at=2026-10-19T03:18:34.207483+00:00
+PATCH /api/venues/<pk>/ -> 200 X-Karni-Queries= 2
+after API PATCH (api-user)                       name='Audit Hall v2'        created_by=api-user@example.com   updated_by=api-user@example.com   updated_at=2026-10-19T03:18:34.222941+00:00
+GET /admin/events/venue/<pk>/change/ -> 200
+POST /admin/events/venue/<pk>/change/ -> 302 /admin/events/venue/
+after admin change (admin@example.com)           name='Audit Hall v3 (admin)' created_by=api-user@example.com   updated_by=admin@example.com      updated_at=2026-10-19T03:18:34.343227+00:00
+
+$ manage.py audit_touch <pk> 'Audit Hall v4 (command)'
+command (without current_user): name='Audit Hall v4 (command)' created_by=api-user@example.com updated_by=admin@example.com updated_at=2026-10-19T03:18:34.354729+00:00
+after command, no current_user                   name='Audit Hall v4 (command)' created_by=api-user@example.com   updated_by=admin@example.com      updated_at=2026-10-19T03:18:34.354729+00:00
+
+$ manage.py audit_touch <pk> 'Audit Hall v5 (command as cmd-user)' --as-user cmd-user@example.com
+command (with current_user): name='Audit Hall v5 (command as cmd-user)' created_by=api-user@example.com updated_by=cmd-user@example.com updated_at=2026-10-19T03:18:34.362208+00:00
+after command with current_user(cmd-user)        name='Audit Hall v5 (command as cmd-user)' created_by=api-user@example.com   updated_by=cmd-user@example.com   updated_at=2026-10-19T03:18:34.362208+00:00
+after shell save(), no current_user              name='Audit Hall v6 (shell)' created_by=api-user@example.com   updated_by=cmd-user@example.com   updated_at=2026-10-19T03:18:34.367343+00:00
+after shell save() inside current_user(admin)    name='Audit Hall v7 (shell as admin)' created_by=api-user@example.com   updated_by=admin@example.com      updated_at=2026-10-19T03:18:34.372745+00:00
+
+Venue.objects.filter(pk=pk).update(name=...) inside current_user(cmd-user): 1 row(s)
+after queryset.update()                          name='Audit Hall v8 (queryset.update)' created_by=api-user@example.com   updated_by=admin@example.com      updated_at=2026-10-19T03:18:34.372745+00:00
+updated_at moved: False | updated_by changed: False
+
+GET /api/venues/<pk>/history/ -> 404 b'<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta http-equiv="content-type" content="text/html; charset=utf-8">\n  <title>Page not found at /api/venues/d1893b32-14'
+GET /admin/events/venue/<pk>/history/ -> 200
+admin history table cells: ['admin@example.com (Admin)', 'Changed Name.']
+mentions old value 'Audit Hall v2'? False | mentions 'v3 (admin)'? True
+LogEntry: 2026-10-19T03:18:34.344017+00:00 admin@example.com flag= 2 change_message= [{"changed": {"fields": ["Name"]}}]
+
+VENUE_PK= d1893b32-1414-484c-8c87-52e81db849b9

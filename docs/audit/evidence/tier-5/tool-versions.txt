@@ -1,0 +1,9 @@
+# tool versions (repo .venv unless noted)
+ruff 0.17.0
+mypy 2.4.0 (compiled: yes)
+pytest 9.1.1
+vitest (packages/karni-ui): vitest/2.1.9 darwin-arm64 node-v20.20.1
+vitest (modules/karni-payments/ui): vitest/2.1.9 darwin-arm64 node-v20.20.1
+eslint (packages/karni-ui): v9.39.5
+tsc (packages/karni-ui): Version 5.9.3
+system python3 (Makefile default PYTHON=python3): Python 3.14.0 at /Library/Frameworks/Python.framework/Versions/3.14/bin/python3

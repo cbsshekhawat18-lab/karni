@@ -1,0 +1,1021 @@
+$ pytest events/tests/test_audit_nplus1.py events/tests/test_audit_oneliners.py -s -v -p no:cacheprovider --create-db
+============================= test session starts ==============================
+platform darwin -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0 -- /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/bin/python
+django: version: 5.1.15, settings: config.settings (from ini)
+rootdir: /private/tmp/claude-501/-Users-chandrabhanshekhawat-Documents-www-Karni/005402c9-153c-4894-bbf4-1ab94a7068d3/scratchpad/audit/t4/audit4
+configfile: pyproject.toml
+plugins: platformdirs-4.12.4, karni-0.1.0, Faker-40.43.0, django-4.14.0
+collecting ... collected 11 items
+
+events/tests/test_audit_nplus1.py::test_generated_bookings_list_three_levels_deep_is_flat Creating test database for alias 'default'...
+
+=== BookingViewSet.list, 2 rows, expand=event.venue,event.organizer: 3 queries, HTTP 200, X-Karni-Queries=3, X-Karni-Query-Budget=8
+   1. SELECT COUNT(*) AS "__count" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = '8c1766e0a4054d00b77c31781261bd88'::uuid)
+   2. SELECT "events_booking"."id", "events_booking"."created_at", "events_booking"."updated_at", "events_booking"."deleted_at", "events_booking"."created_by_id", "events_booking"."updated_by_id", "events_booking"."event_id", "events_booking"."attendee_id", "events_
+   3. SELECT "events_event"."id", "events_event"."created_at", "events_event"."updated_at", "events_event"."deleted_at", "events_event"."created_by_id", "events_event"."updated_by_id", "events_event"."title", "events_event"."organizer_id", "events_event"."venue_id",
+
+=== BookingViewSet.list, 12 rows, expand=event.venue,event.organizer: 3 queries, HTTP 200, X-Karni-Queries=3, X-Karni-Query-Budget=8
+   1. SELECT COUNT(*) AS "__count" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = '8c1766e0a4054d00b77c31781261bd88'::uuid)
+   2. SELECT "events_booking"."id", "events_booking"."created_at", "events_booking"."updated_at", "events_booking"."deleted_at", "events_booking"."created_by_id", "events_booking"."updated_by_id", "events_booking"."event_id", "events_booking"."attendee_id", "events_
+   3. SELECT "events_event"."id", "events_event"."created_at", "events_event"."updated_at", "events_event"."deleted_at", "events_event"."created_by_id", "events_event"."updated_by_id", "events_event"."title", "events_event"."organizer_id", "events_event"."venue_id",
+first row: {'id': '50e5f25c-bee9-4de2-9f38-d8f4f61dde1f', 'created_at': '2026-10-19T03:15:23.581734Z', 'updated_at': '2026-10-19T03:15:23.581738Z', 'created_by': None, 'updated_by': None, 'event': {'id': 'edc80c92-9637-4e67-8dc9-05403d94e2a0', 'created_at': '2026-10-19T03:15:23.581339Z', 'updated_at': '2026-10-19T03:15:23.581343Z', 'created_by': None, 'updated_by': None, 'title': 'event-9', 'organizer': {'id': '8c1766e0-a405-4d00-b77c-31781261bd88', 'email': 'brian.weaver0@example.net', 'first_name': 'Brian', 'last_name': 'Weaver', 'email_verified': False, 'date_joined': '2026-10-19T03:15:23.462600Z', 'created_at': '2026-10-19T03:15:23.462831Z', 'updated_at': '2026-10-19T03:15:23.462840Z'}, 'venue': {'id': 'e413dd28-318c-42bf-b539-530251930fbe', 'created_at': '2026-10-19T03:15:23.580959Z', 'updated_at': '2026-10-19T03:15:23.580964Z', 'created_by': None, 'updated_by': None, 'name': 'venue-9', 'city': 'city-9'}}, 'attendee': '8c1766e0-a405-4d00-b77c-31781261bd88', 'quantity': 10}
+FAILED
+events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_fails_the_budget 2026-10-19T03:15:23.702321Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/slow-bookings/?expand=event.venue,event.organizer' request_id=47859773-2207-474f-b91e-418d1e4a3051 user_agent=None user_id=None
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/exception.py:55 in inner                         │
+│                                                                              │
+│    52 │   │   @wraps(get_response)                                           │
+│    53 │   │   def inner(request):                                            │
+│    54 │   │   │   try:                                                       │
+│ ❱  55 │   │   │   │   response = get_response(request)                       │
+│    56 │   │   │   except Exception as exc:                                   │
+│    57 │   │   │   │   response = response_for_exception(request, exc)        │
+│    58 │   │   │   return response                                            │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │          exc = QueryBudgetExceeded('SlowBookingViewSet.list ran 38       │ │
+│ │                queries; budget is 8.\n38 queries, 36 duplicated, 8.2 ms  │ │
+│ │                in SQL\n  12× SELECT … FROM "events_event" WHERE          │ │
+│ │                "events_event"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsBooking_EventOrganizer_EventVenueExpandedSerialize… │ │
+│ │                12× SELECT … FROM "karni_accounts_user" WHERE             │ │
+│ │                "karni_accounts_user"."id" = %s LIMIT 21\n      ←         │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.organizer\n │ │
+│ │                12× SELECT … FROM "events_venue" WHERE                    │ │
+│ │                "events_venue"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.venue\nFix  │ │
+│ │                the repeated query (the optimiser derives                 │ │
+│ │                select_related/prefetch_related from the serializer; hint │ │
+│ │                opaque fields with select_related/prefetch_related on     │ │
+│ │                SlowBookingViewSet), or declare query_budget =            │ │
+│ │                Budget(list=N, reason=...).')                             │ │
+│ │ get_response = <bound method BaseHandler._get_response of                │ │
+│ │                <rest_framework.test.ForceAuthClientHandler object at     │ │
+│ │                0x10bc6af30>>                                             │ │
+│ │      request = <WSGIRequest: GET                                         │ │
+│ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/base.py:197 in _get_response                     │
+│                                                                              │
+│   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
+│   195 │   │   │   │   wrapped_callback = async_to_sync(wrapped_callback)     │
+│   196 │   │   │   try:                                                       │
+│ ❱ 197 │   │   │   │   response = wrapped_callback(request, *callback_args, * │
+│   198 │   │   │   except Exception as e:                                     │
+│   199 │   │   │   │   response = self.process_exception_by_middleware(e, req │
+│   200 │   │   │   │   if response is None:                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     callback_args = ()                                                   │ │
+│ │   callback_kwargs = {}                                                   │ │
+│ │ middleware_method = <bound method CsrfViewMiddleware.process_view of     │ │
+│ │                     <CsrfViewMiddleware                                  │ │
+│ │                     get_response=convert_exception_to_response.<locals>… │ │
+│ │           request = <WSGIRequest: GET                                    │ │
+│ │                     '/api/slow-bookings/?expand=event.venue,event.organ… │ │
+│ │          response = None                                                 │ │
+│ │              self = <rest_framework.test.ForceAuthClientHandler object   │ │
+│ │                     at 0x10bc6af30>                                      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
+│                                                                              │
+│   62 │   else:                                                               │
+│   63 │   │                                                                   │
+│   64 │   │   def _view_wrapper(request, *args, **kwargs):                    │
+│ ❱ 65 │   │   │   return view_func(request, *args, **kwargs)                  │
+│   66 │                                                                       │
+│   67 │   _view_wrapper.csrf_exempt = True                                    │
+│   68                                                                         │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │    args = ()                                                             │ │
+│ │  kwargs = {}                                                             │ │
+│ │ request = <WSGIRequest: GET                                              │ │
+│ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/rest_framework/viewsets.py:125 in view                                │
+│                                                                              │
+│   122 │   │   │   self.kwargs = kwargs                                       │
+│   123 │   │   │                                                              │
+│   124 │   │   │   # And continue as usual                                    │
+│ ❱ 125 │   │   │   return self.dispatch(request, *args, **kwargs)             │
+│   126 │   │                                                                  │
+│   127 │   │   # take name and docstring from class                           │
+│   128 │   │   update_wrapper(view, cls, updated=())                          │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     action = 'list'                                                      │ │
+│ │    actions = {'get': 'list', 'post': 'create', 'head': 'list'}           │ │
+│ │       args = ()                                                          │ │
+│ │    handler = <bound method BaseViewSet.list of                           │ │
+│ │              <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>> │ │
+│ │ initkwargs = {                                                           │ │
+│ │              │   'suffix': 'List',                                       │ │
+│ │              │   'basename': 'events-slow-booking',                      │ │
+│ │              │   'detail': False                                         │ │
+│ │              }                                                           │ │
+│ │     kwargs = {}                                                          │ │
+│ │     method = 'head'                                                      │ │
+│ │    request = <WSGIRequest: GET                                           │ │
+│ │              '/api/slow-bookings/?expand=event.venue,event.organizer'>   │ │
+│ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>  │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:560 in dispatch                                                     │
+│                                                                              │
+│   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
+│   558 │   │   with record_queries() as recorder:                             │
+│   559 │   │   │   response = super().dispatch(request, *args, **kwargs)      │
+│ ❱ 560 │   │   self.check_query_budget(recorder, response, mode)              │
+│   561 │   │   return response                                                │
+│   562 │                                                                      │
+│   563 │   def check_query_budget(self, recorder: QueryRecorder, response: An │
+│       None:                                                                  │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     args = ()                                                            │ │
+│ │   kwargs = {}                                                            │ │
+│ │     mode = 'raise'                                                       │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bc9c890>       │ │
+│ │  request = <WSGIRequest: GET                                             │ │
+│ │            '/api/slow-bookings/?expand=event.venue,event.organizer'>     │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:583 in check_query_budget                                           │
+│                                                                              │
+│   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
+│   581 │   │   )                                                              │
+│   582 │   │   if mode == "raise":                                            │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+│   584 │   │   logger.warning(message)                                        │
+│   585 │                                                                      │
+│   586 │   # response cache                                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │   action = 'list'                                                        │ │
+│ │    limit = 8                                                             │ │
+│ │  message = 'SlowBookingViewSet.list ran 38 queries; budget is 8.\n38     │ │
+│ │            queries, 36 duplicated, '+681                                 │ │
+│ │     mode = 'raise'                                                       │ │
+│ │     name = 'SlowBookingViewSet'                                          │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bc9c890>       │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────╯
+QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.2 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s 
+LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related 
+from the serializer; hint opaque fields with select_related/prefetch_related on 
+SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/exception.py:55 in inner                         │
+│                                                                              │
+│    52 │   │   @wraps(get_response)                                           │
+│    53 │   │   def inner(request):                                            │
+│    54 │   │   │   try:                                                       │
+│ ❱  55 │   │   │   │   response = get_response(request)                       │
+│    56 │   │   │   except Exception as exc:                                   │
+│    57 │   │   │   │   response = response_for_exception(request, exc)        │
+│    58 │   │   │   return response                                            │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │          exc = QueryBudgetExceeded('SlowBookingViewSet.list ran 38       │ │
+│ │                queries; budget is 8.\n38 queries, 36 duplicated, 8.2 ms  │ │
+│ │                in SQL\n  12× SELECT … FROM "events_event" WHERE          │ │
+│ │                "events_event"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsBooking_EventOrganizer_EventVenueExpandedSerialize… │ │
+│ │                12× SELECT … FROM "karni_accounts_user" WHERE             │ │
+│ │                "karni_accounts_user"."id" = %s LIMIT 21\n      ←         │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.organizer\n │ │
+│ │                12× SELECT … FROM "events_venue" WHERE                    │ │
+│ │                "events_venue"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.venue\nFix  │ │
+│ │                the repeated query (the optimiser derives                 │ │
+│ │                select_related/prefetch_related from the serializer; hint │ │
+│ │                opaque fields with select_related/prefetch_related on     │ │
+│ │                SlowBookingViewSet), or declare query_budget =            │ │
+│ │                Budget(list=N, reason=...).')                             │ │
+│ │ get_response = <bound method BaseHandler._get_response of                │ │
+│ │                <rest_framework.test.ForceAuthClientHandler object at     │ │
+│ │                0x10bc6af30>>                                             │ │
+│ │      request = <WSGIRequest: GET                                         │ │
+│ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/base.py:197 in _get_response                     │
+│                                                                              │
+│   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
+│   195 │   │   │   │   wrapped_callback = async_to_sync(wrapped_callback)     │
+│   196 │   │   │   try:                                                       │
+│ ❱ 197 │   │   │   │   response = wrapped_callback(request, *callback_args, * │
+│   198 │   │   │   except Exception as e:                                     │
+│   199 │   │   │   │   response = self.process_exception_by_middleware(e, req │
+│   200 │   │   │   │   if response is None:                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     callback_args = ()                                                   │ │
+│ │   callback_kwargs = {}                                                   │ │
+│ │ middleware_method = <bound method CsrfViewMiddleware.process_view of     │ │
+│ │                     <CsrfViewMiddleware                                  │ │
+│ │                     get_response=convert_exception_to_response.<locals>… │ │
+│ │           request = <WSGIRequest: GET                                    │ │
+│ │                     '/api/slow-bookings/?expand=event.venue,event.organ… │ │
+│ │          response = None                                                 │ │
+│ │              self = <rest_framework.test.ForceAuthClientHandler object   │ │
+│ │                     at 0x10bc6af30>                                      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
+│                                                                              │
+│   62 │   else:                                                               │
+│   63 │   │                                                                   │
+│   64 │   │   def _view_wrapper(request, *args, **kwargs):                    │
+│ ❱ 65 │   │   │   return view_func(request, *args, **kwargs)                  │
+│   66 │                                                                       │
+│   67 │   _view_wrapper.csrf_exempt = True                                    │
+│   68                                                                         │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │    args = ()                                                             │ │
+│ │  kwargs = {}                                                             │ │
+│ │ request = <WSGIRequest: GET                                              │ │
+│ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/rest_framework/viewsets.py:125 in view                                │
+│                                                                              │
+│   122 │   │   │   self.kwargs = kwargs                                       │
+│   123 │   │   │                                                              │
+│   124 │   │   │   # And continue as usual                                    │
+│ ❱ 125 │   │   │   return self.dispatch(request, *args, **kwargs)             │
+│   126 │   │                                                                  │
+│   127 │   │   # take name and docstring from class                           │
+│   128 │   │   update_wrapper(view, cls, updated=())                          │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     action = 'list'                                                      │ │
+│ │    actions = {'get': 'list', 'post': 'create', 'head': 'list'}           │ │
+│ │       args = ()                                                          │ │
+│ │    handler = <bound method BaseViewSet.list of                           │ │
+│ │              <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>> │ │
+│ │ initkwargs = {                                                           │ │
+│ │              │   'suffix': 'List',                                       │ │
+│ │              │   'basename': 'events-slow-booking',                      │ │
+│ │              │   'detail': False                                         │ │
+│ │              }                                                           │ │
+│ │     kwargs = {}                                                          │ │
+│ │     method = 'head'                                                      │ │
+│ │    request = <WSGIRequest: GET                                           │ │
+│ │              '/api/slow-bookings/?expand=event.venue,event.organizer'>   │ │
+│ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>  │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:560 in dispatch                                                     │
+│                                                                              │
+│   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
+│   558 │   │   with record_queries() as recorder:                             │
+│   559 │   │   │   response = super().dispatch(request, *args, **kwargs)      │
+│ ❱ 560 │   │   self.check_query_budget(recorder, response, mode)              │
+│   561 │   │   return response                                                │
+│   562 │                                                                      │
+│   563 │   def check_query_budget(self, recorder: QueryRecorder, response: An │
+│       None:                                                                  │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     args = ()                                                            │ │
+│ │   kwargs = {}                                                            │ │
+│ │     mode = 'raise'                                                       │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bc9c890>       │ │
+│ │  request = <WSGIRequest: GET                                             │ │
+│ │            '/api/slow-bookings/?expand=event.venue,event.organizer'>     │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:583 in check_query_budget                                           │
+│                                                                              │
+│   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
+│   581 │   │   )                                                              │
+│   582 │   │   if mode == "raise":                                            │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+│   584 │   │   logger.warning(message)                                        │
+│   585 │                                                                      │
+│   586 │   # response cache                                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │   action = 'list'                                                        │ │
+│ │    limit = 8                                                             │ │
+│ │  message = 'SlowBookingViewSet.list ran 38 queries; budget is 8.\n38     │ │
+│ │            queries, 36 duplicated, '+681                                 │ │
+│ │     mode = 'raise'                                                       │ │
+│ │     name = 'SlowBookingViewSet'                                          │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bc9c890>       │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bc9df40>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────╯
+QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.2 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s 
+LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related 
+from the serializer; hint opaque fields with select_related/prefetch_related on 
+SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue [karni.queries]
+
+=== SlowBookingViewSet.list, 12 rows: 38 queries; raised QueryBudgetExceeded code=E117
+--- failure text ---
+E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.2 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+--- end ---
+PASSED
+events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_one_unguarded 2026-10-19T03:15:24.065260Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/slow-bookings/?expand=event.venue,event.organizer' request_id=2a72ad9d-f9d6-40b2-a771-6133aa118764 user_agent=None user_id=None
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/exception.py:55 in inner                         │
+│                                                                              │
+│    52 │   │   @wraps(get_response)                                           │
+│    53 │   │   def inner(request):                                            │
+│    54 │   │   │   try:                                                       │
+│ ❱  55 │   │   │   │   response = get_response(request)                       │
+│    56 │   │   │   except Exception as exc:                                   │
+│    57 │   │   │   │   response = response_for_exception(request, exc)        │
+│    58 │   │   │   return response                                            │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │          exc = QueryBudgetExceeded('SlowBookingViewSet.list ran 38       │ │
+│ │                queries; budget is 8.\n38 queries, 36 duplicated, 8.8 ms  │ │
+│ │                in SQL\n  12× SELECT … FROM "events_event" WHERE          │ │
+│ │                "events_event"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsBooking_EventOrganizer_EventVenueExpandedSerialize… │ │
+│ │                12× SELECT … FROM "karni_accounts_user" WHERE             │ │
+│ │                "karni_accounts_user"."id" = %s LIMIT 21\n      ←         │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.organizer\n │ │
+│ │                12× SELECT … FROM "events_venue" WHERE                    │ │
+│ │                "events_venue"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.venue\nFix  │ │
+│ │                the repeated query (the optimiser derives                 │ │
+│ │                select_related/prefetch_related from the serializer; hint │ │
+│ │                opaque fields with select_related/prefetch_related on     │ │
+│ │                SlowBookingViewSet), or declare query_budget =            │ │
+│ │                Budget(list=N, reason=...).')                             │ │
+│ │ get_response = <bound method BaseHandler._get_response of                │ │
+│ │                <rest_framework.test.ForceAuthClientHandler object at     │ │
+│ │                0x10bd034a0>>                                             │ │
+│ │      request = <WSGIRequest: GET                                         │ │
+│ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/base.py:197 in _get_response                     │
+│                                                                              │
+│   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
+│   195 │   │   │   │   wrapped_callback = async_to_sync(wrapped_callback)     │
+│   196 │   │   │   try:                                                       │
+│ ❱ 197 │   │   │   │   response = wrapped_callback(request, *callback_args, * │
+│   198 │   │   │   except Exception as e:                                     │
+│   199 │   │   │   │   response = self.process_exception_by_middleware(e, req │
+│   200 │   │   │   │   if response is None:                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     callback_args = ()                                                   │ │
+│ │   callback_kwargs = {}                                                   │ │
+│ │ middleware_method = <bound method CsrfViewMiddleware.process_view of     │ │
+│ │                     <CsrfViewMiddleware                                  │ │
+│ │                     get_response=convert_exception_to_response.<locals>… │ │
+│ │           request = <WSGIRequest: GET                                    │ │
+│ │                     '/api/slow-bookings/?expand=event.venue,event.organ… │ │
+│ │          response = None                                                 │ │
+│ │              self = <rest_framework.test.ForceAuthClientHandler object   │ │
+│ │                     at 0x10bd034a0>                                      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
+│                                                                              │
+│   62 │   else:                                                               │
+│   63 │   │                                                                   │
+│   64 │   │   def _view_wrapper(request, *args, **kwargs):                    │
+│ ❱ 65 │   │   │   return view_func(request, *args, **kwargs)                  │
+│   66 │                                                                       │
+│   67 │   _view_wrapper.csrf_exempt = True                                    │
+│   68                                                                         │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │    args = ()                                                             │ │
+│ │  kwargs = {}                                                             │ │
+│ │ request = <WSGIRequest: GET                                              │ │
+│ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/rest_framework/viewsets.py:125 in view                                │
+│                                                                              │
+│   122 │   │   │   self.kwargs = kwargs                                       │
+│   123 │   │   │                                                              │
+│   124 │   │   │   # And continue as usual                                    │
+│ ❱ 125 │   │   │   return self.dispatch(request, *args, **kwargs)             │
+│   126 │   │                                                                  │
+│   127 │   │   # take name and docstring from class                           │
+│   128 │   │   update_wrapper(view, cls, updated=())                          │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     action = 'list'                                                      │ │
+│ │    actions = {'get': 'list', 'post': 'create', 'head': 'list'}           │ │
+│ │       args = ()                                                          │ │
+│ │    handler = <bound method BaseViewSet.list of                           │ │
+│ │              <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>> │ │
+│ │ initkwargs = {                                                           │ │
+│ │              │   'suffix': 'List',                                       │ │
+│ │              │   'basename': 'events-slow-booking',                      │ │
+│ │              │   'detail': False                                         │ │
+│ │              }                                                           │ │
+│ │     kwargs = {}                                                          │ │
+│ │     method = 'head'                                                      │ │
+│ │    request = <WSGIRequest: GET                                           │ │
+│ │              '/api/slow-bookings/?expand=event.venue,event.organizer'>   │ │
+│ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>  │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:560 in dispatch                                                     │
+│                                                                              │
+│   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
+│   558 │   │   with record_queries() as recorder:                             │
+│   559 │   │   │   response = super().dispatch(request, *args, **kwargs)      │
+│ ❱ 560 │   │   self.check_query_budget(recorder, response, mode)              │
+│   561 │   │   return response                                                │
+│   562 │                                                                      │
+│   563 │   def check_query_budget(self, recorder: QueryRecorder, response: An │
+│       None:                                                                  │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     args = ()                                                            │ │
+│ │   kwargs = {}                                                            │ │
+│ │     mode = 'raise'                                                       │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bd01df0>       │ │
+│ │  request = <WSGIRequest: GET                                             │ │
+│ │            '/api/slow-bookings/?expand=event.venue,event.organizer'>     │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:583 in check_query_budget                                           │
+│                                                                              │
+│   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
+│   581 │   │   )                                                              │
+│   582 │   │   if mode == "raise":                                            │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+│   584 │   │   logger.warning(message)                                        │
+│   585 │                                                                      │
+│   586 │   # response cache                                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │   action = 'list'                                                        │ │
+│ │    limit = 8                                                             │ │
+│ │  message = 'SlowBookingViewSet.list ran 38 queries; budget is 8.\n38     │ │
+│ │            queries, 36 duplicated, '+681                                 │ │
+│ │     mode = 'raise'                                                       │ │
+│ │     name = 'SlowBookingViewSet'                                          │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bd01df0>       │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────╯
+QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.8 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s 
+LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related 
+from the serializer; hint opaque fields with select_related/prefetch_related on 
+SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/exception.py:55 in inner                         │
+│                                                                              │
+│    52 │   │   @wraps(get_response)                                           │
+│    53 │   │   def inner(request):                                            │
+│    54 │   │   │   try:                                                       │
+│ ❱  55 │   │   │   │   response = get_response(request)                       │
+│    56 │   │   │   except Exception as exc:                                   │
+│    57 │   │   │   │   response = response_for_exception(request, exc)        │
+│    58 │   │   │   return response                                            │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │          exc = QueryBudgetExceeded('SlowBookingViewSet.list ran 38       │ │
+│ │                queries; budget is 8.\n38 queries, 36 duplicated, 8.8 ms  │ │
+│ │                in SQL\n  12× SELECT … FROM "events_event" WHERE          │ │
+│ │                "events_event"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsBooking_EventOrganizer_EventVenueExpandedSerialize… │ │
+│ │                12× SELECT … FROM "karni_accounts_user" WHERE             │ │
+│ │                "karni_accounts_user"."id" = %s LIMIT 21\n      ←         │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.organizer\n │ │
+│ │                12× SELECT … FROM "events_venue" WHERE                    │ │
+│ │                "events_venue"."id" = %s LIMIT 21\n      ←                │ │
+│ │                EventsEvent_Organizer_VenueExpandedSerializer.venue\nFix  │ │
+│ │                the repeated query (the optimiser derives                 │ │
+│ │                select_related/prefetch_related from the serializer; hint │ │
+│ │                opaque fields with select_related/prefetch_related on     │ │
+│ │                SlowBookingViewSet), or declare query_budget =            │ │
+│ │                Budget(list=N, reason=...).')                             │ │
+│ │ get_response = <bound method BaseHandler._get_response of                │ │
+│ │                <rest_framework.test.ForceAuthClientHandler object at     │ │
+│ │                0x10bd034a0>>                                             │ │
+│ │      request = <WSGIRequest: GET                                         │ │
+│ │                '/api/slow-bookings/?expand=event.venue,event.organizer'> │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/core/handlers/base.py:197 in _get_response                     │
+│                                                                              │
+│   194 │   │   │   if iscoroutinefunction(wrapped_callback):                  │
+│   195 │   │   │   │   wrapped_callback = async_to_sync(wrapped_callback)     │
+│   196 │   │   │   try:                                                       │
+│ ❱ 197 │   │   │   │   response = wrapped_callback(request, *callback_args, * │
+│   198 │   │   │   except Exception as e:                                     │
+│   199 │   │   │   │   response = self.process_exception_by_middleware(e, req │
+│   200 │   │   │   │   if response is None:                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     callback_args = ()                                                   │ │
+│ │   callback_kwargs = {}                                                   │ │
+│ │ middleware_method = <bound method CsrfViewMiddleware.process_view of     │ │
+│ │                     <CsrfViewMiddleware                                  │ │
+│ │                     get_response=convert_exception_to_response.<locals>… │ │
+│ │           request = <WSGIRequest: GET                                    │ │
+│ │                     '/api/slow-bookings/?expand=event.venue,event.organ… │ │
+│ │          response = None                                                 │ │
+│ │              self = <rest_framework.test.ForceAuthClientHandler object   │ │
+│ │                     at 0x10bd034a0>                                      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/django/views/decorators/csrf.py:65 in _view_wrapper                   │
+│                                                                              │
+│   62 │   else:                                                               │
+│   63 │   │                                                                   │
+│   64 │   │   def _view_wrapper(request, *args, **kwargs):                    │
+│ ❱ 65 │   │   │   return view_func(request, *args, **kwargs)                  │
+│   66 │                                                                       │
+│   67 │   _view_wrapper.csrf_exempt = True                                    │
+│   68                                                                         │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │    args = ()                                                             │ │
+│ │  kwargs = {}                                                             │ │
+│ │ request = <WSGIRequest: GET                                              │ │
+│ │           '/api/slow-bookings/?expand=event.venue,event.organizer'>      │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-pa │
+│ ckages/rest_framework/viewsets.py:125 in view                                │
+│                                                                              │
+│   122 │   │   │   self.kwargs = kwargs                                       │
+│   123 │   │   │                                                              │
+│   124 │   │   │   # And continue as usual                                    │
+│ ❱ 125 │   │   │   return self.dispatch(request, *args, **kwargs)             │
+│   126 │   │                                                                  │
+│   127 │   │   # take name and docstring from class                           │
+│   128 │   │   update_wrapper(view, cls, updated=())                          │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     action = 'list'                                                      │ │
+│ │    actions = {'get': 'list', 'post': 'create', 'head': 'list'}           │ │
+│ │       args = ()                                                          │ │
+│ │    handler = <bound method BaseViewSet.list of                           │ │
+│ │              <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>> │ │
+│ │ initkwargs = {                                                           │ │
+│ │              │   'suffix': 'List',                                       │ │
+│ │              │   'basename': 'events-slow-booking',                      │ │
+│ │              │   'detail': False                                         │ │
+│ │              }                                                           │ │
+│ │     kwargs = {}                                                          │ │
+│ │     method = 'head'                                                      │ │
+│ │    request = <WSGIRequest: GET                                           │ │
+│ │              '/api/slow-bookings/?expand=event.venue,event.organizer'>   │ │
+│ │       self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>  │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:560 in dispatch                                                     │
+│                                                                              │
+│   557 │   │   │   return super().dispatch(request, *args, **kwargs)          │
+│   558 │   │   with record_queries() as recorder:                             │
+│   559 │   │   │   response = super().dispatch(request, *args, **kwargs)      │
+│ ❱ 560 │   │   self.check_query_budget(recorder, response, mode)              │
+│   561 │   │   return response                                                │
+│   562 │                                                                      │
+│   563 │   def check_query_budget(self, recorder: QueryRecorder, response: An │
+│       None:                                                                  │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │     args = ()                                                            │ │
+│ │   kwargs = {}                                                            │ │
+│ │     mode = 'raise'                                                       │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bd01df0>       │ │
+│ │  request = <WSGIRequest: GET                                             │ │
+│ │            '/api/slow-bookings/?expand=event.venue,event.organizer'>     │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+│                                                                              │
+│ /Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/vie │
+│ wsets.py:583 in check_query_budget                                           │
+│                                                                              │
+│   580 │   │   │   f"on {name}), or declare query_budget = Budget({action}=N, │
+│   581 │   │   )                                                              │
+│   582 │   │   if mode == "raise":                                            │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+│   584 │   │   logger.warning(message)                                        │
+│   585 │                                                                      │
+│   586 │   # response cache                                                   │
+│                                                                              │
+│ ╭───────────────────────────────── locals ─────────────────────────────────╮ │
+│ │   action = 'list'                                                        │ │
+│ │    limit = 8                                                             │ │
+│ │  message = 'SlowBookingViewSet.list ran 38 queries; budget is 8.\n38     │ │
+│ │            queries, 36 duplicated, '+681                                 │ │
+│ │     mode = 'raise'                                                       │ │
+│ │     name = 'SlowBookingViewSet'                                          │ │
+│ │ recorder = <karni.performance.QueryRecorder object at 0x10bd01df0>       │ │
+│ │ response = <Response status_code=200, "text/html; charset=utf-8">        │ │
+│ │     self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>    │ │
+│ ╰──────────────────────────────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────────────────────╯
+QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.8 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s 
+LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related 
+from the serializer; hint opaque fields with select_related/prefetch_related on 
+SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue [karni.queries]
+FAILED
+events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_crud_one_line 2026-10-19T03:15:24.504928Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/' request_id=9086d24e-bc98-46ed-beb4-51bf31b01c32 user_agent=None user_id=None
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [CsrfView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/accounts/api/views.py: Error [EmailVerifyResendView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+Warning: enum naming encountered a non-optimally resolvable collision for fields named "status". The same name has been used for multiple choice sets in multiple components. The collision was resolved with "Status469Enum". add an entry to ENUM_NAME_OVERRIDES to fix the naming.
+PASSED
+events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_isolated_catches_the_leaky_viewset 2026-10-19T03:15:24.830340Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/leaky-events/' request_id=fab7df98-9142-4ae9-8fbd-f74b7c005ad0 user_agent=None user_id=None
+FAILED
+events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_isolated_one_line 2026-10-19T03:15:24.885312Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/' request_id=7fe9e675-d256-4701-832e-3fa300241a0c user_agent=None user_id=None
+PASSED
+events/tests/test_audit_oneliners.py::test_assert_crud_plain_pytest 2026-10-19T03:15:24.927864Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/' request_id=2b880ba2-25de-449b-b1f8-474338b56709 user_agent=None user_id=None
+PASSED
+events/tests/test_audit_oneliners.py::test_assert_isolated_plain_pytest 2026-10-19T03:15:25.014763Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/events/' request_id=497c1ae0-3761-4b52-aeea-100770720f75 user_agent=None user_id=None
+PASSED
+events/tests/test_audit_oneliners.py::test_user_can_one_liner PASSED
+events/tests/test_audit_oneliners.py::test_requires_one_liner 
+@requires denial: ErrorDetail(string="This action requires the permission 'events.venue:change'.", code='E208') code='E208'
+PASSED
+events/tests/test_audit_oneliners.py::test_can_predicate_one_liner 2026-10-19T03:15:25.078014Z [info     ] request_started                [django_structlog.middlewares.request] ip=127.0.0.1 request='GET /api/can-venues/' request_id=0598a3a7-a3c9-4feb-9da2-ac36b324616e user_agent=None user_id=None
+PASSEDDestroying test database for alias 'default'...
+
+
+=================================== FAILURES ===================================
+____________ test_generated_bookings_list_three_levels_deep_is_flat ____________
+
+    def test_generated_bookings_list_three_levels_deep_is_flat():
+        """BookingViewSet (optimiser on): the query count must not grow with rows."""
+        client = client_as("attendee")
+        user = client.user
+        _seed(user, 2)
+        ctx2, r2 = _list(client, "/api/bookings/" + EXPAND, "BookingViewSet.list, 2 rows, expand=event.venue,event.organizer")
+        assert r2.status_code == 200
+        _seed(user, 10)
+        ctx12, r12 = _list(client, "/api/bookings/" + EXPAND, "BookingViewSet.list, 12 rows, expand=event.venue,event.organizer")
+        assert r12.status_code == 200
+        rows = r12.json()["results"]
+        assert len(rows) == 12
+        print("first row:", rows[0])
+        assert rows[0]["event"]["venue"]["name"].startswith("venue-"), rows[0]
+        sql = " ".join(q["sql"] for q in ctx12.captured_queries)
+        # Event's read scope is Owned('organizer') -> a scoped Prefetch (ADR 0001 R3), and inside it
+        # venue (Public) is a JOIN; so: one booking SELECT + one event SELECT joining venue.
+>       assert re.search(r'FROM "events_event" INNER JOIN "events_venue"', sql), sql
+E       AssertionError: SELECT COUNT(*) AS "__count" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = '8c1766e0a4054d00b77c31781261bd88'::uuid) SELECT "events_booking"."id", "events_booking"."created_at", "events_booking"."updated_at", "events_booking"."deleted_at", "events_booking"."created_by_id", "events_booking"."updated_by_id", "events_booking"."event_id", "events_booking"."attendee_id", "events_booking"."quantity" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = '8c1766e0a4054d00b77c31781261bd88'::uuid) ORDER BY "events_booking"."created_at" DESC LIMIT 12 SELECT "events_event"."id", "events_event"."created_at", "events_event"."updated_at", "events_event"."deleted_at", "events_event"."created_by_id", "events_event"."updated_by_id", "events_event"."title", "events_event"."organizer_id", "events_event"."venue_id", "karni_accounts_user"."password", "karni_accounts_user"."last_login", "karni_accounts_user"."is_superuser", "karni_accounts_user"."id", "karni_accounts_user"."created_at", "karni_accounts_user"."updated_at", "karni_accounts_user"."deleted_at", "karni_accounts_user"."created_by_id", "karni_accounts_user"."updated_by_id", "karni_accounts_user"."email", "karni_accounts_user"."first_name", "karni_accounts_user"."last_name", "karni_accounts_user"."is_active", "karni_accounts_user"."is_staff", "karni_accounts_user"."date_joined", "karni_accounts_user"."email_verified", "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."city" FROM "events_event" INNER JOIN "karni_accounts_user" ON ("events_event"."organizer_id" = "karni_accounts_user"."id") INNER JOIN "events_venue" ON ("events_event"."venue_id" = "events_venue"."id") WHERE ("events_event"."deleted_at" IS NULL AND "events_event"."organizer_id" = '8c1766e0a4054d00b77c31781261bd88'::uuid AND "events_event"."id" IN ('c49bff8069b945498840ad6be78e8f05'::uuid, '7f445dd3c3954c2cbb80a8b56a37fd3e'::uuid, '701103625fbf40cb8c4eb6a0625b5acc'::uuid, '16799f91a05347b89491102e62a54ebc'::uuid, '92eb5db2bfaf4df5a68b905013fff69b'::uuid, 'f27e9fbee43f4d3f86919a704c8ae935'::uuid, '84439ec6e9944000a4e027387c72ab49'::uuid, 'be7bc12be11f46d7b7c2baa486d1e091'::uuid, '5dd89813d2214227856cf320faf1c742'::uuid, '0566a9b877f34dfd9f833ce17fa9a867'::uuid, 'edc80c9296374e678dc905403d94e2a0'::uuid, '84ce050b3660496384c24c51754df041'::uuid))
+E       assert None
+E        +  where None = <function search at 0x106051d00>('FROM "events_event" INNER JOIN "events_venue"', 'SELECT COUNT(*) AS "__count" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = \'8c1766e0a4054d00b77c31781261bd88\'::uuid) SELECT "events_booking"."id", "events_booking"."created_at", "events_booking"."updated_at", "events_booking"."deleted_at", "events_booking"."created_by_id", "events_booking"."updated_by_id", "events_booking"."event_id", "events_booking"."attendee_id", "events_booking"."quantity" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."attendee_id" = \'8c1766e0a4054d00b77c31781261bd88\'::uuid) ORDER BY "events_booking"."created_at" DESC LIMIT 12 SELECT "events_event"."id", "events_event"."created_at", "events_event"."updated_at", "events_event"."deleted_at", "events_event"."created_by_id", "events_event"."updated_by_id", "events_event"."title", "events_event"."organizer_id", "events_event"."venue_id", "karni_accounts_user"."password", "karni_accounts_user"."last_login", "karni_accounts_user"."is_superuser", "karni_accounts_user"."id", "karni_accounts_user"."created_at", "karni_accounts_user"."updated_at", "karni_accounts_user"."deleted_at", "karni_accounts_user"."created_by_...ni_accounts_user"."is_staff", "karni_accounts_user"."date_joined", "karni_accounts_user"."email_verified", "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."city" FROM "events_event" INNER JOIN "karni_accounts_user" ON ("events_event"."organizer_id" = "karni_accounts_user"."id") INNER JOIN "events_venue" ON ("events_event"."venue_id" = "events_venue"."id") WHERE ("events_event"."deleted_at" IS NULL AND "events_event"."organizer_id" = \'8c1766e0a4054d00b77c31781261bd88\'::uuid AND "events_event"."id" IN (\'c49bff8069b945498840ad6be78e8f05\'::uuid, \'7f445dd3c3954c2cbb80a8b56a37fd3e\'::uuid, \'701103625fbf40cb8c4eb6a0625b5acc\'::uuid, \'16799f91a05347b89491102e62a54ebc\'::uuid, \'92eb5db2bfaf4df5a68b905013fff69b\'::uuid, \'f27e9fbee43f4d3f86919a704c8ae935\'::uuid, \'84439ec6e9944000a4e027387c72ab49\'::uuid, \'be7bc12be11f46d7b7c2baa486d1e091\'::uuid, \'5dd89813d2214227856cf320faf1c742\'::uuid, \'0566a9b877f34dfd9f833ce17fa9a867\'::uuid, \'edc80c9296374e678dc905403d94e2a0\'::uuid, \'84ce050b3660496384c24c51754df041\'::uuid))')
+E        +    where <function search at 0x106051d00> = re.search
+
+events/tests/test_audit_nplus1.py:63: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/bookings/?expand=event.venue,event.organizer', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': 'ef6c083a-129f-4ec0-911e-d0e8aa1b41da', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:23.496361Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/bookings/?expand=event.venue,event.organizer', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': 'ef6c083a-129f-4ec0-911e-d0e8aa1b41da', 'user_id': '8c1766e0-a405-4d00-b77c-31781261bd88', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:23.568550Z'}
+INFO     karni.queries:middleware.py:158 GET /api/bookings/?expand=event.venue,event.organizer 200 — 3 queries, 0 duplicated, 2.1 ms in SQL, 80.3 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/bookings/?expand=event.venue,event.organizer', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': 'b9847a56-b779-4d20-8991-65717d366780', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:23.582443Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/bookings/?expand=event.venue,event.organizer', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': 'b9847a56-b779-4d20-8991-65717d366780', 'user_id': '8c1766e0-a405-4d00-b77c-31781261bd88', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:23.591261Z'}
+INFO     karni.queries:middleware.py:158 GET /api/bookings/?expand=event.venue,event.organizer 200 — 3 queries, 0 duplicated, 1.6 ms in SQL, 9.3 ms total
+___________ test_hand_viewset_without_optimiser_n_plus_one_unguarded ___________
+
+    def test_hand_viewset_without_optimiser_n_plus_one_unguarded():
+        """DELIBERATELY FAILING: the same request without catching the exception — what pytest shows."""
+        client = client_as("attendee")
+        _seed(client.user, 12)
+>       client.get("/api/slow-bookings/" + EXPAND)
+
+events/tests/test_audit_nplus1.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:276: in get
+    response = super().get(path, data=data, **extra)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:193: in get
+    return self.generic('GET', path, **r)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:221: in generic
+    return super().generic(
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:676: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:273: in request
+    return super().request(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/test.py:225: in request
+    request = super().request(**kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:1092: in request
+    self.check_exception(response)
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/test/client.py:805: in check_exception
+    raise exc_value
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:65: in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py:125: in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:560: in dispatch
+    self.check_query_budget(recorder, response, mode)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <events.viewsets.SlowBookingViewSet object at 0x10bd015e0>
+recorder = <karni.performance.QueryRecorder object at 0x10bd01df0>
+response = <Response status_code=200, "text/html; charset=utf-8">
+mode = 'raise'
+
+    def check_query_budget(self, recorder: QueryRecorder, response: Any, mode: str) -> None:
+        """Compare ``recorder`` with :meth:`get_query_budget`; warn or raise per ``mode``."""
+        limit = self.get_query_budget()
+        response["X-Karni-Queries"] = str(recorder.count)
+        if limit is None:
+            return
+        response["X-Karni-Query-Budget"] = str(limit)
+        if recorder.count <= limit:
+            return
+        action = getattr(self, "action", None) or "*"
+        name = type(self).__name__
+        message = budget_failure(
+            f"{name}.{action}",
+            recorder.report(),
+            limit,
+            "Fix the repeated query (the optimiser derives select_related/prefetch_related "
+            "from the serializer; hint opaque fields with select_related/prefetch_related "
+            f"on {name}), or declare query_budget = Budget({action}=N, reason=...).",
+        )
+        if mode == "raise":
+>           raise QueryBudgetExceeded(message)
+E           karni.performance.QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+E           38 queries, 36 duplicated, 8.8 ms in SQL
+E             12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+E                 ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+E             12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+E                 ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+E             12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+E                 ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+E           Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
+------------------------------ Captured log call -------------------------------
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/slow-bookings/?expand=event.venue,event.organizer', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '2a72ad9d-f9d6-40b2-a771-6133aa118764', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.065260Z'}
+ERROR    django_structlog.middlewares.request:request.py:283 {'code': 500, 'request': 'GET /api/slow-bookings/?expand=event.venue,event.organizer', 'exc_info': True, 'event': 'request_failed', 'ip': '127.0.0.1', 'request_id': '2a72ad9d-f9d6-40b2-a771-6133aa118764', 'user_id': '6c781f0b-e707-45a6-886e-cc19dfddb3ec', 'logger': 'django_structlog.middlewares.request', 'level': 'error', 'timestamp': '2026-10-19T03:15:24.132572Z'}
+Traceback (most recent call last):
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 560, in dispatch
+    self.check_query_budget(recorder, response, mode)
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
+    raise QueryBudgetExceeded(message)
+karni.performance.QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.8 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+ERROR    django.request:log.py:253 Internal Server Error: /api/slow-bookings/
+Traceback (most recent call last):
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py", line 125, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 560, in dispatch
+    self.check_query_budget(recorder, response, mode)
+  File "/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py", line 583, in check_query_budget
+    raise QueryBudgetExceeded(message)
+karni.performance.QueryBudgetExceeded: E117: SlowBookingViewSet.list ran 38 queries; budget is 8.
+38 queries, 36 duplicated, 8.8 ms in SQL
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on SlowBookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+WARNING  karni.queries:middleware.py:158 GET /api/slow-bookings/?expand=event.venue,event.organizer 500 — 38 queries, 36 duplicated, 8.9 ms in SQL, 348.9 ms total
+  12× SELECT … FROM "events_event" WHERE "events_event"."id" = %s LIMIT 21
+      ← EventsBooking_EventOrganizer_EventVenueExpandedSerializer.event
+  12× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.organizer
+  12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventsEvent_Organizer_VenueExpandedSerializer.venue
+_________ OneLinerTests.test_assert_isolated_catches_the_leaky_viewset _________
+
+self = <events.tests.test_audit_oneliners.OneLinerTests testMethod=test_assert_isolated_catches_the_leaky_viewset>
+
+    def test_assert_isolated_catches_the_leaky_viewset(self) -> None:
+        """DELIBERATELY FAILING: LeakyEventViewSet widens the read scope — the message must say so."""
+>       self.assert_isolated(LeakyEventViewSet, "organizer")
+
+events/tests/test_audit_oneliners.py:24: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/api.py:1055: in assert_isolated
+    return assert_isolated(resource, role, **options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+resource = <class 'events.viewsets.LeakyEventViewSet'>, role = 'organizer'
+by = None, owner = None, values = None
+
+    def assert_isolated(
+        resource: Any,
+        role: str | None = None,
+        *,
+        by: str | tuple[str, ...] | None = None,
+        owner: str | None = None,
+        values: Mapping[str, Any] | None = None,
+    ) -> IsolationReport:
+        """Assert ``role`` cannot reach another owner's (or tenant's) rows of ``resource``.
+    
+        :param resource: a viewset class, a model class, a route prefix or ``"app.Model"``.
+        :param role: the role both principals hold; ``None`` = plain authenticated users.
+        :param by: dimension name(s) to test (default: every one that applies).
+        :param owner: the owner path when ``access`` does not name one (``Where``-scoped reads).
+        :param values: factory overrides for the rows created.
+        :raises AssertionError: listing every leak found.
+        """
+        case = IsolationCase(resolve_resource(resource), role, dict(values or {}), owner)
+        dimensions = isolation_dimensions()
+        names = (by,) if isinstance(by, str) else tuple(by or dimensions)
+        unknown = [name for name in names if name not in dimensions]
+        if unknown:
+            raise KarniAssertionError(
+                f"Unknown isolation dimension(s) {unknown} (registered: {', '.join(dimensions)}).",
+                code="E605",
+            )
+        report = IsolationReport(case.resource.name)
+        applicable = [dimensions[name] for name in names if dimensions[name].applies(case)]
+        if not applicable:
+            reasons = "; ".join(dimensions[name].reason(case) for name in names)
+            raise KarniAssertionError(
+                f"assert_isolated({case.resource.name}): nothing isolates rows — {reasons}.",
+                code="E605",
+            )
+        with _unthrottled(case.resource.viewset):
+            for dimension in applicable:
+                report.dimensions.append(dimension.name)
+                _check(dimension, case, report)
+        if report.failures:
+            who = f"role {role!r}" if role else "authenticated users"
+            lines = "\n".join(f"  - {failure}" for failure in report.failures)
+>           raise KarniAssertionError(
+                f"assert_isolated({case.resource.name}) for {who}: rows leak\n{lines}", code="E606"
+            )
+E           karni.exceptions.KarniAssertionError: E606: assert_isolated(LeakyEventViewSet) for role 'organizer': rows leak
+E             - owner: GET /api/leaky-events/ as mine lists another owner's row
+E             - owner: GET /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ (another owner's row) as mine answered 200, expected 404
+E             - owner: PATCH /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ (another owner's row) as mine answered 200, expected 404
+E             - owner: DELETE /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ (another owner's row) as mine answered 204, expected 404
+E             - owner: another owner's row was deleted by mine
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e606
+
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/testing/isolation.py:305: KarniAssertionError
+------------------------------ Captured log call -------------------------------
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/leaky-events/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': 'fab7df98-9142-4ae9-8fbd-f74b7c005ad0', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.830340Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/leaky-events/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': 'fab7df98-9142-4ae9-8fbd-f74b7c005ad0', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.833205Z'}
+INFO     karni.queries:middleware.py:158 GET /api/leaky-events/ 200 — 2 queries, 0 duplicated, 0.5 ms in SQL, 3.3 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/leaky-events/c072732b-f7ec-46b5-8759-01781610607a/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': 'c9ea074a-e595-4807-a287-66517c2b962a', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.834025Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/leaky-events/c072732b-f7ec-46b5-8759-01781610607a/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': 'c9ea074a-e595-4807-a287-66517c2b962a', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.836120Z'}
+INFO     karni.queries:middleware.py:158 GET /api/leaky-events/c072732b-f7ec-46b5-8759-01781610607a/ 200 — 1 queries, 0 duplicated, 0.2 ms in SQL, 2.5 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'GET /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '7dfa7094-c302-4cf9-8470-d5dd6a716719', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.837480Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'GET /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': '7dfa7094-c302-4cf9-8470-d5dd6a716719', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.839622Z'}
+INFO     karni.queries:middleware.py:158 GET /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ 200 — 1 queries, 0 duplicated, 0.2 ms in SQL, 2.5 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'PATCH /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '5aec40d5-9041-4483-adba-5487e5bf9365', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.840218Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 200, 'request': 'PATCH /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': '5aec40d5-9041-4483-adba-5487e5bf9365', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.844048Z'}
+INFO     karni.queries:middleware.py:158 PATCH /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ 200 — 2 queries, 0 duplicated, 0.5 ms in SQL, 4.2 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'DELETE /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '8ac32490-fa1a-4c2c-98a4-c98c0e1ab901', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.844673Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 204, 'request': 'DELETE /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': '8ac32490-fa1a-4c2c-98a4-c98c0e1ab901', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.846811Z'}
+INFO     karni.queries:middleware.py:158 DELETE /api/leaky-events/ecc0f18a-c21e-498e-a3e3-acb446a688e8/ 204 — 2 queries, 0 duplicated, 0.5 ms in SQL, 2.5 ms total
+INFO     django_structlog.middlewares.request:request.py:211 {'request': 'POST /api/leaky-events/', 'user_agent': None, 'event': 'request_started', 'ip': '127.0.0.1', 'request_id': '52d02ed5-7d4c-44d8-9b99-58e925325941', 'user_id': None, 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.850023Z'}
+INFO     django_structlog.middlewares.request:request.py:162 {'code': 201, 'request': 'POST /api/leaky-events/', 'event': 'request_finished', 'ip': '127.0.0.1', 'request_id': '52d02ed5-7d4c-44d8-9b99-58e925325941', 'user_id': '52a6ae0f-b65b-411e-9bfe-40be79a851c2', 'logger': 'django_structlog.middlewares.request', 'level': 'info', 'timestamp': '2026-10-19T03:15:24.851901Z'}
+INFO     karni.queries:middleware.py:158 POST /api/leaky-events/ 201 — 2 queries, 0 duplicated, 0.4 ms in SQL, 2.4 ms total
+=========================== short test summary info ============================
+FAILED events/tests/test_audit_nplus1.py::test_generated_bookings_list_three_levels_deep_is_flat
+FAILED events/tests/test_audit_nplus1.py::test_hand_viewset_without_optimiser_n_plus_one_unguarded
+FAILED events/tests/test_audit_oneliners.py::OneLinerTests::test_assert_isolated_catches_the_leaky_viewset
+========================= 3 failed, 8 passed in 3.50s ==========================
+exit=

@@ -1,0 +1,100 @@
+
+#1 [clerk_a GET me]
+  GET http://127.0.0.1:8531/api/auth/me/
+  -> 200 application/json
+  {"id":"166ee74b-34f2-4f4a-be30-346661cc1739","email":"clerk_a@example.com","first_name":"","last_name":"","email_verified":true,"date_joined":"2026-10-18T17:11:38.626283Z","roles":["clerk"],"created_at":"2026-10-18T17:11:38.821873Z","updated_at":"2026-10-18T17:11:38.823258Z"}
+
+#2 [clerk_a PATCH me is_staff/is_superuser/groups/roles/branch/email]
+  PATCH http://127.0.0.1:8531/api/auth/me/
+  json={"is_staff": true, "is_superuser": true, "groups": [1, 2, 3], "roles": ["staff"], "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "email": "clerk_a+hijack@example.com", "email_verified": false, "user_permissions": [1], "password": "x"}
+  -> 200 application/json
+  {"id":"166ee74b-34f2-4f4a-be30-346661cc1739","email":"clerk_a@example.com","first_name":"","last_name":"","email_verified":true,"date_joined":"2026-10-18T17:11:38.626283Z","roles":["clerk"],"created_at":"2026-10-18T17:11:38.821873Z","updated_at":"2026-10-19T03:16:40.603407Z"}
+
+#3 [clerk_a PUT me]
+  PUT http://127.0.0.1:8531/api/auth/me/
+  json={"first_name": "x"}
+  -> 405 application/json
+  {"detail":"Method \"PUT\" not allowed."}
+
+#4 [clerk_a GET me after]
+  GET http://127.0.0.1:8531/api/auth/me/
+  -> 200 application/json
+  {"id":"166ee74b-34f2-4f4a-be30-346661cc1739","email":"clerk_a@example.com","first_name":"","last_name":"","email_verified":true,"date_joined":"2026-10-18T17:11:38.626283Z","roles":["clerk"],"created_at":"2026-10-18T17:11:38.821873Z","updated_at":"2026-10-19T03:16:40.603407Z"}
+
+#5 [clerk_a list employees after self-grant attempt (should still be own only)]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 200 application/json
+  {"count":3,"next":null,"previous":null,"results":[{"id":"71a6fb12-40de-410a-8971-fa6fa7a72fe6","created_at":"2026-10-19T03:15:37.124395Z","updated_at":"2026-10-19T03:15:37.124402Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Owner-spoof by clerk_a","branch":"597355d1-a2a4-48b2-a991-c7a7d564cc42","salary":"1.00"},{"id":"ae611f70-b745-4f03-b5cb-e07a1136f1ec","created_at":"2026-10-19T03:15:37.107113Z","updated_at":"2026-10-19T03:15:37.107124Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"Planted by clerk_a","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"1.00"},{"id":"3cd7a2b6-5ca7-4181-8f6b-14bcf4b59acb","created_at":"2026-10-18T17:11:39.629759Z","updated_at":"2026-10-19T03:15:37.307377Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","update
+
+#6 [register with is_staff/is_superuser/groups/branch]
+  POST http://127.0.0.1:8531/api/auth/register/
+  json={"email": "evil@example.com", "password": "Audit3-Str0ng-Passw0rd!", "is_staff": true, "is_superuser": true, "groups": [1], "roles": ["staff"], "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "email_verified": true}
+  -> 201 application/json
+  {"id":"6a50898a-5f66-4b67-b7fe-272cae6f8b33","email":"evil@example.com","first_name":"","last_name":"","email_verified":false,"date_joined":"2026-10-19T03:16:40.659339Z","roles":[],"created_at":"2026-10-19T03:16:40.796320Z","updated_at":"2026-10-19T03:16:40.796333Z"}
+
+#7 [evil GET me]
+  GET http://127.0.0.1:8531/api/auth/me/
+  -> 200 application/json
+  {"id":"6a50898a-5f66-4b67-b7fe-272cae6f8b33","email":"evil@example.com","first_name":"","last_name":"","email_verified":false,"date_joined":"2026-10-19T03:16:40.659339Z","roles":[],"created_at":"2026-10-19T03:16:40.796320Z","updated_at":"2026-10-19T03:16:40.796333Z"}
+
+#8 [evil list employees]
+  GET http://127.0.0.1:8531/api/employees/
+  -> 403 application/json
+  {"detail":"Access denied: this action requires Can('hr.employee:view')."}
+
+#9 [evil list branches (Authenticated read)]
+  GET http://127.0.0.1:8531/api/branches/
+  -> 200 application/json
+  {"count":2,"next":null,"previous":null,"results":[{"id":"b96524ca-0526-4673-b9c9-02f248910ede","created_at":"2026-10-18T17:11:38.163901Z","updated_at":"2026-10-18T17:11:38.163914Z","created_by":null,"updated_by":null,"name":"Branch B"},{"id":"597355d1-a2a4-48b2-a991-c7a7d564cc42","created_at":"2026-10-18T17:11:38.161184Z","updated_at":"2026-10-18T17:11:38.161456Z","created_by":null,"updated_by":null,"name":"Branch A"}]}
+
+#10 [POST /api/roles/]
+  POST http://127.0.0.1:8531/api/roles/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8830 bytes; title=Page not found at /api/roles/>
+
+#11 [POST /api/role-permissions/]
+  POST http://127.0.0.1:8531/api/role-permissions/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8863 bytes; title=Page not found at /api/role-permissions/>
+
+#12 [POST /api/rolepermissions/]
+  POST http://127.0.0.1:8531/api/rolepermissions/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8860 bytes; title=Page not found at /api/rolepermissions/>
+
+#13 [POST /api/permissions/]
+  POST http://127.0.0.1:8531/api/permissions/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8848 bytes; title=Page not found at /api/permissions/>
+
+#14 [POST /api/groups/]
+  POST http://127.0.0.1:8531/api/groups/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8833 bytes; title=Page not found at /api/groups/>
+
+#15 [POST /api/users/]
+  POST http://127.0.0.1:8531/api/users/
+  json={"slug": "god"}
+  -> 404 text/html
+  <html 8830 bytes; title=Page not found at /api/users/>
+
+#16 [POST /api/auth/sync-roles/]
+  POST http://127.0.0.1:8531/api/auth/sync-roles/
+  -> 404 text/html
+  <html 12471 bytes; title=Page not found at /api/auth/sync-roles/>
+
+#17 [GET /api/auth/sync-roles/]
+  GET http://127.0.0.1:8531/api/auth/sync-roles/
+  -> 404 text/html
+  <html 12470 bytes; title=Page not found at /api/auth/sync-roles/>
+
+#18 [clerk_a POST employee with created_by=staff and branch B (owner spoof + scope)]
+  POST http://127.0.0.1:8531/api/employees/
+  json={"name": "spoof2", "branch": "b96524ca-0526-4673-b9c9-02f248910ede", "salary": "5.00", "created_by": "e62d7ccb-868c-46ef-92cb-980bfeccb04f"}
+  -> 201 application/json
+  {"id":"f34fcd74-42ee-4f1c-83bb-ba78007e0aac","created_at":"2026-10-19T03:16:41.071312Z","updated_at":"2026-10-19T03:16:41.071322Z","created_by":"166ee74b-34f2-4f4a-be30-346661cc1739","updated_by":"166ee74b-34f2-4f4a-be30-346661cc1739","name":"spoof2","branch":"b96524ca-0526-4673-b9c9-02f248910ede","salary":"5.00"}

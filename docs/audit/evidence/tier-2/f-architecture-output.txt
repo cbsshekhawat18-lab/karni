@@ -1,0 +1,14 @@
+### pytest --pyargs karni.testing.architecture (the CI form), with the violating files in place
+s.........                                                               [100%]
+9 passed, 1 skipped in 0.19s
+exit=
+
+### karni check --no-frontend again, verbose output in full
+System check identified no issues (0 silenced).
+karni check: ok
+exit=0
+
+### manage.py karni_check directly
+System check identified no issues (0 silenced).
+karni check: ok
+exit=

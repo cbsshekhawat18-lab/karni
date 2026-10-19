@@ -1,0 +1,1 @@
+{"status": "ok", "checks": {"database": {"ok": true, "detail": "database responding"}, "cache": {"ok": true, "detail": "cache responding"}, "celery": {"ok": true, "detail": "1 worker(s) replied"}}}

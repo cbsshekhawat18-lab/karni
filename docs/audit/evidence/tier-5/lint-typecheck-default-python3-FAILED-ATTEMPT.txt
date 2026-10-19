@@ -1,0 +1,49 @@
+==> make lint-py  (1792379990.853970000)
+==> ruff (packages/karni)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named ruff
+==> ruff (packages/karni-cli)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named ruff
+==> ruff (modules/karni-payments)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named ruff
+==> ruff (.github/ci, root ruff.toml)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named ruff
+make: *** [lint-py] Error 1
+exit=  (1792379991.040292000)
+==> make typecheck-py  (1792379991.051576000)
+==> mypy (packages/karni)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named mypy
+==> mypy (packages/karni-cli)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named mypy
+==> mypy (modules/karni-payments)
+/Library/Frameworks/Python.framework/Versions/3.14/bin/python3: No module named mypy
+make: *** [typecheck-py] Error 1
+exit=  (1792379991.184797000)
+==> make lint-ui  (1792379991.197665000)
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+==> eslint + prettier (modules/karni-payments/ui)
+
+> @karni/payments-ui@0.1.0 lint
+> eslint . --ext .ts,.tsx,.cjs,.mjs
+
+
+> @karni/payments-ui@0.1.0 format:check
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+exit=  (1792380002.513007000)
+==> make typecheck-ui  (1792380002.528558000)
+==> tsc (packages/karni-ui)
+
+> @karni/ui@0.1.0 typecheck
+> tsc --noEmit
+
+==> tsc (modules/karni-payments/ui)
+
+> @karni/payments-ui@0.1.0 typecheck
+> tsc --noEmit
+
+exit=  (1792380013.495343000)

@@ -1,0 +1,25 @@
+### BookingViewSet with query_budget = Budget(list=2, reason="audit4: deliberately too low") — the optimised list needs 3 queries
+22:    query_budget = Budget(list=2, reason="audit4: deliberately too low")
+
+$ pytest events/tests/test_audit_nplus1.py::test_generated_bookings_list_three_levels_deep_is_flat -p no:cacheprovider --create-db
+exit=1
+>           raise QueryBudgetExceeded(message)
+E           karni.performance.QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.
+E           3 queries, 0 duplicated, 2.0 ms in SQL
+E           Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on BookingViewSet), or declare query_budget = Budget(list=N, reason=...).
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+/Users/chandrabhanshekhawat/Documents/www/Karni/packages/karni/karni/api/viewsets.py:583: QueryBudgetExceeded
+│ │          exc = QueryBudgetExceeded('BookingViewSet.list ran 3 queries;   │ │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.
+│ │          exc = QueryBudgetExceeded('BookingViewSet.list ran 3 queries;   │ │
+│ ❱ 583 │   │   │   raise QueryBudgetExceeded(message)                         │
+QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.
+ERROR    django_structlog.middlewares.request:request.py:283 {'code': 500, 'request': 'GET /api/bookings/?expand=event.venue,event.organizer', 'exc_info': True, 'event': 'request_failed', 'ip': '127.0.0.1', 'request_id': '87392d3e-c5e6-47fe-be2a-6d040a56cab3', 'user_id': 'a162ea65-0267-47e0-991f-2b4253da023d', 'logger': 'django_structlog.middlewares.request', 'level': 'error', 'timestamp': '2026-10-19T03:24:48.014073Z'}
+    raise QueryBudgetExceeded(message)
+karni.performance.QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.
+    raise QueryBudgetExceeded(message)
+karni.performance.QueryBudgetExceeded: E117: BookingViewSet.list ran 3 queries; budget is 2.
+FAILED events/tests/test_audit_nplus1.py::test_generated_bookings_list_three_levels_deep_is_flat
+============================== 1 failed in 2.19s ===============================
+viewsets.py restored

@@ -1,0 +1,16 @@
+# cmd: cd /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments/ui && npx vitest run
+1792379908.915863000
+
+ RUN  v2.1.9 /Users/chandrabhanshekhawat/Documents/www/Karni/modules/karni-payments/ui
+
+ ✓ src/roles.test.ts (4 tests) 10ms
+ ✓ src/CheckoutButton.test.tsx (4 tests) 202ms
+ ✓ src/PaymentStatus.test.tsx (6 tests) 517ms
+
+ Test Files  3 passed (3)
+      Tests  14 passed (14)
+   Start at  08:48:29
+   Duration  2.20s (transform 422ms, setup 976ms, collect 1.93s, tests 729ms, environment 1.50s, prepare 212ms)
+
+exit=0
+1792379911.745484000
