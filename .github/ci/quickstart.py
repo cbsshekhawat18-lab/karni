@@ -53,8 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     env = {
         k: v
         for k, v in os.environ.items()
-        if not k.startswith(("VIRTUAL_ENV", "DJANGO_", "KARNI_"))
-        and k not in CI_VARIABLES
+        if not k.startswith(("VIRTUAL_ENV", "DJANGO_", "KARNI_")) and k not in CI_VARIABLES
     }
     env["KARNI_UI_SRC"] = os.environ.get("KARNI_UI_SRC", str(ROOT / "packages" / "karni-ui"))
     env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
