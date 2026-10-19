@@ -205,6 +205,36 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
     ]
 
 
+@checks.register(checks.Tags.admin)
+def check_admin_scope(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E210: an admin that opts out of row scope must say why.
+
+    Viewsets are validated at class definition (``validate_access``); admin
+    classes are only instantiated at registration, so they are checked here.
+    """
+    from karni.admin.base import KarniAdminMixin
+    from karni.scoping import admin_site
+
+    messages: list[checks.CheckMessage] = []
+    for model, model_admin in admin_site()._registry.items():
+        if not isinstance(model_admin, KarniAdminMixin) or not model_admin.scope_exempt:
+            continue
+        reason = getattr(model_admin, "scope_exempt_reason", "")
+        if isinstance(reason, str) and reason.strip():
+            continue
+        messages.append(
+            check_error(
+                "E210",
+                f"{type(model_admin).__name__} ({model._meta.label_lower}) sets scope_exempt = "
+                "True "
+                "without a scope_exempt_reason.",
+                hint=_fix("E210"),
+                obj=type(model_admin),
+            )
+        )
+    return messages
+
+
 @checks.register(checks.Tags.caches)
 def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.W501: with DEBUG off, throttle counters must live in a cache every worker shares.

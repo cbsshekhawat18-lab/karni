@@ -553,7 +553,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime email url slug json file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; trailing ? = optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
-| `--access` TEXT |  | With viewset: authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |
+| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
@@ -564,7 +564,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 
 Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py — CRUD at /api/&lt;models&gt;/.
 
-Declares `model = <Model>` and the mandatory `access` (ADR 0001): authenticated (default), public-read (anonymous reads), owned:&lt;field&gt; (rows whose &lt;field&gt; is the user), staff (role "staff"), role:&lt;name&gt;.
+Declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anonymous reads), owned:&lt;field&gt; (rows whose &lt;field&gt; is the user), staff (role "staff"), role:&lt;name&gt;.
 
 ```
 karni make viewset [OPTIONS] MODEL
@@ -573,7 +573,7 @@ karni make viewset [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). |
-| `--access` TEXT |  | Who reads/writes: authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: authenticated. |
+| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). |
 | `--search` TEXT (repeatable) |  | search_fields, comma-separated or repeated (e.g. title,venue). |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
@@ -620,7 +620,7 @@ karni make migration [OPTIONS] [NAME]
 
 Add APP/tests/test_&lt;model&gt;.py — the resource's whole API surface in a few lines.
 
-One APITestCase: `assert_crud` checks list, retrieve, create, update, delete, the denials the access declaration promises, pagination, filtering and the OpenAPI contract; `assert_isolated` (when reads are Owned) checks another owner's rows are out of reach. Run it with `karni test`.
+One APITestCase: `assert_crud` checks list, retrieve, create, update, delete, the denials the access declaration promises, pagination, filtering and the OpenAPI contract; `assert_isolated` (when reads are Owned, or Granted() with an own/related grant) checks another scope's rows are out of reach on every surface. Run it with `karni test`.
 
 ```
 karni make test [OPTIONS] MODEL
@@ -629,7 +629,7 @@ karni make test [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event); it needs a viewset. |
-| `--role` TEXT |  | The role (Django group) the test acts as. Default: the first HasRole the viewset declares, else any signed-in user. |
+| `--role` TEXT |  | The role the test acts as. Default: the first HasRole the viewset declares; for Granted() the first KARNI_ROLES role whose grant reaches the model (own/related first); else any signed-in user. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |

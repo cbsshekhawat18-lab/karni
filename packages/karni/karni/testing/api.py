@@ -236,7 +236,7 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
     traversal (``event__organizer`` — factory-boy passes it down the
     related factories) gets the user, a to-many path ``[user]``.
     """
-    from karni.api.access import Access
+    from karni.api.access import Access, Can, Granted, predicate_leaves
 
     if not isinstance(declaration, Access):
         return {}
@@ -253,6 +253,35 @@ def owner_values(declaration: Any, model: type[models.Model], user: Any) -> dict
             found[owned.path] = [user]
         elif getattr(relation, "concrete", False):
             found[owned.path] = user
+    leaves = predicate_leaves(declaration.read)
+    if user is not None and any(isinstance(leaf, Granted | Can) for leaf in leaves):
+        found.update(granted_values(model, user))
+    return found
+
+
+def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
+    """Factory overrides putting a new ``model`` row inside ``user``'s ``view`` grants.
+
+    An ``own`` grant sets the model's owner field to the user; a ``related``
+    grant sets the scope path to the user's side of it (``user.venue``), when
+    the user has one. An ``all`` grant needs nothing.
+    """
+    from karni.accounts.roles import grants_for
+    from karni.meta import owner_field, permission_key, scope_paths
+
+    found: dict[str, Any] = {}
+    for grant in grants_for(user).get(permission_key(model, "view"), []):
+        if grant.scope == "all":
+            return {}
+        if grant.scope == "own":
+            owner = owner_field(model)
+            if owner:
+                found.setdefault(owner, user)
+        elif grant.scope == "related":
+            path = scope_paths(model).get(grant.scope_path)
+            value = getattr(user, grant.scope_path, None)
+            if path and value is not None:
+                found.setdefault(path, value)
     return found
 
 
@@ -314,7 +343,7 @@ def _visible(view: Any, row: Any, rows: Any = None) -> bool:
     queryset = type(row)._default_manager.filter(pk=row.pk)
     declaration = view.get_access()
     if rows is None and isinstance(declaration, Access):
-        rows = declaration.read.rows(view.request)
+        rows = declaration.read.bind(view, "view").rows(view.request)
     if rows is not None:
         queryset = apply_rows(queryset, rows)
     hook = type(view).filter_queryset_for_user

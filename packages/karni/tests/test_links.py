@@ -72,7 +72,7 @@ def test_no_literal_base_urls_left_in_python_sources() -> None:
         if path.name == "links.py":
             continue
         source = path.read_text()
-        prose = set()  # lines inside docstrings and comments: examples, not configuration
+        prose: set[int] = set()  # lines in docstrings and comments: examples, not configuration
         for token in tokenize.generate_tokens(io.StringIO(source).readline):
             if token.type in (tokenize.STRING, tokenize.COMMENT) and (
                 token.type == tokenize.COMMENT or token.string.startswith(('"""', "'''"))

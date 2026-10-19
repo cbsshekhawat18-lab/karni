@@ -37,6 +37,14 @@ class Command(BaseCommand):
             except Exception as exc:  # noqa: BLE001 - a broken hook is a failure, not a crash
                 failures.append(f"{ep.name}: {exc}")
 
+        # Row-scope exemptions are not failures, but they are printed on every
+        # run so they never accumulate quietly (ADR 0002, P2).
+        from karni.scoping import render_exemptions, scope_exemptions
+
+        exemptions = scope_exemptions()
+        if exemptions:
+            self.stdout.write(render_exemptions(exemptions))
+
         if failures:
             for failure in failures:
                 self.stderr.write(failure)

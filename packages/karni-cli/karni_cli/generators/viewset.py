@@ -1,9 +1,11 @@
 """``karni make viewset <Model>`` — a BaseViewSet with its mandatory ``access``.
 
-ADR 0001 Q2.1: every viewset declares who reads and who writes. ``--access``
-picks one of the common shapes; the default (``authenticated``) is printed
-so it is never silent. Anything richer (``Owned(...) | HasRole(...)``,
-``Where(...)``) is an edit of the generated declaration.
+ADR 0001 Q2.1: every viewset declares who reads and who writes. The default
+is ``Granted()`` (ADR 0002, P2): the roles' grants for the model, row scope
+included, so a generated viewset is scoped without anyone remembering to
+scope it. ``--access`` picks one of the other common shapes; whichever
+applies is printed so it is never silent. Anything richer (``Owned(...) |
+HasRole(...)``, ``Where(...)``) is an edit of the generated declaration.
 """
 
 from __future__ import annotations
@@ -39,15 +41,20 @@ from karni_cli.project import CliError
 NAME = "viewset"
 SUMMARY = "Add a BaseViewSet for a model, with its access declaration (--access)."
 
-DEFAULT_ACCESS = "authenticated"
-ACCESS_CHOICES = "authenticated|public-read|owned:<field>|staff|role:<name>"
+DEFAULT_ACCESS = "granted"
+ACCESS_CHOICES = "granted|authenticated|public-read|owned:<field>|staff|role:<name>"
 _ROLE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 _PATH = re.compile(r"^[a-z_][a-z0-9_]*(__[a-z_][a-z0-9_]*)*$")
 
 
 def access_declaration(spec: str, model: ModelInfo | None) -> tuple[list[str], list[str]]:
-    """``(Access(...) keyword arguments, predicate names to import)`` for ``--access``."""
+    """``(Access(...) keyword arguments, predicate names to import)`` for ``--access``.
+
+    ``granted`` is the bare ``Granted()`` declaration: ``(["Granted()"], ["Granted"])``.
+    """
     kind, _, arg = spec.partition(":")
+    if kind == "granted" and not arg:
+        return ["Granted()"], ["Granted"]
     if kind == "authenticated" and not arg:
         return ["read=Authenticated()", "write=Authenticated()"], ["Authenticated"]
     if kind == "public-read" and not arg:
@@ -116,18 +123,27 @@ def plan(
                         )
     line = ws.line_length
     body = [f"class {class_name}(BaseViewSet):", f"    model = {model.name}"]
-    body.append(call("access = Access", declaration, "    ", line))
+    granted = predicates == ["Granted"]
+    if granted:
+        body.append("    access = Granted()")
+        imports = [Import("karni.api", name) for name in ("BaseViewSet", "Granted")]
+        shown = "Granted()"
+    else:
+        body.append(call("access = Access", declaration, "    ", line))
+        imports = [Import("karni.api", name) for name in ("Access", "BaseViewSet", *predicates)]
+        shown = "Access(" + ", ".join(declaration) + ")"
     if search:
         # A tuple: a list class attribute is a mutable default (ruff RUF012).
         body.append(tuple_literal("search_fields = ", [pystr(s) for s in search], "    ", line))
     block = "\n".join(body)
-    imports = [Import("karni.api", name) for name in ("Access", "BaseViewSet", *predicates)]
     imports.append(Import(model.import_module, model.name))
     text = ensure_imports(ws, rel, text, imports)
     ws.write(path, replace_or_append(ws, rel, text, class_name, block))
-    shown = "Access(" + ", ".join(declaration) + ")"
     if access is None:
-        ws.note(f"access: {shown} — the default; choose with --access {ACCESS_CHOICES}")
+        ws.note(
+            f"access: {shown} — the default: what KARNI_ROLES grants for {model.name}, "
+            f"row-scoped; choose with --access {ACCESS_CHOICES}"
+        )
     else:
         ws.note(f"access: {shown}")
     route = default_route(model.name)
@@ -140,7 +156,7 @@ def command(
     access: str | None = typer.Option(
         None,
         "--access",
-        help=f"Who reads/writes: {ACCESS_CHOICES}. Default: authenticated.",
+        help=f"Who reads/writes: {ACCESS_CHOICES}. Default: granted (the roles' grants).",
     ),
     search: list[str] | None = typer.Option(
         None, "--search", help="search_fields, comma-separated or repeated (e.g. title,venue)."
@@ -152,8 +168,9 @@ def command(
     """Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py — CRUD at /api/<models>/.
 
     Declares `model = <Model>` and the mandatory `access` (ADR 0001):
-    authenticated (default), public-read (anonymous reads), owned:<field>
-    (rows whose <field> is the user), staff (role "staff"), role:<name>.
+    granted (default: whatever KARNI_ROLES grants for the model, row-scoped),
+    authenticated, public-read (anonymous reads), owned:<field> (rows whose
+    <field> is the user), staff (role "staff"), role:<name>.
     """
     ws = project_workspace(force)
     target = resolve_app(ws, app)

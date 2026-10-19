@@ -26,16 +26,19 @@ Per action: ``list``/``retrieve`` and safe custom actions use ``read``;
 ``partial_update``/``destroy`` and unsafe custom actions use ``write``;
 ``@action(..., access=HasRole("x"))`` replaces the predicate for one action.
 
-The vocabulary is closed (ADR 0001 Q2.8): :class:`Owned`, :class:`HasRole`
-(+ the reserved :class:`Can`), :class:`Authenticated`, :class:`Public`,
-:class:`Where`, :class:`Unscoped`, ``|`` and ``&``. Every predicate has a
-request-level answer (:meth:`Predicate.allows`) and a row-level answer
-(:meth:`Predicate.rows`: ``True`` = every row, ``False`` = no row, or a
-``Q``). No predicate can lift a model-level scope: the row ``Q`` is only ever
-``filter()``-ed onto the model's default manager.
+The vocabulary is closed (ADR 0001 Q2.8): :class:`Granted` (the default:
+the roles' grants for the viewset's model and the current action, ADR 0002),
+:class:`Owned`, :class:`HasRole`, :class:`Can`, :class:`Authenticated`,
+:class:`Public`, :class:`Where`, :class:`Unscoped`, ``|`` and ``&``. Every
+predicate has a request-level answer (:meth:`Predicate.allows`) and a
+row-level answer (:meth:`Predicate.rows`: ``True`` = every row, ``False`` =
+no row, or a ``Q``). No predicate can lift a model-level scope: the row ``Q``
+is only ever ``filter()``-ed onto the model's default manager.
 
 Escape hatches, least to most drastic: change the declaration; ``Where(...)``
-for arbitrary row logic; override ``filter_queryset_for_user`` (needs
+for arbitrary row logic; ``scope_exempt = True`` with a
+``scope_exempt_reason`` (the gate stays, the row filter goes; ``karni check``
+lists every exemption); override ``filter_queryset_for_user`` (needs
 ``# karni: allow(access-override): <reason>``); ``access =
 Unscoped(reason="...")`` (plain DRF ``permission_classes``, no row policy);
 ``auto_register = False`` plus your own view. ``get_access()`` on the viewset
@@ -57,6 +60,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from karni.exceptions import KarniImproperlyConfigured, KarniTypeError, docs_url
+from karni.meta import model_actions, owner_field, permission_key, scope_paths
+from karni.rows import RowFilter, apply_rows, combine_and, combine_or
 
 if TYPE_CHECKING:
     from rest_framework.request import Request
@@ -68,6 +73,7 @@ __all__ = [
     "AnyOf",
     "Authenticated",
     "Can",
+    "Granted",
     "HasRole",
     "Owned",
     "Predicate",
@@ -78,17 +84,20 @@ __all__ = [
     "action_predicate",
     "apply_rows",
     "describe_access",
+    "granted_action",
     "missing_access_message",
     "missing_access_text",
     "owner_paths_models",
+    "predicate_leaves",
     "readable",
+    "rows_or_exempt",
     "target_read_scope",
 ]
 
 logger = logging.getLogger(__name__)
 
-type RowFilter = bool | Q
-"""Row-level answer: ``True`` (every row), ``False`` (no row) or a ``Q``."""
+_or = combine_or
+_and = combine_and
 
 #: Standard ``ModelViewSet`` actions → the ``Access`` slot that governs them.
 ACTION_SLOTS: Final[dict[str, str]] = {
@@ -98,6 +107,23 @@ ACTION_SLOTS: Final[dict[str, str]] = {
     "update": "write",
     "partial_update": "write",
     "destroy": "write",
+}
+
+#: Standard actions → the permission action a ``Granted()`` grant names.
+GRANTED_ACTIONS: Final[dict[str, str]] = {
+    "list": "view",
+    "retrieve": "view",
+    "metadata": "view",
+    "create": "add",
+    "update": "change",
+    "partial_update": "change",
+    "destroy": "delete",
+}
+_METHOD_ACTIONS: Final[dict[str, str]] = {
+    "POST": "add",
+    "PUT": "change",
+    "PATCH": "change",
+    "DELETE": "delete",
 }
 
 _ROLE_CACHE: Final = "_karni_access_roles"
@@ -141,26 +167,6 @@ def request_roles(request: Any) -> frozenset[str]:
     return cache[key]
 
 
-def _or(left: RowFilter, right: RowFilter) -> RowFilter:
-    if left is True or right is True:
-        return True
-    if left is False:
-        return right
-    if right is False:
-        return left
-    return left | right
-
-
-def _and(left: RowFilter, right: RowFilter) -> RowFilter:
-    if left is False or right is False:
-        return False
-    if left is True:
-        return right
-    if right is True:
-        return left
-    return left & right
-
-
 # the predicate vocabulary
 
 
@@ -190,6 +196,15 @@ class Predicate:
     def owned(self) -> Iterator[Owned]:
         """Every :class:`Owned` inside this predicate (validation, owner stamping)."""
         return iter(())
+
+    def bind(self, view: Any, action: str | None = None) -> Predicate:
+        """The predicate evaluated for ``view``'s model and action.
+
+        Only :class:`Granted` depends on the view; every other predicate is
+        its own binding. ``action`` overrides the view's current action
+        (``"view"`` when the read scope is being compiled).
+        """
+        return self
 
     def __or__(self, other: object) -> Predicate:
         if not isinstance(other, Predicate):
@@ -282,6 +297,12 @@ class Owned(Predicate):
         yield self
         if self.bypass is not None:
             yield from self.bypass.owned()
+
+    def bind(self, view: Any, action: str | None = None) -> Predicate:
+        if self.bypass is None:
+            return self
+        bound = self.bypass.bind(view, action)
+        return self if bound is self.bypass else Owned(self.path, bypass=bound)
 
     def __repr__(self) -> str:
         if self.bypass is None:
@@ -393,6 +414,89 @@ def _permission_key_ok(key: str) -> bool:
     return bool(sep and action and label.count(".") == 1 and all(label.split(".")))
 
 
+def _view_model(view: Any) -> type[Model] | None:
+    """The model a viewset (class or instance) serves, or ``None``."""
+    model = getattr(view, "model", None)
+    if model is None:
+        model = getattr(getattr(view, "queryset", None), "model", None)
+    return model
+
+
+def granted_action(view: Any, action: str | None = None) -> str:
+    """The permission action ``Granted()`` names for ``view``'s current action.
+
+    ``list``/``retrieve`` → ``view``, ``create`` → ``add``,
+    ``update``/``partial_update`` → ``change``, ``destroy`` → ``delete``. A
+    custom ``@action`` is its own permission when the model declares it in
+    ``class Karni: actions``; otherwise a safe (GET) action reads (``view``)
+    and an unsafe one is an error (``E211``), because silently mapping it to
+    ``change`` would grant more than the role says.
+    """
+    name = action if action is not None else getattr(view, "action", None)
+    if name in GRANTED_ACTIONS:
+        return GRANTED_ACTIONS[name]
+    model = _view_model(view)
+    if name and model is not None and name in model_actions(model):
+        return name
+    method = str(getattr(getattr(view, "request", None), "method", None) or "GET").upper()
+    if not name:
+        return _METHOD_ACTIONS.get(method, "view")
+    if method in SAFE_METHODS:
+        return "view"
+    owner = type(view).__name__ if not isinstance(view, type) else view.__name__
+    target = model.__name__ if model is not None else "the model"
+    raise KarniImproperlyConfigured(
+        f"{owner}.{name}: Granted() has no permission for this action. Add {name!r} to "
+        f"`class Karni: actions = [...]` on {target} (then grant 'app.model:{name}' in "
+        f"KARNI_ROLES), or give the action its own @action(access=...).",
+        code="E211",
+    )
+
+
+@dataclass(frozen=True, repr=False)
+class Granted(Predicate):
+    """Whatever the roles say: :class:`Can` for the viewset's own model and current action.
+
+    ``access = Granted()`` is the default declaration (ADR 0002, P2): the gate
+    asks whether the user holds a grant for ``<model>:<action>`` and the rows
+    are the union of those grants' scopes (``all``, ``own``, ``related:``,
+    ``custom:``), so scoping is on without the viewset naming anything. Reads
+    compile the ``view`` permission's rows; ``create`` needs ``add``; writes
+    need ``change`` / ``delete`` on a row that is also readable (else 404). A
+    custom action is its own permission when the model declares it in
+    ``class Karni: actions`` (:func:`granted_action`).
+
+    The predicate is evaluated through :meth:`bind`, which
+    :func:`action_predicate` and the viewset's read scope call for you.
+    Evaluating it unbound is an error, never a silent deny.
+    """
+
+    def bind(self, view: Any, action: str | None = None) -> Predicate:
+        model = _view_model(view)
+        if model is None:
+            return self
+        return Can(permission_key(model, granted_action(view, action)))
+
+    def _unbound(self) -> KarniImproperlyConfigured:
+        return KarniImproperlyConfigured(
+            "Granted() answers only for a viewset's model and action: evaluate it through "
+            "karni.api.access.action_predicate(view, access) or predicate.bind(view).",
+            code="E211",
+        )
+
+    def allows(self, request: Any) -> bool:
+        raise self._unbound()
+
+    def rows(self, request: Any) -> RowFilter:
+        raise self._unbound()
+
+    def describe(self) -> dict[str, Any]:
+        return {"granted": True}
+
+    def __repr__(self) -> str:
+        return "Granted()"
+
+
 @dataclass(frozen=True, repr=False)
 class Authenticated(Predicate):
     """Any authenticated user; every row."""
@@ -500,6 +604,10 @@ class AnyOf(Predicate):
         for part in self.parts:
             yield from part.owned()
 
+    def bind(self, view: Any, action: str | None = None) -> Predicate:
+        bound = tuple(part.bind(view, action) for part in self.parts)
+        return self if all(a is b for a, b in zip(bound, self.parts, strict=True)) else AnyOf(bound)
+
     def __repr__(self) -> str:
         return " | ".join(repr(part) for part in self.parts)
 
@@ -527,6 +635,10 @@ class AllOf(Predicate):
     def owned(self) -> Iterator[Owned]:
         for part in self.parts:
             yield from part.owned()
+
+    def bind(self, view: Any, action: str | None = None) -> Predicate:
+        bound = tuple(part.bind(view, action) for part in self.parts)
+        return self if all(a is b for a, b in zip(bound, self.parts, strict=True)) else AllOf(bound)
 
     def __repr__(self) -> str:
         return " & ".join(
@@ -627,8 +739,9 @@ def missing_access_text(view_class: type[Any]) -> str:
     """What is wrong and how to fix it, for a viewset that declares no ``access``."""
     return (
         f"{view_class.__name__} declares no `access`, so every request is denied: access "
-        "is mandatory (ADR 0001 Q2.1). Declare one on the viewset, e.g. "
-        "`access = Access(read=Authenticated(), write=Owned('owner'))`, "
+        "is mandatory (ADR 0001 Q2.1). Declare one on the viewset: `access = Granted()` "
+        "(the roles' grants for this model, row-scoped), e.g. "
+        "`access = Access(read=Authenticated(), write=Owned('owner'))` for a custom rule, "
         "or opt out explicitly with `access = Unscoped(reason=...)`."
     )
 
@@ -673,13 +786,13 @@ def action_slot(action: str | None, method: str | None) -> str:
 
 
 def action_predicate(view: Any, access: Access, method: str | None = None) -> Predicate:
-    """The predicate governing the view's current action under ``access``."""
+    """The predicate governing the view's current action under ``access``, bound to the view."""
     override = action_override(view)
     if override is not None:
-        return override
+        return override.bind(view)
     if method is None:
         method = getattr(getattr(view, "request", None), "method", None)
-    return access.slot(action_slot(getattr(view, "action", None), method))
+    return access.slot(action_slot(getattr(view, "action", None), method)).bind(view)
 
 
 def describe_access(declaration: Access | Unscoped | None, predicate: Predicate | None) -> Any:
@@ -691,42 +804,16 @@ def describe_access(declaration: Access | Unscoped | None, predicate: Predicate 
     return predicate.describe() if predicate is not None else None
 
 
-def _spawns_duplicates(model: type[Model], node: Q) -> bool:
-    """True when any lookup in ``node`` crosses a to-many relation."""
-    for child in node.children:
-        if isinstance(child, Q):
-            if _spawns_duplicates(model, child):
-                return True
-            continue
-        if not isinstance(child, tuple):
-            continue  # expressions (Exists, …) add no join
-        opts = model._meta
-        for name in str(child[0]).split(LOOKUP_SEP):
-            if name == "pk":
-                name = opts.pk.name
-            try:
-                relation = opts.get_field(name)
-            except FieldDoesNotExist:
-                break  # a lookup/transform: the path ended
-            path_infos = getattr(relation, "path_infos", None)
-            if not path_infos:
-                break
-            if any(info.m2m for info in path_infos):
-                return True
-            opts = path_infos[-1].to_opts
-    return False
+def rows_or_exempt(view: Any, predicate: Predicate, request: Any) -> RowFilter:
+    """``predicate.rows(request)``, or every row the gate admits when ``view`` is ``scope_exempt``.
 
-
-def apply_rows(queryset: QuerySet[Any], rows: RowFilter) -> QuerySet[Any]:
-    """Narrow ``queryset`` by a compiled row filter (``distinct()`` for to-many paths)."""
-    if rows is True:
-        return queryset
-    if rows is False:
-        return queryset.none()
-    narrowed = queryset.filter(rows)
-    if _spawns_duplicates(queryset.model, rows):
-        narrowed = narrowed.distinct()
-    return narrowed
+    ``scope_exempt = True`` (with a ``scope_exempt_reason``) keeps the request
+    gate and drops the row filter for one viewset; ``karni check`` lists every
+    exemption so they stay visible.
+    """
+    if getattr(view, "scope_exempt", False):
+        return True if predicate.allows(request) else False
+    return predicate.rows(request)
 
 
 # validation
@@ -784,7 +871,22 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
                 code="E103",
             )
         owned.extend(override.owned())
+    exempt = getattr(view_class, "scope_exempt", False)
+    reason = getattr(view_class, "scope_exempt_reason", "")
+    if exempt and (not isinstance(reason, str) or not reason.strip()):
+        raise KarniImproperlyConfigured(
+            f"{name}: scope_exempt = True needs scope_exempt_reason = '...' saying why this "
+            "viewset shows every row its gate admits (karni check lists every exemption).",
+            code="E210",
+        )
+    granted = any(isinstance(p, Granted) for p in _leaves(declaration, view_class))
     if model is None:
+        if granted:
+            raise KarniImproperlyConfigured(
+                f"{name}: Granted() needs the viewset's model (set `model = ...`) to know "
+                "which permissions the roles grant.",
+                code="E211",
+            )
         return
     for predicate in owned:
         valid, problem = _owned_target(model, predicate.path)
@@ -795,7 +897,7 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
                 'e.g. Owned("organizer") or Owned("event__organizer").',
                 code="E104",
             )
-    for can in _cans(declaration, view_class):
+    for can in (p for p in _leaves(declaration, view_class) if isinstance(p, Can)):
         for key in can.keys:
             label = key.rsplit(":", 1)[0]
             if label != model._meta.label_lower:
@@ -807,10 +909,61 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
                     "permission.",
                     code="E209",
                 )
+    if granted:
+        _validate_granted_actions(view_class, declaration, model)
 
 
-def _cans(declaration: Any, view_class: type[Any]) -> list[Can]:
-    """Every :class:`Can` in the viewset's ``access`` and its ``@action(access=...)``."""
+def _validate_granted_actions(view_class: type[Any], declaration: Any, model: type[Model]) -> None:
+    """E211 for an unsafe ``@action`` that ``Granted()`` governs but the model never declared."""
+    for extra in getattr(view_class, "get_extra_actions", lambda: [])():
+        override = getattr(extra, "kwargs", {}).get("access")
+        for method in getattr(extra, "mapping", {}):
+            verb = str(method).upper()
+            if verb in SAFE_METHODS:
+                continue
+            if override is not None:
+                governing: Predicate | None = override
+            elif isinstance(declaration, Access):
+                governing = declaration.slot(action_slot(extra.__name__, verb))
+            else:
+                governing = None
+            if governing is None:
+                continue
+            if not any(isinstance(p, Granted) for p in _flatten_leaves(governing)):
+                continue
+            if extra.__name__ not in model_actions(model):
+                raise KarniImproperlyConfigured(
+                    f"{view_class.__name__}.{extra.__name__}: Granted() has no permission for "
+                    f"this action. Add {extra.__name__!r} to `class Karni: actions = [...]` on "
+                    f"{model.__name__} (then grant 'app.model:{extra.__name__}' in KARNI_ROLES), "
+                    "or give the action its own @action(access=...).",
+                    code="E211",
+                )
+
+
+def predicate_leaves(predicate: Predicate) -> list[Predicate]:
+    """Every leaf predicate inside ``predicate`` (through ``|``, ``&`` and ``bypass=``)."""
+    return _flatten_leaves(predicate)
+
+
+def _flatten_leaves(predicate: Predicate) -> list[Predicate]:
+    pending: list[Predicate] = [predicate]
+    found: list[Predicate] = []
+    while pending:
+        current = pending.pop()
+        if isinstance(current, AnyOf | AllOf):
+            pending.extend(current.parts)
+        elif isinstance(current, Owned):
+            found.append(current)
+            if current.bypass is not None:
+                pending.append(current.bypass)
+        else:
+            found.append(current)
+    return found
+
+
+def _leaves(declaration: Any, view_class: type[Any]) -> list[Predicate]:
+    """Every leaf predicate of the viewset's ``access`` and its ``@action(access=...)``."""
     predicates: list[Predicate] = []
     if isinstance(declaration, Access):
         predicates.extend((declaration.read, declaration.write, declaration.create))
@@ -818,58 +971,65 @@ def _cans(declaration: Any, view_class: type[Any]) -> list[Can]:
         override = getattr(extra, "kwargs", {}).get("access")
         if isinstance(override, Predicate):
             predicates.append(override)
-    found: list[Can] = []
-    while predicates:
-        predicate = predicates.pop()
-        if isinstance(predicate, Can):
-            found.append(predicate)
-        elif isinstance(predicate, AnyOf | AllOf):
-            predicates.extend(predicate.parts)
-        elif isinstance(predicate, Owned) and predicate.bypass is not None:
-            predicates.append(predicate.bypass)
-    return found
+    return [leaf for predicate in predicates for leaf in _flatten_leaves(predicate)]
+
+
+def _direct_user_fk(model: type[Model], name: str) -> bool:
+    """Whether ``model.<name>`` is a concrete FK/O2O to the user model."""
+    if LOOKUP_SEP in name:
+        return False
+    try:
+        relation = model._meta.get_field(name)
+    except FieldDoesNotExist:
+        return False
+    return bool(
+        getattr(relation, "concrete", False)
+        and (relation.many_to_one or relation.one_to_one)
+        and relation.related_model is get_user_model()
+    )
 
 
 def owner_fields(declaration: Access | Unscoped | None, model: type[Model]) -> tuple[str, ...]:
-    """Direct FKs to the user model named by ``Owned`` in ``write``/``create``.
+    """Direct FKs to the user model that ``write``/``create`` own.
 
-    These are stamped from ``request.user`` on create and read-only in the
-    generated serializer. Traversals and to-many paths are never stamped.
+    Named by ``Owned`` there, or — under ``Granted()`` — the model's
+    ``Karni.owner_field`` (the ``own`` scope). These are stamped from
+    ``request.user`` on create and read-only in the generated serializer.
+    Traversals and to-many paths are never stamped.
     """
     if not isinstance(declaration, Access):
         return ()
-    user_model = get_user_model()
     names: list[str] = []
     for predicate in (*declaration.write.owned(), *declaration.create.owned()):
-        if LOOKUP_SEP in predicate.path or predicate.path in names:
-            continue
-        try:
-            relation = model._meta.get_field(predicate.path)
-        except FieldDoesNotExist:
-            continue
-        concrete = getattr(relation, "concrete", False)
-        if (
-            concrete
-            and (relation.many_to_one or relation.one_to_one)
-            and relation.related_model is user_model
-        ):
+        if predicate.path not in names and _direct_user_fk(model, predicate.path):
             names.append(predicate.path)
+    leaves = (*_flatten_leaves(declaration.write), *_flatten_leaves(declaration.create))
+    if any(isinstance(leaf, Granted) for leaf in leaves):
+        owner = owner_field(model)
+        if owner and owner not in names and _direct_user_fk(model, owner):
+            names.append(owner)
     return tuple(names)
 
 
 def owner_paths_models(
     declaration: Access | Unscoped | None, model: type[Model]
 ) -> set[type[Model]]:
-    """Models crossed by the ``read`` predicate's ``Owned`` paths (cache invalidation).
+    """Models crossed by the ``read`` predicate's row paths (cache invalidation).
 
-    A write to any of them can change which rows a requester sees.
+    ``Owned`` paths, plus — under ``Granted()`` — the model's owner field and
+    scope paths. A write to any of them can change which rows a requester sees.
     """
     if not isinstance(declaration, Access):
         return set()
+    paths = [predicate.path for predicate in declaration.read.owned()]
+    if any(isinstance(leaf, Granted) for leaf in _flatten_leaves(declaration.read)):
+        owner = owner_field(model)
+        paths.extend([owner] if owner else [])
+        paths.extend(scope_paths(model).values())
     found: set[type[Model]] = set()
-    for predicate in declaration.read.owned():
+    for path in paths:
         current = model
-        for segment in predicate.path.split(LOOKUP_SEP):
+        for segment in path.split(LOOKUP_SEP):
             try:
                 relation = current._meta.get_field(segment)
             except FieldDoesNotExist:
@@ -914,10 +1074,11 @@ class AccessPermission(BasePermission):
         declaration = view.get_access()
         if not isinstance(declaration, Access):
             return declaration is not None
-        predicate = action_predicate(view, declaration)
-        if predicate == declaration.read:
+        slot = action_slot(getattr(view, "action", None), request.method)
+        if slot == "read" and action_override(view) is None:
             return True  # the row was already found through the read scope
-        rows = predicate.rows(request)
+        predicate = action_predicate(view, declaration)
+        rows = rows_or_exempt(view, predicate, request)
         if rows is True:
             return True
         if rows is not False:

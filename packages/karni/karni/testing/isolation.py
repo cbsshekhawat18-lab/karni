@@ -1,4 +1,4 @@
-"""The test people forget, in one line: a role cannot reach another owner's (or tenant's) rows.
+"""The test people forget, in one line: a role cannot reach another owner's (or scope's) rows.
 
 ::
 
@@ -7,19 +7,25 @@
 
 For every **isolation dimension** that applies to the resource, two users
 with the role are created — *mine* and *theirs* — each with a row of their
-own, and through the resource's URLs *mine* must:
+own, and *mine* must not reach *theirs*' row through any surface:
 
-* see their own row in the list and retrieve it (the positive control: an
-  endpoint that shows nobody anything would otherwise pass);
-* not see *theirs*' row in the list, get 404 (or 403) retrieving, updating
-  and deleting it, and leave it unchanged and undeleted;
-* not be able to create a row owned by *theirs*: a body naming another
-  owner is ignored and the row is stamped with the requester.
+* the list (and *mine* must see their own row: the positive control, so an
+  endpoint that shows nobody anything cannot pass);
+* retrieve, update and delete — 404 (never a 403 that confirms the row
+  exists), and the row stays unchanged and undeleted;
+* a nested ``?expand=`` from another resource that points at it;
+* a filter, ``?search=`` or ``?ordering=`` parameter;
+* the admin — the changelist, its search, the change form and a POST to it;
+* an export route, when the resource has one;
+* a create body naming another owner — ignored, the row is stamped with the
+  requester.
 
-Dimensions (:class:`Isolation`): ``owner`` ships with Karni and applies to
-every resource whose ``access`` ``read`` names an ``Owned(...)`` path
-(``owner="field"`` names the path when rows are scoped by ``Where(...)`` or
-``filter_queryset_for_user`` instead). A tenancy module adds ``tenant`` by
+Dimensions (:class:`Isolation`): ``owner`` applies to every resource whose
+``access`` ``read`` names an ``Owned(...)`` path (``owner="field"`` names the
+path when rows are scoped by ``Where(...)`` or ``filter_queryset_for_user``
+instead); ``grant`` applies when the read is ``Granted()`` (or ``Can``) and
+the role's grant for the model's ``view`` permission has an ``own`` or
+``related:<key>`` scope (ADR 0002, P2). A tenancy module adds ``tenant`` by
 registering a dimension under the ``karni.isolation`` entry-point group (or
 :func:`register_isolation`): ``assert_isolated(resource)`` then tests it too,
 with no change to existing tests. ``by="owner"`` limits the run to one
@@ -38,21 +44,29 @@ from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from typing import Any, ClassVar, Final
 
-from karni.exceptions import KarniAssertionError, KarniValueError
+from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist
+from django.db import models
+
+from karni.exceptions import KarniAssertionError, KarniImproperlyConfigured, KarniValueError
 from karni.testing.api import (
     Resource,
     _ids,
     _json_value,
+    _query_value,
+    _search_token,
     _unthrottled,
     build_payload,
     client_as,
     expectation,
+    readable_row,
     resolve_resource,
     user_with_roles,
 )
 
 __all__ = [
     "ENTRY_POINT_GROUP",
+    "GrantIsolation",
     "Isolation",
     "IsolationCase",
     "OwnerIsolation",
@@ -116,6 +130,24 @@ class Isolation:
         """Direct FK fields a request body might use to claim a row for someone else."""
         return ()
 
+    def persistent(self, case: IsolationCase) -> bool:
+        """Whether a principal's scope survives reloading its user from the database.
+
+        The admin logs users in by primary key, so a scope carried only on
+        the user *instance* (a ``related:`` key the user model has no field
+        for) cannot be exercised there; the admin probe is then skipped.
+        """
+        return True
+
+    def admin_applies(self, case: IsolationCase) -> bool:
+        """Whether the admin partitions rows the way this dimension does.
+
+        The admin's rows follow the roles' grants (:mod:`karni.admin.scope`),
+        so only a dimension built on grants can expect the admin to agree
+        with it; an ``Owned(...)`` partition says nothing about the admin.
+        """
+        return False
+
 
 class OwnerIsolation(Isolation):
     """Rows owned through the ``read`` predicate's ``Owned(...)`` paths (or ``owner=``)."""
@@ -137,8 +169,9 @@ class OwnerIsolation(Isolation):
         read = getattr(declaration, "read", declaration)
         return (
             f"{case.resource.name}.access read={read!r} names no Owned(...) path, so every "
-            "user who passes it sees every row. Scope reads with Owned('<owner field>'), or "
-            "pass owner='<field>' when Where(...)/filter_queryset_for_user scopes them"
+            "user who passes it sees every row. Scope reads with Owned('<owner field>') or "
+            "Granted() (a role whose grant is 'own' or 'related:<key>'), or pass "
+            "owner='<field>' when Where(...)/filter_queryset_for_user scopes them"
         )
 
     def row(self, case: IsolationCase, principal: Principal) -> Any:
@@ -157,7 +190,149 @@ class OwnerIsolation(Isolation):
         return tuple(path for path in self.paths(case) if "__" not in path)
 
 
-_REGISTERED: dict[str, Isolation] = {"owner": OwnerIsolation()}
+class GrantIsolation(Isolation):
+    """Rows reached through the role's grants: a ``Granted()`` / ``Can`` read with a scoped grant.
+
+    The grant for ``<model>:view`` decides the partition: ``own`` puts each
+    principal's row on the model's ``Karni.owner_field``; ``related:<key>``
+    gives each principal a distinct ``user.<key>`` (a new row of the related
+    model, saved on the user when the user model has that field, otherwise
+    set on the instance) and puts their row on the model's scope path.
+    """
+
+    name = "grant"
+
+    def grant(self, case: IsolationCase) -> Any | None:
+        """The role's scoped grant for the model's ``view`` permission, if any."""
+        from django.contrib.contenttypes.models import ContentType
+
+        from karni.accounts.models import RolePermission
+        from karni.accounts.roles import Grant
+        from karni.api.access import Can, Granted, predicate_leaves
+        from karni.meta import permission_key
+
+        if not case.role:
+            return None
+        declaration = getattr(case.resource.viewset, "access", None)
+        read = getattr(declaration, "read", None)
+        if read is None:
+            return None
+        model = case.resource.model
+        key = permission_key(model, "view")
+        leaves = predicate_leaves(read)
+        if not any(
+            isinstance(leaf, Granted) or (isinstance(leaf, Can) and key in leaf.keys)
+            for leaf in leaves
+        ):
+            return None
+        row = (
+            RolePermission.objects.filter(
+                role__slug=case.role,
+                permission__content_type=ContentType.objects.get_for_model(model),
+                permission__action="view",
+            )
+            .order_by("pk")
+            .first()
+        )
+        if row is None or row.scope not in {"own", "related"}:
+            return None
+        return Grant(key, row.scope, row.scope_path)
+
+    def applies(self, case: IsolationCase) -> bool:
+        return self.grant(case) is not None
+
+    def reason(self, case: IsolationCase) -> str:
+        who = f"role {case.role!r}" if case.role else "a user without a role"
+        return (
+            f"{case.resource.name}: {who} holds no 'own' or 'related:<key>' grant for "
+            f"{case.resource.model._meta.label_lower}:view, so grants do not partition its "
+            "rows (an 'all' grant sees everything; grant 'own' or 'related:<key>' in "
+            "KARNI_ROLES and run karni sync-roles)"
+        )
+
+    def _user_field(self, key: str) -> Any | None:
+        try:
+            return get_user_model()._meta.get_field(key)
+        except FieldDoesNotExist:
+            return None
+
+    def _related_model(self, case: IsolationCase, key: str) -> type[models.Model] | None:
+        from karni.meta import scope_paths
+
+        user_field = self._user_field(key)
+        if user_field is not None and getattr(user_field, "related_model", None) is not None:
+            return user_field.related_model
+        path = scope_paths(case.resource.model).get(key)
+        if not path:
+            return None
+        current: Any = case.resource.model
+        for segment in path.split("__"):
+            try:
+                relation = current._meta.get_field(segment)
+            except FieldDoesNotExist:
+                return None
+            current = getattr(relation, "related_model", None)
+            if current is None:
+                return None
+        return current
+
+    def principals(self, case: IsolationCase) -> tuple[Principal, Principal]:
+        from karni.testing.factories import create
+
+        mine, theirs = super().principals(case)
+        grant = self.grant(case)
+        if grant is not None and grant.scope == "related":
+            related = self._related_model(case, grant.scope_path)
+            if related is None:
+                raise KarniAssertionError(
+                    f"{case.resource.name}: grant 'related:{grant.scope_path}' needs "
+                    f"{case.resource.model.__name__}.Karni.scope_paths[{grant.scope_path!r}] "
+                    "to end at a model.",
+                    code="E605",
+                )
+            persistent = self._user_field(grant.scope_path) is not None
+            for principal in (mine, theirs):
+                setattr(principal.user, grant.scope_path, create(related))
+                if persistent:
+                    principal.user.save(update_fields=[grant.scope_path])
+        return mine, theirs
+
+    def persistent(self, case: IsolationCase) -> bool:
+        grant = self.grant(case)
+        if grant is None or grant.scope != "related":
+            return True
+        return self._user_field(grant.scope_path) is not None
+
+    def admin_applies(self, case: IsolationCase) -> bool:
+        return True
+
+    def row(self, case: IsolationCase, principal: Principal) -> Any:
+        from karni.meta import owner_field, scope_paths
+        from karni.testing.factories import create
+
+        model = case.resource.model
+        grant = self.grant(case)
+        scoped: dict[str, Any] = {}
+        if grant is not None and grant.scope == "own":
+            owner = owner_field(model)
+            if owner:
+                scoped[owner] = principal.user
+        elif grant is not None:
+            path = scope_paths(model)[grant.scope_path]
+            scoped[path] = getattr(principal.user, grant.scope_path)
+        return create(model, **{**case.values, **scoped})
+
+    def owner_fields(self, case: IsolationCase) -> tuple[str, ...]:
+        from karni.meta import owner_field
+
+        grant = self.grant(case)
+        if grant is None or grant.scope != "own":
+            return ()
+        owner = owner_field(case.resource.model)
+        return (owner,) if owner and "__" not in owner else ()
+
+
+_REGISTERED: dict[str, Isolation] = {"owner": OwnerIsolation(), "grant": GrantIsolation()}
 _LOADED = False
 
 
@@ -169,7 +344,7 @@ def register_isolation(dimension: Isolation) -> None:
 
 
 def isolation_dimensions() -> dict[str, Isolation]:
-    """Every dimension: the built-in ``owner`` plus the ``karni.isolation`` entry points."""
+    """Every dimension: ``owner``, ``grant`` and the ``karni.isolation`` entry points."""
     global _LOADED
     if not _LOADED:
         _LOADED = True
@@ -184,6 +359,8 @@ class IsolationReport:
     resource: str
     dimensions: list[str] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
+    #: Probes that could not run for this resource (no admin, no export, …).
+    notes: list[str] = field(default_factory=list)
 
 
 def _check(dimension: Isolation, case: IsolationCase, report: IsolationReport) -> None:
@@ -199,6 +376,9 @@ def _check(dimension: Isolation, case: IsolationCase, report: IsolationReport) -
 
     def fail(message: str) -> None:
         report.failures.append(f"{tag} {message}")
+
+    def note(message: str) -> None:
+        report.notes.append(f"{tag} {message}")
 
     with mine.bind():
         listed = me.get(resource.list_url())
@@ -223,17 +403,153 @@ def _check(dimension: Isolation, case: IsolationCase, report: IsolationReport) -
             ("PATCH", me.patch(url, {}, format="json")),
             ("DELETE", me.delete(url)),
         ):
-            if response.status_code not in {403, 404}:
+            allowed = {404} if method == "GET" else {403, 404}
+            if response.status_code not in allowed:
                 fail(
                     f"{method} {url} (another {dimension.name}'s row) as {mine.label} "
                     f"answered {response.status_code}, expected 404"
+                    + (" (a 403 confirms the row exists)" if response.status_code == 403 else "")
                 )
         after = model._default_manager.filter(pk=their_row.pk).values().first()
         if after is None:
             fail(f"another {dimension.name}'s row was deleted by {mine.label}")
         elif after != before:
             fail(f"another {dimension.name}'s row was changed by {mine.label}")
+        _check_parameters(resource, me, their_row, fail)
+        _check_expansion(resource, mine, their_row, fail, note)
+        _check_export(resource, me, their_row, fail, note)
         _check_create(dimension, case, mine, theirs, fail)
+    _check_admin(dimension, case, mine, my_row, their_row, fail, note)
+
+
+def _check_parameters(
+    resource: Resource, me: Any, their_row: Any, fail: Callable[[str], None]
+) -> None:
+    """Filters, ``?search=`` and ``?ordering=`` never widen the scope."""
+    from karni.api.filters import KarniFilterBackend
+
+    url = resource.list_url()
+    model = resource.model
+    probes: list[tuple[str, str]] = []
+    filterset = KarniFilterBackend().derive_filterset_class(model)
+    for param, declared in filterset.base_filters.items():
+        if getattr(declared, "lookup_expr", "exact") != "exact":
+            continue
+        value = getattr(their_row, declared.field_name, None)
+        if value is None or isinstance(value, models.Manager):
+            continue
+        probes.append((param, _query_value(value)))
+        if len(probes) == 3:
+            break
+    search_fields = tuple(getattr(resource.viewset, "search_fields", ()) or ())
+    if search_fields:
+        token = _search_token(their_row, search_fields[0])
+        if token:
+            probes.append(("search", token))
+    orderable = [
+        f.name for f in model._meta.concrete_fields if not f.is_relation and f.name != "id"
+    ][:2]
+    for name in orderable:
+        probes.append(("ordering", name))
+        probes.append(("ordering", f"-{name}"))
+    for param, value in probes:
+        response = me.get(url, {param: value})
+        if response.status_code != 200:
+            continue
+        if str(their_row.pk) in _ids(response.json()):
+            fail(f"GET {url}?{param}={value} reaches another scope's row {their_row.pk}")
+
+
+def _viewset_model(viewset: type[Any]) -> type[models.Model]:
+    model: type[models.Model] | None = viewset.model
+    if model is None:
+        queryset = viewset.queryset
+        if queryset is None:
+            raise KarniImproperlyConfigured(
+                f"{viewset.__name__} must declare 'model' or 'queryset'.", code="E110"
+            )
+        model = queryset.model
+    return model
+
+
+def _expandable_relations(viewset: type[Any], target: type[models.Model]) -> list[str]:
+    """Expand keys of ``viewset`` whose relation points at ``target``."""
+    from karni.api.expansion import auto_expandable_fields
+
+    model = _viewset_model(viewset)
+    declared = viewset.expandable_fields
+    mapping = dict(declared) if declared is not None else auto_expandable_fields(model)
+    found: list[str] = []
+    for key, name in mapping.items():
+        try:
+            relation = model._meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if getattr(relation, "related_model", None) is target and getattr(
+            relation, "concrete", False
+        ):
+            found.append(key)
+    return found
+
+
+def _check_expansion(
+    resource: Resource,
+    mine: Principal,
+    their_row: Any,
+    fail: Callable[[str], None],
+    note: Callable[[str], None],
+) -> None:
+    """No other resource embeds another scope's row through ``?expand=``."""
+    from karni.api.routers import resolve_router
+    from karni.api.viewsets import BaseViewSet
+
+    me = client_as(user=mine.user)
+    probed = 0
+    for prefix, viewset, basename in getattr(resolve_router(), "registry", ()):
+        if not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
+            continue
+        source = Resource(viewset, _viewset_model(viewset), prefix, basename)
+        for key in _expandable_relations(viewset, resource.model):
+            relation = source.model._meta.get_field((viewset.expandable_fields or {}).get(key, key))
+            value = [their_row] if getattr(relation, "many_to_many", False) else their_row
+            try:
+                pointing = readable_row(source.model, mine.user, **{relation.name: value})
+            except Exception:  # noqa: BLE001 - the source cannot be built for this user
+                continue
+            url = source.detail_url(pointing.pk)
+            response = me.get(url, {"expand": key})
+            if response.status_code != 200:
+                continue
+            probed += 1
+            embedded = response.json().get(key)
+            rows = embedded if isinstance(embedded, list) else [embedded]
+            if any(
+                isinstance(row, dict) and str(row.get("id")) == str(their_row.pk) for row in rows
+            ):
+                fail(
+                    f"GET {url}?expand={key} ({source.name}) embeds another scope's "
+                    f"{resource.model.__name__} {their_row.pk}"
+                )
+    if not probed:
+        note("expand: no routed resource expands into this one")
+
+
+def _check_export(
+    resource: Resource,
+    me: Any,
+    their_row: Any,
+    fail: Callable[[str], None],
+    note: Callable[[str], None],
+) -> None:
+    """An export route, when the resource has one, carries only the scope's rows."""
+    url = f"{resource.list_url()}export/"
+    response = me.get(url)
+    if response.status_code != 200:
+        note("export: no export route (P6)")
+        return
+    body = response.content.decode("utf-8", "replace")
+    if str(their_row.pk) in body:
+        fail(f"GET {url} exports another scope's row {their_row.pk}")
 
 
 def _check_create(
@@ -261,6 +577,92 @@ def _check_create(
             )
 
 
+def _check_admin(
+    dimension: Isolation,
+    case: IsolationCase,
+    mine: Principal,
+    my_row: Any,
+    their_row: Any,
+    fail: Callable[[str], None],
+    note: Callable[[str], None],
+) -> None:
+    """The admin — changelist, search, change form, POST — shows the same rows as the API."""
+    from django.contrib.auth.models import Permission
+    from django.test import Client
+    from django.urls import NoReverseMatch, reverse
+
+    from karni.scoping import admin_site
+
+    model = case.resource.model
+    if not dimension.admin_applies(case):
+        note(
+            "admin: rows in the admin follow the roles' grants, not this dimension; "
+            "the grant dimension (a Granted() read with an own/related grant) tests them"
+        )
+        return
+    site = admin_site()
+    if model not in site._registry:
+        note("admin: the model is not registered in the admin")
+        return
+    if not dimension.persistent(case):
+        note("admin: the scope lives on the user instance only (no user field); skipped")
+        return
+    opts = model._meta
+    user = mine.user
+    user.is_staff = True
+    user.save(update_fields=["is_staff"])
+    user.user_permissions.add(
+        *Permission.objects.filter(
+            content_type__app_label=opts.app_label,
+            codename__in=[f"{action}_{opts.model_name}" for action in ("view", "change", "delete")],
+        )
+    )
+    client = Client()
+    client.force_login(user)
+    try:
+        changelist = reverse(f"{site.name}:{opts.app_label}_{opts.model_name}_changelist")
+        change = reverse(
+            f"{site.name}:{opts.app_label}_{opts.model_name}_change", args=[their_row.pk]
+        )
+    except NoReverseMatch:
+        note("admin: the admin site is not mounted in ROOT_URLCONF")
+        return
+    with mine.bind():
+        response = client.get(changelist)
+        if response.status_code != 200:
+            fail(f"admin: GET {changelist} as {mine.label} answered {response.status_code}")
+            return
+        changelist_view = response.context_data.get("cl") if response.context_data else None
+        if changelist_view is None:
+            note("admin: the changelist rendered without a ChangeList context")
+            return
+        shown = {str(pk) for pk in changelist_view.queryset.values_list("pk", flat=True)}
+        if str(my_row.pk) not in shown:
+            fail(f"admin positive control: {mine.label} cannot see their own row in {changelist}")
+        if str(their_row.pk) in shown:
+            fail(f"admin: {changelist} lists another {dimension.name}'s row")
+        search_fields = tuple(site._registry[model].get_search_fields(response.wsgi_request))
+        if search_fields:
+            token = _search_token(their_row, search_fields[0])
+            if token:
+                searched = client.get(changelist, {"q": token})
+                found = searched.context_data.get("cl") if searched.context_data else None
+                if found is not None and str(their_row.pk) in {
+                    str(pk) for pk in found.queryset.values_list("pk", flat=True)
+                }:
+                    fail(f"admin: {changelist}?q={token} finds another {dimension.name}'s row")
+        before = model._default_manager.filter(pk=their_row.pk).values().first()
+        opened = client.get(change)
+        if opened.status_code == 200:
+            fail(f"admin: GET {change} (another {dimension.name}'s row) rendered the change form")
+        posted = client.post(change, {"_save": "1"})
+        if posted.status_code == 200:
+            fail(f"admin: POST {change} (another {dimension.name}'s row) was accepted")
+        after = model._default_manager.filter(pk=their_row.pk).values().first()
+        if after != before:
+            fail(f"admin: another {dimension.name}'s row was changed through {change}")
+
+
 def assert_isolated(
     resource: Any,
     role: str | None = None,
@@ -269,7 +671,7 @@ def assert_isolated(
     owner: str | None = None,
     values: Mapping[str, Any] | None = None,
 ) -> IsolationReport:
-    """Assert ``role`` cannot reach another owner's (or tenant's) rows of ``resource``.
+    """Assert ``role`` cannot reach another owner's (or scope's) rows of ``resource``.
 
     :param resource: a viewset class, a model class, a route prefix or ``"app.Model"``.
     :param role: the role both principals hold; ``None`` = plain authenticated users.

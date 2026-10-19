@@ -127,7 +127,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** Access is mandatory (ADR 0001 Q2.1): without a declaration Karni cannot know which rows a user may see or change, so the viewset denies every request.
 
-**Fix.** Declare `access = Access(read=..., write=...)` on the viewset (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`.
+**Fix.** Declare `access = Granted()` on the viewset (the roles' grants for its model, row-scoped), or a custom `Access(read=..., write=...)` (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`.
 
 <a id="w101"></a>
 
@@ -510,6 +510,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Can() names permissions as 'app_label.model:action', and its row filter is built against that model, so a viewset's declaration can only use its own model's permissions.
 
 **Fix.** Write Can('events.event:approve'); on EventViewSet it must be an events.event permission. To gate on another model's permission use HasRole(...).
+
+<a id="e210"></a>
+
+#### E210 — scope_exempt = True without a reason
+
+*exception* · from `karni.api.access.validate_access`
+
+**Why Karni objects.** A viewset or admin that shows every row its gate admits is the one place row scoping is off; without a reason it looks like an oversight, and karni check lists every exemption by its reason.
+
+**Fix.** Add scope_exempt_reason = '...' next to scope_exempt = True (e.g. 'public catalogue'), or remove the exemption and let Granted() / the roles' grants scope the rows.
+
+<a id="e211"></a>
+
+#### E211 — Granted() has no permission for this action or viewset
+
+*exception* · from `karni.api.access.Granted`
+
+**Why Karni objects.** Granted() resolves to the viewset's model and the current action; an unsafe custom @action the model never declared has no permission to check, and a viewset without a model has nothing to resolve against. Evaluating it outside a viewset is the same error.
+
+**Fix.** Add the action to `class Karni: actions = [...]` on the model and grant 'app.model:<action>' in KARNI_ROLES, give the action its own @action(access=...), set `model = ...` on the viewset, or evaluate through action_predicate(view, access).
 
 ### 3xx · Admin
 
@@ -1447,11 +1467,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `viewset-access`
 
-**Rule.** Every `BaseViewSet` declares `access = Access(read=..., write=...)` (`create=` defaults to `write`), built from `Owned("<fk to user>")`, `HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` combined with `|` / `&`. Reads are public only when you write `Public()`. A viewset without `access` denies every request; `Unscoped(reason=...)` is the explicit opt-out.
+**Rule.** Every `BaseViewSet` declares `access`: `Granted()` (the roles' grants for the model, row-scoped; the default) or `Access(read=..., write=...)` built from `Owned("<fk to user>")`, `HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you write `Public()`. No `access` denies every request; `Unscoped(reason=...)` is the explicit opt-out.
 
 **Why Karni objects.** One declaration compiles into both the request gate and the row filter, so neither can be forgotten; a forgotten permission class fails open silently.
 
-**Fix.** Add `access = Access(read=..., write=...)` (e.g. write=Authenticated()).
+**Fix.** Add `access = Granted()` (or `Access(read=..., write=...)` for a custom rule).
 
 <a id="k110"></a>
 

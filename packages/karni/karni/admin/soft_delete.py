@@ -33,6 +33,7 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
+from karni.admin.scope import scope_queryset
 from karni.managers import ScopedManagerMixin
 from karni.scopes import SOFT_DELETE
 
@@ -146,12 +147,14 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
 
         Mirrors ``ModelAdmin.get_queryset`` exactly, except that the default
         manager's queryset has ``soft_delete`` lifted. Every other scope still
-        applies. :class:`SoftDeleteListFilter` scopes the changelist back to
-        alive rows by default.
+        applies, including the user's row scope (:mod:`karni.admin.scope`).
+        :class:`SoftDeleteListFilter` scopes the changelist back to alive rows
+        by default.
         """
         queryset = lift_soft_delete(
             self.model._default_manager, reason="admin: deleted filter and change form"
         )
+        queryset = scope_queryset(self, request, queryset)
         ordering = self.get_ordering(request)
         if ordering:
             queryset = queryset.order_by(*ordering)

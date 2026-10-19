@@ -192,3 +192,17 @@ a Role row for every existing group. Nothing is deleted; Can('app.model:action')
 is available in access declarations."""
 mechanical = false
 migration = "migrations/0.2.md#roles-as-data"
+
+[[change]]
+id = "row-level-scoping"
+kind = "behaviour"
+symbol = "admin row scope"
+replacement = 'access = Granted(); scope_exempt = True, scope_exempt_reason = "..."'
+summary = """\
+Row-level scoping (ADR 0002, P2): access = Granted() scopes a viewset by the \
+roles' grants and is what karni make viewset writes, and the admin now shows \
+only the rows the user's grants reach — a staff user with Django permissions \
+but no grant sees nothing. scope_exempt opts a viewset or admin out, with a \
+reason that karni check lists."""
+mechanical = false
+migration = "migrations/0.2.md#row-level-scoping"

@@ -369,18 +369,18 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Viewsets declare access.",
         rule=(
-            "Every `BaseViewSet` declares `access = Access(read=..., write=...)` "
-            '(`create=` defaults to `write`), built from `Owned("<fk to user>")`, '
-            "`HasRole(...)`, `Authenticated()`, `Public()` and `Where(lambda request: Q(...))` "
-            "combined with `|` / `&`. Reads are public only when you write `Public()`. A "
-            "viewset without `access` denies every request; `Unscoped(reason=...)` is the "
-            "explicit opt-out."
+            "Every `BaseViewSet` declares `access`: `Granted()` (the roles' grants for the "
+            "model, row-scoped; the default) or `Access(read=..., write=...)` built from "
+            '`Owned("<fk to user>")`, `HasRole(...)`, `Authenticated()`, `Public()` and '
+            "`Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you "
+            "write `Public()`. No `access` denies every request; `Unscoped(reason=...)` is "
+            "the explicit opt-out."
         ),
         rationale=(
             "One declaration compiles into both the request gate and the row filter, so "
             "neither can be forgotten; a forgotten permission class fails open silently."
         ),
-        fix="Add `access = Access(read=..., write=...)` (e.g. write=Authenticated()).",
+        fix="Add `access = Granted()` (or `Access(read=..., write=...)` for a custom rule).",
         enforced_by=("viewset-access",),
     ),
     Rule(

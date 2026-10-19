@@ -17,6 +17,11 @@ change and its migration note.
 - Roles as data: `KARNI_ROLES`, `karni sync-roles`, `user.can()`,
   `@requires()`, `Can("app.model:action")` in `access` declarations
   (ADR 0002).
+- Row-level scoping (ADR 0002, P2): `access = Granted()` is the default
+  `karni make viewset` writes and scopes rows by the roles' grants; the
+  admin shows only the rows the user's grants reach; `scope_exempt` with a
+  reason that `karni check` lists; `assert_isolated` gains the `grant`
+  dimension and probes expansion, filters, search, ordering and the admin.
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

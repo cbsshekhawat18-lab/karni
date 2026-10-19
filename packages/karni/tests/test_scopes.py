@@ -31,6 +31,7 @@ from typing import Any
 
 import pytest
 from django.contrib import admin
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models import Expression
@@ -271,6 +272,10 @@ class TestTenantScopeReach:
     def test_the_derived_admin(self, tenant_scope: Scope, data: SimpleNamespace) -> None:
         task_admin = build_model_admin(Task)(Task, admin.AdminSite())
         request = RequestFactory().get("/")
+        # The admin's row scope reads the user's grants; a superuser holds them all.
+        request.user = get_user_model().objects.create_superuser(
+            email="root@example.com", password="a-strong-password-123"
+        )
         with tenant("acme"):
             # The admin lifts soft_delete only: deleted acme rows, no globex ones.
             assert _titles(task_admin.get_queryset(request)) == {"acme live", "acme dead"}

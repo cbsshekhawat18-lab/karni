@@ -25,12 +25,12 @@ class Event(BaseModel):
 
 ```python
 from events.models import Event
-from karni.api import Access, Authenticated, BaseViewSet
+from karni.api import BaseViewSet, Granted
 
 
 class EventViewSet(BaseViewSet):
     model = Event
-    access = Access(read=Authenticated(), write=Authenticated())
+    access = Granted()
     search_fields = ["title"]
 ```
 
@@ -40,11 +40,14 @@ admin autodiscovers a fully configured `Event` admin; no serializer, router,
 admin or settings code exists anywhere.
 
 `access` is mandatory: it says who may read and who may write, and Karni
-compiles it into both the request gate and the row filter. Here any signed-in
-user may do both; `Owned("organizer")` (owner-only rows), `HasRole("staff")`
-and `Public()` (anonymous reads) cover the usual variations — see
-[Access control](api.md#access-control). A viewset without it answers 403 to
-everything and fails `karni check`.
+compiles it into both the request gate and the row filter. `Granted()` is
+the default `karni make viewset` writes: whatever the project's roles grant
+for `Event` (`KARNI_ROLES`), row scope included, so a `user` sees their own
+events and `staff` every one without this file saying so. A custom rule
+names its predicates — `Access(read=Owned("organizer") | HasRole("staff"),
+write=Owned("organizer"))`, `Public()` for anonymous reads — see
+[Access control](api.md#access-control). A viewset without `access` answers
+403 to everything and fails `karni check`.
 
 ## 3. Wire and generate
 

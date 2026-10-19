@@ -58,9 +58,12 @@ referrer policy and `X-Frame-Options: DENY`; CORS is closed unless
 `CORS_ALLOWED_ORIGINS` lists an origin. Startup validation refuses a missing
 `SECRET_KEY` or empty `ALLOWED_HOSTS` with `DEBUG` off.
 
-**Admin.** Mounted at `KARNI_ADMIN_PATH` (move it off `/admin/`); model
-permissions are the roles' (row scoping in the admin lands with P2 of ADR
-0002); no logo unless `KARNI_ADMIN_LOGO` says so.
+**Admin.** Mounted at `KARNI_ADMIN_PATH` (move it off `/admin/`). Django's
+model permissions decide which screens a staff user may open; the roles'
+grants decide which rows those screens show and accept (row scope, ADR 0002
+P2): a staff user with permissions but no grant sees nothing, and an admin
+that opts out needs a reason that `karni check` lists. No logo unless
+`KARNI_ADMIN_LOGO` says so.
 
 **Modules.** `karni-payments` verifies every webhook signature before it
 touches a payment and treats replays as no-ops.

@@ -98,6 +98,42 @@ its own too), `register = True` (opt an `AbstractBaseUser` subclass in).
 Precedence: explicit `admin.site.register` (project `admin.py`) >
 `AdminMeta` > derived defaults.
 
+## Row scope
+
+The admin shows the rows the user's grants reach (ADR 0002, P2) — the same
+answer the API gives for `access = Granted()`. Django's model permissions
+still decide which screens a staff user may open; the roles' grants
+(`KARNI_ROLES` → `RolePermission`, see [roles as data](accounts.md#roles-as-data))
+decide which rows those screens show and accept:
+
+- `get_queryset()` keeps only the rows the user's `view` grants reach, so the
+  changelist, its search and list filters, the autocomplete endpoint and
+  every action start from the same set. A branch manager sees their
+  branch; a staff user with Django permissions but **no grant sees
+  nothing**; superusers hold every grant.
+- `has_view_permission`, `has_change_permission` and `has_delete_permission`
+  with an object also require the row to be inside the matching grant's
+  scope, so a change-form URL for another scope's row is refused (and the
+  changelist never offered it).
+- FK and M2M widgets list only target rows the user may view — what the
+  API's relation fields accept.
+
+A soft-deleted row inside the scope stays reachable (the owner can restore
+it). An admin that must show everything its Django permissions admit opts
+out:
+
+```python
+class SupportConsoleAdmin(KarniModelAdmin):
+    scope_exempt = True
+    scope_exempt_reason = "support staff look up any customer's rows"
+```
+
+The reason is required (`E210` without it) and `karni check` prints every
+exemption in the project on each run. Viewsets have the same switch
+([Access control](api.md#access-control)); the one-line test that a role
+cannot reach another scope's rows through the admin is
+[`assert_isolated`](testing.md#isolation-the-test-people-forget).
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

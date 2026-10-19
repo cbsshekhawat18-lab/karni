@@ -221,6 +221,11 @@ Asking the question:
   also checks that the row is inside the grant's scope. `user.has_role("organizer")`,
   `user.roles` (the `Role` rows). Grants are resolved once per user instance,
   so a request pays one query however many checks it makes.
+- `access = Granted()` on a viewset — the default `karni make viewset`
+  writes: `Can` for the viewset's own model and the current action, so the
+  roles decide who reaches which rows and the viewset names nothing; see
+  [Access control](api.md#access-control). The [admin](admin.md#row-scope)
+  applies the same grants to its rows.
 - `Can("events.event:approve")` in an `access` declaration: the gate *and* the
   row filter (the union of the scopes); see [Access control](api.md#access-control).
   It must name the viewset's own model (`E209`); to gate on another model's

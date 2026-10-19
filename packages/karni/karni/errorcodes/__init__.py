@@ -263,7 +263,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.checks.check_viewsets; karni.api.access.KarniAccessPermission",
         "Access is mandatory (ADR 0001 Q2.1): without a declaration Karni cannot know which "
         "rows a user may see or change, so the viewset denies every request.",
-        "Declare `access = Access(read=..., write=...)` on the viewset (e.g. "
+        "Declare `access = Granted()` on the viewset (the roles' grants for its model, "
+        "row-scoped), or a custom `Access(read=..., write=...)` (e.g. "
         "Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with "
         "`access = Unscoped(reason='...')`.",
     ),
@@ -637,6 +638,32 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "permissions.",
         "Write Can('events.event:approve'); on EventViewSet it must be an events.event "
         "permission. To gate on another model's permission use HasRole(...).",
+    ),
+    _e(
+        "E210",
+        "scope_exempt = True without a reason",
+        "exception",
+        "karni.api.access.validate_access",
+        "A viewset or admin that shows every row its gate admits is the one place row "
+        "scoping is off; without a reason it looks like an oversight, and karni check "
+        "lists every exemption by its reason.",
+        "Add scope_exempt_reason = '...' next to scope_exempt = True (e.g. 'public "
+        "catalogue'), or remove the exemption and let Granted() / the roles' grants scope "
+        "the rows.",
+    ),
+    _e(
+        "E211",
+        "Granted() has no permission for this action or viewset",
+        "exception",
+        "karni.api.access.Granted",
+        "Granted() resolves to the viewset's model and the current action; an unsafe "
+        "custom @action the model never declared has no permission to check, and a "
+        "viewset without a model has nothing to resolve against. Evaluating it outside a "
+        "viewset is the same error.",
+        "Add the action to `class Karni: actions = [...]` on the model and grant "
+        "'app.model:<action>' in KARNI_ROLES, give the action its own @action(access=...), "
+        "set `model = ...` on the viewset, or evaluate through action_predicate(view, "
+        "access).",
     ),
     # E3xx admin
     _e(

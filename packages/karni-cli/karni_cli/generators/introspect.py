@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 import ast
+import fnmatch
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from karni_cli.generators.core import App, Workspace, local_apps
+from karni_cli.generators.core import SETTINGS, App, Workspace, local_apps
 from karni_cli.generators.pysource import parse
 from karni_cli.project import CliError
+
+#: karni.conf.base's default KARNI_ROLES, mirrored (the CLI runs without karni):
+#: staff holds everything, user and customer their own rows.
+SHIPPED_ROLES: dict[str, dict[str, Any]] = {
+    "staff": {"grants": {"*": "all"}},
+    "user": {"grants": {"*": "own"}},
+    "customer": {"grants": {"*": "own"}},
+}
 
 _RELATION_CALLS = frozenset({"ForeignKey", "OneToOneField", "ManyToManyField"})
 _AUDIT_BASES = frozenset({"BaseModel", "AuditedModel"})
@@ -203,6 +213,47 @@ def role_names(cls: ast.ClassDef) -> list[str]:
                     and arg.value not in found
                 ):
                     found.append(arg.value)
+    return found
+
+
+def granted_reads(cls: ast.ClassDef) -> bool:
+    """Whether the class body calls ``Granted()`` — the roles' grants decide its rows."""
+    return any(
+        isinstance(node, ast.Call) and _call_name(node) == "Granted" for node in ast.walk(cls)
+    )
+
+
+def declared_roles(ws: Workspace) -> dict[str, dict[str, Any]]:
+    """``KARNI_ROLES`` from config/settings.py when it is a literal, else the shipped default."""
+    text = ws.read(SETTINGS)
+    if text is None:
+        return dict(SHIPPED_ROLES)
+    for node in parse(ws, ws.rel(SETTINGS), text).body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "KARNI_ROLES" for target in node.targets
+        ):
+            try:
+                value = ast.literal_eval(node.value)
+            except ValueError:
+                return {}  # computed at runtime: unknown here
+            return value if isinstance(value, dict) else {}
+    return dict(SHIPPED_ROLES)
+
+
+def grant_scopes(roles: dict[str, dict[str, Any]], key: str) -> dict[str, str]:
+    """Role slug → the scope its grants give ``key`` (``app.model:action``); later patterns win."""
+    found: dict[str, str] = {}
+    for slug, spec in roles.items():
+        grants = spec.get("grants") if isinstance(spec, dict) else None
+        if not isinstance(grants, dict):
+            continue
+        scope = None
+        for pattern, value in grants.items():
+            glob = "*:*" if pattern == "*" else str(pattern)
+            if fnmatch.fnmatchcase(key, glob):
+                scope = str(value)
+        if scope is not None:
+            found[slug] = scope
     return found
 
 

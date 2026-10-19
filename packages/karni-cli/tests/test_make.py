@@ -182,18 +182,19 @@ def test_app_name_rules(project: Path) -> None:
 def test_model_chain_and_access_default_is_announced(project: Path) -> None:
     ok("make", "app", "events")
     result = ok("make", "model", "Event", "title:str:200", "--with", "viewset", "--search", "title")
-    assert "access: Access(read=Authenticated(), write=Authenticated()) — the default" in (
-        result.output
-    )
+    assert "access: Granted() — the default: what KARNI_ROLES grants for Event" in result.output
     assert "next: karni make migration --app events" in result.output
     viewsets = (project / "events" / "viewsets.py").read_text()
-    assert "access = Access(read=Authenticated(), write=Authenticated())" in viewsets
+    assert "access = Granted()" in viewsets
+    assert "from karni.api import BaseViewSet, Granted" in viewsets
     assert 'search_fields = ("title",)' in viewsets
 
 
 @pytest.mark.parametrize(
     ("access", "declaration"),
     [
+        ("granted", "Granted()"),
+        ("authenticated", "Access(read=Authenticated(), write=Authenticated())"),
         ("public-read", "Access(read=Public(), write=Authenticated())"),
         ("owned:owner", 'Access(read=Owned("owner"), write=Owned("owner"))'),
         ("staff", 'Access(read=HasRole("staff"), write=HasRole("staff"))'),
@@ -265,6 +266,30 @@ def test_test_generator_follows_the_viewset(project: Path) -> None:
         'self.assert_crud(EventViewSet, "organizer")'
         in (project / "events" / "tests" / "test_event.py").read_text()
     )
+
+
+def test_test_generator_picks_a_granted_role(project: Path) -> None:
+    """A Granted() viewset is tested as the first KARNI_ROLES role with a scoped grant."""
+    ok("make", "app", "events")
+    result = ok("make", "model", "Event", "title:str", "--with", "viewset,test")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert '        self.assert_crud(EventViewSet, "user")\n' in text  # shipped: user = own
+    assert '        self.assert_isolated(EventViewSet, "user")\n' in text
+    assert "as role 'user' + grant isolation" in result.output
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nKARNI_ROLES = {"ops": {"grants": {"*": "all"}}, "clerk": {"grants": {"events.*": "own"}}}\n'
+    )
+    result = ok("make", "test", "Event", "--force")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert '        self.assert_crud(EventViewSet, "clerk")\n' in text
+    assert "        self.assert_isolated(EventViewSet" in text
+    result = ok("make", "test", "Event", "--role", "ops", "--force")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert '        self.assert_crud(EventViewSet, "ops")\n' in text
+    assert "assert_isolated" not in text  # an `all` grant partitions nothing
+    assert "as role 'ops'" in result.output and "isolation" not in result.output
 
 
 def test_test_generator_takes_the_declared_role(project: Path) -> None:

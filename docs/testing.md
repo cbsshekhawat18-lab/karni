@@ -102,16 +102,25 @@ or the route name.
 self.assert_isolated(EventViewSet, "organizer")
 ```
 
-Two users with the role each get a row of their own. The first must see and
-change only their own row: the other's row is absent from the list, returns
-404 for retrieve, update and delete, and stays unchanged. Naming another
-owner in a create body is ignored, and the row is stamped with the
-requester. It runs for every isolation dimension that applies: `owner` (any
-`Owned(...)` read path) ships with Karni. A tenancy module adds `tenant` by
-registering a dimension, and existing tests then cover it with no change. A
-resource no dimension applies to fails and says why: `read=Authenticated()`
-lets every signed-in user see every row, which is exactly the bug this
-catches.
+Two users with the role each get a row of their own. The first must see
+their own row (the positive control) and must not reach the other's through
+any surface: the list; retrieve, update and delete (404, never a 403 that
+confirms the row exists, and the row stays unchanged); a nested `?expand=`
+from another resource that points at it; a filter, `?search=` or
+`?ordering=` parameter; the admin (the changelist, its search, the change
+form and a POST to it — for the `grant` dimension, since the admin's rows
+follow the roles' grants); an export route, when the resource has one; and
+a create body naming another owner, which is
+ignored and stamped with the requester. It runs for every isolation
+dimension that applies: `owner` (any `Owned(...)` read path) and `grant`
+(a `Granted()` or `Can` read where the role's grant for the model's `view`
+permission is `own` or `related:<key>`; the users get distinct related
+values) ship with Karni. A tenancy module adds `tenant` by registering a
+dimension, and existing tests then cover it with no change. A resource no
+dimension applies to fails and says why: `read=Authenticated()`, or a role
+whose grant is `all`, lets every signed-in user see every row, which is
+exactly the bug this catches. Probes that cannot run for a resource (no
+admin registration, no export route) are listed in the report's `notes`.
 
 ## Schema snapshot
 

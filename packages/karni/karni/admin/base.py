@@ -53,6 +53,7 @@ from karni.admin.derive import (
     derive_search_fields,
     password_field_names,
 )
+from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
 from karni.exceptions import KarniImproperlyConfigured
 from karni.models import SoftDeleteModel
@@ -138,12 +139,27 @@ class KarniAdminMixin(admin.ModelAdmin):
       when it points at a soft-deleted row, while new choices stay alive-only
       (amendment C3). Add forms and untouched fields keep Django's default
       queryset, which is already alive-only for soft-delete targets.
+    * **Row scope** (ADR 0002, P2): ``get_queryset`` shows only the rows the
+      user's grants reach for ``view`` (:mod:`karni.admin.scope`), so the
+      changelist, search, filters, autocomplete and actions all agree with
+      the API; ``has_view/change/delete_permission(request, obj)`` also
+      require the row to be inside the matching grant's scope, and relation
+      choices are limited to target rows the user may view. Django's model
+      permissions still decide which screens exist. ``scope_exempt = True``
+      with a ``scope_exempt_reason`` turns the row scope off for one admin
+      (``karni check`` lists every exemption).
 
     Override / escape hatch: subclass and override any ``derive_*`` hook to
     change one rule, or any plain ``ModelAdmin`` method to change behaviour;
     every override here calls ``super()``, so a custom ``KARNI_ADMIN_BASE``
     underneath keeps working.
     """
+
+    scope_exempt: ClassVar[bool] = False
+    """``True`` shows every row Django's model permissions admit (needs a reason)."""
+
+    scope_exempt_reason: ClassVar[str] = ""
+    """Why this admin is exempt from row scope — required with ``scope_exempt``."""
 
     _karni_generated: ClassVar[bool] = False
     """True only on classes built by :func:`build_model_admin`."""
@@ -227,6 +243,35 @@ class KarniAdminMixin(admin.ModelAdmin):
 
     # -- behaviour overrides -------------------------------------------------
 
+    def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:
+        """The rows the user's grants reach for ``view`` (every surface starts here)."""
+        return scope_queryset(self, request, super().get_queryset(request))
+
+    def has_view_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
+        """Django's view-or-change permission, and the row inside the user's scope."""
+        return super().has_view_permission(request, obj) and (
+            within_scope(self, request, obj, "view") or within_scope(self, request, obj, "change")
+        )
+
+    def has_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
+        return super().has_change_permission(request, obj) and within_scope(
+            self, request, obj, "change"
+        )
+
+    def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
+        return super().has_delete_permission(request, obj) and within_scope(
+            self, request, obj, "delete"
+        )
+
+    def formfield_for_manytomany(
+        self, db_field: models.ManyToManyField, request: HttpRequest, **kwargs: Any
+    ) -> Any:
+        """M2M choices limited to target rows the user may view (what the API accepts)."""
+        if "queryset" not in kwargs and not self.scope_exempt:
+            target = db_field.remote_field.model
+            kwargs["queryset"] = scoped_choices(request, target._default_manager.all())
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
     def get_exclude(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
         """Exclude password-named fields from the form (amendment C5).
 
@@ -281,17 +326,25 @@ class KarniAdminMixin(admin.ModelAdmin):
         other case Django's default applies, which is alive-only for
         soft-delete targets (their default manager hides deleted rows).
 
+        The choices are also limited to the target rows the user may view
+        (ADR 0002, P2) — what the API's relation fields accept.
+
         Override / escape hatch: pass ``kwargs["queryset"]`` from a subclass,
         or override this method.
         """
         target = db_field.remote_field.model
-        if "queryset" not in kwargs and issubclass(target, SoftDeleteModel):
-            obj = getattr(request, _REQUEST_OBJ_ATTR, None)
-            current_pk = getattr(obj, db_field.attname, None) if obj is not None else None
-            if current_pk is not None:
-                kwargs["queryset"] = lift_soft_delete(
-                    target._default_manager, reason="admin: keep the current FK value valid"
-                ).filter(Q(deleted_at__isnull=True) | Q(pk=current_pk))
+        if "queryset" not in kwargs:
+            queryset = target._default_manager.all()
+            if issubclass(target, SoftDeleteModel):
+                obj = getattr(request, _REQUEST_OBJ_ATTR, None)
+                current_pk = getattr(obj, db_field.attname, None) if obj is not None else None
+                if current_pk is not None:
+                    queryset = lift_soft_delete(
+                        target._default_manager, reason="admin: keep the current FK value valid"
+                    ).filter(Q(deleted_at__isnull=True) | Q(pk=current_pk))
+            if not self.scope_exempt:
+                queryset = scoped_choices(request, queryset)
+            kwargs["queryset"] = queryset
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     # -- internals -----------------------------------------------------------

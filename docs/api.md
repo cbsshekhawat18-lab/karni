@@ -71,6 +71,30 @@ enforcement layers:
    `get_queryset()`. It is authoritative: lists, details, custom actions,
    relation-field PK validation and `?expand=` all go through it.
 
+The default declaration — what `karni make viewset` writes — is the roles'
+grants (ADR 0002, P2):
+
+```python
+from karni.api import BaseViewSet, Granted
+
+class EventViewSet(BaseViewSet):
+    model = Event
+    access = Granted()      # whatever KARNI_ROLES grants for Event, row-scoped
+```
+
+`Granted()` resolves to the viewset's model and the current action: reads
+need `events.event:view`, `create` needs `add`, writes need `change` /
+`delete` on a row that is also readable, and a custom `@action` declared in
+`class Karni: actions` is its own permission (an undeclared unsafe one is
+`E211`). The rows are the union of the matching grants' scopes (`all`,
+`own`, `related:<key>`, `custom:<name>`, see [roles as data](accounts.md#roles-as-data)),
+so an agent writing a viewset gets row scoping without naming it. Bare
+`access = Granted()` is `Access(read=Granted(), write=Granted())`; it
+combines like any predicate (`read=Granted() | HasRole("auditor")`). The
+[admin](admin.md#row-scope) applies the same grants to its rows.
+
+A custom rule names the predicates itself:
+
 ```python
 from karni.api import Access, Authenticated, BaseViewSet, HasRole, Owned
 
@@ -88,6 +112,7 @@ row-level answer:
 
 | predicate | gate | rows |
 |---|---|---|
+| `Granted()` | holds a grant for the viewset's model and the current action | the union of those grants' scopes; the model's `Karni.owner_field` is stamped on create |
 | `Public()` | everyone | all |
 | `Authenticated()` | authenticated users | all (none for anonymous) |
 | `HasRole("a", "b")` | holds any of the roles (Django groups, one query per request) | all for holders, none otherwise |
@@ -150,14 +175,18 @@ Escape hatches, least to most drastic:
 1. change the declaration;
 2. `Where(...)` for arbitrary row logic, `@action(access=...)` for one action,
    `get_access()` to compute the declaration per request;
-3. override `filter_queryset_for_user(queryset)` — it receives the
+3. `scope_exempt = True` with `scope_exempt_reason = "..."` — the gate stays,
+   the row filter goes: every row the gate admits is visible. The reason is
+   required (`E210`) and `karni check` prints every exemption in the project
+   on each run, so they stay visible instead of accumulating;
+4. override `filter_queryset_for_user(queryset)` — it receives the
    access-scoped queryset; the `access-override` rule requires
    `# karni: allow(access-override): <reason>`;
-4. `access = Unscoped(reason="...")` — no compiled gate, no row policy: the
+5. `access = Unscoped(reason="...")` — no compiled gate, no row policy: the
    viewset's `permission_classes` (else the DRF default) decide, rows are
    limited only by model scopes and `filter_queryset_for_user`; the reason is
    published as `x-karni-access`;
-5. `auto_register = False` plus your own view (the `viewset-base` rule still
+6. `auto_register = False` plus your own view (the `viewset-base` rule still
    applies).
 
 Deprecated: `object_permission_classes` on a `BaseViewSet` warns

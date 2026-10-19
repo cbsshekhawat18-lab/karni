@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib import admin
 from django.db.models import QuerySet
 from django.urls import include, path
 from django_filters.rest_framework import DjangoFilterBackend
@@ -16,7 +17,7 @@ from rest_framework import serializers
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import BasePermission
 
-from karni.api import Access, Authenticated, BaseViewSet, HasRole, Owned, Public
+from karni.api import Access, Authenticated, BaseViewSet, Granted, HasRole, Owned, Public
 from karni.api.routers import KarniRouter
 from karni.pagination import KarniPageNumberPagination
 from tests.testapp.models import Event, Venue
@@ -31,6 +32,14 @@ class EventViewSet(BaseViewSet):
         write=Owned("organizer"),
         create=HasRole("organizer"),
     )
+    search_fields = ("title",)
+
+
+class GrantedEventViewSet(BaseViewSet):
+    """Whatever the roles grant (P2): the isolation suite syncs own/related grants."""
+
+    model = Event
+    access = Granted()
     search_fields = ("title",)
 
 
@@ -132,6 +141,7 @@ class LeakyEventViewSet(EventViewSet):
 
 ROUTES = {
     "events": EventViewSet,
+    "granted-events": GrantedEventViewSet,
     "venues": VenueViewSet,
     "public-venues": PublicVenueViewSet,
     "staff-venues": StaffVenueViewSet,
@@ -154,4 +164,4 @@ def get_router() -> KarniRouter:
     return router
 
 
-urlpatterns = [path("api/", include(router.urls))]
+urlpatterns = [path("admin/", admin.site.urls), path("api/", include(router.urls))]

@@ -85,11 +85,14 @@ from karni.accounts.permissions import ObjectPermissionsMixin
 from karni.api.access import (
     Access,
     AccessPermission,
+    Granted,
     Predicate,
+    RowFilter,
     Unscoped,
     action_predicate,
     apply_rows,
     owner_fields,
+    rows_or_exempt,
     target_read_scope,
     validate_access,
 )
@@ -160,9 +163,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     * ``model`` — required unless ``queryset`` is set (or ``get_queryset``
       overridden).
-    * ``access`` — required: ``Access(read=..., write=..., create=...)`` or
-      ``Unscoped(reason=...)``. Without it every request is denied with a
-      403 naming the fix.
+    * ``access`` — required: ``Granted()`` (the roles' grants for this model
+      and the current action, row-scoped; shorthand for ``Access(read=Granted(),
+      write=Granted())``), ``Access(read=..., write=..., create=...)`` or
+      ``Unscoped(reason=...)``. Without it every request is denied with a 403
+      naming the fix.
+    * ``scope_exempt`` — ``True`` (with ``scope_exempt_reason``) keeps the
+      gate and shows every row it admits; ``karni check`` lists each one.
     * ``serializer_class`` — explicit serializer; ``None`` generates one via
       :func:`karni.api.serializers.build_serializer`.
     * ``queryset`` — explicit base queryset; ``None`` uses
@@ -208,7 +215,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     """
 
     model: ClassVar[type[Model] | None] = None
-    access: ClassVar[Access | Unscoped | None] = None
+    access: ClassVar[Access | Unscoped | Granted | None] = None
     serializer_class: type[BaseSerializer[Any]] | None = None
     queryset: QuerySet[Any] | None = None
     expand_depth: ClassVar[int] = 0
@@ -222,6 +229,8 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     query_budget: ClassVar[Budget | None] = None
     pagination: ClassVar[Unpaginated | None] = None
     cache: ClassVar[Cache | Uncached | None] = None
+    scope_exempt: ClassVar[bool] = False
+    scope_exempt_reason: ClassVar[str] = ""
 
     # The access declaration is the gate; DRF's project-wide default does
     # not apply. Classes listed here (or via @action) are ANDed after it.
@@ -237,6 +246,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Wrap ``get_queryset`` (Q2.7); validate access and the performance declarations."""
         super().__init_subclass__(**kwargs)
+        declared = cls.__dict__.get("access")
+        if isinstance(declared, Granted):
+            # The shorthand: reads, writes and creates all follow the roles' grants.
+            cls.access = Access(read=declared, write=declared)
         resolved = cls.get_queryset
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
@@ -281,7 +294,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
         Override / escape hatch: return a declaration computed per request.
         """
-        return type(self).access
+        declared = type(self).access
+        if isinstance(declared, Granted):  # set after class definition: normalise here
+            return Access(read=declared, write=declared)
+        return declared
 
     def get_access_predicate(self) -> Predicate | None:
         """The predicate governing the current action (``None`` without an ``Access``)."""
@@ -433,7 +449,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         request = getattr(self, "request", None)
         if declaration is None or request is None:
             return queryset.none(), True
-        rows = True if isinstance(declaration, Unscoped) else declaration.read.rows(request)
+        if isinstance(declaration, Unscoped):
+            rows: RowFilter = True
+        else:
+            rows = rows_or_exempt(self, declaration.read.bind(self, "view"), request)
         queryset = apply_rows(queryset, rows)
         filtered = rows is not True
         hook = type(self).filter_queryset_for_user
@@ -454,10 +473,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             declaration = self.get_access()
             request = getattr(self, "request", None)
             if isinstance(declaration, Access) and request is not None:
-                if declaration.read.rows(request) is not True:
+                bound = declaration.read.bind(self, "view")
+                if rows_or_exempt(self, bound, request) is not True:
+                    shown = f"read={declaration.read!r}"
+                    if bound != declaration.read:
+                        shown += f" (= {bound!r})"
                     raise NotFound(
-                        f"{exc} Rows are limited by {type(self).__name__}.access "
-                        f"read={declaration.read!r}."
+                        f"{exc} Rows are limited by {type(self).__name__}.access {shown}."
                     ) from exc
             raise
 
