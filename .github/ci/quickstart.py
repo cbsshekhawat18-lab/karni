@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PAGE = ROOT / "docs" / "quickstart.md"
 BLOCK = re.compile(r"<!-- karni:quickstart -->\s*```sh\n(.*?)```", re.S)
 INSTALL_LINE = "pip install karni karni-cli pytest pytest-django"
+CI_VARIABLES = ("CI", "GITHUB_ACTIONS", "GITHUB_RUN_ID", "RUNNER_OS")
 
 
 def blocks() -> list[str]:
@@ -46,10 +47,14 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(f"{PAGE}: the install line {INSTALL_LINE!r} is missing")
     script = script.replace(INSTALL_LINE, args.install)
     work = Path(tempfile.mkdtemp(prefix="karni-quickstart-"))
+    # The page is a developer's walk-through: no CI variable leaks into it
+    # (with CI set, `karni test` refuses to write the project's first OpenAPI
+    # snapshot, E607, which is right for a real CI and wrong for this page).
     env = {
         k: v
         for k, v in os.environ.items()
         if not k.startswith(("VIRTUAL_ENV", "DJANGO_", "KARNI_"))
+        and k not in CI_VARIABLES
     }
     env["KARNI_UI_SRC"] = os.environ.get("KARNI_UI_SRC", str(ROOT / "packages" / "karni-ui"))
     env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"

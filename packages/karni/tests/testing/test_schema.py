@@ -128,3 +128,21 @@ def test_find_operation_matches_path_templates() -> None:
     assert find_operation(document, "/api/events/5/", "GET") == {"operationId": "x"}
     assert find_operation(document, "/api/events/5/", "DELETE") is None
     assert find_operation(document, "/api/events/", "GET") is None
+
+
+def test_normalise_drops_backend_integer_bounds_only() -> None:
+    from karni.testing.schema import normalise_schema
+
+    schema = {
+        "properties": {
+            "capacity": {"type": "integer", "minimum": -2147483648, "maximum": 2147483647},
+            "big": {"type": "integer", "format": "int64", "maximum": 9223372036854775807},
+            "small": {"type": "integer", "minimum": 0, "maximum": 32767},
+            "rating": {"type": "integer", "minimum": 1, "maximum": 5},
+        }
+    }
+    normalised = normalise_schema(schema)
+    assert normalised["properties"]["capacity"] == {"type": "integer"}
+    assert normalised["properties"]["big"] == {"type": "integer"}
+    assert normalised["properties"]["small"] == {"type": "integer", "minimum": 0, "maximum": 32767}
+    assert normalised["properties"]["rating"] == {"type": "integer", "minimum": 1, "maximum": 5}

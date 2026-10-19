@@ -137,6 +137,33 @@ def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() not in {"", "0", "false", "no", "off"}
 
 
+#: Integer bounds Django derives from the database backend (32-bit on
+#: PostgreSQL, 64-bit on SQLite): the same model gives a different number per
+#: backend, so a snapshot keeps neither.
+_BACKEND_BOUNDS = frozenset({-(2**31), 2**31 - 1, -(2**63), 2**63 - 1})
+
+
+def normalise_schema(schema: Any) -> Any:
+    """``schema`` without the backend-derived integer bounds (in place, and returned).
+
+    A snapshot generated on SQLite must match CI's PostgreSQL and the other
+    way round; the served document still carries the real bounds.
+    """
+    if isinstance(schema, dict):
+        if schema.get("type") == "integer":
+            for key in ("minimum", "maximum"):
+                if schema.get(key) in _BACKEND_BOUNDS:
+                    del schema[key]
+            if schema.get("format") in ("int32", "int64"):
+                del schema["format"]
+        for value in schema.values():
+            normalise_schema(value)
+    elif isinstance(schema, list):
+        for item in schema:
+            normalise_schema(item)
+    return schema
+
+
 def _write(path: Path, schema: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")

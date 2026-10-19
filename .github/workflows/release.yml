@@ -85,9 +85,15 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # Every gate CI runs on main, run again on exactly this commit.
+  # Every gate CI runs on main, run again on exactly this commit. The called
+  # workflow's docs job declares pages/id-token permissions (it only deploys
+  # on a push to main), and a caller must grant what a callee declares.
   ci:
     uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
 
   check:
     name: Release metadata

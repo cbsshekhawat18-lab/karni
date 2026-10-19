@@ -47,6 +47,20 @@ def _no_ambient_templates_env(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(autouse=True)
+def _plain_help_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rich renders typer's help as a styled, 80-column terminal under GitHub Actions.
+
+    The suite asserts on the help text, so render it the way a pipe sees it:
+    no colour codes and wide enough that no option or sentence wraps.
+    """
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("TERM", "dumb")
+    monkeypatch.setenv("COLUMNS", "200")
+
+
+@pytest.fixture(autouse=True)
 def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
     """The suite's expectations are for a project without an interpreter around it."""
     from karni_cli import project as project_mod

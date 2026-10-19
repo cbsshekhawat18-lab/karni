@@ -136,7 +136,10 @@ def test_the_api_contract_is_unchanged(db):
     assert_schema_snapshot()
 ```
 
-The generated schema is compared with `tests/openapi.snapshot.json`. A
+The generated schema is compared with `tests/openapi.snapshot.json`
+(minus the integer bounds Django derives from the database backend — 32-bit
+on PostgreSQL, 64-bit on SQLite — so a snapshot written on one matches CI
+on the other). A
 difference fails, listing breaking changes (removed and changed paths) first.
 A missing snapshot is written and the test passes, except under CI, where it
 fails, because a snapshot that was never committed protects nothing. To

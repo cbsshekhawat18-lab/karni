@@ -25,6 +25,8 @@ from typing import Any, ClassVar
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
@@ -107,6 +109,7 @@ class PermissionMatrixView(APIView):
         return Response(plan.to_dict())
 
 
+@extend_schema(responses={200: OpenApiTypes.OBJECT})
 class EffectivePermissionsView(APIView):
     """``GET permissions/effective/[<user id>/]`` — what a user may do, and why."""
 
