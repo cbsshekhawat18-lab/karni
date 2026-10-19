@@ -45,25 +45,43 @@ moves with every minor release.
 
 The tag runs `.github/workflows/release.yml`:
 
-1. **ci**: every CI gate, re-run on the tagged commit. That includes the
+1. **mode**: decides whether this run publishes. It does only when the
+   repository variable `KARNI_PUBLISHING` is `true` and the ref is a
+   `vX.Y.Z` tag (a tag push, or "Run workflow" on the tag with `dry_run`
+   unchecked). Everything else is a dry run, which the run's summary says
+   up front.
+2. **ci**: every CI gate, re-run on the tagged commit. That includes the
    `examples/eventhub` build, seed, tests and end-to-end run.
-2. **check**: `check_release.py` verifies that all five versions equal the
+3. **check**: `check_release.py` verifies that all five versions equal the
    tag, every repository URL is this repository (npm provenance is verified
    against it), every package's LICENSE equals the root LICENSE, and the
-   modules' ranges on core include the release.
-3. **build-python**: sdists and wheels for the three Python packages, then
-   `twine check --strict`.
-4. **publish-pypi**: trusted publishing (OIDC, no stored token), with PEP 740
-   attestations as provenance.
-5. **publish-npm**: `npm publish --provenance` through npm trusted
-   publishing (OIDC, no stored token). `@karni/ui` publishes first, because
-   `@karni/payments-ui` peers on it. This step runs after PyPI, so npm is
-   never ahead of the backend it talks to.
-6. **github-release**: a GitHub release with the Python distributions
-   attached.
+   modules' ranges on core include the release. A dry run on a branch has
+   no tag, so the version comes from `packages/karni/pyproject.toml`.
+4. **build-python**: sdists and wheels for the three Python packages, then
+   `twine check --strict`, then the wheels installed into a clean venv where
+   `karni --help` and `karni explain E104` must work. Uploaded as the
+   `python-dist` artifact.
+5. **build-npm**: `npm ci`, `npm run build` and `npm publish --dry-run` for
+   both npm packages (the full publish pipeline short of the upload; it
+   needs no credentials), then `npm pack`. Uploaded as `npm-dist`.
+6. **publish-pypi** (publishing runs only): trusted publishing (OIDC, no
+   stored token), with PEP 740 attestations as provenance.
+7. **publish-npm** (publishing runs only): `npm publish --provenance`
+   through npm trusted publishing (OIDC, no stored token). `@karni/ui`
+   publishes first, because `@karni/payments-ui` peers on it. This step
+   runs after PyPI, so npm is never ahead of the backend it talks to.
+8. **github-release** (publishing runs only): a GitHub release with the
+   Python distributions attached.
+9. **dry-run-summary** (dry runs only): writes to the run summary what
+   passed and which artifacts to inspect.
 
-A failure before step 4 publishes nothing. Fix it, delete the tag, and tag
-again. A failure after step 4 needs a new patch version, because PyPI never
+Until `KARNI_PUBLISHING` is set, every tag push is a dry run: steps 1–5 and
+9 run, the artifacts are there to download, and nothing reaches a registry.
+That is the rehearsal for the first release
+([launch registrations](launch-registrations.md), steps 16–18).
+
+A failure before step 6 publishes nothing. Fix it, delete the tag, and tag
+again. A failure after step 6 needs a new patch version, because PyPI never
 accepts the same version twice.
 
 ## One-time repository setup
