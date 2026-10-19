@@ -64,6 +64,16 @@ change and its migration note.
   every Karni admin; `<ResourceImport/>` and export buttons on
   `<ResourceTable>` in `@karni/ui`. `KARNI_IMPORT_INLINE_ROWS`,
   `KARNI_IMPORT_MAX_ROWS`, `KARNI_EXPORT_MAX_ROWS`; `E801`–`E803`.
+- Write interception: every `BaseModel` save and delete sends
+  `karni.signals.pre_write`; a receiver that raises `KarniWriteDeferred`
+  stops the write before any SQL — the API answers 202 with its payload,
+  the admin shows its message. The hook behind the new `karni-approvals`
+  module (M1): `class Karni: requires_approval = [...]` turns a maker's
+  guarded change into a pending change a second person approves or
+  rejects (never the maker, in code), with per-model approvals count,
+  approver roles and timeouts, an admin queue, `/api/pending-changes/`,
+  Celery notifications, every decision in `karni.audit`, and
+  `@karni/approvals-ui` (`<ApprovalsQueue/>`, `<ApprovalsBadge/>`).
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`

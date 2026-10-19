@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-approvals"
+version = "0.1.0"
+description = "Maker-checker approvals module for the Karni Django + React framework: a second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["django", "karni", "approvals", "maker-checker", "four-eyes", "workflow", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md): karni 0.x minors
+# may break, so a module pins the minor it was built against.
+dependencies = ["karni>=0.1,<0.2"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+
+# The settings fragment: karni_settings() merges DEFAULTS into every project
+# that installs this module (new top-level names only).
+[project.entry-points."karni.settings"]
+approvals = "karni_approvals.conf:DEFAULTS"
+
+# Error codes (APR001...) for `karni explain` and docs/errors.md.
+[project.entry-points."karni.errorcodes"]
+approvals = "karni_approvals.errorcodes:CODES"
+
+# Build-failing checks run by `karni check`.
+[project.entry-points."karni.checks"]
+approvals = "karni_approvals.checks:run_checks"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_approvals"]
+# `karni add` reads the agent guidance through importlib.resources after install.
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_approvals/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+# Inside a project checkout, never pick up the project's manage.py / tests package.
+django_find_project = false
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

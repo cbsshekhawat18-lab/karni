@@ -102,7 +102,7 @@ from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSear
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
-from karni.exceptions import KarniImproperlyConfigured, KarniValueError
+from karni.exceptions import KarniImproperlyConfigured, KarniValueError, KarniWriteDeferred
 from karni.pagination import Unpaginated, check_pagination_class
 from karni.performance import (
     Budget,
@@ -693,6 +693,35 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return Response(job_state(started, request))
 
     # writes & serializers
+
+    def deferred_response(self, exc: KarniWriteDeferred) -> Response:
+        """The answer when a ``pre_write`` receiver deferred the write: its payload, 202 by default.
+
+        ``karni-approvals`` raises it with the pending change; override to
+        shape the answer differently.
+        """
+        return Response(exc.payload, status=exc.status)
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        try:
+            response: Response = super().create(request, *args, **kwargs)
+        except KarniWriteDeferred as exc:
+            return self.deferred_response(exc)
+        return response
+
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        try:
+            response: Response = super().update(request, *args, **kwargs)
+        except KarniWriteDeferred as exc:
+            return self.deferred_response(exc)
+        return response
+
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        try:
+            response: Response = super().destroy(request, *args, **kwargs)
+        except KarniWriteDeferred as exc:
+            return self.deferred_response(exc)
+        return response
 
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Save, stamping every owner field from ``request.user`` (ADR 0001 R6).

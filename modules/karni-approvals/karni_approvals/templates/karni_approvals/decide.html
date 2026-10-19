@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+  <p>
+    {% if verdict == "approve" %}
+      {% blocktranslate count counter=queryset|length trimmed %}
+        You are about to approve {{ counter }} pending change. It is applied as soon as enough approvals are in.
+      {% plural %}
+        You are about to approve {{ counter }} pending changes. Each is applied as soon as enough approvals are in.
+      {% endblocktranslate %}
+    {% else %}
+      {% blocktranslate count counter=queryset|length trimmed %}
+        You are about to reject {{ counter }} pending change. The row stays as it is.
+      {% plural %}
+        You are about to reject {{ counter }} pending changes. The rows stay as they are.
+      {% endblocktranslate %}
+    {% endif %}
+  </p>
+  <ul>
+    {% for pending in queryset %}
+      <li>{{ pending.summary }} — {{ pending.get_action_display }} ({{ pending.approvals }}/{{ pending.required }})</li>
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ pending.pk }}">
+    {% endfor %}
+  </ul>
+  <p>
+    <label for="karni-approvals-reason">{% translate "Reason" %}</label><br>
+    <textarea id="karni-approvals-reason" name="reason" rows="3" cols="60" style="min-height:88px;font-size:16px"></textarea>
+  </p>
+  <input type="hidden" name="action" value="{{ action_name }}">
+  <input type="hidden" name="post" value="yes">
+  <button type="submit" style="min-height:44px;padding:0 1.25rem">
+    {% if verdict == "approve" %}{% translate "Approve" %}{% else %}{% translate "Reject" %}{% endif %}
+  </button>
+  <a href="{% url opts|admin_urlname:'changelist' %}" style="margin-left:1rem">{% translate "Cancel" %}</a>
+</form>
+{% endblock %}

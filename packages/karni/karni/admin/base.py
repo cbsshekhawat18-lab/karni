@@ -35,12 +35,13 @@ from collections.abc import Sequence
 from typing import Any, ClassVar
 
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.utils import flatten, flatten_fieldsets
 from django.db import models
 from django.db.models import Q
 from django.forms import ModelForm
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseRedirect
+from django.urls import reverse
 from django.utils.module_loading import import_string
 
 from karni.admin.derive import (
@@ -56,8 +57,9 @@ from karni.admin.derive import (
 from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
 from karni.admin.transfer import TransferAdminMixin
-from karni.exceptions import KarniImproperlyConfigured
+from karni.exceptions import KarniImproperlyConfigured, KarniWriteDeferred
 from karni.models import SoftDeleteModel
+from karni.signals import pre_write
 
 __all__ = [
     "DEFAULT_ADMIN_BASE",
@@ -446,6 +448,63 @@ class KarniAdminMixin(admin.ModelAdmin):
                 queryset = scoped_choices(request, queryset)
             kwargs["queryset"] = queryset
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    # -- deferred writes (karni.signals.pre_write) ----------------------------
+
+    _DEFERRED_ATTR: ClassVar[str] = "_karni_write_deferred"
+
+    def _defer(self, request: HttpRequest, exc: KarniWriteDeferred) -> None:
+        setattr(request, self._DEFERRED_ATTR, exc)
+
+    def _deferred_redirect(self, request: HttpRequest) -> HttpResponseRedirect | None:
+        """After a deferred write: the receiver's message, then back to the changelist."""
+        exc = getattr(request, self._DEFERRED_ATTR, None)
+        if exc is None:
+            return None
+        self.message_user(request, str(exc), messages.INFO)
+        opts = self.model._meta
+        return HttpResponseRedirect(
+            reverse(f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_changelist")
+        )
+
+    def save_model(self, request: HttpRequest, obj: Any, form: Any, change: bool) -> None:
+        """Save, unless a ``pre_write`` receiver defers the write (karni-approvals)."""
+        try:
+            super().save_model(request, obj, form, change)
+        except KarniWriteDeferred as exc:
+            self._defer(request, exc)
+
+    def save_related(self, request: HttpRequest, form: Any, formsets: Any, change: bool) -> None:
+        if getattr(request, self._DEFERRED_ATTR, None) is not None:
+            return  # the parent was not written; its inlines must not be either
+        super().save_related(request, form, formsets, change)
+
+    def delete_model(self, request: HttpRequest, obj: Any) -> None:
+        try:
+            super().delete_model(request, obj)
+        except KarniWriteDeferred as exc:
+            self._defer(request, exc)
+
+    def delete_queryset(self, request: HttpRequest, queryset: models.QuerySet[Any]) -> None:
+        """One ``delete()`` per row when something listens to ``pre_write`` (bulk SQL skips it)."""
+        if pre_write.has_listeners(queryset.model):
+            for obj in queryset:
+                self.delete_model(request, obj)
+            return
+        super().delete_queryset(request, queryset)
+
+    def response_add(self, request: HttpRequest, obj: Any, post_url_continue: Any = None) -> Any:
+        return self._deferred_redirect(request) or super().response_add(
+            request, obj, post_url_continue
+        )
+
+    def response_change(self, request: HttpRequest, obj: Any) -> Any:
+        return self._deferred_redirect(request) or super().response_change(request, obj)
+
+    def response_delete(self, request: HttpRequest, obj_display: Any, obj_id: Any) -> Any:
+        return self._deferred_redirect(request) or super().response_delete(
+            request, obj_display, obj_id
+        )
 
     # -- internals -----------------------------------------------------------
 

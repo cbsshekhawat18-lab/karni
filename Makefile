@@ -27,11 +27,12 @@ MYPY_CONFIG := $(ROOT)/mypy.ini
 PY_PACKAGES := \
 	packages/karni:karni \
 	packages/karni-cli:karni_cli \
-	modules/karni-payments:karni_payments
+	modules/karni-payments:karni_payments \
+	modules/karni-approvals:karni_approvals
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.
-UI_PACKAGES := packages/karni-ui modules/karni-payments/ui
+UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,2fa
 PY_DEV_TOOLS := pytest pytest-django factory-boy Pillow ruff mypy types-PyYAML pre-commit
@@ -55,6 +56,7 @@ install-py:
 		-e "packages/karni[$(KARNI_EXTRAS)]" \
 		-e packages/karni-cli \
 		-e modules/karni-payments \
+		-e modules/karni-approvals \
 		$(PY_DEV_TOOLS)
 
 install-ui:

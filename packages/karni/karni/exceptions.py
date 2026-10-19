@@ -43,6 +43,7 @@ __all__ = [
     "KarniLookupError",
     "KarniTypeError",
     "KarniValueError",
+    "KarniWriteDeferred",
     "api_error",
     "check_error",
     "check_warning",
@@ -82,6 +83,28 @@ class KarniCommandError(KarniError, CommandError):
     def __init__(self, message: str, *, code: str | None = None, returncode: int = 1) -> None:
         KarniError.__init__(self, message, code=code)
         self.returncode = returncode
+
+
+class KarniWriteDeferred(KarniError):
+    """A write that a ``karni.signals.pre_write`` receiver turned into something else.
+
+    Raised before any SQL runs, so nothing is written and nothing needs
+    rolling back. ``payload`` is what the API answers with (HTTP ``status``,
+    202 by default) and ``str(exc)`` is what the admin shows; the ``code``
+    belongs to whoever deferred the write (``karni-approvals``: ``APR001``).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        payload: dict[str, Any] | None = None,
+        status: int = 202,
+    ) -> None:
+        super().__init__(message, code=code)
+        self.payload: dict[str, Any] = payload if payload is not None else {}
+        self.status = status
 
 
 def _with_link(code: str, text: str) -> str:

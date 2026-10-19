@@ -250,6 +250,15 @@ downloadable template. The gate is the declaration's `create` **or** `write`
 (`write_or_create_actions`); each row is then checked on its own. See
 [import and export](import-export.md).
 
+## Deferred writes
+
+When a `karni.signals.pre_write` receiver defers a write (the
+[`karni-approvals`](modules.md#modules-in-this-repository) module does, for
+a guarded change), `create`, `update`, `partial_update` and `destroy` answer
+**202** with the receiver's payload — the pending change — instead of
+writing. `BaseViewSet.deferred_response(exc)` shapes that answer; see
+[write interception](models.md#write-interception).
+
 ## APIMeta — model-side API metadata
 
 ```python

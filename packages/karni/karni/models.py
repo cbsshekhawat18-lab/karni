@@ -38,6 +38,7 @@ from karni.managers import (
     _SoftDeleteAllObjectsManager,
 )
 from karni.middleware import get_current_user
+from karni.signals import pre_write
 
 __all__ = [
     "AuditedModel",
@@ -210,6 +211,11 @@ class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
     replace it; or compose the individual mixins instead. Changing these base
     fields ripples migrations into every inheriting model, including a
     swapped user model.
+
+    Every ``save()`` and ``delete()`` first sends :data:`karni.signals.pre_write`
+    (``action`` ``create`` / ``update`` / ``delete``); a receiver that raises
+    :class:`karni.exceptions.KarniWriteDeferred` stops the write before any
+    SQL — how ``karni-approvals`` holds a change for a second person.
     """
 
     objects: ClassVar[BaseManager] = BaseManager()
@@ -218,3 +224,28 @@ class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
 
     class Meta(SoftDeleteModel.Meta):
         abstract = True
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        if not getattr(self, "_karni_in_delete", False):
+            pre_write.send(
+                sender=type(self),
+                instance=self,
+                action="create" if self._state.adding else "update",
+                update_fields=kwargs.get("update_fields"),
+            )
+        super().save(*args, **kwargs)
+
+    def delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+    ) -> tuple[int, dict[str, int]]:
+        """Soft-delete after ``pre_write`` (sent once: not again for the ``deleted_at`` save)."""
+        pre_write.send(sender=type(self), instance=self, action="delete", update_fields=None)
+        self._karni_in_delete = True
+        try:
+            return super().delete(using=using, keep_parents=keep_parents)
+        finally:
+            self._karni_in_delete = False
+
+    delete.alters_data = True  # type: ignore[attr-defined]

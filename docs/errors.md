@@ -971,6 +971,78 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
 
+## APR (`APR`)
+
+<a id="apr001"></a>
+
+### APR001 — The change was sent for approval instead of being written
+
+*API 400 response* · from `karni_approvals.interception`
+
+**Why Karni objects.** The model declares requires_approval and the change touches a guarded field, so a pending change holds it until a second person approves (the API answers 202 with the pending change; the admin says so; code gets KarniWriteDeferred).
+
+**Fix.** Nothing is wrong. Have a checker approve it (the admin queue, /api/pending-changes/, <ApprovalsQueue/>); trusted code may write inside karni_approvals.interception.bypass(reason=...).
+
+<a id="apr002"></a>
+
+### APR002 — The maker cannot be the checker
+
+*API 400 response* · from `karni_approvals.services.decide`
+
+**Why Karni objects.** Second-person approval means a second person: the user who proposed a change may never approve or reject it, through the API, the admin or a direct call.
+
+**Fix.** Ask another holder of the approve permission to decide it.
+
+<a id="apr003"></a>
+
+### APR003 — This user may not decide this pending change
+
+*API 400 response* · from `karni_approvals.services.decide`
+
+**Why Karni objects.** Deciding needs the karni_approvals.pendingchange:approve (or :reject) grant, the model's approver_roles when it declares them, and the row inside the checker's own scope.
+
+**Fix.** Grant the permission in KARNI_ROLES (or the permission matrix), assign the approver role, or have someone whose scope covers the row decide.
+
+<a id="apr004"></a>
+
+### APR004 — This checker has already decided this change
+
+*API 400 response* · from `karni_approvals.services.decide`
+
+**Why Karni objects.** One decision per person per change; a second one would count twice.
+
+**Fix.** Another checker must supply the remaining approvals.
+
+<a id="apr005"></a>
+
+### APR005 — The pending change is no longer pending
+
+*API 400 response* · from `karni_approvals.services.decide`
+
+**Why Karni objects.** It was already approved, rejected, expired or failed; decisions are final.
+
+**Fix.** Propose the change again if it is still wanted.
+
+<a id="apr006"></a>
+
+### APR006 — The change could not be applied: the row changed since it was proposed
+
+*API 400 response* · from `karni_approvals.services.apply`
+
+**Why Karni objects.** Every recorded old value must still be current when the change is applied, or an approval would overwrite something nobody reviewed.
+
+**Fix.** Propose the change again against the row as it is now.
+
+<a id="apr007"></a>
+
+### APR007 — The model's approval policy is malformed
+
+*system check (error)* · from `karni_approvals.meta.approval_policy`
+
+**Why Karni objects.** requires_approval, approvals_required, approver_roles, approval_timeout and approval_on_timeout are read at boot; a typo would silently hold or release changes.
+
+**Fix.** requires_approval = True or a list of field names; approvals_required a positive int; approver_roles / approval_escalation_roles lists of KARNI_ROLES slugs; approval_timeout a timedelta or hours; approval_on_timeout 'expire' or 'escalate'.
+
 ## karni-payments (`PAY`)
 
 <a id="pay001"></a>

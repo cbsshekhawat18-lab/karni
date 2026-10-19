@@ -192,3 +192,22 @@ To customise, subclass `BaseQuerySet` and build the manager the same way
 `BaseManager` is built (see *Custom managers* above):
 `class EventManager(ScopedManagerMixin, Manager.from_queryset(EventQuerySet))`.
 Then assign `objects = EventManager()` on the model.
+
+## Write interception
+
+Every `BaseModel` `save()` and `delete()` first sends `karni.signals.pre_write`
+with `instance`, `action` (`create`, `update`, `delete`) and `update_fields`
+— before any SQL, outside any transaction the save would open, once per
+`delete()` (not again for the `deleted_at` save a soft delete performs). A
+receiver may stop the write by raising `karni.exceptions.KarniWriteDeferred`
+with a `payload` and a `status` (202 by default): a `BaseViewSet` then
+answers that status with the payload instead of writing, a Karni admin shows
+the message and returns to the changelist (inlines and bulk deletes
+included), and plain code gets the exception. Nothing is written and nothing
+needs rolling back.
+
+That is the hook the `karni-approvals` module is built on — a guarded change
+becomes a pending change a second person decides — and any module can use it
+the same way. Bulk SQL (`QuerySet.update()`, `bulk_create()`), raw saves and
+fixture loading never send it; `karni check`'s `audited-bulk-write` rule is
+the guard for those on audited models.

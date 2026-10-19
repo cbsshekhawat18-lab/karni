@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Python: packages/karni, packages/karni-cli, modules/karni-payments.
+  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals.
   # Every step goes through the root Makefile, so CI and `make` never drift.
   # ---------------------------------------------------------------------------
   python:
@@ -61,6 +61,7 @@ jobs:
             packages/karni/pyproject.toml
             packages/karni-cli/pyproject.toml
             modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
 
       - name: Install packages (editable) + dev tools
         run: make install-py
@@ -254,6 +255,7 @@ jobs:
             packages/karni/pyproject.toml
             packages/karni-cli/pyproject.toml
             modules/karni-payments/pyproject.toml
+            modules/karni-approvals/pyproject.toml
             examples/eventhub/pyproject.toml
 
       - uses: actions/setup-node@v4
@@ -267,7 +269,8 @@ jobs:
       - name: Install Karni from this checkout (the project depends on it)
         run: |
           python -m pip install -e "../../packages/karni[images]" -e ../../packages/karni-cli \
-            -e ../../modules/karni-payments "psycopg[binary]" pytest pytest-django
+            -e ../../modules/karni-payments -e ../../modules/karni-approvals \
+            "psycopg[binary]" pytest pytest-django
 
       - name: Build @karni/ui (the project installs it from packages/karni-ui)
         working-directory: packages/karni-ui
@@ -303,7 +306,7 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
-  # UI: packages/karni-ui (@karni/ui) and modules/karni-payments/ui.
+  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui and modules/karni-approvals/ui.
   # ---------------------------------------------------------------------------
   ui:
     name: UI (Node 20)
@@ -318,6 +321,7 @@ jobs:
           cache-dependency-path: |
             packages/karni-ui/package-lock.json
             modules/karni-payments/ui/package-lock.json
+            modules/karni-approvals/ui/package-lock.json
 
       # karni-ui first: payments-ui resolves @karni/ui from its source, which
       # imports packages/karni-ui/node_modules.
@@ -348,3 +352,6 @@ jobs:
           cd ../../modules/karni-payments/ui
           node -e "const m = require('@karni/payments-ui'); if (!m.CheckoutButton) throw new Error('CJS payments-ui missing exports')"
           node --input-type=module -e "const m = await import('@karni/payments-ui'); if (!m.CheckoutButton) throw new Error('ESM payments-ui missing exports')"
+          cd ../../karni-approvals/ui
+          node -e "const m = require('@karni/approvals-ui'); if (!m.ApprovalsQueue) throw new Error('CJS approvals-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/approvals-ui'); if (!m.ApprovalsQueue) throw new Error('ESM approvals-ui missing exports')"

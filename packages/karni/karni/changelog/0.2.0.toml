@@ -265,6 +265,20 @@ mechanical = false
 migration = "migrations/0.2.md#import-and-export"
 
 [[change]]
+id = "write-interception"
+kind = "behaviour"
+symbol = "karni.signals.pre_write"
+replacement = "nothing: an additive hook (karni-approvals is its first user)"
+summary = """\
+Every BaseModel save() and delete() now sends karni.signals.pre_write first; a \
+receiver raising KarniWriteDeferred stops the write before any SQL (the API answers \
+202 with its payload, the admin shows its message). Code that wraps model saves \
+in its own transactions sees no difference; a custom BaseModel.save() override \
+must call super().save() for the hook to fire."""
+mechanical = false
+migration = "migrations/0.2.md#write-interception"
+
+[[change]]
 id = "architecture-scans-without-base-dir"
 kind = "behaviour"
 symbol = "BASE_DIR"
