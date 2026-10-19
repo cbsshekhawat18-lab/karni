@@ -104,6 +104,33 @@ export type {
   ChangeHistoryParams,
 } from "./hooks/useChangeHistory";
 
+export { ResourceImport } from "./components/resource/import/ResourceImport";
+export type { ResourceImportProps } from "./components/resource/import/ResourceImport";
+export {
+  useImportDescribe,
+  useImportJob,
+  useImportActions,
+  downloadResourceExport,
+  downloadImportTemplate,
+  importDescribeKey,
+  importJobKey,
+  isImportInFlight,
+} from "./hooks/useResourceImport";
+export type {
+  ExportFormat,
+  ImportActions,
+  ImportColumn,
+  ImportColumnKind,
+  ImportDescription,
+  ImportJob,
+  ImportProblem,
+  ImportResult,
+  ImportStatus,
+  PreviewImportInput,
+  UploadImportInput,
+  UseImportJobOptions,
+} from "./hooks/useResourceImport";
+
 export { displayLabel } from "./components/resource/displayLabel";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";
 

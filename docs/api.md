@@ -238,6 +238,18 @@ a field the model does not have or a role `KARNI_ROLES` does not declare
 (`E212`): a role nobody holds would hide the field from everyone.
 `assert_crud(ViewSet, "role")` checks all of it in its `visibility` step.
 
+## Import and export
+
+Every `BaseViewSet` serves `GET /<resource>/export/?format=csv|xlsx` — the
+list as this request sees it (filters, search, ordering, row scope, field
+visibility), relations written as natural keys — and the import flow under
+`/<resource>/import/`: `GET` describes the importable fields, `POST` uploads
+a file, `…/<job>/preview/` is the mandatory dry run, `…/<job>/commit/` writes
+in one transaction and one audit batch, `…/import/template/` is the
+downloadable template. The gate is the declaration's `create` **or** `write`
+(`write_or_create_actions`); each row is then checked on its own. See
+[import and export](import-export.md).
+
 ## APIMeta — model-side API metadata
 
 ```python

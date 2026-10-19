@@ -27,10 +27,11 @@ class ChangeLogSerializer(serializers.ModelSerializer[ChangeLog]):
     actor = ActorSerializer(read_only=True, allow_null=True)
     diff = serializers.SerializerMethodField()
     fields_changed = serializers.SerializerMethodField()
+    batch = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
 
     class Meta:
         model = ChangeLog
-        fields = ["id", "timestamp", "actor", "action", "diff", "fields_changed"]
+        fields = ["id", "timestamp", "actor", "action", "diff", "fields_changed", "batch"]
         read_only_fields = fields
 
     def _user(self) -> Any:

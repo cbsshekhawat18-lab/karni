@@ -71,14 +71,6 @@ class KarniAutoSchema(AutoSchema):
     Set as ``REST_FRAMEWORK["DEFAULT_SCHEMA_CLASS"]`` by ``karni.conf``.
     """
 
-    def get_override_parameters(self) -> list[Any]:
-        """Contribute the ``expand`` query parameter on list/retrieve."""
-        parameters = list(super().get_override_parameters())
-        expand = self._build_expand_parameter()
-        if expand is not None:
-            parameters.append(expand)
-        return parameters
-
     def get_operation(
         self,
         path: str,
@@ -104,17 +96,74 @@ class KarniAutoSchema(AutoSchema):
         return operation
 
     def get_response_serializers(self) -> Any:
-        """The history action answers with change-log entries, not the resource."""
-        if self._karni_action() == "history":
+        """History answers with change-log entries; export and import with files and job states."""
+        action = self._karni_action()
+        if action == "history":
             from karni.audit.serializers import ChangeLogSerializer
 
             return ChangeLogSerializer
+        if action in ("export", "import_template"):
+            from drf_spectacular.types import OpenApiTypes
+
+            return OpenApiTypes.BINARY
+        if action == "import_data" and self.method == "GET":
+            from karni.transfer.serializers import ImportDescribeSerializer
+
+            return ImportDescribeSerializer
+        if action in ("import_data", "import_job", "import_preview", "import_commit"):
+            from karni.transfer.serializers import ImportJobSerializer
+
+            return ImportJobSerializer
         return super().get_response_serializers()
 
+    def get_request_serializer(self) -> Any:
+        """The import endpoints take an upload, then a mapping."""
+        action = self._karni_action()
+        if action == "import_data" and self.method == "POST":
+            from karni.transfer.serializers import ImportUploadSerializer
+
+            return ImportUploadSerializer
+        if action == "import_preview":
+            from karni.transfer.serializers import ImportMappingSerializer
+
+            return ImportMappingSerializer
+        if action == "import_commit":
+            return None
+        return super().get_request_serializer()
+
+    def get_override_parameters(self) -> list[Any]:
+        """Contribute ``expand`` on list/retrieve and ``format`` on export/template."""
+        parameters = list(super().get_override_parameters())
+        expand = self._build_expand_parameter()
+        if expand is not None:
+            parameters.append(expand)
+        if self._karni_action() in ("export", "import_template"):
+            parameters.append(
+                OpenApiParameter(
+                    name="format",
+                    type=str,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    enum=["csv", "xlsx"],
+                    description="File format (csv by default for an export, xlsx for a template).",
+                )
+            )
+        return parameters
+
     def _is_list_view(self, serializer: Any = None) -> bool:
-        """The history action is a paginated list (``paginated_response``)."""
-        if self._karni_action() == "history":
+        """The history action is a paginated list (``paginated_response``); the rest are not."""
+        action = self._karni_action()
+        if action == "history":
             return True
+        if action in (
+            "export",
+            "import_template",
+            "import_data",
+            "import_job",
+            "import_preview",
+            "import_commit",
+        ):
+            return False
         return bool(super()._is_list_view(serializer))
 
     def _karni_audited(self) -> bool:

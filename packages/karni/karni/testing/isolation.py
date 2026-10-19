@@ -547,7 +547,7 @@ def _check_export(
     if response.status_code != 200:
         note("export: no export route (P6)")
         return
-    body = response.content.decode("utf-8", "replace")
+    body = _body(response).decode("utf-8", "replace")
     if str(their_row.pk) in body:
         fail(f"GET {url} exports another scope's row {their_row.pk}")
 
@@ -708,3 +708,11 @@ def assert_isolated(
             f"assert_isolated({case.resource.name}) for {who}: rows leak\n{lines}", code="E606"
         )
     return report
+
+
+def _body(response: Any) -> bytes:
+    """The response body, streamed or not (an export answers with a streaming CSV)."""
+    if getattr(response, "streaming", False):
+        return b"".join(response.streaming_content)
+    content: bytes = response.content
+    return content

@@ -92,6 +92,9 @@ class KarniSettingsModel(BaseModel):
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_IMPORT_INLINE_ROWS: int = Field(default=500, ge=0)
+    KARNI_IMPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
+    KARNI_EXPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_ADMIN_LOGO: Any = None
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"

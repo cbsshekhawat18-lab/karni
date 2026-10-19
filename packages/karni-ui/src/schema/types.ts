@@ -83,6 +83,10 @@ export interface ResourceSchema {
     create?: OperationDef;
     update?: OperationDef;
     remove?: OperationDef;
+    /** `GET /<resource>/export/` — the list as a CSV/XLSX file (karni.transfer, P6). */
+    export?: OperationDef;
+    /** `POST /<resource>/import/` — the import flow (upload, preview, commit). */
+    import?: OperationDef;
   };
   /** Ordered by declaration; unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];

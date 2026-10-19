@@ -100,3 +100,14 @@ wrapper that does both.
 
 Settings: `KARNI_AUDIT_ASYNC`, `KARNI_AUDIT_RETENTION_DAYS`,
 `KARNI_AUDIT_REDACT` ([settings](settings.md)).
+
+## Batches
+
+An operation that changes many rows at once — an [import](import-export.md)
+today — is recorded as one `ChangeBatch` (who, when, what kind, a label such
+as the file name, and what it knew about itself in `meta`), and every entry
+written while it ran points at it through `ChangeLog.batch`, so "which rows
+did this import touch" and "which import changed this row" are one query
+each. In code, `with karni.audit.capture.change_batch("import", label) as
+batch:` groups whatever the block records; the history endpoint and
+`<ChangeHistory/>` carry the batch id on each entry.

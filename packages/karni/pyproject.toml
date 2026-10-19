@@ -60,6 +60,8 @@ dependencies = [
     "django-cors-headers>=4.4",
     "structlog>=24.1",
     "django-structlog>=8.0",
+    # karni.transfer: XLSX import, export and templates (pure Python, no service).
+    "openpyxl>=3.1",
     # karni.testing.factories (test data, the N+1 scaling check, seeding).
     # Imported only by tests and seed commands, never by the web process.
     "factory-boy>=3.3",

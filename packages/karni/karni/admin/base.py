@@ -55,6 +55,7 @@ from karni.admin.derive import (
 )
 from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
+from karni.admin.transfer import TransferAdminMixin
 from karni.exceptions import KarniImproperlyConfigured
 from karni.models import SoftDeleteModel
 
@@ -148,6 +149,10 @@ class KarniAdminMixin(admin.ModelAdmin):
       permissions still decide which screens exist. ``scope_exempt = True``
       with a ``scope_exempt_reason`` turns the row scope off for one admin
       (``karni check`` lists every exemption).
+    * **Import and export** (ADR 0002, P6) come from
+      :class:`karni.admin.transfer.TransferAdminMixin`, mixed into
+      :class:`KarniModelAdmin`: the *Export selected* actions and the
+      *Import* page (``karni_transfer = False`` removes them).
 
     Override / escape hatch: subclass and override any ``derive_*`` hook to
     change one rule, or any plain ``ModelAdmin`` method to change behaviour;
@@ -458,8 +463,8 @@ class KarniAdminMixin(admin.ModelAdmin):
 _AdminBase: type[admin.ModelAdmin] = resolve_admin_base()
 
 
-class KarniModelAdmin(KarniAdminMixin, _AdminBase):  # type: ignore[valid-type, misc]
-    """:class:`KarniAdminMixin` on the ``KARNI_ADMIN_BASE`` class.
+class KarniModelAdmin(KarniAdminMixin, TransferAdminMixin, _AdminBase):  # type: ignore[valid-type, misc]
+    """:class:`KarniAdminMixin` (and the import/export mixin) on the ``KARNI_ADMIN_BASE`` class.
 
     The class :func:`karni.admin.autodiscover` derives every generated admin
     from, and the base class to hand-register with when autodiscovery is off::

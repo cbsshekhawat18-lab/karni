@@ -102,7 +102,7 @@ from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSear
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
-from karni.exceptions import KarniImproperlyConfigured
+from karni.exceptions import KarniImproperlyConfigured, KarniValueError
 from karni.pagination import Unpaginated, check_pagination_class
 from karni.performance import (
     Budget,
@@ -128,6 +128,26 @@ _STANDARD_ACTIONS: Final = frozenset(
 
 _SCOPED_MARK = "_karni_scoped_queryset"
 _DEPTH_ATTR = "_karni_queryset_depth"
+
+
+def _file_renderers() -> list[type[Any]]:
+    from karni.transfer.exports import CSVRenderer, XLSXRenderer
+
+    return [CSVRenderer, XLSXRenderer]
+
+
+#: ``?format=csv|xlsx`` on export (csv first) and the template (reversed: xlsx first).
+_FILE_RENDERERS: Final[list[type[Any]]] = _file_renderers()
+
+
+def _file_format(request: Any, default: str) -> str:
+    """The negotiated file format (``?format=``), else ``default``."""
+    from karni.transfer.formats import FORMATS
+
+    fmt = getattr(getattr(request, "accepted_renderer", None), "format", None)
+    if fmt not in FORMATS:
+        fmt = request.query_params.get("format") if hasattr(request, "query_params") else None
+    return fmt if fmt in FORMATS else default
 
 
 def _scoped_get_queryset(func: Callable[[Any], QuerySet[Any]]) -> Callable[[Any], QuerySet[Any]]:
@@ -231,6 +251,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     cache: ClassVar[Cache | Uncached | None] = None
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
+
+    #: Actions governed by ``access.create`` **or** ``access.write`` (an
+    #: import creates some rows and changes others); the action decides per
+    #: row. ``import_data = False`` on a subclass removes the import routes.
+    write_or_create_actions: ClassVar[frozenset[str]] = frozenset(
+        {"import_data", "import_job", "import_preview", "import_commit"}
+    )
 
     # The access declaration is the gate; DRF's project-wide default does
     # not apply. Classes listed here (or via @action) are ANDed after it.
@@ -507,6 +534,164 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             )
         return self.paginated_response(history_for(self.get_object()), ChangeLogSerializer)
 
+    # import and export (ADR 0002, P6)
+
+    @staticmethod
+    def _refused(exc: Any) -> Response:
+        """A ``KarniValueError`` from the import/export layer as a 400 with its code."""
+        return Response({"code": getattr(exc, "code", None), "detail": str(exc)}, status=400)
+
+    @action(detail=False, methods=["get"], url_path="export", renderer_classes=_FILE_RENDERERS)
+    def export(self, request: Request, *args: Any, **kwargs: Any) -> Any:
+        """``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.
+
+        The same rows the list would show for this request — its filters,
+        ``?search=`` and ``?ordering=`` applied, the read scope applied —
+        and the columns the requester may read; relations are written as
+        the target's ``Karni.natural_key`` so the file imports back.
+        """
+        from karni.transfer.exports import export_response
+
+        queryset = self.filter_queryset(self.get_queryset())
+        if not queryset.ordered:
+            queryset = queryset.order_by(*self.ordering)
+        serializer_class = self.get_serializer_class()
+        try:
+            return export_response(
+                self.optimize_queryset(queryset, serializer_class),
+                serializer_class,
+                self.get_serializer_context(),
+                fmt=_file_format(request, "csv"),
+            )
+        except KarniValueError as exc:
+            return self._refused(exc)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="import/template",
+        renderer_classes=list(reversed(_FILE_RENDERERS)),
+    )
+    def import_template(self, request: Request, *args: Any, **kwargs: Any) -> Any:
+        """``GET /<resource>/import/template/``: headers, an example row, the allowed values."""
+        from karni.transfer.imports import Importer
+        from karni.transfer.template import template_response
+
+        importer = Importer(self.get_model(), request, view=self)
+        return template_response(
+            self.get_model(),
+            importer.importable(),
+            _file_format(request, "xlsx"),
+        )
+
+    @action(detail=False, methods=["get", "post"], url_path="import", url_name="import")
+    def import_data(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.
+
+        ``POST`` (multipart ``file``, optional ``mapping``) creates an import
+        job and answers with its state — the file's columns and the mapping
+        suggested from the headers or remembered from the user's last
+        import. Preview it (the mandatory dry run) before committing.
+        """
+        from karni.transfer.imports import Importer
+        from karni.transfer.models import ColumnMapping
+        from karni.transfer.serializers import ImportUploadSerializer
+        from karni.transfer.services import (
+            create_job,
+            inline_rows,
+            job_state,
+            max_import_rows,
+        )
+
+        model = self.get_model()
+        if request.method == "GET":
+            importer = Importer(model, request, view=self)
+            return Response(
+                {
+                    "fields": [spec.to_dict() for spec in importer.importable()],
+                    "mapping": ColumnMapping.remembered(request.user, model),
+                    "inline_rows": inline_rows(),
+                    "max_rows": max_import_rows(),
+                    "key": importer.options.key,
+                }
+            )
+        body = ImportUploadSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        mapping = body.validated_data.get("mapping")
+        try:
+            job = create_job(
+                model,
+                request,
+                body.validated_data["file"],
+                mapping=mapping if isinstance(mapping, dict) else None,
+            )
+        except KarniValueError as exc:
+            return self._refused(exc)
+        return Response(job_state(job, request), status=201)
+
+    def _import_job(self, request: Request, job: str) -> Any:
+        from karni.transfer.models import ImportJob
+
+        found = (
+            ImportJob.objects.filter(
+                pk=job,
+                content_type__app_label=self.get_model()._meta.app_label,
+                content_type__model=self.get_model()._meta.model_name,
+            )
+            .select_related("content_type")
+            .first()
+        )
+        user = getattr(request, "user", None)
+        if found is None or (
+            not getattr(user, "is_superuser", False)
+            and found.created_by_id != getattr(user, "pk", None)
+        ):
+            raise NotFound("No such import job (or it is not yours).")
+        return found
+
+    @action(detail=False, methods=["get"], url_path=r"import/(?P<job>[0-9a-f-]{36})")
+    def import_job(self, request: Request, job: str = "", *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/import/<job>/``: the job's state and progress."""
+        from karni.transfer.services import job_state
+
+        return Response(job_state(self._import_job(request, job), request))
+
+    @action(detail=False, methods=["post"], url_path=r"import/(?P<job>[0-9a-f-]{36})/preview")
+    def import_preview(
+        self, request: Request, job: str = "", *args: Any, **kwargs: Any
+    ) -> Response:
+        """``POST /<resource>/import/<job>/preview/``: the dry run, with ``{"mapping": …}``.
+
+        Every row is validated and written inside a transaction that is
+        rolled back, so the counts and the per-row errors are exactly what
+        the commit will do. Large files run in Celery: poll the job.
+        """
+        from karni.transfer.serializers import ImportMappingSerializer
+        from karni.transfer.services import PREVIEW, job_state, set_mapping, start_stage
+
+        found = self._import_job(request, job)
+        body = ImportMappingSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        mapping = body.validated_data.get("mapping")
+        try:
+            set_mapping(found, request, mapping if mapping is not None else found.mapping)
+            started = start_stage(found, request, PREVIEW)
+        except KarniValueError as exc:
+            return self._refused(exc)
+        return Response(job_state(started, request))
+
+    @action(detail=False, methods=["post"], url_path=r"import/(?P<job>[0-9a-f-]{36})/commit")
+    def import_commit(self, request: Request, job: str = "", *args: Any, **kwargs: Any) -> Response:
+        """``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically."""
+        from karni.transfer.services import COMMIT, job_state, start_stage
+
+        found = self._import_job(request, job)
+        try:
+            started = start_stage(found, request, COMMIT)
+        except KarniValueError as exc:
+            return self._refused(exc)
+        return Response(job_state(started, request))
+
     # writes & serializers
 
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
@@ -583,12 +768,33 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     # query budget
 
+    #: Actions whose query count grows with the file they handle: unbudgeted
+    #: unless the viewset's ``query_budget`` names them explicitly.
+    unbudgeted_actions: ClassVar[frozenset[str]] = frozenset(
+        {
+            "export",
+            "import_template",
+            "import_data",
+            "import_job",
+            "import_preview",
+            "import_commit",
+        }
+    )
+
     def get_query_budget(self) -> int | None:
         """The query budget of the current action (``None`` = unchecked).
 
-        ``query_budget`` on the class first, then ``KARNI_QUERY_BUDGET``.
+        ``query_budget`` on the class first, then ``KARNI_QUERY_BUDGET``. The
+        import and export actions are unbudgeted (their queries scale with
+        the rows) unless ``query_budget`` names them.
         """
-        return resolve_budget(type(self).query_budget, getattr(self, "action", None))
+        action = getattr(self, "action", None)
+        declared = type(self).query_budget
+        if action in self.unbudgeted_actions and (
+            declared is None or action not in declared.limits
+        ):
+            return None
+        return resolve_budget(declared, action)
 
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Any:
         """DRF's dispatch, counted against the action's query budget.

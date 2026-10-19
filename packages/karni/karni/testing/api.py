@@ -620,7 +620,9 @@ class _Crud:
             self.schema_errors.append(f"{method} {path} is not in the OpenAPI schema")
             return
         self.documented[f"{method} {path}"] = operation
-        if response.status_code == 204 or not response.content:
+        if response.status_code == 204 or getattr(response, "streaming", False):
+            return None
+        if not response.content:
             return
         documented = response_schema(operation, response.status_code)
         if documented is None:

@@ -10,10 +10,12 @@ scoping — `Granted()`, the admin's row scope, `scope_exempt`, the `grant`
 isolation dimension), P3 (field-level visibility — `Karni.field_roles`,
 per-role serializer, schema and admin, the ordering/filter/search oracles
 closed), P4 (change history — `karni.audit`, `Karni.audit`, the History
-tab, `/history/`, `<ChangeHistory/>`, `audited-bulk-write`) and P5 (the
+tab, `/history/`, `<ChangeHistory/>`, `audited-bulk-write`), P5 (the
 permission matrix — the admin page, its guard rails, effective permissions,
-`api/auth/permissions/`, `RolePermission.origin`) have shipped; §2 below
-describes the state before them.*
+`api/auth/permissions/`, `RolePermission.origin`) and P6 (import and export
+— `karni.transfer`, `/export/`, the four-step import with its mandatory dry
+run, audit batches, `<ResourceImport/>`) have shipped; §2 below describes
+the state before them.*
 
 This audits Karni's permission surface before the six retrofits (P1 roles as
 data, P2 row-level scoping, P3 field-level visibility, P4 change history, P5

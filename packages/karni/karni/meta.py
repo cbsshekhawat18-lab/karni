@@ -12,12 +12,19 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
                 "phone": {"read": ["staff", "support"], "write": ["staff"]},
                 "internal_note": ["staff"],     # shorthand: read and write
             }
+            audit = True                        # change history (P4)
+            natural_key = "number"              # how imports and exports name a row (P6)
+            import_key = "number"               # the column an import matches rows on
+            import_lookup = {"customer": "email"}       # FK column → target field
+            import_transform = "shop.imports.clean_order_row"
+            after_import = "shop.imports.reindex"
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
-standard actions, every field visible to whoever may read the row. Readers
-go through :func:`karni_option` so a project can also set an option on an
-abstract base and inherit it.
+standard actions, every field visible to whoever may read the row, no
+history, keyed by its first unique text field (else the primary key).
+Readers go through :func:`karni_option` so a project can also set an option
+on an abstract base and inherit it.
 
 Override / escape hatch: subclass a model's ``Karni`` class in a subclass
 model (``class Karni(Parent.Karni): ...``) to change one option.
@@ -25,10 +32,11 @@ model (``class Karni(Parent.Karni): ...``) to change one option.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 
 from karni.exceptions import KarniImproperlyConfigured
@@ -36,9 +44,12 @@ from karni.exceptions import KarniImproperlyConfigured
 __all__ = [
     "STANDARD_ACTIONS",
     "FieldRule",
+    "ImportOptions",
     "field_roles",
+    "import_options",
     "karni_option",
     "model_actions",
+    "natural_key",
     "owner_field",
     "permission_key",
     "scope_paths",
@@ -131,3 +142,100 @@ def field_roles(model: type[models.Model]) -> dict[str, FieldRule]:
             read = write = _slugs(model, str(name), spec)
         rules[str(name)] = FieldRule(read, write)
     return rules
+
+
+# import and export (ADR 0002, P6)
+
+_KEY_FIELD_TYPES: Final[tuple[str, ...]] = ("SlugField", "CharField", "EmailField")
+
+
+def natural_key(model: type[models.Model]) -> str | None:
+    """The field that names a row of ``model`` to people: ``Karni.natural_key``.
+
+    How an import refers to a related row (``venue = "Arena"``) and how an
+    export writes a relation. Declared explicitly, else the first unique
+    slug/char/email field (``slug``, ``email``, ``sku``), else ``None`` —
+    imports and exports then use the primary key.
+    """
+    declared = karni_option(model, "natural_key")
+    if declared:
+        name = str(declared)
+        try:
+            model._meta.get_field(name)
+        except FieldDoesNotExist as exc:
+            raise KarniImproperlyConfigured(
+                f"{model.__name__}.Karni.natural_key names {name!r}, which the model does "
+                "not have.",
+                code="E801",
+            ) from exc
+        return name
+    for field in model._meta.concrete_fields:
+        if field.unique and not field.primary_key and field.get_internal_type() in _KEY_FIELD_TYPES:
+            return str(field.name)
+    return None
+
+
+@dataclass(frozen=True)
+class ImportOptions:
+    """What generic import code cannot know about a model, from ``class Karni``.
+
+    ``key`` is the column an import matches existing rows on (update instead
+    of create); ``lookups`` maps a relation field to the target field its
+    column carries; ``transform`` rewrites each row's mapped values before
+    validation; ``after`` runs once a commit has succeeded, with the result.
+    """
+
+    key: str | None
+    lookups: Mapping[str, str]
+    transform: Callable[..., Mapping[str, Any]] | None
+    after: Callable[..., Any] | None
+
+
+def _callable_option(model: type[models.Model], name: str) -> Callable[..., Any] | None:
+    value = karni_option(model, name)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        from django.utils.module_loading import import_string
+
+        try:
+            value = import_string(value)
+        except ImportError as exc:
+            raise KarniImproperlyConfigured(
+                f"{model.__name__}.Karni.{name} = {value!r} cannot be imported: {exc}",
+                code="E801",
+            ) from exc
+    if isinstance(value, staticmethod):
+        value = value.__func__
+    if not callable(value):
+        raise KarniImproperlyConfigured(
+            f"{model.__name__}.Karni.{name} must be a callable or its dotted path, got {value!r}.",
+            code="E801",
+        )
+    return value
+
+
+def import_options(model: type[models.Model]) -> ImportOptions:
+    """``Karni.import_key`` / ``import_lookup`` / ``import_transform`` / ``after_import``."""
+    key = karni_option(model, "import_key") or natural_key(model)
+    if key is not None:
+        try:
+            model._meta.get_field(str(key))
+        except FieldDoesNotExist as exc:
+            raise KarniImproperlyConfigured(
+                f"{model.__name__}.Karni.import_key names {key!r}, which the model does not have.",
+                code="E801",
+            ) from exc
+    lookups = karni_option(model, "import_lookup", None) or {}
+    if not isinstance(lookups, Mapping):
+        raise KarniImproperlyConfigured(
+            f"{model.__name__}.Karni.import_lookup must map a relation field to the target "
+            "field its column carries, e.g. {'venue': 'name'}.",
+            code="E801",
+        )
+    return ImportOptions(
+        key=str(key) if key is not None else None,
+        lookups={str(field): str(target) for field, target in lookups.items()},
+        transform=_callable_option(model, "import_transform"),
+        after=_callable_option(model, "after_import"),
+    )

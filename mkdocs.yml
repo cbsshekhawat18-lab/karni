@@ -64,6 +64,7 @@ nav:
       - Accounts: accounts.md
       - Admin: admin.md
       - Change history: change-history.md
+      - Import and export: import-export.md
       - Events and listeners: events.md
       - Scheduling: scheduling.md
       - Testing: testing.md

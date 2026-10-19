@@ -99,6 +99,12 @@ export interface KarniClient {
   readonly baseUrl: string;
   readonly schemaUrl: string;
   request<T>(path: string, options?: KarniRequestOptions): Promise<T>;
+  /**
+   * The same request (auth, query, 401 retry) returning the raw `Response`
+   * instead of a parsed body — for file downloads (`GET /<resource>/export/`).
+   * Non-2xx responses still throw `KarniApiError` with the parsed error body.
+   */
+  requestRaw(path: string, options?: KarniRequestOptions): Promise<Response>;
   /** D6 hook point: the auth layer wires tokens/CSRF/401 handling here. */
   setAuthHooks(hooks: KarniAuthHooks): void;
 }
@@ -197,33 +203,43 @@ export function createKarniClient(options: KarniClientOptions): KarniClient {
     return fetchImpl(url, init);
   }
 
+  async function requestRaw(
+    path: string,
+    requestOptions: KarniRequestOptions = {},
+  ): Promise<Response> {
+    const url = appendQuery(joinUrl(baseUrl, path), requestOptions.query);
+
+    let response = await perform(url, requestOptions);
+    if (response.ok) return response;
+
+    const error = new KarniApiError(response.status, await parseBody(response));
+    if (
+      response.status === 401 &&
+      hooks.onUnauthorized !== undefined &&
+      requestOptions.skipAuthRefresh !== true
+    ) {
+      const shouldRetry = await hooks.onUnauthorized(error);
+      if (shouldRetry) {
+        response = await perform(url, requestOptions);
+        if (response.ok) return response;
+        // A 401 (or anything else) after a successful refresh is surfaced
+        // as-is — it never re-triggers refresh (D6).
+        throw new KarniApiError(response.status, await parseBody(response));
+      }
+    }
+    throw error;
+  }
+
   return {
     baseUrl,
     schemaUrl,
 
     async request<T>(path: string, requestOptions: KarniRequestOptions = {}): Promise<T> {
-      const url = appendQuery(joinUrl(baseUrl, path), requestOptions.query);
-
-      let response = await perform(url, requestOptions);
-      if (response.ok) return (await parseBody(response)) as T;
-
-      const error = new KarniApiError(response.status, await parseBody(response));
-      if (
-        response.status === 401 &&
-        hooks.onUnauthorized !== undefined &&
-        requestOptions.skipAuthRefresh !== true
-      ) {
-        const shouldRetry = await hooks.onUnauthorized(error);
-        if (shouldRetry) {
-          response = await perform(url, requestOptions);
-          if (response.ok) return (await parseBody(response)) as T;
-          // A 401 (or anything else) after a successful refresh is surfaced
-          // as-is — it never re-triggers refresh (D6).
-          throw new KarniApiError(response.status, await parseBody(response));
-        }
-      }
-      throw error;
+      const response = await requestRaw(path, requestOptions);
+      return (await parseBody(response)) as T;
     },
+
+    requestRaw,
 
     setAuthHooks(next: KarniAuthHooks): void {
       hooks = { ...hooks, ...next };

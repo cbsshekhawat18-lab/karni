@@ -112,6 +112,7 @@ describe("package self-registrations", () => {
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
+      "resource-import": "ResourceImport",
       chart: "DataChart",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",

@@ -250,6 +250,21 @@ mechanical = false
 migration = "migrations/0.2.md#permission-matrix"
 
 [[change]]
+id = "import-export"
+kind = "behaviour"
+symbol = "karni.transfer"
+replacement = "GET /<resource>/export/, /<resource>/import/…, the admin's Export/Import, <ResourceImport/>"
+summary = """\
+Import and export (ADR 0002, P6): the new karni.transfer app (run migrate once; \
+karni.audit gains ChangeBatch) gives every BaseViewSet a CSV/XLSX export of the \
+list as the request sees it and a four-step import with a mandatory dry run, \
+audited as one batch; every Karni admin gains the export actions and an import \
+page; @karni/ui gains <ResourceImport/> and export buttons on <ResourceTable>; \
+openpyxl is a new core dependency."""
+mechanical = false
+migration = "migrations/0.2.md#import-and-export"
+
+[[change]]
 id = "architecture-scans-without-base-dir"
 kind = "behaviour"
 symbol = "BASE_DIR"

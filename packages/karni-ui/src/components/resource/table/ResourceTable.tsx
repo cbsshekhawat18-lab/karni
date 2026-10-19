@@ -46,8 +46,10 @@ import { ChevronDownIcon, ChevronUpIcon } from "../../primitives/icons";
 import { Skeleton } from "../../primitives/skeleton";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
+import type { ExportFormat } from "../../../hooks/useResourceImport";
 import { BulkActionsBar, type BulkAction } from "./BulkActionsBar";
 import { deriveColumns, type ResourceColumn } from "./derive-columns";
+import { ExportButtons } from "./ExportButtons";
 import { FilterBar } from "./FilterBar";
 import { PaginationControls } from "./PaginationControls";
 import {
@@ -113,6 +115,13 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    * on the same field never overrides them.
    */
   params?: Readonly<Record<string, KarniQueryValue>>;
+  /**
+   * Export buttons (one per format) when the resource serves
+   * `GET /<resource>/export/` — every Karni BaseViewSet does. The file carries
+   * the table's current filters, search and ordering; the backend applies the
+   * row scope and field visibility. Default `["csv", "xlsx"]`; `false` hides them.
+   */
+  exportFormats?: readonly ExportFormat[] | false;
   /** Extra toolbar content, rendered to the right of the search/filter row. */
   toolbar?: React.ReactNode;
   /** Replaces the default EmptyState when the list has no results. */
@@ -286,6 +295,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     pageSize,
     filters,
     params,
+    exportFormats,
     toolbar,
     empty,
     footer,
@@ -582,8 +592,13 @@ export function ResourceTable<T = Record<string, unknown>>(
     );
   }
 
+  const exportList: readonly ExportFormat[] =
+    exportFormats === undefined ? ["csv", "xlsx"] : exportFormats === false ? [] : exportFormats;
+  const exportEnabled = exportList.length > 0 && schema?.operations.export !== undefined;
+
   const showFilterRow =
-    schema !== undefined && (searchEnabled || filterFields.length > 0 || toolbar !== undefined);
+    schema !== undefined &&
+    (searchEnabled || filterFields.length > 0 || toolbar !== undefined || exportEnabled);
 
   return (
     <div className={cn("flex w-full flex-col gap-3", className)}>
@@ -598,8 +613,13 @@ export function ResourceTable<T = Record<string, unknown>>(
             onFilterChange={handleFilterChange}
             className="min-w-0 flex-1"
           />
-          {toolbar !== undefined && (
-            <div className="flex shrink-0 items-center gap-2">{toolbar}</div>
+          {(toolbar !== undefined || exportEnabled) && (
+            <div className="flex shrink-0 items-center gap-2">
+              {exportEnabled && (
+                <ExportButtons resource={resource} params={listParams} formats={exportList} />
+              )}
+              {toolbar}
+            </div>
           )}
         </div>
       )}

@@ -9,7 +9,38 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils import timezone
 
-__all__ = ["ChangeLog", "ChangeLogQuerySet"]
+__all__ = ["ChangeBatch", "ChangeLog", "ChangeLogQuerySet"]
+
+
+class ChangeBatch(models.Model):
+    """One operation that changed many rows at once — an import, a bulk action.
+
+    Every :class:`ChangeLog` entry written while the batch is current
+    (:func:`karni.audit.capture.change_batch`) points at it, so "which rows
+    did this import touch" and "which import changed this row" are one query
+    each. ``meta`` carries what the operation knows about itself (file name,
+    counts, the job id).
+    """
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
+    kind = models.CharField(max_length=32)
+    label = models.CharField(max_length=200, blank=True, default="")
+    meta = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ("-timestamp", "-id")
+        verbose_name = "change batch"
+        verbose_name_plural = "change batches"
+
+    def __str__(self) -> str:
+        return f"{self.kind} {self.label or self.pk} at {self.timestamp:%Y-%m-%d %H:%M}"
 
 
 class ChangeLogQuerySet(models.QuerySet["ChangeLog"]):
@@ -53,6 +84,9 @@ class ChangeLog(models.Model):
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     action = models.CharField(max_length=10, choices=Action.choices)
     diff = models.JSONField(default=dict, blank=True)
+    batch = models.ForeignKey(
+        ChangeBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name="entries"
+    )
 
     objects: ClassVar[models.Manager[ChangeLog]] = ChangeLogQuerySet.as_manager()
 

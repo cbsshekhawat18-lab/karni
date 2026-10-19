@@ -20,6 +20,7 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 - `ResourceDetail` — role `detail-view`
 - `ResourceSelect` — role `async-select`
 - `ChangeHistory` — role `change-history`
+- `ResourceImport` — role `resource-import`
 
 ## App shell and pages
 
@@ -51,6 +52,9 @@ Styled Radix parts and basics; `className` always merges, refs are forwarded.
 
 - `useAuth` — `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.
 - `useChangeHistory` — One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
+- `useImportActions` — `upload`, `preview` (the dry run) and `commit` mutations of an import.
+- `useImportDescribe` — The importable fields of a resource and the user's remembered column mapping.
+- `useImportJob` — One import job's state; polls while the backend previews or commits it.
 - `useKarniClient` — The `KarniClient` behind every hook: `client.request(path, { method, body, query })` for custom actions.
 - `usePermission` — `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem` — One row by id, optionally expanded.
@@ -79,5 +83,6 @@ role another component holds (compose it instead), and `karni context` lists the
 | `modal` | `Modal` |
 | `page-shell` | `Page` |
 | `resource-form` | `ResourceForm` |
+| `resource-import` | `ResourceImport` |
 | `stat` | `Stat` |
 | `toast` | `Toaster` |

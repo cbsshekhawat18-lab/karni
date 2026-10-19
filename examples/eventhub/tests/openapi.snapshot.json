@@ -575,6 +575,211 @@
         ],
         "type": "object"
       },
+      "ImportColumn": {
+        "properties": {
+          "choices": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "help": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "lookup": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "readable": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "target": {
+            "nullable": true,
+            "type": "string"
+          },
+          "writable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "choices",
+          "help",
+          "kind",
+          "label",
+          "lookup",
+          "name",
+          "readable",
+          "required",
+          "target",
+          "writable"
+        ],
+        "type": "object"
+      },
+      "ImportDescribe": {
+        "description": "``GET /<resource>/import/``: the importable fields and the remembered mapping.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "type": "array"
+          },
+          "inline_rows": {
+            "type": "integer"
+          },
+          "key": {
+            "nullable": true,
+            "type": "string"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "max_rows": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fields",
+          "inline_rows",
+          "key",
+          "mapping",
+          "max_rows"
+        ],
+        "type": "object"
+      },
+      "ImportJob": {
+        "description": "The state of one import job (``services.job_state``).",
+        "properties": {
+          "async_": {
+            "title": "Async ",
+            "type": "boolean"
+          },
+          "batch": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "nullable": true,
+            "type": "string"
+          },
+          "error": {
+            "nullable": true,
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "type": "array"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "model": {
+            "nullable": true,
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "result": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
+          "rows_done": {
+            "type": "integer"
+          },
+          "rows_total": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "async_",
+          "batch",
+          "columns",
+          "created_at",
+          "error",
+          "file_name",
+          "format",
+          "id",
+          "mapping",
+          "model",
+          "problems",
+          "result",
+          "rows_done",
+          "rows_total",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ImportMappingRequest": {
+        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column).",
+        "properties": {
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "ImportUploadRequest": {
+        "description": "``POST /<resource>/import/``: the file, optionally with a mapping.",
+        "properties": {
+          "file": {
+            "format": "binary",
+            "type": "string"
+          },
+          "mapping": {}
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
       "KarniPaymentsPayment": {
         "description": "Auto-generated serializer for karni_payments.Payment. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -2539,6 +2744,389 @@
         }
       }
     },
+    "/api/bookings/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "bookings_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "attendee"
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/bookings/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "bookings_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "owned": "attendee"
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "bookings_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "owned": "attendee"
+            }
+          ]
+        }
+      }
+    },
+    "/api/bookings/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "bookings_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "attendee"
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/bookings/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "bookings_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "owned": "attendee"
+            }
+          ]
+        }
+      }
+    },
+    "/api/bookings/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "bookings_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "owned": "attendee"
+            }
+          ]
+        }
+      }
+    },
+    "/api/bookings/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "bookings_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "bookings"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "owned": "attendee"
+            }
+          ]
+        }
+      }
+    },
     "/api/bookings/{id}/": {
       "delete": {
         "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
@@ -3205,6 +3793,431 @@
           "role": [
             "organizer",
             "staff"
+          ]
+        }
+      }
+    },
+    "/api/events/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "events_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "where": "lambda"
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/events/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "events_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "events_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/events/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "events_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "where": "lambda"
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/events/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "events_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/events/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "events_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/events/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "events_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "events"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "owned": "organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
           ]
         }
       }
@@ -3915,6 +4928,383 @@
         }
       }
     },
+    "/api/payments/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "payments_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/payments/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "payments_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "owned": "user"
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "payments_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "owned": "user"
+            }
+          ]
+        }
+      }
+    },
+    "/api/payments/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "payments_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/payments/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "payments_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "owned": "user"
+            }
+          ]
+        }
+      }
+    },
+    "/api/payments/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "payments_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "owned": "user"
+            }
+          ]
+        }
+      }
+    },
+    "/api/payments/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "payments_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "payments"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "user"
+            },
+            {
+              "owned": "user"
+            }
+          ]
+        }
+      }
+    },
     "/api/payments/{id}/": {
       "delete": {
         "description": "Owner-scoped, read-only payments plus the checkout/refund actions.",
@@ -4453,6 +5843,389 @@
         }
       }
     },
+    "/api/refunds/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "refunds_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "role": [
+            "payments-admin"
+          ]
+        }
+      }
+    },
+    "/api/refunds/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "refunds_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "payments-admin"
+              ]
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "refunds_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "payments-admin"
+              ]
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/refunds/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "refunds_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "role": [
+            "payments-admin"
+          ]
+        }
+      }
+    },
+    "/api/refunds/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "refunds_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "payments-admin"
+              ]
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/refunds/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "refunds_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "payments-admin"
+              ]
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/refunds/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "refunds_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "refunds"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "payments-admin"
+              ]
+            },
+            {
+              "role": [
+                "payments-admin"
+              ]
+            }
+          ]
+        }
+      }
+    },
     "/api/refunds/{id}/": {
       "delete": {
         "description": "Read-only refunds, gated on the ``payments-admin`` role.\n\n``HasRole`` is both the request gate (non-admins get 403) and the row\npolicy (non-admins would see no rows even if the gate were swapped).\n\nOverride / escape hatch: to let customers list their own refunds,\nsubclass with ``access = Access(read=Owned(\"payment__user\") |\nHasRole(\"payments-admin\"), write=HasRole(\"payments-admin\"))``.",
@@ -4906,6 +6679,441 @@
         ],
         "x-karni-access": {
           "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "ticket_tiers_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "where": "lambda"
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "ticket_tiers_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "ticket_tiers_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "ticket_tiers_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "where": "lambda"
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "ticket_tiers_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "ticket_tiers_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            },
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/ticket-tiers/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "ticket_tiers_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "ticket-tiers"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "owned": "event__organizer"
+            },
+            {
+              "role": [
+                "staff"
+              ]
+            },
             {
               "owned": "event__organizer"
             },
@@ -5410,6 +7618,397 @@
           "role": [
             "organizer",
             "staff"
+          ]
+        }
+      }
+    },
+    "/api/venues/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "venues_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/venues/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "venues_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "venues_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/venues/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "venues_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/venues/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "venues_import_retrieve_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/venues/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "venues_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "/api/venues/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "venues_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "venues"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            },
+            {
+              "role": [
+                "organizer",
+                "staff"
+              ]
+            }
           ]
         }
       }

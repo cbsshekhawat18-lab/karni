@@ -33,6 +33,11 @@ class Venue(BaseModel):
     name = models.CharField(max_length=200)
     city = models.CharField(max_length=100)
 
+    class Karni:
+        """Imports and exports name a row by its ``name`` (ADR 0002, P6)."""
+
+        natural_key = "name"
+
     def __str__(self) -> str:
         return self.name
 
@@ -41,6 +46,11 @@ class Tag(BaseModel):
     """Minimal M2M target."""
 
     name = models.CharField(max_length=100)
+
+    class Karni:
+        """Imports and exports name a row by its ``name`` (ADR 0002, P6)."""
+
+        natural_key = "name"
 
     def __str__(self) -> str:
         return self.name

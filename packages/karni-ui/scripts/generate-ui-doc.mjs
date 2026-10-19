@@ -18,7 +18,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const GROUPS = [
   [
     "Resource components (schema-driven)",
-    ["ResourceTable", "ResourceForm", "ResourceDetail", "ResourceSelect", "ChangeHistory"],
+    [
+      "ResourceTable",
+      "ResourceForm",
+      "ResourceDetail",
+      "ResourceSelect",
+      "ChangeHistory",
+      "ResourceImport",
+    ],
   ],
   [
     "App shell and pages",
@@ -44,6 +51,10 @@ const HOOKS = {
   useResourceItem: "One row by id, optionally expanded.",
   useChangeHistory:
     "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
+  useImportDescribe:
+    "The importable fields of a resource and the user's remembered column mapping.",
+  useImportJob: "One import job's state; polls while the backend previews or commits it.",
+  useImportActions: "`upload`, `preview` (the dry run) and `commit` mutations of an import.",
   useResourceMutations:
     "`create`, `update`, `remove` for a resource; they invalidate the resource's queries on success.",
   useSchema: "The parsed OpenAPI schema of one resource (fields, operations, access).",

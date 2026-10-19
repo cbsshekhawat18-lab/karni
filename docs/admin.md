@@ -166,6 +166,15 @@ on the grants (`karni_accounts.rolepermission:view` to look, `:change` to
 edit) and work at tablet width. The rules, the guard rails and the API are in
 [accounts](accounts.md#permission-matrix).
 
+## Import and export
+
+Every changelist has **Export selected as CSV / XLSX** (the selection, or
+every filtered row with "select all" — through the row scope and the role's
+field visibility) and an **Import** button: upload, map columns to fields,
+preview the dry run, commit — on one page, with progress for large files and
+a downloadable template. `karni_transfer = False` on an admin class removes
+both. See [import and export](import-export.md).
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

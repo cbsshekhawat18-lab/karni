@@ -52,6 +52,18 @@ change and its migration note.
   under `api/auth/permissions/` for custom UIs, fixtures and tests
   (`E213`). `RolePermission.origin` tells the sync which grants the matrix
   owns; `KARNI_MATRIX_EXCLUDE`.
+- Import and export (ADR 0002, P6): `GET /<resource>/export/?format=csv|xlsx`
+  on every resource — the list as the request sees it, filters and scope and
+  field visibility included, relations as natural keys — and a four-step
+  import (`/<resource>/import/…`): upload, map columns (remembered per model
+  per user), the mandatory dry run with exact counts and per-row errors,
+  then one transaction recorded as one audit batch; large files run in
+  Celery with progress; per-model hooks in `class Karni` (`natural_key`,
+  `import_key`, `import_lookup`, `import_transform`, `after_import`); a
+  downloadable template per model. Export actions and an Import page on
+  every Karni admin; `<ResourceImport/>` and export buttons on
+  `<ResourceTable>` in `@karni/ui`. `KARNI_IMPORT_INLINE_ROWS`,
+  `KARNI_IMPORT_MAX_ROWS`, `KARNI_EXPORT_MAX_ROWS`; `E801`–`E803`.
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`

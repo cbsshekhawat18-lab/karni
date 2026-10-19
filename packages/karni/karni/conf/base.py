@@ -143,6 +143,7 @@ BASE: dict[str, Any] = {
         "django_structlog",
         "karni.accounts",
         "karni.audit",
+        "karni.transfer",
         "karni",
         # Last on purpose: karni.admin's ready() autodiscovers *unregistered*
         # models, so every explicit registration (project admin.py files,
@@ -432,6 +433,7 @@ BASE: dict[str, Any] = {
             "account",
             "socialaccount",
             "karni_audit",
+            "karni_transfer",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
         ],
@@ -445,6 +447,12 @@ BASE: dict[str, Any] = {
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
+    # --- Import and export (karni.transfer) ---------------------------------
+    # Files with at most this many rows import inside the request; larger
+    # ones run in Celery with progress. The two caps refuse outright.
+    "KARNI_IMPORT_INLINE_ROWS": env.int("KARNI_IMPORT_INLINE_ROWS", default=500),
+    "KARNI_IMPORT_MAX_ROWS": env.int("KARNI_IMPORT_MAX_ROWS", default=100_000),
+    "KARNI_EXPORT_MAX_ROWS": env.int("KARNI_EXPORT_MAX_ROWS", default=100_000),
     # --- Change history (karni.audit) -------------------------------------
     "KARNI_AUDIT_ASYNC": env.bool("KARNI_AUDIT_ASYNC", default=False),
     "KARNI_AUDIT_RETENTION_DAYS": env.int("KARNI_AUDIT_RETENTION_DAYS", default=None),

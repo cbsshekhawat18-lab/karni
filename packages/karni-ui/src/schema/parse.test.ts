@@ -326,3 +326,33 @@ describe("parseOpenApi — generated testapp snapshot (D9)", () => {
     },
   );
 });
+
+describe("parseOpenApi — import and export operations (karni.transfer)", () => {
+  const doc = {
+    paths: {
+      "/api/things/": {
+        get: { "x-karni-resource": "things", responses: {} },
+        post: { responses: {} },
+      },
+      "/api/things/export/": {
+        get: { parameters: [{ in: "query", name: "format" }], responses: {} },
+      },
+      "/api/things/import/": { post: { responses: {} } },
+      "/api/plain/": { get: { "x-karni-resource": "plain", responses: {} } },
+    },
+  };
+  const parsed = parseOpenApi(doc);
+
+  it("records the export and import operations under the list path", () => {
+    const things = parsed.resources["things"];
+    expect(things?.operations.export?.path).toBe("/api/things/export/");
+    expect(things?.operations.export?.queryParams).toEqual(["format"]);
+    expect(things?.operations.import?.path).toBe("/api/things/import/");
+    expect(things?.operations.import?.method).toBe("post");
+  });
+
+  it("leaves them undefined for a resource without them", () => {
+    expect(parsed.resources["plain"]?.operations.export).toBeUndefined();
+    expect(parsed.resources["plain"]?.operations.import).toBeUndefined();
+  });
+});

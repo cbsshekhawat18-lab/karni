@@ -526,6 +526,18 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     };
     const createOp = isRecord(item.post) ? item.post : undefined;
     if (createOp !== undefined) operations.create = operationDef(doc, path, "post", createOp);
+    // karni.transfer (P6): the export and import actions live under the list path.
+    const exportItem = paths[`${path}export/`];
+    const exportOp = isRecord(exportItem) && isRecord(exportItem.get) ? exportItem.get : undefined;
+    if (exportOp !== undefined) {
+      operations.export = operationDef(doc, `${path}export/`, "get", exportOp);
+    }
+    const importItem = paths[`${path}import/`];
+    const importOp =
+      isRecord(importItem) && isRecord(importItem.post) ? importItem.post : undefined;
+    if (importOp !== undefined) {
+      operations.import = operationDef(doc, `${path}import/`, "post", importOp);
+    }
     if (itemPath !== undefined && itemItem !== undefined) {
       for (const method of METHODS) {
         const op = itemItem[method];

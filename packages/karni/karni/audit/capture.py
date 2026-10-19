@@ -13,6 +13,9 @@ import datetime as dt
 import decimal
 import re
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from django.conf import settings
@@ -27,8 +30,10 @@ from karni.middleware import get_current_user
 __all__ = [
     "DEFAULT_REDACT",
     "audited_fields",
+    "change_batch",
     "clear_caches",
     "connect",
+    "current_batch_id",
     "diff_values",
     "json_value",
     "record",
@@ -48,6 +53,37 @@ _ALWAYS_SKIPPED = frozenset({"id", "pk", "created_at", "updated_at"})
 
 _AUDITED: dict[type[models.Model], tuple[str, ...] | None] = {}
 _SENSITIVE: dict[type[models.Model], frozenset[str]] = {}
+
+#: The batch (``ChangeBatch`` pk) every entry written in this context joins.
+_BATCH: ContextVar[int | None] = ContextVar("karni_audit_batch", default=None)
+
+
+def current_batch_id() -> int | None:
+    """The pk of the batch entries are being written into, or ``None``."""
+    return _BATCH.get()
+
+
+@contextmanager
+def change_batch(kind: str, label: str = "", meta: dict[str, Any] | None = None) -> Iterator[Any]:
+    """Group every change recorded inside the block under one ``ChangeBatch``.
+
+    ``with change_batch("import", "orders.xlsx", {"job": str(job.pk)}) as batch:``
+    — the batch row is created first (with the current user as actor), each
+    entry written while the block runs points at it, and ``batch`` is the row
+    (``batch.pk`` is what to store on the operation that owns it). Batches
+    nest: the innermost wins.
+    """
+    from karni.audit.models import ChangeBatch
+
+    user = get_current_user()
+    batch = ChangeBatch.objects.create(
+        actor_id=getattr(user, "pk", None), kind=kind, label=label[:200], meta=meta or {}
+    )
+    token = _BATCH.set(int(batch.pk))
+    try:
+        yield batch
+    finally:
+        _BATCH.reset(token)
 
 
 def clear_caches() -> None:
@@ -209,6 +245,7 @@ def record(instance: models.Model, action: str, diff: dict[str, Any]) -> None:
         "actor_id": json_value(getattr(user, "pk", None)),
         "action": action,
         "diff": _redact(model, diff),
+        "batch_id": _BATCH.get(),
     }
     if getattr(settings, "KARNI_AUDIT_ASYNC", False):
         from karni.audit.tasks import record_change
@@ -231,6 +268,7 @@ def write(payload: dict[str, Any]) -> None:
         actor_id=payload.get("actor_id"),
         action=payload["action"],
         diff=payload["diff"],
+        batch_id=payload.get("batch_id"),
     )
 
 

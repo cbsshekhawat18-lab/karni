@@ -90,6 +90,7 @@ __all__ = [
     "owner_paths_models",
     "predicate_leaves",
     "readable",
+    "routed_view",
     "rows_or_exempt",
     "target_read_scope",
 ]
@@ -785,14 +786,28 @@ def action_slot(action: str | None, method: str | None) -> str:
     return "write"
 
 
+def _write_or_create(view: Any, action: str | None) -> bool:
+    """Whether ``action`` is one the view lists in ``write_or_create_actions``."""
+    return bool(action) and action in (getattr(view, "write_or_create_actions", None) or ())
+
+
 def action_predicate(view: Any, access: Access, method: str | None = None) -> Predicate:
-    """The predicate governing the view's current action under ``access``, bound to the view."""
+    """The predicate governing the view's current action under ``access``, bound to the view.
+
+    An action the view names in ``write_or_create_actions`` (an import: it
+    creates some rows and changes others) is governed by ``create`` **or**
+    ``write`` — whoever may do either may start it; which rows each may
+    touch is the action's own business, per row.
+    """
     override = action_override(view)
     if override is not None:
         return override.bind(view)
+    action = getattr(view, "action", None)
+    if _write_or_create(view, action):
+        return AnyOf((access.create.bind(view, "create"), access.write.bind(view, "update")))
     if method is None:
         method = getattr(getattr(view, "request", None), "method", None)
-    return access.slot(action_slot(getattr(view, "action", None), method)).bind(view)
+    return access.slot(action_slot(action, method)).bind(view)
 
 
 def describe_access(declaration: Access | Unscoped | None, predicate: Predicate | None) -> Any:
@@ -917,6 +932,8 @@ def _validate_granted_actions(view_class: type[Any], declaration: Any, model: ty
     """E211 for an unsafe ``@action`` that ``Granted()`` governs but the model never declared."""
     for extra in getattr(view_class, "get_extra_actions", lambda: [])():
         override = getattr(extra, "kwargs", {}).get("access")
+        if _write_or_create(view_class, extra.__name__):
+            continue  # governed by create | write, bound to those actions
         for method in getattr(extra, "mapping", {}):
             verb = str(method).upper()
             if verb in SAFE_METHODS:
@@ -1120,6 +1137,15 @@ def _target_view(model: type[Model], request: Any) -> Any | None:
         view.action = "list"
     cache[model] = view
     return view
+
+
+def routed_view(model: type[Model], request: Any) -> Any | None:
+    """The request-bound instance of the ``BaseViewSet`` routed for ``model``, or ``None``.
+
+    What relation scoping and the importer use to evaluate a model's own
+    ``access`` declaration outside its viewset (cached per request).
+    """
+    return _target_view(model, request)
 
 
 def target_read_scope(queryset: QuerySet[Any], request: Any | None) -> tuple[QuerySet[Any], bool]:

@@ -19,6 +19,7 @@ from django.db import models
 CONTEXT_SKIP_APPS: frozenset[str] = frozenset(
     {
         "karni_audit",
+        "karni_transfer",
         "admin",
         "auth",
         "contenttypes",

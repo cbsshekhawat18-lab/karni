@@ -56,12 +56,16 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_ADMIN_SEARCH_MAX` | — | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` | — | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` | — | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 | **Karni knobs** | | | |
 | `KARNI_HEALTH_CHECKS` | — | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default). |
 | `KARNI_HEALTH_CELERY_TIMEOUT` | — | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
 | `KARNI_THUMBNAILER` | — | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` | — | `True` | Validate the merged settings at startup (`karni.conf.validation`); `False` skips it. |
+| **Import and export (karni.transfer)** | | | |
+| `KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request; larger ones run in Celery with progress. |
+| `KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`); split the file. |
+| `KARNI_EXPORT_MAX_ROWS` | `KARNI_EXPORT_MAX_ROWS` | `100_000` | An [export](import-export.md) with more rows than this is refused (`E803`); narrow the filters. |
 | **Change history (karni.audit)** | | | |
 | `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
 | `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |

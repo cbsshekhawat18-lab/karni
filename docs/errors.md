@@ -941,6 +941,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Maintainers: fix the entries the message lists (schema in karni/changelog/__init__.py). Users: reinstall karni-cli.
 
+<a id="e801"></a>
+
+#### E801 — An import cannot proceed as asked
+
+*API 400 response* · from `karni.transfer`
+
+**Why Karni objects.** The mapping names a column the file lacks or a field the role may not write, the file has no header row, a commit was requested before the mandatory preview, or the model's import metadata (Karni.natural_key / import_key / import_lookup / import_transform / after_import) is malformed.
+
+**Fix.** Map columns to importable fields only (GET /<resource>/import/ lists them), preview before committing, and check the names in class Karni against the model.
+
+<a id="e802"></a>
+
+#### E802 — The file format is not supported
+
+*API 400 response* · from `karni.transfer.formats`
+
+**Why Karni objects.** Import and export speak CSV and XLSX; anything else (or an upload whose format cannot be told from its name or content type) is refused.
+
+**Fix.** Upload a .csv or .xlsx file, or pass ?format=csv|xlsx; XLSX needs openpyxl (a core dependency).
+
+<a id="e803"></a>
+
+#### E803 — Too many rows for one import or export
+
+*API 400 response* · from `karni.transfer`
+
+**Why Karni objects.** KARNI_IMPORT_MAX_ROWS caps an upload and KARNI_EXPORT_MAX_ROWS an export so one request cannot pin a worker or build an unbounded file.
+
+**Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
+
 ## karni-payments (`PAY`)
 
 <a id="pay001"></a>
