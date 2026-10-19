@@ -98,7 +98,7 @@ def test_ui_source_repo_walk_is_verified(tmp_path: Path) -> None:
 
 
 def test_ui_spec(tmp_path: Path) -> None:
-    assert ui_spec(None) == "^0.1.0"
+    assert ui_spec(None) == "^0.2.0"
     assert ui_spec(Path("/opt/Karni/packages/karni-ui")) == "file:/opt/Karni/packages/karni-ui"
     # A project elsewhere keeps the absolute path; one inside the checkout gets a
     # relative one (from frontend/), so examples/ install on any machine.
@@ -156,7 +156,7 @@ def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> 
     assert result.exit_code == 0, result.output
     project = tmp_path / "registry_ui"
     package = json.loads((project / "frontend" / "package.json").read_text())
-    assert package["dependencies"]["@karni/ui"] == "^0.1.0"
+    assert package["dependencies"]["@karni/ui"] == "^0.2.0"
     assert all(isinstance(volume, str) for volume in _frontend_volumes(project))
     assert "KARNI_UI_SRC=" in result.output
 

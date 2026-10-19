@@ -230,3 +230,30 @@ class TestForeignKeyFormFields:
         queryset = form_cls.base_fields["note"].queryset
         assert alive in queryset
         assert dead not in queryset
+
+
+class TestChangelistCounts:
+    """``?deleted=all`` lists the root rows, so their count runs once (audit, tier 2 §9)."""
+
+    def _count_queries(self, admin_client: Client, query: dict[str, str]) -> list[str]:
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        with CaptureQueriesContext(connection) as captured:
+            response = admin_client.get(CHANGELIST_URL, query)
+        assert response.status_code == 200
+        return [q["sql"] for q in captured.captured_queries if "COUNT(" in q["sql"].upper()]
+
+    def test_all_rows_are_counted_once(self, admin_client: Client) -> None:
+        _note("alive")
+        _note("gone", deleted=True)
+        counts = self._count_queries(admin_client, {"deleted": "all"})
+        assert len(counts) == 1, counts
+
+    def test_a_narrowed_list_keeps_the_full_count(self, admin_client: Client) -> None:
+        _note("alive")
+        _note("gone", deleted=True)
+        counts = self._count_queries(admin_client, {"deleted": "all", "q": "alive"})
+        assert len(counts) == 2, counts
+        counts = self._count_queries(admin_client, {"deleted": "deleted"})
+        assert len(counts) == 2, counts

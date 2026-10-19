@@ -151,7 +151,7 @@ export function renderFieldCell(
       return dateText(value, true);
     case "enum":
       return typeof value === "string" || typeof value === "number"
-        ? enumLabel(value)
+        ? enumLabel(value, field.enumLabels)
         : String(value);
     case "relation":
       return <RelationCell value={value} label={getRowLabel ?? displayLabel} />;

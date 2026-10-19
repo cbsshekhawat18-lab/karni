@@ -93,13 +93,15 @@ below changes one, edit it there and run `python -m karni.links sync`
 ## 3. Trusted publishing (no tokens stored anywhere)
 
 14. **PyPI trusted publishers** — *reversible*. For each of `karni`,
-    `karni-cli`, `karni-payments`: <https://pypi.org/manage/account/publishing/>
+    `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`:
+    <https://pypi.org/manage/account/publishing/>
     → "Add a new pending publisher": owner `cbsshekhawat18-lab` (or the
     org), repository `karni`, workflow `release.yml`, environment `pypi`.
-15. **npm trusted publishers** — *reversible*. For `@karni/ui` and
-    `@karni/payments-ui`: the package must exist first (publish 0.1.0 once
-    by hand with `npm publish --access public` from the built tarball, with
-    2FA), then Package settings → Publishing access → Trusted publisher:
+15. **npm trusted publishers** — *reversible*. For `@karni/ui`,
+    `@karni/payments-ui`, `@karni/approvals-ui` and `@karni/impersonation-ui`:
+    the package must exist first (publish 0.2.0 once by hand with
+    `npm publish --access public` from the built tarball, with 2FA), then
+    Package settings → Publishing access → Trusted publisher:
     this repository, workflow `release.yml`, environment `npm`.
 16. **Enable the release workflow** — *reversible*. Settings → Secrets and
     variables → Actions → Variables: `KARNI_PUBLISHING = true`. Until it is
@@ -110,8 +112,10 @@ below changes one, edit it there and run `python -m karni.links sync`
 17. Run the dry run: Actions → Release → "Run workflow" with `dry_run =
     true`. It builds every artifact, runs `twine check` and `npm publish
     --dry-run`, and uploads the files for inspection.
-18. **Tag `v0.1.0`** — *a published version is permanent on PyPI and npm;
-    a mistake needs `v0.1.1`*. `git tag v0.1.0 && git push origin v0.1.0`,
+18. **Tag `v0.2.0`** (the first published release; 0.1.0 was the
+    pre-release development line) — *a published version is permanent on
+    PyPI and npm; a mistake needs `v0.2.1`*. The tag exists locally since
+    the release commit: `git push origin main v0.2.0`,
     approve the `pypi` and `npm` environments when the workflow pauses.
 19. Verify the pages: <https://pypi.org/project/karni/>,
     <https://www.npmjs.com/package/@karni/ui> — the README renders, the

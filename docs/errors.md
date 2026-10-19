@@ -1559,7 +1559,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k003"></a>
 
-### K003 — Model changed: make migrate && karni types.
+### K003 — Model changed: make migrate; karni types.
 
 *agent rule, must* · enforced by `review`
 
@@ -1571,7 +1571,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k004"></a>
 
-### K004 — karni rules --check FILE; karni check before commit.
+### K004 — karni rules --check FILE; karni check pre-commit.
 
 *agent rule, must* · enforced by `review`
 
@@ -1619,7 +1619,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k009"></a>
 
-### K009 — Scaffold via karni make, not by hand.
+### K009 — Scaffold with karni make.
 
 *agent rule, must* · enforced by `review`
 
@@ -1739,7 +1739,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k110"></a>
 
-### K110 — Row rules belong in access.
+### K110 — Row rules: in access.
 
 *agent rule, error* · enforced by `access-override`
 
@@ -1799,7 +1799,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k203"></a>
 
-### K203 — Import the @karni/ui barrel only.
+### K203 — Import only the @karni/ui barrel.
 
 *agent rule, error* · enforced by `karni/no-deep-imports`
 
@@ -1847,7 +1847,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k302"></a>
 
-### K302 — Never write auth, users, admin, serializers, routers, settings, infra, tables, forms.
+### K302 — Never write auth/users, admin, serializers, routers, settings, infra, tables, forms.
 
 *agent rule, must* · enforced by `review`
 
@@ -1883,7 +1883,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k305"></a>
 
-### K305 — Per entity: models.py + viewsets.py only.
+### K305 — Per entity: models.py and viewsets.py.
 
 *agent rule, must* · enforced by `review`
 
@@ -1895,7 +1895,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k306"></a>
 
-### K306 — Pages live in frontend/src/pages/.
+### K306 — Pages: frontend/src/pages/.
 
 *agent rule, must* · enforced by `review`
 
@@ -1919,7 +1919,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k308"></a>
 
-### K308 — Configure modules via documented settings.
+### K308 — Modules: configure via settings.
 
 *agent rule, must* · enforced by `review`
 

@@ -118,7 +118,7 @@ RULES: tuple[Rule, ...] = (
         code="K003",
         category="workflow",
         severity="must",
-        summary="Model changed: make migrate && karni types.",
+        summary="Model changed: make migrate; karni types.",
         rule="After any model change run `make migrate && karni types`.",
         rationale=(
             "Migrations and the frontend's TS types + typed hooks are derived from the "
@@ -129,7 +129,7 @@ RULES: tuple[Rule, ...] = (
         code="K004",
         category="workflow",
         severity="must",
-        summary="karni rules --check FILE; karni check before commit.",
+        summary="karni rules --check FILE; karni check pre-commit.",
         rule=(
             "Run `karni rules --check <file>` on files you write and `karni check` before "
             "committing — every enforced rule fails the build, nothing only warns."
@@ -201,7 +201,7 @@ RULES: tuple[Rule, ...] = (
         code="K009",
         category="workflow",
         severity="must",
-        summary="Scaffold via karni make, not by hand.",
+        summary="Scaffold with karni make.",
         rule=(
             "Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, "
             "listeners, management commands, services, middleware, pages, components and "
@@ -233,7 +233,7 @@ RULES: tuple[Rule, ...] = (
         category="architecture",
         severity="must",
         summary=(
-            "Never write auth, users, admin, serializers, routers, settings, infra, tables, forms."
+            "Never write auth/users, admin, serializers, routers, settings, infra, tables, forms."
         ),
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
@@ -273,7 +273,7 @@ RULES: tuple[Rule, ...] = (
         code="K305",
         category="architecture",
         severity="must",
-        summary="Per entity: models.py + viewsets.py only.",
+        summary="Per entity: models.py and viewsets.py.",
         rule=(
             "Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py` — "
             "nothing else. No admin.py, serializers.py, forms.py; urls.py only for non-API "
@@ -285,7 +285,7 @@ RULES: tuple[Rule, ...] = (
         code="K306",
         category="architecture",
         severity="must",
-        summary="Pages live in frontend/src/pages/.",
+        summary="Pages: frontend/src/pages/.",
         rule=(
             "Frontend pages live in `frontend/src/pages/`, one file per page, with the route "
             "registered alongside the existing pages."
@@ -307,7 +307,7 @@ RULES: tuple[Rule, ...] = (
         code="K308",
         category="architecture",
         severity="must",
-        summary="Configure modules via documented settings.",
+        summary="Modules: configure via settings.",
         rule=(
             "Configure an installed module only through the settings it documents; never "
             "patch its internals."
@@ -387,7 +387,7 @@ RULES: tuple[Rule, ...] = (
         code="K110",
         category="backend",
         severity="error",
-        summary="Row rules belong in access.",
+        summary="Row rules: in access.",
         rule=(
             "Express who sees which rows in `access` (`Where(...)` for custom logic, "
             "`@action(..., access=...)` for one action). An overridden `get_queryset` is "
@@ -533,7 +533,7 @@ RULES: tuple[Rule, ...] = (
         code="K203",
         category="frontend",
         severity="error",
-        summary="Import the @karni/ui barrel only.",
+        summary="Import only the @karni/ui barrel.",
         rule="Import only the public `@karni/ui` barrel, never `@karni/ui/dist/*` or `/src/*`.",
         rationale="Internals change without notice; the barrel is the versioned API.",
         fix='Import from "@karni/ui".',

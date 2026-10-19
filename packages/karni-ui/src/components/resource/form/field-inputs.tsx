@@ -135,7 +135,7 @@ export function DefaultFieldControl({
             const members = field.enumValues ?? [];
             const options = members.map((member) => ({
               value: String(member),
-              label: humanizeValue(String(member)),
+              label: field.enumLabels?.[String(member)] ?? humanizeValue(String(member)),
             }));
             return (
               <Select

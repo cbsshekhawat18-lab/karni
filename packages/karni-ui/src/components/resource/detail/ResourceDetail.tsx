@@ -93,7 +93,7 @@ function DefaultValue({ field, value }: { field: FieldDef; value: unknown }): Re
     case "datetime":
       return <>{formatDateTime(String(value))}</>;
     case "enum":
-      return <>{humanizeValue(String(value))}</>;
+      return <>{field.enumLabels?.[String(value)] ?? humanizeValue(String(value))}</>;
     case "relation":
       return <RelationValue value={value} />;
     case "file":

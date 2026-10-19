@@ -59,7 +59,12 @@ export function errorMessage(error: unknown): string {
  * prettified ("DRAFT" → "Draft", "in_progress" → "In progress"); mixed-case
  * values ("iOS") pass through untouched.
  */
-export function enumLabel(value: string | number): string {
+export function enumLabel(
+  value: string | number,
+  labels?: Readonly<Record<string, string>>,
+): string {
+  const known = labels?.[String(value)];
+  if (known !== undefined) return known;
   if (typeof value === "number") return String(value);
   const simple = /^[A-Za-z0-9_ ]+$/.test(value);
   if (simple && (value === value.toUpperCase() || value === value.toLowerCase())) {

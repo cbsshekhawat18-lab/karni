@@ -18,7 +18,7 @@ follow what they return.
 | Command | What it returns |
 |---|---|
 | `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, MODULES, BASES |
-| `karni rules` | Every convention as `CODE summary` (under 400 tokens for Karni's own rules) |
+| `karni rules` | Every convention as `CODE summary` (about 400 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
 | `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix; exit 1 if any |

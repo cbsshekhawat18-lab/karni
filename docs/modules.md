@@ -245,7 +245,7 @@ A module's UI package (`@karni/<x>-ui` or your own scope):
 
 - **composes `@karni/ui`** primitives (`Button`, `useKarniClient`,
   `useResourceList`, …) — never a parallel table/form/query stack;
-- peer-depends on `@karni/ui` (pin the 0.x minor: `"^0.1.0"` — 0.x minors
+- peer-depends on `@karni/ui` (pin the 0.x minor: `"^0.2.0"` — 0.x minors
   may break), react 18/19 and `@tanstack/react-query`;
 - styles with **tokens only** (the `--karni-*` CSS variables) — no raw hex,
   no Tailwind palette imports;

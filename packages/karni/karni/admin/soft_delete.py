@@ -117,6 +117,57 @@ class SoftDeleteListFilter(admin.SimpleListFilter):
             }
 
 
+class _PaginatorCount:
+    """Stands in for ``root_queryset`` during ``get_results``: its count is the paginator's."""
+
+    def __init__(self, request: HttpRequest) -> None:
+        self.request = request
+
+    def count(self) -> int:
+        paginator = getattr(self.request, "_karni_changelist_paginator", None)
+        if paginator is None:  # pragma: no cover - get_paginator always runs first
+            return 0
+        return int(paginator.count)  # a cached property: the query already ran
+
+
+class _SingleCountChangeList:
+    """Mixed in front of the admin's ``ChangeList`` (see ``get_changelist``).
+
+    Django counts the filtered rows (the paginator) and then the root rows
+    again for "N total". With *All* selected and nothing else narrowing the
+    list the two are the same rows, so the second count reads the first.
+    """
+
+    root_queryset: Any
+    query: str
+
+    def get_results(self, request: HttpRequest) -> None:
+        lookups = self.get_filters_params()  # type: ignore[attr-defined]
+        selected = lookups.get(SoftDeleteListFilter.parameter_name)
+        if isinstance(selected, list | tuple):  # Django 5 keeps every value of a parameter
+            selected = selected[-1] if selected else None
+        if not (selected == "all" and len(lookups) == 1 and not self.query):
+            super().get_results(request)  # type: ignore[misc]
+            return
+        original = self.root_queryset
+        self.root_queryset = _PaginatorCount(request)
+        try:
+            super().get_results(request)  # type: ignore[misc]
+        finally:
+            self.root_queryset = original
+
+
+_CHANGELIST_CLASSES: dict[type[ChangeList], type[ChangeList]] = {}
+
+
+def _changelist_class(base: type[ChangeList]) -> type[ChangeList]:
+    found = _CHANGELIST_CLASSES.get(base)
+    if found is None:
+        found = type(f"SoftDelete{base.__name__}", (_SingleCountChangeList, base), {})
+        _CHANGELIST_CLASSES[base] = found
+    return found
+
+
 class SoftDeleteAdminMixin(admin.ModelAdmin):
     """Admin behaviour for soft-delete models.
 
@@ -159,6 +210,30 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
         if ordering:
             queryset = queryset.order_by(*ordering)
         return queryset
+
+    def get_paginator(
+        self,
+        request: HttpRequest,
+        queryset: QuerySet,
+        per_page: int,
+        orphans: int = 0,
+        allow_empty_first_page: bool = True,
+    ) -> Any:
+        paginator = super().get_paginator(
+            request, queryset, per_page, orphans, allow_empty_first_page
+        )
+        request._karni_changelist_paginator = paginator  # type: ignore[attr-defined]
+        return paginator
+
+    def get_changelist(self, request: HttpRequest, **kwargs: Any) -> type[ChangeList]:
+        """Django's ``ChangeList`` plus one economy: ``?deleted=all`` counts its rows once.
+
+        With *All* selected and nothing else narrowing the list, the filtered
+        rows are the root rows, so the "full result count" Django would run
+        a second ``COUNT`` for is the result count itself.
+        """
+        base = super().get_changelist(request, **kwargs)
+        return _changelist_class(base)
 
     def get_list_filter(self, request: HttpRequest) -> list[Any]:
         """Guarantee the "deleted" filter, whatever ``list_filter`` says.

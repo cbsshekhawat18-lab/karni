@@ -27,8 +27,15 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PYTHON_PACKAGES = ("packages/karni", "packages/karni-cli", "modules/karni-payments")
-NPM_PACKAGES = ("packages/karni-ui", "modules/karni-payments/ui")
+PYTHON_PACKAGES = (
+    "packages/karni",
+    "packages/karni-cli",
+    "modules/karni-payments",
+    "modules/karni-approvals",
+    "modules/karni-impersonation",
+)
+MODULES = ("modules/karni-payments", "modules/karni-approvals", "modules/karni-impersonation")
+NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in MODULES))
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
 
 
@@ -102,21 +109,22 @@ def check_module_ranges(version: str) -> list[str]:
     from packaging.version import Version
 
     problems = []
-    for requirement in _pyproject("modules/karni-payments").get("dependencies") or []:
-        assert isinstance(requirement, str)
-        match = re.match(r"^karni(?![\w-])\s*(?P<spec>[^;]*)", requirement)
-        if match and not SpecifierSet(match["spec"].strip()).contains(Version(version)):
+    for module in MODULES:
+        for requirement in _pyproject(module).get("dependencies") or []:
+            assert isinstance(requirement, str)
+            match = re.match(r"^karni(?![\w-])\s*(?P<spec>[^;]*)", requirement)
+            if match and not SpecifierSet(match["spec"].strip()).contains(Version(version)):
+                problems.append(
+                    f"{module} requires {requirement!r}, which excludes karni "
+                    f"{version}. Widen the range in its pyproject.toml (docs/modules.md)."
+                )
+        peers = _package_json(f"{module}/ui").get("peerDependencies") or {}
+        spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
+        if isinstance(spec, str) and not _caret_allows(spec, version):
             problems.append(
-                f"modules/karni-payments requires {requirement!r}, which excludes karni "
-                f"{version}. Widen the range in its pyproject.toml (docs/modules.md)."
+                f"{module}/ui peers on @karni/ui {spec!r}, which excludes {version}. "
+                f'Set "@karni/ui": "^{version}" in {module}/ui/package.json.'
             )
-    peers = _package_json("modules/karni-payments/ui").get("peerDependencies") or {}
-    spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
-    if isinstance(spec, str) and not _caret_allows(spec, version):
-        problems.append(
-            f"@karni/payments-ui peers on @karni/ui {spec!r}, which excludes {version}. "
-            f'Set "@karni/ui": "^{version}" in modules/karni-payments/ui/package.json.'
-        )
     return problems
 
 

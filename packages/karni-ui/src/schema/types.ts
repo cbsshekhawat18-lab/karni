@@ -42,6 +42,8 @@ export interface FieldDef {
   nullable: boolean;
   /** Enum members; BlankEnum's "" and NullEnum's null are never members (D1/D3). */
   enumValues?: ReadonlyArray<string | number>;
+  /** Choice labels by value, from drf-spectacular's "* `value` - Label" description lines. */
+  enumLabels?: Readonly<Record<string, string>>;
   /** The schema's `default` (a model default): forms start from it on create. */
   default?: unknown;
   maxLength?: number;

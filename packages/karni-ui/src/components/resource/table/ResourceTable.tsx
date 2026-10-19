@@ -534,7 +534,7 @@ export function ResourceTable<T = Record<string, unknown>>(
                             ? "descending"
                             : undefined
                       }
-                      className="h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                      className="h-10 px-3 text-left align-middle text-xs font-medium text-muted-foreground"
                     >
                       {header.isPlaceholder ? null : canSort ? (
                         <button

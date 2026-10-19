@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
-## Unreleased — 0.2.0
+## 0.2.0 — 2026-10-20
 
 See [docs/migrations/0.2.md](docs/migrations/0.2.md) for every breaking
 change and its migration note.
@@ -105,7 +105,13 @@ change and its migration note.
   "Required" and an optional one clears; `[tool.karni] baseline` in a new
   project's pyproject, so `karni upgrade` never reports changes a fresh
   scaffold already satisfies; `LOGIN_REDIRECT_URL` defaults to the admin;
-  the seed login says "superuser"; the two schema warnings are gone.
+  the seed login says "superuser"; the two schema warnings are gone. The
+  cosmetics too: choice labels from the schema's choice list instead of raw
+  markdown help text (`FieldDef.enumLabels`), one casing for every table
+  header, `karni rules` trimmed (402 cl100k tokens, measured), and the
+  admin's *All* rows counted once. The EventHub Playwright journeys ran
+  (three passed) and every package built, installed into a clean venv and
+  dry-run published.
 - Every `BaseViewSet` declares `access`; relation fields and `?expand=`
   follow the target's read scope; query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,

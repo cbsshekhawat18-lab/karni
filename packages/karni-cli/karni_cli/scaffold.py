@@ -17,7 +17,7 @@ SLUG_RE = re.compile(r"^[a-z_][a-z0-9_]*$")
 
 UI_PACKAGE = "@karni/ui"
 #: The npm spec a project gets when no local @karni/ui is found.
-UI_REGISTRY_SPEC = "^0.1.0"
+UI_REGISTRY_SPEC = "^0.2.0"
 #: What a ``file:`` consumer needs: package.json ``exports`` point into dist/.
 UI_DIST_FILES = ("dist/index.js", "dist/styles.css", "dist/tailwind-preset.js")
 #: Sources the dist is built from (staleness check).

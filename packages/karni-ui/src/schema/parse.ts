@@ -170,6 +170,7 @@ interface PropertyInfo {
   kind: FieldKind;
   nullable: boolean;
   enumValues?: ReadonlyArray<string | number>;
+  enumLabels?: Readonly<Record<string, string>>;
   maxLength?: number;
   min?: number;
   max?: number;
@@ -221,12 +222,16 @@ function combineEnumMembers(
   doc: OpenApiDocument,
   members: readonly SchemaObject[],
   seen: readonly string[],
-): { values: Array<string | number>; nullable: boolean } | undefined {
+): { values: Array<string | number>; nullable: boolean; description?: string } | undefined {
   const values: Array<string | number> = [];
   let nullable = false;
+  let description: string | undefined;
   for (const member of members) {
     const resolved = resolveSchema(doc, member, seen);
     if (resolved === undefined || !Array.isArray(resolved.enum)) return undefined;
+    if (description === undefined && resolved.description !== undefined && values.length === 0) {
+      description = resolved.description; // the XEnum member carries the choice list
+    }
     for (const value of resolved.enum) {
       if (value === null) {
         nullable = true; // NullEnum
@@ -235,7 +240,43 @@ function combineEnumMembers(
       }
     }
   }
-  return { values, nullable };
+  return { values, nullable, description };
+}
+
+const CHOICE_LINE = /^\* `(.+?)` - (.*)$/;
+
+/**
+ * Splits drf-spectacular's generated choice list ("* `draft` - Draft" per
+ * line, appended to a ChoiceField's description) into labels by value and
+ * the human help text that remains (undefined when nothing remains). The
+ * raw list is markdown a form would otherwise show verbatim as help text.
+ */
+export function choiceLabels(description: string | undefined): {
+  labels?: Record<string, string>;
+  rest?: string;
+} {
+  if (description === undefined) return {};
+  const labels: Record<string, string> = {};
+  const rest: string[] = [];
+  for (const line of description.split("\n")) {
+    const match = CHOICE_LINE.exec(line.trim());
+    if (match !== null && match[1] !== undefined && match[2] !== undefined) {
+      labels[match[1]] = match[2].trim();
+    } else {
+      rest.push(line);
+    }
+  }
+  const text = rest.join("\n").trim();
+  return {
+    ...(Object.keys(labels).length > 0 ? { labels } : {}),
+    ...(text !== "" ? { rest: text } : {}),
+  };
+}
+
+function applyChoiceLabels(info: PropertyInfo, description: string | undefined): void {
+  const { labels, rest } = choiceLabels(description);
+  if (labels !== undefined) info.enumLabels = labels;
+  info.description = rest;
 }
 
 /** True for drf-spectacular's JSONField output: a schema with no constraints at all. */
@@ -281,6 +322,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
       info.kind = "enum";
       info.enumValues = combined.values;
       info.nullable = info.nullable || combined.nullable;
+      applyChoiceLabels(info, resolved.description ?? combined.description);
       return info;
     }
     return info; // unsupported composition → kind "unknown"
@@ -292,6 +334,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
     info.enumValues = resolved.enum.filter(
       (value): value is string | number => value !== null && value !== "",
     );
+    applyChoiceLabels(info, resolved.description);
     return info;
   }
 
@@ -405,6 +448,8 @@ function mergeField(
   const fallback = requestInfo?.default ?? responseInfo?.default;
   if (fallback !== undefined) field.default = fallback;
   if (enumValues !== undefined) field.enumValues = enumValues;
+  const enumLabels = requestInfo?.enumLabels ?? responseInfo?.enumLabels;
+  if (enumLabels !== undefined) field.enumLabels = enumLabels;
   const maxLength = requestInfo?.maxLength ?? responseInfo?.maxLength;
   if (maxLength !== undefined) field.maxLength = maxLength;
   const min = requestInfo?.min ?? responseInfo?.min;

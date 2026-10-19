@@ -356,3 +356,29 @@ describe("parseOpenApi — import and export operations (karni.transfer)", () =>
     expect(parsed.resources["plain"]?.operations.import).toBeUndefined();
   });
 });
+
+describe("parseOpenApi — enum choice labels", () => {
+  function withStatusDescription(description: string) {
+    const doc = structuredClone(openApiFixture) as typeof openApiFixture;
+    const schemas = (doc as unknown as { components: { schemas: Record<string, unknown> } })
+      .components.schemas;
+    schemas["StatusEnum"] = { ...(schemas["StatusEnum"] as object), description };
+    return parseOpenApi(doc);
+  }
+
+  it("turns drf-spectacular's choice list into labels and drops it from the help text", () => {
+    const parsed = withStatusDescription("* `draft` - Draft\n* `published` - Published");
+    const status = fieldOf(parsed.resources["events"] as ResourceSchema, "status");
+    expect(status.enumLabels).toEqual({ draft: "Draft", published: "Published" });
+    expect(status.description).toBeUndefined();
+  });
+
+  it("keeps the field's own help text next to the choice list", () => {
+    const parsed = withStatusDescription(
+      "Visibility of the event.\n\n* `draft` - Draft\n* `published` - Published",
+    );
+    const status = fieldOf(parsed.resources["events"] as ResourceSchema, "status");
+    expect(status.enumLabels).toEqual({ draft: "Draft", published: "Published" });
+    expect(status.description).toBe("Visibility of the event.");
+  });
+});

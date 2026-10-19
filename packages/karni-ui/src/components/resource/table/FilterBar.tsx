@@ -60,7 +60,7 @@ function EnumFilter({
 }): React.ReactElement {
   const options = (field.enumValues ?? []).map((member) => ({
     value: String(member),
-    label: enumLabel(member),
+    label: enumLabel(member, field.enumLabels),
   }));
   return (
     <Select

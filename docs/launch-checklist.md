@@ -35,7 +35,7 @@ notes below are what the sidebars said in October 2026 or earlier.
 
 - **Django forum, Show & Tell** — <https://forum.djangoproject.com/c/show-tell/>.
   The friendliest venue: project posts are the category's purpose. Lead with
-  the problem (what an agent regenerates per project) and the measured 582
+  the problem (what an agent regenerates per project) and the measured 593
   lines, not the feature list.
 - **r/django** (~140k members) — project posts are allowed when they say
   what the project is and why; repeated promotion is removed. One post, with
@@ -74,9 +74,9 @@ notes below are what the sidebars said in October 2026 or earlier.
    the admin, in `?expand=`, in `?ordering=` on a hidden column, in the
    export — with the leaks reproduced on a plain DRF project. The
    `assert_isolated` matrix is the natural closing example.
-3. **"582 lines: measuring an application instead of estimating it."** The
+3. **"593 lines: measuring an application instead of estimating it."** The
    method (`loc.py`, what counts as project code), the friction log, the
-   framework fixes it produced, and the number going from 656 to 582. The
+   framework fixes it produced, and the number going from 656 to 593. The
    post is useful to anyone comparing starting points, whatever they pick.
 4. **"What a CLAUDE.md for a Django project should actually contain."** The
    rules that changed agent behaviour in practice versus the ones that did
