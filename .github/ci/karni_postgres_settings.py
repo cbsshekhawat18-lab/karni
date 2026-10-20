@@ -24,7 +24,6 @@ import os
 from pathlib import Path
 
 import environ
-
 from tests.settings import *  # noqa: F403
 
 _db = environ.Env.db_url_config(
