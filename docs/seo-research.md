@@ -130,6 +130,26 @@ the three agents people search by name; and it has no stack list to go
 stale. A says more and is cut off in listings; C leads with "starting
 point", which is the boilerplate framing Karni argues against.
 
+## Revision, 2026-10-20
+
+The live About line now leads with what Karni is for, because readers of the
+first version could not tell what they would use it for:
+
+> Build full-stack Django + React apps from your models. Karni gives you the
+> REST API, admin, role-based permissions, React screens and tests, kept in an
+> upgradable package instead of a Django React boilerplate you copy. AI coding
+> agents (Claude Code, Cursor, Copilot) write only the domain code.
+
+294 characters; the first 150 still carry the meaning ("full-stack",
+"Django + React", what you get) for listings that truncate.
+
+Topics: four swapped for ones that describe Karni better and have more traffic
+(repository counts from the GitHub search API, 2026-10-20). Added `rest-api`
+(90,469), `crud` (21,340), `mcp-server` (46,382; `karni mcp` is one) and `rbac`
+(6,422; roles as data). Dropped `developer-tools` (broad, says nothing about
+Karni), `coding-agents` (covered by `ai-agents` and `ai-coding`), `celery`
+(used by Karni, not why people look for it) and `scaffolding` (2,187).
+
 ## Sources
 
 - Search results for the phrases above (2026-10-18): PyPI `django-react-cli`,
