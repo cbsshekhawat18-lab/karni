@@ -218,21 +218,50 @@ jobs:
           done
           if [ -n "$(ls -A dist)" ]; then echo "unexpected files in dist/:"; ls dist; exit 1; fi
           ls -R pypi
+      - name: Authentication
+        id: auth
+        env:
+          TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        # A PYPI_API_TOKEN secret, when set, is used instead of trusted
+        # publishing; attestations need trusted publishing, so they are off then.
+        run: |
+          if [ -n "$TOKEN" ]; then echo "attest=false" >> "$GITHUB_OUTPUT"; echo "Using the PYPI_API_TOKEN secret."
+          else echo "attest=true" >> "$GITHUB_OUTPUT"; echo "Using trusted publishing."; fi
       - name: karni
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: { packages-dir: pypi/karni/, attestations: true, skip-existing: true }
+        with:
+          packages-dir: pypi/karni/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-cli
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: { packages-dir: pypi/karni_cli/, attestations: true, skip-existing: true }
+        with:
+          packages-dir: pypi/karni_cli/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-payments
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: { packages-dir: pypi/karni_payments/, attestations: true, skip-existing: true }
+        with:
+          packages-dir: pypi/karni_payments/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-approvals
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: { packages-dir: pypi/karni_approvals/, attestations: true, skip-existing: true }
+        with:
+          packages-dir: pypi/karni_approvals/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
       - name: karni-impersonation
         uses: pypa/gh-action-pypi-publish@release/v1
-        with: { packages-dir: pypi/karni_impersonation/, attestations: true, skip-existing: true }
+        with:
+          packages-dir: pypi/karni_impersonation/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
 
   publish-npm:
     name: Publish to npm
