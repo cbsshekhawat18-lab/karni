@@ -87,10 +87,8 @@ jobs:
       # connection.vendor == "postgresql") run through a CI settings overlay:
       # .github/ci/karni_postgres_settings.py. --no-migrations is required
       # because tests.testapp (unmigrated) has a FK to the migrated user model.
-      # The OpenAPI snapshot test is deselected here: the committed snapshot is
-      # generated on sqlite, and drf-spectacular derives integer bounds from
-      # the backend (PositiveIntegerField max 2^63-1 on sqlite, 2^31-1 + int32
-      # format on Postgres). It runs in the sqlite step above.
+      # The OpenAPI snapshot runs here too: snapshots leave out the integer
+      # bounds drf-spectacular derives from the backend (normalise_schema).
       - name: Enable pg_trgm for test databases
         env:
           PGPASSWORD: postgres
@@ -103,8 +101,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: |
           python -m pip install "psycopg[binary]>=3.1"
-          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations \
-            --deselect tests/api/test_schema_snapshot.py::test_schema_snapshot_is_current
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
       # -----------------------------------------------------------------------
       # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a

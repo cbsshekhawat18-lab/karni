@@ -256,10 +256,15 @@ def test_import_modules_hook_waits_for_django(
 
 
 @pytest.mark.django_db
-def test_database_scheduler_syncs_merged_entries() -> None:
+def test_database_scheduler_syncs_merged_entries(monkeypatch: pytest.MonkeyPatch) -> None:
+    from django_celery_beat import schedulers
     from django_celery_beat.models import PeriodicTask
     from django_celery_beat.schedulers import DatabaseScheduler
 
+    # The scheduler closes "old" connections (CONN_MAX_AGE 0: every one) on
+    # every schedule read — right for a beat process, fatal to the test's
+    # transaction on PostgreSQL (sqlite in-memory ignores close()).
+    monkeypatch.setattr(schedulers, "close_old_connections", lambda: None)
     app = create_celery_app()
     apply_discovered_schedules(app)
     scheduler = DatabaseScheduler(app=app)

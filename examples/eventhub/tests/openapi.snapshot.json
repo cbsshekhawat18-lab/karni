@@ -142,9 +142,6 @@
             }
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "status": {
@@ -203,9 +200,6 @@
             }
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "tier": {
@@ -416,9 +410,6 @@
             "type": "string"
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "updated_at": {
@@ -468,9 +459,6 @@
             "type": "string"
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           }
         },
@@ -489,9 +477,6 @@
             "type": "string"
           },
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "city": {
@@ -551,9 +536,6 @@
             "type": "string"
           },
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "city": {
@@ -1422,9 +1404,6 @@
             }
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "tier": {
@@ -1503,9 +1482,6 @@
             "type": "string"
           },
           "quantity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           }
         },
@@ -1519,9 +1495,6 @@
             "type": "string"
           },
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
-            "minimum": -9223372036854775808,
             "type": "integer"
           },
           "city": {

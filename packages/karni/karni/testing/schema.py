@@ -185,7 +185,7 @@ def assert_schema_snapshot(
     :raises AssertionError: listing every change, breaking ones first.
     """
     target = Path(path) if path is not None else default_snapshot_path()
-    generated = generate_schema(urlconf)
+    generated = normalise_schema(generate_schema(urlconf))
     if update is None:
         update = UPDATE_SNAPSHOTS or _truthy(os.environ.get(SNAPSHOT_ENV))
     accept = f"{SNAPSHOT_ENV}=1 karni test (or pytest --karni-update-snapshots)"

@@ -746,8 +746,6 @@
         "description": "Auto-generated serializer for testapp.Event. See karni.api.serializers.build_serializer.",
         "properties": {
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
             "minimum": 0,
             "nullable": true,
             "type": "integer"
@@ -911,8 +909,6 @@
         "description": "Auto-generated serializer for testapp.Event. See karni.api.serializers.build_serializer.",
         "properties": {
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
             "minimum": 0,
             "nullable": true,
             "type": "integer"
@@ -1017,8 +1013,6 @@
         "description": "Auto-generated serializer for testapp.Event. See karni.api.serializers.build_serializer.",
         "properties": {
           "capacity": {
-            "format": "int64",
-            "maximum": 9223372036854775807,
             "minimum": 0,
             "nullable": true,
             "type": "integer"

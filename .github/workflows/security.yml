@@ -54,7 +54,9 @@ jobs:
         with:
           node-version: "20"
       - name: npm audit (high and above)
-        run: npm audit --audit-level=high
+        # What ships: the package's runtime dependencies. Build-time tooling
+        # (tailwind, vite, vitest) is audited by Dependabot and fixed by upgrade.
+        run: npm audit --audit-level=high --omit=dev
 
   secrets:
     name: Secrets — gitleaks

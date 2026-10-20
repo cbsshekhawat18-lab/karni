@@ -13,6 +13,7 @@ from karni.testing.schema import (
     SNAPSHOT_ENV,
     find_operation,
     generate_schema,
+    normalise_schema,
     render_changes,
     schema_changes,
     validate,
@@ -32,7 +33,7 @@ def test_a_missing_snapshot_is_written_locally_and_then_holds(tmp_path: Path) ->
     target = tmp_path / "openapi.snapshot.json"
     with pytest.warns(UserWarning, match="commit it"):
         assert_schema_snapshot(target)
-    assert json.loads(target.read_text()) == generate_schema()
+    assert json.loads(target.read_text()) == normalise_schema(generate_schema())
     assert_schema_snapshot(target)  # unchanged API: passes silently
 
 
@@ -71,7 +72,7 @@ def test_update_rewrites_the_snapshot(tmp_path: Path, monkeypatch: pytest.Monkey
     target = tmp_path / "openapi.snapshot.json"
     target.write_text("{}")
     assert_schema_snapshot(target, update=True)
-    assert json.loads(target.read_text()) == generate_schema()
+    assert json.loads(target.read_text()) == normalise_schema(generate_schema())
     target.write_text("{}")
     monkeypatch.setenv(SNAPSHOT_ENV, "1")
     assert_schema_snapshot(target)
