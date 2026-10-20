@@ -93,8 +93,8 @@ def new(
         typer.echo(f"@karni/ui: {ui_spec} (local checkout)")
     else:
         typer.echo(
-            f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm — until it is published, "
-            "set KARNI_UI_SRC=/path/to/Karni/packages/karni-ui and re-run karni new."
+            f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm "
+            "(KARNI_UI_SRC=/path/to/Karni/packages/karni-ui uses a checkout instead)"
         )
     typer.echo("Next steps:")
     typer.echo(f"  cd {slug}")

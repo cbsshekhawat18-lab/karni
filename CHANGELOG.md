@@ -11,6 +11,9 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `@karni/ui` and the three module UIs are on npm (0.3.1). The README's
+  quickstart installs the frontend with a plain `npm install`, and `karni new`
+  no longer says `@karni/ui` is unpublished.
 - Tailwind 4 for new projects: `karni new` sets up Tailwind 4 through
   `@tailwindcss/vite`, loading the same `@karni/ui` preset with `@config`, and
   Vite 8. New `@karni/ui/tailwind-v4.css`, imported after Tailwind in a
