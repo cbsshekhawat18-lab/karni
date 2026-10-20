@@ -9,7 +9,10 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
-## Unreleased
+## 0.3.0 — 2026-10-20
+
+See [docs/migrations/0.3.md](docs/migrations/0.3.md) for the two breaking
+changes and how to upgrade.
 
 - Membership scoping and generated tests, from the Social Stats case study:
   `own` takes an owner path through a many-to-many
@@ -26,7 +29,7 @@ reads to apply codemods and list the manual steps — and explained in
   every admin page failed under 3.14. Projects pinned to Django 5.1 upgrade
   Django with karni; no project code changes were needed in EventHub,
   Social Leads or the modules. Dropping Django 5.1 is a minor-release
-  change under the [stability promise](docs/stability.md): the next release is 0.3.0.
+  change under the [stability promise](docs/stability.md), released as 0.3.0.
 - `karni seed` can run again on a seeded database. Each run is a new process
   that draws the same UUID keys from the same seed, so a second run failed
   with `E612` on the primary key (found by running the README quickstart, then

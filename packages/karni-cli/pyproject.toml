@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "The karni command for the Karni Django + React framework: scaffold a project, generate models, viewsets and pages, run it, upgrade it across releases, and give AI coding agents its context, rules and error explanations."
 readme = "README.md"
 requires-python = ">=3.12"

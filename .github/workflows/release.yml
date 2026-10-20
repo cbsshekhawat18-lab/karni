@@ -235,10 +235,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.mode.outputs.tag }}
+        # A release made by hand before registry publishing was set up (0.2.0,
+        # 0.3.0) already exists: replace its Python files instead of failing.
         run: |
-          notes="Migration notes: docs/migrations/. Upgrade with \`karni upgrade --to ${TAG#v}\`."
-          gh release create "$TAG" dist/* --title "Karni ${TAG#v}" \
-            --notes "$notes" --verify-tag
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            notes="Migration notes: docs/migrations/. Upgrade with \`karni upgrade --to ${TAG#v}\`."
+            gh release create "$TAG" dist/* --title "Karni ${TAG#v}" \
+              --notes "$notes" --verify-tag
+          fi
 
   dry-run-summary:
     name: Dry run complete

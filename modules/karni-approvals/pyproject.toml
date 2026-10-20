@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-approvals"
-version = "0.2.0"
+version = "0.3.0"
 description = "Maker-checker approvals module for the Karni Django + React framework: a second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,7 +27,7 @@ classifiers = [
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
-dependencies = ["karni>=0.2,<0.3"]
+dependencies = ["karni>=0.3,<0.4"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"

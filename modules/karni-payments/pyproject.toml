@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-payments"
-version = "0.2.0"
+version = "0.3.0"
 description = "Payments module for the Karni Django + React framework: hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,7 +30,7 @@ classifiers = [
 ]
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors
 # may break, so a module pins the minor it was built against.
-dependencies = ["karni>=0.2,<0.3"]
+dependencies = ["karni>=0.3,<0.4"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"

@@ -1,0 +1,25 @@
+# Karni 0.3.0: breaking changes since 0.2.0.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.3.md.
+# Neither change has a codemod: both are reported by `karni upgrade` with their note.
+version = "0.3.0"
+
+[[change]]
+id = "django-5-2"
+kind = "behaviour"
+symbol = "Django"
+summary = """\
+Karni requires Django 5.2 LTS (>=5.2.8). Django 5.1 is out of support with \
+unpatched security advisories, and its admin fails on Python 3.14."""
+mechanical = false
+migration = "migrations/0.3.md#django-52-lts"
+
+[[change]]
+id = "role-scope-paths-checked"
+kind = "behaviour"
+symbol = "KARNI_ROLES"
+summary = """\
+Every path a role's grants filter on is resolved at startup. A path that does \
+not resolve on its model is now system check error karni.E214 instead of a 500 \
+on the first request that uses it."""
+mechanical = false
+migration = "migrations/0.3.md#role-scope-paths-are-checked-at-startup"
