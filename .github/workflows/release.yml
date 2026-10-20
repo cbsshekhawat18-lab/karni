@@ -202,7 +202,7 @@ jobs:
     permissions:
       id-token: write # trusted publishing + PEP 740 attestations (provenance)
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist/
@@ -272,13 +272,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist/
       # The npm tarballs too: until a package is on npm, the release is where
       # it installs from (npm install <release URL>/karni-ui-X.Y.Z.tgz).
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: npm-dist
           path: dist/
