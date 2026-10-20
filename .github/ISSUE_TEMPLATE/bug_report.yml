@@ -39,7 +39,7 @@ body:
       description: >
         karni and karni-cli (`pip show karni karni-cli`), @karni/ui (`npm ls @karni/ui` in frontend/),
         Python, Django and Node. For CLI problems, also paste `karni doctor` below.
-      placeholder: karni 0.1.0, karni-cli 0.1.0, @karni/ui 0.1.0, Python 3.12.6, Django 5.1.4, Node 20.18
+      placeholder: karni 0.1.0, karni-cli 0.1.0, @karni/ui 0.1.0, Python 3.12.6, Django 5.2.18, Node 20.18
     validations:
       required: true
   - type: dropdown

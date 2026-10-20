@@ -26,8 +26,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.12", "3.13"]
-        django: ["5.1.*"]
+        python: ["3.12", "3.13", "3.14"]
+        django: ["5.2.*"]
 
     services:
       # Only the Postgres step below talks to this; the main suites run on

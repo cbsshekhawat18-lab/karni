@@ -9,6 +9,16 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
+## Unreleased
+
+- Django 5.2 LTS: karni requires `Django>=5.2.8,<5.3` (5.1 is out of
+  support; pip-audit reported ten unpatched advisories against 5.1.15) and
+  django-unfold 0.110. Python 3.14 is supported and tested — on Django 5.1
+  every admin page failed under 3.14. Projects pinned to Django 5.1 upgrade
+  Django with karni; no project code changes were needed in EventHub,
+  Social Leads or the modules. Dropping Django 5.1 is a minor-release
+  change under the [stability promise](docs/stability.md): the next release is 0.3.0.
+
 ## 0.2.0 — 2026-10-20
 
 See [docs/migrations/0.2.md](docs/migrations/0.2.md) for every breaking

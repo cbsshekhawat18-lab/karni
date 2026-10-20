@@ -5,7 +5,7 @@ Core principle: if code would be written more than once across projects, it belo
 base class or component — never regenerated.
 
 ## Stack
-- Python 3.12, Django 5.1 LTS, DRF + drf-spectacular, Pydantic v2, django-environ
+- Python 3.12+, Django 5.2 LTS, DRF + drf-spectacular, Pydantic v2, django-environ
 - PostgreSQL 16, Redis 7, Celery 5 (+ beat, + results)
 - React 18, TypeScript strict, Vite, TanStack Query/Router/Table, Zustand, react-hook-form + Zod, Tailwind + Radix
 - Docker Compose, GitHub Actions, Caddy

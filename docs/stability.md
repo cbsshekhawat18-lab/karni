@@ -127,7 +127,7 @@ and a codemod or detector is included where possible.
 | Component | Supported |
 |---|---|
 | Python | 3.12, 3.13 |
-| Django | 5.1 |
+| Django | 5.2 LTS |
 | Node.js (frontend tooling) | 20+ |
 | React | 18, 19 |
 | PostgreSQL | 16+ (production). SQLite works for development and tests. |

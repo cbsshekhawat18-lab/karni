@@ -32,26 +32,31 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
     "Framework :: Django",
-    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP :: WSGI",
     "Topic :: Software Development :: Code Generators",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Typing :: Typed",
 ]
 dependencies = [
-    "Django>=5.1,<5.2",
+    # Django 5.2 LTS (security fixes until April 2028); 5.2.8 is the first
+    # release that supports Python 3.14.
+    "Django>=5.2.8,<5.3",
     "djangorestframework>=3.15",
     "djangorestframework-simplejwt>=5.4,<6",
     "drf-spectacular>=0.27",
     "django-filter>=24.2",
     "django-environ>=0.11",
-    # 0.97+ requires Django 5.2; keep in lockstep with the Django pin above.
-    "django-unfold>=0.96,<0.97",
+    # The admin builds on unfold's action decorators and templates; move the
+    # range deliberately, with the admin suite, not with every release.
+    "django-unfold>=0.110,<0.111",
     "pydantic>=2",
     "redis>=5",
     "celery[redis]>=5.3",
