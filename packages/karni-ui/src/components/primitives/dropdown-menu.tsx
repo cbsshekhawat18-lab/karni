@@ -3,11 +3,16 @@ import * as React from "react";
 import { cn } from "../../lib/cn";
 import { CheckIcon } from "./icons";
 
+/** Dropdown menu root (Radix DropdownMenu). */
 export const DropdownMenu = DropdownMenuPrimitive.Root;
+/** The element that opens the menu. */
 export const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+/** Groups related menu items. */
 export const DropdownMenuGroup = DropdownMenuPrimitive.Group;
+/** Renders the menu into `document.body`. */
 export const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
 
+/** The styled menu panel. */
 export const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
@@ -26,6 +31,7 @@ export const DropdownMenuContent = React.forwardRef<
 ));
 DropdownMenuContent.displayName = "DropdownMenuContent";
 
+/** One menu item; `onSelect` runs the action. */
 export const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & { inset?: boolean }
@@ -42,6 +48,7 @@ export const DropdownMenuItem = React.forwardRef<
 ));
 DropdownMenuItem.displayName = "DropdownMenuItem";
 
+/** A menu item with a check mark that toggles `checked`. */
 export const DropdownMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
@@ -65,6 +72,7 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
 ));
 DropdownMenuCheckboxItem.displayName = "DropdownMenuCheckboxItem";
 
+/** A non-interactive heading inside the menu. */
 export const DropdownMenuLabel = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & { inset?: boolean }
@@ -77,6 +85,7 @@ export const DropdownMenuLabel = React.forwardRef<
 ));
 DropdownMenuLabel.displayName = "DropdownMenuLabel";
 
+/** A divider line between menu items. */
 export const DropdownMenuSeparator = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Separator>

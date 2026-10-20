@@ -107,7 +107,9 @@ function XIcon(props: React.SVGAttributes<SVGSVGElement>): React.ReactElement {
 }
 
 /**
- * Drag-and-drop / click-to-browse file picker (contract "FileUpload").
+ * Drag-and-drop or click-to-browse file picker that shows the current file and the pending ones.
+ *
+ * Contract "FileUpload".
  *
  * Shows an existing uploaded value (URL string) as a link, pending `File`
  * values with name and size, and emits `File` objects — the hooks layer turns

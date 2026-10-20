@@ -15,7 +15,7 @@ export interface TokenStorage {
 }
 
 /**
- * Default adapter. `key` defaults to "karni.refreshToken". Every storage
+ * Keeps the refresh token in localStorage; the default storage. `key` defaults to "karni.refreshToken". Every storage
  * access is guarded: when localStorage is unavailable (SSR, private windows,
  * blocked site data) the adapter degrades to a no-op that returns `null`
  * instead of throwing.

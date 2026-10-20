@@ -66,7 +66,7 @@ export function __resetRoleRegistryForTests(): void {
 }
 
 /**
- * Claims `role` for `component`. The first argument must be a string literal
+ * Claims a UI role (such as `data-table`) for a component, so a second component with the same role fails the build. The first argument must be a string literal
  * (build-scan convention, F11).
  */
 export function registerComponentRole(

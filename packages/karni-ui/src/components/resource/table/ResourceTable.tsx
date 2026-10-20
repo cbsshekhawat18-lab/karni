@@ -276,6 +276,7 @@ function SchemaErrorPanel(props: { error: unknown }): React.ReactElement {
 
 // the table
 
+/** Schema-driven data table for one resource: columns, sorting, filters, search, pagination, row actions and bulk select, all derived from the OpenAPI schema. */
 export function ResourceTable<T = Record<string, unknown>>(
   props: ResourceTableProps<T>,
 ): React.ReactElement {

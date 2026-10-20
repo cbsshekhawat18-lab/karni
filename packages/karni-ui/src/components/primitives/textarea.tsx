@@ -3,6 +3,7 @@ import { cn } from "../../lib/cn";
 
 export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
+/** Themed multi-line text input; every native `<textarea>` prop passes through. */
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => (
     <textarea

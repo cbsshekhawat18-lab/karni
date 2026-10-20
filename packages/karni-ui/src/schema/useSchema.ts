@@ -42,6 +42,7 @@ export interface UseSchemaResult {
   error: unknown;
 }
 
+/** Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. */
 export function useSchema(resource: string): UseSchemaResult {
   const query = useParsedSchema();
 

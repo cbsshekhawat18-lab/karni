@@ -41,13 +41,15 @@ karni make model Event title:str:200 description:text starts_at:datetime ends_at
     "status:choice:draft|published" organizer:fk:User venue:fk:Venue -a --access owned:organizer
 karni make migration --app events
 karni migrate
+karni make page login --kind login
 ```
 
 Two models, declared on the command line, became: the models on
 `karni.models.BaseModel`; two REST resources with filtering, search,
 pagination and `?expand=`; the `access` declarations that decide who reads
 and writes what; admin pages; list, detail and form screens; and one test file
-per resource.
+per resource. The last command adds a sign-in page at `/login`: a new
+project has none until you ask for one.
 
 ## 3. Seed, test, run
 
@@ -83,8 +85,8 @@ nothing here needs them. When you want Celery (e-mails, scheduled tasks,
 `/health/ready/` all green), point `REDIS_URL` at a Redis, drop the
 `KARNI_CACHE` line and run `karni worker` in a third shell.
 
-Sign in with the demo login `karni seed` printed (`demo@example.com` /
-`karni-password`), open **Events**, create one, and look at
+Open `http://localhost:5173/login` and sign in with the demo login `karni seed`
+printed (`demo@example.com` / `karni-password`), open **Events**, create one, and look at
 `http://127.0.0.1:8000/api/docs/` for the OpenAPI document everything was
 generated from, and `/admin/` for the admin that needed no `admin.py`.
 

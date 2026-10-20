@@ -17,6 +17,7 @@ import { karniKeys } from "./keys";
 import { buildItemQuery, detailPath } from "./params";
 import type { ResourceItemParams } from "./types";
 
+/** Fetches one row of a resource (`GET /<resource>/<id>/`), optionally expanded. */
 export function useResourceItem<T = Record<string, unknown>>(
   resource: string,
   id: string | number,

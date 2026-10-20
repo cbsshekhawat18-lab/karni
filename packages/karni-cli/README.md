@@ -102,7 +102,7 @@ With the compose stack up, `worker` and `beat` already run as services, so
 nor an AI agent hand-creates a file a generator makes. `karni make --list`
 prints them all; every one is also a hidden Laravel-style alias
 `karni make:<type>`. The full reference (every option, the field DSL) is
-[docs/cli.md](../../docs/cli.md), generated from this CLI.
+[docs/cli.md](https://cbsshekhawat18-lab.github.io/karni/cli/), generated from this CLI.
 
 | Command | Writes |
 |---|---|

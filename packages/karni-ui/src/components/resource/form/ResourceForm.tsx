@@ -376,7 +376,10 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
 }
 
 /**
- * Schema-driven create/edit form (contract "ResourceForm" + D2/D3/D10).
+ * Schema-driven create and edit form for one resource: inputs, validation and
+ * server errors derived from the OpenAPI schema.
+ *
+ * Contract "ResourceForm" + D2/D3/D10.
  *
  * Create mode POSTs every prepared value; edit mode loads the UNEXPANDED
  * detail record and PATCHes only dirty fields at top-level granularity, with

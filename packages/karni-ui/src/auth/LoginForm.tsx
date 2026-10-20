@@ -35,6 +35,7 @@ export interface LoginFormProps {
   className?: string;
 }
 
+/** Email and password sign-in form with inline errors and a callback for the two-factor step. */
 export function LoginForm({
   onSuccess,
   on2FA,

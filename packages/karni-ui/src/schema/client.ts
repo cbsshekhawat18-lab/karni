@@ -164,6 +164,7 @@ async function parseBody(response: Response): Promise<unknown> {
 
 // the client
 
+/** Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. */
 export function createKarniClient(options: KarniClientOptions): KarniClient {
   const { baseUrl, schemaUrl = "/api/schema/", fetch: fetchOption } = options;
 

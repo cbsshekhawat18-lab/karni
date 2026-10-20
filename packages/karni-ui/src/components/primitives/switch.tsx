@@ -4,6 +4,7 @@ import { cn } from "../../lib/cn";
 
 export type SwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>;
 
+/** Themed on/off toggle (Radix Switch). */
 export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.Root>, SwitchProps>(
   ({ className, ...props }, ref) => (
     <SwitchPrimitive.Root

@@ -50,8 +50,9 @@ cache in production.
 **Observability.** Every auth outcome is a structlog event on
 `karni.accounts` with a user id or an address fingerprint, never an address
 — see [bots and security events](accounts.md#bots-and-security-events).
-`AuditedModel` records who created and last changed a row; field-level
-change history is on the roadmap (ADR 0002).
+`AuditedModel` records who created and last changed a row; models with
+`class Karni: audit = True` also keep a field-level change history
+([change history](change-history.md)).
 
 **Transport and headers.** The production profile sets HSTS (one year,
 subdomains, preload), `SECURE_SSL_REDIRECT` behind the proxy's

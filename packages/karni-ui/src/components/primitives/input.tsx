@@ -3,6 +3,7 @@ import { cn } from "../../lib/cn";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
+/** Themed text input; every native `<input>` prop passes through. */
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => (
     <input

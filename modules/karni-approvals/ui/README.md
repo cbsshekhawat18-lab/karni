@@ -1,6 +1,6 @@
 # @karni/approvals-ui
 
-React components for the [karni-approvals](../README.md) module, composing
+React components for the [karni-approvals](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-approvals/README.md) module, composing
 `@karni/ui`: the queue a checker decides from, and the badge that says how
 much is waiting.
 

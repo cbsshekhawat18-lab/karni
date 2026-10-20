@@ -4,6 +4,7 @@ import { cn } from "../../lib/cn";
 
 export type LabelProps = React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>;
 
+/** Themed form label (Radix Label) that dims when its field is disabled. */
 export const Label = React.forwardRef<React.ElementRef<typeof LabelPrimitive.Root>, LabelProps>(
   ({ className, ...props }, ref) => (
     <LabelPrimitive.Root

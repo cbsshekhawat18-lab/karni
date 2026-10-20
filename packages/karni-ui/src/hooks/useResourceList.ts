@@ -17,6 +17,7 @@ import { karniKeys } from "./keys";
 import { buildListQuery, listPath } from "./params";
 import type { Paginated, ResourceListParams } from "./types";
 
+/** Fetches one page of a resource's list (`GET /<resource>/`) with filters, search, ordering and `?expand=`. */
 export function useResourceList<T = Record<string, unknown>>(
   resource: string,
   params?: ResourceListParams,

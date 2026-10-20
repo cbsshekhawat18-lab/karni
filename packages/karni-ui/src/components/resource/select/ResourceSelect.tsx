@@ -66,7 +66,9 @@ function XIcon(props: React.SVGAttributes<SVGSVGElement>): React.ReactElement {
 }
 
 /**
- * Searchable relation picker (contract D8).
+ * Searchable picker for a related row, querying the related resource as you type.
+ *
+ * Contract D8.
  *
  * A text input drives a debounced `?search=` list request; options render in
  * a NON-MODAL Radix Popover whose auto-focus is prevented so keyboard focus

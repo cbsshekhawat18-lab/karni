@@ -19,6 +19,7 @@ export interface KarniProviderProps {
   children?: ReactNode;
 }
 
+/** Provides the Karni client and a TanStack QueryClient to everything inside it; render it once at the app root. */
 export function KarniProvider(props: KarniProviderProps): ReactElement {
   const { client, queryClient, children } = props;
   // Lazy initial state so the fallback QueryClient is created exactly once
@@ -31,7 +32,7 @@ export function KarniProvider(props: KarniProviderProps): ReactElement {
   );
 }
 
-/** Throws with a descriptive error when used outside <KarniProvider>. */
+/** Returns the Karni client from `KarniProvider`; throws a descriptive error outside one. */
 export function useKarniClient(): KarniClient {
   const client = useContext(KarniClientContext);
   if (client === null) {

@@ -5,6 +5,7 @@ import { CheckIcon } from "./icons";
 
 export type CheckboxProps = React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>;
 
+/** Themed checkbox (Radix Checkbox) with a check mark indicator. */
 export const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   CheckboxProps
