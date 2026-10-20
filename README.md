@@ -82,8 +82,8 @@ Numbers come from commands in this repository; nothing is estimated.
 | EventHub's tests | 14 backend tests (`assert_crud`, `assert_isolated`, the book → pay → webhook → e-mail path) and 3 Playwright journeys against the running stack, in CI on every push |
 | Karni's own suites | `karni` 1,310, `karni-cli` 378, `karni-payments` 127, `karni-approvals` 28, `karni-impersonation` 22, `@karni/ui` 454, `@karni/payments-ui` 14, `@karni/approvals-ui` 7, `@karni/impersonation-ui` 5 tests; ruff, mypy, ESLint and tsc clean |
 | `karni rules` (the conventions an agent reads first) | 402 cl100k tokens (395 o200k) for 33 rules |
-| A real module rebuilt: Social Stats' leads/CRM ([case study](docs/case-study-social-stats.md)) | **1,311 lines → 697** (569 without the 128 lines of tests the original lacked); same data model, endpoints, screens and workspace rule — `python examples/social-leads/scripts/measure.py`; the [14 friction points](examples/social-leads/FRICTION.md) it found are listed, three of them high severity |
-| Adding one more entity to that module | 6.6 s of machine time for `karni context`, `karni rules`, the generator, the migration and the test; 92 generated lines; 11 lines by hand. The text an agent types and reads for it: 1,081 cl100k tokens |
+| A real module rebuilt: Social Stats' leads/CRM ([case study](docs/case-study-social-stats.md)) | **2,346 lines → 1,013** as built on 0.2.0, **996** after the fixes it prompted (780 without tests the original lacked); same data model, endpoints, screens and workspace rule; both sides formatted alike before counting — `python examples/social-leads/scripts/measure.py --normalise`. The [14 friction points](examples/social-leads/FRICTION.md) it found are listed; the three high-severity ones are fixed |
+| Adding one more entity to that module | 7.0 s of machine time for `karni context`, `karni rules`, the generator, the migration and the test; 95 generated lines including CRUD and isolation tests; 2 lines by hand. The text an agent types and reads for it: 918 cl100k tokens |
 | Token cost of building an app with an agent | not measured yet — this README states no figure until it is |
 
 ## How Karni compares
@@ -115,7 +115,7 @@ docker compose up -d        # PostgreSQL, Redis, Django, Celery, the frontend
 karni check                 # conventions and system checks
 ```
 
-Python 3.12+, Django 5.1, Node 20+. The [quickstart](docs/quickstart.md)
+Python 3.12–3.14, Django 5.2 LTS, Node 20+. The [quickstart](docs/quickstart.md)
 walks through adding the first model; the
 [tutorial](docs/tutorial.md) builds EventHub.
 

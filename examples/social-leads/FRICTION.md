@@ -1,7 +1,8 @@
 # Friction log — rebuilding Social Stats' leads module on Karni
 
 Every place the rebuild needed project code that Karni should arguably have
-provided, in the order it was hit. Each entry says what was wanted, what was
+provided, in the order it was hit. Entries 1, 2, 3 and 14 carry a **Status**:
+the three high-severity ones were fixed in Karni the same day. Each entry says what was wanted, what was
 done instead, and what it cost. The rule for the rebuild was Karni's
 documented public surface only: no edits to Karni, no undocumented imports.
 Karni 0.2.0 (commit `8333c9c`), Python 3.12, SQLite.
@@ -9,7 +10,7 @@ Karni 0.2.0 (commit `8333c9c`), Python 3.12, SQLite.
 Severity: **high** = a correctness or security trap; **medium** = real
 project code an agent writes every time; **low** = cosmetic or one-off.
 
-## 1. Membership tenancy has no scope — medium
+## 1. Membership tenancy has no scope — medium (documented)
 
 **Wanted:** "a member sees the rows of the workspaces they belong to". Social
 Stats' rule (`TenantScopedMixin`) is exactly that, through agency and staff
@@ -24,7 +25,13 @@ and `crm/apps.py`, 13 lines).
 `Karni.scope_paths` through a many-to-many), or the tenancy module the testing
 docs anticipate.
 
-## 2. A custom scope must name every model's path — high
+**Status — it could already, and now says so.** `own` takes an owner *path*,
+and a path through the membership many-to-many is exactly this rule:
+`owner_field = "workspace__members"`. Nothing documented it; the roles docs
+now have a "Membership" section, and this example uses it (the custom scope
+is gone).
+
+## 2. A custom scope must name every model's path — high (fixed)
 
 **Wanted:** the scope to find each model's way to its workspace on its own.
 
@@ -40,7 +47,12 @@ learned its path — and the generated test stayed green (entry 3). Nothing in
 fail `karni check` when a model granted by a custom scope has no resolvable
 path.
 
-## 3. Generated tests cannot cover a custom scope, and drop isolation silently — high
+**Status — fixed.** Every path a role's grants filter on (`own` owner paths,
+`related:` scope paths, and whatever a `custom:` scope builds) is resolved
+at boot on each model the grant covers; one that does not resolve fails
+`karni check` with `E214` instead of answering 500.
+
+## 3. Generated tests cannot cover a custom scope, and drop isolation silently — high (fixed)
 
 **Wanted:** `karni make model … --with test` to keep giving the two
 one-liners (`assert_crud`, `assert_isolated`) that the docs promise.
@@ -67,6 +79,14 @@ plus the pipeline actions — 128 lines.
 hook, which `assert_isolated` and `karni make test` then use; and never drop
 the isolation test silently — generate a failing placeholder or print a
 warning naming the reason.
+
+**Status — fixed.** With membership as `own` and an owner path,
+`assert_crud` and `assert_isolated` drive it; they had failed only because the
+test factories passed a single user to the many-to-many (fixed). `karni make
+test` now says, in its output and in the test file, why it leaves
+`assert_isolated` out — a custom scope, or no role partitioning the rows.
+This example's tests are now the four generated ones plus the cases they do
+not reach.
 
 ## 4. The field DSL has no defaults and no list JSON — low
 
@@ -171,7 +191,7 @@ resource), so `ResourceDetail` printed the object as a string.
 **Karni could:** emit relation metadata for the user model and render any
 expanded object through `displayLabel`.
 
-## 14. Python 3.14 installs, then the admin crashes — high
+## 14. Python 3.14 installs, then the admin crashes — high (fixed)
 
 **What happened:** `python3 -m venv` picked Python 3.14 on this machine.
 Karni (`requires-python >= 3.12`) and Django 5.1.15 installed cleanly, every
@@ -184,6 +204,11 @@ Python 3.14).
 **Karni could:** cap `requires-python` below 3.14 while it targets Django
 5.1, or move to Django 5.2 LTS — which the security scan asks for anyway
 (pip-audit reports ten advisories against Django 5.1.15 with no 5.1 fix).
+
+**Status — fixed.** Karni requires Django 5.2 LTS (`>=5.2.8`, the first
+release supporting Python 3.14) and django-unfold 0.110; CI runs Python
+3.12, 3.13 and 3.14; this example's admin answers 200 on Python 3.14.4 and
+pip-audit finds nothing.
 
 ## What Karni caught that the rebuild got wrong
 

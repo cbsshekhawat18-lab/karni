@@ -71,19 +71,28 @@ class LeadViewSet(BaseViewSet):
         if new not in Lead.Status.values:
             raise ValidationError({"status": f"one of {sorted(Lead.Status.values)}"})
         notes = str(request.data.get("notes") or "").strip()
-        return Response(self.get_serializer(services.set_status(lead, request.user, new, notes)).data)
+        return Response(
+            self.get_serializer(services.set_status(lead, request.user, new, notes)).data
+        )
 
     @action(detail=True, methods=["post"], access=WRITE)
     def activity(self, request: Request, pk: Any = None) -> Response:
         lead = self.get_object()
         kind = request.data.get("activity_type") or "note"
         if kind not in LeadActivity.ActivityType.values:
-            raise ValidationError({"activity_type": f"one of {sorted(LeadActivity.ActivityType.values)}"})
+            raise ValidationError(
+                {"activity_type": f"one of {sorted(LeadActivity.ActivityType.values)}"}
+            )
         row = services.record(
-            lead, request.user, kind, str(request.data.get("content") or "").strip(),
+            lead,
+            request.user,
+            kind,
+            str(request.data.get("content") or "").strip(),
             **(request.data.get("metadata") or {}),
         )
-        return Response({"id": row.pk, "activity_type": row.activity_type, "content": row.content}, status=201)
+        return Response(
+            {"id": row.pk, "activity_type": row.activity_type, "content": row.content}, status=201
+        )
 
     @action(detail=True, methods=["post"], access=WRITE)
     def convert(self, request: Request, pk: Any = None) -> Response:
@@ -99,8 +108,11 @@ class LeadViewSet(BaseViewSet):
         lead = self.get_object()
         activities = [
             {
-                "id": row.pk, "activity_type": row.activity_type, "content": row.content,
-                "metadata": row.metadata, "actor": row.actor_id,
+                "id": row.pk,
+                "activity_type": row.activity_type,
+                "content": row.content,
+                "metadata": row.metadata,
+                "actor": row.actor_id,
                 "actor_email": getattr(row.actor, "email", "") if row.actor_id else "",
                 "created_at": row.created_at.isoformat(),
             }
@@ -123,7 +135,9 @@ class LeadViewSet(BaseViewSet):
     @action(detail=True, methods=["post"], url_path="score-with-ai", access=WRITE)
     def score(self, request: Request, pk: Any = None) -> Response:
         lead = services.apply_score(self.get_object(), request.user)
-        return Response({"quality_score": lead.quality_score, "quality_reason": lead.quality_reason})
+        return Response(
+            {"quality_score": lead.quality_score, "quality_reason": lead.quality_reason}
+        )
 
 
 class LeadActivityViewSet(BaseViewSet):

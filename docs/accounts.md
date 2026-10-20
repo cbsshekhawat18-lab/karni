@@ -186,7 +186,7 @@ earlier wildcard. Scopes:
 | scope | rows the action reaches |
 |---|---|
 | `all` | every row |
-| `own` | rows whose `Karni.owner_field` is the user (`created_by` by default) |
+| `own` | rows whose `Karni.owner_field` is the user (`created_by` by default); the field may be a path, through foreign keys and many-to-manys |
 | `related:<key>` | rows whose `Karni.scope_paths[key]` equals `user.<key>` (`user.venue` → `event.venue`) |
 | `custom:<name>` | the `Q` a scope registered with `karni.accounts.roles.register_scope(name, fn)` returns |
 
@@ -206,6 +206,47 @@ class Event(BaseModel):
 `field_roles` is field-level visibility ([API reference](api.md#field-visibility)):
 a role can see a row without seeing every field of it, on the API, in
 `?expand=`, in the schema and in the admin.
+
+### Membership: workspaces, teams, client accounts
+
+"A member sees the rows of every workspace they belong to" is `own` with an
+owner *path* that ends at the user through the membership many-to-many — no
+custom scope, and `assert_isolated` drives it like any other grant:
+
+```python
+class Workspace(BaseModel):
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL)
+
+    class Karni:
+        owner_field = "members"
+
+
+class Lead(BaseModel):
+    workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE)
+
+    class Karni:
+        owner_field = "workspace__members"
+
+
+class LeadActivity(BaseModel):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE)
+
+    class Karni:
+        owner_field = "lead__workspace__members"
+
+
+KARNI_ROLES = {
+    "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+    "member": {"grants": {"crm.*:*": "own"}},
+}
+```
+
+Someone in two workspaces sees both; creating a row in a workspace you do not
+belong to is refused (the relation only accepts workspaces you can read). A
+model that joins the wildcard later without its own `owner_field` falls back
+to `created_by` — give it the membership path too. Every path a grant filters
+on is resolved at boot: one that does not exist on a model the grant covers
+fails `karni check` with [`E214`](errors.md#e214), never a 500 at request time.
 
 The defaults are deliberately boring: a model with no `Karni` class is owned
 by whoever created it, has no scope paths and the four standard actions. The

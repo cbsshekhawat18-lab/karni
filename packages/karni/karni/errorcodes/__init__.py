@@ -712,6 +712,20 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "slug, the 'app.model:action' key and the scope value against GET "
         "permissions/matrix/.",
     ),
+    _e(
+        "E214",
+        "A role's scope names a path the model does not have",
+        "check",
+        "karni.checks.check_role_scope_paths",
+        "A grant's scope becomes a database filter on every request: `own` follows "
+        "Karni.owner_field, `related:<key>` follows Karni.scope_paths[key], and a "
+        "`custom:<name>` scope builds its own. A path the model does not have would answer "
+        "500 to every user holding the grant — typically after a new model joins a wildcard "
+        "grant written for its siblings.",
+        "Give the model the path the scope expects (`class Karni: owner_field = "
+        "'workspace__members'`, or the scope path), teach the custom scope the new model, "
+        "or narrow the grant's pattern so it does not cover the model.",
+    ),
     # E3xx admin
     _e(
         "E301",

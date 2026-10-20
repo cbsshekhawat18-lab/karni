@@ -232,6 +232,10 @@ def _m2m_hook(name: str, target: type[models.Model]) -> Callable[..., None]:
             return
         if isinstance(extracted, int) and not isinstance(extracted, bool):
             extracted = factory_for(target).create_batch(extracted)
+        elif isinstance(extracted, models.Model):
+            # One row, e.g. the user an `own` path through a many-to-many
+            # (owner_field = "workspace__members") makes the owner.
+            extracted = [extracted]
         getattr(obj, name).set(list(extracted), through_defaults=kwargs.get("through_defaults"))
 
     hook.__name__ = f"set_{name}"

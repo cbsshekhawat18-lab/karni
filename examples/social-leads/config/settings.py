@@ -29,8 +29,8 @@ MIDDLEWARE += [  # noqa: F821
 # CELERY_TASK_TIME_LIMIT = 600
 
 # Roles (ADR 0002): staff sees everything; a member sees the rows of the
-# workspaces they belong to (the `workspace` scope registered in crm/apps.py).
+# workspaces they belong to (`own` through each model's owner_field path).
 KARNI_ROLES = {
     "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
-    "member": {"name": "Workspace member", "grants": {"crm.*:*": "custom:workspace"}},
+    "member": {"name": "Workspace member", "grants": {"crm.*:*": "own"}},
 }

@@ -232,3 +232,14 @@ def test_abstract_and_non_models_are_rejected() -> None:
         factory_for(BaseModel)
     with pytest.raises(TypeError):
         factory_for(object)
+
+
+@pytest.mark.django_db
+def test_a_many_to_many_accepts_one_row() -> None:
+    """``create(Event, tags=tag)``: what an owner path through a many-to-many passes down."""
+    from karni.testing.factories import create
+    from tests.testapp.models import Event, Tag
+
+    tag = create(Tag)
+    event = create(Event, tags=tag)
+    assert list(event.tags.all()) == [tag]

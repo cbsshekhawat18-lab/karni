@@ -11,6 +11,15 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- Membership scoping and generated tests, from the Social Stats case study:
+  `own` takes an owner path through a many-to-many
+  (`owner_field = "workspace__members"`), now documented as the way to scope
+  rows to a workspace's members; the test factories accept one row for a
+  many-to-many, so `assert_crud` and `assert_isolated` drive it; a new
+  check, `E214`, resolves every path a role's grants filter on (owner paths,
+  scope paths, custom scopes) at boot, so a scope that names a missing path
+  fails `karni check` instead of answering 500; `karni make test` says, in
+  its output and the test file, why it leaves `assert_isolated` out.
 - Django 5.2 LTS: karni requires `Django>=5.2.8,<5.3` (5.1 is out of
   support; pip-audit reported ten unpatched advisories against 5.1.15) and
   django-unfold 0.110. Python 3.14 is supported and tested — on Django 5.1

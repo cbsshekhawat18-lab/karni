@@ -16,7 +16,9 @@ from django.utils import timezone
 from crm.models import Lead, LeadActivity
 
 
-def record(lead: Lead, actor: Any, activity_type: str, content: str, **metadata: Any) -> LeadActivity:
+def record(
+    lead: Lead, actor: Any, activity_type: str, content: str, **metadata: Any
+) -> LeadActivity:
     return LeadActivity.objects.create(
         lead=lead, actor=actor, activity_type=activity_type, content=content, metadata=metadata
     )
@@ -28,7 +30,10 @@ def assign(lead: Lead, actor: Any, user: Any | None) -> Lead:
     lead.save(update_fields=["assigned_to", "updated_at"])
     who = user.email if user is not None else "(unassigned)"
     record(
-        lead, actor, "assignment", f"Assigned to {who}",
+        lead,
+        actor,
+        "assignment",
+        f"Assigned to {who}",
         previous_user_id=str(previous) if previous else None,
         new_user_id=str(lead.assigned_to_id) if lead.assigned_to_id else None,
     )
@@ -42,9 +47,12 @@ def set_status(lead: Lead, actor: Any, status: str, notes: str = "") -> Lead:
         lead.notes = f"{lead.notes}\n\n{notes}" if lead.notes else notes
     lead.save(update_fields=["status", "notes", "updated_at"])
     record(
-        lead, actor, "status_change",
+        lead,
+        actor,
+        "status_change",
         f"Status: {previous} → {status}" + (f" — {notes}" if notes else ""),
-        previous=previous, new=status,
+        previous=previous,
+        new=status,
     )
     return lead
 

@@ -378,3 +378,89 @@ def check_schedules(app_configs: Any = None, **kwargs: Any) -> list[checks.Check
     except ScheduleError as exc:
         return [_as_check(exc)]
     return []
+
+
+@checks.register(checks.Tags.models)
+def check_role_scope_paths(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E214: every path a role's grants filter on resolves on the model it covers.
+
+    ``own`` follows ``Karni.owner_field`` (a field or a path, e.g.
+    ``workspace__members``), ``related:<key>`` follows ``Karni.scope_paths``,
+    and a ``custom:<name>`` scope is called with a stand-in user. Each filter is
+    built (not run) on the model's manager, which resolves every lookup. A
+    custom scope that cannot be evaluated without a database is skipped.
+    """
+    from django.contrib.auth import get_user_model
+    from django.core.exceptions import FieldError
+    from django.db.models import Q
+
+    from karni.accounts.roles import _custom_scopes, declared_roles, expand_grants, permission_keys
+    from karni.meta import owner_field, scope_paths
+
+    try:
+        specs = declared_roles()
+        keys = permission_keys()
+    except Exception:  # noqa: BLE001 - KARNI_ROLES itself is validated elsewhere
+        return []
+    stand_in = _stand_in_user(get_user_model())
+    messages: list[checks.CheckMessage] = []
+    seen: set[tuple[type, str, str]] = set()
+    for spec in specs:
+        try:
+            grants = expand_grants(spec, keys)
+        except KarniError:
+            continue  # reported by sync-roles / the settings validation
+        for grant in grants:
+            model = keys[grant.permission]
+            marker = (model, grant.scope, grant.scope_path)
+            if grant.scope == "all" or marker in seen:
+                continue
+            seen.add(marker)
+            if grant.scope == "own":
+                field = owner_field(model)
+                if field is None:
+                    continue
+                described, scope_fn = f"owner_field {field!r}", None
+                path: str | None = field
+            elif grant.scope == "related":
+                path = scope_paths(model).get(grant.scope_path)
+                if path is None:
+                    continue
+                described, scope_fn = f"scope_paths[{grant.scope_path!r}] = {path!r}", None
+            else:
+                scope_fn = _custom_scopes.get(grant.scope_path)
+                if scope_fn is None:
+                    continue  # an unregistered custom scope is reported when it is used
+                described, path = f"custom scope {grant.scope_path!r}", None
+            try:
+                condition: Q | bool = (
+                    scope_fn(stand_in, model)
+                    if scope_fn is not None
+                    else Q(**{f"{path}__isnull": False})
+                )
+                if isinstance(condition, Q):
+                    model._default_manager.filter(condition)
+            except FieldError as exc:
+                messages.append(
+                    check_error(
+                        "E214",
+                        f"KARNI_ROLES[{spec.slug!r}] grants {grant.permission} through "
+                        f"{described}, which does not resolve on {model.__name__}: {exc}",
+                        hint=_fix("E214"),
+                        obj=model,
+                    )
+                )
+            except Exception:  # noqa: BLE001 - a scope that needs the database is not checkable here
+                continue
+    return messages
+
+
+def _stand_in_user(user_model: Any) -> Any:
+    """An unsaved user with a primary key, so related filters on it can be built."""
+    import uuid
+
+    from django.db import models as dj_models
+
+    pk = user_model._meta.pk
+    value: Any = uuid.uuid4() if isinstance(pk, dj_models.UUIDField) else 1
+    return user_model(pk=value)

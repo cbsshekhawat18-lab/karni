@@ -523,3 +523,19 @@ def test_detail_pages_expand_the_model_relations(project: Path) -> None:
     ok("make", "model", "Show", "title:str", "venue:fk:Venue", "organizer:fk:User", "-a")
     page = (project / "frontend" / "src" / "pages" / "show-detail.tsx").read_text()
     assert 'expand={["venue"]}' in page
+
+
+def test_test_generator_never_drops_isolation_silently(project: Path) -> None:
+    """A custom scope, or no partitioning grant at all, is named in the output and the file."""
+    ok("make", "app", "events")
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nKARNI_ROLES = {"staff": {"system": True, "grants": {"*": "all"}}, '
+        + '"member": {"grants": {"events.*": "custom:workspace"}}}\n'
+    )
+    result = ok("make", "model", "Event", "title:str", "--with", "viewset,test")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert "assert_isolated" not in text.split("# No assert_isolated", 1)[0]
+    assert "# No assert_isolated: 'member' (custom:workspace)" in text
+    assert "isolation: NOT generated" in result.output and "owner_field" in result.output

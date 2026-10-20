@@ -571,6 +571,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Change KARNI_ROLES for a system role's grants; ask someone who holds the permission at that scope; keep one of your roles able to change permissions; check the role slug, the 'app.model:action' key and the scope value against GET permissions/matrix/.
 
+<a id="e214"></a>
+
+#### E214 — A role's scope names a path the model does not have
+
+*system check (error)* · from `karni.checks.check_role_scope_paths`
+
+**Why Karni objects.** A grant's scope becomes a database filter on every request: `own` follows Karni.owner_field, `related:<key>` follows Karni.scope_paths[key], and a `custom:<name>` scope builds its own. A path the model does not have would answer 500 to every user holding the grant — typically after a new model joins a wildcard grant written for its siblings.
+
+**Fix.** Give the model the path the scope expects (`class Karni: owner_field = 'workspace__members'`, or the scope path), teach the custom scope the new model, or narrow the grant's pattern so it does not cover the model.
+
 ### 3xx · Admin
 
 <a id="e301"></a>

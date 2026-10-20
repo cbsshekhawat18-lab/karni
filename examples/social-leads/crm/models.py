@@ -9,6 +9,9 @@ class Workspace(BaseModel):
     name = models.CharField(max_length=200)
     members = models.ManyToManyField(settings.AUTH_USER_MODEL)
 
+    class Karni:
+        owner_field = "members"  # a member reaches it through the workspace
+
     def __str__(self) -> str:
         return self.name
 
@@ -18,6 +21,9 @@ class Contact(BaseModel):
     phone = models.CharField(max_length=30)
     name = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
+
+    class Karni:
+        owner_field = "workspace__members"  # a member reaches it through the workspace
 
     def __str__(self) -> str:
         return self.phone
@@ -56,12 +62,11 @@ class Lead(BaseModel):
     tags = models.JSONField(default=list, blank=True)
     notes = models.TextField(blank=True)
     converted_at = models.DateTimeField(null=True, blank=True)
-    conversion_value = models.DecimalField(
-        max_digits=12, decimal_places=2, null=True, blank=True
-    )
+    conversion_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     capi_pushed_at = models.DateTimeField(null=True, blank=True)
 
     class Karni:
+        owner_field = "workspace__members"  # a member reaches it through the workspace
         audit = True  # every status change, assignment and conversion is history
 
     def __str__(self) -> str:
@@ -91,6 +96,9 @@ class LeadActivity(BaseModel):
     class Meta(BaseModel.Meta):
         ordering = ["-created_at"]
         verbose_name_plural = "lead activities"
+
+    class Karni:
+        owner_field = "lead__workspace__members"  # a member reaches it through the workspace
 
     def __str__(self) -> str:
         return f"{self.activity_type} on {self.lead_id}"

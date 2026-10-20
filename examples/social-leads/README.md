@@ -11,13 +11,15 @@ Karni should have provided and did not is [FRICTION.md](FRICTION.md).
 python3.12 -m venv .venv && .venv/bin/pip install -e ../../packages/karni -e ../../packages/karni-cli pytest pytest-django
 cp .env.example .env && printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\n' >> .env
 .venv/bin/karni migrate && .venv/bin/karni seed && .venv/bin/karni test
-python scripts/measure.py --before <social-stats checkout> --pristine <karni new "Social Leads" output>
+PRETTIER=<path to prettier> python scripts/measure.py --normalise --before <social-stats checkout> --pristine <karni new "Social Leads" output>
 ```
 
-What the project wrote: `crm/models.py`, `crm/viewsets.py`, `crm/services.py`,
-`crm/scopes.py`, `crm/tests/test_leads.py`, the `KARNI_ROLES` block in
-`config/settings.py`, and `frontend/src/pages/lead*.tsx` with
-`frontend/src/components/`. Everything else below is the `karni new` scaffold.
+What the project wrote: `crm/models.py` (workspace membership is each
+model's `owner_field` path), `crm/viewsets.py`, `crm/services.py`,
+`crm/tests/test_leads.py` (the four other test files are generated), the
+`KARNI_ROLES` block in `config/settings.py`, and `frontend/src/pages/lead*.tsx`
+with `frontend/src/components/`. Everything else below is the `karni new`
+scaffold.
 
 ---
 
