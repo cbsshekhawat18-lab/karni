@@ -1,5 +1,5 @@
 ---
-description: Install Karni, scaffold a project, add a model, migrate, seed demo data and run it locally with Python 3.12 and Node 20.
+description: Install Karni, scaffold a project, add a model, migrate, seed demo data and run it locally with Python 3.12 and Node 24.
 ---
 
 # Quickstart
@@ -9,7 +9,7 @@ Docker required. Every command on this page is run verbatim by CI
 (`.github/ci/quickstart.py`), so it works on a clean machine or the build
 fails.
 
-You need Python 3.12+ and Node 20+.
+You need Python 3.12+ and Node 20.19+ (Node 24 LTS recommended).
 
 ## 1. Install Karni and create a project
 

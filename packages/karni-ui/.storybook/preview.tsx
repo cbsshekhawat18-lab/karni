@@ -1,14 +1,19 @@
 import type { Preview } from "@storybook/react";
-import { initialize, mswLoader } from "msw-storybook-addon";
+import { setupWorker } from "msw/browser";
+import { mswLoader } from "msw-storybook-addon/csf3";
 import * as React from "react";
 import "./tailwind.css";
 
 /**
- * MSW is initialized once for every story; stories opt in to handlers via
- * `parameters.msw.handlers` (msw-storybook-addon@^2). Unhandled requests
- * pass through so plain component stories need no handlers at all.
+ * MSW runs for every story; stories opt in to handlers via
+ * `parameters.msw.handlers` (msw-storybook-addon 3, CSF 3 loader). Unhandled
+ * requests pass through, so plain component stories need no handlers at all.
  */
-initialize({ onUnhandledRequest: "bypass" });
+const msw = mswLoader(async () => {
+  const worker = setupWorker();
+  await worker.start({ onUnhandledRequest: "bypass", quiet: true });
+  return worker;
+});
 
 /** Applies the theme toolbar choice by toggling `.dark` on <html>. */
 function ThemeDecorator(props: { theme: string; children: React.ReactNode }): React.ReactElement {
@@ -51,7 +56,7 @@ const preview: Preview = {
   initialGlobals: {
     theme: "light",
   },
-  loaders: [mswLoader],
+  loaders: [msw],
   decorators: [
     (Story, context) => (
       <ThemeDecorator theme={String(context.globals.theme ?? "light")}>

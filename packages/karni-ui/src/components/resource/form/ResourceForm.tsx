@@ -68,6 +68,14 @@ const EDITABLE_KINDS: ReadonlySet<string> = new Set([
   "json",
 ]);
 
+/**
+ * A field's label-to-control gap as Tailwind 3's `space-y` draws it: a top
+ * margin on every child after the first. Tailwind 4's `space-y` puts a bottom
+ * margin on the inline <label> instead, which an inline element ignores, so
+ * the gap is spelled out to render the same under both.
+ */
+const FIELD_GAP = "[&>:not([hidden])~:not([hidden])]:mt-2";
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
@@ -184,7 +192,7 @@ function FormFieldRow({
       .join(" ") || undefined;
 
   return (
-    <div className="space-y-2">
+    <div className={FIELD_GAP}>
       <Label htmlFor={inputId}>
         {label}
         {field.required ? (

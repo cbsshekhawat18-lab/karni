@@ -1,0 +1,23 @@
+/* @karni/ui under Tailwind 4: import once, after Tailwind itself.
+ *
+ *   @import "tailwindcss";
+ *   @import "@karni/ui/tailwind-v4.css";
+ *   @config "../tailwind.config.ts";   (the @karni/ui preset)
+ *
+ * Tailwind 3 projects do not import this file: Tailwind 3 rejects an
+ * `@layer base` outside its own stylesheet, and needs nothing here.
+ *
+ * A bare `border` uses the --karni-border token, as under Tailwind 3, whose
+ * preflight applies the preset's default border color. Tailwind 4 defaults
+ * borders to currentColor. In the base layer this rule sits below every
+ * utility, so `border-input`, `border-destructive` and the rest still win;
+ * `:root` lifts it just above Tailwind's own reset. */
+@layer base {
+  :root *,
+  :root ::before,
+  :root ::after,
+  :root ::backdrop,
+  :root ::file-selector-button {
+    border-color: hsl(var(--karni-border));
+  }
+}

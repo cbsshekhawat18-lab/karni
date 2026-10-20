@@ -1,5 +1,5 @@
 /**
- * Tailwind (v3) preset for @karni/ui consumers.
+ * Tailwind preset for @karni/ui consumers (Tailwind 3, and 4 through @config).
  *
  * Usage (tailwind.config.ts of the consuming app):
  *
@@ -16,7 +16,8 @@
  * ```
  *
  * Also import "@karni/ui/styles.css" once (it defines the --karni-* tokens).
- * Tailwind v4 users: see the README recipe (@source into dist) instead.
+ * Tailwind v4 loads the same config through `@config` in CSS, next to
+ * `@import "@karni/ui/tailwind-v4.css"` (see the README).
  */
 import type { Config } from "tailwindcss";
 

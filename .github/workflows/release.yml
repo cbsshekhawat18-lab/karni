@@ -172,7 +172,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
       # `npm publish --dry-run` runs the full publish pipeline — prepack,
       # the files list, the tarball manifest — and stops before the upload;
@@ -202,7 +202,7 @@ jobs:
     permissions:
       id-token: write # trusted publishing + PEP 740 attestations (provenance)
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist/
@@ -251,7 +251,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
       # Trusted publishing needs npm >= 11.5.1; Node 20 ships npm 10.
       - run: npm install -g npm@^11.5.1
@@ -272,13 +272,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist/
       # The npm tarballs too: until a package is on npm, the release is where
       # it installs from (npm install <release URL>/karni-ui-X.Y.Z.tgz).
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: npm-dist
           path: dist/

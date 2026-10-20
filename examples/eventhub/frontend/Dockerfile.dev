@@ -10,7 +10,7 @@
 # --no-package-lock: the host's package-lock.json records a local @karni/ui
 # relative to the host's frontend/ directory, which does not hold from /app;
 # the container resolves from package.json and never rewrites the host lock.
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY . .
 EXPOSE 5173
