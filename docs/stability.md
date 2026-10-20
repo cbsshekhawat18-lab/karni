@@ -33,7 +33,7 @@ For everything listed as public below:
    deprecates are removed in 1.0, not in 0.3.
 2. **Every breaking change is recorded.** Each one is an entry in Karni's
    machine-readable changelog (`karni/changelog/<version>.toml`) and has a
-   section in the migration notes ([0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
+   section in the migration notes ([0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
 3. **Mechanical changes are applied for you.** When a change can be made
    safely by rewriting code (a renamed import, setting, base class or method),
    it ships with a codemod. `karni upgrade --to <version>` runs every codemod
@@ -126,7 +126,7 @@ and a codemod or detector is included where possible.
 
 | Component | Supported |
 |---|---|
-| Python | 3.12, 3.13, 3.14 (3.14 from the release after 0.2.0) |
+| Python | 3.12, 3.13, 3.14 (3.14 from 0.3.0) |
 | Django | 5.2 LTS |
 | Node.js (frontend tooling) | 20+ |
 | React | 18, 19 |
