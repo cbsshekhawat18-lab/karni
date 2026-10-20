@@ -9,8 +9,16 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
-## Unreleased
+## 0.3.1 — 2026-10-20
 
+A patch release: security updates to the development tooling, Vite 6.4 for
+new projects, and publishing to PyPI. No public API changes.
+
+- The release workflow publishes to each registry separately:
+  `KARNI_PUBLISHING` names the registries that are set up (`pypi`, `npm`,
+  `pypi,npm` or `true`), and PyPI uploads one project at a time, core first,
+  with `skip-existing`, so a missing trusted publisher cannot half-publish a
+  release. The GitHub release carries the npm tarballs too.
 - Development tooling upgraded, closing every Dependabot alert (52, all in
   build and test tools, none in what the packages ship): Vite 6.4, Vitest 4.1
   (which drops tinypool), vite-plugin-dts 5 (API Extractor, and with it
