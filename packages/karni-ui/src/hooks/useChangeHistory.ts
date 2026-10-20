@@ -37,6 +37,7 @@ export interface ChangeHistoryParams {
   page?: number;
 }
 
+/** The query key of one row's change history. */
 export function changeHistoryKey(
   resource: string,
   id: string | number,
@@ -45,6 +46,7 @@ export function changeHistoryKey(
   return [...karniKeys.resource(resource), "history", String(id), params ?? {}] as const;
 }
 
+/** Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. */
 export function useChangeHistory(
   resource: string,
   id: string | number,

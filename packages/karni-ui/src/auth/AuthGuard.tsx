@@ -23,6 +23,7 @@ export interface AuthGuardProps {
   children?: ReactNode;
 }
 
+/** Renders its children only for a signed-in user, optionally with one of the given roles; otherwise its `fallback`. */
 export function AuthGuard({
   roles,
   fallback = null,

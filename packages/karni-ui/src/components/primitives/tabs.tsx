@@ -2,8 +2,10 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import * as React from "react";
 import { cn } from "../../lib/cn";
 
+/** Tab set root (Radix Tabs); holds the selected value. */
 export const Tabs = TabsPrimitive.Root;
 
+/** The row of tab buttons. */
 export const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -19,6 +21,7 @@ export const TabsList = React.forwardRef<
 ));
 TabsList.displayName = "TabsList";
 
+/** One tab button; `value` names the panel it opens. */
 export const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
@@ -34,6 +37,7 @@ export const TabsTrigger = React.forwardRef<
 ));
 TabsTrigger.displayName = "TabsTrigger";
 
+/** The panel shown while its `value` is the selected tab. */
 export const TabsContent = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>

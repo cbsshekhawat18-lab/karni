@@ -88,6 +88,7 @@ export interface AuthContextValue {
  */
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Holds the signed-in user and attaches credentials (JWT or session) to every request; render it inside `KarniProvider`. */
 export function AuthProvider({
   mode,
   tokenStorage,
@@ -152,7 +153,7 @@ export function AuthProvider({
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/** Throws with a descriptive error when used outside <AuthProvider>. */
+/** Returns the signed-in user, auth status, `login` and `logout`; throws a descriptive error outside `AuthProvider`. */
 export function useAuth(): AuthContextValue {
   const value = useContext(AuthContext);
   if (value === null) {

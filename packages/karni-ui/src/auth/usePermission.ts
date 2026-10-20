@@ -11,6 +11,7 @@ export interface PermissionHelpers {
   isAuthenticated: boolean;
 }
 
+/** `isAuthenticated` and `hasRole(...names)` for the signed-in user. */
 export function usePermission(): PermissionHelpers {
   const { roles, status } = useAuth();
   return useMemo<PermissionHelpers>(

@@ -140,6 +140,7 @@ function baseSchemaFor(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {
   }
 }
 
+/** Builds a Zod validator for a resource's create or update payload from its schema. */
 export function zodFor(schema: ResourceSchema, mode: "create" | "update"): ZodObject<ZodRawShape> {
   const shape: ZodRawShape = {};
 

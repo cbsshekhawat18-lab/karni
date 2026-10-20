@@ -1,6 +1,6 @@
 # karni-payments
 
-Payments module for [Karni](../../README.md): hosted checkout, refunds and
+Payments module for [Karni](https://github.com/cbsshekhawat18-lab/karni): hosted checkout, refunds and
 webhook-driven payment state for **Stripe** (Checkout Sessions) and
 **Razorpay** (Payment Links), plus an in-memory **test provider**.
 

@@ -4,8 +4,9 @@ import { cn } from "../../lib/cn";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "./icons";
 
 /**
- * Radix Select reserves the empty string, so @karni/ui maps the empty state
- * through this sentinel at the component boundary (contract D8). Consumers of
+ * The value that stands for "nothing selected" inside Radix Select, which reserves the empty string.
+ *
+ * This package maps the empty state through this sentinel at the component boundary (contract D8). Consumers of
  * the composed <Select> never see it: `value`/`onValueChange` use `null`.
  */
 export const KARNI_SELECT_EMPTY = "__karni_empty__";
@@ -14,10 +15,14 @@ export const KARNI_SELECT_EMPTY = "__karni_empty__";
 // Low-level styled Radix parts (escape hatch for fully custom selects)
 // ---------------------------------------------------------------------------
 
+/** Radix Select root, for composing a custom select from the styled parts. */
 export const SelectRoot = SelectPrimitive.Root;
+/** Groups related options inside `SelectContent`. */
 export const SelectGroup = SelectPrimitive.Group;
+/** Shows the selected option's label inside `SelectTrigger`. */
 export const SelectValue = SelectPrimitive.Value;
 
+/** The styled button that opens the select. */
 export const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
@@ -66,6 +71,7 @@ const SelectScrollDownButton = React.forwardRef<
 ));
 SelectScrollDownButton.displayName = "SelectScrollDownButton";
 
+/** The styled dropdown panel that lists the options. */
 export const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
@@ -98,6 +104,7 @@ export const SelectContent = React.forwardRef<
 ));
 SelectContent.displayName = "SelectContent";
 
+/** A heading inside a `SelectGroup`. */
 export const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
@@ -110,6 +117,7 @@ export const SelectLabel = React.forwardRef<
 ));
 SelectLabel.displayName = "SelectLabel";
 
+/** One selectable option; `value` is what the select reports. */
 export const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
@@ -132,6 +140,7 @@ export const SelectItem = React.forwardRef<
 ));
 SelectItem.displayName = "SelectItem";
 
+/** A divider line between option groups. */
 export const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
@@ -182,7 +191,7 @@ export interface SelectProps {
 }
 
 /**
- * Options-driven select built on the styled Radix parts above. Maps the
+ * Styled select for a list of `options`, with `null` for no selection. Maps the
  * empty state through the KARNI_SELECT_EMPTY sentinel so `""` never reaches
  * Radix (D8). For fully custom composition use SelectRoot/SelectTrigger/
  * SelectContent/SelectItem directly.

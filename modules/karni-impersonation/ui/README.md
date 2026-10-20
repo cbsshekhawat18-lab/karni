@@ -1,6 +1,6 @@
 # @karni/impersonation-ui
 
-React pieces for the [karni-impersonation](../README.md) module, composing
+React pieces for the [karni-impersonation](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-impersonation/README.md) module, composing
 `@karni/ui`: the banner a SPA shows while a support user acts as someone
 else, and the hooks to start and stop.
 

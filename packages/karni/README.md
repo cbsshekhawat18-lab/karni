@@ -7,13 +7,13 @@ settings core it ships the three batteries every project rewrites:
 
 - **karni.accounts** — email-based swappable user, JWT or session auth
   endpoints, verified-email / password-reset / email-change flows, roles,
-  optional TOTP 2FA and social login ([docs](../../docs/accounts.md))
+  optional TOTP 2FA and social login ([docs](https://cbsshekhawat18-lab.github.io/karni/accounts/))
 - **karni.api** — `class EventViewSet(BaseViewSet): model = Event` gives
   CRUD + filtering + search + expansion + OpenAPI, auto-routed
-  ([docs](../../docs/api.md))
+  ([docs](https://cbsshekhawat18-lab.github.io/karni/api/))
 - **karni.admin** — zero-config django-unfold admin: every model registered
   with derived columns, filters, search and soft-delete handling
-  ([docs](../../docs/admin.md))
+  ([docs](https://cbsshekhawat18-lab.github.io/karni/admin/))
 
 ```bash
 pip install karni            # core
@@ -109,8 +109,8 @@ Broker, django-db results, database beat scheduler and task autodiscovery are
 configured from the `CELERY_*` settings that `karni_settings()` provided.
 Periodic tasks declared with `karni.schedule.every()` / `cron()` in
 `<app>/schedules.py` are merged into the beat schedule
-([docs/scheduling.md](../../docs/scheduling.md)). Model lifecycle listeners
-live in `<app>/listeners.py` ([docs/events.md](../../docs/events.md)).
+([docs/scheduling.md](https://cbsshekhawat18-lab.github.io/karni/scheduling/)). Model lifecycle listeners
+live in `<app>/listeners.py` ([docs/events.md](https://cbsshekhawat18-lab.github.io/karni/events/)).
 `manage.py karni_routes` and `manage.py karni_schedules` list every URL and
 every schedule (`--json` for agents).
 

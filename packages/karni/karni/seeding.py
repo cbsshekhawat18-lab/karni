@@ -183,7 +183,22 @@ class SeedBuilder(FactoryBuilder):
     def declaration(self, model: type[models.Model], field: Any) -> Any:
         random = self.values.fake.random
         if field.primary_key and isinstance(field, models.UUIDField):
-            return factory.LazyFunction(lambda: uuid.UUID(int=random.getrandbits(128), version=4))
+            rows = model._base_manager
+
+            def fresh_key() -> uuid.UUID:
+                # One draw from the seed per row, so an empty table gets the
+                # same keys on every run. A key an earlier run already used is
+                # replaced by one derived from it (uuid5, off the seeded stream,
+                # so later values do not shift): re-running adds rows instead
+                # of failing on the primary key.
+                key = uuid.UUID(int=random.getrandbits(128), version=4)
+                attempt = 0
+                while rows.filter(pk=key).exists():
+                    attempt += 1
+                    key = uuid.uuid5(key, str(attempt))
+                return key
+
+            return factory.LazyFunction(fresh_key)
         reproducible = (
             field.has_default()
             and field.editable

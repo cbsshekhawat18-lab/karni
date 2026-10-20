@@ -35,6 +35,7 @@ export type VariantFn<V extends VariantShape> = (
  */
 export type VariantProps<F> = F extends VariantFn<infer V> ? VariantSelection<V> : never;
 
+/** Builds a typed class-name function from variant definitions, the way every themed component declares its looks. */
 export function variants<V extends VariantShape>(config: VariantsConfig<V>): VariantFn<V> {
   const groupNames = Object.keys(config.variants) as Array<Extract<keyof V, string>>;
 

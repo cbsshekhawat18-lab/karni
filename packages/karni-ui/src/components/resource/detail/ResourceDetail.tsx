@@ -189,7 +189,9 @@ function DetailRow(props: {
 }
 
 /**
- * Schema-driven read view (contract "ResourceDetail"): a definition list of
+ * Schema-driven read view of one row: every readable field, labelled and formatted.
+ *
+ * Contract "ResourceDetail": a definition list of
  * every non-writeOnly field — domain fields first (schema order), then the
  * audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
  * updated_by) in a visually muted "Record" group. Relations render through

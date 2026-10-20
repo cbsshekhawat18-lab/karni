@@ -12,6 +12,7 @@
  */
 import type { FieldDef } from "../../schema/types";
 
+/** The audit field names (`created_at`, `created_by`, …) that tables hide and detail views group last. */
 export const AUDIT_FIELDS: readonly string[] = Object.freeze([
   "id",
   "created_at",

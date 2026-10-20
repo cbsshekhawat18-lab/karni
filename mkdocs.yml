@@ -60,6 +60,7 @@ nav:
       - Adding an entity end to end: adding-an-entity.md
       - "Case study: rebuilding Social Stats' leads": case-study-social-stats.md
   - Reference:
+      - Everything, generated: REFERENCE.md
       - Models: models.md
       - API: api.md
       - Accounts: accounts.md

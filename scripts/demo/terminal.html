@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{margin:0;height:100%;background:#0d1117;}
+#t{font:25px/1.45 Menlo,Consolas,monospace;color:#c9d1d9;padding:30px 36px;white-space:pre-wrap;word-break:break-all;}
+.c{color:#e6edf3;font-weight:600}.p{color:#f0883e}.d{color:#8b949e}.ok{color:#7ee787}
+</style></head><body><div id="t"></div>
+<script>
+// Real output of the README quickstart, captured from a run on 2026-10-20
+// (Karni 0.2.0 from the GitHub release, clean HOME). Lines are shown as printed;
+// "…" marks the stock Django migrations left out.
+const script = [
+  ["$", 'karni new "Ticket Shop" && cd ticket_shop'],
+  ["o", "Created ticket_shop (24 agent adapter files)"],
+  ["$", "karni make app events"],
+  ["o", "created  events/models.py\ncreated  events/viewsets.py\nmodified config/settings.py"],
+  ["$", "karni make model Event title:str:200 starts_at:datetime organizer:fk:User -a --access owned:organizer"],
+  ["o", "modified events/models.py\nmodified events/viewsets.py\ncreated  frontend/src/pages/events.tsx\ncreated  frontend/src/pages/event-detail.tsx\ncreated  frontend/src/pages/event-form.tsx\ncreated  events/tests/test_event.py\naccess: Access(read=Owned(\"organizer\"), write=Owned(\"organizer\"))\nroute: /api/events/ (auto-registered)"],
+  ["$", "karni make migration --app events && karni migrate"],
+  ["o", "    + Create model Event\n  …\n  Applying events.0001_initial... OK"],
+  ["$", "karni make page login --kind login"],
+  ["o", "created  frontend/src/pages/login.tsx\npage: /login -> LoginPage"],
+  ["$", "karni seed"],
+  ["o", "Seeded 2 model(s) with seed 0 (count 10) in 0.2s:\n  karni_accounts.User     3\n  events.Event           10\nLog in as demo@example.com / karni-password (superuser)."],
+  ["$", "karni serve --local"],
+];
+const t = document.getElementById("t");
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function line(html) { const d = document.createElement("div"); d.innerHTML = html; t.appendChild(d); return d; }
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+(async () => {
+  await sleep(500);
+  for (const [kind, text] of script) {
+    if (kind === "$") {
+      const d = line('<span class="p">$ </span><span class="c"></span>');
+      const span = d.querySelector(".c");
+      for (const ch of text) { span.textContent += ch; await sleep(text.length > 60 ? 12 : 28); }
+      await sleep(350);
+    } else {
+      for (const l of text.split("\n")) { line(esc(l).replace(/^(created|modified)/, '<span class="ok">$1</span>')); await sleep(70); }
+      await sleep(450);
+    }
+    while (t.scrollHeight > window.innerHeight && t.firstChild) t.removeChild(t.firstChild);
+  }
+  window.done = true;
+})();
+</script></body></html>

@@ -27,6 +27,24 @@ reads to apply codemods and list the manual steps — and explained in
   Django with karni; no project code changes were needed in EventHub,
   Social Leads or the modules. Dropping Django 5.1 is a minor-release
   change under the [stability promise](docs/stability.md): the next release is 0.3.0.
+- `karni seed` can run again on a seeded database. Each run is a new process
+  that draws the same UUID keys from the same seed, so a second run failed
+  with `E612` on the primary key (found by running the README quickstart, then
+  adding a model and seeding again). A key an earlier run used is now replaced
+  by one derived from it; an empty database still gets the same rows.
+- A generated reference: `scripts/gen_reference.py` writes `docs/REFERENCE.md`
+  (every command, base class, `class Karni` key, setting, component, hook,
+  module, error code, make target and slash command, with each capability's
+  status) and the README's generated blocks from the source, and CI fails when
+  either is stale. `karni.meta.OPTIONS` (and a module's `KARNI_OPTIONS`) now
+  documents each `class Karni` key; the generator fails on a key that code
+  reads but no list declares. Every `@karni/ui` export has a one-line JSDoc.
+- The README is rewritten: a demo recorded from a real quickstart run
+  (`scripts/demo/`), a cheat sheet, the generated command table and per-area
+  reference, an honest comparison and status. The quickstart (README and
+  docs) adds `karni make page login --kind login`: a new project had no
+  sign-in page for the React app. Package READMEs link absolutely, so their
+  links work on PyPI.
 
 ## 0.2.0 — 2026-10-20
 

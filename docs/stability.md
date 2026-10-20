@@ -126,7 +126,7 @@ and a codemod or detector is included where possible.
 
 | Component | Supported |
 |---|---|
-| Python | 3.12, 3.13 |
+| Python | 3.12, 3.13, 3.14 (3.14 from the release after 0.2.0) |
 | Django | 5.2 LTS |
 | Node.js (frontend tooling) | 20+ |
 | React | 18, 19 |

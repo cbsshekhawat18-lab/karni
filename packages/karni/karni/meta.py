@@ -42,9 +42,11 @@ from django.db import models
 from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
+    "OPTIONS",
     "STANDARD_ACTIONS",
     "FieldRule",
     "ImportOptions",
+    "Option",
     "field_roles",
     "import_options",
     "karni_option",
@@ -62,6 +64,97 @@ class FieldRule:
 
     read: tuple[str, ...]
     write: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Option:
+    """One key ``class Karni`` accepts: its default, what it controls, an example line.
+
+    The reference (``docs/REFERENCE.md``) is generated from :data:`OPTIONS`
+    and the modules' ``KARNI_OPTIONS``; ``scripts/gen_reference.py`` fails
+    when code reads a key through :func:`karni_option` that no list declares.
+    """
+
+    name: str
+    default: str
+    summary: str
+    example: str
+
+
+#: Every key Karni's own layers read from ``class Karni``.
+OPTIONS: Final[tuple[Option, ...]] = (
+    Option(
+        "owner_field",
+        "`created_by`",
+        "The field or path (through foreign keys and many-to-manys) that leads to the user "
+        "who owns a row; the `own` scope filters on it.",
+        'owner_field = "workspace__members"',
+    ),
+    Option(
+        "scope_paths",
+        "`{}`",
+        "Named paths a role's `related:<key>` scope compares with the same key on the user.",
+        'scope_paths = {"branch": "branch", "region": "branch__region"}',
+    ),
+    Option(
+        "actions",
+        "`()`",
+        "Permission actions besides view, add, change and delete; roles grant them like any other.",
+        'actions = ["approve", "export"]',
+    ),
+    Option(
+        "field_roles",
+        "`{}`",
+        "Which roles see and change a field; the API, the admin and exports hide it from the rest.",
+        'field_roles = {"salary": {"read": ["hr", "manager"], "write": ["hr"]}}',
+    ),
+    Option(
+        "audit",
+        "`False`",
+        "Record field-level change history (who, when, old and new value): `True` for every "
+        "field, or a list of field names.",
+        "audit = True",
+    ),
+    Option(
+        "sensitive",
+        "`()`",
+        "Fields the change history records as changed but never with their values, on top "
+        "of names matching `KARNI_AUDIT_REDACT`.",
+        'sensitive = ["iban"]',
+    ),
+    Option(
+        "natural_key",
+        "first unique slug, char or email field, else the primary key",
+        "The field that names a row to people: imports refer to related rows by it and "
+        "exports write relations with it.",
+        'natural_key = "sku"',
+    ),
+    Option(
+        "import_key",
+        "`natural_key`",
+        "The column an import matches existing rows on, so a row with a known key is "
+        "updated instead of created.",
+        'import_key = "number"',
+    ),
+    Option(
+        "import_lookup",
+        "`{}`",
+        "For a relation field, the field of the related model that its import column carries.",
+        'import_lookup = {"customer": "email"}',
+    ),
+    Option(
+        "import_transform",
+        "`None`",
+        "A callable, or its dotted path, that rewrites each imported row before validation.",
+        'import_transform = "shop.imports.clean_order_row"',
+    ),
+    Option(
+        "after_import",
+        "`None`",
+        "A callable, or its dotted path, run once an import commits, with the result.",
+        'after_import = "shop.imports.reindex"',
+    ),
+)
 
 
 #: The actions every model has a permission for (Django's names, so the

@@ -13,9 +13,11 @@ from django.core.management import CommandError, call_command
 from django.db import models
 from django.test import override_settings
 from django.test.utils import isolate_apps
+from factory.random import reseed_random
 
 from karni.seeding import (
     DEMO_LOGIN,
+    SeedBuilder,
     Seeder,
     SeedError,
     _order,
@@ -24,8 +26,8 @@ from karni.seeding import (
     seed_plan,
     seeders,
 )
-from karni.testing.factories import DEFAULT_PASSWORD
-from karni.testing.values import SAFE_DOMAINS
+from karni.testing.factories import DEFAULT_PASSWORD, factory_for
+from karni.testing.values import SAFE_DOMAINS, ValueInference
 from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen, Writer
 from tests.perfapp.seeds import PublisherSeeder, WriterSeeder
 from tests.testapp.models import Event, Tag, Venue
@@ -119,6 +121,20 @@ def test_without_reset_a_run_adds_rows_and_keeps_uniques_unique() -> None:
     assert Chapter.objects.count() == 10
     pairs = list(Chapter.objects.values_list("novel_id", "number"))
     assert len(set(pairs)) == 10  # unique (novel, number)
+
+
+def test_a_seeded_uuid_key_an_earlier_run_used_is_replaced() -> None:
+    # Each `karni seed` is a new process, so the same seed draws the same UUID
+    # keys again; a key already in the table must give way to a fresh one, or
+    # re-running fails with E612 on the primary key.
+    declaration = SeedBuilder(ValueInference(now=NOW)).declaration(Venue, Venue._meta.pk)
+    reseed_random(0)
+    key = declaration.function()
+    factory_for(Venue).create(pk=key)
+    reseed_random(0)
+    again = declaration.function()
+    assert again != key
+    assert not Venue.objects.filter(pk=again).exists()
 
 
 def test_seeders_pin_counts_values_and_take_over_creation() -> None:

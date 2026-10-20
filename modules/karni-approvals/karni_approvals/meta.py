@@ -24,13 +24,54 @@ from typing import Any
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from karni.exceptions import KarniImproperlyConfigured
-from karni.meta import karni_option
+from karni.meta import Option, karni_option
 
 from karni_approvals import conf
 
-__all__ = ["ApprovalPolicy", "approval_policy", "clear_caches"]
+__all__ = ["KARNI_OPTIONS", "ApprovalPolicy", "approval_policy", "clear_caches"]
 
 ON_TIMEOUT = ("expire", "escalate")
+
+#: The ``class Karni`` keys this module reads (listed in docs/REFERENCE.md).
+KARNI_OPTIONS: tuple[Option, ...] = (
+    Option(
+        "requires_approval",
+        "unset: never held",
+        "Hold changes for a second person's approval: a list of guarded fields, or `True` "
+        "for any change, create and delete included.",
+        'requires_approval = ["amount", "status"]',
+    ),
+    Option(
+        "approvals_required",
+        "`KARNI_APPROVALS_REQUIRED` (1)",
+        "Approvals a pending change needs before it is applied.",
+        "approvals_required = 2",
+    ),
+    Option(
+        "approver_roles",
+        "`KARNI_APPROVALS_APPROVER_ROLES`",
+        "Roles that may approve, on top of holding the approve permission.",
+        'approver_roles = ["finance"]',
+    ),
+    Option(
+        "approval_timeout",
+        "`KARNI_APPROVALS_TIMEOUT_HOURS` (0: never)",
+        "How long a change may wait: a `timedelta`, or hours as an integer.",
+        "approval_timeout = timedelta(hours=48)",
+    ),
+    Option(
+        "approval_on_timeout",
+        "`KARNI_APPROVALS_ON_TIMEOUT` (`expire`)",
+        "What a timeout does: `expire` the change, or `escalate` it to the escalation roles.",
+        'approval_on_timeout = "escalate"',
+    ),
+    Option(
+        "approval_escalation_roles",
+        "`KARNI_APPROVALS_ESCALATION_ROLES`",
+        "Roles notified when a change escalates.",
+        'approval_escalation_roles = ["cfo"]',
+    ),
+)
 
 
 @dataclass(frozen=True)

@@ -111,10 +111,12 @@ export interface ImportJob {
   fields?: ImportColumn[];
 }
 
+/** The query key of a resource's import description. */
 export function importDescribeKey(resource: string): readonly unknown[] {
   return [...karniKeys.resource(resource), "import", "describe"] as const;
 }
 
+/** The query key of one import job. */
 export function importJobKey(resource: string, jobId: string): readonly unknown[] {
   return [...karniKeys.resource(resource), "import", "job", jobId] as const;
 }
@@ -125,6 +127,7 @@ function importPath(resource: string, suffix = ""): string {
 
 const IN_FLIGHT: ReadonlySet<ImportStatus> = new Set<ImportStatus>(["previewing", "committing"]);
 
+/** True while an import job is previewing or committing (the states worth polling). */
 export function isImportInFlight(job: ImportJob | undefined): boolean {
   return job !== undefined && IN_FLIGHT.has(job.status);
 }
@@ -186,6 +189,7 @@ export async function downloadImportTemplate(
   return filename;
 }
 
+/** Fetches what a resource's import accepts: its columns, required fields and allowed values. */
 export function useImportDescribe(
   resource: string,
   options?: Omit<UseQueryOptions<ImportDescription>, "queryKey" | "queryFn">,
@@ -203,6 +207,7 @@ export interface UseImportJobOptions {
   pollMs?: number;
 }
 
+/** Fetches one import job and polls it while it runs. */
 export function useImportJob(
   resource: string,
   jobId: string | undefined,
@@ -238,6 +243,7 @@ export interface ImportActions {
   commit: UseMutationResult<ImportJob, unknown, string>;
 }
 
+/** Upload, preview and commit mutations for a resource's import jobs. */
 export function useImportActions(resource: string): ImportActions {
   const client = useKarniClient();
   const queryClient = useQueryClient();
