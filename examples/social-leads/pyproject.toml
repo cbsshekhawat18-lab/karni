@@ -1,0 +1,31 @@
+[project]
+name = "social_leads"
+version = "0.1.0"
+description = "Social Leads — a Karni project."
+requires-python = ">=3.12"
+dependencies = [
+    "karni",
+    "gunicorn",
+    "uvicorn-worker",
+    "psycopg[binary]",
+]
+
+[dependency-groups]
+# factory-boy and Faker come with karni (karni.testing factories, `karni seed`).
+dev = [
+    "pytest",
+    "pytest-django",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+# tests/ plus every app's own tests/ (`karni make test <Model>` writes there).
+# modules/ is left out: each module runs its own suite with its own settings.
+testpaths = ["tests", "*/tests"]
+# Karni's architecture rules run as a SEPARATE invocation (never via addopts):
+#   pytest --pyargs karni.testing.architecture
+
+[tool.karni]
+# The Karni release this project was generated for. `karni upgrade` starts
+# from here (or from the installed karni, whichever is newer).
+baseline = "0.2.0"

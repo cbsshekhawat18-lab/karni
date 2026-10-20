@@ -1,0 +1,11 @@
+/* Tailwind layers. The --karni-* tokens come from @karni/ui/styles.css
+   (imported first in main.tsx); override any token below to retheme. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-background text-foreground antialiased;
+    }
+}
