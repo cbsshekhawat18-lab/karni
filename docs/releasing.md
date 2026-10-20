@@ -115,6 +115,11 @@ accepts the same version twice.
   it, so publish soon after adding them. The workflow uploads one project at
   a time, core first, with `skip-existing`: a missing publisher stops the
   job before the next project, and a re-run after adding it is safe.
+- **PyPI with a token instead:** a `PYPI_API_TOKEN` repository secret, when
+  set, is used in place of trusted publishing (attestations are then off).
+  `.github/workflows/pypi-from-release.yml` ("Run workflow" with a tag)
+  uploads an existing GitHub release's Python files to PyPI the same way, for
+  a release whose PyPI step never ran or failed part-way.
 - **npm:** for each of the four packages, add a trusted publisher: this
   repository, workflow `release.yml`, environment `npm`. The `@karni` scope
   must exist and belong to the maintainers.
