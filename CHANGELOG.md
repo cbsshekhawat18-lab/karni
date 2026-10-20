@@ -9,6 +9,23 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
+## Unreleased
+
+- Tailwind 4 for new projects: `karni new` sets up Tailwind 4 through
+  `@tailwindcss/vite`, loading the same `@karni/ui` preset with `@config`, and
+  Vite 8. New `@karni/ui/tailwind-v4.css`, imported after Tailwind in a
+  Tailwind 4 project, keeps a bare `border` on the `--karni-border` token.
+  `@karni/ui` keeps working with Tailwind 3: every Storybook story (light and
+  dark) and every page a new project generates render pixel-identical under
+  Tailwind 3 and 4. The form and sign-in field gaps no longer use `space-y`
+  (Tailwind 4 moved its margin onto the inline label, which ignores it).
+- Development tooling: Vite 8, Vitest 5, Storybook 10 (with
+  msw-storybook-addon 3) and Tailwind 4 in `@karni/ui` and the module UIs;
+  CI and releases on Node 24 (Node 20 is out of support; Vitest 5 needs
+  22.12 or later, npm trusted publishing needs npm 11.5); the Pages and
+  artifact actions on their current majors. `npm audit` reports nothing, dev
+  dependencies included.
+
 ## 0.3.1 — 2026-10-20
 
 A patch release: security updates to the development tooling, Vite 6.4 for

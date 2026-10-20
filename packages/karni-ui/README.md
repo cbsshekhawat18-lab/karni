@@ -84,14 +84,33 @@ import "@karni/ui/styles.css";
 import "./index.css"; // your @tailwind base/components/utilities file
 ```
 
-### Tailwind v4 (CSS-first recipe)
+### Tailwind v4 (what `karni new` sets up)
 
-Tailwind v4 has no `presets` array; map the tokens in CSS instead:
+Keep the same `tailwind.config.ts` (the preset and the content paths) and load
+it with `@config`; add the `@tailwindcss/vite` plugin to `vite.config.ts`:
+
+```css
+/* src/index.css (main.tsx imports @karni/ui/styles.css first) */
+@import "tailwindcss";
+@import "@karni/ui/tailwind-v4.css";
+@config "../tailwind.config.ts";
+```
+
+`@karni/ui/tailwind-v4.css` keeps a bare `border` on the `--karni-border` token,
+as Tailwind 3 does (Tailwind 4 defaults borders to `currentColor`); a Tailwind 3
+project must not import it. With it, every Storybook story and the pages
+`karni new` generates render pixel-identical under Tailwind 3 and 4, light
+and dark.
+
+#### Alternative: no JavaScript config
+
+Map the tokens in CSS instead of loading the preset:
 
 ```css
 /* app.css */
 @import "tailwindcss";
 @import "@karni/ui/styles.css";
+@import "@karni/ui/tailwind-v4.css";
 
 /* Scan the library's shipped output for class names. */
 @source "../node_modules/@karni/ui/dist";

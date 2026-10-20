@@ -18,6 +18,7 @@ function copyStyles(): PluginOption {
     closeBundle() {
       mkdirSync(resolve(root, "dist"), { recursive: true });
       copyFileSync(resolve(root, "src/styles.css"), resolve(root, "dist/styles.css"));
+      copyFileSync(resolve(root, "src/tailwind-v4.css"), resolve(root, "dist/tailwind-v4.css"));
     },
   };
 }

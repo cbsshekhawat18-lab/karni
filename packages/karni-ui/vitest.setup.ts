@@ -1,5 +1,4 @@
 import "@testing-library/jest-dom/vitest";
-import { File as NodeFile } from "node:buffer";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./tests/msw/server";
@@ -74,23 +73,37 @@ if (typeof Blob.prototype.stream !== "function") {
 // --- fetch with files: keep their names --------------------------------------
 // Vitest's jsdom environment hands a jsdom FormData to Node's fetch by copying
 // each file into a plain Blob, which drops its name: the part goes out as
-// "blob". A browser sends the file's own name. So a body holding files is
-// rebuilt as Node's FormData with Node Files first, and the multipart tests
-// see what a browser would send.
-const NodeFormData = (await new Response(new URLSearchParams("probe=1")).formData())
-  .constructor as typeof FormData;
-async function withNamedFiles(body: FormData): Promise<FormData> {
-  const rebuilt = new NodeFormData();
+// "blob". A browser sends the file's own name. So a FormData body is encoded
+// here as multipart, the way a browser encodes it, before the request is
+// built; this works whatever FormData and File classes the environment uses.
+async function encodeMultipart(
+  body: FormData,
+): Promise<{ bytes: Uint8Array<ArrayBuffer>; type: string }> {
+  const boundary = `----karni-test-${Math.random().toString(16).slice(2)}`;
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [];
   for (const [key, value] of body.entries()) {
+    const disposition = `--${boundary}\r\nContent-Disposition: form-data; name="${key}"`;
     if (typeof value === "string") {
-      rebuilt.append(key, value);
+      chunks.push(encoder.encode(`${disposition}\r\n\r\n${value}\r\n`));
     } else {
-      const bytes = new Uint8Array(await value.arrayBuffer());
-      const file = new NodeFile([bytes], value.name, { type: value.type });
-      rebuilt.append(key, file as unknown as Blob, value.name);
+      const type = value.type || "application/octet-stream";
+      chunks.push(
+        encoder.encode(`${disposition}; filename="${value.name}"\r\nContent-Type: ${type}\r\n\r\n`),
+        new Uint8Array(await value.arrayBuffer()),
+        encoder.encode("\r\n"),
+      );
     }
   }
-  return rebuilt;
+  chunks.push(encoder.encode(`--${boundary}--\r\n`));
+  const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const bytes = new Uint8Array(new ArrayBuffer(size));
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return { bytes, type: `multipart/form-data; boundary=${boundary}` };
 }
 
 /** Wraps the current fetch (msw's, once the server listens) so files keep their names. */
@@ -98,7 +111,10 @@ function keepFileNames(): () => void {
   const inner = globalThis.fetch;
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     if (init?.body instanceof FormData) {
-      return inner(input, { ...init, body: await withNamedFiles(init.body) });
+      const { bytes, type } = await encodeMultipart(init.body);
+      const headers = new Headers(init.headers);
+      headers.set("content-type", type);
+      return inner(input, { ...init, body: bytes, headers });
     }
     return inner(input, init);
   };

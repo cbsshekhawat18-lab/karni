@@ -39,7 +39,7 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
 `AuthProvider`, the router and a `Toaster`; `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
-(Tailwind v3 with the `@karni/ui/tailwind-preset`, see `tailwind.config.ts`).
+(Tailwind 4 with the `@karni/ui/tailwind-preset`, loaded through `@config` from `tailwind.config.ts`).
 Every route renders inside `src/layout.tsx` — @karni/ui's `Layout` with one
 nav entry per static route in `src/routes.tsx`, so pages from
 `karni make page` (or `karni make model ... -a`) appear in the sidebar.

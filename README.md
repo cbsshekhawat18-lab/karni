@@ -75,7 +75,7 @@ Karni stays a versioned dependency that you upgrade; a boilerplate is copied onc
 
 ## Quickstart
 
-You need Python 3.12 or later and Node 20 or later. Version 0.3.0 is not on PyPI or npm yet, so these commands install it from the GitHub release.
+You need Python 3.12 or later and Node 20.19 or later (24 LTS recommended). Version 0.3.0 is not on PyPI or npm yet, so these commands install it from the GitHub release.
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate

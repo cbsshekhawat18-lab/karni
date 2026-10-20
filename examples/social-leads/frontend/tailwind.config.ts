@@ -1,7 +1,7 @@
 import karniPreset from "@karni/ui/tailwind-preset";
 import type { Config } from "tailwindcss";
 
-// Tailwind v3 + the @karni/ui preset: maps bg-primary, text-muted-foreground,
+// Loaded by Tailwind 4 through @config in src/index.css. The @karni/ui preset maps bg-primary, text-muted-foreground,
 // border, rounded-lg, ... onto the --karni-* tokens from @karni/ui/styles.css.
 export default {
     presets: [karniPreset],

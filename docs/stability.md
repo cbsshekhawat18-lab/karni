@@ -82,7 +82,7 @@ and a codemod or detector is included where possible.
 - Everything exported from the package root (`@karni/ui`): components, their
   documented props, hooks and types.
 - The subpath exports in `package.json`: `@karni/ui/styles.css`,
-  `@karni/ui/tailwind-preset`, `@karni/ui/eslint-plugin` and
+  `@karni/ui/tailwind-preset`, `@karni/ui/tailwind-v4.css`, `@karni/ui/eslint-plugin` and
   `@karni/ui/manifest.json`.
 - ESLint rule ids (`karni/no-raw-elements`, …) and what each forbids.
 - Deep imports (`@karni/ui/dist/...`, `src/...`) are internal, and the
@@ -128,7 +128,7 @@ and a codemod or detector is included where possible.
 |---|---|
 | Python | 3.12, 3.13, 3.14 (3.14 from 0.3.0) |
 | Django | 5.2 LTS |
-| Node.js (frontend tooling) | 20+ |
+| Node.js (frontend tooling) | 20.19+ for projects (Vite 8); 22.12+ to develop Karni itself (Vitest 5) |
 | React | 18, 19 |
 | PostgreSQL | 16+ (production). SQLite works for development and tests. |
 

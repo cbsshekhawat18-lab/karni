@@ -1,8 +1,8 @@
-/* Storybook-only stylesheet: the --karni-* tokens plus a local Tailwind
- * build (tailwind.config.ts at the package root scans src/ and .storybook/).
+/* Storybook-only stylesheet: the --karni-* tokens plus a local Tailwind 4
+ * build. tailwind.config.ts (the same preset consumers use) is loaded through
+ * @config, so stories render the way a project using the preset sees them.
  * The published package ships src/styles.css verbatim instead. */
 @import "../src/styles.css";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "../src/tailwind-v4.css";
+@config "../tailwind.config.ts";

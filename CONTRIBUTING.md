@@ -39,7 +39,7 @@ alike.
 
 ## Development setup
 
-You need Python 3.12+ and Node 20+.
+You need Python 3.12+ and Node 22.12+ (CI uses Node 24; Vitest 5 needs 22.12 or later).
 
 ```sh
 python3.12 -m venv .venv

@@ -35,6 +35,14 @@ export interface LoginFormProps {
   className?: string;
 }
 
+/**
+ * A field's label-to-control gap as Tailwind 3's `space-y` draws it: a top
+ * margin on every child after the first. Tailwind 4's `space-y` puts a bottom
+ * margin on the inline <label> instead, which an inline element ignores, so
+ * the gap is spelled out to render the same under both.
+ */
+const FIELD_GAP = "[&>:not([hidden])~:not([hidden])]:mt-1";
+
 /** Email and password sign-in form with inline errors and a callback for the two-factor step. */
 export function LoginForm({
   onSuccess,
@@ -85,7 +93,7 @@ export function LoginForm({
       {description !== undefined ? (
         <p className="text-sm text-muted-foreground">{description}</p>
       ) : null}
-      <div className="space-y-1">
+      <div className={FIELD_GAP}>
         <Label htmlFor={`${id}-email`}>Email</Label>
         <Input
           id={`${id}-email`}
@@ -96,7 +104,7 @@ export function LoginForm({
           disabled={disabled || busy}
         />
       </div>
-      <div className="space-y-1">
+      <div className={FIELD_GAP}>
         <Label htmlFor={`${id}-password`}>Password</Label>
         <Input
           id={`${id}-password`}
