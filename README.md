@@ -75,12 +75,12 @@ Karni stays a versioned dependency that you upgrade; a boilerplate is copied onc
 
 ## Quickstart
 
-You need Python 3.12 or 3.13 and Node 20 or later. Version 0.2.0 is not on PyPI or npm yet, so these commands install it from the GitHub release.
+You need Python 3.12 or later and Node 20 or later. Version 0.3.0 is not on PyPI or npm yet, so these commands install it from the GitHub release.
 
 ```sh
-python3.12 -m venv .venv && . .venv/bin/activate
-R=https://github.com/cbsshekhawat18-lab/karni/releases/download/v0.2.0
-pip install "$R/karni-0.2.0-py3-none-any.whl" "$R/karni_cli-0.2.0-py3-none-any.whl" pytest pytest-django
+python3 -m venv .venv && . .venv/bin/activate
+R=https://github.com/cbsshekhawat18-lab/karni/releases/download/v0.3.0
+pip install "$R/karni-0.3.0-py3-none-any.whl" "$R/karni_cli-0.3.0-py3-none-any.whl" pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
@@ -96,7 +96,7 @@ In a second terminal, in the same directory:
 
 ```sh
 cd ticket_shop/frontend
-npm install https://github.com/cbsshekhawat18-lab/karni/releases/download/v0.2.0/karni-ui-0.2.0.tgz
+npm install https://github.com/cbsshekhawat18-lab/karni/releases/download/v0.3.0/karni-ui-0.3.0.tgz
 npm run dev
 ```
 
@@ -110,7 +110,7 @@ Open `http://127.0.0.1:8000/` for the welcome page and `/admin/` for the admin. 
 | Serializers, viewsets, admin, permissions per model | you write them | you write them | generated once, then yours | derived from the model and its `access` rule |
 | An upstream fix reaches your code | only for Django itself | no | by regenerating and merging | through `karni upgrade` |
 | Teams, subscriptions, multi-tenancy | no | no | yes, mature | no; payments only, as a module |
-| Maturity | the standard | large community, many years in production | large, actively supported | version 0.2, two reference apps |
+| Maturity | the standard | large community, many years in production | large, actively supported | version 0.3, two reference apps |
 | Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated Docker Compose stack, not yet verified end to end |
 | AI agent guidance in the project | none | none in the generated project | Cursor rules, CLAUDE.md and Claude Code skills | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
 
@@ -422,7 +422,7 @@ Yes. Nothing in Karni calls a language model, and every generator, such as `karn
 The model, an `access` rule and whatever is specific to your domain. In the reference app EventHub, the `Venue` resource is a five-line model and a four-line viewset.
 
 **Is it production-ready?**
-Not yet. Version 0.2.0 has two reference applications and CI on every push, but no known production deployment, no PyPI or npm release, and a Docker path that has not been tested end to end.
+Not yet. Version 0.3.0 has two reference applications and CI on every push, but no known production deployment, no PyPI or npm release, and a Docker path that has not been tested end to end.
 
 **What happens when Karni releases a breaking change?**
 A public name keeps working for at least one minor release, with a `KarniDeprecationWarning` that names the release that removes it. `karni upgrade --to <version>` applies the mechanical changes and lists, by file and line, what it could not change ([stability promise](docs/stability.md)).
@@ -436,11 +436,10 @@ A public name keeps working for at least one minor release, with a `KarniDepreca
 
 ## Status and roadmap
 
-Version 0.2.0 was released on 2026-10-20. Each capability's status is in the [reference](docs/REFERENCE.md#capabilities-and-status).
+Version 0.3.0 was released on 2026-10-20, with Django 5.2 LTS and Python 3.12 to 3.14. Each capability's status is in the [reference](docs/REFERENCE.md#capabilities-and-status).
 
 - **Stable:** models, the API with `access`, roles with the `all` and `own` scopes, the admin, the schema-driven components, change history, import and export, the testing helpers and the agent tooling.
 - **Built, not yet used by a reference app:** the `related:` and `custom:` scopes, field visibility per role, row scope in the admin, and the approvals and impersonation modules.
-- **Next release, already on `main`:** Django 5.2 LTS, Python 3.14, and a check that fails when a role's scope path does not resolve.
 - **Not done:** PyPI and npm releases, an end-to-end test of the Docker stack, the tenancy module.
 
 ## Documentation, contributing, security, license
