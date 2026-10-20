@@ -1,0 +1,18 @@
+# gitleaks (Security scans → Secrets): the default rules, plus the two kinds
+# of secret-shaped text this repository contains on purpose. Neither is a
+# credential for anything that exists.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Audit evidence from throwaway local projects, and test-fixture passwords"
+paths = [
+  # Raw request logs of the 2026-10-18 launch audit: JWTs and one-time tokens
+  # issued by scratch projects on localhost, each with its own random
+  # SECRET_KEY, long since deleted.
+  '''^docs/audit/evidence/''',
+]
+regexes = [
+  # Passwords the test suites give their fixture users.
+  '''^pw-12345678\d*$''',
+]
