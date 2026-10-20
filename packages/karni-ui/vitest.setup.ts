@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import { File as NodeFile } from "node:buffer";
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./tests/msw/server";
@@ -70,11 +71,54 @@ if (typeof Blob.prototype.stream !== "function") {
   };
 }
 
+// --- fetch with files: keep their names --------------------------------------
+// Vitest's jsdom environment hands a jsdom FormData to Node's fetch by copying
+// each file into a plain Blob, which drops its name: the part goes out as
+// "blob". A browser sends the file's own name. So a body holding files is
+// rebuilt as Node's FormData with Node Files first, and the multipart tests
+// see what a browser would send.
+const NodeFormData = (await new Response(new URLSearchParams("probe=1")).formData())
+  .constructor as typeof FormData;
+async function withNamedFiles(body: FormData): Promise<FormData> {
+  const rebuilt = new NodeFormData();
+  for (const [key, value] of body.entries()) {
+    if (typeof value === "string") {
+      rebuilt.append(key, value);
+    } else {
+      const bytes = new Uint8Array(await value.arrayBuffer());
+      const file = new NodeFile([bytes], value.name, { type: value.type });
+      rebuilt.append(key, file as unknown as Blob, value.name);
+    }
+  }
+  return rebuilt;
+}
+
+/** Wraps the current fetch (msw's, once the server listens) so files keep their names. */
+function keepFileNames(): () => void {
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    if (init?.body instanceof FormData) {
+      return inner(input, { ...init, body: await withNamedFiles(init.body) });
+    }
+    return inner(input, init);
+  };
+  return () => {
+    globalThis.fetch = inner;
+  };
+}
+
 // --- MSW server lifecycle (handlers live in tests/msw/) ----------------------
 
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+let restoreFetch: () => void = () => undefined;
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "error" });
+  restoreFetch = keepFileNames(); // above msw's fetch, which builds the Request
+});
 afterEach(() => {
   cleanup();
   server.resetHandlers();
 });
-afterAll(() => server.close());
+afterAll(() => {
+  restoreFetch();
+  server.close();
+});

@@ -9,6 +9,18 @@ Breaking changes and deprecations are recorded in machine-readable form in
 reads to apply codemods and list the manual steps — and explained in
 `docs/migrations/<version>.md`. This file is the human summary.
 
+## Unreleased
+
+- Development tooling upgraded, closing every Dependabot alert (52, all in
+  build and test tools, none in what the packages ship): Vite 6.4, Vitest 4.1
+  (which drops tinypool), vite-plugin-dts 5 (API Extractor, and with it
+  sprintf-js, is no longer installed), typescript-eslint 8 in the module UIs,
+  and overrides for `uuid` (Storybook 8) and `postcss-selector-parser`
+  (Tailwind 3). New projects get Vite 6.4 and the same override. The
+  generated type declarations and Tailwind's output are unchanged. Vitest 4
+  hands a jsdom `FormData` to Node's fetch without file names, so the UI test
+  setup restores them the way a browser sends them.
+
 ## 0.3.0 — 2026-10-20
 
 See [docs/migrations/0.3.md](docs/migrations/0.3.md) for the two breaking
