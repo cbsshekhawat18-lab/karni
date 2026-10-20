@@ -1,0 +1,158 @@
+<!doctype html>
+<!--
+  The first frame of docs/assets/karni-demo.gif: what a reader sees while the
+  GIF is paused (GitHub pauses animations for readers who turned autoplay off).
+  record.cjs fills the placeholders with the brand lockup and screenshots
+  taken during the same recording, then saves the page as a PNG.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+      }
+      body {
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        position: relative;
+      }
+      .logo {
+        position: absolute;
+        left: 56px;
+        top: 44px;
+        height: 52px;
+      }
+      h1 {
+        position: absolute;
+        left: 56px;
+        top: 118px;
+        margin: 0;
+        width: 1170px;
+        font-size: 46px;
+        line-height: 1.15;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      h1 code {
+        font-family: Menlo, Consolas, monospace;
+        font-size: 42px;
+        color: #f0883e;
+        background: #161b22;
+        border-radius: 8px;
+        padding: 2px 12px;
+      }
+      p.sub {
+        position: absolute;
+        left: 56px;
+        top: 196px;
+        margin: 0;
+        width: 1100px;
+        font-size: 22px;
+        line-height: 1.4;
+        color: #9da7b3;
+      }
+      .term {
+        position: absolute;
+        left: 56px;
+        top: 290px;
+        width: 470px;
+        height: 380px;
+        box-sizing: border-box;
+        padding: 22px 24px;
+        border-radius: 12px;
+        background: #010409;
+        border: 1px solid #30363d;
+        font:
+          17px/1.75 Menlo,
+          Consolas,
+          monospace;
+        color: #c9d1d9;
+        white-space: pre;
+      }
+      .term .p {
+        color: #f0883e;
+      }
+      .term .ok {
+        color: #7ee787;
+      }
+      .shot {
+        position: absolute;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid #30363d;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+        background: #fff;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+      }
+      .admin {
+        left: 556px;
+        top: 290px;
+        width: 500px;
+      }
+      .app {
+        left: 724px;
+        top: 412px;
+        width: 500px;
+      }
+      .label {
+        position: absolute;
+        font-size: 15px;
+        font-weight: 600;
+        color: #0d1117;
+        background: #f0883e;
+        border-radius: 6px;
+        padding: 4px 10px;
+      }
+      .label.admin-l {
+        left: 570px;
+        top: 304px;
+      }
+      .label.app-l {
+        left: 738px;
+        top: 426px;
+      }
+      .foot {
+        position: absolute;
+        left: 56px;
+        top: 700px;
+        font-size: 18px;
+        color: #9da7b3;
+      }
+    </style>
+  </head>
+  <body>
+    <img class="logo" src="{{LOGO}}" alt="" />
+    <h1>
+      From <code>karni new</code> to a running Django&nbsp;+&nbsp;React app
+    </h1>
+    <p class="sub">
+      Declare a model and who may access it. The REST API, admin, permissions,
+      React screens, tests and seed data come from the framework.
+    </p>
+    <div class="term">
+      <span class="p">$</span> karni new "Ticket Shop"
+      <span class="p">$</span> karni make model Event \ title:str:200
+      starts_at:datetime \ organizer:fk:User -a \ --access owned:organizer
+      <span class="ok">created</span> frontend/src/pages/events.tsx
+      <span class="ok">created</span> events/tests/test_event.py
+      <span class="p">$</span> karni migrate &amp;&amp; karni seed
+      <span class="p">$</span> karni serve --local
+    </div>
+    <div class="shot admin"><img src="{{ADMIN}}" alt="" /></div>
+    <div class="shot app"><img src="{{APP}}" alt="" /></div>
+    <span class="label admin-l">Admin, no admin.py</span>
+    <span class="label app-l">React app on @karni/ui</span>
+    <div class="foot">
+      Recorded from the README quickstart, Karni {{VERSION}}
+    </div>
+  </body>
+</html>
