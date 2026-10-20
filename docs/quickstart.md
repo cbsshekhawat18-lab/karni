@@ -105,8 +105,9 @@ domain and the framework did the rest. From here:
 
 ## Using a Karni checkout instead of PyPI
 
-Until the packages are published, replace the `pip install` line with
-editable installs from a checkout and let `karni new` find `@karni/ui` in it:
+To try changes that are not released yet, replace the `pip install` line
+with editable installs from a checkout and let `karni new` find `@karni/ui`
+in it:
 
 ```sh
 pip install -e /path/to/Karni/packages/karni -e /path/to/Karni/packages/karni-cli
