@@ -1,11 +1,15 @@
 name: Release
 
 # Pushing a tag vX.Y.Z publishes every package at X.Y.Z (lockstep versioning,
-# docs/releasing.md): karni, karni-cli and karni-payments to PyPI, @karni/ui
-# and @karni/payments-ui to npm, each with build provenance.
+# docs/releasing.md): karni, karni-cli, karni-payments, karni-approvals and
+# karni-impersonation to PyPI; @karni/ui, @karni/payments-ui,
+# @karni/approvals-ui and @karni/impersonation-ui to npm; each with build
+# provenance.
 #
-# Publishing is off until the repository variable KARNI_PUBLISHING is "true"
-# (Settings → Secrets and variables → Actions → Variables). Before that, and
+# Publishing is off until the repository variable KARNI_PUBLISHING names the
+# registries to publish to: "pypi", "npm", "pypi,npm" or "true" (both)
+# (Settings → Secrets and variables → Actions → Variables). Each registry is
+# switched on once its trusted publishers exist. Before that, and
 # on every "Run workflow" with dry_run checked, the workflow is a dry run: it
 # runs CI, checks the release metadata, builds every distribution, runs
 # `twine check --strict`, installs the wheels into a clean venv, runs
@@ -13,14 +17,14 @@ name: Release
 # nothing. A tag push with the variable set is the only path that publishes.
 #
 # One-time setup (repository settings, not code):
-#   - PyPI: add a trusted publisher for each of the three projects
+#   - PyPI: add a (pending) trusted publisher for each of the five projects
 #     (this repository, workflow release.yml, environment "pypi").
-#   - npm: add a trusted publisher for @karni/ui and @karni/payments-ui
+#   - npm: add a trusted publisher for each of the four packages
 #     (this repository, workflow release.yml, environment "npm"). No token is
 #     stored; npm exchanges the workflow's OIDC token at publish time.
 #   - Environments "pypi" and "npm": add required reviewers to gate a publish
 #     on a human.
-#   - Variable KARNI_PUBLISHING = true, last.
+#   - Variable KARNI_PUBLISHING, last: the registries that are set up.
 
 on:
   push:
@@ -48,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       publish: ${{ steps.mode.outputs.publish }}
+      pypi: ${{ steps.mode.outputs.pypi }}
+      npm: ${{ steps.mode.outputs.npm }}
       tag: ${{ steps.mode.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
@@ -60,10 +66,21 @@ jobs:
         run: |
           set -euo pipefail
           publish=false
-          if [ "$PUBLISHING" = "true" ] && [[ "$REF" == refs/tags/v* ]]; then
+          case ",$PUBLISHING," in
+            ,true,) registries="pypi,npm" ;;
+            *) registries="$PUBLISHING" ;;
+          esac
+          pypi=false
+          npm=false
+          if [ -n "$registries" ] && [[ "$REF" == refs/tags/v* ]]; then
             case "$EVENT:$DRY_RUN" in
               push:*|workflow_dispatch:false) publish=true ;;
             esac
+          fi
+          if [ "$publish" = "true" ]; then
+            [[ ",$registries," == *,pypi,* ]] && pypi=true
+            [[ ",$registries," == *,npm,* ]] && npm=true
+            [ "$pypi" = "true" ] || [ "$npm" = "true" ] || publish=false
           fi
           if [[ "$REF" == refs/tags/* ]]; then
             tag="${REF#refs/tags/}"
@@ -71,13 +88,15 @@ jobs:
             tag="v$(python3 -c 'import tomllib; print(tomllib.load(open("packages/karni/pyproject.toml", "rb"))["project"]["version"])')"
           fi
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "pypi=$pypi" >> "$GITHUB_OUTPUT"
+          echo "npm=$npm" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           {
             echo "## Release $tag"
             if [ "$publish" = "true" ]; then
-              echo "Publishing: KARNI_PUBLISHING is true and this is a release tag."
-            elif [ "$PUBLISHING" != "true" ]; then
-              echo "Dry run: the repository variable KARNI_PUBLISHING is not \"true\"; nothing will be published."
+              echo "Publishing to: $( [ "$pypi" = true ] && echo -n 'PyPI ' )$( [ "$npm" = true ] && echo -n 'npm' ) (KARNI_PUBLISHING=$PUBLISHING, release tag)."
+            elif [ -z "$PUBLISHING" ]; then
+              echo "Dry run: the repository variable KARNI_PUBLISHING is not set; nothing will be published."
             elif [[ "$REF" != refs/tags/v* ]]; then
               echo "Dry run: \`$REF\` is not a release tag; nothing will be published."
             else
@@ -176,7 +195,7 @@ jobs:
   publish-pypi:
     name: Publish to PyPI
     needs: [mode, build-python]
-    if: needs.mode.outputs.publish == 'true'
+    if: needs.mode.outputs.pypi == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -187,16 +206,41 @@ jobs:
         with:
           name: python-dist
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          attestations: true
+      # One upload per project, core first: a project whose trusted publisher
+      # is missing stops the job without half-publishing the others, and
+      # skip-existing makes a re-run after fixing it safe.
+      - name: One directory per project
+        run: |
+          set -euo pipefail
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation; do
+            mkdir -p "pypi/$project"
+            mv dist/"$project"-[0-9]* "pypi/$project/"
+          done
+          if [ -n "$(ls -A dist)" ]; then echo "unexpected files in dist/:"; ls dist; exit 1; fi
+          ls -R pypi
+      - name: karni
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with: { packages-dir: pypi/karni/, attestations: true, skip-existing: true }
+      - name: karni-cli
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with: { packages-dir: pypi/karni_cli/, attestations: true, skip-existing: true }
+      - name: karni-payments
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with: { packages-dir: pypi/karni_payments/, attestations: true, skip-existing: true }
+      - name: karni-approvals
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with: { packages-dir: pypi/karni_approvals/, attestations: true, skip-existing: true }
+      - name: karni-impersonation
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with: { packages-dir: pypi/karni_impersonation/, attestations: true, skip-existing: true }
 
   publish-npm:
     name: Publish to npm
     # After PyPI: a JS-only failure must not leave npm ahead of the backend
     # it talks to.
     needs: [mode, build-npm, publish-pypi]
-    if: needs.mode.outputs.publish == 'true'
+    # publish-pypi may be skipped (npm alone); it must not have failed.
+    if: needs.mode.outputs.npm == 'true' && !cancelled() && !failure()
     runs-on: ubuntu-latest
     environment:
       name: npm
@@ -220,8 +264,9 @@ jobs:
 
   github-release:
     name: GitHub release
-    needs: [mode, publish-pypi, publish-npm]
-    if: needs.mode.outputs.publish == 'true'
+    needs: [mode, build-npm, publish-pypi, publish-npm]
+    # After whichever registries this run published to; none may have failed.
+    if: needs.mode.outputs.publish == 'true' && !cancelled() && !failure()
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -231,12 +276,18 @@ jobs:
         with:
           name: python-dist
           path: dist/
+      # The npm tarballs too: until a package is on npm, the release is where
+      # it installs from (npm install <release URL>/karni-ui-X.Y.Z.tgz).
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-dist
+          path: dist/
       - name: Create the release with the built distributions
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.mode.outputs.tag }}
         # A release made by hand before registry publishing was set up (0.2.0,
-        # 0.3.0) already exists: replace its Python files instead of failing.
+        # 0.3.0) already exists: replace its files instead of failing.
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
@@ -260,7 +311,7 @@ jobs:
             echo "## Dry run complete — nothing was published"
             echo
             echo "Every gate passed for $TAG: CI, release metadata, \`python -m build\` + \`twine check --strict\`,"
-            echo "a clean-venv install of the wheels, and \`npm publish --dry-run\` for both npm packages."
+            echo "a clean-venv install of the wheels, and \`npm publish --dry-run\` for every npm package."
             echo
             echo "Artifacts to inspect: **python-dist** (sdists and wheels) and **npm-dist** (packed tarballs)."
             echo

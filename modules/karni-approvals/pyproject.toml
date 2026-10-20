@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-approvals"
-version = "0.3.0"
+version = "0.3.1"
 description = "Maker-checker approvals module for the Karni Django + React framework: a second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail."
 readme = "README.md"
 requires-python = ">=3.12"
