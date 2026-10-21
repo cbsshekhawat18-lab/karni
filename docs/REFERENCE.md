@@ -65,6 +65,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
+| `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 
 ### Permissions
 
@@ -208,6 +209,44 @@ Every setting with its effective value and source.
 ```
 karni config list
 ```
+
+### Frontend
+
+#### `karni ui`
+
+Fit Karni's components to the project's design system.
+
+```
+karni ui COMMAND [ARGS]...
+```
+
+##### `karni ui detect`
+
+Adopt the frontend's design system: map its theme onto Karni's `--karni-*` tokens.
+
+Detection order: shadcn/ui (`components.json`: Karni's tokens reference the project's CSS variables with `var()`, and `karni-primitives.tsx` registers its components as Karni's primitives); a Tailwind theme (`@theme` blocks, or the `tailwind.config` that Node evaluates in the project); a Material UI, Chakra UI or Mantine theme (literal values read from the source); else Karni's defaults, listed for editing.
+
+Writes one file the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import). The report lists every token mapped (from, to, value) and every value not mapped, with the reason. A generated file edited since is never overwritten without `--force`.
+
+Example:
+
+```sh
+karni ui detect --dry-run
+```
+
+```
+karni ui detect [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--output`, `-o` PATH |  | Where to write karni-theme.css (default: next to the main stylesheet). |
+| `--frontend` PATH |  | The frontend directory (default: the current directory if it has package.json, else ./frontend, else the Karni project's frontend/). |
+| `--source` CHOICE |  | Read this source instead of detecting the first one present: shadcn, tailwind, mui, chakra, mantine or defaults. |
+| `--primitives/--no-primitives` | on | For shadcn/ui, also write karni-primitives.tsx (the project's components as Karni's primitives). |
+| `--force` |  | Overwrite generated files even if they were edited. |
+| `--dry-run` |  | Print the report and the files; write nothing. |
+| `--json` |  | Print the report as JSON (for agents). |
 
 ### Agents and checks
 
@@ -1440,6 +1479,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C301`](errors.md#c301) | cli | No frontend found |
+| [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
+| [`C303`](errors.md#c303) | cli | A theme source cannot be read |
+| [`C304`](errors.md#c304) | cli | The frontend has no theme of the --source kind |
 
 ### Agent rules (`K`)
 

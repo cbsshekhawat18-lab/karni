@@ -93,9 +93,10 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C006",
         "An optional tool is not installed",
-        "karni mcp, karni types",
+        "karni mcp, karni types, karni ui detect",
         "Some commands need extra tools: the MCP SDK for karni mcp, Node and "
-        "openapi-typescript for karni types.",
+        "openapi-typescript for karni types, Node for karni ui detect to evaluate a "
+        "tailwind.config.",
         "Install what the message names, e.g. pip install 'karni-cli[mcp]', or add "
         "openapi-typescript to frontend devDependencies (Node 20+).",
     ),
@@ -110,9 +111,10 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C008",
         "A file cannot be written",
-        "karni config",
+        "karni config, karni ui detect",
         "The file or its directory is not writable.",
-        "Check the path's permissions, or set the value per project instead of --global.",
+        "Check the path's permissions; for karni config set the value per project instead of "
+        "--global, for karni ui detect choose another place with --output.",
     ),
     _c(
         "C009",
@@ -184,7 +186,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C106",
         "An option value is invalid",
-        "karni make, karni types",
+        "karni make, karni types, karni ui detect",
         "The option accepts specific values (the message lists them).",
         "Use one of the values shown, e.g. --access owned:organizer or --every 15m.",
     ),
@@ -280,6 +282,44 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add",
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
+    ),
+    # C3xx karni ui
+    _c(
+        "C301",
+        "No frontend found",
+        "karni ui detect",
+        "karni ui detect reads a frontend: its package.json, stylesheets and theme files. It "
+        "looks in the current directory, in ./frontend, and in the Karni project's frontend/.",
+        "Run it in the frontend directory (the one with package.json), or pass --frontend <dir>.",
+    ),
+    _c(
+        "C302",
+        "A generated file was edited, so karni ui detect does not overwrite it",
+        "karni ui detect (karni-theme.css, karni-primitives.tsx)",
+        "The files karni ui detect writes belong to the project. Each carries a digest of what "
+        "was generated; a file whose content no longer matches it (or that has none) was "
+        "edited by hand, and a re-run must not lose those edits silently.",
+        "Compare with `karni ui detect --dry-run` and copy what you need; or overwrite with "
+        "--force; or write the new file elsewhere with --output.",
+    ),
+    _c(
+        "C303",
+        "A theme source cannot be read",
+        "karni ui detect (components.json, the stylesheet it names, tailwind.config)",
+        "karni ui detect maps the project's theme from its files: shadcn/ui's components.json "
+        "and the stylesheet it names, or a tailwind.config that Node evaluates in the project "
+        "(with the project's own packages). The message names the file and what failed.",
+        "Fix the file the message names (or run npm install so a config's imports load), or "
+        "pass --source to read another theme source.",
+    ),
+    _c(
+        "C304",
+        "The frontend has no theme of the --source kind",
+        "karni ui detect --source",
+        "--source makes karni ui detect read one source (shadcn, tailwind, mui, chakra, "
+        "mantine) instead of detecting; that source is not in this frontend.",
+        "Run karni ui detect without --source to detect what the frontend has, or name a "
+        "source it uses.",
     ),
 )
 

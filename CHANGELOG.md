@@ -11,6 +11,19 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `karni ui detect`: adopts the frontend's design system as `@karni/ui`'s
+  tokens, in one file the project owns (`karni-theme.css`, imported after
+  `@karni/ui/styles.css`). shadcn/ui: every token references the project's
+  own variable (`var(--primary)`, or `hsl(var(--primary))` for Tailwind 3
+  HSL channels) on `:root, .dark`, and `karni-primitives.tsx` registers the
+  project's shadcn components as Karni's primitives. Otherwise a Tailwind
+  theme (`@theme`, or the `tailwind.config` Node evaluates), a Material UI,
+  Chakra UI or Mantine theme (literal values read statically), or Karni's
+  defaults listed for editing. The report lists every token mapped and every
+  value not mapped with the reason (`--json` for agents, `--dry-run` to
+  preview); an edited file is never overwritten without `--force`. New error
+  codes C301-C304. `karni new` does not write the file (nothing to detect in
+  a fresh project). See [docs/theming.md](docs/theming.md).
 - `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
   input: Input, select: {...} }}>` renders every Karni component with the
   project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,

@@ -223,6 +223,38 @@ The 0.3 names (`--karni-primary: 262 83% 58%`, an HSL triplet) still work:
 each `--karni-color-*` defaults to `hsl()` of its 0.3 name. They are
 deprecated in 0.4 and removed in 1.0 ([migration note](https://cbsshekhawat18-lab.github.io/karni/migrations/0.4/)).
 
+### Adopting your design system: `karni ui detect`
+
+A project that already has a design system does not retype it. Run
+`karni ui detect` in the frontend (or the Karni project root):
+
+```sh
+karni ui detect --dry-run   # the report and the file, nothing written
+karni ui detect             # write src/karni-theme.css (and wire it in)
+```
+
+It maps the first theme it finds onto the tokens above and writes one file
+the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css`:
+
+1. **shadcn/ui** (`components.json`): every token references the project's
+   own variable, `--karni-color-primary: var(--primary)` (or
+   `hsl(var(--primary))` for shadcn's Tailwind 3 HSL channels), declared on
+   `:root, .dark` so the project's theme and dark mode flow through live. It
+   also writes `karni-primitives.tsx`, registering the project's shadcn
+   components as Karni's primitives (below).
+2. **A Tailwind theme**: `@theme` blocks (Tailwind 4), or the
+   `tailwind.config` Node evaluates in the project (Tailwind 3).
+3. **A Material UI, Chakra UI or Mantine theme**: the literal values of its
+   `createTheme` / `extendTheme` / `createSystem` call.
+4. **Nothing**: Karni's defaults, listed commented, for you to edit.
+
+The report lists every token mapped (from, to, value) and every value not
+mapped with the reason (a palette is never turned into `primary`
+silently: the line to add is printed). Re-running never overwrites a file
+you edited unless you pass `--force`; `--json` prints the report for agents.
+See [Theming](https://cbsshekhawat18-lab.github.io/karni/theming/) for each
+source in detail.
+
 ## Resource components
 
 Every resource component takes the backend's resource name (the router prefix)
@@ -363,6 +395,12 @@ its own). `select` is replaced as a whole family because Radix parts share a
 context. A registered component may wrap Karni's own primitive: inside it, the
 role resolves to Karni's again. `KarniPrimitivesProvider` changes the registry
 for a subtree.
+
+In a shadcn/ui project, `karni ui detect` writes this registry for you as
+`karni-primitives.tsx` (a file the project owns), with only the roles whose
+shadcn component exists, and the `select` family only when `select.tsx`
+exports all eight parts on Radix. It adds `primitives={primitives}` to the
+scaffold's `<KarniProvider client={client}>`, or prints the line to add.
 
 ## Manifest for coding agents
 

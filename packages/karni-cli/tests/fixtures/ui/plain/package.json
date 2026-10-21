@@ -1,0 +1,5 @@
+{
+  "name": "plain-app",
+  "private": true,
+  "dependencies": { "@karni/ui": "^0.4.0", "react": "^18.3.1" }
+}

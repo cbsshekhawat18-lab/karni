@@ -1,0 +1,201 @@
+"""The files ``karni ui detect`` writes, and the guard that keeps hand edits.
+
+Each generated file carries a digest line in its header comment:
+``karni ui detect: sha256 <16 hex>``, the SHA-256 of the whole file with that
+field blanked. A re-run overwrites the file only while the digest still
+matches (nobody edited it); an edited file, or one without the line, needs
+``--force``.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import re
+import textwrap
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
+
+from karni_cli.uitheme.model import COLOR_ROLES, Detection, Mapping, Scheme
+
+_PLACEHOLDER = "0" * 16
+_DIGEST = re.compile(r"karni ui detect: sha256 ([0-9a-f]{16})")
+DIGEST_LINE = f"karni ui detect: sha256 {_PLACEHOLDER}"
+
+State = Literal["absent", "unmodified", "modified"]
+
+_TOKEN_ORDER = [f"--karni-color-{role}" for role in COLOR_ROLES] + [
+    "--karni-radius",
+    "--karni-radius-sm",
+    "--karni-radius-md",
+    "--karni-radius-lg",
+    "--karni-radius-xl",
+    "--karni-radius-full",
+    "--karni-font-sans",
+    "--karni-font-mono",
+    "--karni-shadow-sm",
+    "--karni-shadow",
+    "--karni-shadow-md",
+    "--karni-shadow-lg",
+    "--karni-space-unit",
+]
+
+
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def seal(text: str) -> str:
+    """Fill the digest line of freshly rendered ``text``."""
+    return text.replace(DIGEST_LINE, f"karni ui detect: sha256 {_digest(text)}", 1)
+
+
+def state(path: Path) -> State:
+    """``absent``, ``unmodified`` (as karni ui detect wrote it) or ``modified``."""
+    if not path.exists():
+        return "absent"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return "modified"
+    match = _DIGEST.search(text)
+    if match is None:
+        return "modified"
+    blank = text[: match.start(1)] + _PLACEHOLDER + text[match.end(1) :]
+    return "unmodified" if _digest(blank) == match.group(1) else "modified"
+
+
+def _order(mapping: Mapping) -> tuple[int, str]:
+    try:
+        return _TOKEN_ORDER.index(mapping.token), mapping.token
+    except ValueError:
+        return len(_TOKEN_ORDER), mapping.token
+
+
+def _declaration(mapping: Mapping, commented: bool = False) -> list[str]:
+    lines: list[str] = []
+    if mapping.note:
+        wrapped = textwrap.wrap(f"{mapping.note}.", width=88)
+        lines.append(f"  /* {wrapped[0]}")
+        lines += [f"     {line}" for line in wrapped[1:]]
+        lines[-1] += " */"
+    text = f"{mapping.token}: {mapping.value};"
+    if commented:
+        return [*lines, f"  /* {text} */"]
+    origin = mapping.source.split(" ", 1)[-1]
+    if origin and origin not in mapping.value and mapping.source != "(none)":
+        text += f" /* {mapping.source} */"
+    return [*lines, f"  {text}"]
+
+
+_SCHEME_HEADINGS: dict[Scheme, tuple[str, list[str]]] = {
+    "both": (
+        ":root,\n.dark {",
+        [
+            "/* Declared on :root and .dark: a value that reads another variable must be",
+            "   recomputed in a dark subtree (a :root declaration is inherited computed). */",
+        ],
+    ),
+    "light": (":root {", []),
+    "dark": (".dark {", []),
+}
+
+
+def theme_body(detection: Detection) -> str:
+    blocks: list[str] = []
+    entries = detection.commented or detection.mappings
+    commented = bool(detection.commented)
+    if commented:
+        blocks.append(
+            "/* Karni's defaults, from @karni/ui's styles.css. Uncomment a line to change it;\n"
+            "   any colour notation works (hsl(), oklch(), hex, var() of your own variable). */"
+        )
+    for scheme in ("both", "light", "dark"):
+        chosen = sorted((m for m in entries if m.scheme == scheme), key=_order)
+        if not chosen:
+            continue
+        opener, comment = _SCHEME_HEADINGS[scheme]
+        lines = [*comment, opener]
+        for mapping in chosen:
+            lines += _declaration(mapping, commented)
+        lines.append("}")
+        blocks.append("\n".join(lines))
+    suggestions = [u for u in detection.unmapped if u.suggestion]
+    if suggestions:
+        lines = ["/* Not mapped: lines you could add (see the `karni ui detect` report)."]
+        for unmapped in suggestions:
+            lines.append(f"   {unmapped.name}: {unmapped.suggestion}")
+        lines[-1] += " */"
+        blocks.append("\n".join(lines))
+    if not blocks:
+        blocks.append("/* Nothing to set: Karni's defaults apply (@karni/ui/styles.css). */")
+    return "\n\n".join(blocks) + "\n"
+
+
+def theme_file(detection: Detection, *, date: str, import_after: str) -> str:
+    files = ", ".join(detection.files) or "-"
+    header = [
+        "/*",
+        " * karni-theme.css: this project's values for Karni's design tokens (--karni-*).",
+        " *",
+        f" * Detected: {detection.label}",
+        f" * Read: {files}",
+        f" * Generated by `karni ui detect` on {date}.",
+        " *",
+        f" * This file is yours: edit it freely. Import it after {import_after}.",
+        " * `karni ui detect` will not overwrite it once edited (unless --force);",
+        " * the next line lets it tell.",
+        f" * {DIGEST_LINE}",
+        " */",
+    ]
+    return seal("\n".join(header) + "\n\n" + theme_body(detection))
+
+
+def primitives_file(
+    body: str, *, alias: str, date: str, missing: list[str], name: str = "karni-primitives.tsx"
+) -> str:
+    header = [
+        "/**",
+        f" * {name}: Karni's primitive roles filled with this project's shadcn/ui",
+        f" * components (components.json ui alias: {alias}).",
+        " *",
+        f" * Generated by `karni ui detect` on {date}. Pass it to KarniProvider:",
+        " *   <KarniProvider client={client} primitives={primitives}>",
+        " * and every Karni component (ResourceTable, ResourceForm, ...) renders these in",
+        " * place of Karni's own. A role left out renders Karni's.",
+    ]
+    if missing:
+        header.append(f" * Not registered: {', '.join(missing)} (see the karni ui detect report).")
+    header += [
+        " *",
+        " * This file is yours: edit it freely. `karni ui detect` will not overwrite it once",
+        " * edited (unless --force); the next line lets it tell.",
+        f" * {DIGEST_LINE}",
+        " */",
+    ]
+    return seal("\n".join(header) + "\n" + body)
+
+
+@dataclass
+class Planned:
+    """A file to write and what happens to it."""
+
+    path: Path
+    content: str
+    state: State
+
+    @property
+    def unchanged(self) -> bool:
+        """The file already says the same (ignoring the generation date and digest)."""
+        if self.state == "absent":
+            return False
+        try:
+            current = self.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return False
+        return _comparable(current) == _comparable(self.content)
+
+
+def _comparable(text: str) -> str:
+    text = re.sub(r"Generated by `karni ui detect` on [\d-]+", "", text)
+    return _DIGEST.sub("", text)
