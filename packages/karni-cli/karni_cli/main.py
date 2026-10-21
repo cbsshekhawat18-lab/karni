@@ -27,6 +27,7 @@ from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
 from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.types import types
+from karni_cli.commands.ui import ui_app
 from karni_cli.commands.upgrade import upgrade
 from karni_cli.commands.worker import worker
 from karni_cli.project import PASSTHROUGH, CliError
@@ -62,6 +63,7 @@ def _root(
 app.command(help="Scaffold a project from templates/project")(new)
 app.command(help="Install an optional module and wire it into settings")(add)
 app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(types)
+app.add_typer(ui_app, name="ui")
 app.command(help="Print a compact machine-readable project inventory")(context)
 app.command(help="Run architecture and system checks")(check)
 app.command(help="Upgrade across Karni versions: codemods, diff, manual-change report")(upgrade)

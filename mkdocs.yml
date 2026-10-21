@@ -73,6 +73,7 @@ nav:
       - Seeding: seeding.md
       - Settings: settings.md
       - "@karni/ui": ui.md
+      - Theming (karni ui detect): theming.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md

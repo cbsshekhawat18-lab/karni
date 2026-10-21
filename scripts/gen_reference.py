@@ -195,6 +195,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
+    Capability(
+        "ui",
+        "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
+        "Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives",
+    ),
     # permissions
     Capability(
         "permissions",

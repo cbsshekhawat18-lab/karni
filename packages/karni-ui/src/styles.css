@@ -16,7 +16,8 @@
  * The Tailwind preset maps its classes to these properties, so `bg-primary`
  * or `p-4` in a component (or in your own code) reads them. Override any of
  * them in your own stylesheet to retheme every component; `karni ui detect`
- * writes karni-theme.css for you from shadcn/ui or Tailwind theme values.
+ * writes karni-theme.css for you from the project's shadcn/ui, Tailwind,
+ * Material UI, Chakra UI or Mantine theme.
  * Add the `dark` class to <html> (or any ancestor) for the dark palette.
  *
  * The 0.3 HSL-triplet names (--karni-primary, --karni-border, ...) still

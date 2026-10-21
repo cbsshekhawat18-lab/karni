@@ -19,6 +19,7 @@ packages/karni-cli/karni_cli/_templates/
 packages/karni-cli/karni_cli/_agent/
 packages/karni-cli/karni_cli/_changelog/
 packages/karni-cli/karni_cli/_errorcodes/
+packages/karni-cli/karni_cli/_ui/
 
 # Node
 node_modules/
