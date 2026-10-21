@@ -32,6 +32,12 @@ def test_exit_code_aggregates_backend_and_frontend(runner, tmp_path, monkeypatch
     monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 1)
     assert runner.invoke(app, ["check"]).exit_code == 1
 
+    # an eslint failure alone (a raw <table> in a page) must fail too
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_lint", lambda p: 1)
+    result = runner.invoke(app, ["check"])
+    assert result.exit_code == 1 and "karni check: FAILED" in result.output
+
 
 def test_no_frontend_flag_skips_duplication(runner, tmp_path, monkeypatch) -> None:
     (tmp_path / "manage.py").write_text("")

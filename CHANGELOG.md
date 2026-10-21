@@ -11,6 +11,8 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `karni check` exits 1 when only eslint fails (a raw `<table>` in a page, any
+  `karni/*` rule). It printed `FAILED` but exited 0, so CI let it through.
 - `karni` commands no longer end in Django's traceback when the project's
   database is not ready. On the host, a command that starts Django first
   checks that the database driver loads, and one that opens the database

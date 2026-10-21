@@ -104,4 +104,4 @@ def check(
         tip = tips.history_tip(project, quiet=quiet)
         if tip:
             sys.stderr.write(f"\n{tip}\n")
-    raise typer.Exit(1 if (backend or dup) else 0)
+    raise typer.Exit(1 if (backend or dup or lint) else 0)
