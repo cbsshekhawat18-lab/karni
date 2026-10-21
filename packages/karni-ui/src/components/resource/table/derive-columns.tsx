@@ -23,6 +23,7 @@ import type { FieldDef, FieldKind } from "../../../schema/types";
 import { CheckIcon } from "../../primitives/icons";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
+import { EmptyValue } from "../empty-value";
 import { asRecord, enumLabel } from "./table-utils";
 
 /** Per-field override merged over the schema-derived column. */
@@ -44,14 +45,6 @@ const UNSORTABLE_KINDS: ReadonlySet<FieldKind> = new Set([
   "array",
   "unknown",
 ]);
-
-function EmptyValue(): React.ReactElement {
-  return (
-    <span aria-hidden="true" className="text-muted-foreground">
-      –
-    </span>
-  );
-}
 
 function BooleanCell({ value }: { value: boolean }): React.ReactElement {
   return value ? (
@@ -141,7 +134,8 @@ export function renderFieldCell(
   value: unknown,
   getRowLabel?: RowLabeler,
 ): React.ReactNode {
-  if (value === null || value === undefined) return <EmptyValue />;
+  // The same empty rendering as ResourceDetail: a dash, read as "empty".
+  if (value === null || value === undefined || value === "") return <EmptyValue />;
   switch (field.kind) {
     case "boolean":
       return <BooleanCell value={value === true} />;

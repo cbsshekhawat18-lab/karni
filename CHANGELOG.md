@@ -16,6 +16,30 @@ reads to apply codemods and list the manual steps — and explained in
   `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,
   `useOnlineStatus`. Dark mode for apps: `ThemeProvider`, `ThemeToggle` and
   `KARNI_THEME_SCRIPT` (follows the system until the user chooses).
+- `@karni/ui` ResourceDetail, ResourceImport, ChangeHistory, LoginForm and
+  AuthGuard handle every unhappy state through the kit, each with `slots`
+  (and `defaultXSlots` to wrap). ResourceDetail: a loading placeholder in the
+  record's own layout, header included (no layout shift); "Couldn't find this
+  event" for a 404 (worded so an out-of-scope record is not confirmed to
+  exist) with a `back` action; "You can't view this event" for a 403; retry
+  that refetches the schema when that failed; offline reloads by itself;
+  `title`/`actions` may be functions of the record; Edit and Delete with
+  `onEdit`/`canEdit`, `enableDelete`/`canDelete`/`onDeleted` (delete asks
+  first and reports a refusal in the dialog). A field the role may not read
+  has no row at all; an empty value is the new shared `EmptyValue` (an en
+  dash read as "empty"), also used by ResourceTable (which now treats `""`
+  as empty) and ChangeHistory. ResourceImport shows no form when the role may
+  not import, keeps the file after a failed upload, confirms a commit with
+  its counts, announces progress by the quarter, and its tables have
+  captions and header scopes. LoginForm tells wrong credentials from
+  throttling, server errors and a dropped connection, wires the message to
+  the fields and focuses the email (`autoFocus`). Behaviour changes:
+  AuthGuard without a `fallback` now explains a refusal (a sign-in prompt
+  for anonymous visitors, PermissionDenied for a role without access;
+  `fallback={null}` keeps rendering nothing, `anonymous`/`denied` replace one
+  case); a non-HTTP sign-in failure no longer reads as wrong credentials;
+  ResourceDetail's empty dash is "–" (was "—") and its error panel no longer
+  shows a raw error message.
 - `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
   input: Input, select: {...} }}>` renders every Karni component with the
   project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,

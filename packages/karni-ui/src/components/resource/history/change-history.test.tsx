@@ -1,5 +1,6 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider, type UseQueryResult } from "@tanstack/react-query";
+import { render as renderUi, screen, within } from "@testing-library/react";
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import {
@@ -7,6 +8,7 @@ import {
   type ChangeHistoryPage,
   type ChangeHistoryParams,
 } from "../../../hooks/useChangeHistory";
+import { KarniApiError } from "../../../schema/client";
 import { ChangeHistory } from "./ChangeHistory";
 
 vi.mock("../../../hooks/useChangeHistory", () => ({ useChangeHistory: vi.fn() }));
@@ -16,8 +18,14 @@ const mockUseChangeHistory = useChangeHistory as unknown as Mock<
     resource: string,
     id: string | number,
     params?: ChangeHistoryParams,
+    options?: object,
   ) => UseQueryResult<ChangeHistoryPage>
 >;
+
+/** The data hook is mocked; the query client only serves the retry policy. */
+function render(ui: React.ReactElement) {
+  return renderUi(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+}
 
 function result(partial: Partial<UseQueryResult<ChangeHistoryPage>>) {
   return {
@@ -56,7 +64,7 @@ describe("ChangeHistory", () => {
   it("renders each entry with its action, actor and field diffs, newest first", () => {
     mockUseChangeHistory.mockReturnValue(result({ data: page }));
     render(<ChangeHistory resource="prices" id={7} />);
-    expect(mockUseChangeHistory).toHaveBeenCalledWith("prices", 7, undefined);
+    expect(mockUseChangeHistory).toHaveBeenCalledWith("prices", 7, undefined, expect.anything());
     const [newest, oldest] = screen.getAllByRole("listitem");
     if (newest === undefined || oldest === undefined) throw new Error("expected two entries");
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
@@ -72,7 +80,12 @@ describe("ChangeHistory", () => {
   it("passes the page size through and shows the empty state", () => {
     mockUseChangeHistory.mockReturnValue(result({ data: { ...page, count: 0, results: [] } }));
     render(<ChangeHistory resource="prices" id="abc" pageSize={5} empty="Nothing yet" />);
-    expect(mockUseChangeHistory).toHaveBeenCalledWith("prices", "abc", { pageSize: 5 });
+    expect(mockUseChangeHistory).toHaveBeenCalledWith(
+      "prices",
+      "abc",
+      { pageSize: 5 },
+      expect.anything(),
+    );
     expect(screen.getByText("Nothing yet")).toBeInTheDocument();
   });
 
@@ -81,8 +94,16 @@ describe("ChangeHistory", () => {
     const { unmount } = render(<ChangeHistory resource="prices" id={1} />);
     expect(screen.getByTestId("change-history-loading")).toBeInTheDocument();
     unmount();
-    mockUseChangeHistory.mockReturnValue(result({ error: new Error("No history is kept") }));
+    // The backend's 404 for a model that keeps no history: plain words, plus its explanation.
+    mockUseChangeHistory.mockReturnValue(
+      result({
+        error: new KarniApiError(404, {
+          detail: "No history is kept for Venue: opt in with class Karni: audit = True.",
+        }),
+      }),
+    );
     render(<ChangeHistory resource="venues" id={1} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't find the history of this venue");
     expect(screen.getByRole("alert")).toHaveTextContent("No history is kept");
   });
 });

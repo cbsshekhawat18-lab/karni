@@ -121,17 +121,33 @@ export type {
   KarniFieldProps,
 } from "./components/resource/ResourceForm";
 
-export { ResourceDetail } from "./components/resource/ResourceDetail";
+export { ResourceDetail, defaultResourceDetailSlots } from "./components/resource/ResourceDetail";
 export type {
   ResourceDetailProps,
   ResourceDetailFieldOverride,
+  ResourceDetailSlots,
+  ResourceDetailLoadingProps,
+  ResourceDetailErrorProps,
+  ResourceDetailNotFoundProps,
+  ResourceDetailDeletedProps,
+  ResourceDetailEmptyValueProps,
+  ResourceDetailDeleteDialogProps,
 } from "./components/resource/ResourceDetail";
 
 export { ResourceSelect } from "./components/resource/ResourceSelect";
 export type { ResourceSelectProps } from "./components/resource/ResourceSelect";
 
-export { ChangeHistory } from "./components/resource/history/ChangeHistory";
-export type { ChangeHistoryProps } from "./components/resource/history/ChangeHistory";
+export {
+  ChangeHistory,
+  defaultChangeHistorySlots,
+} from "./components/resource/history/ChangeHistory";
+export type {
+  ChangeHistoryProps,
+  ChangeHistorySlots,
+  ChangeHistoryLoadingProps,
+  ChangeHistoryEmptyProps,
+  ChangeHistoryEntryProps,
+} from "./components/resource/history/ChangeHistory";
 export { useChangeHistory, changeHistoryKey } from "./hooks/useChangeHistory";
 export type {
   ChangeAction,
@@ -140,8 +156,19 @@ export type {
   ChangeHistoryParams,
 } from "./hooks/useChangeHistory";
 
-export { ResourceImport } from "./components/resource/import/ResourceImport";
-export type { ResourceImportProps } from "./components/resource/import/ResourceImport";
+export {
+  ResourceImport,
+  defaultResourceImportSlots,
+} from "./components/resource/import/ResourceImport";
+export type {
+  ResourceImportProps,
+  ResourceImportSlots,
+  ResourceImportLoadingProps,
+  ImportProgressProps,
+  ImportSummaryProps,
+  ImportProblemsProps,
+  ImportConfirmProps,
+} from "./components/resource/import/ResourceImport";
 export {
   useImportDescribe,
   useImportJob,
@@ -168,6 +195,8 @@ export type {
 } from "./hooks/useResourceImport";
 
 export { displayLabel } from "./components/resource/displayLabel";
+export { EmptyValue, EMPTY_VALUE_LABEL } from "./components/resource/empty-value";
+export type { EmptyValueProps } from "./components/resource/empty-value";
 export { AUDIT_FIELDS } from "./components/resource/audit-fields";
 
 // hooks
@@ -212,11 +241,16 @@ export type {
 export { AuthProvider, useAuth } from "./auth/provider";
 export type { AuthProviderProps, AuthContextValue } from "./auth/provider";
 
-export { AuthGuard } from "./auth/AuthGuard";
-export type { AuthGuardProps } from "./auth/AuthGuard";
+export { AuthGuard, defaultAuthGuardSlots } from "./auth/AuthGuard";
+export type {
+  AuthGuardProps,
+  AuthGuardSlots,
+  AuthGuardAnonymousProps,
+  AuthGuardDeniedProps,
+} from "./auth/AuthGuard";
 
-export { LoginForm } from "./auth/LoginForm";
-export type { LoginFormProps } from "./auth/LoginForm";
+export { LoginForm, defaultLoginFormSlots } from "./auth/LoginForm";
+export type { LoginFormProps, LoginFormSlots, LoginFormErrorProps } from "./auth/LoginForm";
 
 export { usePermission } from "./auth/usePermission";
 export type { PermissionHelpers } from "./auth/usePermission";
