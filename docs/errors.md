@@ -801,11 +801,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="e603"></a>
 
-#### E603 — assert_crud(skip=...) names unknown checks
+#### E603 — checks=/skip= names unknown checks
 
-*exception* · from `karni.testing.assert_crud`
+*exception* · from `karni.testing.assert_crud; assert_row_hidden; assert_admin_row_hidden`
 
-**Why Karni objects.** Skipping a check that does not exist would hide nothing and mislead the reader.
+**Why Karni objects.** Skipping (or selecting) a check that does not exist would hide nothing and mislead the reader.
 
 **Fix.** Use the check names the message lists.
 
@@ -833,11 +833,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E606 — Rows leak to a user who must not see them
 
-*test failure* · from `karni.testing.assert_isolated`
+*test failure* · from `karni.testing.assert_isolated; assert_row_hidden; assert_admin_row_hidden`
 
-**Why Karni objects.** One owner (or tenant) could read or change another's rows: a data leak.
+**Why Karni objects.** One owner (or tenant) could read or change another's rows, or learn that a row outside their scope exists (a 403 where a missing row gets 404, a count, an expanded or exported related row): a data leak.
 
-**Fix.** Restrict the viewset's access with Owned('<owner path>') (or the tenant scope), and check custom get_queryset / @action code that bypasses it.
+**Fix.** Fix what each listed line names: usually the viewset's access (Owned('<owner path>'), a scoped grant, the tenant scope), or custom get_queryset / get_object / serializer / @action code that bypasses it.
 
 <a id="e607"></a>
 
@@ -928,6 +928,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** DEBUG = False usually means a production database, and seeding creates a demo superuser with a known password.
 
 **Fix.** Seed a development database. If you really mean it, pass --force.
+
+<a id="e616"></a>
+
+#### E616 — A hidden-row check has nothing to prove against
+
+*test failure* · from `karni.testing.assert_row_hidden; assert_admin_row_hidden`
+
+**Why Karni objects.** A row-scope check only means something when the client can list the resource and sees some row (the positive control); a role-level refusal or an empty list hides every row alike, so every check would pass vacuously.
+
+**Fix.** Pass a client (or staff user) that can list the resource and a row it does see as visible=; test role-level refusals with assert_crud's denials instead.
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 

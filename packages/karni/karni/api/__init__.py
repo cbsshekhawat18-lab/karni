@@ -13,6 +13,7 @@ That declaration alone yields CRUD, filtering, pagination, ordering, search,
 access control, ``?expand=``, query optimisation and OpenAPI schema. The
 supporting machinery lives in the submodules — :mod:`karni.api.access` (the
 ``access`` vocabulary), :mod:`karni.api.serializers` (generation),
+:mod:`karni.api.related` (related rows in a response are readable ones),
 :mod:`karni.api.optimizer` (select/prefetch from the serializer),
 :mod:`karni.api.caching`, :mod:`karni.api.expansion`, :mod:`karni.api.filters`,
 :mod:`karni.api.routers` / :mod:`karni.api.urls` (autodiscovery) and

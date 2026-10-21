@@ -380,7 +380,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `experimental` `query_budget` and `user_with_roles` helpers
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_crud`, `assert_isolated`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
