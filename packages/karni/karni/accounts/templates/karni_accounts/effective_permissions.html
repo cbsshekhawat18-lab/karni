@@ -4,24 +4,18 @@
 {% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
 
 {% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
 <style>
-  .karni-effective { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-  .karni-effective th, .karni-effective td { border-bottom: 1px solid var(--color-base-200); padding: 0.45rem 0.5rem; text-align: left; vertical-align: top; }
-  .karni-effective .karni-group td { background: var(--color-base-100); font-weight: 600; }
-  .karni-effective .karni-none { color: var(--color-base-500); }
-  html.dark .karni-effective th, html.dark .karni-effective td { border-color: var(--color-base-800); }
-  html.dark .karni-effective .karni-group td { background: var(--color-base-800); }
-  .karni-picker { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
-  .karni-picker input { min-height: 44px; font-size: 16px; padding: 0 0.6rem; border: 1px solid var(--color-base-300); border-radius: 6px; min-width: 16rem; background: transparent; color: inherit; }
-  .karni-button { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 1.25rem; border-radius: 6px; background: var(--color-primary-600); color: #fff; font-weight: 600; border: 0; cursor: pointer; }
-  .karni-note { color: var(--color-base-500); font-size: 0.85rem; }
+  .karni-picker { display: flex; flex-wrap: wrap; gap: calc(var(--karni-space-unit) * 2); align-items: center; margin-bottom: calc(var(--karni-space-unit) * 4); }
+  .karni-picker .karni-field { min-width: min(16rem, 100%); }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="karni-page">
 <form method="get" class="karni-picker">
   <label for="karni-effective-user">{% translate "User (email or id)" %}</label>
-  <input id="karni-effective-user" type="text" name="user" value="{{ query }}" autocomplete="off" inputmode="email">
+  <input class="karni-field" id="karni-effective-user" type="text" name="user" value="{{ query }}" autocomplete="off" inputmode="email">
   <button type="submit" class="karni-button">{% translate "Show" %}</button>
 </form>
 
@@ -36,7 +30,7 @@
       — {% translate "holds no role, so no grant applies." %}
     {% endif %}
   </p>
-  <table class="karni-effective">
+  <div class="karni-scroll"><table class="karni-table">
     <thead>
       <tr>
         <th>{% translate "Action" %}</th>
@@ -50,7 +44,7 @@
         {% for entry in group.entries %}
           <tr>
             <td>{{ entry.action }}</td>
-            <td>{% if entry.scope %}{{ entry.scope }}{% else %}<span class="karni-none">—</span>{% endif %}</td>
+            <td>{% if entry.scope %}{{ entry.scope }}{% else %}<span class="karni-muted">—</span>{% endif %}</td>
             <td>
               {% for source in entry.sources %}
                 <div>
@@ -67,15 +61,16 @@
                   {% endif %}
                 </div>
               {% empty %}
-                <span class="karni-none">{% translate "no role grants it" %}</span>
+                <span class="karni-muted">{% translate "no role grants it" %}</span>
               {% endfor %}
             </td>
           </tr>
         {% endfor %}
       {% endfor %}
     </tbody>
-  </table>
+  </table></div>
 {% elif not query %}
   <p class="karni-note">{% translate "Pick a user to see exactly what they may do, and which role grants it at which scope." %}</p>
 {% endif %}
+</div>
 {% endblock %}

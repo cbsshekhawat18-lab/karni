@@ -230,6 +230,11 @@ first paint already has the right theme:
 </ThemeProvider>
 ```
 
+The Django side of a Karni project reads the same tokens: the admin and the
+welcome page load a copy of this stylesheet, so the same overrides, added to
+the admin's `UNFOLD["STYLES"]`, retheme the admin too
+([admin theming](https://cbsshekhawat18-lab.github.io/karni/admin/#theming)).
+
 The 0.3 names (`--karni-primary: 262 83% 58%`, an HSL triplet) still work:
 each `--karni-color-*` defaults to `hsl()` of its 0.3 name. They are
 deprecated in 0.4 and removed in 1.0 ([migration note](https://cbsshekhawat18-lab.github.io/karni/migrations/0.4/)).

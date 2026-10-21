@@ -11,6 +11,26 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- One brand across the welcome page, the admin and `@karni/ui`: the same
+  colours in light and dark, radius, font stack and dark-mode switch (the
+  `dark` class on `<html>`, following the system preference by default). The
+  `karni` package ships `@karni/ui`'s token stylesheet as the static file
+  `karni/tokens.css`, a byte-for-byte copy that a test keeps identical. The
+  admin loads it through `UNFOLD["STYLES"]` with `karni/unfold-theme.css`;
+  unfold's primary scale and text colours now read the tokens (`@karni/ui`'s
+  near-black primary in light mode, near-white in dark, replacing the indigo
+  scale), its neutral scale holds the tokens' gray values, `BORDER_RADIUS` is
+  `var(--karni-radius-md)` and the font is `@karni/ui`'s system stack instead
+  of Inter. Retheme the admin like the frontend, with `--karni-*` overrides in
+  a stylesheet appended to `UNFOLD["STYLES"]` ([admin](docs/admin.md#theming)).
+  The welcome page inlines the tokens instead of its own palette. Karni's
+  admin pages (import, permission matrix, effective permissions) share
+  `karni/admin-pages.css`, with no colour literals and no dark-mode duplicates.
+  On a tablet the matrix shows several roles beside a narrower model column,
+  the template downloads and the effective-permissions link are 44px buttons,
+  and on touch screens unfold's sidebar rows, inputs, selects and save buttons
+  are 44px. The hard-delete confirmation uses unfold's layout and buttons (its
+  buttons rendered as plain text). Account emails use the brand's colour values.
 - `@karni/ui` unhappy-state kit: `describeError` words any failure in plain
   words (never a status code), `ErrorState`, `PermissionDenied`,
   `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,

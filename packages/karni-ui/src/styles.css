@@ -23,6 +23,10 @@
  * The 0.3 HSL-triplet names (--karni-primary, --karni-border, ...) still
  * work as inputs: each --karni-color-* defaults to its triplet. They are
  * deprecated in 0.4 and removed in 1.0; set --karni-color-* instead.
+ *
+ * The Django side (the admin, the welcome page) uses this same file: the
+ * karni package ships a byte-for-byte copy as the static file
+ * karni/tokens.css, and a karni test fails until a change here is copied.
  */
 :root {
   color-scheme: light;
