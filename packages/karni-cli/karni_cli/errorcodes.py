@@ -307,6 +307,32 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C31x debugging: karni why / karni why-empty
+    _c(
+        "C310",
+        "karni why: the target is malformed",
+        "karni why, karni why-empty",
+        "A question names one thing: <resource>/<id> (a row), <resource>.<field> (a field), "
+        "<resource> (its list), or a status followed by the request id of a recorded request.",
+        "Use one of those forms, e.g. karni why events/42 --as alice@example.com or "
+        "karni why 403 <request-id>.",
+    ),
+    _c(
+        "C311",
+        "karni why: --as is missing",
+        "karni why, karni why-empty",
+        "An access decision is always for one user; only a recorded request carries its own.",
+        "Pass --as with an email, username or primary key, or --as anonymous.",
+    ),
+    _c(
+        "C312",
+        "karni why: the project's karni is too old",
+        "karni why, karni why-empty",
+        "The question runs as manage.py karni_why in the project, which ships with karni; a "
+        "project on an older karni does not have it.",
+        "Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask "
+        "again.",
+    ),
 )
 
 

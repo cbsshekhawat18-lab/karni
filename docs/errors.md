@@ -1011,6 +1011,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
 
+<a id="e901"></a>
+
+#### E901 — karni why: no API resource by that name
+
+*exception* · from `karni.why.resolve.resolve_resource; karni why`
+
+**Why Karni objects.** karni why explains the decisions of a routed BaseViewSet, so it needs the resource as the API routes it.
+
+**Fix.** Name the resource by its route prefix (events), router basename (events-event) or model label (events.Event). The message lists the routed resources; `karni routes` lists every URL.
+
+<a id="e902"></a>
+
+#### E902 — karni why: no such user
+
+*exception* · from `karni.why.resolve.resolve_user; karni why --as`
+
+**Why Karni objects.** A decision is always for one user. --as looks the user up by primary key, login field, email or username; a recorded request names its user by primary key.
+
+**Fix.** Pass --as with an email, username or primary key that exists, or --as anonymous for a request that is not signed in.
+
+<a id="e903"></a>
+
+#### E903 — karni why: no request record for that id
+
+*exception* · from `karni.why.resolve.load_record; karni why <status> <request-id>`
+
+**Why Karni objects.** The dev server records each request as .karni/requests/<request id>.json, and only while DEBUG is on. Without the record there is nothing to replay.
+
+**Fix.** Reproduce the request with the dev server running (`karni serve`) and use its request id, or ask about the row directly: karni why <resource>/<id> --as <user> [--action ...].
+
+<a id="e904"></a>
+
+#### E904 — karni why: the request record cannot be read
+
+*exception* · from `karni.why.resolve.load_record`
+
+**Why Karni objects.** The record is not JSON, or its version or fields are not what this karni reads (version 1: request_id, method, path, status, user, ...).
+
+**Fix.** Delete the file and reproduce the request; if it keeps happening, upgrade karni so the writer and the reader agree.
+
+<a id="e905"></a>
+
+#### E905 — karni why: the resource has no such field
+
+*exception* · from `karni.why.verdict.explain_field; karni why <resource>.<field>`
+
+**Why Karni objects.** A field question names a model field or a field of the resource's serializer.
+
+**Fix.** Use a field name the message lists (the resource's API fields).
+
+<a id="e906"></a>
+
+#### E906 — karni why: the resource routes no such action or method
+
+*exception* · from `karni.why.resolve.resolve_action; karni why --action/--method`
+
+**Why Karni objects.** --action names a routed viewset action (or the plain words view, update, delete, create, list); --method must be one that action answers.
+
+**Fix.** Use an action the message lists, or drop --method.
+
+<a id="e907"></a>
+
+#### E907 — karni why: not a Karni BaseViewSet route
+
+*exception* · from `karni.why.resolve.resolve_resource; karni.why.verdict.explain_record`
+
+**Why Karni objects.** karni why explains the decisions of Karni's access layer, which only BaseViewSet routes have; another view's permission_classes decide on their own.
+
+**Fix.** Read that view's permission_classes and get_queryset(), or move the endpoint onto a BaseViewSet with an access declaration.
+
+<a id="e908"></a>
+
+#### E908 — karni why: the question is incomplete
+
+*exception* · from `manage.py karni_why`
+
+**Why Karni objects.** A question names what (a request id after its status, <resource>/<id>, <resource>.<field> or <resource>) and, except for a recorded request, who (--as).
+
+**Fix.** Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, karni why 403 <request-id>, or karni why-empty events --as alice@example.com.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>
@@ -1569,6 +1649,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
 
+<a id="c310"></a>
+
+### C310 — karni why: the target is malformed
+
+*karni command* · from `karni why, karni why-empty`
+
+**Why Karni objects.** A question names one thing: <resource>/<id> (a row), <resource>.<field> (a field), <resource> (its list), or a status followed by the request id of a recorded request.
+
+**Fix.** Use one of those forms, e.g. karni why events/42 --as alice@example.com or karni why 403 <request-id>.
+
+<a id="c311"></a>
+
+### C311 — karni why: --as is missing
+
+*karni command* · from `karni why, karni why-empty`
+
+**Why Karni objects.** An access decision is always for one user; only a recorded request carries its own.
+
+**Fix.** Pass --as with an email, username or primary key, or --as anonymous.
+
+<a id="c312"></a>
+
+### C312 — karni why: the project's karni is too old
+
+*karni command* · from `karni why, karni why-empty`
+
+**Why Karni objects.** The question runs as manage.py karni_why in the project, which ships with karni; a project on an older karni does not have it.
+
+**Fix.** Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask again.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -1668,6 +1778,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Generators emit the conventions in one step (BaseModel, a mandatory access declaration, settings and route markers, ruff-clean imports) and are tested to pass every rule; hand-written scaffolding drifts.
 
 **Fix.** Delete the hand-written scaffold and run the matching `karni make` command.
+
+<a id="k015"></a>
+
+### K015 — Row/field/action missing or refused: karni why first.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** When a row, field or action is unexpectedly missing or refused (a 403, a 404, an empty list, a field absent from a response), run `karni why <resource>/<id> --as <user> [--action ...]`, `karni why <resource>.<field> --as <user>`, `karni why-empty <resource> --as <user>` or `karni why 403 <request-id>` (MCP: `why`, `why_empty`) before reading viewsets, KARNI_ROLES or the access layer, and act on its verdict.
+
+**Why Karni objects.** Access bugs raise no error: the row is just absent. karni why computes the decision with the code that enforces it and prints the user's roles, the grants and where each comes from, the predicate that decided, the row's values, file:line and the fix — one call instead of reconstructing the rules from source.
+
+**Fix.** Run the matching `karni why` command and apply the fix it prints.
 
 <a id="k101"></a>
 

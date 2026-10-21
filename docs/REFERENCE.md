@@ -90,7 +90,8 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
-| MCP server exposing `context`, `rules` and `check` as tools | `experimental` | Karni's own tests |
+| `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
+| MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
 ### Testing
 
@@ -526,6 +527,45 @@ karni manage [OPTIONS] [ARGS...]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+### Debugging
+
+#### `karni why`
+
+Explain an access decision: why a row, field or action is refused or missing
+
+```
+karni why [OPTIONS] TARGET [REQUEST_ID]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to explain: &lt;resource&gt;/&lt;id&gt; (a row), &lt;resource&gt;.&lt;field&gt; (a field), &lt;resource&gt; (its list), or a status followed by a request id (403 &lt;request-id&gt;). Resources are named as the API names them: events, events-event or events.Event. |
+| `REQUEST_ID` |  | The request id, after a status. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--action` TEXT |  | For a row: view (default), update, delete, or an @action name; create or list for a resource. |
+| `--method` TEXT |  | The HTTP method, for an @action that answers several. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni why-empty`
+
+Explain an empty list: which step removes the rows, and the fix
+
+```
+karni why-empty [OPTIONS] RESOURCE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `RESOURCE` (required) |  | The resource, named as the API names it. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### Generators
 
 #### `karni make`
@@ -949,12 +989,12 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
-| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `describe` |
+| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `facts`, `describe` |
 | `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions`; endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")` — a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])` — tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
-| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `describe` |
+| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `explain`, `describe` |
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included; every row. The explicit public form. | methods `allows`, `rows`, `describe` |
@@ -1378,6 +1418,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E901`](errors.md#e901) | exception | karni why: no API resource by that name |
+| [`E902`](errors.md#e902) | exception | karni why: no such user |
+| [`E903`](errors.md#e903) | exception | karni why: no request record for that id |
+| [`E904`](errors.md#e904) | exception | karni why: the request record cannot be read |
+| [`E905`](errors.md#e905) | exception | karni why: the resource has no such field |
+| [`E906`](errors.md#e906) | exception | karni why: the resource routes no such action or method |
+| [`E907`](errors.md#e907) | exception | karni why: not a Karni BaseViewSet route |
+| [`E908`](errors.md#e908) | exception | karni why: the question is incomplete |
 
 ### Modules
 
@@ -1443,6 +1491,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
+| [`C311`](errors.md#c311) | cli | karni why: --as is missing |
+| [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
 
 ### Agent rules (`K`)
 
@@ -1456,6 +1507,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K006`](errors.md#k006) | rule | Procedures: karni rules --procedure NAME. |
 | [`K007`](errors.md#k007) | rule | Commands: karni --help. |
 | [`K009`](errors.md#k009) | rule | Scaffold with karni make. |
+| [`K015`](errors.md#k015) | rule | Row/field/action missing or refused: karni why first. |
 | [`K101`](errors.md#k101) | rule | Models inherit BaseModel or compose its mixins. |
 | [`K102`](errors.md#k102) | rule | Viewsets inherit BaseViewSet. |
 | [`K103`](errors.md#k103) | rule | No ModelAdmin; use AdminMeta. |

@@ -16,7 +16,8 @@ Code ranges
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
-``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog).
+``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
+``E8xx`` import and export · ``E9xx`` debugging (``karni why``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1136,6 +1137,85 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    # E9xx debugging: karni why
+    _e(
+        "E901",
+        "karni why: no API resource by that name",
+        "exception",
+        "karni.why.resolve.resolve_resource; karni why",
+        "karni why explains the decisions of a routed BaseViewSet, so it needs the resource as "
+        "the API routes it.",
+        "Name the resource by its route prefix (events), router basename (events-event) or "
+        "model label (events.Event). The message lists the routed resources; `karni routes` "
+        "lists every URL.",
+    ),
+    _e(
+        "E902",
+        "karni why: no such user",
+        "exception",
+        "karni.why.resolve.resolve_user; karni why --as",
+        "A decision is always for one user. --as looks the user up by primary key, login field, "
+        "email or username; a recorded request names its user by primary key.",
+        "Pass --as with an email, username or primary key that exists, or --as anonymous for a "
+        "request that is not signed in.",
+    ),
+    _e(
+        "E903",
+        "karni why: no request record for that id",
+        "exception",
+        "karni.why.resolve.load_record; karni why <status> <request-id>",
+        "The dev server records each request as .karni/requests/<request id>.json, and only "
+        "while DEBUG is on. Without the record there is nothing to replay.",
+        "Reproduce the request with the dev server running (`karni serve`) and use its request "
+        "id, or ask about the row directly: karni why <resource>/<id> --as <user> [--action ...].",
+    ),
+    _e(
+        "E904",
+        "karni why: the request record cannot be read",
+        "exception",
+        "karni.why.resolve.load_record",
+        "The record is not JSON, or its version or fields are not what this karni reads "
+        "(version 1: request_id, method, path, status, user, ...).",
+        "Delete the file and reproduce the request; if it keeps happening, upgrade karni so "
+        "the writer and the reader agree.",
+    ),
+    _e(
+        "E905",
+        "karni why: the resource has no such field",
+        "exception",
+        "karni.why.verdict.explain_field; karni why <resource>.<field>",
+        "A field question names a model field or a field of the resource's serializer.",
+        "Use a field name the message lists (the resource's API fields).",
+    ),
+    _e(
+        "E906",
+        "karni why: the resource routes no such action or method",
+        "exception",
+        "karni.why.resolve.resolve_action; karni why --action/--method",
+        "--action names a routed viewset action (or the plain words view, update, delete, "
+        "create, list); --method must be one that action answers.",
+        "Use an action the message lists, or drop --method.",
+    ),
+    _e(
+        "E907",
+        "karni why: not a Karni BaseViewSet route",
+        "exception",
+        "karni.why.resolve.resolve_resource; karni.why.verdict.explain_record",
+        "karni why explains the decisions of Karni's access layer, which only BaseViewSet "
+        "routes have; another view's permission_classes decide on their own.",
+        "Read that view's permission_classes and get_queryset(), or move the endpoint onto a "
+        "BaseViewSet with an access declaration.",
+    ),
+    _e(
+        "E908",
+        "karni why: the question is incomplete",
+        "exception",
+        "manage.py karni_why",
+        "A question names what (a request id after its status, <resource>/<id>, "
+        "<resource>.<field> or <resource>) and, except for a recorded request, who (--as).",
+        "Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, "
+        "karni why 403 <request-id>, or karni why-empty events --as alice@example.com.",
     ),
 )
 

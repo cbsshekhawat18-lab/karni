@@ -48,7 +48,7 @@ may return a declaration computed at request time.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final
 
@@ -67,12 +67,15 @@ if TYPE_CHECKING:
     from rest_framework.request import Request
 
 __all__ = [
+    "TRACE_ATTR",
     "Access",
+    "AccessEvent",
     "AccessPermission",
     "AllOf",
     "AnyOf",
     "Authenticated",
     "Can",
+    "Explained",
     "Granted",
     "HasRole",
     "Owned",
@@ -93,6 +96,7 @@ __all__ = [
     "routed_view",
     "rows_or_exempt",
     "target_read_scope",
+    "trace",
 ]
 
 logger = logging.getLogger(__name__)
@@ -135,6 +139,37 @@ OWNED_NEEDS_A_FIELD: Final = (
     'Owned("organizer") or Owned("event__organizer"). Use Owned("created_by") '
     "only when whoever created the row is its owner (ADR 0001 Q2.6)."
 )
+
+
+# decision trace (``karni why``)
+
+#: Attribute ``karni why`` sets on a request (a list) to receive every decision
+#: the access layer makes for it. Absent on real requests: :func:`trace` is a
+#: dictionary lookup and nothing else.
+TRACE_ATTR: Final = "_karni_access_trace"
+
+
+@dataclass(frozen=True)
+class AccessEvent:
+    """One decision the access layer made: ``kind`` and what it decided with.
+
+    Kinds: ``gate`` (:meth:`AccessPermission.has_permission`: ``predicate``,
+    ``allowed``, ``declaration``), ``veto`` (``name``, ``reason``), ``object``
+    (:meth:`AccessPermission.has_object_permission`: ``predicate``, ``rows``,
+    ``allowed``) and ``read_scope`` (``BaseViewSet.read_scope``:
+    ``predicate``, ``rows``, ``exempt``, ``hook``). ``view`` is the viewset
+    instance the decision was made for (relation scoping reuses the request).
+    """
+
+    kind: str
+    data: Mapping[str, Any]
+
+
+def trace(request: Any, kind: str, **data: Any) -> None:
+    """Record a decision on ``request`` when ``karni why`` listens; a no-op otherwise."""
+    events = getattr(request, "__dict__", {}).get(TRACE_ATTR)
+    if events is not None:
+        events.append(AccessEvent(kind, data))
 
 
 # request helpers
@@ -194,6 +229,19 @@ class Predicate:
         """JSON-serialisable form, published as the ``x-karni-access`` extension."""
         raise NotImplementedError
 
+    def explain(self, request: Any) -> Explained:
+        """Both answers for ``request``, part by part (``karni why``).
+
+        A leaf calls its own :meth:`allows` and :meth:`rows`; ``|``, ``&``
+        and ``bypass=`` combine their parts' explanations with the folds
+        their own answers use. Override :meth:`facts` to add what a leaf read.
+        """
+        return Explained(self, self.allows(request), self.rows(request), facts=self.facts(request))
+
+    def facts(self, request: Any) -> dict[str, Any]:
+        """What this leaf's evaluation reads for ``request`` (shown by ``karni why``)."""
+        return {}
+
     def owned(self) -> Iterator[Owned]:
         """Every :class:`Owned` inside this predicate (validation, owner stamping)."""
         return iter(())
@@ -229,6 +277,64 @@ def _flatten(predicate: Predicate, kind: type[AnyOf] | type[AllOf]) -> tuple[Pre
     if isinstance(predicate, kind):
         return predicate.parts
     return (predicate,)
+
+
+# The folds ``|`` and ``&`` combine their parts with. ``allows()``/``rows()``
+# and ``explain()`` both go through them, so an explanation cannot disagree
+# with the answer it explains. Iterables are consumed lazily: enforcement
+# stops at the first decisive part, an explanation evaluates every part.
+
+
+def _any_allows(answers: Iterable[bool]) -> bool:
+    return any(answers)
+
+
+def _all_allows(answers: Iterable[bool]) -> bool:
+    return all(answers)
+
+
+def _any_rows(answers: Iterable[RowFilter]) -> RowFilter:
+    result: RowFilter = False
+    for answer in answers:
+        result = _or(result, answer)
+        if result is True:
+            break
+    return result
+
+
+def _all_rows(answers: Iterable[RowFilter]) -> RowFilter:
+    result: RowFilter = True
+    for answer in answers:
+        result = _and(result, answer)
+        if result is False:
+            break
+    return result
+
+
+@dataclass(frozen=True)
+class Explained:
+    """A predicate's answer for one request, with its parts' answers (``karni why``).
+
+    ``allows`` and ``rows`` come from the predicate's own :meth:`Predicate.allows`
+    and :meth:`Predicate.rows` (a leaf) or from its parts through the same
+    folds ``|`` and ``&`` use, so the explanation is the enforcement, part by
+    part. ``facts`` is what the evaluation read: the roles held, the grants
+    found, the owner path.
+    """
+
+    predicate: Predicate
+    allows: bool
+    rows: RowFilter
+    parts: tuple[Explained, ...] = ()
+    facts: Mapping[str, Any] = field(default_factory=dict)
+
+    def leaves(self) -> Iterator[Explained]:
+        """Every leaf explanation, left to right."""
+        if not self.parts:
+            yield self
+            return
+        for part in self.parts:
+            yield from part.leaves()
 
 
 @dataclass(frozen=True, init=False, repr=False)
@@ -271,22 +377,46 @@ class Owned(Predicate):
         object.__setattr__(self, "bypass", bypass)
 
     def allows(self, request: Any) -> bool:
-        if _authenticated(request):
-            return True
-        return self.bypass is not None and self.bypass.allows(request)
+        return _any_allows(self._branch_allows(request))
 
     def rows(self, request: Any) -> RowFilter:
-        own: RowFilter = False
-        if _authenticated(request):
-            user = _user(request)
-            last = self.path.rsplit(LOOKUP_SEP, 1)[-1]
-            # A relation path compares against the user; the user model's own
-            # primary key ("pk"/"id") compares against its value.
-            value = user.pk if last in {"pk", user._meta.pk.name} else user
-            own = Q(**{self.path: value})
+        return _any_rows(self._branch_rows(request))
+
+    def _branch_allows(self, request: Any) -> Iterator[bool]:
+        """The owner branch, then ``bypass`` (lazily: the fold stops at the first yes)."""
+        yield _authenticated(request)
+        if self.bypass is not None:
+            yield self.bypass.allows(request)
+
+    def _branch_rows(self, request: Any) -> Iterator[RowFilter]:
+        yield self._own_rows(request)
+        if self.bypass is not None:
+            yield self.bypass.rows(request)
+
+    def _own_rows(self, request: Any) -> RowFilter:
+        if not _authenticated(request):
+            return False
+        user = _user(request)
+        last = self.path.rsplit(LOOKUP_SEP, 1)[-1]
+        # A relation path compares against the user; the user model's own
+        # primary key ("pk"/"id") compares against its value.
+        value = user.pk if last in {"pk", user._meta.pk.name} else user
+        return Q(**{self.path: value})
+
+    def explain(self, request: Any) -> Explained:
         if self.bypass is None:
-            return own
-        return _or(own, self.bypass.rows(request))
+            return super().explain(request)
+        own = Owned(self.path).explain(request)
+        bypass = self.bypass.explain(request)
+        return Explained(
+            self,
+            _any_allows((own.allows, bypass.allows)),
+            _any_rows((own.rows, bypass.rows)),
+            parts=(own, bypass),
+        )
+
+    def facts(self, request: Any) -> dict[str, Any]:
+        return {"path": self.path, "authenticated": _authenticated(request)}
 
     def describe(self) -> dict[str, Any]:
         own = {"owned": self.path}
@@ -336,6 +466,9 @@ class HasRole(Predicate):
     def rows(self, request: Any) -> RowFilter:
         return self.allows(request)
 
+    def facts(self, request: Any) -> dict[str, Any]:
+        return {"required": list(self.names), "held": sorted(request_roles(request))}
+
     def describe(self) -> dict[str, Any]:
         return {"role": list(self.names)}
 
@@ -376,24 +509,50 @@ class Can(Predicate):
         object.__setattr__(self, "keys", tuple(keys))
 
     def allows(self, request: Any) -> bool:
-        from karni.accounts.roles import user_can
-
-        user = _user(request)
-        return any(user_can(user, key) for key in self.keys)
+        return _any_allows(self._key_allows(request, key) for key in self.keys)
 
     def rows(self, request: Any) -> RowFilter:
-        from karni.accounts.roles import rows_for
-
-        user = _user(request)
         if not _authenticated(request):
             return False
-        rows: RowFilter = False
+        return _any_rows(self._key_rows(request, key) for key in self.keys)
+
+    @staticmethod
+    def _key_allows(request: Any, key: str) -> bool:
+        from karni.accounts.roles import user_can
+
+        return user_can(_user(request), key)
+
+    def _key_rows(self, request: Any, key: str) -> RowFilter:
+        from karni.accounts.roles import rows_for
+
+        model, action = self.target(key)
+        return rows_for(_user(request), model, action)
+
+    def explain(self, request: Any) -> Explained:
+        if len(self.keys) == 1:
+            return super().explain(request)
+        parts = tuple(Can(key).explain(request) for key in self.keys)
+        return Explained(
+            self,
+            _any_allows(part.allows for part in parts),
+            _any_rows(part.rows for part in parts),
+            parts=parts,
+        )
+
+    def facts(self, request: Any) -> dict[str, Any]:
+        """The grants behind each permission, and the rows each one reaches."""
+        from karni.accounts.roles import grant_rows, grant_sources, grants_for
+
+        user = _user(request)
+        found: dict[str, Any] = {}
         for key in self.keys:
-            model, action = self.target(key)
-            rows = _or(rows, rows_for(user, model, action))
-            if rows is True:
-                break
-        return rows
+            model, _action = self.target(key)
+            grants = grants_for(user).get(key, [])
+            found[key] = {
+                "grants": [(grant, grant_rows(user, model, grant)) for grant in grants],
+                "sources": grant_sources(user, key),
+            }
+        return {"permissions": found, "authenticated": _authenticated(request)}
 
     def describe(self) -> dict[str, Any]:
         return {"can": list(self.keys)}
@@ -491,6 +650,9 @@ class Granted(Predicate):
     def rows(self, request: Any) -> RowFilter:
         raise self._unbound()
 
+    def explain(self, request: Any) -> Explained:
+        raise self._unbound()
+
     def describe(self) -> dict[str, Any]:
         return {"granted": True}
 
@@ -507,6 +669,9 @@ class Authenticated(Predicate):
 
     def rows(self, request: Any) -> RowFilter:
         return _authenticated(request)
+
+    def facts(self, request: Any) -> dict[str, Any]:
+        return {"authenticated": _authenticated(request)}
 
     def describe(self) -> dict[str, Any]:
         return {"authenticated": True}
@@ -588,15 +753,19 @@ class AnyOf(Predicate):
     parts: tuple[Predicate, ...]
 
     def allows(self, request: Any) -> bool:
-        return any(part.allows(request) for part in self.parts)
+        return _any_allows(part.allows(request) for part in self.parts)
 
     def rows(self, request: Any) -> RowFilter:
-        result: RowFilter = False
-        for part in self.parts:
-            result = _or(result, part.rows(request))
-            if result is True:
-                break
-        return result
+        return _any_rows(part.rows(request) for part in self.parts)
+
+    def explain(self, request: Any) -> Explained:
+        parts = tuple(part.explain(request) for part in self.parts)
+        return Explained(
+            self,
+            _any_allows(part.allows for part in parts),
+            _any_rows(part.rows for part in parts),
+            parts=parts,
+        )
 
     def describe(self) -> dict[str, Any]:
         return {"any": [d for part in self.parts for d in _flatten_described(part, "any")]}
@@ -620,15 +789,19 @@ class AllOf(Predicate):
     parts: tuple[Predicate, ...]
 
     def allows(self, request: Any) -> bool:
-        return all(part.allows(request) for part in self.parts)
+        return _all_allows(part.allows(request) for part in self.parts)
 
     def rows(self, request: Any) -> RowFilter:
-        result: RowFilter = True
-        for part in self.parts:
-            result = _and(result, part.rows(request))
-            if result is False:
-                break
-        return result
+        return _all_rows(part.rows(request) for part in self.parts)
+
+    def explain(self, request: Any) -> Explained:
+        parts = tuple(part.explain(request) for part in self.parts)
+        return Explained(
+            self,
+            _all_allows(part.allows for part in parts),
+            _all_rows(part.rows for part in parts),
+            parts=parts,
+        )
 
     def describe(self) -> dict[str, Any]:
         return {"all": [d for part in self.parts for d in _flatten_described(part, "all")]}
@@ -1078,18 +1251,29 @@ class AccessPermission(BasePermission):
         declaration = view.get_access()
         if declaration is None:
             _log_missing(type(view))
+            trace(request, "gate", view=view, declaration=None, predicate=None, allowed=False)
             raise PermissionDenied(detail=missing_access_message(type(view)), code="E101")
         if isinstance(declaration, Unscoped):
+            trace(request, "gate", view=view, declaration=declaration, predicate=None, allowed=True)
             return self._not_vetoed(request, view)
         predicate = action_predicate(view, declaration)
-        if predicate.allows(request):
+        allowed = predicate.allows(request)
+        trace(
+            request,
+            "gate",
+            view=view,
+            declaration=declaration,
+            predicate=predicate,
+            allowed=allowed,
+        )
+        if allowed:
             return self._not_vetoed(request, view)
         self.message = f"Access denied: this action requires {predicate!r}."
         return False
 
     def _not_vetoed(self, request: Request, view: Any) -> bool:
         """Consult :mod:`karni.vetoes` for the current action (the gate's last word)."""
-        from karni.vetoes import VetoContext, check_vetoes
+        from karni.vetoes import VetoContext, first_veto
 
         model = _view_model(view)
         action = str(getattr(view, "action", None) or request.method or "").lower()
@@ -1099,11 +1283,12 @@ class AccessPermission(BasePermission):
                 permission = permission_key(model, granted_action(view))
             except KarniImproperlyConfigured:
                 permission = None
-        reason = check_vetoes(
-            VetoContext(request, "api", action, model=model, permission=permission, view=view)
-        )
-        if reason is None:
+        context = VetoContext(request, "api", action, model=model, permission=permission, view=view)
+        found = first_veto(context)
+        if found is None:
             return True
+        name, reason = found
+        trace(request, "veto", view=view, name=name, reason=reason, context=context)
         self.message = reason
         return False
 
@@ -1113,15 +1298,19 @@ class AccessPermission(BasePermission):
             return declaration is not None
         slot = action_slot(getattr(view, "action", None), request.method)
         if slot == "read" and action_override(view) is None:
+            trace(request, "object", view=view, predicate=None, rows=True, allowed=True, row=obj)
             return True  # the row was already found through the read scope
         predicate = action_predicate(view, declaration)
         rows = rows_or_exempt(view, predicate, request)
-        if rows is True:
-            return True
-        if rows is not False:
+        allowed = rows is True
+        if rows is not True and rows is not False:
             model = type(obj)
-            if apply_rows(model._default_manager.filter(pk=obj.pk), rows).exists():
-                return True
+            allowed = apply_rows(model._default_manager.filter(pk=obj.pk), rows).exists()
+        trace(
+            request, "object", view=view, predicate=predicate, rows=rows, allowed=allowed, row=obj
+        )
+        if allowed:
+            return True
         self.message = f"Access denied: this row is readable but the action requires {predicate!r}."
         return False
 

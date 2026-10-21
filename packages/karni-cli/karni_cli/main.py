@@ -28,6 +28,7 @@ from karni_cli.commands.shell import shell
 from karni_cli.commands.sync_roles import sync_roles
 from karni_cli.commands.types import types
 from karni_cli.commands.upgrade import upgrade
+from karni_cli.commands.why import why, why_empty
 from karni_cli.commands.worker import worker
 from karni_cli.project import PASSTHROUGH, CliError
 
@@ -85,6 +86,14 @@ app.command(context_settings=PASSTHROUGH)(seed)
 app.command("sync-roles", context_settings=PASSTHROUGH)(sync_roles)
 app.command(context_settings=PASSTHROUGH)(createsuperuser)
 app.command(context_settings=PASSTHROUGH)(manage)
+
+# Debugging: `karni why` / `karni why-empty` (access decisions, manage.py karni_why).
+app.command(help="Explain an access decision: why a row, field or action is refused or missing")(
+    why
+)
+app.command("why-empty", help="Explain an empty list: which step removes the rows, and the fix")(
+    why_empty
+)
 
 # Generators: `karni make <type>` (+ hidden `karni make:<type>` aliases).
 app.add_typer(make_app, name="make")

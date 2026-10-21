@@ -84,6 +84,8 @@ nav:
       - History providers: concepts/history-providers.md
       - ADR 0001 — core architecture: decisions/0001-core-architecture.md
       - ADR 0002 — permissions audit: decisions/0002-permissions-audit.md
+  - Debugging:
+      - "Why is it missing? karni why": debugging/why.md
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md

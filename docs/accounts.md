@@ -330,7 +330,10 @@ a user's change page — is the read-only answer to "why can this person see
 this?": every permission, the rows it reaches, and each role that grants it
 with its scope and origin (a superuser holds everything; a revoked cell is
 shown as revoked). Anyone may look at their own; someone else's needs
-`karni_accounts.rolepermission:view`.
+`karni_accounts.rolepermission:view`. For one row, field or list in
+development, `karni why events/<id> --as <user>` gives the same answer for
+that row, with the predicate that decided and the fix
+([debugging](debugging/why.md)).
 
 The same thing as an API, for a project's own UI and for fixtures and tests:
 

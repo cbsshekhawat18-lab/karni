@@ -216,6 +216,28 @@ RULES: tuple[Rule, ...] = (
         ),
         fix="Delete the hand-written scaffold and run the matching `karni make` command.",
     ),
+    # --- debugging: karni why (access decisions) ------------------------------
+    Rule(
+        code="K015",
+        category="workflow",
+        severity="must",
+        summary="Row/field/action missing or refused: karni why first.",
+        rule=(
+            "When a row, field or action is unexpectedly missing or refused (a 403, a 404, an "
+            "empty list, a field absent from a response), run `karni why <resource>/<id> --as "
+            "<user> [--action ...]`, `karni why <resource>.<field> --as <user>`, `karni why-empty "
+            "<resource> --as <user>` or `karni why 403 <request-id>` (MCP: `why`, `why_empty`) "
+            "before reading viewsets, KARNI_ROLES or the access layer, and act on its verdict."
+        ),
+        rationale=(
+            "Access bugs raise no error: the row is just absent. karni why computes the decision "
+            "with the code that enforces it and prints the user's roles, the grants and where "
+            "each comes from, the predicate that decided, the row's values, file:line and the "
+            "fix — one call instead of reconstructing the rules from source."
+        ),
+        fix="Run the matching `karni why` command and apply the fix it prints.",
+    ),
+    # --- end debugging ----------------------------------------------------------
     # architecture
     Rule(
         code="K301",

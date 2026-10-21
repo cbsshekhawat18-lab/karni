@@ -11,6 +11,23 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **`karni why`: an access decision explained by the code that makes it.**
+  `karni why events/<id> --as alice@example.com [--action update]`,
+  `karni why events.<field> --as ...`, `karni why-empty events --as ...` and
+  `karni why 403 <request-id>` (a request the dev server recorded) print the
+  user and roles, the grants that applied and where each comes from, the gate
+  and every part of `read`/`write` against the row, the row's values
+  (redacted like the change history), the result, `file:line` and one
+  concrete fix; `--json` for agents, `why`/`why_empty` on `karni mcp`, and
+  rule `K015`. The verdict comes from running DRF's own gate and lookup in a
+  rolled-back transaction while the access layer records its decisions
+  (`karni.api.access.trace`); `Predicate.explain()` takes a predicate apart
+  with the same folds `|` and `&` use. A test matrix checks the verdict
+  against the API for every user, viewset, action and row of the test app.
+  New: `karni.why`, `manage.py karni_why`, `BaseViewSet.base_queryset()`,
+  `karni.vetoes.first_veto`, `karni.accounts.roles.grant_rows` /
+  `grant_sources`; codes `E901`–`E908`, `C310`–`C312`. See
+  [debugging](docs/debugging/why.md).
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

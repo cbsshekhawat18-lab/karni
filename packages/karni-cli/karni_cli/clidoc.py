@@ -41,6 +41,7 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "manage",
         ),
     ),
+    ("Debugging", ("why", "why-empty")),
     ("Generators", ("make",)),
 )
 

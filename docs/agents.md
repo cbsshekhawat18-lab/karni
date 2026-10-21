@@ -26,7 +26,8 @@ follow what they return.
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
 | `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
-| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check` |
+| `karni why events/<id> --as <user>` | Why a row, field or action is refused or missing for a user, computed by the code that enforces it ([debugging](debugging/why.md)); `karni why-empty <resource> --as <user>` for an empty list |
+| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, `why`, `why_empty` |
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
@@ -176,8 +177,10 @@ pip install 'karni-cli[mcp]'
 karni mcp                 # stdio; --project PATH when not started inside the project
 ```
 
-Tools: `context()`, `rules(code="", procedure="")`, `check(path)`. Each
-returns the same text as the CLI.
+Tools: `context()`, `rules(code="", procedure="")`, `check(path)`,
+`why(target, user="", action="", method="", params="", as_json=False)` and
+`why_empty(resource, user, params="", as_json=False)` ([`karni
+why`](debugging/why.md)). Each returns the same text as the CLI.
 
 Claude Code:
 

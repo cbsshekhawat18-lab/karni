@@ -94,6 +94,7 @@ from karni.api.access import (
     owner_fields,
     rows_or_exempt,
     target_read_scope,
+    trace,
     validate_access,
 )
 from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
@@ -411,6 +412,20 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         queryset: QuerySet[Any] = self.get_model()._default_manager.all()
         return queryset
 
+    def base_queryset(self) -> QuerySet[Any]:
+        """What :meth:`get_queryset` returns before the read pipeline scopes it.
+
+        The declared ``queryset`` or an overridden ``get_queryset()``, model
+        scopes included, the access scope not. ``karni why`` uses it to say
+        how many rows each step of the pipeline removes.
+        """
+        depth = self.__dict__.get(_DEPTH_ATTR, 0)
+        setattr(self, _DEPTH_ATTR, depth + 1)
+        try:
+            return self.get_queryset()
+        finally:
+            setattr(self, _DEPTH_ATTR, depth)
+
     def scope_queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
         """Steps 3–4 of the read pipeline: :meth:`read_scope`, then the optimiser.
 
@@ -484,14 +499,26 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         request = getattr(self, "request", None)
         if declaration is None or request is None:
             return queryset.none(), True
+        predicate: Predicate | None = None
         if isinstance(declaration, Unscoped):
             rows: RowFilter = True
         else:
-            rows = rows_or_exempt(self, declaration.read.bind(self, "view"), request)
+            predicate = declaration.read.bind(self, "view")
+            rows = rows_or_exempt(self, predicate, request)
         queryset = apply_rows(queryset, rows)
         filtered = rows is not True
         hook = type(self).filter_queryset_for_user
-        if hook is not ObjectPermissionsMixin.filter_queryset_for_user:
+        hooked = hook is not ObjectPermissionsMixin.filter_queryset_for_user
+        trace(
+            request,
+            "read_scope",
+            view=self,
+            predicate=predicate,
+            rows=rows,
+            exempt=bool(getattr(self, "scope_exempt", False)),
+            hook=hooked,
+        )
+        if hooked:
             queryset = self.filter_queryset_for_user(queryset)
             filtered = True
         return queryset, filtered

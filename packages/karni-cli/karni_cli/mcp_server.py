@@ -1,8 +1,9 @@
 """``karni mcp`` — Karni's agent surface as MCP tools (stdio).
 
 Tools: ``context`` (the ``karni context`` inventory), ``rules`` (the
-conventions, one rule in full, or a procedure) and ``check`` (static
-violations for one file). The tool functions are plain functions so they are
+conventions, one rule in full, or a procedure), ``check`` (static
+violations for one file), and ``why`` / ``why_empty`` (``karni why``: an
+access decision explained by the code that makes it). The tool functions are plain functions so they are
 testable without a client; :func:`build_server` registers them on the
 official MCP Python SDK server (``pip install 'karni-cli[mcp]'``): ``MCPServer``
 in mcp 2.x, ``FastMCP`` in mcp 1.x.
@@ -22,7 +23,9 @@ from karni_cli.rules_render import render_explain, render_procedure, render_rule
 
 INSTRUCTIONS = (
     "Karni project tools. Call `context` and `rules` before any work and follow what they "
-    "return; call `check` on every file you write."
+    "return; call `check` on every file you write. When a row, field or action is "
+    "unexpectedly missing or refused, call `why` (or `why_empty`) before reading the access "
+    "layer."
 )
 
 _project_override: Path | None = None
@@ -74,6 +77,72 @@ def check_tool(path: str) -> str:
 
 
 TOOLS: dict[str, Any] = {"context": context_tool, "rules": rules_tool, "check": check_tool}
+
+
+# --- debugging: karni why (access decisions) ----------------------------------
+
+
+def _params(params: str) -> list[str]:
+    return [part.strip() for part in params.replace("&", " ").split() if part.strip()]
+
+
+def _why(args_for: Any) -> str:
+    from karni_cli.commands.why import run_why
+
+    project = _project()
+    if project is None:
+        return "error: not inside a Karni project (no manage.py found)."
+    try:
+        code, out, err = run_why(args_for(), project=project)
+    except CliError as exc:
+        return f"error: {exc}"
+    if code != 0:
+        return f"error: {(err or out).strip()}"
+    return out.rstrip("\n")
+
+
+def why_tool(
+    target: str,
+    user: str = "",
+    action: str = "",
+    method: str = "",
+    params: str = "",
+    as_json: bool = False,
+) -> str:
+    """Why an API row, field or action is refused or missing for a user — run this before
+    reading the access layer. ``target``: ``<resource>/<id>`` (a row), ``<resource>.<field>``
+    (a field), ``<resource>`` (its list), or ``"403 <request-id>"`` (a recorded request).
+    ``user``: email, username, pk or ``anonymous``. ``action``: view (default), update,
+    delete, create, list or an @action. ``params``: query parameters, ``k=v&k2=v2``.
+    Returns the decision computed by the enforcing code, where it is made, and the fix."""
+    from karni_cli.commands.why import why_args
+
+    head, _, rest = target.strip().partition(" ")
+    return _why(
+        lambda: why_args(
+            head,
+            rest.strip() or None,
+            user=user or None,
+            action=action or None,
+            method=method or None,
+            params=_params(params),
+            as_json=as_json,
+        )
+    )
+
+
+def why_empty_tool(resource: str, user: str, params: str = "", as_json: bool = False) -> str:
+    """Why a user's list of ``resource`` is empty: the rows each step of the read pipeline
+    removes (table, soft delete, the viewset's queryset, access.read part by part, the
+    filters in ``params`` as ``k=v&k2=v2``), the step that empties it, and the fix."""
+    from karni_cli.commands.why import why_empty_args
+
+    return _why(
+        lambda: why_empty_args(resource, user=user or None, params=_params(params), as_json=as_json)
+    )
+
+
+TOOLS.update({"why": why_tool, "why_empty": why_empty_tool})
 
 
 def _server_class() -> Any:

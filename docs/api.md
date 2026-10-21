@@ -193,6 +193,12 @@ related row by its natural key. A hand-written serializer or action that
 renders related rows itself can run the same check with
 `karni.api.related.readable_related(serializer.context, rows)`.
 
+**Why is a row missing?** `karni why events/<id> --as <user>` prints the
+decision for that user — the gate, each part of `read` and `write` against
+the row, the grants and roles behind them, `file:line` and the fix — computed
+by the code above; `karni why-empty events --as <user>` explains an empty
+list step by step. See [debugging](debugging/why.md).
+
 Escape hatches, least to most drastic:
 
 1. change the declaration;

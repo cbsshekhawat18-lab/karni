@@ -26,6 +26,7 @@ traceback; `KARNI_DB_CHECK=false` skips the check.
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make)
 
 ## Project
@@ -444,6 +445,45 @@ karni manage [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | The manage.py command and its arguments, e.g. `showmigrations events`. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+## Debugging
+
+### `karni why`
+
+Explain an access decision: why a row, field or action is refused or missing
+
+```
+karni why [OPTIONS] TARGET [REQUEST_ID]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to explain: &lt;resource&gt;/&lt;id&gt; (a row), &lt;resource&gt;.&lt;field&gt; (a field), &lt;resource&gt; (its list), or a status followed by a request id (403 &lt;request-id&gt;). Resources are named as the API names them: events, events-event or events.Event. |
+| `REQUEST_ID` |  | The request id, after a status. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--action` TEXT |  | For a row: view (default), update, delete, or an @action name; create or list for a resource. |
+| `--method` TEXT |  | The HTTP method, for an @action that answers several. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni why-empty`
+
+Explain an empty list: which step removes the rows, and the fix
+
+```
+karni why-empty [OPTIONS] RESOURCE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `RESOURCE` (required) |  | The resource, named as the API names it. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 

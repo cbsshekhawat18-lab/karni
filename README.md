@@ -230,6 +230,8 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni sync-roles`](docs/REFERENCE.md#karni-sync-roles) | Create or update the roles KARNI_ROLES declares — wraps `manage.py karni_sync_roles [ARGS]` |
 | [`karni createsuperuser`](docs/REFERENCE.md#karni-createsuperuser) | Create an admin user — wraps `manage.py createsuperuser [ARGS]` |
 | [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command — wraps `manage.py ARGS` (raw passthrough) |
+| [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
+| [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [module](docs/REFERENCE.md#karni-make-module) |
 <!-- /generated:commands -->
 
@@ -359,7 +361,8 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
 - `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
-- `experimental` MCP server exposing `context`, `rules` and `check` as tools
+- `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
+- `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
 Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`.
 <!-- /generated:agents -->
