@@ -70,7 +70,7 @@ function EnumFilter({
       options={options}
       placeholder={field.label}
       clearable
-      clearLabel="All"
+      clearLabel={`${field.label}: All`}
       onValueChange={(next) => {
         if (next === null) {
           onFilterChange(field, null);
@@ -104,7 +104,7 @@ function BooleanFilter({
       ]}
       placeholder={field.label}
       clearable
-      clearLabel="All"
+      clearLabel={`${field.label}: All`}
       onValueChange={(next) => onFilterChange(field, next === null ? null : next === "true")}
     />
   );

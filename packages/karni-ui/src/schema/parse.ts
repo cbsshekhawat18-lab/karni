@@ -499,6 +499,8 @@ function operationDef(
   };
   if (typeof op.operationId === "string") def.operationId = op.operationId;
   if (expandEnum !== undefined) def.expandEnum = expandEnum;
+  const access = op["x-karni-access"];
+  if (isRecord(access)) def.access = access;
   return def;
 }
 
