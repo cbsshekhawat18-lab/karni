@@ -28,7 +28,7 @@ export type {
   KarniErrorKind,
 } from "./states/describe-error";
 export { ErrorState, PermissionDenied } from "./states/ErrorState";
-export type { ErrorStateProps, PermissionDeniedProps } from "./states/ErrorState";
+export type { ErrorSlotProps, ErrorStateProps, PermissionDeniedProps } from "./states/ErrorState";
 export { PendingButton } from "./states/PendingButton";
 export type { PendingButtonProps } from "./states/PendingButton";
 export { SLOW_AFTER_MS, useDelayedFlag, useOnlineStatus } from "./states/hooks";

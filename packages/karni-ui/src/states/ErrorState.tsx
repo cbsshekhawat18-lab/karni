@@ -32,6 +32,12 @@ export interface ErrorStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
 }
 
 /**
+ * What a component's `Error` slot receives: every Karni component that loads
+ * data takes `slots={{ Error: YourPanel }}` with these props.
+ */
+export type ErrorSlotProps = Pick<ErrorStateProps, "error" | "context" | "onRetry" | "retrying">;
+
+/**
  * What failed and what to do, in plain words (see describeError). Never shows
  * a raw status code; shows the server's own explanation when it gave one.
  * Announced to screen readers when it appears.
