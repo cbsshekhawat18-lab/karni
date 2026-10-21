@@ -9,6 +9,11 @@ Interactive runners (shell, test, worker, ...) pass ``interactive=True``:
 in docker mode that allocates a TTY (``docker compose exec`` without
 ``-T``) when the CLI itself runs in a terminal, so prompts, colours and
 Ctrl-C work; scripted and agent runs (no TTY) keep ``-T``.
+
+Runners that start Django declare what they need from its database with
+``database=`` (``run_manage`` defaults to ``"load"``): the guard in
+:mod:`karni_cli.database` turns a missing driver or an unreachable database
+into a coded error (C012, C013) instead of Django's traceback.
 """
 
 from __future__ import annotations
@@ -20,12 +25,17 @@ import signal
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 #: Typer ``context_settings`` for runners that pass unknown options through
 #: to the wrapped command (``karni test -x -k name``). Put ``--`` before
 #: arguments that clash with the runner's own options.
 PASSTHROUGH: dict[str, Any] = {"ignore_unknown_options": True, "allow_extra_args": True}
+
+#: What a command needs from the project's database (:mod:`karni_cli.database`):
+#: ``"load"`` its backend and driver (every Django process), ``"connect"`` a
+#: running server too.
+DatabaseUse = Literal["load", "connect"]
 
 
 class CliError(Exception):
@@ -149,6 +159,17 @@ def _tty() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
+def _resolve_command(
+    project: Path, args: list[str], *, docker: bool | None, service: str, interactive: bool
+) -> tuple[Path | None, list[str]]:
+    """The host interpreter (``None`` in docker mode) and the argv running ``python <args>``."""
+    if resolve_execution(project, docker, service) == "venv":
+        python = venv_python(project)
+        return python, [str(python), *args]
+    no_tty = [] if interactive and _tty() else ["-T"]
+    return None, ["docker", "compose", "exec", *no_tty, service, "python", *args]
+
+
 def python_command(
     project: Path,
     args: list[str],
@@ -158,11 +179,10 @@ def python_command(
     interactive: bool = False,
 ) -> list[str]:
     """The argv running ``python <args>`` in the resolved environment."""
-    mode = resolve_execution(project, docker, service)
-    if mode == "venv":
-        return [str(venv_python(project)), *args]
-    no_tty = [] if interactive and _tty() else ["-T"]
-    return ["docker", "compose", "exec", *no_tty, service, "python", *args]
+    _, cmd = _resolve_command(
+        project, args, docker=docker, service=service, interactive=interactive
+    )
+    return cmd
 
 
 def run_python(
@@ -173,15 +193,34 @@ def run_python(
     service: str = "django",
     capture: bool = True,
     interactive: bool = False,
+    database: DatabaseUse | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``python <args>`` through the project interpreter, cwd pinned to the project.
 
     Returns the CompletedProcess (text mode, never raises on non-zero exit).
     With ``capture=False`` output streams through to the terminal (stdin is
     always inherited); ``interactive=True`` also asks docker for a TTY.
+
+    ``database`` is what the command needs from the project's database (it
+    starts Django): :func:`karni_cli.database.guard` checks it on the host
+    before a streamed command and after a captured one that failed, and raises
+    a coded :class:`CliError` (C012/C013) instead of letting Django's
+    traceback through. ``None`` (the default here) skips the check.
     """
-    cmd = python_command(project, args, docker=docker, service=service, interactive=interactive)
-    return run_process(cmd, cwd=project, capture=capture)
+    python, cmd = _resolve_command(
+        project, args, docker=docker, service=service, interactive=interactive
+    )
+    if database is None or python is None:
+        return run_process(cmd, cwd=project, capture=capture)
+    from karni_cli import database as database_mod
+
+    checked = database_mod.enabled()
+    if checked and not capture:
+        database_mod.guard(project, python, database)
+    proc = run_process(cmd, cwd=project, capture=capture)
+    if checked and capture and proc.returncode != 0:
+        database_mod.guard(project, python, database)
+    return proc
 
 
 def run_process(
@@ -224,8 +263,13 @@ def run_manage(
     service: str = "django",
     capture: bool = True,
     interactive: bool = False,
+    database: DatabaseUse | None = "load",
 ) -> subprocess.CompletedProcess[str]:
-    """Run ``manage.py <args>`` in the resolved environment (see :func:`run_python`)."""
+    """Run ``manage.py <args>`` in the resolved environment (see :func:`run_python`).
+
+    Every manage.py command starts Django, so ``database`` defaults to
+    ``"load"``; commands that open the database pass ``"connect"``.
+    """
     return run_python(
         project,
         ["manage.py", *args],
@@ -233,6 +277,7 @@ def run_manage(
         service=service,
         capture=capture,
         interactive=interactive,
+        database=database,
     )
 
 

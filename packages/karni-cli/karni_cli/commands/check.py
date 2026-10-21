@@ -21,7 +21,7 @@ import typer
 
 from karni_cli import project as project_mod
 from karni_cli import tips
-from karni_cli.project import require_project
+from karni_cli.project import CliError, require_project
 
 _BARE_IGNORE = re.compile(r"jscpd:ignore-start\s*$")
 
@@ -85,9 +85,15 @@ def check(
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Do not print the optional tip."),
 ) -> None:
     project = require_project()
-    backend = project_mod.run_manage(
-        project, ["karni_check"], docker=docker, service=service, capture=False
-    ).returncode
+    try:
+        backend = project_mod.run_manage(
+            project, ["karni_check"], docker=docker, service=service, capture=False
+        ).returncode
+    except CliError as exc:
+        # The backend cannot start here (no interpreter, no database driver):
+        # say why, and still run the frontend checks.
+        typer.echo(f"error: {exc}", err=True)
+        backend = 1
     dup = _frontend_duplication(project) if frontend else 0
     lint = _frontend_lint(project) if frontend else 0
     if backend or dup or lint:

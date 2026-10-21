@@ -11,6 +11,18 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `karni` commands no longer end in Django's traceback when the project's
+  database is not ready. On the host, a command that starts Django first
+  checks that the database driver loads, and one that opens the database
+  (`migrate`, `seed`, `sync-roles`, `createsuperuser`, `serve --local`,
+  `test`, `beat`, `manage`) that the server answers. A missing driver is
+  `C012` (install `psycopg[binary]` into the project interpreter, or use
+  Docker) and an unreachable database is `C013` (with the address, the
+  driver's error, and a note when `.env` is missing or `db` is the compose
+  host). Captured commands (`karni context`, `karni types`) are checked only
+  after they fail, so they cost nothing when the project works.
+  `KARNI_DB_CHECK=false` skips the check. `karni check` still runs the
+  frontend checks when the backend cannot start.
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.
