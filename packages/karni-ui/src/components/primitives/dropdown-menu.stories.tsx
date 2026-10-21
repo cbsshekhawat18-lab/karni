@@ -20,10 +20,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function RowActionsDemo(): React.ReactElement {
+function RowActionsDemo(props: { defaultOpen?: boolean }): React.ReactElement {
   const [archived, setArchived] = React.useState(false);
   return (
-    <DropdownMenu>
+    <DropdownMenu defaultOpen={props.defaultOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline">Row actions</Button>
       </DropdownMenuTrigger>
@@ -45,4 +45,12 @@ function RowActionsDemo(): React.ReactElement {
 
 export const Playground: Story = {
   render: () => <RowActionsDemo />,
+};
+
+/**
+ * Open on load. The arrow keys move through the items, Enter or Space runs
+ * one, typing jumps to an item, Escape closes and returns focus to the trigger.
+ */
+export const Open: Story = {
+  render: () => <RowActionsDemo defaultOpen />,
 };

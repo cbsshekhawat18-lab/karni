@@ -20,6 +20,11 @@
  * Material UI, Chakra UI or Mantine theme.
  * Add the `dark` class to <html> (or any ancestor) for the dark palette.
  *
+ * Both palettes meet WCAG 2.2 AA for every pair the components use (4.5:1
+ * text, 3:1 field boundaries, focus rings, icons and chart series);
+ * tests/contrast.test.ts computes the ratios from the values below. Check
+ * your own overrides against the same pairs.
+ *
  * The 0.3 HSL-triplet names (--karni-primary, --karni-border, ...) still
  * work as inputs: each --karni-color-* defaults to its triplet. They are
  * deprecated in 0.4 and removed in 1.0; set --karni-color-* instead.
@@ -47,24 +52,24 @@
   --karni-secondary-foreground: 220.9 39.3% 11%;
 
   --karni-muted: 220 14.3% 95.9%;
-  --karni-muted-foreground: 220 8.9% 46.1%;
+  --karni-muted-foreground: 220 8.9% 43%;
 
   --karni-accent: 220 14.3% 95.9%;
   --karni-accent-foreground: 220.9 39.3% 11%;
 
-  --karni-destructive: 0 84.2% 60.2%;
+  --karni-destructive: 0 72% 46%;
   --karni-destructive-foreground: 210 20% 98%;
 
   --karni-border: 220 13% 91%;
-  --karni-input: 220 13% 91%;
+  --karni-input: 220 9% 56%;
   --karni-ring: 224 71.4% 4.1%;
 
   --karni-radius: 0.5rem;
 
   /* DataChart series colors (chart-1 .. chart-5). */
   --karni-chart-1: 220 70% 50%;
-  --karni-chart-2: 160 60% 45%;
-  --karni-chart-3: 30 80% 55%;
+  --karni-chart-2: 160 60% 36%;
+  --karni-chart-3: 30 80% 42%;
   --karni-chart-4: 280 65% 60%;
   --karni-chart-5: 340 75% 55%;
 }
@@ -93,11 +98,11 @@
   --karni-accent: 215 27.9% 16.9%;
   --karni-accent-foreground: 210 20% 98%;
 
-  --karni-destructive: 0 62.8% 30.6%;
-  --karni-destructive-foreground: 210 20% 98%;
+  --karni-destructive: 0 84% 65%;
+  --karni-destructive-foreground: 224 71.4% 4.1%;
 
   --karni-border: 215 27.9% 16.9%;
-  --karni-input: 215 27.9% 16.9%;
+  --karni-input: 215 14% 42%;
   --karni-ring: 216 12.2% 83.9%;
 
   --karni-chart-1: 217 91% 60%;
@@ -154,6 +159,13 @@
   --karni-color-chart-3: hsl(var(--karni-chart-3));
   --karni-color-chart-4: hsl(var(--karni-chart-4));
   --karni-color-chart-5: hsl(var(--karni-chart-5));
+}
+
+/* The scrim behind a modal or the mobile drawer dims the page in both
+   themes: the dark theme's foreground is light, so its scrim is the
+   background colour instead. */
+.dark {
+  --karni-color-overlay: color-mix(in srgb, var(--karni-color-background) 80%, transparent);
 }
 
 /* Size, type, elevation, stacking and motion. The preset falls back to the

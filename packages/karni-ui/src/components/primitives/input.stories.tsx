@@ -33,3 +33,22 @@ export const Invalid: Story = {
 export const Disabled: Story = {
   args: { disabled: true, defaultValue: "read only value" },
 };
+
+/** The invalid style next to its label and message, as a form renders it. */
+export const InvalidWithMessage: Story = {
+  render: (args) => (
+    <div className="grid w-full max-w-sm gap-1.5">
+      <Label htmlFor="story-email-invalid">Email</Label>
+      <Input
+        {...args}
+        id="story-email-invalid"
+        defaultValue="not-an-email"
+        aria-invalid
+        aria-describedby="story-email-error"
+      />
+      <p id="story-email-error" className="text-sm text-destructive">
+        Enter a valid email address.
+      </p>
+    </div>
+  ),
+};

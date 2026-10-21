@@ -227,20 +227,52 @@ export type { TokenStorage } from "./auth/storage";
 export type { KarniUser, AuthStatus, LoginResult } from "./auth/types";
 
 // support components
-export { Page } from "./components/page/page";
-export type { PageProps } from "./components/page/page";
+export { Page, defaultPageSlots } from "./components/page/page";
+export type {
+  PageProps,
+  PageSlots,
+  PageHeaderProps,
+  PageSlotContentProps,
+} from "./components/page/page";
 
-export { Layout } from "./components/layout/layout";
-export type { LayoutProps, LayoutNavItem } from "./components/layout/layout";
+export { Layout, defaultLayoutSlots } from "./components/layout/layout";
+export type {
+  LayoutProps,
+  LayoutNavItem,
+  LayoutSlots,
+  LayoutHeaderProps,
+  LayoutSidebarProps,
+  LayoutNavLinkProps,
+  LayoutMobileDrawerProps,
+  LayoutSkipLinkProps,
+} from "./components/layout/layout";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";
 
-export { Modal, ModalClose } from "./components/modal/modal";
-export type { ModalProps } from "./components/modal/modal";
+export {
+  Modal,
+  ModalClose,
+  ModalTitle,
+  ModalDescription,
+  defaultModalSlots,
+} from "./components/modal/modal";
+export type {
+  ModalProps,
+  ModalSlots,
+  ModalHeaderProps,
+  ModalFooterProps,
+  ModalCloseButtonProps,
+} from "./components/modal/modal";
 
-export { Toaster, toastVariants } from "./components/toast/toaster";
-export type { ToasterProps, ToastVariantProps } from "./components/toast/toaster";
+export { Toaster, toastVariants, defaultToasterSlots } from "./components/toast/toaster";
+export type {
+  ToasterProps,
+  ToastVariantProps,
+  ToasterSlots,
+  ToasterSlotProps,
+  ToasterCloseButtonProps,
+} from "./components/toast/toaster";
 export { useToast } from "./components/toast/use-toast";
 export type { UseToastResult } from "./components/toast/use-toast";
 export type {
@@ -250,19 +282,34 @@ export type {
   ToastVariant,
 } from "./components/toast/toast-store";
 
-export { EmptyState } from "./components/empty-state/empty-state";
-export type { EmptyStateProps } from "./components/empty-state/empty-state";
-export { FileUpload } from "./components/file-upload/FileUpload";
-export type { FileUploadProps, FileUploadRejectReason } from "./components/file-upload/FileUpload";
+export { EmptyState, defaultEmptyStateSlots } from "./components/empty-state/empty-state";
+export type {
+  EmptyStateProps,
+  EmptyStateSlots,
+  EmptyStateSlotProps,
+} from "./components/empty-state/empty-state";
+export { FileUpload, defaultFileUploadSlots } from "./components/file-upload/FileUpload";
+export type {
+  FileUploadProps,
+  FileUploadRejectReason,
+  FileUploadSlots,
+  FileUploadDropzoneProps,
+  FileUploadFileRowProps,
+} from "./components/file-upload/FileUpload";
 
-export { Stat } from "./components/stat/stat";
-export type { StatProps } from "./components/stat/stat";
+export { Stat, defaultStatSlots } from "./components/stat/stat";
+export type { StatProps, StatSlots, StatSlotProps, StatDeltaProps } from "./components/stat/stat";
 
-export { DataChart } from "./components/chart/data-chart";
+export { DataChart, defaultDataChartSlots } from "./components/chart/data-chart";
 export type {
   DataChartProps,
   DataChartKind,
   DataChartPoint,
   DataChartSeries,
   DataChartTooltipContext,
+  DataChartSlots,
+  DataChartTooltipProps,
+  DataChartLegendProps,
+  DataChartEmptyProps,
+  DataChartLoadingProps,
 } from "./components/chart/data-chart";

@@ -183,7 +183,7 @@ def test_emails_use_the_brand_values() -> None:
     """Inline email CSS cannot read variables: its colours are the light tokens' values."""
     light = _triplets(":root")
     brand = {_hex(light[name]) for name in light}
-    assert {"#111827", "#f9fafb", "#6b7280"} <= brand  # primary, its foreground, muted text
+    assert {"#111827", "#f9fafb", "#646a77"} <= brand  # primary, its foreground, muted text
     assert EMAIL_TEMPLATES
     for path in EMAIL_TEMPLATES:
         colours = {colour.lower() for colour in re.findall(r"#[0-9a-fA-F]{6}\b", path.read_text())}

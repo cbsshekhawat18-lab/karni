@@ -30,7 +30,7 @@ const KarniSelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive [&>span]:line-clamp-1",
       className,
     )}
     {...props}
@@ -212,6 +212,12 @@ export interface SelectProps {
   className?: string;
   contentClassName?: string;
   "aria-label"?: string;
+  /** Marks the trigger invalid: a destructive border, announced by screen readers. */
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  /** Ids of the elements that describe the trigger (help text, the error message). */
+  "aria-describedby"?: string;
+  /** Ids of the elements that label the trigger (when no <label htmlFor> points at `id`). */
+  "aria-labelledby"?: string;
   /** Extra <SelectItem>/<SelectGroup> nodes appended after `options` (escape hatch). */
   children?: React.ReactNode;
 }
@@ -237,6 +243,9 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     contentClassName,
     children,
     "aria-label": ariaLabel,
+    "aria-invalid": ariaInvalid,
+    "aria-describedby": ariaDescribedBy,
+    "aria-labelledby": ariaLabelledBy,
   } = props;
 
   const safeOptions = React.useMemo(() => {
@@ -271,7 +280,15 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
       disabled={disabled}
       name={name}
     >
-      <SelectTrigger ref={ref} id={id} className={className} aria-label={ariaLabel}>
+      <SelectTrigger
+        ref={ref}
+        id={id}
+        className={className}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        aria-labelledby={ariaLabelledBy}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className={contentClassName}>

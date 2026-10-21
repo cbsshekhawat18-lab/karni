@@ -11,7 +11,9 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Playground: Story = {};
+export const Playground: Story = {
+  args: { "aria-label": "Email notifications" },
+};
 
 export const WithLabel: Story = {
   render: () => (
@@ -23,9 +25,9 @@ export const WithLabel: Story = {
 };
 
 export const On: Story = {
-  args: { defaultChecked: true },
+  args: { defaultChecked: true, "aria-label": "Email notifications" },
 };
 
 export const Disabled: Story = {
-  args: { disabled: true },
+  args: { disabled: true, "aria-label": "Email notifications" },
 };

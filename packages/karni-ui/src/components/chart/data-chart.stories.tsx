@@ -93,3 +93,36 @@ export const Empty: Story = {
     emptyLabel: "No signups recorded yet",
   },
 };
+
+export const Loading: Story = {
+  args: { loading: true },
+};
+
+/**
+ * Keyboard: Tab focuses the chart, the arrow keys move the tooltip from
+ * month to month and announce each value (Home, End; Escape hides it).
+ */
+export const KeyboardFocus: Story = {
+  args: {
+    title: "Signups vs churn",
+    data: undefined,
+    series: multiSeries,
+  },
+  play: ({ canvasElement }) => {
+    const svg = canvasElement.querySelector("svg");
+    svg?.focus();
+    for (const key of ["ArrowRight", "ArrowRight", "ArrowRight"]) {
+      svg?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    }
+  },
+};
+
+/** A phone-width container: tick labels stay legible, lines stay visible. */
+export const Narrow: Story = {
+  args: {
+    title: "Signups vs churn",
+    data: undefined,
+    series: multiSeries,
+    className: "max-w-80",
+  },
+};
