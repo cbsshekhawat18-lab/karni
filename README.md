@@ -102,6 +102,8 @@ npm run dev
 
 Open `http://127.0.0.1:8000/` for the welcome page and `/admin/` for the admin. Open `http://localhost:5173/login` for the React app. Sign in as `demo@example.com` with the password `karni-password`; `karni seed` created that user. The [quickstart guide](docs/quickstart.md) explains each step.
 
+Without Python 3.12 on your machine, run the `karni` command from its container image, [`ghcr.io/cbsshekhawat18-lab/karni`](https://github.com/cbsshekhawat18-lab/karni/pkgs/container/karni). For example, `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"` scaffolds the project into the current directory.
+
 ## Karni compared
 
 | | Plain Django + DRF | Cookiecutter Django | SaaS Pegasus | Karni |

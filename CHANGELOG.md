@@ -11,6 +11,11 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- The `karni` command as a container image, `ghcr.io/cbsshekhawat18-lab/karni`
+  (linux/amd64 and arm64), built from the PyPI release after every release
+  and listed under the repository's Packages. It runs the CLI on machines
+  without Python 3.12: `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work"
+  ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"`.
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.
