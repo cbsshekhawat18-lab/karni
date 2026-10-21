@@ -1,0 +1,159 @@
+/*
+ * Karni's own admin pages (import, permission matrix and its review,
+ * effective permissions): the controls and tables they share, drawn with
+ * @karni/ui's tokens (karni/tokens.css, linked before this file). The tokens
+ * follow the `dark` class unfold puts on <html>, so only the problem red
+ * below needs a dark-mode rule, and no colour is written here.
+ *
+ * Touch: every control is at least 44px tall (--karni-space-unit * 11) and
+ * nothing depends on hover; hover only adds feedback.
+ */
+
+.karni-page {
+  --karni-touch: calc(var(--karni-space-unit) * 11);
+  max-width: 72rem;
+  color: var(--karni-color-foreground);
+}
+
+.karni-page h2 {
+  margin: calc(var(--karni-space-unit) * 6) 0 calc(var(--karni-space-unit) * 2);
+  font-size: var(--karni-font-size-base);
+  line-height: var(--karni-font-leading-base);
+  font-weight: var(--karni-font-weight-semibold);
+}
+
+.karni-note {
+  color: var(--karni-color-muted-foreground);
+  font-size: var(--karni-font-size-sm);
+  line-height: var(--karni-font-leading-sm);
+}
+
+/* Problems use the red unfold gives its own form errors on the same pages
+   (its theme variables), which reads well on both backgrounds. */
+.karni-problem,
+.karni-problem td {
+  color: var(--color-red-600);
+}
+
+.dark .karni-problem,
+.dark .karni-problem td {
+  color: var(--color-red-500);
+}
+
+.karni-page code {
+  font-family: var(--karni-font-mono);
+  font-size: 0.9em;
+}
+
+/* Buttons: @karni/ui's Button, default and outline variants. */
+.karni-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--karni-space-unit) * 3);
+  align-items: center;
+  margin: calc(var(--karni-space-unit) * 4) 0;
+}
+
+.karni-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--karni-space-unit) * 2);
+  min-height: var(--karni-touch);
+  padding: 0 calc(var(--karni-space-unit) * 5);
+  border: var(--karni-border-width) solid transparent;
+  border-radius: var(--karni-radius-md);
+  background: var(--karni-color-primary);
+  color: var(--karni-color-primary-foreground);
+  font: inherit;
+  font-size: var(--karni-font-size-sm);
+  font-weight: var(--karni-font-weight-medium);
+  line-height: var(--karni-font-leading-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--karni-duration) var(--karni-ease);
+}
+
+.karni-button:hover {
+  background: var(--karni-color-primary-hover);
+}
+
+.karni-button-secondary {
+  border-color: var(--karni-color-input);
+  background: var(--karni-color-background);
+  color: var(--karni-color-foreground);
+}
+
+.karni-button-secondary:hover {
+  background: var(--karni-color-accent);
+  color: var(--karni-color-accent-foreground);
+}
+
+.karni-button:focus-visible,
+.karni-field:focus-visible {
+  outline: var(--karni-ring-width) solid var(--karni-color-ring);
+  outline-offset: var(--karni-ring-offset-width);
+}
+
+/* Form controls: @karni/ui's Input and Select. 16px text keeps iOS from
+   zooming on focus. */
+.karni-field {
+  min-height: var(--karni-touch);
+  min-width: 12rem;
+  padding: 0 calc(var(--karni-space-unit) * 3);
+  border: var(--karni-border-width) solid var(--karni-color-input);
+  border-radius: var(--karni-radius-md);
+  background: var(--karni-color-background);
+  color: var(--karni-color-foreground);
+  font: inherit;
+  font-size: var(--karni-font-size-base);
+}
+
+input[type="file"].karni-field {
+  padding: calc(var(--karni-space-unit) * 2.5) calc(var(--karni-space-unit) * 3);
+}
+
+.karni-field:disabled {
+  opacity: var(--karni-opacity-60);
+  cursor: not-allowed;
+}
+
+/* Tables. Wide ones sit in .karni-scroll and scroll sideways on their own,
+   so the page itself never does. */
+.karni-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.karni-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--karni-font-size-sm);
+  line-height: var(--karni-font-leading-sm);
+}
+
+.karni-table th,
+.karni-table td {
+  padding: calc(var(--karni-space-unit) * 2);
+  border-bottom: var(--karni-border-width) solid var(--karni-color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.karni-table thead th {
+  color: var(--karni-color-muted-foreground);
+  font-weight: var(--karni-font-weight-medium);
+}
+
+.karni-table .karni-group td {
+  background: var(--karni-color-muted);
+  color: var(--karni-color-foreground);
+  font-weight: var(--karni-font-weight-semibold);
+}
+
+.karni-muted {
+  color: var(--karni-color-muted-foreground);
+}
