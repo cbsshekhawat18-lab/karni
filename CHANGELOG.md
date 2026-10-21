@@ -114,6 +114,31 @@ reads to apply codemods and list the manual steps — and explained in
   `chart-3`; dark `destructive`, `destructive-foreground`, `input`), checked by
   a new test, and the dark theme's modal and drawer scrim dims the page (it
   lightened it). axe-core runs over the stories of these components.
+- `@karni/ui` ResourceTable in every state and at real size. Each state is its
+  own screen and a replaceable slot (`slots`, `defaultResourceTableSlots`):
+  a loading outline of the real layout (nothing moves when data arrives),
+  "No events yet" with the create action (`onCreate`, `createLabel`) apart
+  from "No events match" with "Clear filters", errors in plain words with a
+  retry, a failed refresh that keeps the rows, "You can't view events" for a
+  403 (4xx are no longer retried, except 408 and 429), offline, and progress
+  after 500ms with controls that do not double-fire. Row actions follow the
+  schema's `x-karni-access` rules for the signed-in user (`canCreate`,
+  `canEdit`, `canDelete` override); delete failures are reported (row delete
+  now confirms in a dialog instead of `window.confirm`). Bulk actions confirm
+  destructive work with the count, may return `{ failed: [{ id, reason }] }`
+  to mark failed rows, and show progress. Page, page size, sort, search and
+  filters live in the URL (namespaced, Back works; `syncUrl`, `urlNamespace`,
+  `stateStore` for a router). Page size choice, first/last and jump to page;
+  wide tables scroll in their own box with a sticky header and a frozen first
+  column; compact rows and hidden columns are remembered per user; below
+  `cardBreakpoint` (the table's own width) rows render as cards. Rows open
+  from the keyboard, checkboxes are named after their row, and page, sort,
+  selection and loading changes are announced. The parsed schema now carries
+  each operation's `access` rule. Changed wording: the empty screen says "No
+  events yet" (was "Nothing here yet"), the select-all checkbox "Select all
+  events on this page", row checkboxes "Select <row>", filter "All" items
+  "Status: All", and list errors read like every other error ("Something went
+  wrong on our side", "Try again").
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.

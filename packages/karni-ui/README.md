@@ -67,7 +67,7 @@ property defined in `@karni/ui/styles.css`:
 | `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                           |
 | `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                        |
 | `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                             |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`                                                                |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box)       |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -402,6 +402,124 @@ cleared optional field is left out of the request rather than sent as `null`
 
 Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`;
 `displayLabel(obj)` picks a human label for relation objects.
+
+### ResourceTable in every state
+
+Each state is its own screen, and each is a slot you can replace:
+
+| State                         | What the user sees                                                                                                                      | Slot           |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| first load                    | the real layout in outline: header with the real column count, a full page of rows, the pagination row; nothing moves when data arrives | `Loading`      |
+| no records yet                | "No events yet", and the create action when `onCreate` is set and the role may create                                                   | `NoRecords`    |
+| nothing matches               | "No events match", what is narrowing the list (search, each filter) and "Clear filters" (pinned `params` stay)                          | `NoResults`    |
+| the list failed               | `ErrorState`: plain words, "Try again" when it can help                                                                                 | `Error`        |
+| a refresh failed              | the rows stay; one line above them says so, with "Try again"                                                                            | `RefetchError` |
+| 403 on the list               | "You can't view events", no retry (4xx are not retried, except 408 and 429)                                                             | `Forbidden`    |
+| offline                       | a line over the rows it has, or the offline panel; the list reloads by itself when the connection is back                               | `Offline`      |
+| slow (500ms, `SLOW_AFTER_MS`) | a progress bar, dimmed rows, "Loading events…" announced; the clicked control shows progress and ignores repeat clicks                  | —              |
+
+The other slots are `Pagination`, `BulkActions` and `RowCard`. Every slot
+receives the props type exported next to it (`ResourceTableLoadingProps`,
+`ResourceTableNoResultsProps`, … ; `Error` and `RefetchError` take
+`ErrorSlotProps`), and the defaults are exported as
+`defaultResourceTableSlots`, so a replacement can wrap one:
+
+```tsx
+<ResourceTable
+  resource="events"
+  onCreate={() => navigate("/events/new")} // "New event" in the toolbar and the empty screen
+  slots={{
+    NoRecords: (props) => <OurEmptyState {...props} />,
+    Error: (props) => <defaultResourceTableSlots.Error {...props} />,
+  }}
+/>
+```
+
+The `empty` prop still replaces both empty screens; the `NoRecords` and
+`NoResults` slots are preferred, because they tell "nothing yet" from
+"nothing matches". `resourceLabel` ("events") and `itemLabel` ("event") word
+every message; by default they come from the resource name.
+
+**Permissions.** Columns follow the role's schema (a field the role cannot
+read is not in its schema, so its column and filter are absent). Row actions
+follow the schema's `x-karni-access` rules for the signed-in user (from
+`AuthProvider`): Edit shows on the rows the update rule allows (for example
+`Owned("organizer") | HasRole("staff")` shows it on the user's own rows),
+Delete on the rows the delete rule allows, and the create action only when
+the create rule allows it. Rules only the server can answer (grants, custom
+`Where` functions) keep the action, and a refusal is reported in plain words.
+`canCreate`, `canEdit` and `canDelete` (a boolean, or a function of the row)
+replace the schema's answer.
+
+**Deletes and bulk actions.** `enableDelete` asks in a dialog ("Delete
+“Spring Gala”?"); a failure is reported in the dialog, with "Try again" when
+it can help. A destructive bulk action (or one with `confirm: true`) asks
+first with the count ("Delete 3 events?"). An action may return a promise:
+the button shows progress after 500ms, the rows that succeeded are
+deselected, and a resolved `{ failed: [{ id, reason }] }` marks each failed
+row with its reason. `onClick(ids)` returning nothing keeps working as
+before. "Select all" selects the rows on this page, and the bar says so when
+more rows match.
+
+**At real size.** Only the current page is fetched: a page size choice
+(`pageSizeOptions`, default 10/25/50/100), first, previous, next, last and a
+page number to jump to. Wide tables scroll inside their own box (the page
+never scrolls sideways): the header sticks, the first column stays put and
+shows an edge once the table scrolls. The box is at most
+`--karni-table-max-height` (70vh) tall; set it to `none` to let the page
+scroll. The "View" menu toggles compact rows and hides columns; both are
+remembered per user (in `localStorage`, under the signed-in user's id).
+`density` / `onDensityChange` control density from outside. Below
+`cardBreakpoint` (640px of the table's own width, not the viewport's; `0`
+turns cards off) each row is a card: its title, then label and value pairs,
+with its checkbox and actions, and a sort choice above the cards.
+
+**View state in the URL.** Page, page size, ordering, search and filters are
+query parameters under the table's namespace (`?events.page=2&events.ordering=-starts_at`),
+so a view can be shared and Back returns to the previous one. A value equal
+to the default is left out; pinned `params` never appear. `urlNamespace`
+keeps two tables on one page apart, `syncUrl={false}` keeps the view in
+component state, and `stateStore` plugs in a router. A store reads the
+current query values, writes changes (`null` removes a key, `push` adds a
+history entry) and reports outside changes:
+
+```tsx
+// TanStack Router: the table's keys live in the route's search params.
+function useRouterTableStore(): ResourceTableStateStore {
+  const search = useSearch({ strict: false }) as Record<string, unknown>;
+  const navigate = useNavigate();
+  return React.useMemo(
+    () => ({
+      read: () =>
+        Object.fromEntries(Object.entries(search).map(([key, value]) => [key, String(value)])),
+      write: (changes, { push }) =>
+        void navigate({
+          to: ".",
+          replace: !push,
+          search: (previous: Record<string, unknown>) => {
+            const next = { ...previous };
+            for (const [key, value] of Object.entries(changes)) {
+              if (value === null) delete next[key];
+              else next[key] = value;
+            }
+            return next;
+          },
+        }),
+      // The store object changes with `search`, so the table re-reads it.
+      subscribe: () => () => undefined,
+    }),
+    [search, navigate],
+  );
+}
+```
+
+**Keyboard and screen readers.** The table is named by a caption (`caption`,
+default the capitalised `resourceLabel`) and its scroll box is focusable.
+Sortable headers are buttons with `aria-sort`. With `onRowClick`, the first
+cell of each row is a button, so a row opens with Enter or Space. Each
+checkbox is named after its row ("Select Spring Gala"). Page changes,
+sorting, the selection count and slow loading are announced in a polite live
+region; errors are announced as alerts.
 
 ## Hooks
 

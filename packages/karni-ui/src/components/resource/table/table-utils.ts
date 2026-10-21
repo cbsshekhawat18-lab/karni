@@ -14,18 +14,65 @@ export function sortingToOrdering(sorting: SortingState): string | undefined {
   return sorting.map((entry) => (entry.desc ? `-${entry.id}` : entry.id)).join(",");
 }
 
+/** `"-title,starts_at"` → TanStack sorting state (the inverse of sortingToOrdering). */
+export function orderingToSorting(ordering: string): SortingState {
+  return ordering
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && part !== "-")
+    .map((part) =>
+      part.startsWith("-") ? { id: part.slice(1), desc: true } : { id: part, desc: false },
+    );
+}
+
+/** The HTTP status of a KarniApiError-shaped error, if it has one. */
+export function statusOf(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("status" in error)) return undefined;
+  const status = (error as { status: unknown }).status;
+  return typeof status === "number" ? status : undefined;
+}
+
 /**
  * Duck-typed 404 check (works with KarniApiError or any error exposing a
  * numeric `status`), used for the D5 page-clamp: a list 404 with page > 1
  * decrements the page and refetches as loading, never as an error.
  */
 export function isNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "status" in error &&
-    (error as { status: unknown }).status === 404
-  );
+  return statusOf(error) === 404;
+}
+
+/**
+ * The list query's retry rule: a request the server refused (4xx) fails the
+ * same way again, so it is not retried, except a timeout (408) or a rate
+ * limit (429). Network failures and 5xx get three tries.
+ */
+export function shouldRetryList(failureCount: number, error: unknown): boolean {
+  const status = statusOf(error);
+  if (status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429) {
+    return false;
+  }
+  return failureCount < 3;
+}
+
+/** "loose-slots" → "loose slots": the resource as a sentence names it. */
+export function resourceWords(resource: string): string {
+  return resource.replace(/[_-]+/g, " ").trim().toLowerCase();
+}
+
+/**
+ * A conservative English singular ("events" → "event", "categories" →
+ * "category", "addresses" → "address"); ResourceTable's `itemLabel` prop
+ * replaces it where it guesses wrong.
+ */
+export function singular(plural: string): string {
+  if (/[^aeiou]ies$/.test(plural)) return `${plural.slice(0, -3)}y`;
+  if (/(?:ss|x|z|ch|sh)es$/.test(plural)) return plural.slice(0, -2);
+  if (/[^s]s$/.test(plural)) return plural.slice(0, -1);
+  return plural;
+}
+
+export function capitalised(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export function pageCountFor(count: number | undefined, pageSize: number): number {

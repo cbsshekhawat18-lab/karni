@@ -218,6 +218,10 @@
   --karni-ring-width-1: 1px;
   --karni-ring-offset-width: 2px;
 
+  /* ResourceTable scrolls inside a box this tall (its header sticks); `none`
+     lets the page scroll instead. */
+  --karni-table-max-height: 70vh;
+
   --karni-z-raised: 10;
   --karni-z-drawer: 40;
   --karni-z-popover: 50;

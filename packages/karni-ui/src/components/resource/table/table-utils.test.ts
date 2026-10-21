@@ -1,11 +1,51 @@
 import { describe, expect, it } from "vitest";
+import { KarniApiError } from "../../../schema/client";
 import {
   enumLabel,
   errorMessage,
   isNotFoundError,
+  orderingToSorting,
   pageCountFor,
+  resourceWords,
+  shouldRetryList,
+  singular,
   sortingToOrdering,
 } from "./table-utils";
+
+describe("orderingToSorting", () => {
+  it("is the inverse of sortingToOrdering", () => {
+    expect(orderingToSorting("")).toEqual([]);
+    expect(orderingToSorting("status,-starts_at")).toEqual([
+      { id: "status", desc: false },
+      { id: "starts_at", desc: true },
+    ]);
+    expect(sortingToOrdering(orderingToSorting("-title"))).toBe("-title");
+  });
+});
+
+describe("shouldRetryList", () => {
+  it("never retries a refusal (4xx) except a timeout or a rate limit", () => {
+    for (const status of [400, 401, 403, 404, 409, 422]) {
+      expect(shouldRetryList(0, new KarniApiError(status, {}))).toBe(false);
+    }
+    expect(shouldRetryList(0, new KarniApiError(408, {}))).toBe(true);
+    expect(shouldRetryList(0, new KarniApiError(429, {}))).toBe(true);
+    expect(shouldRetryList(0, new KarniApiError(503, {}))).toBe(true);
+    expect(shouldRetryList(0, new TypeError("Failed to fetch"))).toBe(true);
+    expect(shouldRetryList(3, new KarniApiError(503, {}))).toBe(false);
+  });
+});
+
+describe("resource words", () => {
+  it("names the resource as a sentence does, one and many", () => {
+    expect(resourceWords("loose-slots")).toBe("loose slots");
+    expect(singular("events")).toBe("event");
+    expect(singular("categories")).toBe("category");
+    expect(singular("addresses")).toBe("address");
+    expect(singular("courses")).toBe("course");
+    expect(singular("people")).toBe("people");
+  });
+});
 
 describe("sortingToOrdering (D5: column ids are the ordering contract)", () => {
   it("maps asc/desc to DRF ordering values", () => {

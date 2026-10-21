@@ -113,6 +113,29 @@ export type {
   ResourceColumn,
   BulkAction,
 } from "./components/resource/ResourceTable";
+export {
+  createHistoryStateStore,
+  defaultResourceTableSlots,
+} from "./components/resource/ResourceTable";
+export type {
+  BulkActionReturn,
+  BulkOutcome,
+  BulkResult,
+  ResourceTableActiveFilter,
+  ResourceTableBulkActionsProps,
+  ResourceTableCardField,
+  ResourceTableDensity,
+  ResourceTableForbiddenProps,
+  ResourceTableLoadingProps,
+  ResourceTableNoRecordsProps,
+  ResourceTableNoResultsProps,
+  ResourceTableOfflineProps,
+  ResourceTablePaginationProps,
+  ResourceTableRowCardProps,
+  ResourceTableSlots,
+  ResourceTableStateStore,
+} from "./components/resource/ResourceTable";
+export type { KarniAccessRule } from "./schema/types";
 
 export { ResourceForm } from "./components/resource/ResourceForm";
 export type {

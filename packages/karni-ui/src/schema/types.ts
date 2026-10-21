@@ -64,6 +64,14 @@ export interface FieldDef {
   order: number;
 }
 
+/**
+ * An operation's `x-karni-access` rule as the backend publishes it: the access
+ * predicate governing the operation, e.g. `{"role": ["staff"]}`,
+ * `{"owned": "organizer"}`, `{"any": [...]}`. A display hint only: the server
+ * enforces it.
+ */
+export type KarniAccessRule = Readonly<Record<string, unknown>>;
+
 export interface OperationDef {
   path: string;
   method: "get" | "post" | "put" | "patch" | "delete";
@@ -74,6 +82,8 @@ export interface OperationDef {
   expandEnum?: readonly string[];
   /** True when the operation declares a `search` query parameter (api B14). */
   hasSearch?: boolean;
+  /** The operation's `x-karni-access` rule, when the backend published one. */
+  access?: KarniAccessRule;
 }
 
 export interface ResourceSchema {
