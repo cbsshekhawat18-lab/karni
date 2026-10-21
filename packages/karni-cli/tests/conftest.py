@@ -11,6 +11,32 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
+MODULES = ("karni-payments", "karni-approvals", "karni-impersonation")
+#: Set where every module is installed (CI's Python jobs): a test that needs a
+#: module fails without it instead of skipping, so the coverage cannot drop out.
+REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
+
+
+def require_modules(*projects: str) -> None:
+    """Skip the test, naming what to install, unless every optional module in ``projects`` is."""
+    from importlib.metadata import PackageNotFoundError, distribution
+
+    missing = []
+    for project in projects or MODULES:
+        try:
+            distribution(project)
+        except PackageNotFoundError:
+            missing.append(project)
+    if not missing:
+        return
+    install = " ".join(f"-e modules/{project}" for project in missing)
+    reason = (
+        f"needs {', '.join(missing)}, not installed. Install with: pip install {install} "
+        "(make install installs every module)"
+    )
+    if REQUIRE_MODULES:
+        pytest.fail(f"{reason}. KARNI_REQUIRE_MODULES=1 requires every module.")
+    pytest.skip(reason)
 
 
 @pytest.fixture

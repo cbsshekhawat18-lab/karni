@@ -200,9 +200,10 @@ def test_new_from_a_checkout_leaves_git_status_clean(tmp_path: Path) -> None:
     """``karni new`` run from a clone builds that clone's @karni/ui and changes no tracked file."""
     clone = tmp_path / "karni"
     git = ["git", "-C", str(clone)]
-    subprocess.run(
-        ["git", "clone", "-q", "--depth", "1", f"file://{REPO_ROOT}", str(clone)], check=True
-    )
+    # init + fetch HEAD, not clone: CI checks a pull request out as a detached commit
+    subprocess.run(["git", "init", "-q", str(clone)], check=True)
+    subprocess.run([*git, "fetch", "-q", "--depth", "1", f"file://{REPO_ROOT}", "HEAD"], check=True)
+    subprocess.run([*git, "checkout", "-q", "FETCH_HEAD"], check=True)
     ui = clone / "packages" / "karni-ui"
     assert not (ui / "dist").exists() and not (ui / "node_modules").exists()
     env = {k: v for k, v in os.environ.items() if k not in {"KARNI_UI_SRC", "KARNI_TEMPLATES"}}

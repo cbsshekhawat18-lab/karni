@@ -58,6 +58,14 @@ make typecheck PYTHON=.venv/bin/python   # mypy (root mypy.ini), tsc --noEmit
 make format    PYTHON=.venv/bin/python   # fix formatting
 ```
 
+`make install` also installs the three optional modules in `modules/`, and
+`make test` tests them. A few tests in `packages/karni` and
+`packages/karni-cli` check the modules' error codes and their documentation.
+With only the core packages installed (`pip install -e packages/karni -e
+packages/karni-cli`, or `make install-py test-py CORE_ONLY=1`), those tests
+skip and name the module to install. CI runs both ways. Its full run sets
+`KARNI_REQUIRE_MODULES=1`, so there a missing module fails instead of skipping.
+
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for
 real users. Fix the framework, not the example.
