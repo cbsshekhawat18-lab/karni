@@ -96,6 +96,8 @@ export interface FileUploadProps {
   "aria-describedby"?: string;
   /** Marks the dropzone invalid (a destructive border); `error` sets it too. */
   "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  /** Called when focus leaves the dropzone (react-hook-form's onBlur). */
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>;
 }
 
 function matchesAccept(file: File, accept: string | undefined): boolean {
@@ -284,165 +286,170 @@ export const defaultFileUploadSlots: FileUploadSlots = {
  * Escape hatches: `slots` replaces the Dropzone or FileRow, `children`
  * replaces the dropzone's content, `rejectionMessage` rewords refusals.
  */
-export function FileUpload(props: FileUploadProps): React.ReactElement {
-  const {
-    value = null,
-    onChange,
-    accept,
-    multiple = false,
-    disabled = false,
-    maxSize,
-    onReject,
-    rejectionMessage = defaultRejectionMessage,
-    error,
-    uploading = false,
-    id,
-    name,
-    className,
-    children,
-    clearable = true,
-    slots,
-  } = props;
-  const { Dropzone, FileRow } = { ...defaultFileUploadSlots, ...slots };
+export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(
+  function FileUpload(props, ref): React.ReactElement {
+    const {
+      value = null,
+      onChange,
+      accept,
+      multiple = false,
+      disabled = false,
+      maxSize,
+      onReject,
+      rejectionMessage = defaultRejectionMessage,
+      error,
+      uploading = false,
+      id,
+      name,
+      className,
+      children,
+      clearable = true,
+      slots,
+    } = props;
+    const { Dropzone, FileRow } = { ...defaultFileUploadSlots, ...slots };
 
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const dropzoneRef = React.useRef<HTMLButtonElement>(null);
-  const messageId = React.useId();
-  const [dragging, setDragging] = React.useState(false);
-  const [rejections, setRejections] = React.useState<readonly React.ReactNode[]>([]);
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const dropzoneRef = React.useRef<HTMLButtonElement>(null);
+    // The forwarded ref is the dropzone button: what a label, aria-describedby and form focus point at.
+    React.useImperativeHandle(ref, () => dropzoneRef.current as HTMLButtonElement, []);
+    const messageId = React.useId();
+    const [dragging, setDragging] = React.useState(false);
+    const [rejections, setRejections] = React.useState<readonly React.ReactNode[]>([]);
 
-  const blocked = disabled || uploading;
-  const entries: ReadonlyArray<File | string> =
-    value == null ? [] : Array.isArray(value) ? value : [value as File | string];
+    const blocked = disabled || uploading;
+    const entries: ReadonlyArray<File | string> =
+      value == null ? [] : Array.isArray(value) ? value : [value as File | string];
 
-  const acceptFiles = (list: ArrayLike<File>): void => {
-    if (blocked) return;
-    const accepted: File[] = [];
-    const refused: React.ReactNode[] = [];
-    for (const file of Array.from(list)) {
-      let reason: FileUploadRejectReason | null = null;
-      if (!matchesAccept(file, accept)) reason = "accept";
-      else if (maxSize !== undefined && file.size > maxSize) reason = "size";
-      if (reason === null) {
-        accepted.push(file);
-        continue;
+    const acceptFiles = (list: ArrayLike<File>): void => {
+      if (blocked) return;
+      const accepted: File[] = [];
+      const refused: React.ReactNode[] = [];
+      for (const file of Array.from(list)) {
+        let reason: FileUploadRejectReason | null = null;
+        if (!matchesAccept(file, accept)) reason = "accept";
+        else if (maxSize !== undefined && file.size > maxSize) reason = "size";
+        if (reason === null) {
+          accepted.push(file);
+          continue;
+        }
+        onReject?.(file, reason);
+        const message = rejectionMessage(file, reason, { accept, maxSize });
+        if (message != null && message !== false) refused.push(message);
       }
-      onReject?.(file, reason);
-      const message = rejectionMessage(file, reason, { accept, maxSize });
-      if (message != null && message !== false) refused.push(message);
-    }
-    setRejections(refused);
-    if (accepted.length === 0) return;
-    onChange?.(multiple ? accepted : accepted[0]);
-  };
+      setRejections(refused);
+      if (accepted.length === 0) return;
+      onChange?.(multiple ? accepted : accepted[0]);
+    };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    if (event.target.files !== null) acceptFiles(event.target.files);
-    // Reset so selecting the same file again re-fires the change event.
-    event.target.value = "";
-  };
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+      if (event.target.files !== null) acceptFiles(event.target.files);
+      // Reset so selecting the same file again re-fires the change event.
+      event.target.value = "";
+    };
 
-  const handleDrop = (event: React.DragEvent<HTMLButtonElement>): void => {
-    event.preventDefault();
-    setDragging(false);
-    if (blocked) return;
-    acceptFiles(event.dataTransfer.files);
-  };
+    const handleDrop = (event: React.DragEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      setDragging(false);
+      if (blocked) return;
+      acceptFiles(event.dataTransfer.files);
+    };
 
-  const handleDragOver = (event: React.DragEvent<HTMLButtonElement>): void => {
-    event.preventDefault();
-    if (!blocked) setDragging(true);
-  };
+    const handleDragOver = (event: React.DragEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      if (!blocked) setDragging(true);
+    };
 
-  const removeEntry = (index: number): void => {
-    if (onChange === undefined) return;
-    // The row (and its button) is about to go: keep the keyboard on the field.
-    dropzoneRef.current?.focus();
-    const remaining = entries.filter((_, i) => i !== index);
-    if (remaining.length === 0) {
-      onChange(null);
-      return;
-    }
-    // Existing URL strings cannot be re-emitted (onChange carries File values
-    // only); the remaining pending files are kept.
-    const files = remaining.filter((entry): entry is File => typeof entry !== "string");
-    if (multiple) {
-      onChange(files);
-    } else {
-      onChange(files[0] ?? null);
-    }
-  };
+    const removeEntry = (index: number): void => {
+      if (onChange === undefined) return;
+      // The row (and its button) is about to go: keep the keyboard on the field.
+      dropzoneRef.current?.focus();
+      const remaining = entries.filter((_, i) => i !== index);
+      if (remaining.length === 0) {
+        onChange(null);
+        return;
+      }
+      // Existing URL strings cannot be re-emitted (onChange carries File values
+      // only); the remaining pending files are kept.
+      const files = remaining.filter((entry): entry is File => typeof entry !== "string");
+      if (multiple) {
+        onChange(files);
+      } else {
+        onChange(files[0] ?? null);
+      }
+    };
 
-  const messages: React.ReactNode[] = error != null && error !== false ? [error] : [];
-  messages.push(...rejections);
-  const describedBy =
-    [props["aria-describedby"], messages.length > 0 ? messageId : undefined]
-      .filter(Boolean)
-      .join(" ") || undefined;
-  const invalid = props["aria-invalid"] ?? (error != null && error !== false ? true : undefined);
+    const messages: React.ReactNode[] = error != null && error !== false ? [error] : [];
+    messages.push(...rejections);
+    const describedBy =
+      [props["aria-describedby"], messages.length > 0 ? messageId : undefined]
+        .filter(Boolean)
+        .join(" ") || undefined;
+    const invalid = props["aria-invalid"] ?? (error != null && error !== false ? true : undefined);
 
-  return (
-    <div className={cn("space-y-2", className)}>
-      <Dropzone
-        buttonRef={dropzoneRef}
-        id={id}
-        disabled={blocked}
-        aria-label={props["aria-label"]}
-        aria-labelledby={props["aria-labelledby"]}
-        aria-describedby={describedBy}
-        aria-invalid={invalid}
-        aria-busy={uploading || undefined}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragOver}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        dragging={dragging}
-        multiple={multiple}
-        uploading={uploading}
-      >
-        {children}
-      </Dropzone>
-      <input
-        ref={inputRef}
-        type="file"
-        name={name}
-        accept={accept}
-        multiple={multiple}
-        disabled={blocked}
-        onChange={handleInputChange}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="sr-only"
-      />
-      <span className="sr-only" role="status">
-        {uploading ? "Uploading…" : ""}
-      </span>
-      {messages.length > 0 ? (
-        <div id={messageId} className="space-y-1">
-          {messages.map((message, index) => (
-            <p key={index} role="alert" className="text-sm text-destructive">
-              {message}
-            </p>
-          ))}
-        </div>
-      ) : null}
-      {entries.length > 0 ? (
-        <ul className="space-y-1">
-          {entries.map((entry, index) => {
-            const label = typeof entry === "string" ? fileBasename(entry) : entry.name;
-            return (
-              <FileRow
-                key={typeof entry === "string" ? `url-${entry}` : `file-${entry.name}-${index}`}
-                file={entry}
-                name={label}
-                size={typeof entry === "string" ? undefined : formatFileSize(entry.size)}
-                onRemove={clearable && !blocked ? () => removeEntry(index) : undefined}
-              />
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
+    return (
+      <div className={cn("space-y-2", className)}>
+        <Dropzone
+          buttonRef={dropzoneRef}
+          id={id}
+          disabled={blocked}
+          aria-label={props["aria-label"]}
+          aria-labelledby={props["aria-labelledby"]}
+          aria-describedby={describedBy}
+          aria-invalid={invalid}
+          aria-busy={uploading || undefined}
+          onBlur={props.onBlur}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragOver}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          dragging={dragging}
+          multiple={multiple}
+          uploading={uploading}
+        >
+          {children}
+        </Dropzone>
+        <input
+          ref={inputRef}
+          type="file"
+          name={name}
+          accept={accept}
+          multiple={multiple}
+          disabled={blocked}
+          onChange={handleInputChange}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="sr-only"
+        />
+        <span className="sr-only" role="status">
+          {uploading ? "Uploading…" : ""}
+        </span>
+        {messages.length > 0 ? (
+          <div id={messageId} className="space-y-1">
+            {messages.map((message, index) => (
+              <p key={index} role="alert" className="text-sm text-destructive">
+                {message}
+              </p>
+            ))}
+          </div>
+        ) : null}
+        {entries.length > 0 ? (
+          <ul className="space-y-1">
+            {entries.map((entry, index) => {
+              const label = typeof entry === "string" ? fileBasename(entry) : entry.name;
+              return (
+                <FileRow
+                  key={typeof entry === "string" ? `url-${entry}` : `file-${entry.name}-${index}`}
+                  file={entry}
+                  name={label}
+                  size={typeof entry === "string" ? undefined : formatFileSize(entry.size)}
+                  onRemove={clearable && !blocked ? () => removeEntry(index) : undefined}
+                />
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+    );
+  },
+);

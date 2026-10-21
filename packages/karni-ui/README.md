@@ -521,6 +521,101 @@ checkbox is named after its row ("Select Spring Gala"). Page changes,
 sorting, the selection count and slow loading are announced in a polite live
 region; errors are announced as alerts.
 
+### ResourceForm: states, errors and the keyboard
+
+- **Loading** draws the form's own layout: once the schema is known (edit
+  mode while the row loads) it has the real rows, labels and submit row, so
+  nothing moves when the values arrive.
+- **A failed load** (schema or row) is an `ErrorState` with "Try again"; a 403
+  on the row reads "You can't edit this event" (`PermissionDenied`). Fields a
+  role may not see or write are absent from its schema, so the form has no
+  row for them: no blank row, no dash.
+- **Validation runs when a field loses focus**, not on every keystroke; a
+  field that shows an error re-checks on every change, so the error clears as
+  soon as it is fixed. `validationMode` and `reValidateMode` (react-hook-form's
+  `mode` / `reValidateMode`) change it.
+- **Server errors** land on their field for every DRF shape (field lists,
+  strings, nested serializers, list serializers, `non_field_errors`, `detail`,
+  keys the form does not show). When more than one thing fails, a summary at
+  the top lists them, each a link to its field, and takes focus; with one
+  failing field, focus moves to it. Errors are announced, and every control
+  carries `aria-invalid`, `aria-describedby` (help text and error) and, where
+  its role allows, `aria-required`.
+- **Any other failure** (offline, 401, 403 "You can't save this event", 409
+  "This changed while you were working" with "Load the latest version", 429,
+  5xx) is a banner in plain words, with "Try again" when it can help. **The
+  typed values are never lost**, whatever the failure.
+- **Submitting** disables the fields and the button (`PendingButton`: progress
+  after 500ms, same width). Enter submits from a one-line input, Ctrl/Cmd+Enter
+  from anywhere (a textarea included); Enter inside an open relation picker
+  chooses an option. The first field takes focus on create (`autoFocus` to
+  change it; edit mode does not unless asked).
+
+Replace any state through `slots` (`Loading`, `Error`, `Forbidden`,
+`ErrorSummary`, `SubmitError`); the defaults are exported as
+`defaultResourceFormSlots` to wrap. `submitLabel` renames the button and
+`resourceLabel={{ singular: "person", plural: "people" }}` fixes the
+resource's name in messages.
+
+**Unsaved changes.** A dirty form warns before the page unloads
+(`guardUnsavedChanges={false}` opts out). In-app navigation belongs to your
+router: `useUnsavedChangesGuard()` holds the state and gives the router's
+blocker its answer. With TanStack Router (what `karni new` sets up):
+
+```tsx
+import { useBlocker, useNavigate } from "@tanstack/react-router";
+import { ResourceForm, useUnsavedChangesGuard } from "@karni/ui";
+
+function EditEvent({ id }: { id: string }) {
+  const navigate = useNavigate();
+  const guard = useUnsavedChangesGuard();
+  // Asks "You have unsaved changes. Leave without saving them?" while dirty.
+  useBlocker({ shouldBlockFn: guard.shouldBlock, enableBeforeUnload: false });
+  return (
+    <ResourceForm
+      resource="events"
+      id={id}
+      onDirtyChange={guard.setDirty}
+      onSuccess={() => navigate({ to: "/events/$id", params: { id } })}
+    />
+  );
+}
+```
+
+ResourceForm reports itself clean just before `onSuccess`, so navigating there
+is never blocked. `useUnsavedChangesGuard({ confirm })` swaps
+`window.confirm` for your own dialog; `useUnsavedChangesGuard({ dirty })`
+guards a form of your own.
+
+### ResourceSelect: thousands of options
+
+- Options load a page at a time from the related list (its own `next` link,
+  page-number or cursor), more as the list scrolls, through "Load more", or
+  when the keyboard reaches the end. Nothing fetches every row, and long lists
+  render only the rows in view. The list says how many there are: "Showing 50
+  of 10,000 — type to narrow".
+- Typing searches (`?search=`, debounced by `searchDebounceMs`), keeping the
+  previous results on screen and saying "Searching…". A related viewset with
+  no `search_fields` documents no `search` parameter; then typing narrows the
+  loaded rows and the list says search is not available. `searchable`
+  overrides what the schema says.
+- Empty reads "No venues yet" or "No venues match “ber”"; a failure reads "You
+  can't view venues", "Couldn't reach the server" or "Something went wrong on
+  our side", with "Try again" when it can help.
+- Preselected ids are labelled in one request when the list documents
+  `id__in` (Karni's derived filters do not include it; add it on the viewset
+  with `filterset_fields = {"id": ["exact", "in"]}`), otherwise one detail
+  request per id, in parallel. `idsFilter` names another filter or (`false`)
+  forces per-id requests. An id that cannot be loaded says "Couldn't load venue
+  12" instead of showing the bare id.
+- It is an ARIA 1.2 combobox (`aria-expanded`, `aria-controls`,
+  `aria-activedescendant`); arrows, Home/End and PageUp/PageDown move through
+  every loaded page; chips remove with their button, Backspace/Delete, or
+  Backspace in the empty input. The ref is the input; `onBlur`,
+  `aria-describedby`, `aria-invalid` and `aria-required` make it a form field.
+  `slots` replaces `Option`, `Chip`, `Loading`, `Empty` and `Error`
+  (`defaultResourceSelectSlots`).
+
 ## Hooks
 
 ```tsx

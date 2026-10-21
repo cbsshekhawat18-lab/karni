@@ -212,12 +212,21 @@ export interface SelectProps {
   className?: string;
   contentClassName?: string;
   "aria-label"?: string;
-  /** Marks the trigger invalid: a destructive border, announced by screen readers. */
-  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
-  /** Ids of the elements that describe the trigger (help text, the error message). */
-  "aria-describedby"?: string;
-  /** Ids of the elements that label the trigger (when no <label htmlFor> points at `id`). */
+  /** Forwarded to the trigger, like the other `aria-*` props below. */
   "aria-labelledby"?: string;
+  /** Ids of the help text and error message that describe the field. */
+  "aria-describedby"?: string;
+  /** Marks the field invalid: the trigger reads it and draws its destructive border. */
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  "aria-required"?: boolean | "true" | "false";
+  /**
+   * Called when focus leaves the select, never when it moves into the open
+   * list, so react-hook-form's onBlur validation does not run while the user
+   * is still choosing.
+   */
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>;
+  /** Called when the list opens or closes. */
+  onOpenChange?: (open: boolean) => void;
   /** Extra <SelectItem>/<SelectGroup> nodes appended after `options` (escape hatch). */
   children?: React.ReactNode;
 }
@@ -243,10 +252,14 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     contentClassName,
     children,
     "aria-label": ariaLabel,
-    "aria-invalid": ariaInvalid,
-    "aria-describedby": ariaDescribedBy,
     "aria-labelledby": ariaLabelledBy,
+    "aria-describedby": ariaDescribedBy,
+    "aria-invalid": ariaInvalid,
+    "aria-required": ariaRequired,
+    onBlur,
+    onOpenChange,
   } = props;
+  const openRef = React.useRef(false);
 
   const safeOptions = React.useMemo(() => {
     const filtered = options.filter(
@@ -277,6 +290,10 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     <SelectRoot
       value={radixValue}
       onValueChange={handleValueChange}
+      onOpenChange={(open) => {
+        openRef.current = open;
+        onOpenChange?.(open);
+      }}
       disabled={disabled}
       name={name}
     >
@@ -285,9 +302,17 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
         id={id}
         className={className}
         aria-label={ariaLabel}
-        aria-invalid={ariaInvalid}
-        aria-describedby={ariaDescribedBy}
         aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
+        aria-required={ariaRequired}
+        onBlur={(event) => {
+          // Opening moves focus into the list: that is not leaving the field.
+          if (openRef.current) return;
+          const next = event.relatedTarget;
+          if (next instanceof Element && next.closest("[role='listbox']") !== null) return;
+          onBlur?.(event);
+        }}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

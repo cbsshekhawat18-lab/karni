@@ -65,6 +65,8 @@ const HOOKS = {
   useAuth: "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.",
   usePermission: "`{ hasRole(...names), isAuthenticated }` for gating UI on roles.",
   useToast: "Show a toast through the mounted `Toaster`.",
+  useUnsavedChangesGuard:
+    "`{ dirty, setDirty, isDirty, shouldBlock }`: warns before leaving a dirty form; give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",
 };
 
 export function render(manifest) {

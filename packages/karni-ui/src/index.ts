@@ -137,12 +137,23 @@ export type {
 } from "./components/resource/ResourceTable";
 export type { KarniAccessRule } from "./schema/types";
 
-export { ResourceForm } from "./components/resource/ResourceForm";
+export { ResourceForm, defaultResourceFormSlots } from "./components/resource/ResourceForm";
 export type {
   ResourceFormProps,
+  ResourceFormSlots,
+  ResourceFormErrorSummaryProps,
+  ResourceFormFieldError,
+  ResourceFormForbiddenProps,
+  ResourceFormLoadingProps,
+  ResourceFormSubmitErrorProps,
   FieldOverride,
   KarniFieldProps,
 } from "./components/resource/ResourceForm";
+export { UNSAVED_CHANGES_MESSAGE, useUnsavedChangesGuard } from "./hooks/useUnsavedChangesGuard";
+export type {
+  UnsavedChangesGuard,
+  UseUnsavedChangesGuardOptions,
+} from "./hooks/useUnsavedChangesGuard";
 
 export { ResourceDetail, defaultResourceDetailSlots } from "./components/resource/ResourceDetail";
 export type {
@@ -157,8 +168,15 @@ export type {
   ResourceDetailDeleteDialogProps,
 } from "./components/resource/ResourceDetail";
 
-export { ResourceSelect } from "./components/resource/ResourceSelect";
-export type { ResourceSelectProps } from "./components/resource/ResourceSelect";
+export { ResourceSelect, defaultResourceSelectSlots } from "./components/resource/ResourceSelect";
+export type {
+  ResourceSelectProps,
+  ResourceSelectSlots,
+  ResourceSelectChipProps,
+  ResourceSelectEmptyProps,
+  ResourceSelectLoadingProps,
+  ResourceSelectOptionProps,
+} from "./components/resource/ResourceSelect";
 
 export {
   ChangeHistory,

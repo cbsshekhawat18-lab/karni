@@ -56,7 +56,7 @@ describe("PendingButton", () => {
     act(() => vi.advanceTimersByTime(500));
     expect(button.querySelector("svg")).not.toBeNull();
     // The label stays in the layout (hidden), so the button keeps its width.
-    expect(screen.getByText("Save")).toHaveClass("invisible");
+    expect(screen.getByText("Save")).toHaveClass("text-transparent");
     rerender(<PendingButton>Save</PendingButton>);
     expect(button).toBeEnabled();
     expect(button.querySelector("svg")).toBeNull();
