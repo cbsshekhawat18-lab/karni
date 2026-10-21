@@ -5,3 +5,11 @@
  */
 export { ResourceSelect } from "./select/ResourceSelect";
 export type { ResourceSelectProps } from "./select/ResourceSelect";
+export { defaultResourceSelectSlots } from "./select/select-states";
+export type {
+  ResourceSelectChipProps,
+  ResourceSelectEmptyProps,
+  ResourceSelectLoadingProps,
+  ResourceSelectOptionProps,
+  ResourceSelectSlots,
+} from "./select/select-states";

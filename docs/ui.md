@@ -66,6 +66,7 @@ Styled Radix parts and basics; `className` always merges, refs are forwarded.
 - `useSchema` — The parsed OpenAPI schema of one resource (fields, operations, access).
 - `useTheme` — see the package README.
 - `useToast` — Show a toast through the mounted `Toaster`.
+- `useUnsavedChangesGuard` — `{ dirty, setDirty, isDirty, shouldBlock }`: warns before leaving a dirty form; give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.
 
 ## Component roles
 

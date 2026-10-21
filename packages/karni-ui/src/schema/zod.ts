@@ -49,10 +49,18 @@ function enumSchema(values: ReadonlyArray<string | number>): ZodTypeAny {
 
 function stringSchema(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {
   let schema = z.string();
-  if (field.format === "email") schema = schema.email();
-  else if (field.format === "uri" || field.format === "url") schema = schema.url();
-  else if (field.format === "uuid") schema = schema.uuid();
-  if (field.maxLength !== undefined) schema = schema.max(field.maxLength);
+  // DRF's own wording, so a value reads the same whether the browser or the
+  // server rejects it.
+  if (field.format === "email") schema = schema.email("Enter a valid email address.");
+  else if (field.format === "uri" || field.format === "url")
+    schema = schema.url("Enter a valid URL.");
+  else if (field.format === "uuid") schema = schema.uuid("Must be a valid UUID.");
+  if (field.maxLength !== undefined) {
+    schema = schema.max(
+      field.maxLength,
+      `Ensure this field has no more than ${field.maxLength} characters.`,
+    );
+  }
   if (requireNonEmpty) schema = schema.min(1, REQUIRED_MESSAGE);
   return schema;
 }

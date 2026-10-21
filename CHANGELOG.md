@@ -11,6 +11,31 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `@karni/ui` forms: `ResourceForm` validates when a field loses focus (not
+  per keystroke; `validationMode` / `reValidateMode` change it), puts every
+  DRF error shape on its field, shows a focusable summary when more than one
+  thing fails, words 401/403/409/429/5xx and offline failures in a banner with
+  "Try again", never loses typed input, shows a skeleton shaped like the form,
+  "You can't edit this event" on a 403, disables the fields while saving
+  (`PendingButton`), submits with Enter and Ctrl/Cmd+Enter, autofocuses on
+  create, and wires labels, `aria-invalid`, `aria-describedby` and
+  `aria-required` for every field kind. Unsaved changes: `beforeunload` while
+  dirty (`guardUnsavedChanges`), `onDirtyChange`, and
+  `useUnsavedChangesGuard` for a router's blocker. New `slots`
+  (`defaultResourceFormSlots`), `submitLabel`, `autoFocus`, `resourceLabel`.
+  Fixed: an empty optional email or URL field no longer blocks the submit, and
+  a created form now starts over after saving (it kept the typed values).
+  `ResourceSelect` pages through the API instead of showing one page (scroll,
+  "Load more", keyboard), renders only the rows in view, keeps results while
+  a search loads, says when search is unavailable, tells "no venues yet" from
+  "no match", has loading, error, 403 and offline states, labels preselected
+  ids in one `?id__in=` request where the API has it, never shows a bare id,
+  forwards its ref and takes `onBlur`, `aria-*`, `slots`
+  (`defaultResourceSelectSlots`), `searchable`, `idsFilter`. Input, Textarea,
+  Select, Checkbox, Switch and FileUpload draw `aria-invalid` with the
+  destructive tokens; `Select` and `FileUpload` take `aria-describedby`,
+  `aria-invalid` and `onBlur`. A slow `PendingButton` keeps its accessible
+  name. `useSchema` returns `refetch` and `isFetching`.
 - `@karni/ui` unhappy-state kit: `describeError` words any failure in plain
   words (never a status code), `ErrorState`, `PermissionDenied`,
   `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,

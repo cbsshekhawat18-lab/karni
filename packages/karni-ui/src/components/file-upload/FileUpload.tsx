@@ -37,6 +37,12 @@ export interface FileUploadProps {
   /** Set false to hide the per-file remove affordance. Default true. */
   clearable?: boolean;
   "aria-label"?: string;
+  /** Ids of the help text and error message that describe the field (set on the dropzone). */
+  "aria-describedby"?: string;
+  /** Marks the field invalid: the dropzone reads it and draws its destructive border. */
+  "aria-invalid"?: boolean | "true" | "false";
+  /** Called when focus leaves the dropzone (react-hook-form's onBlur). */
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>;
 }
 
 function matchesAccept(file: File, accept: string | undefined): boolean {
@@ -113,162 +119,170 @@ function XIcon(props: React.SVGAttributes<SVGSVGElement>): React.ReactElement {
  *
  * Shows an existing uploaded value (URL string) as a link, pending `File`
  * values with name and size, and emits `File` objects — the hooks layer turns
- * them into multipart bodies per amendment D2.
+ * them into multipart bodies per amendment D2. The ref is the dropzone
+ * button (what a label, `aria-describedby` and form focus point at).
  */
-export function FileUpload(props: FileUploadProps): React.ReactElement {
-  const {
-    value = null,
-    onChange,
-    accept,
-    multiple = false,
-    disabled = false,
-    maxSize,
-    onReject,
-    id,
-    name,
-    className,
-    children,
-    clearable = true,
-  } = props;
+export const FileUpload = React.forwardRef<HTMLButtonElement, FileUploadProps>(
+  function FileUpload(props, ref): React.ReactElement {
+    const {
+      value = null,
+      onChange,
+      accept,
+      multiple = false,
+      disabled = false,
+      maxSize,
+      onReject,
+      id,
+      name,
+      className,
+      children,
+      clearable = true,
+    } = props;
 
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = React.useState(false);
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const [dragging, setDragging] = React.useState(false);
 
-  const entries: ReadonlyArray<File | string> =
-    value == null ? [] : Array.isArray(value) ? value : [value as File | string];
+    const entries: ReadonlyArray<File | string> =
+      value == null ? [] : Array.isArray(value) ? value : [value as File | string];
 
-  const acceptFiles = (list: ArrayLike<File>): void => {
-    if (disabled) return;
-    const accepted: File[] = [];
-    for (const file of Array.from(list)) {
-      if (!matchesAccept(file, accept)) {
-        onReject?.(file, "accept");
-        continue;
+    const acceptFiles = (list: ArrayLike<File>): void => {
+      if (disabled) return;
+      const accepted: File[] = [];
+      for (const file of Array.from(list)) {
+        if (!matchesAccept(file, accept)) {
+          onReject?.(file, "accept");
+          continue;
+        }
+        if (maxSize !== undefined && file.size > maxSize) {
+          onReject?.(file, "size");
+          continue;
+        }
+        accepted.push(file);
       }
-      if (maxSize !== undefined && file.size > maxSize) {
-        onReject?.(file, "size");
-        continue;
+      if (accepted.length === 0) return;
+      onChange?.(multiple ? accepted : accepted[0]);
+    };
+
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+      if (event.target.files !== null) acceptFiles(event.target.files);
+      // Reset so selecting the same file again re-fires the change event.
+      event.target.value = "";
+    };
+
+    const handleDrop = (event: React.DragEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      setDragging(false);
+      if (disabled) return;
+      acceptFiles(event.dataTransfer.files);
+    };
+
+    const handleDragOver = (event: React.DragEvent<HTMLButtonElement>): void => {
+      event.preventDefault();
+      if (!disabled) setDragging(true);
+    };
+
+    const removeEntry = (index: number): void => {
+      if (onChange === undefined) return;
+      const remaining = entries.filter((_, i) => i !== index);
+      if (remaining.length === 0) {
+        onChange(null);
+        return;
       }
-      accepted.push(file);
-    }
-    if (accepted.length === 0) return;
-    onChange?.(multiple ? accepted : accepted[0]);
-  };
+      // Existing URL strings cannot be re-emitted (onChange carries File values
+      // only); the remaining pending files are kept.
+      const files = remaining.filter((entry): entry is File => typeof entry !== "string");
+      if (multiple) {
+        onChange(files);
+      } else {
+        onChange(files[0] ?? null);
+      }
+    };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    if (event.target.files !== null) acceptFiles(event.target.files);
-    // Reset so selecting the same file again re-fires the change event.
-    event.target.value = "";
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLButtonElement>): void => {
-    event.preventDefault();
-    setDragging(false);
-    if (disabled) return;
-    acceptFiles(event.dataTransfer.files);
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLButtonElement>): void => {
-    event.preventDefault();
-    if (!disabled) setDragging(true);
-  };
-
-  const removeEntry = (index: number): void => {
-    if (onChange === undefined) return;
-    const remaining = entries.filter((_, i) => i !== index);
-    if (remaining.length === 0) {
-      onChange(null);
-      return;
-    }
-    // Existing URL strings cannot be re-emitted (onChange carries File values
-    // only); the remaining pending files are kept.
-    const files = remaining.filter((entry): entry is File => typeof entry !== "string");
-    if (multiple) {
-      onChange(files);
-    } else {
-      onChange(files[0] ?? null);
-    }
-  };
-
-  return (
-    <div className={cn("space-y-2", className)}>
-      <button
-        type="button"
-        id={id}
-        disabled={disabled}
-        aria-label={props["aria-label"]}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragOver}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        data-dragging={dragging ? "true" : undefined}
-        className="flex w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-input bg-background px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[dragging=true]:border-ring data-[dragging=true]:bg-accent data-[dragging=true]:text-accent-foreground"
-      >
-        {children ?? (
-          <>
-            <UploadIcon className="h-5 w-5" />
-            <span>
-              {multiple
-                ? "Drag and drop files here, or click to browse"
-                : "Drag and drop a file here, or click to browse"}
-            </span>
-          </>
-        )}
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        name={name}
-        accept={accept}
-        multiple={multiple}
-        disabled={disabled}
-        onChange={handleInputChange}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="sr-only"
-      />
-      {entries.length > 0 ? (
-        <ul className="space-y-1">
-          {entries.map((entry, index) => {
-            const label = typeof entry === "string" ? fileBasename(entry) : entry.name;
-            return (
-              <li
-                key={typeof entry === "string" ? `url-${entry}` : `file-${entry.name}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted-subtle px-3 py-1.5 text-sm"
-              >
-                {typeof entry === "string" ? (
-                  <a
-                    href={entry}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="truncate font-medium text-primary underline underline-offset-4"
-                  >
-                    {label}
-                  </a>
-                ) : (
-                  <span className="truncate">
-                    {entry.name}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {formatFileSize(entry.size)}
+    return (
+      <div className={cn("space-y-2", className)}>
+        <button
+          ref={ref}
+          type="button"
+          id={id}
+          disabled={disabled}
+          aria-label={props["aria-label"]}
+          aria-describedby={props["aria-describedby"]}
+          aria-invalid={props["aria-invalid"]}
+          onBlur={props.onBlur}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragOver}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          data-dragging={dragging ? "true" : undefined}
+          className="flex w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-input bg-background px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-ring hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive data-[dragging=true]:border-ring data-[dragging=true]:bg-accent data-[dragging=true]:text-accent-foreground"
+        >
+          {children ?? (
+            <>
+              <UploadIcon className="h-5 w-5" />
+              <span>
+                {multiple
+                  ? "Drag and drop files here, or click to browse"
+                  : "Drag and drop a file here, or click to browse"}
+              </span>
+            </>
+          )}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          name={name}
+          accept={accept}
+          multiple={multiple}
+          disabled={disabled}
+          onChange={handleInputChange}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="sr-only"
+        />
+        {entries.length > 0 ? (
+          <ul className="space-y-1">
+            {entries.map((entry, index) => {
+              const label = typeof entry === "string" ? fileBasename(entry) : entry.name;
+              return (
+                <li
+                  key={typeof entry === "string" ? `url-${entry}` : `file-${entry.name}-${index}`}
+                  className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted-subtle px-3 py-1.5 text-sm"
+                >
+                  {typeof entry === "string" ? (
+                    <a
+                      href={entry}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate font-medium text-primary underline underline-offset-4"
+                    >
+                      {label}
+                    </a>
+                  ) : (
+                    <span className="truncate">
+                      {entry.name}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {formatFileSize(entry.size)}
+                      </span>
                     </span>
-                  </span>
-                )}
-                {clearable && !disabled ? (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${label}`}
-                    onClick={() => removeEntry(index)}
-                    className="rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <XIcon className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
+                  )}
+                  {clearable && !disabled ? (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${label}`}
+                      onClick={() => removeEntry(index)}
+                      className="rounded-sm p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+    );
+  },
+);
+FileUpload.displayName = "FileUpload";

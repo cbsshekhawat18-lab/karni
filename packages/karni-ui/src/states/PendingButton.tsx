@@ -33,7 +33,7 @@ export const PendingButton = React.forwardRef<HTMLButtonElement, PendingButtonPr
           className={cn("relative", className)}
           {...props}
         >
-          <span className={cn("inline-flex items-center gap-2", slow && "invisible")}>
+          <span className={cn("inline-flex items-center gap-2", slow && "text-transparent")}>
             {children}
           </span>
           {slow && (

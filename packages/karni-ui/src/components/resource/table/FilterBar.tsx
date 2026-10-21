@@ -165,6 +165,8 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
                 multiple={field.relation.many}
                 value={toRelationValue(value)}
                 placeholder={field.label}
+                // A placeholder is not a label: it disappears once a value is chosen.
+                aria-label={field.label}
                 onChange={(next) => onFilterChange(field, next)}
               />
             </div>
