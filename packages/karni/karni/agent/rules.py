@@ -563,6 +563,21 @@ RULES: tuple[Rule, ...] = (
         fix="Extract one component or hook, or compose the existing @karni/ui one.",
         enforced_by=("jscpd",),
     ),
+    Rule(
+        code="K206",
+        category="frontend",
+        severity="error",
+        summary="Style with token classes; no literal values.",
+        rule=(
+            "Style with the @karni/ui preset's classes (`bg-primary`, `p-4`, `rounded-md`, "
+            "`z-popover`), which read `--karni-*` tokens; no arbitrary literals (`w-[13px]`, "
+            "`bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. A failing "
+            "build where the project enables `karni/no-style-literals`."
+        ),
+        rationale="One stylesheet (or `karni ui detect`) then rethemes every screen.",
+        fix="Use a preset class, or add the token to the project's karni-theme.css.",
+        enforced_by=("karni/no-style-literals",),
+    ),
 )
 
 

@@ -1843,6 +1843,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Extract one component or hook, or compose the existing @karni/ui one.
 
+<a id="k206"></a>
+
+### K206 — Style with token classes; no literal values.
+
+*agent rule, error* · enforced by `karni/no-style-literals`
+
+**Rule.** Style with the @karni/ui preset's classes (`bg-primary`, `p-4`, `rounded-md`, `z-popover`), which read `--karni-*` tokens; no arbitrary literals (`w-[13px]`, `bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. A failing build where the project enables `karni/no-style-literals`.
+
+**Why Karni objects.** One stylesheet (or `karni ui detect`) then rethemes every screen.
+
+**Fix.** Use a preset class, or add the token to the project's karni-theme.css.
+
 <a id="k301"></a>
 
 ### K301 — Domain code only; extend Karni.

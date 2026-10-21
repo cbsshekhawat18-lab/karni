@@ -1483,6 +1483,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K203`](errors.md#k203) | rule | Import only the @karni/ui barrel. |
 | [`K204`](errors.md#k204) | rule | Data only via Karni hooks; no fetch/axios. |
 | [`K205`](errors.md#k205) | rule | No duplicated frontend code. |
+| [`K206`](errors.md#k206) | rule | Style with token classes; no literal values. |
 | [`K301`](errors.md#k301) | rule | Domain code only; extend Karni. |
 | [`K302`](errors.md#k302) | rule | Never write auth/users, admin, serializers, routers, settings, infra, tables, forms. |
 | [`K303`](errors.md#k303) | rule | Extend via props/methods; never fork. |
