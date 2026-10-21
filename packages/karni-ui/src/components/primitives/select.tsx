@@ -1,6 +1,7 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridableSelectPart } from "../../primitives/registry";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "./icons";
 
 /**
@@ -16,14 +17,13 @@ export const KARNI_SELECT_EMPTY = "__karni_empty__";
 // ---------------------------------------------------------------------------
 
 /** Radix Select root, for composing a custom select from the styled parts. */
-export const SelectRoot = SelectPrimitive.Root;
+export const SelectRoot = overridableSelectPart("Root", SelectPrimitive.Root);
 /** Groups related options inside `SelectContent`. */
-export const SelectGroup = SelectPrimitive.Group;
+export const SelectGroup = overridableSelectPart("Group", SelectPrimitive.Group);
 /** Shows the selected option's label inside `SelectTrigger`. */
-export const SelectValue = SelectPrimitive.Value;
+export const SelectValue = overridableSelectPart("Value", SelectPrimitive.Value);
 
-/** The styled button that opens the select. */
-export const SelectTrigger = React.forwardRef<
+const KarniSelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
@@ -41,7 +41,13 @@ export const SelectTrigger = React.forwardRef<
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
-SelectTrigger.displayName = "SelectTrigger";
+KarniSelectTrigger.displayName = "SelectTrigger";
+
+/** The styled button that opens the select.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectTrigger = overridableSelectPart("Trigger", KarniSelectTrigger);
 
 const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
@@ -71,8 +77,7 @@ const SelectScrollDownButton = React.forwardRef<
 ));
 SelectScrollDownButton.displayName = "SelectScrollDownButton";
 
-/** The styled dropdown panel that lists the options. */
-export const SelectContent = React.forwardRef<
+const KarniSelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => (
@@ -102,10 +107,15 @@ export const SelectContent = React.forwardRef<
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));
-SelectContent.displayName = "SelectContent";
+KarniSelectContent.displayName = "SelectContent";
 
-/** A heading inside a `SelectGroup`. */
-export const SelectLabel = React.forwardRef<
+/** The styled dropdown panel that lists the options.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectContent = overridableSelectPart("Content", KarniSelectContent);
+
+const KarniSelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
@@ -115,10 +125,15 @@ export const SelectLabel = React.forwardRef<
     {...props}
   />
 ));
-SelectLabel.displayName = "SelectLabel";
+KarniSelectLabel.displayName = "SelectLabel";
 
-/** One selectable option; `value` is what the select reports. */
-export const SelectItem = React.forwardRef<
+/** A heading inside a `SelectGroup`.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectLabel = overridableSelectPart("Label", KarniSelectLabel);
+
+const KarniSelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, ...props }, ref) => (
@@ -138,10 +153,15 @@ export const SelectItem = React.forwardRef<
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ));
-SelectItem.displayName = "SelectItem";
+KarniSelectItem.displayName = "SelectItem";
 
-/** A divider line between option groups. */
-export const SelectSeparator = React.forwardRef<
+/** One selectable option; `value` is what the select reports.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectItem = overridableSelectPart("Item", KarniSelectItem);
+
+const KarniSelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
 >(({ className, ...props }, ref) => (
@@ -151,7 +171,13 @@ export const SelectSeparator = React.forwardRef<
     {...props}
   />
 ));
-SelectSeparator.displayName = "SelectSeparator";
+KarniSelectSeparator.displayName = "SelectSeparator";
+
+/** A divider line between option groups.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectSeparator = overridableSelectPart("Separator", KarniSelectSeparator);
 
 // ---------------------------------------------------------------------------
 // Composed, options-driven Select (what ResourceForm / the filter bar use)

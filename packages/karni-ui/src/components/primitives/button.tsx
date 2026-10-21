@@ -1,4 +1,5 @@
 import * as React from "react";
+import { overridable } from "../../primitives/registry";
 import { variants, type VariantProps } from "../../lib/variants";
 
 /**
@@ -33,11 +34,7 @@ export type ButtonVariantProps = VariantProps<typeof buttonVariants>;
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & ButtonVariantProps;
 
-/**
- * Themed button. `type` defaults to "button" (pass type="submit" in forms).
- * `className` is merged via cn(), so consumer classes win.
- */
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+const KarniButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, type, ...props }, ref) => (
     <button
       ref={ref}
@@ -47,4 +44,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     />
   ),
 );
-Button.displayName = "Button";
+KarniButton.displayName = "Button";
+
+/**
+ * Themed button. `type` defaults to "button" (pass type="submit" in forms).
+ * `className` is merged via cn(), so consumer classes win.
+ * A project replaces it with its own through `primitives={{ button: ... }}` on KarniProvider.
+ */
+export const Button = overridable<ButtonProps, HTMLButtonElement>("button", KarniButton);

@@ -324,6 +324,46 @@ Option values `""` and `"__karni_empty__"` are reserved.
 The `variants()` helper (a dependency-free cva-style utility) and `cn()` are
 exported for building your own components in the same style.
 
+### Your design system's primitives
+
+A project with its own design system registers its primitives once, and every
+Karni component renders them in place of Karni's, keeping its schema-driven
+behaviour:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import * as select from "@/components/ui/select";
+
+<KarniProvider
+  client={client}
+  primitives={{
+    button: Button,
+    input: Input,
+    select: {
+      Root: select.Select,
+      Trigger: select.SelectTrigger,
+      Value: select.SelectValue,
+      Content: select.SelectContent,
+      Item: select.SelectItem,
+      Group: select.SelectGroup,
+      Label: select.SelectLabel,
+      Separator: select.SelectSeparator,
+    },
+  }}
+>
+```
+
+The roles are `button`, `input`, `textarea`, `checkbox`, `switch`, `label`,
+`skeleton` and the `select` family. A registered component receives the props
+of Karni's primitive (`ButtonProps`, `InputProps`, …) and its ref; shadcn/ui's
+components take them as they are, and another design system registers a small
+adapter (its own button with Karni's `variant` and `size` names mapped onto
+its own). `select` is replaced as a whole family because Radix parts share a
+context. A registered component may wrap Karni's own primitive: inside it, the
+role resolves to Karni's again. `KarniPrimitivesProvider` changes the registry
+for a subtree.
+
 ## Manifest for coding agents
 
 The published package contains `dist/manifest.json` —

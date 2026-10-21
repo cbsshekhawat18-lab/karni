@@ -1,11 +1,11 @@
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridable } from "../../primitives/registry";
 
 export type SwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>;
 
-/** Themed on/off toggle (Radix Switch). */
-export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.Root>, SwitchProps>(
+const KarniSwitch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.Root>, SwitchProps>(
   ({ className, ...props }, ref) => (
     <SwitchPrimitive.Root
       ref={ref}
@@ -19,4 +19,10 @@ export const Switch = React.forwardRef<React.ElementRef<typeof SwitchPrimitive.R
     </SwitchPrimitive.Root>
   ),
 );
-Switch.displayName = "Switch";
+KarniSwitch.displayName = "Switch";
+
+/** Themed on/off toggle (Radix Switch).
+ *
+ * A project replaces it with its own through `primitives={{ switch: ... }}` on KarniProvider.
+ */
+export const Switch = overridable<SwitchProps, HTMLButtonElement>("switch", KarniSwitch);

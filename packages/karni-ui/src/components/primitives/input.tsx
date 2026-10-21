@@ -1,10 +1,10 @@
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridable } from "../../primitives/registry";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
-/** Themed text input; every native `<input>` prop passes through. */
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+const KarniInput = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, ...props }, ref) => (
     <input
       ref={ref}
@@ -16,4 +16,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     />
   ),
 );
-Input.displayName = "Input";
+KarniInput.displayName = "Input";
+
+/** Themed text input; every native `<input>` prop passes through.
+ *
+ * A project replaces it with its own through `primitives={{ input: ... }}` on KarniProvider.
+ */
+export const Input = overridable<InputProps, HTMLInputElement>("input", KarniInput);

@@ -20,7 +20,15 @@ export type {
   VariantProps,
 } from "./lib/variants";
 
-// primitives
+// primitives (each defers to the project's own through the registry)
+export { KarniPrimitivesProvider, useKarniPrimitives } from "./primitives/registry";
+export type {
+  KarniPrimitiveOverrides,
+  KarniPrimitiveRole,
+  KarniPrimitives,
+  KarniPrimitivesProviderProps,
+  KarniSelectParts,
+} from "./primitives/registry";
 export { Button, buttonVariants } from "./components/primitives/button";
 export type { ButtonProps, ButtonVariantProps } from "./components/primitives/button";
 

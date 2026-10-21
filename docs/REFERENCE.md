@@ -1169,6 +1169,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Component | Required props | What it renders | Source |
 |---|---|---|---|
+| `KarniPrimitivesProvider` | `value: Partial<KarniPrimitives>` | Registers the project's primitives for everything inside it. | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `Button` | — | Themed button. | [button.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/button.tsx) |
 | `Input` | — | Themed text input; every native `<input>` prop passes through. | [input.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/input.tsx) |
 | `Textarea` | — | Themed multi-line text input; every native `<textarea>` prop passes through. | [textarea.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/textarea.tsx) |
@@ -1223,6 +1224,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Hook | Parameters | What it does | Source |
 |---|---|---|---|
+| `useKarniPrimitives` | — | The registered primitives in scope (the roles the project replaced). | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `useChangeHistory` | `resource: string`, `id: string \| number`, `params?: ChangeHistoryParams \| undefined`, `options?: Omit<UseQueryOptions<ChangeHistoryPage, Error, ChangeHistoryPage, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `useImportDescribe` | `resource: string`, `options?: Omit<UseQueryOptions<ImportDescription, Error, ImportDescription, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches what a resource's import accepts: its columns, required fields and allowed values. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `useImportJob` | `resource: string`, `jobId: string \| undefined`, `options?: UseImportJobOptions \| undefined` | Fetches one import job and polls it while it runs. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |

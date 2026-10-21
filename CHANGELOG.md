@@ -11,6 +11,12 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
+  input: Input, select: {...} }}>` renders every Karni component with the
+  project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,
+  `switch`, `label`, `skeleton` and the `select` family), keeping Karni's
+  schema-driven behaviour. shadcn/ui's components fit the contract as they
+  are. `KarniPrimitivesProvider` and `useKarniPrimitives` are exported.
 - `@karni/ui` design tokens: every visual value in every component now
   resolves from a CSS custom property in `--karni-color-*`, `--karni-space-*`,
   `--karni-radius-*`, `--karni-font-*` or `--karni-shadow-*` (plus stacking,

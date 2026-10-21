@@ -46,7 +46,7 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 
 Styled Radix parts and basics; `className` always merges, refs are forwarded.
 
-`Button`, `Checkbox`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `Input`, `Label`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`
+`Button`, `Checkbox`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `Input`, `KarniPrimitivesProvider`, `Label`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`
 
 ## Hooks
 
@@ -56,6 +56,7 @@ Styled Radix parts and basics; `className` always merges, refs are forwarded.
 - `useImportDescribe` — The importable fields of a resource and the user's remembered column mapping.
 - `useImportJob` — One import job's state; polls while the backend previews or commits it.
 - `useKarniClient` — The `KarniClient` behind every hook: `client.request(path, { method, body, query })` for custom actions.
+- `useKarniPrimitives` — see the package README.
 - `usePermission` — `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem` — One row by id, optionally expanded.
 - `useResourceList` — A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.

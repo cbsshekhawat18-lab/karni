@@ -1,10 +1,10 @@
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridable } from "../../primitives/registry";
 
 export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
-/** Themed multi-line text input; every native `<textarea>` prop passes through. */
-export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+const KarniTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, ...props }, ref) => (
     <textarea
       ref={ref}
@@ -16,4 +16,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     />
   ),
 );
-Textarea.displayName = "Textarea";
+KarniTextarea.displayName = "Textarea";
+
+/** Themed multi-line text input; every native `<textarea>` prop passes through.
+ *
+ * A project replaces it with its own through `primitives={{ textarea: ... }}` on KarniProvider.
+ */
+export const Textarea = overridable<TextareaProps, HTMLTextAreaElement>("textarea", KarniTextarea);
