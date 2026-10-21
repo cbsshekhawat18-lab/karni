@@ -1,3 +1,7 @@
+---
+description: "Launch audit tier 1: building, installing and booting Karni from a clean machine, and running the quickstart as written."
+---
+
 # Tier 1 audit — build, install, quickstart, boot
 
 Repo `<REDACTED>`, branch `main`, commit `0873e51`.

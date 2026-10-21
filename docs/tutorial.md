@@ -1,5 +1,5 @@
 ---
-description: Build EventHub, Karni's reference event-ticketing app, step by step: models, access rules, API, admin, React pages, payments, email and tests.
+description: "Build EventHub, Karni's reference event-ticketing app, step by step: models, access rules, API, admin, React pages, payments, email and tests."
 ---
 
 # Tutorial — build EventHub

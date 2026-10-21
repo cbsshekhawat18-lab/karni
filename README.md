@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-Karni is a Django + React framework that replaces the Django React boilerplate: the REST API, admin, permissions, React screens and tests come from an upgradable package, so you and your AI coding agent (Claude Code, Cursor, Copilot) write only your domain code.
+Karni is an open-source Django + React framework for building with AI coding agents. One rule set writes the rules files for Claude Code, Cursor, Copilot and five more tools, and the build fails when an agent hand-writes what Karni provides. The API, admin, permissions and React screens come from a package you upgrade, not a boilerplate you copy.
 </p>
 
 <p align="center">
@@ -112,9 +112,11 @@ Open `http://127.0.0.1:8000/` for the welcome page and `/admin/` for the admin. 
 | Teams, subscriptions, multi-tenancy | no | no | yes, mature | no; payments only, as a module |
 | Maturity | the standard | large community, many years in production | large, actively supported | version 0.3, two reference apps |
 | Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated Docker Compose stack, not yet verified end to end |
-| AI agent guidance in the project | none | none in the generated project | Cursor rules, CLAUDE.md and Claude Code skills | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
+| AI agent guidance in the project | none | none in the generated project | rule files, CLAUDE.md / AGENTS.md, Claude Code skills and MCP | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
 
 Choose Cookiecutter Django or SaaS Pegasus for a proven, complete starting point that you will own. Choose Karni to keep the generic code upstream, and accept a younger framework for it.
+
+The [comparison pages](https://cbsshekhawat18-lab.github.io/karni/compare/) go into each alternative, with sources.
 
 ## How it works
 
@@ -340,8 +342,8 @@ Full reference: [capabilities](docs/REFERENCE.md#permissions) and [settings](doc
 A module is a separate package for anything with its own service or a real memory cost. Install it, then `karni add <name>` wires it in.
 
 <!-- generated:modules -->
-- `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail
-- `experimental` `karni add impersonation`: 'Log in as user' for support, done safely — an explicit permission, no privilege escalation, a banner, a session record, both identities in the audit trail, blocked actions and a time limit
+- `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
+- `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff, with an explicit permission, no privilege escalation, a banner, a time limit and both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->

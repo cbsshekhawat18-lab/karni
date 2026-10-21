@@ -192,8 +192,27 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install mkdocs-material
-      - name: "Build (strict: a broken link or a missing page fails)"
+      # docs/seo/description.txt, verbatim on the README, docs homepage,
+      # llms.txt, Open Graph, every package's metadata and the GitHub About.
+      - name: Karni's description is identical everywhere
+        run: python scripts/check_description.py --github
+      # scripts/docs_seo.py: every page has its own title and description,
+      # JSON-LD on the homepage and FAQ, llms-full.txt; warnings fail --strict.
+      - name: "Build (strict: a broken link, a missing page or a missing description fails)"
         run: python -m mkdocs build --strict --site-dir site
+      - name: The pages are server-rendered HTML with their metadata
+        run: |
+          set -euo pipefail
+          for page in index.html faq/index.html compare/index.html; do
+            grep -q '<link rel="canonical"' "site/$page"
+            grep -q '<meta name="description"' "site/$page"
+          done
+          grep -q '"@type":"SoftwareApplication"' site/index.html
+          grep -q '"@type":"FAQPage"' site/faq/index.html
+          # the text is in the HTML itself, not rendered by JavaScript
+          grep -q "$(cut -c1-60 docs/seo/description.txt)" site/index.html
+          test -s site/llms.txt && test -s site/llms-full.txt && test -s site/sitemap.xml
+          grep -q "GPTBot" site/robots.txt
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:

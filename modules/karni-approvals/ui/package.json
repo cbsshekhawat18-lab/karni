@@ -1,7 +1,7 @@
 {
   "name": "@karni/approvals-ui",
   "version": "0.3.1",
-  "description": "Maker-checker approvals components for Karni backends (the Django + React framework): ApprovalsQueue and ApprovalsBadge composing @karni/ui, for the karni-approvals module.",
+  "description": "React components for the Karni approvals module: ApprovalsQueue and ApprovalsBadge. Karni is an open-source Django + React framework for building with AI coding agents. One rule set writes the rules files for Claude Code, Cursor, Copilot and five more tools, and the build fails when an agent hand-writes what Karni provides. The API, admin, permissions and React screens come from a package you upgrade, not a boilerplate you copy.",
   "keywords": [
     "react",
     "django",

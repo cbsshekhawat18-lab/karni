@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-approvals"
 version = "0.3.1"
-description = "Maker-checker approvals module for the Karni Django + React framework: a second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail."
+description = "Maker-checker approvals for Karni: a second person approves high-value changes before they are written, with a queue, an API and an audit trail. Karni is an open-source Django + React framework for building with AI coding agents. One rule set writes the rules files for Claude Code, Cursor, Copilot and five more tools, and the build fails when an agent hand-writes what Karni provides. The API, admin, permissions and React screens come from a package you upgrade, not a boilerplate you copy."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"

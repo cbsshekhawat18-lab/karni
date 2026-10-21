@@ -1,5 +1,5 @@
 ---
-description: karni.api: BaseViewSet with a mandatory access declaration, generated serializers, filtering, ordering, pagination, search, expansion, query budgets and the OpenAPI document.
+description: "karni.api: BaseViewSet with a mandatory access declaration, generated serializers, filtering, ordering, pagination, search, expansion, query budgets and the OpenAPI document."
 ---
 
 # karni.api
