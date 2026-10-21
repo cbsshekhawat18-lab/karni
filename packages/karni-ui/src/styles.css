@@ -214,6 +214,7 @@
 
   --karni-duration: 150ms;
   --karni-duration-pulse: 2s;
+  --karni-duration-spin: 1s;
   --karni-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -221,5 +222,6 @@
   :root {
     --karni-duration: 0ms;
     --karni-duration-pulse: 0s;
+    --karni-duration-spin: 0s;
   }
 }

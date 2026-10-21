@@ -11,6 +11,11 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `@karni/ui` unhappy-state kit: `describeError` words any failure in plain
+  words (never a status code), `ErrorState`, `PermissionDenied`,
+  `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,
+  `useOnlineStatus`. Dark mode for apps: `ThemeProvider`, `ThemeToggle` and
+  `KARNI_THEME_SCRIPT` (follows the system until the user chooses).
 - `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
   input: Input, select: {...} }}>` renders every Karni component with the
   project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,

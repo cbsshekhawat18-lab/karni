@@ -216,12 +216,39 @@ Override any token after importing the stylesheet. Colours take any CSS colour
 ```
 
 The derived shades (`-hover`, `-subtle`, `-border`) follow the colour they
-derive from unless you set them too. Toggle dark mode by adding or removing the
-`dark` class on `<html>`.
+derive from unless you set them too.
+
+Dark mode is the `dark` class on `<html>`. `ThemeProvider` manages it: it
+follows the system until the user chooses, keeps the choice per browser, and
+`ThemeToggle` is a button that cycles Light, Dark and System. Put
+`KARNI_THEME_SCRIPT` in an inline `<script>` in `index.html`'s `<head>` so the
+first paint already has the right theme:
+
+```tsx
+<ThemeProvider>
+  <App /> {/* <ThemeToggle /> in the header */}
+</ThemeProvider>
+```
 
 The 0.3 names (`--karni-primary: 262 83% 58%`, an HSL triplet) still work:
 each `--karni-color-*` defaults to `hsl()` of its 0.3 name. They are
 deprecated in 0.4 and removed in 1.0 ([migration note](https://cbsshekhawat18-lab.github.io/karni/migrations/0.4/)).
+
+## Unhappy states
+
+Every component words failures the same way, through `describeError(error,
+{ action, resource })`: a 403 reads "You can't delete events", a dropped
+connection "You're offline", a 5xx "Something went wrong on our side". A status
+code is never shown; the server's own explanation is, when it gave one. The
+building blocks are exported for your own screens:
+
+- `ErrorState`: what failed and what to do, with "Try again" when retrying can
+  help (`onRetry`, `retrying`), announced to screen readers.
+- `PermissionDenied`: which action the role does not allow, in plain words.
+- `PendingButton`: disabled while `pending`, shows progress after 500ms
+  (`SLOW_AFTER_MS`) and keeps its width.
+- `useDelayedFlag(active)` (true once work has run for 500ms) and
+  `useOnlineStatus()`.
 
 ## Resource components
 

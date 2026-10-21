@@ -180,6 +180,7 @@ const karniPreset = {
       transitionTimingFunction: { DEFAULT: "var(--karni-ease, cubic-bezier(0.4, 0, 0.2, 1))" },
       animation: {
         pulse: "pulse var(--karni-duration-pulse, 2s) cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        spin: "spin var(--karni-duration-spin, 1s) linear infinite",
       },
     },
   },

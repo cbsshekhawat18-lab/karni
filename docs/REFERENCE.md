@@ -1169,6 +1169,11 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Component | Required props | What it renders | Source |
 |---|---|---|---|
+| `ErrorState` | `error: unknown` | What failed and what to do, in plain words (see describeError). | [ErrorState.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/ErrorState.tsx) |
+| `PermissionDenied` | — | Says, in plain words, which action the user's role does not allow — for screens that know before asking the server (a role check) as well as after a 403. | [ErrorState.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/ErrorState.tsx) |
+| `PendingButton` | — | A button for work that takes time. | [PendingButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/PendingButton.tsx) |
+| `ThemeProvider` | — | Applies the user's theme choice and keeps it; render it once around the app. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
+| `ThemeToggle` | — | One button that cycles Light → Dark → System. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
 | `KarniPrimitivesProvider` | `value: Partial<KarniPrimitives>` | Registers the project's primitives for everything inside it. | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `Button` | — | Themed button. | [button.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/button.tsx) |
 | `Input` | — | Themed text input; every native `<input>` prop passes through. | [input.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/input.tsx) |
@@ -1224,6 +1229,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Hook | Parameters | What it does | Source |
 |---|---|---|---|
+| `useDelayedFlag` | `active: boolean`, `delayMs?: number` | True once `active` has stayed true for `delayMs` (default 500ms), false as soon as it turns false. | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `useOnlineStatus` | — | Whether the browser reports a network connection; re-renders when it changes. | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `useTheme` | — | The theme choice and a setter; throws a descriptive error outside ThemeProvider. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
 | `useKarniPrimitives` | — | The registered primitives in scope (the roles the project replaced). | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `useChangeHistory` | `resource: string`, `id: string \| number`, `params?: ChangeHistoryParams \| undefined`, `options?: Omit<UseQueryOptions<ChangeHistoryPage, Error, ChangeHistoryPage, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `useImportDescribe` | `resource: string`, `options?: Omit<UseQueryOptions<ImportDescription, Error, ImportDescription, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches what a resource's import accepts: its columns, required fields and allowed values. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
@@ -1246,6 +1254,11 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `registerComponentRole` | function | Claims a UI role (such as `data-table`) for a component, so a second component with the same role fails the build. | [roles.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/roles.ts) |
 | `getRoleRegistry` | function | Snapshot of the current registry ({ role: component }) for tooling. | [roles.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/roles.ts) |
 | `variants` | function | Builds a typed class-name function from variant definitions, the way every themed component declares its looks. | [variants.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/variants.ts) |
+| `describeError` | function | Classifies `error` and words it for the person using the app. | [describe-error.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/describe-error.ts) |
+| `errorSummary` | function | `describeError(...).title`, capitalised, for one-line contexts (toasts, inline text). | [describe-error.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/describe-error.ts) |
+| `SLOW_AFTER_MS` | constant | How long a request may run before Karni shows progress (ms). | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `KARNI_THEME_SCRIPT` | constant | Inline script for index.html's &lt;head&gt;: applies the stored (or system) theme before the first paint. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
+| `THEME_STORAGE_KEY` | constant |  | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
 | `buttonVariants` | function | Exported for composition (escape hatch): render any element as a button lookalike with `className={buttonVariants({ variant: "outline" })}`. | [button.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/button.tsx) |
 | `KARNI_SELECT_EMPTY` | constant | The value that stands for "nothing selected" inside Radix Select, which reserves the empty string. | [select.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/select.tsx) |
 | `changeHistoryKey` | function | The query key of one row's change history. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |

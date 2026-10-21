@@ -46,22 +46,25 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 
 Styled Radix parts and basics; `className` always merges, refs are forwarded.
 
-`Button`, `Checkbox`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `Input`, `KarniPrimitivesProvider`, `Label`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`
+`Button`, `Checkbox`, `DropdownMenu`, `DropdownMenuCheckboxItem`, `DropdownMenuContent`, `DropdownMenuGroup`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuPortal`, `DropdownMenuSeparator`, `DropdownMenuTrigger`, `ErrorState`, `Input`, `KarniPrimitivesProvider`, `Label`, `PendingButton`, `PermissionDenied`, `Select`, `SelectContent`, `SelectGroup`, `SelectItem`, `SelectLabel`, `SelectRoot`, `SelectSeparator`, `SelectTrigger`, `SelectValue`, `Skeleton`, `Switch`, `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger`, `Textarea`, `ThemeProvider`, `ThemeToggle`
 
 ## Hooks
 
 - `useAuth` — `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.
 - `useChangeHistory` — One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
+- `useDelayedFlag` — see the package README.
 - `useImportActions` — `upload`, `preview` (the dry run) and `commit` mutations of an import.
 - `useImportDescribe` — The importable fields of a resource and the user's remembered column mapping.
 - `useImportJob` — One import job's state; polls while the backend previews or commits it.
 - `useKarniClient` — The `KarniClient` behind every hook: `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives` — see the package README.
+- `useOnlineStatus` — see the package README.
 - `usePermission` — `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem` — One row by id, optionally expanded.
 - `useResourceList` — A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations` — `create`, `update`, `remove` for a resource; they invalidate the resource's queries on success.
 - `useSchema` — The parsed OpenAPI schema of one resource (fields, operations, access).
+- `useTheme` — see the package README.
 - `useToast` — Show a toast through the mounted `Toaster`.
 
 ## Component roles
@@ -78,12 +81,15 @@ role another component holds (compose it instead), and `karni context` lists the
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |
 | `empty-state` | `EmptyState` |
+| `error-state` | `ErrorState` |
 | `file-upload` | `FileUpload` |
 | `layout-shell` | `Layout` |
 | `login-form` | `LoginForm` |
 | `modal` | `Modal` |
 | `page-shell` | `Page` |
+| `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
 | `resource-import` | `ResourceImport` |
 | `stat` | `Stat` |
+| `theme-toggle` | `ThemeToggle` |
 | `toast` | `Toaster` |

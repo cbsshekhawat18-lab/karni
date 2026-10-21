@@ -20,6 +20,34 @@ export type {
   VariantProps,
 } from "./lib/variants";
 
+// unhappy states: plain-words errors, permission, slow and offline work
+export { describeError, errorSummary } from "./states/describe-error";
+export type {
+  KarniErrorContext,
+  KarniErrorDescription,
+  KarniErrorKind,
+} from "./states/describe-error";
+export { ErrorState, PermissionDenied } from "./states/ErrorState";
+export type { ErrorStateProps, PermissionDeniedProps } from "./states/ErrorState";
+export { PendingButton } from "./states/PendingButton";
+export type { PendingButtonProps } from "./states/PendingButton";
+export { SLOW_AFTER_MS, useDelayedFlag, useOnlineStatus } from "./states/hooks";
+
+// theme: light, dark or the system's choice
+export {
+  KARNI_THEME_SCRIPT,
+  THEME_STORAGE_KEY,
+  ThemeProvider,
+  ThemeToggle,
+  useTheme,
+} from "./theme/theme";
+export type {
+  ResolvedTheme,
+  ThemePreference,
+  ThemeProviderProps,
+  ThemeToggleProps,
+} from "./theme/theme";
+
 // primitives (each defers to the project's own through the registry)
 export { KarniPrimitivesProvider, useKarniPrimitives } from "./primitives/registry";
 export type {
