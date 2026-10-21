@@ -57,10 +57,23 @@ the schema root (`x-karni-auth-mode`); override it with `mode="jwt" | "session"`
 
 ## Styling
 
-All component colors resolve through `--karni-*` CSS custom properties defined in
-`@karni/ui/styles.css` (light values on `:root`, dark values under `.dark`).
-Import it once, then wire Tailwind so the token-backed utility classes
-(`bg-primary`, `text-muted-foreground`, …) exist in your build.
+Every visual value in every component resolves from a `--karni-*` CSS custom
+property defined in `@karni/ui/styles.css`:
+
+| Family | What it holds |
+|---|---|
+| `--karni-color-*` | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades |
+| `--karni-space-*` | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem) |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`) |
+| `--karni-font-*` | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*` |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`) |
+| other | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*` |
+
+The Tailwind preset maps its scales onto these properties, so `bg-primary`,
+`p-4` or `rounded-md`, in a component or in your own code, reads them. Import
+the stylesheet once, then wire Tailwind (3.4 or later) so the classes exist in
+your build. The rule `karni/no-style-literals` (in the ESLint plugin) and a
+test that compiles every component class keep literals out of the library.
 
 ### Tailwind v3 (preset)
 
@@ -96,15 +109,18 @@ it with `@config`; add the `@tailwindcss/vite` plugin to `vite.config.ts`:
 @config "../tailwind.config.ts";
 ```
 
-`@karni/ui/tailwind-v4.css` keeps a bare `border` on the `--karni-border` token,
-as Tailwind 3 does (Tailwind 4 defaults borders to `currentColor`); a Tailwind 3
-project must not import it. With it, every Storybook story and the pages
-`karni new` generates render pixel-identical under Tailwind 3 and 4, light
-and dark.
+`@karni/ui/tailwind-v4.css` keeps a bare `border` on `--karni-color-border`,
+as Tailwind 3 does (Tailwind 4 defaults borders to `currentColor`), and points
+Tailwind 4's default transition timing at `--karni-duration` and
+`--karni-ease`. A Tailwind 3 project must not import it. With it, every
+Storybook story and the pages `karni new` generates render pixel-identical
+under Tailwind 3 and 4, light and dark.
 
 #### Alternative: no JavaScript config
 
-Map the tokens in CSS instead of loading the preset:
+Map the tokens in CSS instead of loading the preset. This covers colours,
+spacing, type, radius, shadow and motion; the named stacking classes
+(`z-popover`, …) and the token-backed opacity steps come only with the preset.
 
 ```css
 /* app.css */
@@ -118,52 +134,94 @@ Map the tokens in CSS instead of loading the preset:
 /* Dark mode is class-based: add `dark` to <html> (or any ancestor). */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Map Tailwind color/radius theme slots onto the --karni-* tokens. */
 @theme inline {
-  --color-background: hsl(var(--karni-background));
-  --color-foreground: hsl(var(--karni-foreground));
-  --color-card: hsl(var(--karni-card));
-  --color-card-foreground: hsl(var(--karni-card-foreground));
-  --color-popover: hsl(var(--karni-popover));
-  --color-popover-foreground: hsl(var(--karni-popover-foreground));
-  --color-primary: hsl(var(--karni-primary));
-  --color-primary-foreground: hsl(var(--karni-primary-foreground));
-  --color-secondary: hsl(var(--karni-secondary));
-  --color-secondary-foreground: hsl(var(--karni-secondary-foreground));
-  --color-muted: hsl(var(--karni-muted));
-  --color-muted-foreground: hsl(var(--karni-muted-foreground));
-  --color-accent: hsl(var(--karni-accent));
-  --color-accent-foreground: hsl(var(--karni-accent-foreground));
-  --color-destructive: hsl(var(--karni-destructive));
-  --color-destructive-foreground: hsl(var(--karni-destructive-foreground));
-  --color-border: hsl(var(--karni-border));
-  --color-input: hsl(var(--karni-input));
-  --color-ring: hsl(var(--karni-ring));
-  --color-chart-1: hsl(var(--karni-chart-1));
-  --color-chart-2: hsl(var(--karni-chart-2));
-  --color-chart-3: hsl(var(--karni-chart-3));
-  --color-chart-4: hsl(var(--karni-chart-4));
-  --color-chart-5: hsl(var(--karni-chart-5));
-  --radius-lg: var(--karni-radius);
-  --radius-md: calc(var(--karni-radius) - 2px);
-  --radius-sm: calc(var(--karni-radius) - 4px);
+  --color-background: var(--karni-color-background);
+  --color-foreground: var(--karni-color-foreground);
+  --color-card: var(--karni-color-card);
+  --color-card-foreground: var(--karni-color-card-foreground);
+  --color-popover: var(--karni-color-popover);
+  --color-popover-foreground: var(--karni-color-popover-foreground);
+  --color-primary: var(--karni-color-primary);
+  --color-primary-foreground: var(--karni-color-primary-foreground);
+  --color-primary-hover: var(--karni-color-primary-hover);
+  --color-secondary: var(--karni-color-secondary);
+  --color-secondary-foreground: var(--karni-color-secondary-foreground);
+  --color-secondary-hover: var(--karni-color-secondary-hover);
+  --color-muted: var(--karni-color-muted);
+  --color-muted-foreground: var(--karni-color-muted-foreground);
+  --color-muted-subtle: var(--karni-color-muted-subtle);
+  --color-accent: var(--karni-color-accent);
+  --color-accent-foreground: var(--karni-color-accent-foreground);
+  --color-destructive: var(--karni-color-destructive);
+  --color-destructive-foreground: var(--karni-color-destructive-foreground);
+  --color-destructive-hover: var(--karni-color-destructive-hover);
+  --color-destructive-subtle: var(--karni-color-destructive-subtle);
+  --color-destructive-border: var(--karni-color-destructive-border);
+  --color-border: var(--karni-color-border);
+  --color-input: var(--karni-color-input);
+  --color-ring: var(--karni-color-ring);
+  --color-overlay: var(--karni-color-overlay);
+  --color-chart-1: var(--karni-color-chart-1);
+  --color-chart-2: var(--karni-color-chart-2);
+  --color-chart-3: var(--karni-color-chart-3);
+  --color-chart-4: var(--karni-color-chart-4);
+  --color-chart-5: var(--karni-color-chart-5);
+  --spacing: var(--karni-space-unit);
+  --radius-sm: var(--karni-radius-sm);
+  --radius-md: var(--karni-radius-md);
+  --radius-lg: var(--karni-radius-lg);
+  --radius-xl: var(--karni-radius-xl);
+  --font-sans: var(--karni-font-sans);
+  --font-mono: var(--karni-font-mono);
+  --text-xs: var(--karni-font-size-xs);
+  --text-xs--line-height: var(--karni-font-leading-xs);
+  --text-sm: var(--karni-font-size-sm);
+  --text-sm--line-height: var(--karni-font-leading-sm);
+  --text-base: var(--karni-font-size-base);
+  --text-base--line-height: var(--karni-font-leading-base);
+  --text-lg: var(--karni-font-size-lg);
+  --text-lg--line-height: var(--karni-font-leading-lg);
+  --text-xl: var(--karni-font-size-xl);
+  --text-xl--line-height: var(--karni-font-leading-xl);
+  --text-2xl: var(--karni-font-size-2xl);
+  --text-2xl--line-height: var(--karni-font-leading-2xl);
+  --font-weight-normal: var(--karni-font-weight-normal);
+  --font-weight-medium: var(--karni-font-weight-medium);
+  --font-weight-semibold: var(--karni-font-weight-semibold);
+  --font-weight-bold: var(--karni-font-weight-bold);
+  --tracking-tight: var(--karni-font-tracking-tight);
+  --tracking-wide: var(--karni-font-tracking-wide);
+  --shadow-sm: var(--karni-shadow-sm);
+  --shadow-md: var(--karni-shadow-md);
+  --shadow-lg: var(--karni-shadow-lg);
 }
 ```
 
 ### Theming and dark mode
 
-Override any token after importing the stylesheet — components pick it up
-everywhere, in both Tailwind versions:
+Override any token after importing the stylesheet. Colours take any CSS colour
+(`hsl()`, `oklch()`, hex, or `var()` of your own design system's variable):
 
 ```css
 :root {
-  --karni-primary: 262 83% 58%; /* HSL triplet, no hsl() wrapper */
+  --karni-color-primary: oklch(0.55 0.22 285);
+  --karni-color-primary-foreground: white;
   --karni-radius: 0.75rem;
+  --karni-space-unit: 0.225rem; /* a denser spacing scale everywhere */
+  --karni-font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+.dark {
+  --karni-color-primary: oklch(0.7 0.18 285);
 }
 ```
 
-Toggle dark mode by adding/removing the `dark` class on `<html>`. Chart series
-colors are `--karni-chart-1` … `--karni-chart-5`.
+The derived shades (`-hover`, `-subtle`, `-border`) follow the colour they
+derive from unless you set them too. Toggle dark mode by adding or removing the
+`dark` class on `<html>`.
+
+The 0.3 names (`--karni-primary: 262 83% 58%`, an HSL triplet) still work:
+each `--karni-color-*` defaults to `hsl()` of its 0.3 name. They are
+deprecated in 0.4 and removed in 1.0 ([migration note](https://cbsshekhawat18-lab.github.io/karni/migrations/0.4/)).
 
 ## Resource components
 
@@ -278,7 +336,10 @@ build time. AI coding agents can read it (export path
 
 `@karni/ui/eslint-plugin` ships the Karni frontend enforcement rules
 (`karni/no-raw-elements`, `karni/max-page-lines`, `karni/no-deep-imports`,
-`karni/no-direct-http`) as a flat-config preset for ESLint >= 9:
+`karni/no-direct-http`) as a flat-config preset for ESLint >= 9. A fifth rule,
+`karni/no-style-literals`, is not in the preset: it fails on any visual value
+that does not resolve from a `--karni-*` token, and a project whose own code
+should follow the theme turns it on with `"karni/no-style-literals": "error"`.
 
 ```js
 // eslint.config.js

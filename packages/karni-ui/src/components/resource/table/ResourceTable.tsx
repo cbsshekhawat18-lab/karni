@@ -249,7 +249,7 @@ function ErrorPanel(props: { error: unknown; onRetry?: () => void }): React.Reac
   return (
     <div
       role="alert"
-      className="flex w-full flex-col items-center gap-3 rounded-md border border-destructive/50 bg-destructive/10 px-6 py-8 text-center"
+      className="flex w-full flex-col items-center gap-3 rounded-md border border-destructive-border bg-destructive-subtle px-6 py-8 text-center"
     >
       <p className="text-sm font-medium text-destructive">{errorMessage(props.error)}</p>
       {props.onRetry !== undefined && (

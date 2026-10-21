@@ -170,7 +170,7 @@ export function renderFieldCell(
       return Array.isArray(value) ? value.map((item) => String(item)).join(", ") : String(value);
     case "text":
       return (
-        <span className="block max-w-xs truncate" title={String(value)}>
+        <span className="block max-w-80 truncate" title={String(value)}>
           {String(value)}
         </span>
       );

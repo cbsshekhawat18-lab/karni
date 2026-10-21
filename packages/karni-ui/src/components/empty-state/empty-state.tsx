@@ -40,7 +40,7 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       )}
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       {description != null && (
-        <p className="max-w-sm text-sm text-muted-foreground">{description}</p>
+        <p className="max-w-96 text-sm text-muted-foreground">{description}</p>
       )}
       {action != null && <div className="mt-3 flex items-center gap-2">{action}</div>}
       {children}

@@ -439,7 +439,7 @@ export function ResourceSelect(props: ResourceSelectProps): React.ReactElement {
               event.preventDefault();
             }
           }}
-          className="z-50 max-h-72 w-[var(--radix-popover-trigger-width)] min-w-[12rem] overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
+          className="z-popover max-h-72 w-[var(--radix-popover-trigger-width)] min-w-48 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md"
         >
           <div role="listbox" id={listboxId} aria-multiselectable={multiple || undefined}>
             {listContent}

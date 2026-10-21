@@ -1485,6 +1485,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`karni/max-page-lines`](errors.md#karni-max-page-lines) | lint | A page file is longer than its cap (50 lines by default) |
 | [`karni/no-deep-imports`](errors.md#karni-no-deep-imports) | lint | An import reaches into @karni/ui internals |
 | [`karni/no-direct-http`](errors.md#karni-no-direct-http) | lint | fetch / axios / XMLHttpRequest / WebSocket outside the api client |
+| [`karni/no-style-literals`](errors.md#karni-no-style-literals) | lint | A class or inline style holds a literal value instead of a design token |
 
 ## Make targets
 

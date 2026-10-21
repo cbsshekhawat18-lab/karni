@@ -24,6 +24,7 @@ import maxPageLines from "./rules/max-page-lines.js";
 import noDeepImports from "./rules/no-deep-imports.js";
 import noDirectHttp from "./rules/no-direct-http.js";
 import noRawElements from "./rules/no-raw-elements.js";
+import noStyleLiterals from "./rules/no-style-literals.js";
 
 const plugin = {
   meta: {
@@ -35,6 +36,9 @@ const plugin = {
     "max-page-lines": maxPageLines,
     "no-deep-imports": noDeepImports,
     "no-direct-http": noDirectHttp,
+    // Not in `recommended`: a project with its own design system uses its own
+    // palette. @karni/ui enables it for its own source; projects may opt in.
+    "no-style-literals": noStyleLiterals,
   },
   // Filled below so the config entries can reference the plugin object itself.
   configs: {},

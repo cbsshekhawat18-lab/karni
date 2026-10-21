@@ -149,7 +149,7 @@ function DetailError({
     <div
       role="alert"
       className={cn(
-        "space-y-3 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive",
+        "space-y-3 rounded-md border border-destructive-border bg-destructive-subtle p-4 text-sm text-destructive",
         className,
       )}
     >
@@ -245,7 +245,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
           {actions !== undefined ? <div className="flex items-center gap-2">{actions}</div> : null}
         </div>
       ) : null}
-      <dl className="divide-y divide-border">
+      <dl className="[&>*+*]:border-t [&>*+*]:border-border">
         {domain.map((field) => (
           <DetailRow
             key={field.name}
@@ -259,7 +259,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
       {audit.length > 0 ? (
         <section
           aria-labelledby={recordHeadingId}
-          className="rounded-md border border-border bg-muted/40 px-4 py-2"
+          className="rounded-md border border-border bg-muted-subtle px-4 py-2"
         >
           <h3
             id={recordHeadingId}
@@ -267,7 +267,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
           >
             Record
           </h3>
-          <dl className="divide-y divide-border">
+          <dl className="[&>*+*]:border-t [&>*+*]:border-border">
             {audit.map((field) => (
               <DetailRow
                 key={field.name}

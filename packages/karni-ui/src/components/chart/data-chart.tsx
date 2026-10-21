@@ -400,7 +400,7 @@ export function DataChart({
             {hovered !== null && hoveredLabel !== undefined && hoveredPoints.length > 0 && (
               <div
                 data-karni-chart-tooltip=""
-                className="pointer-events-none absolute z-10 min-w-24 -translate-x-1/2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md"
+                className="pointer-events-none absolute z-raised min-w-24 -translate-x-1/2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md"
                 style={{
                   left: pct(bandCenter(hovered), width),
                   top: pct(MARGIN.top, height),

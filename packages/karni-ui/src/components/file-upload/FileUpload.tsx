@@ -235,7 +235,7 @@ export function FileUpload(props: FileUploadProps): React.ReactElement {
             return (
               <li
                 key={typeof entry === "string" ? `url-${entry}` : `file-${entry.name}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted-subtle px-3 py-1.5 text-sm"
               >
                 {typeof entry === "string" ? (
                   <a

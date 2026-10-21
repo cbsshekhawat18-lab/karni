@@ -97,12 +97,12 @@ export function Modal({
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger != null && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/40" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-modal bg-overlay" />
         <DialogPrimitive.Content
           {...contentProps}
           {...clearDescribedBy}
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 text-foreground shadow-lg",
+            "fixed left-1/2 top-1/2 z-modal grid w-full max-w-128 -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 text-foreground shadow-lg",
             className,
           )}
         >

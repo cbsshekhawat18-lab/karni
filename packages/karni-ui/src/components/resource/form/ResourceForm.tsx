@@ -106,7 +106,7 @@ function FormErrorPanel({
     <div
       role="alert"
       className={cn(
-        "rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive",
+        "rounded-md border border-destructive-border bg-destructive-subtle p-4 text-sm text-destructive",
         className,
       )}
     >
@@ -349,7 +349,7 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
         {typeof rootError === "string" ? (
           <div
             role="alert"
-            className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="rounded-md border border-destructive-border bg-destructive-subtle px-3 py-2 text-sm text-destructive"
           >
             {rootError}
           </div>

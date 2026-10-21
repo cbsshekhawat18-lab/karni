@@ -1974,3 +1974,11 @@ Every rule is an error in `karni.configs.recommended`; an opt-out needs an `esli
 **Why Karni objects.** The generated typed hooks and KarniClient handle auth, errors, retries and types in one place; ad-hoc HTTP calls bypass all of it.
 
 **Fix.** Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui; keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`.
+
+<a id="karni-no-style-literals"></a>
+
+### `karni/no-style-literals` — A class or inline style holds a literal value instead of a design token
+
+**Why Karni objects.** @karni/ui's preset resolves every colour, spacing step, radius, type size, shadow, z-index, opacity and duration from a --karni-* custom property, so one stylesheet (or `karni ui detect`) rethemes every component. A literal (`w-[13px]`, `bg-slate-500`, `bg-primary/90`, `style={{ color: "#333" }}`) is out of the theme's reach.
+
+**Fix.** Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source; a project opts in with `"karni/no-style-literals": "error"`. Opt out only with `// eslint-disable-next-line karni/no-style-literals -- <reason>`.

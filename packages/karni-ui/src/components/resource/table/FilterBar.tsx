@@ -132,7 +132,7 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
-          className="h-9 w-full max-w-xs"
+          className="h-9 w-full max-w-80"
         />
       )}
       {filterFields.map((field) => {

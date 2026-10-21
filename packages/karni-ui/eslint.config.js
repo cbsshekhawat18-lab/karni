@@ -64,6 +64,21 @@ export default tseslint.config(
     },
   },
   {
+    // Every visual value in a shipped component resolves from a --karni-*
+    // token; `npm run build` runs lint, so a literal fails the build.
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    // mark-paths.ts is the Karni logo, generated from assets/brand/: its
+    // colours are the brand's, fixed by its usage rules, not theme values.
+    ignores: [
+      "**/*.test.*",
+      "**/*.stories.*",
+      "**/demo-fixtures.ts",
+      "**/fixtures.ts",
+      "src/components/brand/mark-paths.ts",
+    ],
+    rules: { "karni/no-style-literals": "error" },
+  },
+  {
     // Re-assert the preset's test-file carve-out after the override above
     // (later entries win in flat config); tests/ holds msw infrastructure.
     files: ["**/*.test.*", "**/mocks/**", "**/vitest.setup.*", "tests/**"],

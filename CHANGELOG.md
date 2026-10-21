@@ -11,6 +11,18 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `@karni/ui` design tokens: every visual value in every component now
+  resolves from a CSS custom property in `--karni-color-*`, `--karni-space-*`,
+  `--karni-radius-*`, `--karni-font-*` or `--karni-shadow-*` (plus stacking,
+  opacity, motion and line widths). The preset maps Tailwind's scales onto
+  them, so one stylesheet rethemes every component; colours take any CSS
+  colour. Motion drops to 0ms under `prefers-reduced-motion`. New ESLint rule
+  `karni/no-style-literals` and a test that compiles every component class
+  keep literals out; `npm run build` runs the lint. Every Storybook story
+  renders pixel-identical before and after, light and dark. The 0.3 HSL
+  triplet names (`--karni-primary`, ...) still work and are deprecated
+  ([docs/migrations/0.4.md](docs/migrations/0.4.md)). ResourceDetail's section
+  background now uses the shared `muted-subtle` shade (50% muted, was 40%).
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.

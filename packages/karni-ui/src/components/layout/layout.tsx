@@ -200,11 +200,11 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
 
         {/* Overlay drawer (below md). */}
         {mobileOpen && (
-          <div className="fixed inset-0 z-40 md:hidden">
+          <div className="fixed inset-0 z-drawer md:hidden">
             <div
               data-testid="karni-layout-backdrop"
               aria-hidden="true"
-              className="absolute inset-0 bg-foreground/40"
+              className="absolute inset-0 bg-overlay"
               onClick={closeMobile}
             />
             <aside
