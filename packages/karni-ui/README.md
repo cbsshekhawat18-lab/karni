@@ -351,6 +351,14 @@ Option values `""` and `"__karni_empty__"` are reserved.
 The `variants()` helper (a dependency-free cva-style utility) and `cn()` are
 exported for building your own components in the same style.
 
+Leaf primitives have no `slots`: there is nothing inside them to replace, and
+each one is replaced whole through the registry below (or restyled with
+`className`). `Input`, `Textarea`, `SelectTrigger` (and the composed `Select`)
+and `Checkbox` show a destructive border while `aria-invalid` is true, so a
+form marks a field invalid with the same attribute screen readers announce;
+the composed `Select` passes `aria-invalid`, `aria-describedby` and
+`aria-labelledby` to its trigger.
+
 ### Your design system's primitives
 
 A project with its own design system registers its primitives once, and every
@@ -390,6 +398,103 @@ its own). `select` is replaced as a whole family because Radix parts share a
 context. A registered component may wrap Karni's own primitive: inside it, the
 role resolves to Karni's again. `KarniPrimitivesProvider` changes the registry
 for a subtree.
+
+## App shell and support components: slots
+
+`Layout`, `Page`, `Modal`, `Toaster`, `EmptyState`, `Stat`, `DataChart` and
+`FileUpload` take `className` (merged onto their root with `cn()`) and
+`slots`: replace one internal piece and keep the rest of the component's
+behaviour. Each component exports its slot contract (`LayoutSlots`,
+`PageSlots`, ...), the props each slot receives, and its defaults
+(`defaultLayoutSlots`, ...) so a replacement can wrap the original:
+
+```tsx
+import { Layout, type LayoutNavLinkProps } from "@karni/ui";
+import { Link } from "@tanstack/react-router";
+
+function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
+  // onClick closes the mobile drawer; className carries the active style and focus ring.
+  return <Link to={href} onClick={onClick} {...props} />;
+}
+
+<Layout navItems={nav} slots={{ NavLink }}>
+  …
+</Layout>;
+```
+
+| Component    | Slots                                                      |
+| ------------ | ---------------------------------------------------------- |
+| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink` |
+| `Page`       | `Header`, `Title`, `Description`, `Actions`                |
+| `Modal`      | `Header`, `Footer`, `CloseButton`                          |
+| `Toaster`    | `Title`, `Description`, `CloseButton`                      |
+| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                  |
+| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                          |
+| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                    |
+| `FileUpload` | `Dropzone`, `FileRow`                                      |
+
+Where a slot does what an older prop did, the prop keeps working and the slot
+is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
+(use `Header`, which still receives the title, description and actions),
+`DataChart`'s `renderTooltip` (use `Tooltip`), `Toaster`'s `viewportClassName`
+(use `className`). A custom `Modal` `Header` renders `ModalTitle` (and
+`ModalDescription`) so the dialog stays labelled; a custom `CloseButton` wraps
+its button in `ModalClose`.
+
+Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
+`onMobileNavOpenChange` to control the drawer; `Stat` and `DataChart` take
+`loading`; `DataChart` takes `summary`; `FileUpload` takes `error`,
+`uploading`, `rejectionMessage`, `aria-invalid`, `aria-describedby` and
+`aria-labelledby`.
+
+## Accessibility
+
+The app shell, the support components and the primitives target WCAG 2.2 AA.
+What each one does for keyboard and screen-reader users:
+
+- **Layout**: a "Skip to content" link is the first Tab stop and moves focus
+  to `<main>`. Below `md` the sidebar is a modal drawer (Radix Dialog): named
+  "Navigation", focus moves into it and stays there, Escape, the backdrop, the
+  close button or a link close it, and focus returns to the menu button. The
+  menu button's `aria-controls` names the drawer only while it is open. The
+  drawer closes itself if the window grows past `md`. Nav links show a focus
+  ring and mark the current page with `aria-current="page"`.
+- **Modal**: named by its title, described by its description; focus moves in,
+  Tab stays inside, Escape closes, focus returns to what opened it.
+- **Toaster**: an error toast is announced at once (assertive), the others
+  politely. F8 moves focus to the toasts, Tab walks them and their buttons,
+  Escape dismisses the focused one. A toast's timer pauses while the pointer is
+  over the toasts or focus is inside them.
+- **FileUpload**: the dropzone is a button (Enter or Space opens the file
+  picker), named by its text, `aria-label`, `aria-labelledby` or a
+  `<label htmlFor={id}>`. A refused file ("notes.txt isn't an accepted file
+  type.") and the `error` prop are announced and linked with
+  `aria-describedby`; `aria-invalid` gives the invalid style. While
+  `uploading` it is busy and says so. Removing a file returns focus to the
+  dropzone.
+- **DataChart**: an image named by its title and described by its description
+  plus a generated summary (each series' lowest and highest value); every
+  value is in a visually hidden table. Tab focuses the chart; the arrow keys,
+  Home and End move the tooltip from point to point and announce each one;
+  Escape hides it. On a narrow screen the tick labels stay at 11px.
+- **Stat**: a change is spoken ("Increased by", "Decreased by", "Unchanged")
+  and drawn with an arrow or a dash, not by colour alone; `loading` sets
+  `aria-busy`.
+- **Primitives**: every control shows a focus ring on keyboard focus
+  (`focus-visible`, the `--karni-color-ring` token); Tabs, DropdownMenu,
+  Select, Checkbox and Switch follow the WAI-ARIA keyboard patterns through
+  Radix.
+
+Contrast: every text and background pair the components use reaches 4.5:1 in
+both themes, and field boundaries, the switch track, focus rings, icon-only
+buttons and chart series reach 3:1. `tests/contrast.test.ts` computes the
+ratios from the tokens in `styles.css`, so a token change cannot lower one
+unnoticed; if you override tokens, check the same pairs. Motion reads
+`--karni-duration`, which is 0ms under `prefers-reduced-motion`; nothing
+animates from JavaScript.
+
+`tests/a11y.test.tsx` runs axe-core (the WCAG A and AA rules) over every
+story of these components.
 
 ## Manifest for coding agents
 

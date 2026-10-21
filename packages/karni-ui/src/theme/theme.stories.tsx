@@ -19,3 +19,32 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
+
+/** Each starting choice; the button's name says the current one and the next. */
+export const Light: Story = {
+  decorators: [
+    (Story) => (
+      <ThemeProvider
+        defaultTheme="light"
+        storageKey="karni-theme-story-light"
+        target={() => document.createElement("div")}
+      >
+        <Story />
+      </ThemeProvider>
+    ),
+  ],
+};
+
+export const Dark: Story = {
+  decorators: [
+    (Story) => (
+      <ThemeProvider
+        defaultTheme="dark"
+        storageKey="karni-theme-story-dark"
+        target={() => document.createElement("div")}
+      >
+        <Story />
+      </ThemeProvider>
+    ),
+  ],
+};

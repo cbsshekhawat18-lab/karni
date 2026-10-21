@@ -34,6 +34,26 @@ reads to apply codemods and list the manual steps — and explained in
   triplet names (`--karni-primary`, ...) still work and are deprecated
   ([docs/migrations/0.4.md](docs/migrations/0.4.md)). ResourceDetail's section
   background now uses the shared `muted-subtle` shade (50% muted, was 40%).
+- `@karni/ui` app shell, keyboard and screen readers: `Layout`, `Page`,
+  `Modal`, `Toaster`, `EmptyState`, `Stat`, `DataChart` and `FileUpload` take
+  `className` and `slots` (`slots={{ NavLink: RouterLink }}`), with exported
+  slot contracts and `default*Slots`; `ModalTitle` and `ModalDescription` are
+  exported. Layout's mobile drawer is a modal dialog (focus trapped and
+  returned to the menu button, Escape closes, labelled) and the shell starts
+  with a skip link; nav links, SelectTrigger and the toast close buttons show
+  a keyboard focus ring. Toasts are announced by urgency (errors assertive)
+  and pause while hovered or focused. FileUpload announces refused files,
+  takes `error`, `uploading`, `aria-invalid`, `aria-describedby` and
+  `aria-labelledby`. DataChart is focusable (the arrow keys read point by
+  point), gets a generated summary and `loading`, and keeps its axis labels
+  legible on phones. Stat takes `loading`, and a zero delta reads "Unchanged"
+  (it read "Increased by +0"). `Input`, `Textarea`, `SelectTrigger` and
+  `Checkbox` show a destructive border under `aria-invalid`. Contrast: token
+  values change so every pair the components use reaches WCAG AA in both
+  themes (light `muted-foreground`, `destructive`, `input`, `chart-2`,
+  `chart-3`; dark `destructive`, `destructive-foreground`, `input`), checked by
+  a new test, and the dark theme's modal and drawer scrim dims the page (it
+  lightened it). axe-core runs over the stories of these components.
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.

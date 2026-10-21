@@ -2,6 +2,7 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import * as React from "react";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
+import { Skeleton } from "../primitives/skeleton";
 
 registerComponentRole("chart", "DataChart");
 
@@ -9,10 +10,12 @@ registerComponentRole("chart", "DataChart");
  * In-house SVG chart (contract: no chart dependency).
  *
  * Accessibility model (contract D10): the SVG is a labelled image
- * (role="img" + aria-label + <title>/<desc>); the REAL accessible data
- * surface is a visually-hidden <table> rendered next to it. The hover
- * tooltip is a visual-only affordance rendered OUTSIDE the role="img"
- * element and hidden from assistive tech.
+ * (role="img" + aria-label + <title>/<desc>) described by a generated
+ * summary (the range of each series); the REAL accessible data surface is a
+ * visually-hidden <table> rendered next to it. The tooltip is rendered
+ * OUTSIDE the role="img" element and hidden from assistive tech; the SVG is
+ * focusable, the arrow keys move the tooltip from point to point, and each
+ * point is announced through a polite live region.
  *
  * Colors come exclusively from the --karni-chart-1..5 tokens, via the
  * Tailwind preset's chart color scale (stroke-chart-N / fill-chart-N /
@@ -38,6 +41,44 @@ export interface DataChartTooltipContext {
   points: ReadonlyArray<{ seriesName: string; value: number; swatchClassName: string }>;
 }
 
+/** What the `Tooltip` slot receives: the hovered (or keyboard-selected) category. */
+export interface DataChartTooltipProps extends DataChartTooltipContext {
+  valueFormatter: (value: number) => string;
+}
+
+/** What the `Legend` slot receives. */
+export interface DataChartLegendProps {
+  series: ReadonlyArray<{ name: string; swatchClassName: string }>;
+}
+
+/** What the `Empty` slot receives (no plottable data). */
+export interface DataChartEmptyProps {
+  /** The chart's title, for screen readers. */
+  title: string;
+  /** The `emptyLabel` prop. */
+  label: React.ReactNode;
+}
+
+/** What the `Loading` slot receives (`loading` is true). */
+export interface DataChartLoadingProps {
+  title: string;
+  /** The viewBox size, for a placeholder of the chart's proportions. */
+  width: number;
+  height: number;
+}
+
+/** The parts of the chart a project can replace (`slots={{ Tooltip: MyTooltip }}`). */
+export interface DataChartSlots {
+  /** The tooltip's content (the positioned box around it stays the chart's). */
+  Tooltip: React.ComponentType<DataChartTooltipProps>;
+  /** The series legend; decorative, the hidden table carries the names. */
+  Legend: React.ComponentType<DataChartLegendProps>;
+  /** Shown instead of the chart when there is nothing to plot. */
+  Empty: React.ComponentType<DataChartEmptyProps>;
+  /** Shown instead of the chart while `loading`. */
+  Loading: React.ComponentType<DataChartLoadingProps>;
+}
+
 export interface DataChartProps {
   kind: DataChartKind;
   /** Single-series shorthand (ignored when `series` is given). */
@@ -48,11 +89,16 @@ export interface DataChartProps {
   title: string;
   /** Longer description for the SVG <desc>. */
   description?: string;
+  /**
+   * What screen readers hear after the title and description. Default: a
+   * generated summary (each series' lowest and highest value). "" omits it.
+   */
+  summary?: string;
   /** Formats values in the tooltip, y-axis ticks and the hidden table. */
   valueFormatter?: (value: number) => string;
   /** Formats x-axis tick labels (default: the category label itself). */
   xTickFormatter?: (label: string) => string;
-  /** Escape hatch: fully custom tooltip content. */
+  /** Fully custom tooltip content. Prefer the `Tooltip` slot. */
   renderTooltip?: (context: DataChartTooltipContext) => React.ReactNode;
   /** viewBox width (default 640) — rendered size is responsive. */
   width?: number;
@@ -62,12 +108,16 @@ export interface DataChartProps {
   yTickCount?: number;
   /** Show the series legend (default: only for 2+ series). */
   showLegend?: boolean;
-  /** Show the hover tooltip (default true). */
+  /** Show the tooltip on hover and keyboard focus (default true). */
   showTooltip?: boolean;
   /** Column header of the hidden table's category column (default "Label"). */
   categoryHeader?: string;
   /** Text shown when there is no plottable data. */
   emptyLabel?: string;
+  /** True while the data loads: a placeholder of the chart's size replaces it. */
+  loading?: boolean;
+  /** Replaces the Tooltip, Legend, Empty or Loading; see DataChartSlots. */
+  slots?: Partial<DataChartSlots>;
   className?: string;
 }
 
@@ -103,6 +153,10 @@ function seriesClass(classes: readonly string[], index: number): string {
 }
 
 const MARGIN = { top: 8, right: 12, bottom: 28, left: 48 } as const;
+/** Tick label size in viewBox units, as drawn when the chart renders at its viewBox size or larger. */
+const TICK_FONT = 10;
+/** The smallest tick label, in CSS pixels, a narrow chart scales its labels up to. */
+const MIN_TICK_PX = 11;
 
 function niceNum(range: number, round: boolean): number {
   const exponent = Math.floor(Math.log10(range));
@@ -171,10 +225,123 @@ function defaultValueFormatter(value: number): string {
   return value.toLocaleString();
 }
 
+/** "Line chart, Jan to Jun. Signups: lowest 120 (Jan), highest 300 (May)." */
+function describeChart(
+  kind: DataChartKind,
+  chart: NormalizedChart,
+  format: (value: number) => string,
+): string {
+  const { categories, seriesNames, matrix } = chart;
+  const span =
+    categories.length > 1
+      ? `${categories[0] ?? ""} to ${categories[categories.length - 1] ?? ""}`
+      : (categories[0] ?? "");
+  const parts = [`${kind === "line" ? "Line" : "Bar"} chart, ${span}.`];
+  matrix.forEach((row, seriesIndex) => {
+    let low = -1;
+    let high = -1;
+    for (let index = 0; index < row.length; index += 1) {
+      const value = row[index] ?? null;
+      if (value === null) continue;
+      if (low === -1 || value < (row[low] ?? value)) low = index;
+      if (high === -1 || value > (row[high] ?? value)) high = index;
+    }
+    if (low === -1 || high === -1) return;
+    const prefix = matrix.length > 1 ? `${seriesNames[seriesIndex] ?? ""}: lowest` : "Lowest";
+    parts.push(
+      `${prefix} ${format(row[low] ?? 0)} (${categories[low] ?? ""}), highest ${format(row[high] ?? 0)} (${categories[high] ?? ""}).`,
+    );
+  });
+  return parts.join(" ");
+}
+
+function DefaultTooltip({
+  label,
+  points,
+  valueFormatter,
+}: DataChartTooltipProps): React.ReactElement {
+  return (
+    <>
+      <p className="mb-1 font-medium">{label}</p>
+      {points.map((point) => (
+        <p key={point.seriesName} className="flex items-center gap-1.5">
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", point.swatchClassName)} />
+          <span className="text-muted-foreground">{point.seriesName}</span>
+          <span className="ml-auto font-medium">{valueFormatter(point.value)}</span>
+        </p>
+      ))}
+    </>
+  );
+}
+
+function DefaultLegend({ series }: DataChartLegendProps): React.ReactElement {
+  return (
+    <div aria-hidden="true" className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+      {series.map(({ name, swatchClassName }) => (
+        <span key={name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className={cn("h-2 w-2 rounded-full", swatchClassName)} />
+          {name}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function DefaultEmpty({ title, label }: DataChartEmptyProps): React.ReactElement {
+  return (
+    <div className="flex w-full items-center justify-center rounded-lg border border-dashed border-border px-6 py-10 text-sm text-muted-foreground">
+      <span className="sr-only">{title}: </span>
+      {label}
+    </div>
+  );
+}
+
+function DefaultLoading({ title, width, height }: DataChartLoadingProps): React.ReactElement {
+  return (
+    <>
+      <Skeleton
+        className="w-full"
+        style={{ aspectRatio: `${String(width)} / ${String(height)}` }}
+      />
+      <span className="sr-only">Loading {title}</span>
+    </>
+  );
+}
+
+/** The default pieces of the chart, for wrapping one. */
+export const defaultDataChartSlots: DataChartSlots = {
+  Tooltip: DefaultTooltip,
+  Legend: DefaultLegend,
+  Empty: DefaultEmpty,
+  Loading: DefaultLoading,
+};
+
+/** The rendered width of an element, tracked as it resizes (null before the first measure). */
+function useRenderedWidth(ref: React.RefObject<Element | null>, active: boolean): number | null {
+  const [width, setWidth] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!active || element === null || typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries[0]?.contentRect.width;
+      if (measured !== undefined && measured > 0) setWidth(measured);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref, active]);
+  return width;
+}
+
 /**
  * Minimal line/bar chart driven by `{label, value}` points or named series.
  *
- * Escape hatches: `valueFormatter`/`xTickFormatter`, `renderTooltip`,
+ * Keyboard and screen readers: the chart is an image named by `title`,
+ * described by `description` and a generated summary, with every value in a
+ * visually-hidden table. Tab focuses it; the arrow keys (Home, End) move the
+ * tooltip from category to category and announce each one; Escape hides it.
+ *
+ * Escape hatches: `slots` replaces the Tooltip, Legend, Empty or Loading
+ * pieces; `valueFormatter`/`xTickFormatter`, `summary`, `renderTooltip`,
  * `width`/`height`/`yTickCount`, legend and tooltip toggles, `className`
  * (merged via cn()). Colors are only themeable through the
  * --karni-chart-1..5 CSS variables.
@@ -185,6 +352,7 @@ export function DataChart({
   series,
   title,
   description,
+  summary,
   valueFormatter = defaultValueFormatter,
   xTickFormatter,
   renderTooltip,
@@ -195,30 +363,54 @@ export function DataChart({
   showTooltip = true,
   categoryHeader = "Label",
   emptyLabel = "No data",
+  loading = false,
+  slots,
   className,
 }: DataChartProps): React.ReactElement {
+  const { Tooltip, Legend, Empty, Loading } = { ...defaultDataChartSlots, ...slots };
   const titleId = React.useId();
   const descId = React.useId();
-  const [hovered, setHovered] = React.useState<number | null>(null);
+  const summaryId = React.useId();
+  const [hovered, setHoveredState] = React.useState<number | null>(null);
+  // The latest index, for key presses that arrive before a re-render.
+  const hoveredRef = React.useRef<number | null>(null);
+  const setHovered = React.useCallback((index: number | null) => {
+    hoveredRef.current = index;
+    setHoveredState(index);
+  }, []);
+  // What the live region says: set by the keyboard only, so hovering stays quiet.
+  const [announcement, setAnnouncement] = React.useState("");
+  const svgRef = React.useRef<SVGSVGElement>(null);
 
-  const { categories, seriesNames, matrix } = React.useMemo(
-    () => normalize(data, series),
-    [data, series],
-  );
+  const chart = React.useMemo(() => normalize(data, series), [data, series]);
+  const { categories, seriesNames, matrix } = chart;
 
   const values = matrix.flat().filter((value): value is number => value !== null);
-  if (categories.length === 0 || values.length === 0) {
+  const plottable = !loading && categories.length > 0 && values.length > 0;
+  const renderedWidth = useRenderedWidth(svgRef, plottable);
+
+  if (loading) {
     return (
-      <div
-        className={cn(
-          "flex w-full items-center justify-center rounded-lg border border-dashed border-border px-6 py-10 text-sm text-muted-foreground",
-          className,
-        )}
-      >
-        {emptyLabel}
+      <div aria-busy="true" className={cn("w-full", className)}>
+        <Loading title={title} width={width} height={height} />
       </div>
     );
   }
+
+  if (!plottable) {
+    return (
+      <div className={cn("w-full", className)}>
+        <Empty title={title} label={emptyLabel} />
+      </div>
+    );
+  }
+
+  // A chart drawn narrower than its viewBox would shrink its labels below
+  // legibility: keep them at MIN_TICK_PX, and the lines visible, on phones.
+  const scale = renderedWidth === null ? 1 : renderedWidth / width;
+  const fontSize = renderedWidth === null ? TICK_FONT : Math.max(TICK_FONT, MIN_TICK_PX / scale);
+  const strokeWidth = Math.max(2, 1.5 / scale);
+  const pointRadius = Math.max(3, 2.5 / scale);
 
   // scales
   const rawMin = Math.min(0, ...values);
@@ -228,12 +420,20 @@ export function DataChart({
   const domainMax = ticks[ticks.length - 1] ?? rawMax;
   const domainSpan = domainMax - domainMin || 1;
 
-  const plotWidth = width - MARGIN.left - MARGIN.right;
-  const plotHeight = height - MARGIN.top - MARGIN.bottom;
+  const longestTick = Math.max(...ticks.map((tick) => valueFormatter(tick).length));
+  const margin = {
+    top: Math.max(MARGIN.top, fontSize * 0.6),
+    right: MARGIN.right,
+    // Room for the y labels (about 0.6em a character) and the x labels.
+    left: Math.max(MARGIN.left, Math.ceil(longestTick * fontSize * 0.6) + 6),
+    bottom: Math.max(MARGIN.bottom, Math.ceil(fontSize * 2)),
+  };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
   const yScale = (value: number): number =>
-    MARGIN.top + ((domainMax - value) / domainSpan) * plotHeight;
+    margin.top + ((domainMax - value) / domainSpan) * plotHeight;
   const bandWidth = plotWidth / categories.length;
-  const bandCenter = (index: number): number => MARGIN.left + (index + 0.5) * bandWidth;
+  const bandCenter = (index: number): number => margin.left + (index + 0.5) * bandWidth;
   const zeroY = yScale(Math.max(domainMin, Math.min(domainMax, 0)));
 
   // marks
@@ -278,7 +478,7 @@ export function DataChart({
         <polyline
           className={seriesClass(SERIES_STROKE, seriesIndex)}
           fill="none"
-          strokeWidth={2}
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeLinejoin="round"
           points={points.map(([x, y]) => `${String(x)},${String(y)}`).join(" ")}
@@ -289,42 +489,101 @@ export function DataChart({
             className={seriesClass(SERIES_FILL, seriesIndex)}
             cx={x}
             cy={y}
-            r={3}
+            r={pointRadius}
           />
         ))}
       </g>
     );
   });
 
+  const pointsAt = (index: number): DataChartTooltipContext["points"] =>
+    matrix
+      .map((row, seriesIndex) => ({
+        seriesName: seriesNames[seriesIndex] ?? "",
+        value: row[index] ?? null,
+        swatchClassName: seriesClass(SERIES_SWATCH, seriesIndex),
+      }))
+      .filter(
+        (entry): entry is { seriesName: string; value: number; swatchClassName: string } =>
+          entry.value !== null,
+      );
+
   // tooltip geometry (percentages of the rendered box)
   const pct = (value: number, total: number): string => `${String((value / total) * 100)}%`;
-  const hoveredPoints =
-    hovered === null
-      ? []
-      : matrix
-          .map((row, seriesIndex) => ({
-            seriesName: seriesNames[seriesIndex] ?? "",
-            value: row[hovered] ?? null,
-            swatchClassName: seriesClass(SERIES_SWATCH, seriesIndex),
-          }))
-          .filter(
-            (entry): entry is { seriesName: string; value: number; swatchClassName: string } =>
-              entry.value !== null,
-          );
+  const hoveredPoints = hovered === null ? [] : pointsAt(hovered);
   const hoveredLabel = hovered === null ? undefined : categories[hovered];
+
+  const select = (index: number | null): void => {
+    setHovered(index);
+    if (index === null) {
+      setAnnouncement("");
+      return;
+    }
+    const spoken = pointsAt(index)
+      .map((point) =>
+        matrix.length > 1
+          ? `${point.seriesName} ${valueFormatter(point.value)}`
+          : valueFormatter(point.value),
+      )
+      .join(", ");
+    setAnnouncement(`${categories[index] ?? ""}: ${spoken}`);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<SVGSVGElement>): void => {
+    const last = categories.length - 1;
+    const current = hoveredRef.current;
+    let next: number | null | undefined;
+    switch (event.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        next = current === null ? 0 : Math.min(last, current + 1);
+        break;
+      case "ArrowLeft":
+      case "ArrowUp":
+        next = current === null ? last : Math.max(0, current - 1);
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = last;
+        break;
+      case "Escape":
+        next = null;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    select(next);
+  };
+
+  const generatedSummary =
+    summary ??
+    `${describeChart(kind, chart, valueFormatter)}${
+      showTooltip ? " Use the arrow keys to read each value." : ""
+    }`;
+  const describedBy =
+    [description !== undefined ? descId : null, generatedSummary !== "" ? summaryId : null]
+      .filter(Boolean)
+      .join(" ") || undefined;
 
   const defaultLegend = seriesNames.length > 1;
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="relative w-full">
+      <div className="relative w-full rounded-md ring-offset-background has-[svg:focus-visible]:ring-2 has-[svg:focus-visible]:ring-ring has-[svg:focus-visible]:ring-offset-2">
         <svg
+          ref={svgRef}
           role="img"
           aria-label={title}
           aria-labelledby={titleId}
-          aria-describedby={description !== undefined ? descId : undefined}
+          aria-describedby={describedBy}
+          tabIndex={showTooltip ? 0 : undefined}
+          onKeyDown={showTooltip ? onKeyDown : undefined}
+          onBlur={showTooltip ? () => select(null) : undefined}
           viewBox={`0 0 ${String(width)} ${String(height)}`}
-          className="block h-auto w-full text-muted-foreground"
+          className="block h-auto w-full text-muted-foreground focus-visible:outline-none"
         >
           <title id={titleId}>{title}</title>
           {description !== undefined && <desc id={descId}>{description}</desc>}
@@ -333,19 +592,19 @@ export function DataChart({
           {ticks.map((tick) => (
             <g key={tick}>
               <line
-                x1={MARGIN.left}
-                x2={width - MARGIN.right}
+                x1={margin.left}
+                x2={width - margin.right}
                 y1={yScale(tick)}
                 y2={yScale(tick)}
                 stroke="currentColor"
                 strokeOpacity={tick === 0 ? 0.6 : 0.2}
               />
               <text
-                x={MARGIN.left - 6}
+                x={margin.left - 6}
                 y={yScale(tick)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize={10}
+                fontSize={fontSize}
                 fill="currentColor"
               >
                 {valueFormatter(tick)}
@@ -358,9 +617,9 @@ export function DataChart({
             <text
               key={category}
               x={bandCenter(index)}
-              y={height - MARGIN.bottom + 14}
+              y={height - margin.bottom + fontSize * 1.4}
               textAnchor="middle"
-              fontSize={10}
+              fontSize={fontSize}
               fill="currentColor"
             >
               {xTickFormatter ? xTickFormatter(category) : category}
@@ -377,9 +636,9 @@ export function DataChart({
             <div
               className="absolute flex"
               style={{
-                left: pct(MARGIN.left, width),
+                left: pct(margin.left, width),
                 width: pct(plotWidth, width),
-                top: pct(MARGIN.top, height),
+                top: pct(margin.top, height),
                 height: pct(plotHeight, height),
               }}
               onMouseLeave={() => {
@@ -403,24 +662,17 @@ export function DataChart({
                 className="pointer-events-none absolute z-raised min-w-24 -translate-x-1/2 rounded-md border border-border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-md"
                 style={{
                   left: pct(bandCenter(hovered), width),
-                  top: pct(MARGIN.top, height),
+                  top: pct(margin.top, height),
                 }}
               >
                 {renderTooltip ? (
                   renderTooltip({ label: hoveredLabel, points: hoveredPoints })
                 ) : (
-                  <>
-                    <p className="mb-1 font-medium">{hoveredLabel}</p>
-                    {hoveredPoints.map((point) => (
-                      <p key={point.seriesName} className="flex items-center gap-1.5">
-                        <span
-                          className={cn("h-2 w-2 shrink-0 rounded-full", point.swatchClassName)}
-                        />
-                        <span className="text-muted-foreground">{point.seriesName}</span>
-                        <span className="ml-auto font-medium">{valueFormatter(point.value)}</span>
-                      </p>
-                    ))}
-                  </>
+                  <Tooltip
+                    label={hoveredLabel}
+                    points={hoveredPoints}
+                    valueFormatter={valueFormatter}
+                  />
                 )}
               </div>
             )}
@@ -429,19 +681,19 @@ export function DataChart({
       </div>
 
       {(showLegend ?? defaultLegend) && (
-        <div aria-hidden="true" className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-          {seriesNames.map((name, index) => (
-            <span key={name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={cn("h-2 w-2 rounded-full", seriesClass(SERIES_SWATCH, index))} />
-              {name}
-            </span>
-          ))}
-        </div>
+        <Legend
+          series={seriesNames.map((name, index) => ({
+            name,
+            swatchClassName: seriesClass(SERIES_SWATCH, index),
+          }))}
+        />
       )}
 
       {/* The accessible data surface (contract D10). */}
       <VisuallyHidden.Root asChild>
         <div>
+          {generatedSummary !== "" && <p id={summaryId}>{generatedSummary}</p>}
+          <p role="status">{announcement}</p>
           <table>
             <caption>{title}</caption>
             <thead>

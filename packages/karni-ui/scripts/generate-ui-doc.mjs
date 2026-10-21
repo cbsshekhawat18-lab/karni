@@ -35,6 +35,8 @@ const GROUPS = [
       "EmptyState",
       "Modal",
       "ModalClose",
+      "ModalTitle",
+      "ModalDescription",
       "Toaster",
       "Stat",
       "DataChart",

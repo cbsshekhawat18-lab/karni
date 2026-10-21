@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "./dropdown-menu";
 import { Input } from "./input";
+import { Select, SelectTrigger, SelectRoot, SelectValue } from "./select";
 import { Label } from "./label";
 import { Skeleton } from "./skeleton";
 import { Switch } from "./switch";
@@ -124,5 +125,130 @@ describe("Skeleton", () => {
     expect(el.className.split(/\s+/)).toEqual(
       expect.arrayContaining(["animate-pulse", "h-4", "w-24"]),
     );
+  });
+});
+
+describe("keyboard and invalid state", () => {
+  it("Tabs: the arrow keys move between tabs and select them", async () => {
+    const user = userEvent.setup();
+    render(
+      <Tabs defaultValue="one">
+        <TabsList aria-label="Sections">
+          <TabsTrigger value="one">One</TabsTrigger>
+          <TabsTrigger value="two">Two</TabsTrigger>
+        </TabsList>
+        <TabsContent value="one">First panel</TabsContent>
+        <TabsContent value="two">Second panel</TabsContent>
+      </Tabs>,
+    );
+    await user.tab();
+    expect(screen.getByRole("tab", { name: "One" })).toHaveFocus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "Two" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "Two" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel", { name: "Two" })).toHaveTextContent("Second panel");
+  });
+
+  it("DropdownMenu: opens from the keyboard, Escape returns focus to the trigger", async () => {
+    const user = userEvent.setup();
+    render(
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">Actions</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuItem>Delete</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    const trigger = screen.getByRole("button", { name: "Actions" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("menu")).toBeInTheDocument();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: "Delete" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("Checkbox and Switch toggle with Space", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Checkbox aria-label="Accept" />
+        <Switch aria-label="Notify" />
+      </>,
+    );
+    await user.tab();
+    await user.keyboard(" ");
+    expect(screen.getByRole("checkbox", { name: "Accept" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await user.tab();
+    await user.keyboard(" ");
+    expect(screen.getByRole("switch", { name: "Notify" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("Select: opens from the keyboard and is named by its label", async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(
+      <>
+        <Label htmlFor="status">Status</Label>
+        <Select
+          id="status"
+          value={null}
+          onValueChange={onValueChange}
+          options={[
+            { value: "draft", label: "Draft" },
+            { value: "live", label: "Live" },
+          ]}
+        />
+      </>,
+    );
+    const trigger = screen.getByRole("combobox", { name: "Status" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("listbox")).toBeInTheDocument();
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(onValueChange).toHaveBeenCalled();
+  });
+
+  it("the focus style is keyboard-only (focus-visible) on SelectTrigger", () => {
+    render(
+      <SelectRoot>
+        <SelectTrigger aria-label="Pick">
+          <SelectValue />
+        </SelectTrigger>
+      </SelectRoot>,
+    );
+    const trigger = screen.getByRole("combobox", { name: "Pick" });
+    expect(trigger).toHaveClass("focus-visible:ring-2");
+    expect(trigger.className).not.toMatch(/(^|\s)focus:ring/);
+  });
+
+  it("aria-invalid gives Input, Textarea, SelectTrigger and Checkbox the destructive border", () => {
+    render(
+      <>
+        <Input aria-label="a" aria-invalid />
+        <Textarea aria-label="b" aria-invalid />
+        <Select value={null} options={[]} aria-label="c" aria-invalid aria-describedby="err" />
+        <Checkbox aria-label="d" aria-invalid />
+        <p id="err">Choose one.</p>
+      </>,
+    );
+    for (const element of [
+      screen.getByRole("textbox", { name: "a" }),
+      screen.getByRole("textbox", { name: "b" }),
+      screen.getByRole("combobox", { name: "c" }),
+      screen.getByRole("checkbox", { name: "d" }),
+    ]) {
+      expect(element).toHaveAttribute("aria-invalid", "true");
+      expect(element).toHaveClass("aria-[invalid=true]:border-destructive");
+    }
+    expect(screen.getByRole("combobox", { name: "c" })).toHaveAccessibleDescription("Choose one.");
   });
 });

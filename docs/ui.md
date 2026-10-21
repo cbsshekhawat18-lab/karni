@@ -29,6 +29,8 @@ is a few lines composing them (see the [tutorial](tutorial.md)).
 - `EmptyState` — role `empty-state`
 - `Modal` — role `modal`
 - `ModalClose`
+- `ModalTitle`
+- `ModalDescription`
 - `Toaster` — role `toast`
 - `Stat` — role `stat`
 - `DataChart` — role `chart`
