@@ -42,6 +42,8 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     ("Generators", ("make",)),
+    # The development capture under .karni/ (docs/debugging/).
+    ("Debugging", ("trace", "replay")),
 )
 
 HEADER = """---

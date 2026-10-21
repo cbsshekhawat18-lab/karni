@@ -18,6 +18,7 @@ from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.migrate import migrate
 from karni_cli.commands.new import new
+from karni_cli.commands.replay import replay
 from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
 from karni_cli.commands.run_tests import test
@@ -26,6 +27,7 @@ from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
 from karni_cli.commands.sync_roles import sync_roles
+from karni_cli.commands.trace import trace
 from karni_cli.commands.types import types
 from karni_cli.commands.upgrade import upgrade
 from karni_cli.commands.worker import worker
@@ -69,6 +71,9 @@ app.add_typer(rules_app, name="rules")
 app.command(help="Serve context, rules and check as MCP tools (needs karni-cli[mcp])")(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
 app.command(help="Explain an error code (E104, C101, PAY004, K106): why and the fix")(explain)
+# Debugging (development capture under .karni/): follow and re-run requests.
+app.command(help="Follow a captured request: its tasks, retries, email, webhooks, audit")(trace)
+app.command(help="Re-run a captured request against the current code, as any user")(replay)
 app.add_typer(config_app, name="config")
 
 # Runners: each wraps one project command (named in its --help), run through

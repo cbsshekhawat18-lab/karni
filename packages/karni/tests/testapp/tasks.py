@@ -37,3 +37,20 @@ def explode() -> None:
 def record_shelf_deleted(pk: Any) -> None:
     """``queued(task)`` target: receives the deleted shelf's primary key."""
     deleted_shelves.append(pk)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=0)
+def flaky_mail(self: Any, to: str, fail_times: int = 1) -> str:
+    """Fails ``fail_times`` times, then sends an email (tests/test_debug.py: retries keep ids)."""
+    from django.core.mail import send_mail
+
+    if self.request.retries < fail_times:
+        raise self.retry(exc=RuntimeError("smtp is down"), countdown=0)
+    send_mail("Your receipt", "Thanks.", None, [to])
+    return "sent"
+
+
+@shared_task
+def broken_task(token: str) -> None:
+    """Fails for good — the task failure snapshot (its ``token`` argument is redacted)."""
+    raise ValueError("cannot process the order")

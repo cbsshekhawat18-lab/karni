@@ -23,6 +23,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 - [Events and listeners](https://cbsshekhawat18-lab.github.io/karni/events/), [Scheduling](https://cbsshekhawat18-lab.github.io/karni/scheduling/), [Seeding](https://cbsshekhawat18-lab.github.io/karni/seeding/).
 - [Enforcement](https://cbsshekhawat18-lab.github.io/karni/enforcement/): `karni check`, the ESLint preset and the architecture tests that keep generic code out of projects.
 - [Karni for AI agents](https://cbsshekhawat18-lab.github.io/karni/agents/): the generated AGENTS.md / CLAUDE.md / Cursor / Copilot adapters, slash commands and the MCP server.
+- [Debugging](https://cbsshekhawat18-lab.github.io/karni/debugging/capture/): one request id across tasks, email, webhooks and the change log; a development-only, redacted capture under `.karni/`; `karni trace`, `karni replay --as` and `karni explain --failure` ([trace and replay](https://cbsshekhawat18-lab.github.io/karni/debugging/trace-and-replay/)).
 
 ## Reference
 

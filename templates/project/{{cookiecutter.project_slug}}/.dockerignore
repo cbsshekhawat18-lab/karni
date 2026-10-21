@@ -5,3 +5,6 @@
 *.pyc
 frontend/node_modules
 frontend/dist
+.karni/requests
+.karni/failures
+.karni/trace

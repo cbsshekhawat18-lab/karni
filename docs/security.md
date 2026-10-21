@@ -55,7 +55,13 @@ cache in production.
 — see [bots and security events](accounts.md#bots-and-security-events).
 `AuditedModel` records who created and last changed a row; models with
 `class Karni: audit = True` also keep a field-level change history
-([change history](change-history.md)).
+([change history](change-history.md)). Every request has an id
+(`X-Request-ID`) that its logs, tasks, email and history entries carry; a
+client's `X-Request-ID` is never trusted with `DEBUG` off unless
+`KARNI_REQUEST_ID_TRUST_HEADER` says the proxy overwrites it (and
+`NUM_PROXIES` is not 0). The development capture under `.karni/` runs only
+with `DEBUG` on and redacts credentials, secret-named fields and known
+secret values ([capture](debugging/capture.md)).
 
 **Transport and headers.** The production profile sets HSTS (one year,
 subdomains, preload), `SECURE_SSL_REDIRECT` behind the proxy's

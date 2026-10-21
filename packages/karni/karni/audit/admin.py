@@ -17,8 +17,16 @@ class ChangeLogAdmin(KarniModelAdmin):
 
     list_display = ("timestamp", "action", "content_type", "object_id", "actor")
     list_filter = ("action", "content_type")
-    search_fields = ("object_id",)
-    readonly_fields = ("timestamp", "action", "content_type", "object_id", "actor", "diff")
+    search_fields = ("object_id", "request_id")
+    readonly_fields = (
+        "timestamp",
+        "action",
+        "content_type",
+        "object_id",
+        "actor",
+        "diff",
+        "request_id",
+    )
     date_hierarchy = "timestamp"
     ordering = ("-timestamp",)
 

@@ -77,6 +77,9 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+  - Debugging:
+      - Request ids and capture: debugging/capture.md
+      - Trace, replay and failure briefs: debugging/trace-and-replay.md
   - Concepts:
       - Why serializers are generated: concepts/generated-serializers.md
       - Permissions at the queryset: concepts/queryset-permissions.md

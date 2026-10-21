@@ -32,6 +32,7 @@ from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from karni.debug import trace_event
 
 from karni_payments.models import WebhookEvent
 from karni_payments.providers.base import WebhookVerificationError, get_provider_by_name
@@ -82,4 +83,14 @@ def webhook(request: HttpRequest, provider: str) -> HttpResponse:
         if created or event.processed_at is None:
             event_pk = str(event.pk)
             transaction.on_commit(lambda: process_webhook_event.delay(event_pk))
+    # Development trace (DEBUG only): the delivery is a new request; the task
+    # it enqueues carries the id, and `webhook.matched` names the payment.
+    trace_event(
+        "webhook.received",
+        provider=provider_instance.name,
+        event_id=parsed.event_id,
+        event_type=parsed.event_type,
+        duplicate=not created,
+        refs=[f"{WebhookEvent._meta.label}:{event.pk}"],
+    )
     return HttpResponse("ok")

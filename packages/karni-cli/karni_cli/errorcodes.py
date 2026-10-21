@@ -307,6 +307,43 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C32x debugging: trace, replay, explain --failure
+    _c(
+        "C320",
+        "karni explain needs a code or --failure, not both",
+        "karni explain",
+        "karni explain explains one thing: an error code (E104, C101, PAY004, K106) or a "
+        "captured failure (--failure <id>).",
+        "Run `karni explain E104`, or `karni explain --failure <id>` (a failure id, a failed "
+        "request's id, or `last`).",
+    ),
+    _c(
+        "C321",
+        "A --set value is not FIELD=VALUE",
+        "karni replay --set",
+        "--set supplies a value the capture redacted, by its place in the request.",
+        "Write the body path, '=', then the value: --set password=s3cret, --set "
+        "card.token=tok_1, or --set query:token=abc for a query parameter. The value is "
+        "parsed as JSON when it can be (numbers, true/false), else used as text.",
+    ),
+    _c(
+        "C322",
+        "The project's karni has no debugging commands",
+        "karni trace, karni replay, karni explain --failure",
+        "These commands run manage.py karni_trace, karni_replay and karni_failure in the "
+        "project's interpreter; a karni older than the CLI does not have them.",
+        "Upgrade karni in the project: `karni upgrade`, or bump karni in pyproject.toml and "
+        "reinstall (`uv pip install -r pyproject.toml`, or rebuild the image).",
+    ),
+    _c(
+        "C323",
+        "A debugging command failed in the project",
+        "karni trace, karni replay, karni explain --failure",
+        "The command ran in the project's interpreter and failed without a coded Karni "
+        "error, usually because Django could not start (settings, imports, the database).",
+        "Run the command it names with `karni manage ...` to see the full output, fix what "
+        "it reports, then retry.",
+    ),
 )
 
 

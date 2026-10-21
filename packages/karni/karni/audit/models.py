@@ -19,7 +19,8 @@ class ChangeBatch(models.Model):
     (:func:`karni.audit.capture.change_batch`) points at it, so "which rows
     did this import touch" and "which import changed this row" are one query
     each. ``meta`` carries what the operation knows about itself (file name,
-    counts, the job id).
+    counts, the job id). ``request_id`` is the id of the request (or task)
+    that ran it (:mod:`karni.tracing`), so ``karni trace`` finds it.
     """
 
     actor = models.ForeignKey(
@@ -33,6 +34,7 @@ class ChangeBatch(models.Model):
     kind = models.CharField(max_length=32)
     label = models.CharField(max_length=200, blank=True, default="")
     meta = models.JSONField(default=dict, blank=True)
+    request_id = models.CharField(max_length=128, blank=True, default="", db_index=True)
 
     class Meta:
         ordering = ("-timestamp", "-id")
@@ -64,6 +66,9 @@ class ChangeLog(models.Model):
     ``["[redacted]", "[redacted]"]``. Relations are recorded by primary key,
     dates and decimals as strings, files by name. ``object_id`` is the row's
     primary key as text, so UUID and integer keys share one table.
+    ``request_id`` is the id of the request or task that made the change
+    (:mod:`karni.tracing`; ``""`` from a shell), so ``karni trace <id>`` lists
+    every change one request made.
     """
 
     class Action(models.TextChoices):
@@ -87,6 +92,7 @@ class ChangeLog(models.Model):
     batch = models.ForeignKey(
         ChangeBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name="entries"
     )
+    request_id = models.CharField(max_length=128, blank=True, default="", db_index=True)
 
     objects: ClassVar[models.Manager[ChangeLog]] = ChangeLogQuerySet.as_manager()
 

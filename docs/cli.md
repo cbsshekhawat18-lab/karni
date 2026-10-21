@@ -27,6 +27,7 @@ traceback; `KARNI_DB_CHECK=false` skips the check.
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Generators**: [make](#karni-make)
+- **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
 
@@ -196,13 +197,14 @@ karni check [OPTIONS]
 Explain an error code (E104, C101, PAY004, K106): why and the fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106. |
 | `--json` |  | Machine-readable output. |
+| `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
 ### `karni types`
 
@@ -848,3 +850,40 @@ karni make module [OPTIONS] NAME
 | `--dir` PATH |  | Parent directory (default: modules/ in the project, else the cwd). |
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
+
+## Debugging
+
+### `karni trace`
+
+Follow a captured request: its tasks, retries, email, webhooks, audit
+
+```
+karni trace [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A request id (the X-Request-ID response header), or `last`. |
+| `--json` |  | Print the story as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni replay`
+
+Re-run a captured request against the current code, as any user
+
+```
+karni replay [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A captured request id, or `last`. |
+| `--as` TEXT |  | Replay as this user: an email, a username or a primary key. |
+| `--anonymous` |  | Replay without a user. |
+| `--set` TEXT (repeatable) |  | Supply a redacted value: FIELD=VALUE (dotted body path, or query:NAME). Repeatable. |
+| `--drop-redacted` |  | Leave redacted values out instead of supplying them. |
+| `--commit` |  | Keep the writes; by default the replay is rolled back. |
+| `--json` |  | Print the result as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
