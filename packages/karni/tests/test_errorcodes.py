@@ -8,8 +8,12 @@ keep it that way as the code base grows.
 from __future__ import annotations
 
 import ast
+import os
 import pickle
 import re
+from collections.abc import Iterable
+from dataclasses import dataclass
+from importlib.metadata import entry_points
 from pathlib import Path
 
 import pytest
@@ -28,10 +32,32 @@ from karni.exceptions import (
 
 PACKAGE = Path(errorcodes.__file__).resolve().parents[1]
 REPO = PACKAGE.parents[2]
-PAYMENTS = REPO / "modules" / "karni-payments" / "karni_payments"
-APPROVALS = REPO / "modules" / "karni-approvals" / "karni_approvals"
-IMPERSONATION = REPO / "modules" / "karni-impersonation" / "karni_impersonation"
-SOURCES = [PACKAGE, PAYMENTS, APPROVALS, IMPERSONATION]
+
+
+@dataclass(frozen=True)
+class Module:
+    """An optional module: its codes register through the ``karni.errorcodes`` entry point."""
+
+    entry_point: str
+    prefix: str
+    source: Path
+
+    @property
+    def project(self) -> str:
+        return self.source.parent.name
+
+
+MODULES = [
+    Module("payments", "PAY", REPO / "modules" / "karni-payments" / "karni_payments"),
+    Module("approvals", "APR", REPO / "modules" / "karni-approvals" / "karni_approvals"),
+    Module(
+        "impersonation", "IMP", REPO / "modules" / "karni-impersonation" / "karni_impersonation"
+    ),
+]
+SOURCES = [PACKAGE, *(module.source for module in MODULES)]
+#: Set where every module is installed (CI's Python jobs): a missing module
+#: fails its checks instead of skipping them, so the coverage cannot drop out.
+REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
 
 #: Constructing these directly would let an uncoded error escape Karni code.
 BARE = {
@@ -52,10 +78,10 @@ ALLOWED_FILES = {"errorcodes/__init__.py"}
 MARKER = "karni: bare-raise-ok"
 
 
-def _python_files() -> list[Path]:
+def _python_files(roots: Iterable[Path] = SOURCES) -> list[Path]:
     return [
         path
-        for root in SOURCES
+        for root in roots
         for path in sorted(root.rglob("*.py"))
         if "migrations" not in path.parts and "__pycache__" not in path.parts
     ]
@@ -79,11 +105,35 @@ def test_registry_entries_are_complete_and_well_formed() -> None:
     )
 
 
-def test_module_codes_use_their_own_prefix() -> None:
-    payments = [code for code in errorcodes.registry() if code.startswith("PAY")]
-    assert payments, "karni-payments' codes are not registered (karni.errorcodes entry point)"
+def _module_codes(module: Module) -> list[errorcodes.ErrorCode]:
+    """The codes ``module`` registers; skips, naming what to install, when it is not installed."""
+    for entry_point in entry_points(group="karni.errorcodes", name=module.entry_point):
+        return list(entry_point.load())
+    reason = (
+        f"{module.project} is not installed, so its {module.prefix} codes are not registered. "
+        f"Install it with: pip install -e modules/{module.project} (make install installs "
+        "every module)"
+    )
+    if REQUIRE_MODULES:
+        pytest.fail(f"{reason}. KARNI_REQUIRE_MODULES=1 requires every module.")
+    pytest.skip(reason)
+
+
+def _project(module: Module | None) -> str:
+    return module.project if module else "karni"
+
+
+def test_core_codes_use_the_e_and_w_prefixes() -> None:
     core = {entry.code for entry in errorcodes.CODES}
     assert all(re.match(r"^[EW]\d{3}$", code) for code in core)
+
+
+@pytest.mark.parametrize("module", MODULES, ids=_project)
+def test_module_codes_use_their_own_prefix(module: Module) -> None:
+    codes = [entry.code for entry in _module_codes(module)]
+    assert codes, f"{module.project} registers no codes (karni.errorcodes entry point)"
+    assert all(re.match(rf"^{module.prefix}\d{{3}}$", code) for code in codes), codes
+    assert set(codes) <= set(errorcodes.registry())
 
 
 def test_a_code_registered_twice_is_refused() -> None:
@@ -143,11 +193,11 @@ def test_check_messages_use_the_code_as_their_id() -> None:
 # the source
 
 
-def _codes_in_source() -> dict[str, list[str]]:
+def _codes_in_source(roots: Iterable[Path]) -> dict[str, list[str]]:
     """Every code literal the source passes as ``code=``, a class ``code``, or a helper arg."""
     used: dict[str, list[str]] = {}
     helpers = {"api_error", "check_error", "check_warning", "docs_url", "_fix"}
-    for path in _python_files():
+    for path in _python_files(roots):
         if _rel(path) in ALLOWED_FILES or path.name == "errorcodes.py":
             continue
         tree = ast.parse(path.read_text())
@@ -173,9 +223,14 @@ def _literal(node: ast.expr) -> str | None:
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
-def test_every_code_the_source_uses_is_registered() -> None:
+@pytest.mark.parametrize("module", [None, *MODULES], ids=_project)
+def test_every_code_the_source_uses_is_registered(module: Module | None) -> None:
+    if module is not None:
+        _module_codes(module)
+    root = module.source if module else PACKAGE
     registered = set(errorcodes.registry())
-    unknown = {code: where for code, where in _codes_in_source().items() if code not in registered}
+    used = _codes_in_source([root])
+    unknown = {code: where for code, where in used.items() if code not in registered}
     assert not unknown, f"register these codes in karni/errorcodes (or the module's): {unknown}"
 
 
