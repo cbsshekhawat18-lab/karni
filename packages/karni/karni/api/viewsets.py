@@ -100,6 +100,7 @@ from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
 from karni.api.expansion import collect_expand_param, validate_expand
 from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter
 from karni.api.optimizer import TargetScope, optimize, validate_hints
+from karni.api.related import mark_read_scoped
 from karni.api.serializers import build_serializer
 from karni.deprecation import warn_deprecated
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError, KarniWriteDeferred
@@ -426,11 +427,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         return queryset
 
     def target_scope(self) -> TargetScope:
-        """``scope(model) -> (readable rows, filtered)`` for prefetches (ADR 0001 R3)."""
+        """``scope(model) -> (readable rows, filtered)`` for prefetches (ADR 0001 R3).
+
+        The rows are marked as read-scoped (:func:`karni.api.related.mark_read_scoped`),
+        so rendering them needs no second check.
+        """
         request = getattr(self, "request", None)
 
         def scope(target: type[Model]) -> tuple[QuerySet[Any], bool]:
-            return target_read_scope(target._default_manager.all(), request)
+            queryset, filtered = target_read_scope(target._default_manager.all(), request)
+            return mark_read_scoped(queryset), filtered
 
         return scope
 

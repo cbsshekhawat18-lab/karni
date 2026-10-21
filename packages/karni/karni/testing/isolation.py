@@ -11,12 +11,15 @@ own, and *mine* must not reach *theirs*' row through any surface:
 
 * the list (and *mine* must see their own row: the positive control, so an
   endpoint that shows nobody anything cannot pass);
-* retrieve, update and delete — 404 (never a 403 that confirms the row
-  exists), and the row stays unchanged and undeleted;
-* a nested ``?expand=`` from another resource that points at it;
-* a filter, ``?search=`` or ``?ordering=`` parameter;
+* retrieve, update (PATCH and PUT) and delete — 404 (never a 403 that
+  confirms the row exists; a 403 passes only when the verb is refused for a
+  row that does not exist too), and the row stays unchanged and undeleted;
+* every other check of :func:`karni.testing.hidden.assert_row_hidden`
+  (:data:`ISOLATION_PROBES`): detail actions, filters, ``?search=``,
+  ``?ordering=``, ``?expand=`` and lists of primary keys from any resource
+  relating to it (a row pointing at it is created when none does), on reads
+  and in write responses, and every export format;
 * the admin — the changelist, its search, the change form and a POST to it;
-* an export route, when the resource has one;
 * a create body naming another owner — ignored, the row is stamped with the
   requester.
 
@@ -48,12 +51,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 
-from karni.exceptions import KarniAssertionError, KarniImproperlyConfigured, KarniValueError
+from karni.exceptions import KarniAssertionError, KarniValueError
 from karni.testing.api import (
     Resource,
     _ids,
     _json_value,
-    _query_value,
     _search_token,
     _unthrottled,
     build_payload,
@@ -63,6 +65,7 @@ from karni.testing.api import (
     resolve_resource,
     user_with_roles,
 )
+from karni.testing.hidden import HiddenRowProbe, _missing_value
 
 __all__ = [
     "ENTRY_POINT_GROUP",
@@ -397,159 +400,59 @@ def _check(dimension: Isolation, case: IsolationCase, report: IsolationReport) -
         if own.status_code != 200:
             fail(f"positive control: GET own row answered {own.status_code}")
         url = resource.detail_url(their_row.pk)
+        missing_url = resource.detail_url(_missing_value(model, model._meta.pk.name))
         before = model._default_manager.filter(pk=their_row.pk).values().first()
-        for method, response in (
-            ("GET", me.get(url)),
-            ("PATCH", me.patch(url, {}, format="json")),
-            ("DELETE", me.delete(url)),
-        ):
-            allowed = {404} if method == "GET" else {403, 404}
-            if response.status_code not in allowed:
+        for method in ("GET", "PATCH", "PUT", "DELETE"):
+            call = getattr(me, method.lower())
+            status = call(url, {}, format="json").status_code
+            allowed = {404}
+            if method != "GET" and call(missing_url, {}, format="json").status_code == 403:
+                allowed.add(403)  # the gate refuses the verb for every row, a missing one too
+            if status not in allowed:
                 fail(
                     f"{method} {url} (another {dimension.name}'s row) as {mine.label} "
-                    f"answered {response.status_code}, expected 404"
-                    + (" (a 403 confirms the row exists)" if response.status_code == 403 else "")
+                    f"answered {status}, expected 404"
+                    + (" (a 403 confirms the row exists)" if status == 403 else "")
                 )
         after = model._default_manager.filter(pk=their_row.pk).values().first()
         if after is None:
             fail(f"another {dimension.name}'s row was deleted by {mine.label}")
         elif after != before:
             fail(f"another {dimension.name}'s row was changed by {mine.label}")
-        _check_parameters(resource, me, their_row, fail)
-        _check_expansion(resource, mine, their_row, fail, note)
-        _check_export(resource, me, their_row, fail, note)
+        probe = _IsolationProbe(me, resource.viewset, their_row, visible=my_row, owner=mine)
+        found = probe.run(ISOLATION_PROBES)
+        for problem in (*found.failures, *found.unproven):
+            fail(problem)
+        for found_note in found.notes:
+            note(found_note)
         _check_create(dimension, case, mine, theirs, fail)
     _check_admin(dimension, case, mine, my_row, their_row, fail, note)
 
 
-def _check_parameters(
-    resource: Resource, me: Any, their_row: Any, fail: Callable[[str], None]
-) -> None:
-    """Filters, ``?search=`` and ``?ordering=`` never widen the scope."""
-    from karni.api.filters import KarniFilterBackend
+ISOLATION_PROBES: Final = ("actions", "filters", "search", "ordering", "expand", "export")
+"""The :mod:`karni.testing.hidden` checks ``assert_isolated`` runs on the other principal's row.
 
-    url = resource.list_url()
-    model = resource.model
-    probes: list[tuple[str, str]] = []
-    filterset = KarniFilterBackend().derive_filterset_class(model)
-    for param, declared in filterset.base_filters.items():
-        if getattr(declared, "lookup_expr", "exact") != "exact":
-            continue
-        value = getattr(their_row, declared.field_name, None)
-        if value is None or isinstance(value, models.Manager):
-            continue
-        probes.append((param, _query_value(value)))
-        if len(probes) == 3:
-            break
-    search_fields = tuple(getattr(resource.viewset, "search_fields", ()) or ())
-    if search_fields:
-        token = _search_token(their_row, search_fields[0])
-        if token:
-            probes.append(("search", token))
-    orderable = [
-        f.name for f in model._meta.concrete_fields if not f.is_relation and f.name != "id"
-    ][:2]
-    for name in orderable:
-        probes.append(("ordering", name))
-        probes.append(("ordering", f"-{name}"))
-    for param, value in probes:
-        response = me.get(url, {param: value})
-        if response.status_code != 200:
-            continue
-        if str(their_row.pk) in _ids(response.json()):
-            fail(f"GET {url}?{param}={value} reaches another scope's row {their_row.pk}")
+The list, the detail verbs and the admin are probed by ``assert_isolated``
+itself (it knows both principals); everything else is the hidden-row probe.
+"""
 
 
-def _viewset_model(viewset: type[Any]) -> type[models.Model]:
-    model: type[models.Model] | None = viewset.model
-    if model is None:
-        queryset = viewset.queryset
-        if queryset is None:
-            raise KarniImproperlyConfigured(
-                f"{viewset.__name__} must declare 'model' or 'queryset'.", code="E110"
-            )
-        model = queryset.model
-    return model
+class _IsolationProbe(HiddenRowProbe):
+    """The hidden-row probe, creating a row that points at the hidden one when none does."""
 
+    def __init__(self, client: Any, resource: Any, row: Any, *, visible: Any, owner: Any) -> None:
+        super().__init__(client, resource, row, visible=visible)
+        self.owner = owner
 
-def _expandable_relations(viewset: type[Any], target: type[models.Model]) -> list[str]:
-    """Expand keys of ``viewset`` whose relation points at ``target``."""
-    from karni.api.expansion import auto_expandable_fields
-
-    model = _viewset_model(viewset)
-    declared = viewset.expandable_fields
-    mapping = dict(declared) if declared is not None else auto_expandable_fields(model)
-    found: list[str] = []
-    for key, name in mapping.items():
+    def pointing_rows(self, resource: Resource, relation: Any) -> list[models.Model]:
+        found = super().pointing_rows(resource, relation)
+        if found or not getattr(relation, "concrete", False):
+            return found
+        value = [self.row] if getattr(relation, "many_to_many", False) else self.row
         try:
-            relation = model._meta.get_field(name)
-        except FieldDoesNotExist:
-            continue
-        if getattr(relation, "related_model", None) is target and getattr(
-            relation, "concrete", False
-        ):
-            found.append(key)
-    return found
-
-
-def _check_expansion(
-    resource: Resource,
-    mine: Principal,
-    their_row: Any,
-    fail: Callable[[str], None],
-    note: Callable[[str], None],
-) -> None:
-    """No other resource embeds another scope's row through ``?expand=``."""
-    from karni.api.routers import resolve_router
-    from karni.api.viewsets import BaseViewSet
-
-    me = client_as(user=mine.user)
-    probed = 0
-    for prefix, viewset, basename in getattr(resolve_router(), "registry", ()):
-        if not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
-            continue
-        source = Resource(viewset, _viewset_model(viewset), prefix, basename)
-        for key in _expandable_relations(viewset, resource.model):
-            relation = source.model._meta.get_field((viewset.expandable_fields or {}).get(key, key))
-            value = [their_row] if getattr(relation, "many_to_many", False) else their_row
-            try:
-                pointing = readable_row(source.model, mine.user, **{relation.name: value})
-            except Exception:  # noqa: BLE001 - the source cannot be built for this user
-                continue
-            url = source.detail_url(pointing.pk)
-            response = me.get(url, {"expand": key})
-            if response.status_code != 200:
-                continue
-            probed += 1
-            embedded = response.json().get(key)
-            rows = embedded if isinstance(embedded, list) else [embedded]
-            if any(
-                isinstance(row, dict) and str(row.get("id")) == str(their_row.pk) for row in rows
-            ):
-                fail(
-                    f"GET {url}?expand={key} ({source.name}) embeds another scope's "
-                    f"{resource.model.__name__} {their_row.pk}"
-                )
-    if not probed:
-        note("expand: no routed resource expands into this one")
-
-
-def _check_export(
-    resource: Resource,
-    me: Any,
-    their_row: Any,
-    fail: Callable[[str], None],
-    note: Callable[[str], None],
-) -> None:
-    """An export route, when the resource has one, carries only the scope's rows."""
-    url = f"{resource.list_url()}export/"
-    response = me.get(url)
-    if response.status_code != 200:
-        note("export: no export route (P6)")
-        return
-    body = _body(response).decode("utf-8", "replace")
-    if str(their_row.pk) in body:
-        fail(f"GET {url} exports another scope's row {their_row.pk}")
+            return [readable_row(resource.model, self.owner.user, **{relation.name: value})]
+        except Exception:  # noqa: BLE001 - the source cannot be built for this user
+            return []
 
 
 def _check_create(
@@ -708,11 +611,3 @@ def assert_isolated(
             f"assert_isolated({case.resource.name}) for {who}: rows leak\n{lines}", code="E606"
         )
     return report
-
-
-def _body(response: Any) -> bytes:
-    """The response body, streamed or not (an export answers with a streaming CSV)."""
-    if getattr(response, "streaming", False):
-        return b"".join(response.streaming_content)
-    content: bytes = response.content
-    return content

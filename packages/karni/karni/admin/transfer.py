@@ -96,7 +96,10 @@ class TransferAdminMixin(admin.ModelAdmin):
     # export
 
     def _export(self, request: HttpRequest, queryset: QuerySet[Any], fmt: str) -> HttpResponse:
+        """The selection as a file; related rows named only as far as the admin shows them."""
+        from karni.admin.scope import related_rows_scope
         from karni.api.access import routed_view
+        from karni.api.related import SCOPE_KEY
         from karni.api.serializers import build_serializer
         from karni.transfer.exports import export_response
 
@@ -104,7 +107,10 @@ class TransferAdminMixin(admin.ModelAdmin):
         serializer_class = (
             view.get_serializer_class() if view is not None else build_serializer(self.model)
         )
-        context: dict[str, Any] = {"request": request}
+        context: dict[str, Any] = {
+            "request": request,
+            SCOPE_KEY: related_rows_scope(self, request),
+        }
         if view is not None:
             context["view"] = view
         if not queryset.ordered:

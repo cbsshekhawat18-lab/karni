@@ -938,10 +938,11 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ),
     _e(
         "E603",
-        "assert_crud(skip=...) names unknown checks",
+        "checks=/skip= names unknown checks",
         "exception",
-        "karni.testing.assert_crud",
-        "Skipping a check that does not exist would hide nothing and mislead the reader.",
+        "karni.testing.assert_crud; assert_row_hidden; assert_admin_row_hidden",
+        "Skipping (or selecting) a check that does not exist would hide nothing and mislead "
+        "the reader.",
         "Use the check names the message lists.",
     ),
     _e(
@@ -966,10 +967,13 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "E606",
         "Rows leak to a user who must not see them",
         "test",
-        "karni.testing.assert_isolated",
-        "One owner (or tenant) could read or change another's rows: a data leak.",
-        "Restrict the viewset's access with Owned('<owner path>') (or the tenant scope), "
-        "and check custom get_queryset / @action code that bypasses it.",
+        "karni.testing.assert_isolated; assert_row_hidden; assert_admin_row_hidden",
+        "One owner (or tenant) could read or change another's rows, or learn that a row "
+        "outside their scope exists (a 403 where a missing row gets 404, a count, an "
+        "expanded or exported related row): a data leak.",
+        "Fix what each listed line names: usually the viewset's access (Owned('<owner "
+        "path>'), a scoped grant, the tenant scope), or custom get_queryset / get_object / "
+        "serializer / @action code that bypasses it.",
     ),
     _e(
         "E607",
@@ -1050,6 +1054,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "DEBUG = False usually means a production database, and seeding creates a demo "
         "superuser with a known password.",
         "Seed a development database. If you really mean it, pass --force.",
+    ),
+    _e(
+        "E616",
+        "A hidden-row check has nothing to prove against",
+        "test",
+        "karni.testing.assert_row_hidden; assert_admin_row_hidden",
+        "A row-scope check only means something when the client can list the resource and "
+        "sees some row (the positive control); a role-level refusal or an empty list hides "
+        "every row alike, so every check would pass vacuously.",
+        "Pass a client (or staff user) that can list the resource and a row it does see as "
+        "visible=; test role-level refusals with assert_crud's denials instead.",
     ),
     # E7xx agent tooling
     _e(

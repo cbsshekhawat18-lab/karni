@@ -5,8 +5,12 @@ read-scoped queryset; an admin changelist selection); columns are the
 serializer's readable fields for this user (``Karni.field_roles`` applied by
 the serializer itself). Relations are written as the target's
 ``Karni.natural_key`` when it has one, else the primary key; to-many
-relations join their values with ``|``. CSV streams; XLSX is built in memory
-(``KARNI_EXPORT_MAX_ROWS`` caps both).
+relations join their values with ``|``. A related row the user may not read
+(:mod:`karni.api.related`: the target's API read scope, or the scope the
+serializer context names, such as the admin's) is never named by its natural
+key: a to-one keeps its primary key, as the API shows it, and a to-many
+leaves it out. CSV streams; XLSX is built in memory (``KARNI_EXPORT_MAX_ROWS``
+caps both).
 """
 
 from __future__ import annotations
@@ -60,23 +64,36 @@ def max_export_rows() -> int:
 
 
 class _Resolver:
-    """Primary key → natural-key value for one relation column, chunk by chunk."""
+    """Primary key → natural-key value for one relation column, chunk by chunk.
 
-    def __init__(self, spec: ColumnSpec) -> None:
+    Only rows the requester may read are named by their natural key
+    (:func:`karni.api.related.related_scope` of the serializer context); any
+    other stays its primary key, which is what the API itself shows for it.
+    """
+
+    def __init__(self, spec: ColumnSpec, context: Any = None) -> None:
         from django.apps import apps
 
         self.spec = spec
+        self.context = context
         self.model = apps.get_model(spec.target) if spec.target else None
         self.cache: dict[str, Any] = {}
+        self.loaded: set[str] = set()
 
     def load(self, pks: set[Any]) -> None:
+        from karni.api.related import related_scope
+
         if self.model is None or self.spec.lookup is None:
             return
-        missing = {pk for pk in pks if str(pk) not in self.cache}
+        missing = {pk for pk in pks if str(pk) not in self.loaded}
         if not missing:
             return
-        rows = self.model._base_manager.filter(pk__in=missing).values_list("pk", self.spec.lookup)
-        for pk, value in rows:
+        self.loaded.update(str(pk) for pk in missing)
+        rows = self.model._base_manager.filter(pk__in=missing)
+        scope = related_scope(self.context)
+        if scope is not None:
+            rows, _filtered = scope(rows)
+        for pk, value in rows.values_list("pk", self.spec.lookup):
             self.cache[str(pk)] = value
 
     def value(self, pk: Any) -> Any:
@@ -99,7 +116,9 @@ def export_rows(
     columns = list(specs) if specs is not None else exportable(column_specs(model, probe))
     yield [spec.name for spec in columns]
     resolvers = {
-        spec.name: _Resolver(spec) for spec in columns if spec.kind in ("relation", "relations")
+        spec.name: _Resolver(spec, context)
+        for spec in columns
+        if spec.kind in ("relation", "relations")
     }
     buffer: list[Any] = []
 
