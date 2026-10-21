@@ -29,6 +29,11 @@ def seed(
     """
     project = require_project()
     proc = project_mod.run_manage(
-        project, ["karni_seed", *(args or [])], docker=docker, service=service, capture=False
+        project,
+        ["karni_seed", *(args or [])],
+        docker=docker,
+        service=service,
+        capture=False,
+        database="connect",
     )
     raise typer.Exit(proc.returncode)

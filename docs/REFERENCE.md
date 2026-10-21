@@ -1420,6 +1420,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C009`](errors.md#c009) | cli | A command in the project failed |
 | [`C010`](errors.md#c010) | cli | The path is not a file inside the project |
 | [`C011`](errors.md#c011) | cli | pytest is not installed in the project interpreter |
+| [`C012`](errors.md#c012) | cli | The project's database driver is not installed |
+| [`C013`](errors.md#c013) | cli | The project's database cannot be reached |
 | [`C101`](errors.md#c101) | cli | The file karni make would write already exists |
 | [`C102`](errors.md#c102) | cli | Which app? (none, unknown, or several) |
 | [`C103`](errors.md#c103) | cli | The name is not valid here |
