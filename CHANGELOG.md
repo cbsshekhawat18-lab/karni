@@ -11,6 +11,9 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
+  (0.3.1). The README's quickstart installs them with a plain `pip install`;
+  installing from a checkout is for unreleased changes only.
 - `@karni/ui` and the three module UIs are on npm (0.3.1). The README's
   quickstart installs the frontend with a plain `npm install`, and `karni new`
   no longer says `@karni/ui` is unpublished.

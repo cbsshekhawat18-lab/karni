@@ -11,7 +11,7 @@ Karni is a Django + React framework that replaces the Django React boilerplate: 
 
 <p align="center">
   <a href="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cbsshekhawat18-lab/karni/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/cbsshekhawat18-lab/karni/releases"><img alt="Release" src="https://img.shields.io/github/v/release/cbsshekhawat18-lab/karni"></a>
+  <a href="https://pypi.org/project/karni/"><img alt="PyPI" src="https://img.shields.io/pypi/v/karni"></a>
   <a href="https://www.npmjs.com/package/@karni/ui"><img alt="npm" src="https://img.shields.io/npm/v/@karni/ui"></a>
   <a href="https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <a href="https://cbsshekhawat18-lab.github.io/karni/"><img alt="Docs" src="https://img.shields.io/badge/docs-online-blue"></a>
@@ -76,12 +76,11 @@ Karni stays a versioned dependency that you upgrade; a boilerplate is copied onc
 
 ## Quickstart
 
-You need Python 3.12 or later and Node 20.19 or later (24 LTS recommended). `@karni/ui` is on npm; the Python packages are not on PyPI yet, so the first block installs them from the GitHub release.
+You need Python 3.12 or later and Node 20.19 or later (24 LTS recommended).
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
-R=https://github.com/cbsshekhawat18-lab/karni/releases/download/v0.3.1
-pip install "$R/karni-0.3.1-py3-none-any.whl" "$R/karni_cli-0.3.1-py3-none-any.whl" pytest pytest-django
+pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
@@ -423,7 +422,7 @@ Yes. Nothing in Karni calls a language model, and every generator, such as `karn
 The model, an `access` rule and whatever is specific to your domain. In the reference app EventHub, the `Venue` resource is a five-line model and a four-line viewset.
 
 **Is it production-ready?**
-Not yet. Version 0.3.1 has two reference applications and CI on every push, but no known production deployment, no PyPI release yet, and a Docker path that has not been tested end to end.
+Not yet. Version 0.3.1 has two reference applications and CI on every push, but no known production deployment and a Docker path that has not been tested end to end.
 
 **What happens when Karni releases a breaking change?**
 A public name keeps working for at least one minor release, with a `KarniDeprecationWarning` that names the release that removes it. `karni upgrade --to <version>` applies the mechanical changes and lists, by file and line, what it could not change ([stability promise](docs/stability.md)).
@@ -441,7 +440,7 @@ Version 0.3.1 was released on 2026-10-20, with Django 5.2 LTS and Python 3.12 to
 
 - **Stable:** models, the API with `access`, roles with the `all` and `own` scopes, the admin, the schema-driven components, change history, import and export, the testing helpers and the agent tooling.
 - **Built, not yet used by a reference app:** the `related:` and `custom:` scopes, field visibility per role, row scope in the admin, and the approvals and impersonation modules.
-- **Not done:** the PyPI release, an end-to-end test of the Docker stack, the tenancy module.
+- **Not done:** an end-to-end test of the Docker stack, the tenancy module.
 
 ## Documentation, contributing, security, license
 
