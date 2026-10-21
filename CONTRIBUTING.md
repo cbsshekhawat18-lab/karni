@@ -41,6 +41,32 @@ alike.
 
 You need Python 3.12+ and Node 22.12+ (CI uses Node 24; Vitest 5 needs 22.12 or later).
 
+### Why Python 3.12 and not 3.11
+
+This is a decision, checked on 2026-10-21 with a real CPython 3.11.17:
+
+- **The admin requires it.** Karni's admin is built on django-unfold, pinned
+  to 0.110. django-unfold has required Python 3.12 since 0.92.0. The last
+  release that runs on 3.11 is 0.91.0, and it gets no fixes. Supporting 3.11
+  would mean an admin pinned to an unmaintained release, or two admin versions
+  to keep in step.
+- **The code needs only small changes.** Four PEP 695 `type` aliases are a
+  SyntaxError on 3.11: `karni/api/optimizer.py:72`, `karni/health/checks.py:24`
+  and `:27`, and `karni/rows.py:19`. Each becomes `X: TypeAlias = ...`. With
+  those changes and unfold 0.91 forced in, every package's suite passed on
+  3.11. Nothing else needs 3.12: no other syntax, typing feature or stdlib
+  call, and mypy at `--python-version 3.11` is clean. Every other dependency
+  ships for 3.11.
+- **3.11 would not cover Ubuntu 22.04 anyway.** Its system Python is 3.10.
+  Debian 12's is 3.11.
+
+On either system, get 3.12 from the scaffold's Docker image
+(`python:3.12-slim`), `uv python install 3.12`, or the deadsnakes PPA on
+Ubuntu. Revisit this if django-unfold supports 3.11 again or Karni's admin
+moves off it. Lowering the floor then means changing `requires-python` in all
+five packages, the ruff `target-version` (or UP040 rewrites the aliases back),
+`mypy.ini`, the scaffold and module templates, and the CI matrix.
+
 ```sh
 python3.12 -m venv .venv
 make install PYTHON=.venv/bin/python   # editable installs + dev tools, npm ci per UI package
