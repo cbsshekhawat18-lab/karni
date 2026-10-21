@@ -44,8 +44,8 @@ You need Python 3.12+ and Node 22.12+ (CI uses Node 24; Vitest 5 needs 22.12 or 
 ```sh
 python3.12 -m venv .venv
 make install PYTHON=.venv/bin/python   # editable installs + dev tools, npm ci per UI package
-pre-commit install                      # optional: lint on commit
-pre-commit install --hook-type pre-push # optional: mypy on push
+.venv/bin/pre-commit install                      # optional: lint on commit
+.venv/bin/pre-commit install --hook-type pre-push # optional: mypy on push
 ```
 
 Everything CI runs goes through the root Makefile, so local runs and CI cannot
