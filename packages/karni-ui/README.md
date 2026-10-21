@@ -287,6 +287,43 @@ building blocks are exported for your own screens:
 - `useDelayedFlag(active)` (true once work has run for 500ms) and
   `useOnlineStatus()`.
 
+A visible field with no value (`null`, `""`, an empty list) renders the same
+everywhere, as `EmptyValue`: a muted en dash that screen readers read as
+"empty" (`label` changes the word). ResourceTable's cells, ResourceDetail's
+rows and ChangeHistory's before/after values all use it. A field the role may
+not read (`Karni.field_roles`) is different: it is absent from the per-role
+schema and from the payload, so it gets no row and no cell at all — never a
+dash that would hint it exists.
+
+### Replacing a state: `slots`
+
+The resource and auth components take `slots`, an object of components that
+replace one part each; `defaultXSlots` (`defaultResourceDetailSlots`, ...)
+holds Karni's own, so a project can wrap one instead of rewriting it. Every
+`Error` slot receives `ErrorSlotProps` (`error`, `context`, `onRetry`,
+`retrying`), so one project error panel fits all of them.
+
+```tsx
+<ResourceDetail
+  resource="events"
+  id={id}
+  slots={{ Error: MyErrorPanel, EmptyValue: ({ field }) => <i>not set</i> }}
+/>
+```
+
+| Component        | Slots                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `ResourceDetail` | `Loading`, `Error` (+ `back`), `NotFound`, `EmptyValue`, `DeleteDialog`, `Deleted`       |
+| `ResourceImport` | `Loading`, `Error`, `Progress`, `Summary`, `Problems`, `ConfirmCommit`                   |
+| `ChangeHistory`  | `Loading`, `Error`, `Empty`, `Entry`                                                     |
+| `LoginForm`      | `Error` (+ `id` for `aria-describedby`, and `described`: the failure worded for sign-in) |
+| `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
+
+Loading placeholders take the real layout from the start (ResourceDetail
+draws one row per field the schema declares, plus the title and action
+buttons) but are drawn only once loading is slow (500ms), so a fast load
+never flashes them and nothing moves when the data arrives.
+
 ## Resource components
 
 Every resource component takes the backend's resource name (the router prefix)
@@ -313,6 +350,42 @@ override props, and you can always drop down to the hooks + primitives.
 <ResourceDetail resource="events" id={eventId} />
 <ResourceSelect resource="venues" value={venueId} onChange={setVenueId} />
 ```
+
+`ResourceDetail` also renders its own header and actions:
+
+```tsx
+<ResourceDetail
+  resource="events"
+  id={eventId}
+  title={(event) => event.title} // a function waits for the record (a placeholder stands in)
+  back={
+    <Button variant="outline" onClick={() => navigate("/events")}>
+      Back to events
+    </Button>
+  }
+  onEdit={(event) => navigate(`/events/${event.id}/edit`)}
+  canEdit={hasRole("organizer")} // or (event) => boolean
+  enableDelete // asks for confirmation; a refusal is shown in the dialog
+  canDelete={(event) => event.status === "draft"}
+  onDeleted={() => navigate("/events")}
+/>
+```
+
+A 404 reads "Couldn't find this event" with the `back` action and no retry.
+Karni answers 404 for a record outside the user's scope too, so the words never
+say the record exists. A 403 reads "You can't view this event". Other failures
+offer "Try again" (it refetches the schema too when that is what failed);
+offline says so and reloads when the connection returns. `resourceLabel`
+("event") names the resource in these messages when the router prefix does not
+singularize well.
+
+`ResourceImport` shows no upload form when the role may not import ("You
+can't import events"). A failed upload keeps the chosen file, moves focus to
+the error and offers "Try again" when it can help; a preview's rows with errors
+are a captioned table; Commit asks for confirmation with the counts
+(created, updated, unchanged, failed). Background progress is a
+`progressbar` announced by the quarter, not every poll. `ChangeHistory` words
+its failures the same way ("You can't view the history of this event").
 
 Audit fields — `AUDIT_FIELDS`: `id`, `created_at`, `updated_at`, `created_by`,
 `updated_by`, which every Karni resource carries — never lead the screen.
@@ -356,10 +429,26 @@ manual cache work so your keys and the library's keys never drift.
 const { user, status, login, logout } = useAuth();
 const { hasRole, isAuthenticated } = usePermission();
 
-<AuthGuard roles={["admin"]} fallback={<LoginPage />}>
+<AuthGuard roles={["admin"]} explain>
   <AdminPanel />
 </AuthGuard>;
 ```
+
+With `explain`, `AuthGuard` says why it refuses. A visitor who is not signed in
+sees a sign-in prompt with a `LoginForm` (signing in reveals the content in
+place); a signed-in user whose role lacks access sees `PermissionDenied` naming
+who is signed in. Replace one case with `anonymous={...}` or `denied={...}` (or
+the `Anonymous` / `Denied` slots); `fallback` still covers both, and
+`fallback={null}` renders nothing. Without any of these a guard renders
+nothing, as in 0.3, and warns once in development: 1.0 makes `explain` the
+default. To hide a piece of UI from a role, prefer `usePermission().hasRole(...)`.
+
+`LoginForm` tells wrong credentials ("That email and password do not match")
+from throttling ("Too many sign-in attempts. Wait 42 seconds"), a server error
+and a dropped connection. The message is announced; both fields point at it
+(`aria-describedby`) and are marked invalid when they are the problem. The
+email stays after a failure; wrong credentials clear and focus the password.
+The email field takes focus on mount (`autoFocus={false}` turns that off).
 
 In JWT mode the refresh token is stored via a pluggable `TokenStorage`; the
 default is `localStorage` (simple, but readable by any XSS on your page — use
