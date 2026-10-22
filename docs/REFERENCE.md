@@ -21,7 +21,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 
 ## Capabilities and status
 
-`stable`: public under the [stability promise](stability.md) and used by a reference application (EventHub or the Social Stats rebuild). `experimental`: public and covered by Karni's own tests, but no reference application uses it yet, so expect rough edges. `planned`: documented as coming, but not in the code.
+`stable`: public under the [stability promise](stability.md) and used by a reference application (EventHub or the social-leads example). `experimental`: public and covered by Karni's own tests, but no reference application uses it yet, so expect rough edges. `planned`: documented as coming, but not in the code.
 
 ### Models
 
