@@ -2,8 +2,10 @@
 
 Tools: ``context`` (the ``karni context`` inventory), ``rules`` (the
 conventions, one rule in full, or a procedure), ``check`` (static
-violations for one file), and ``why`` / ``why_empty`` (``karni why``: an
-access decision explained by the code that makes it). The tool functions are plain functions so they are
+violations for one file), and, for debugging, ``why`` / ``why_empty`` (``karni
+why``: an access decision explained by the code that makes it) and ``trace``,
+``replay`` and ``explain_failure`` (the development capture under ``.karni/``,
+through the project interpreter). The tool functions are plain functions so they are
 testable without a client; :func:`build_server` registers them on the
 official MCP Python SDK server (``pip install 'karni-cli[mcp]'``): ``MCPServer``
 in mcp 2.x, ``FastMCP`` in mcp 1.x.
@@ -143,6 +145,66 @@ def why_empty_tool(resource: str, user: str, params: str = "", as_json: bool = F
 
 
 TOOLS.update({"why": why_tool, "why_empty": why_empty_tool})
+
+
+# --- debugging: the development capture under .karni/ (karni_cli.debugging) ---
+
+
+def _debug(args: list[str], database: Any = "load") -> str:
+    from karni_cli.debugging import run_debug_command
+
+    project = _project()
+    if project is None:
+        return "error: not inside a Karni project (no manage.py found)."
+    try:
+        return run_debug_command(project, args, database=database)
+    except CliError as exc:
+        return f"error: {exc}"
+
+
+def trace_tool(request_id: str = "last", as_json: bool = False) -> str:
+    """Follow one captured request (development, DEBUG on) in order: the request, the Celery
+    tasks it enqueued and their retries, email, webhooks and change-log entries, with timings.
+    ``request_id`` is the X-Request-ID response header, or ``last``. Use it instead of
+    correlating log timestamps."""
+    return _debug(["karni_trace", request_id, *(["--json"] if as_json else [])])
+
+
+def replay_tool(
+    request_id: str = "last",
+    as_user: str = "",
+    sets: list[str] | None = None,
+    drop_redacted: bool = False,
+    commit: bool = False,
+) -> str:
+    """Re-run a captured request against the current code, in-process, as its user or
+    ``as_user`` (email, username or pk); returns the status and what changed ("was 403, now
+    200"). Writes are rolled back unless ``commit``. Redacted values: ``sets`` ["field=value",
+    "query:name=value"] or ``drop_redacted``. Use it to confirm a permission or bug fix."""
+    from karni_cli.debugging import replay_args
+
+    try:
+        args = replay_args(
+            request_id,
+            as_user=as_user or None,
+            sets=list(sets or []),
+            drop_redacted=drop_redacted,
+            commit=commit,
+        )
+    except CliError as exc:
+        return f"error: {exc}"
+    return _debug(args, database="connect")
+
+
+def explain_failure_tool(failure_id: str = "last") -> str:
+    """A captured failure (unhandled exception, DEBUG on) as a brief: who requested what, where
+    it failed with the frame's locals, the exception and Karni code, the SQL, next steps.
+    ``failure_id``: a failure id, a failed request's id, or ``last``. Read this before a
+    traceback."""
+    return _debug(["karni_failure", failure_id])
+
+
+TOOLS.update({"trace": trace_tool, "replay": replay_tool, "explain_failure": explain_failure_tool})
 
 
 def _server_class() -> Any:

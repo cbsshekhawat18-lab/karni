@@ -61,7 +61,16 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
     pytest.importorskip("mcp")
     server = mcp_server.build_server(generated_project)
     tools = asyncio.run(server.list_tools())
-    assert sorted(tool.name for tool in tools) == ["check", "context", "rules", "why", "why_empty"]
+    assert sorted(tool.name for tool in tools) == [
+        "check",
+        "context",
+        "explain_failure",
+        "replay",
+        "rules",
+        "trace",
+        "why",
+        "why_empty",
+    ]
     schemas = {
         # mcp 2.x: input_schema; mcp 1.x: inputSchema
         tool.name: getattr(tool, "input_schema", None) or tool.inputSchema

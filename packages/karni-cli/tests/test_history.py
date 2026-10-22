@@ -19,6 +19,7 @@ from karni_cli.commands import context as context_cmd
 from karni_cli.main import app
 
 from .conftest import REPO_ROOT
+from .test_rules import TOKEN_BUDGET
 
 BACKEND = (
     "MODELS: Event(title,starts_at,capacity,status) Venue(name,address)\n"
@@ -204,9 +205,9 @@ def test_builtin_chronicle_store_turns_the_rule_on_without_running_chronicle(
 
 
 def test_rules_budget_with_and_without_a_store(runner, project, fake_provider) -> None:
-    assert _tokens(_run(runner, "rules")) < 400
+    assert _tokens(_run(runner, "rules")) < TOKEN_BUDGET
     _store(project)
-    assert _tokens(_run(runner, "rules")) < 400 + _tokens(K008 + "\n")
+    assert _tokens(_run(runner, "rules")) < TOKEN_BUDGET + _tokens(K008 + "\n")
 
 
 def test_adapters_are_identical_with_and_without_a_store(
@@ -319,6 +320,7 @@ def test_no_store_spawns_no_provider_process(runner, project, monkeypatch) -> No
 
 FAKE_CHRONICLE = """#!{python}
 import json, os, sys
+from .test_rules import TOKEN_BUDGET
 sys.stderr.write("note: workspace moved (discarded)\\n")
 print(json.dumps({{
     "apiVersion": 1, "command": "context", "file": sys.argv[2], "empty": False,

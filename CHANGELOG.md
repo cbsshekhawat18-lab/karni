@@ -28,6 +28,24 @@ reads to apply codemods and list the manual steps — and explained in
   `karni.vetoes.first_veto`, `karni.accounts.roles.grant_rows` /
   `grant_sources`; codes `E901`–`E908`, `C310`–`C312`. See
   [debugging](docs/debugging/why.md).
+- **Debugging: one request id everywhere, a development capture, and
+  `karni trace` / `karni replay` / `karni explain --failure`.** Every
+  request gets an id (`X-Request-ID` on the response; a client's value is
+  accepted only in development or from a trusted proxy,
+  `KARNI_REQUEST_ID_TRUST_HEADER`) that follows its Celery tasks and their
+  retries (a message header), its email (`X-Karni-Request-ID`), outgoing
+  calls (`karni.tracing.outgoing_headers()`) and the change log
+  (`ChangeLog.request_id`, `ChangeBatch.request_id`; migration
+  `karni_audit.0003`). With `DEBUG` on, Karni writes `.karni/requests/`,
+  `.karni/failures/` and `.karni/trace/` under the project, bounded
+  (`KARNI_DEBUG_CAPTURE_KEEP`, `KARNI_DEBUG_TRACE_DAYS`) and redacted by
+  the change log's rules plus known secret values; with `DEBUG` off nothing
+  runs. `karni trace` follows a request through its async work in order,
+  `karni replay [--as USER]` re-runs it against the current code (rolled
+  back unless `--commit`), `karni explain --failure` turns a crash into a
+  brief; the same three are MCP tools and agent rules K030–K032. New codes
+  E920–E924, W920, C320–C323. karni-payments links a webhook delivery to
+  the checkout it settles. See [debugging](docs/debugging/capture.md).
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

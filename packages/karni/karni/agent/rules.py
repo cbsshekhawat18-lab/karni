@@ -585,6 +585,54 @@ RULES: tuple[Rule, ...] = (
         fix="Extract one component or hook, or compose the existing @karni/ui one.",
         enforced_by=("jscpd",),
     ),
+    # workflow: debugging with the development capture (karni trace / replay /
+    # explain --failure; docs/debugging/trace-and-replay.md)
+    Rule(
+        code="K030",
+        category="workflow",
+        severity="should",
+        summary="A failure: karni explain --failure first.",
+        rule=(
+            "When a request or task fails in development, run `karni explain --failure <id>` "
+            "(or `--failure last`) before reading a traceback by hand: it names the failing "
+            "frame with its locals, the user and their roles, the SQL and the next steps."
+        ),
+        rationale=(
+            "The snapshot was taken when it failed, with secrets redacted; reconstructing the "
+            "same context from a traceback and the code costs far more."
+        ),
+    ),
+    Rule(
+        code="K031",
+        category="workflow",
+        severity="should",
+        summary="Follow a request: karni trace ID.",
+        rule=(
+            "To see what a request set in motion (Celery tasks and their retries, email, "
+            "webhooks, change-log entries) run `karni trace <request-id>` (its X-Request-ID "
+            "response header, or `last`) instead of correlating log timestamps."
+        ),
+        rationale=(
+            "The request's tasks, retries, email and audit entries all carry its id, so the "
+            "trace is exact; timestamps from several processes are not."
+        ),
+    ),
+    Rule(
+        code="K032",
+        category="workflow",
+        severity="should",
+        summary="Confirm a fix: karni replay ID --as USER.",
+        rule=(
+            "After changing access, roles or fixing a bug a request hit, confirm it with "
+            "`karni replay <request-id> [--as <email|username|pk>]`: it re-runs the captured "
+            'request against the current code and prints what changed ("was 403, now '
+            '200"); writes are rolled back unless `--commit`.'
+        ),
+        rationale=(
+            "Replaying the real request as the real user tests the case that failed, not "
+            "the one you think failed."
+        ),
+    ),
 )
 
 

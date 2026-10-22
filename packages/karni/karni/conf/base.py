@@ -185,9 +185,15 @@ BASE: dict[str, Any] = {
         "karni.admin",
     ],
     "MIDDLEWARE": [
-        # Outermost so it counts every query of the request; a no-op (removed
-        # from the chain at startup) unless KARNI_QUERY_LOG is on (dev profile).
+        # First: every log line, task, email and history entry of the request
+        # carries its id (X-Request-ID); before django-structlog's middleware.
+        "karni.tracing.RequestIdMiddleware",
+        # Counts every query of the request; a no-op (removed from the chain
+        # at startup) unless KARNI_QUERY_LOG is on (dev profile).
         "karni.middleware.QueryLogMiddleware",
+        # .karni/ request records and failure snapshots; removed from the
+        # chain at startup unless DEBUG is on (and KARNI_DEBUG_CAPTURE).
+        "karni.debug.middleware.CaptureMiddleware",
         "django.middleware.security.SecurityMiddleware",
         "corsheaders.middleware.CorsMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
@@ -492,6 +498,16 @@ BASE: dict[str, Any] = {
     "KARNI_AUDIT_REDACT": env.list(
         "KARNI_AUDIT_REDACT", default=["password", "token", "secret", "key"]
     ),
+    # --- Request ids and development capture (karni.tracing / karni.debug) --
+    # Accept a client's X-Request-ID with DEBUG off only when the proxy in
+    # front overwrites it (and NUM_PROXIES says there is one).
+    "KARNI_REQUEST_ID_TRUST_HEADER": env.bool("KARNI_REQUEST_ID_TRUST_HEADER", default=False),
+    # Stamp X-Karni-Request-ID on outgoing email (wraps EmailMessage.send).
+    "KARNI_REQUEST_ID_EMAILS": True,
+    # DEBUG only: request records, failure snapshots and the trace under .karni/.
+    "KARNI_DEBUG_CAPTURE": env.bool("KARNI_DEBUG_CAPTURE", default=True),
+    "KARNI_DEBUG_CAPTURE_KEEP": env.int("KARNI_DEBUG_CAPTURE_KEEP", default=200),
+    "KARNI_DEBUG_TRACE_DAYS": env.int("KARNI_DEBUG_TRACE_DAYS", default=7),
     # --- Events & schedules (karni.events / karni.schedule) -----------------
     # <app>/listeners.py, <app>/events.py and <app>/schedules.py are
     # autodiscovered at startup; set False to wire them yourself.

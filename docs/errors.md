@@ -1091,6 +1091,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, karni why 403 <request-id>, or karni why-empty events --as alice@example.com.
 
+<a id="e920"></a>
+
+#### E920 — karni replay needs DEBUG on
+
+*exception* · from `karni.debug.replay; manage.py karni_replay`
+
+**Why Karni objects.** A replay re-sends a captured request, force-authenticated as a captured user, against the configured database. That is a development tool; with DEBUG off it could act as any user on a production database, so Karni refuses.
+
+**Fix.** Run it in development, where DEBUG is on (DEBUG=true in the environment or .env). To check a fix in production, add a test instead.
+
+<a id="w920"></a>
+
+#### W920 — RequestIdMiddleware runs after django-structlog's RequestMiddleware
+
+*system check (warning)* · from `karni.checks.check_request_id_middleware`
+
+**Why Karni objects.** django-structlog logs request_started with the X-Request-ID it finds. Karni's RequestIdMiddleware decides that id (a client's value is accepted only in development or from a trusted proxy); placed after, the first log lines carry a different, possibly client-chosen id than the response, tasks and history.
+
+**Fix.** Move 'karni.tracing.RequestIdMiddleware' above 'django_structlog.middlewares.RequestMiddleware' in MIDDLEWARE (Karni's defaults put it first).
+
+<a id="e921"></a>
+
+#### E921 — Nothing was captured for this request id
+
+*exception* · from `karni.debug.trace; manage.py karni_trace, karni_replay`
+
+**Why Karni objects.** karni trace and karni replay read what the development capture wrote under .karni/ (requests/, trace/) plus change log entries with the id. Capture runs only with DEBUG on and KARNI_DEBUG_CAPTURE not False, keeps the newest KARNI_DEBUG_CAPTURE_KEEP records and KARNI_DEBUG_TRACE_DAYS of trace; ids are 1-128 letters, digits, '_' and '-'.
+
+**Fix.** Turn DEBUG on, repeat the request, and pass the id from its X-Request-ID response header (or `last` for the newest capture). Check the id has no typo.
+
+<a id="e922"></a>
+
+#### E922 — No failure snapshot with this id
+
+*exception* · from `karni.debug.brief; karni explain --failure; manage.py karni_failure`
+
+**Why Karni objects.** A failure snapshot is written to .karni/failures/ when a request or a Celery task raises an unhandled exception with DEBUG on; the newest KARNI_DEBUG_CAPTURE_KEEP are kept. A request that answered an error status without raising has none.
+
+**Fix.** Use the failure id from the request record or `karni trace <request-id>`, a failed request's id, or `last`. Reproduce the failure with DEBUG on if nothing was captured.
+
+<a id="e923"></a>
+
+#### E923 — A redacted value cannot be replayed
+
+*exception* · from `karni.debug.replay; karni replay --set`
+
+**Why Karni objects.** Capture never stores passwords, tokens or other secrets: they are recorded as '[redacted]'. Replaying that literal could, for example, set a password to it, so the replay stops until the value is supplied.
+
+**Fix.** Pass each value the message lists: --set <field>=<value> (a dotted path into the body, or query:<name> for a query parameter), or leave them out with --drop-redacted.
+
+<a id="e924"></a>
+
+#### E924 — The user to replay as cannot be found
+
+*exception* · from `karni.debug.replay; karni replay --as`
+
+**Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses.
+
+**Fix.** Pass --as with an existing user's email, username or primary key, or --anonymous; pass only one of the two.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>
@@ -1679,6 +1739,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask again.
 
+<a id="c320"></a>
+
+### C320 — karni explain needs a code or --failure, not both
+
+*karni command* · from `karni explain`
+
+**Why Karni objects.** karni explain explains one thing: an error code (E104, C101, PAY004, K106) or a captured failure (--failure <id>).
+
+**Fix.** Run `karni explain E104`, or `karni explain --failure <id>` (a failure id, a failed request's id, or `last`).
+
+<a id="c321"></a>
+
+### C321 — A --set value is not FIELD=VALUE
+
+*karni command* · from `karni replay --set`
+
+**Why Karni objects.** --set supplies a value the capture redacted, by its place in the request.
+
+**Fix.** Write the body path, '=', then the value: --set password=s3cret, --set card.token=tok_1, or --set query:token=abc for a query parameter. The value is parsed as JSON when it can be (numbers, true/false), else used as text.
+
+<a id="c322"></a>
+
+### C322 — The project's karni has no debugging commands
+
+*karni command* · from `karni trace, karni replay, karni explain --failure`
+
+**Why Karni objects.** These commands run manage.py karni_trace, karni_replay and karni_failure in the project's interpreter; a karni older than the CLI does not have them.
+
+**Fix.** Upgrade karni in the project: `karni upgrade`, or bump karni in pyproject.toml and reinstall (`uv pip install -r pyproject.toml`, or rebuild the image).
+
+<a id="c323"></a>
+
+### C323 — A debugging command failed in the project
+
+*karni command* · from `karni trace, karni replay, karni explain --failure`
+
+**Why Karni objects.** The command ran in the project's interpreter and failed without a coded Karni error, usually because Django could not start (settings, imports, the database).
+
+**Fix.** Run the command it names with `karni manage ...` to see the full output, fix what it reports, then retry.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -1790,6 +1890,42 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Access bugs raise no error: the row is just absent. karni why computes the decision with the code that enforces it and prints the user's roles, the grants and where each comes from, the predicate that decided, the row's values, file:line and the fix — one call instead of reconstructing the rules from source.
 
 **Fix.** Run the matching `karni why` command and apply the fix it prints.
+
+<a id="k030"></a>
+
+### K030 — A failure: karni explain --failure first.
+
+*agent rule, should* · enforced by `review`
+
+**Rule.** When a request or task fails in development, run `karni explain --failure <id>` (or `--failure last`) before reading a traceback by hand: it names the failing frame with its locals, the user and their roles, the SQL and the next steps.
+
+**Why Karni objects.** The snapshot was taken when it failed, with secrets redacted; reconstructing the same context from a traceback and the code costs far more.
+
+**Fix.** 
+
+<a id="k031"></a>
+
+### K031 — Follow a request: karni trace ID.
+
+*agent rule, should* · enforced by `review`
+
+**Rule.** To see what a request set in motion (Celery tasks and their retries, email, webhooks, change-log entries) run `karni trace <request-id>` (its X-Request-ID response header, or `last`) instead of correlating log timestamps.
+
+**Why Karni objects.** The request's tasks, retries, email and audit entries all carry its id, so the trace is exact; timestamps from several processes are not.
+
+**Fix.** 
+
+<a id="k032"></a>
+
+### K032 — Confirm a fix: karni replay ID --as USER.
+
+*agent rule, should* · enforced by `review`
+
+**Rule.** After changing access, roles or fixing a bug a request hit, confirm it with `karni replay <request-id> [--as <email|username|pk>]`: it re-runs the captured request against the current code and prints what changed ("was 403, now 200"); writes are rolled back unless `--commit`.
+
+**Why Karni objects.** Replaying the real request as the real user tests the case that failed, not the one you think failed.
+
+**Fix.** 
 
 <a id="k101"></a>
 

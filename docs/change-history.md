@@ -111,3 +111,13 @@ did this import touch" and "which import changed this row" are one query
 each. In code, `with karni.audit.capture.change_batch("import", label) as
 batch:` groups whatever the block records; the history endpoint and
 `<ChangeHistory/>` carry the batch id on each entry.
+
+## Request ids
+
+Every entry and batch records the id of the request (or Celery task) that
+made it, `request_id` — the `X-Request-ID` of the response
+([request ids](debugging/capture.md#request-ids)). `karni trace <id>` lists
+a request's changes among its tasks, email and webhooks;
+`ChangeLog.objects.filter(request_id=...)` is the same in code, and the
+admin's *Change log* searches by it. A change made in a shell has none
+(`""`) unless the block runs under `karni.tracing.bound_request_id()`.

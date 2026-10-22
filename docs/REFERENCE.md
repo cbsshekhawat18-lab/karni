@@ -276,13 +276,14 @@ karni check [OPTIONS]
 Explain an error code (E104, C101, PAY004, K106): why and the fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106. |
 | `--json` |  | Machine-readable output. |
+| `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
 #### `karni types`
 
@@ -968,6 +969,43 @@ karni make module [OPTIONS] NAME
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
 
+### Debugging
+
+#### `karni trace`
+
+Follow a captured request: its tasks, retries, email, webhooks, audit
+
+```
+karni trace [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A request id (the X-Request-ID response header), or `last`. |
+| `--json` |  | Print the story as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni replay`
+
+Re-run a captured request against the current code, as any user
+
+```
+karni replay [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A captured request id, or `last`. |
+| `--as` TEXT |  | Replay as this user: an email, a username or a primary key. |
+| `--anonymous` |  | Replay without a user. |
+| `--set` TEXT (repeatable) |  | Supply a redacted value: FIELD=VALUE (dotted body path, or query:NAME). Repeatable. |
+| `--drop-redacted` |  | Leave redacted values out instead of supplying them. |
+| `--commit` |  | Keep the writes; by default the replay is rolled back. |
+| `--json` |  | Print the result as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -1155,6 +1193,16 @@ class Lead(BaseModel):
 | `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
 | `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |
 | `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
+
+### Request ids and development capture (karni.tracing / karni.debug)
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn on only when the proxy in front overwrites the header on every request; ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
+| `KARNI_REQUEST_ID_EMAILS` | — | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
+| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off; with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
+| `KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
+| `KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
 
 ### Events & schedules (karni.events / karni.schedule)
 
@@ -1426,6 +1474,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E906`](errors.md#e906) | exception | karni why: the resource routes no such action or method |
 | [`E907`](errors.md#e907) | exception | karni why: not a Karni BaseViewSet route |
 | [`E908`](errors.md#e908) | exception | karni why: the question is incomplete |
+| [`E920`](errors.md#e920) | exception | karni replay needs DEBUG on |
+| [`W920`](errors.md#w920) | warning | RequestIdMiddleware runs after django-structlog's RequestMiddleware |
+| [`E921`](errors.md#e921) | exception | Nothing was captured for this request id |
+| [`E922`](errors.md#e922) | exception | No failure snapshot with this id |
+| [`E923`](errors.md#e923) | exception | A redacted value cannot be replayed |
+| [`E924`](errors.md#e924) | exception | The user to replay as cannot be found |
 
 ### Modules
 
@@ -1494,6 +1548,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
 | [`C311`](errors.md#c311) | cli | karni why: --as is missing |
 | [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
+| [`C320`](errors.md#c320) | cli | karni explain needs a code or --failure, not both |
+| [`C321`](errors.md#c321) | cli | A --set value is not FIELD=VALUE |
+| [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
+| [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
 
 ### Agent rules (`K`)
 
@@ -1508,6 +1566,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K007`](errors.md#k007) | rule | Commands: karni --help. |
 | [`K009`](errors.md#k009) | rule | Scaffold with karni make. |
 | [`K015`](errors.md#k015) | rule | Row/field/action missing or refused: karni why first. |
+| [`K030`](errors.md#k030) | rule | A failure: karni explain --failure first. |
+| [`K031`](errors.md#k031) | rule | Follow a request: karni trace ID. |
+| [`K032`](errors.md#k032) | rule | Confirm a fix: karni replay ID --as USER. |
 | [`K101`](errors.md#k101) | rule | Models inherit BaseModel or compose its mixins. |
 | [`K102`](errors.md#k102) | rule | Viewsets inherit BaseViewSet. |
 | [`K103`](errors.md#k103) | rule | No ModelAdmin; use AdminMeta. |

@@ -27,7 +27,10 @@ follow what they return.
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
 | `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
 | `karni why events/<id> --as <user>` | Why a row, field or action is refused or missing for a user, computed by the code that enforces it ([debugging](debugging/why.md)); `karni why-empty <resource> --as <user>` for an empty list |
-| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, `why`, `why_empty` |
+| `karni explain --failure last` | A captured crash as a brief: request, user, failing frame with locals, SQL, next steps ([debugging](debugging/trace-and-replay.md)) |
+| `karni trace <request-id>` | One request's story in order: its tasks and retries, email, webhooks, change-log entries |
+| `karni replay <request-id> --as USER` | Re-run a captured request against the current code ("was 403, now 200") |
+| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, and for debugging `why`, `why_empty`, `trace`, `replay`, `explain_failure` |
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
@@ -181,6 +184,12 @@ Tools: `context()`, `rules(code="", procedure="")`, `check(path)`,
 `why(target, user="", action="", method="", params="", as_json=False)` and
 `why_empty(resource, user, params="", as_json=False)` ([`karni
 why`](debugging/why.md)). Each returns the same text as the CLI.
+
+For debugging (the [development capture](debugging/capture.md)):
+`trace(request_id="last", as_json=False)`, `replay(request_id="last",
+as_user="", sets=[], drop_redacted=False, commit=False)` and
+`explain_failure(failure_id="last")` — the text of `karni trace`,
+`karni replay` and `karni explain --failure`.
 
 Claude Code:
 
