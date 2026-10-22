@@ -1,6 +1,6 @@
 # Karni
 
-> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships.
+> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
 
 The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https://github.com/cbsshekhawat18-lab/karni. Python 3.12+, Django 5.2 LTS, React 18, TypeScript.
 
