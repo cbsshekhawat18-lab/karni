@@ -1,5 +1,5 @@
 ---
-description: For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup.
+description: "For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
 ---
 
 # Releasing Karni
@@ -86,6 +86,16 @@ The tag runs `.github/workflows/release.yml`:
 9. **dry-run-summary** (dry runs only): writes to the run summary what
    passed and which artifacts to inspect.
 
+When a publishing run succeeds, `.github/workflows/container.yml` builds
+`ghcr.io/<owner>/karni` (the `karni` command, from `docker/karni/Dockerfile`)
+from the new version on PyPI. It waits for PyPI to serve the files, checks
+that `karni --version`, `karni new` and `karni explain` work in the image, and
+pushes it for linux/amd64 and linux/arm64, tagged `X.Y.Z`, `X.Y` and
+`latest`. Run it by hand ("Run workflow", with a version) for a release
+that is already on PyPI. The image shows under the repository's Packages.
+After the first push, set the package's visibility to public once, in the
+package's settings on GitHub. New packages start private.
+
 Until `KARNI_PUBLISHING` is set, every tag push is a dry run: steps 1–5 and
 9 run, the artifacts are there to download, and nothing reaches a registry.
 That is the rehearsal for the first release
@@ -123,6 +133,11 @@ accepts the same version twice.
 - **npm:** for each of the four packages, add a trusted publisher: this
   repository, workflow `release.yml`, environment `npm`. The `@karni` scope
   must exist and belong to the maintainers.
+- **npm with a token instead:** an `NPM_TOKEN` repository secret (an npm
+  automation token, or a granular token that may publish the `@karni`
+  packages), when set, is used in place of trusted publishing; provenance
+  still comes from the job's OIDC token. Store it without pasting it
+  anywhere else: `gh secret set NPM_TOKEN` and paste at the prompt.
 - **`KARNI_PUBLISHING`** (Settings → Secrets and variables → Actions →
   Variables): the registries that are set up, `pypi`, `npm`, `pypi,npm`, or
   `true` for both. Unset, every run is a dry run. A registry is switched on

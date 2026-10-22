@@ -1017,9 +1017,11 @@ The public names of the four packages a project builds on, from their `__all__`.
 
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
-| `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call CRUD/isolation checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated` |
+| `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call CRUD/isolation/hiding checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden` |
+| `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = ()) -> CrudReport` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
+| `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
 | `query_budget` | function | Fail with the grouped duplicate report if the block runs more than `limit` queries. | `query_budget(limit: int, *, label: str = 'block', using: str \| None = None) -> Iterator[QueryRecorder]` |
@@ -1345,8 +1347,8 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 
 | Module | Status | Install | UI package | Scope |
 |---|---|---|---|---|
-| [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail. |
-| [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | 'Log in as user' for support, done safely — an explicit permission, no privilege escalation, a banner, a session record, both identities in the audit trail, blocked actions and a time limit. |
+| [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
+| [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | `karni-tenancy` | planned | — | — | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
@@ -1432,7 +1434,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
-| [`E603`](errors.md#e603) | exception | assert_crud(skip=...) names unknown checks |
+| [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |
 | [`E604`](errors.md#e604) | test | A request raised an exception during assert_crud |
 | [`E605`](errors.md#e605) | exception | assert_isolated cannot isolate this resource |
 | [`E606`](errors.md#e606) | test | Rows leak to a user who must not see them |
@@ -1445,6 +1447,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E613`](errors.md#e613) | exception | Seeding a row failed |
 | [`E614`](errors.md#e614) | exception | karni seed was given invalid arguments |
 | [`E615`](errors.md#e615) | exception | karni seed refuses to run with DEBUG = False |
+| [`E616`](errors.md#e616) | test | A hidden-row check has nothing to prove against |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |
@@ -1497,6 +1500,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C009`](errors.md#c009) | cli | A command in the project failed |
 | [`C010`](errors.md#c010) | cli | The path is not a file inside the project |
 | [`C011`](errors.md#c011) | cli | pytest is not installed in the project interpreter |
+| [`C012`](errors.md#c012) | cli | The project's database driver is not installed |
+| [`C013`](errors.md#c013) | cli | The project's database cannot be reached |
 | [`C101`](errors.md#c101) | cli | The file karni make would write already exists |
 | [`C102`](errors.md#c102) | cli | Which app? (none, unknown, or several) |
 | [`C103`](errors.md#c103) | cli | The name is not valid here |

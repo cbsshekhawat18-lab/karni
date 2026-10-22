@@ -32,5 +32,6 @@ def beat(
         service=service,
         capture=False,
         interactive=True,
+        database="connect",  # the schedule is stored in the database (django-celery-beat)
     )
     raise typer.Exit(proc.returncode)

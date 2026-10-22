@@ -1,5 +1,5 @@
 ---
-description: What actually gets a new framework found: the launch surfaces in order of expected effect, with what to post where and when.
+description: "What actually gets a new framework found: the launch surfaces in order of expected effect, with what to post where and when."
 ---
 
 # Launch checklist: what moves the needle

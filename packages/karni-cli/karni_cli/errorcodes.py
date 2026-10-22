@@ -141,6 +141,32 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Install them there: pip install pytest pytest-django (or `uv sync` for the dev "
         "group), then run karni test again.",
     ),
+    _c(
+        "C012",
+        "The project's database driver is not installed",
+        "karni_cli.database (every command that starts Django: check, context, migrate, "
+        "serve --local, test, ...)",
+        "Django imports the database driver as it starts (psycopg for PostgreSQL), so "
+        "without it every project command stops with a traceback. A venv made for the "
+        "quickstart has none: the quickstart uses SQLite.",
+        'Install the driver into the project interpreter: pip install "psycopg[binary]" (or '
+        "pip install -e . for all of the project's dependencies). Or run in Docker: `karni "
+        "serve -d` starts the stack, whose image has the driver, and --docker runs a project "
+        "command inside it. KARNI_DB_CHECK=false skips the check.",
+    ),
+    _c(
+        "C013",
+        "The project's database cannot be reached",
+        "karni_cli.database (commands that open the database: migrate, seed, sync-roles, "
+        "createsuperuser, serve --local, test, beat, manage)",
+        "These commands open the database at DATABASE_URL first. A server that is not "
+        "running, a host that does not resolve (the compose default `db`, from the host) or "
+        "rejected credentials would stop them with a traceback.",
+        "Start the database (`karni serve -d` runs the compose stack with PostgreSQL), or "
+        "point DATABASE_URL in .env at one that runs (cp .env.example .env first; "
+        "DATABASE_URL=sqlite:///db.sqlite3 needs no server). The message names the address "
+        "and the driver's error. KARNI_DB_CHECK=false skips the check.",
+    ),
     # C1xx karni make
     _c(
         "C101",

@@ -22,7 +22,15 @@ def manage(
 ) -> None:
     """Run any management command — wraps `manage.py ARGS` (raw passthrough)."""
     project = require_project()
+    # Most management commands without a dedicated runner read or write the
+    # database (showmigrations, dbshell, loaddata, ...), so check it is up.
     proc = project_mod.run_manage(
-        project, list(args or []), docker=docker, service=service, capture=False, interactive=True
+        project,
+        list(args or []),
+        docker=docker,
+        service=service,
+        capture=False,
+        interactive=True,
+        database="connect",
     )
     raise typer.Exit(proc.returncode)

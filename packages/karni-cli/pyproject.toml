@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-cli"
 version = "0.3.1"
-description = "The karni command for the Karni Django + React framework: scaffold a project, generate models, viewsets and pages, run it, upgrade it across releases, and give AI coding agents its context, rules and error explanations."
+description = "The karni command: scaffold, generate, run and upgrade Karni projects. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 # PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).

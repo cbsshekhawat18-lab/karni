@@ -1,5 +1,5 @@
 ---
-description: karni.admin: every model gets a derived django-unfold admin with columns, filters, search and autocompletes, and how to override any part of it.
+description: "karni.admin: every model gets a derived django-unfold admin with columns, filters, search and autocompletes, and how to override any part of it."
 ---
 
 # karni.admin

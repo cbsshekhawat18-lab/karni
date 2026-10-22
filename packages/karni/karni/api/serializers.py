@@ -32,7 +32,9 @@ Relations serialize as writable primary keys by default; relations named in
 the depth limit stops nesting at the primary key). A writable relation only
 accepts primary keys of rows the requester can read through the target
 model's routed viewset (ADR 0001 Q2.5, see
-:class:`KarniPrimaryKeyRelatedField`).
+:class:`KarniPrimaryKeyRelatedField`), and every related row a generated
+serializer renders — expanded, or in a to-many list of primary keys — is one
+the requester can read, on every response path (:mod:`karni.api.related`).
 
 Override / escape hatch: set ``serializer_class`` on the viewset to bypass
 generation entirely, declare ``APIMeta`` for per-model tweaks, or subclass
@@ -49,6 +51,7 @@ from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Model, QuerySet
+from django.db.models.manager import BaseManager
 from django.test.signals import setting_changed
 from rest_framework import serializers
 from rest_framework.relations import (
@@ -58,9 +61,11 @@ from rest_framework.relations import (
 )
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.api.related import readable_related, related_scope
 from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
+    "KarniListSerializer",
     "KarniManyRelatedField",
     "KarniModelSerializer",
     "KarniPrimaryKeyRelatedField",
@@ -117,8 +122,66 @@ class KarniManyRelatedField(ManyRelatedField):
     """``ManyRelatedField`` counterpart of :class:`KarniPrimaryKeyRelatedField`.
 
     Created by :meth:`KarniPrimaryKeyRelatedField.many_init` for to-many
-    relations so schema generation can mark them ``{"many": true}``.
+    relations so schema generation can mark them ``{"many": true}``. The
+    list it renders holds only the related rows the requester may read
+    (:func:`karni.api.related.readable_related`), on every response path.
     """
+
+    def to_representation(self, iterable: Any) -> list[Any]:
+        return list(super().to_representation(readable_related(self.context, iterable)))
+
+
+class KarniListSerializer(serializers.ListSerializer):
+    """The ``many=True`` form of every generated serializer.
+
+    Nested (an expanded to-many relation), it renders only the rows the
+    requester may read. At the root (a page of rows), it first checks the
+    related rows the page already holds that did not come through a read
+    scope (a hint's join or prefetch) in one query per model, so the per-row
+    checks that follow cost nothing (:mod:`karni.api.related`).
+    """
+
+    def to_representation(self, data: Any) -> list[Any]:
+        iterable = data.all() if isinstance(data, BaseManager) else data
+        if self.parent is not None:
+            rows = readable_related(self.context, iterable)
+        else:
+            rows = list(iterable)
+            _check_related(self.context, self.child, rows)
+        return [self.child.to_representation(row) for row in rows]
+
+
+def _check_related(context: Any, serializer: Any, rows: list[Any]) -> None:
+    """Batch-check the related rows ``rows`` already hold for ``serializer``'s relation fields."""
+    if related_scope(context) is None or not isinstance(serializer, serializers.Serializer):
+        return
+    held: list[Any] = []
+    for relation in serializer.fields.values():
+        attrs = list(getattr(relation, "source_attrs", None) or [])
+        if getattr(relation, "write_only", False) or len(attrs) != 1:
+            continue
+        if isinstance(relation, ManyRelatedField | serializers.ListSerializer):
+            for row in rows:
+                manager = getattr(row, attrs[0], None)
+                cached = manager.all()._result_cache if isinstance(manager, BaseManager) else None
+                held.extend(cached or ())
+        elif isinstance(relation, KarniModelSerializer):
+            for row in rows:
+                related = _cached_related(row, attrs[0])
+                if related is not None:
+                    held.append(related)
+    readable_related(context, held)
+
+
+def _cached_related(row: Any, name: str) -> Any | None:
+    """The to-one row ``row.<name>`` already holds (joined or prefetched), else ``None``."""
+    try:
+        relation = row._meta.get_field(name)
+    except (AttributeError, FieldDoesNotExist):
+        return None
+    if not hasattr(relation, "is_cached") or not relation.is_cached(row):
+        return None
+    return relation.get_cached_value(row)
 
 
 class KarniModelSerializer(serializers.ModelSerializer):
@@ -134,6 +197,17 @@ class KarniModelSerializer(serializers.ModelSerializer):
     """
 
     serializer_related_field = KarniPrimaryKeyRelatedField
+
+    def get_attribute(self, instance: Any) -> Any:
+        """Nested as an expanded to-one: the related row, or ``None`` when it is unreadable.
+
+        Only called when this serializer is a field of another; the read
+        scope check is :func:`karni.api.related.readable_related`.
+        """
+        value = super().get_attribute(instance)
+        if self.source == "*" or not isinstance(value, Model):
+            return value  # the parent row itself, or no row
+        return value if readable_related(self.context, [value]) else None
 
     # field-level visibility (ADR 0002, P3)
 
@@ -508,7 +582,12 @@ def _build_serializer_class(
     meta = type(
         "Meta",
         (),
-        {"model": model, "fields": meta_fields, "extra_kwargs": extra_kwargs},
+        {
+            "model": model,
+            "fields": meta_fields,
+            "extra_kwargs": extra_kwargs,
+            "list_serializer_class": KarniListSerializer,
+        },
     )
     attrs: dict[str, Any] = {
         "Meta": meta,

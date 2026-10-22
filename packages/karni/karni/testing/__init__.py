@@ -23,6 +23,9 @@ package stays free of test-only imports:
   surface in one call;
 * ``assert_isolated`` (:mod:`karni.testing.isolation`) — a role cannot reach
   another owner's (or tenant's) rows;
+* ``assert_row_hidden`` / ``assert_admin_row_hidden`` (:mod:`karni.testing.hidden`)
+  — one row outside a client's row scope behaves as "does not exist" on every
+  API surface / in the admin;
 * ``assert_schema_snapshot`` (:mod:`karni.testing.schema`) — the OpenAPI
   contract snapshot;
 * ``query_budget`` (:mod:`karni.testing.performance`);
@@ -37,14 +40,17 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
+    from karni.testing.hidden import assert_admin_row_hidden, assert_row_hidden
     from karni.testing.isolation import assert_isolated
     from karni.testing.performance import query_budget
     from karni.testing.schema import assert_schema_snapshot
 
 __all__ = [
     "APITestCase",
+    "assert_admin_row_hidden",
     "assert_crud",
     "assert_isolated",
+    "assert_row_hidden",
     "assert_schema_snapshot",
     "client_as",
     "query_budget",
@@ -53,8 +59,10 @@ __all__ = [
 
 _LAZY = {
     "APITestCase": "karni.testing.api",
+    "assert_admin_row_hidden": "karni.testing.hidden",
     "assert_crud": "karni.testing.api",
     "assert_isolated": "karni.testing.isolation",
+    "assert_row_hidden": "karni.testing.hidden",
     "assert_schema_snapshot": "karni.testing.schema",
     "client_as": "karni.testing.api",
     "query_budget": "karni.testing.performance",

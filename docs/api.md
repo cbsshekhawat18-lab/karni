@@ -1,5 +1,5 @@
 ---
-description: karni.api: BaseViewSet with a mandatory access declaration, generated serializers, filtering, ordering, pagination, search, expansion, query budgets and the OpenAPI document.
+description: "karni.api: BaseViewSet with a mandatory access declaration, generated serializers, filtering, ordering, pagination, search, expansion, query budgets and the OpenAPI document."
 ---
 
 # karni.api
@@ -59,6 +59,16 @@ overridable — `BaseViewSet` is a plain `ModelViewSet` underneath, plus
 `ObjectPermissionsMixin` (`filter_queryset_for_user`) from `karni.accounts`.
 Overriding `get_queryset` (with or without `super()`) never loses the access
 scope: `BaseViewSet.__init_subclass__` wraps it.
+
+`?ordering=` accepts the fields the request's serializer reads back, so a
+write-only field or one `Karni.field_roles` hides from the requester cannot
+order the list (its values would leak through the order). A forward relation
+orders by its key column (`?ordering=venue` sorts by `venue_id`, never by the
+venue model's `Meta.ordering`, which may be a field of a row the requester
+cannot read), and to-many and reverse relations are not orderable: ordering
+by one repeats a row once per related row, readable or not, and pushes others
+off the page. An explicit `ordering_fields` on the viewset is honoured as DRF
+does.
 
 ## Access control
 
@@ -170,6 +180,19 @@ its default manager, so model scopes still hold. A target whose viewset has
 no `access` accepts no PK and expands to nothing. Serializers used without a
 request in their context (server-side code) are not narrowed.
 
+That holds for **every response**, not only `list` and `retrieve`: a write's
+response (`create`, `update`), a viewset with `optimize = False`, a hint that
+wins over the scoped lookup, and a custom action rendering a generated
+serializer show the same related rows. The generated serializers check them
+at render time (`karni.api.related`): rows fetched through a scoped lookup
+render as they are, any other related row is checked against its model's
+read scope, in one query per related model and page. An unreadable to-one
+renders as `null`, an unreadable member of a to-many relation (expanded, or
+a list of primary keys) is left out, and an export never names an unreadable
+related row by its natural key. A hand-written serializer or action that
+renders related rows itself can run the same check with
+`karni.api.related.readable_related(serializer.context, rows)`.
+
 Escape hatches, least to most drastic:
 
 1. change the declaration;
@@ -242,7 +265,8 @@ a field the model does not have or a role `KARNI_ROLES` does not declare
 
 Every `BaseViewSet` serves `GET /<resource>/export/?format=csv|xlsx` — the
 list as this request sees it (filters, search, ordering, row scope, field
-visibility), relations written as natural keys — and the import flow under
+visibility), relations written as natural keys (a related row the requester
+cannot read keeps its primary key) — and the import flow under
 `/<resource>/import/`: `GET` describes the importable fields, `POST` uploads
 a file, `…/<job>/preview/` is the mandatory dry run, `…/<job>/commit/` writes
 in one transaction and one audit batch, `…/import/template/` is the
@@ -354,7 +378,14 @@ with explicit `filterset_fields`), File/Image/JSON/binary fields,
 `APIMeta.write_only`/excluded fields, and password-named fields. The
 type→lookups map is the overridable `lookup_map` class attribute on
 `KarniFilterBackend`. Explicit `filterset_*` on the viewset always wins,
-untouched.
+untouched, except for one thing: a relation named in `filterset_fields`
+becomes a choice filter over the target's **readable** rows
+(`KarniFilterSet`, the backend's `filterset_base`), so naming a row the
+requester cannot read is refused exactly like naming one that does not exist
+(a 200 for one and a 400 for the other would confirm the row exists). A
+hand-written `filterset_class` declares its own querysets; give a
+`ModelChoiceFilter` `queryset=lambda request: readable(<queryset>, request)`
+(`karni.api.access.readable`).
 
 ## Expansion
 
@@ -373,7 +404,8 @@ untouched.
 - Expanded nested representations are read-only; writes keep using PKs.
 - Only rows the requester can read are embedded — every level goes through
   its target's read scope (see [Access control](#access-control)); a to-one
-  target outside it renders as `null`.
+  target outside it renders as `null`. This holds on every response that
+  renders the expanded serializer, writes included (`PATCH …?expand=venue`).
 
 `karni.api.expansion.related_lookups()` and `scoped_related_lookups()` are
 deprecated (they warn; removed in 1.0): the optimiser derives the same
@@ -434,7 +466,10 @@ class Novel(BaseModel):
 ```
 
 A hint string is applied as written (model scopes apply, the target viewset's
-read scope does not); a hinted `Prefetch(...)` owns its whole subtree; and a
+read scope does not) — a hint changes how rows are fetched, never which
+related rows a response shows: the render-time check
+([access control](#access-control)) still applies, in one query per related
+model and page; a hinted `Prefetch(...)` owns its whole subtree; and a
 lookup already on the incoming queryset (`queryset = ...prefetch_related(...)`)
 wins over a derived one at the same level. `optimize = False` keeps only the
 hints; override `optimize_queryset(queryset, serializer_class=None)` for a

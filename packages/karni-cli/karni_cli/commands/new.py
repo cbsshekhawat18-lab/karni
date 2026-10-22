@@ -8,7 +8,9 @@ Windsurf, Copilot, Cline, Aider, Junie adapters + slash commands).
 checkout's ``packages/karni-ui`` > the npm release. A local source becomes
 ``"@karni/ui": "file:<abs path>"`` in frontend/package.json (installed as a
 packed copy via the scaffold's ``.npmrc``), and its ``dist/`` is built here
-when missing — package.json ``exports`` point into dist/.
+when missing — package.json ``exports`` point into dist/. The build writes only
+git-ignored paths (``npm ci`` never rewrites package-lock.json), so scaffolding
+from a checkout leaves its working tree clean.
 """
 
 from __future__ import annotations
@@ -31,7 +33,8 @@ def write_agent_adapters(project: Path) -> int:
 
 def prepare_ui_source(source: Path) -> None:
     """Make sure a local @karni/ui has the dist/ a ``file:`` install ships."""
-    rebuild = f"(cd {source} && npm install && npm run build)"
+    install = " ".join(scaffold.ui_install_command(source)[:2])
+    rebuild = f"(cd {source} && {install} && npm run build)"
     if not scaffold.ui_dist_missing(source):
         if scaffold.ui_dist_stale(source):
             typer.echo(
@@ -40,7 +43,12 @@ def prepare_ui_source(source: Path) -> None:
                 err=True,
             )
         return
-    typer.echo(f"Building @karni/ui in {source} (dist/ is missing; file: installs ship dist/)...")
+    steps = " && ".join(" ".join(argv) for argv in scaffold.ui_build_commands(source))
+    typer.echo(
+        f"Building @karni/ui in {source} (dist/ is missing; file: installs ship dist/): "
+        f"{steps}. This writes node_modules/ and dist/ there, both git-ignored; files git "
+        "tracks, package-lock.json included, are left as they are."
+    )
     failure = scaffold.build_ui_dist(source)
     if failure is not None:
         typer.echo(

@@ -15,13 +15,14 @@ from karni_cli.errordoc import render
 from karni_cli.main import app
 from karni_cli.project import CliError
 
-from .conftest import REPO_ROOT
+from .conftest import REPO_ROOT, require_modules
 
 PACKAGE = Path(errorcodes.__file__).resolve().parent
 runner = CliRunner()
 
 
 def test_docs_errors_md_is_fresh() -> None:
+    require_modules()  # the page lists every module's codes
     docs = (REPO_ROOT / "docs" / "errors.md").read_text(encoding="utf-8")
     assert docs == render(), (
         "docs/errors.md is stale — regenerate it: python -m karni_cli.errordoc > docs/errors.md"
@@ -30,8 +31,13 @@ def test_docs_errors_md_is_fresh() -> None:
 
 def test_the_page_documents_every_kind_of_code() -> None:
     page = render()
-    for anchor in ("e104", "w101", "pay004", "c101", "k106", "karni-no-raw-elements"):
+    for anchor in ("e104", "w101", "c101", "k106", "karni-no-raw-elements"):
         assert f'<a id="{anchor}"></a>' in page, anchor
+
+
+def test_the_page_documents_module_codes() -> None:
+    require_modules("karni-payments")
+    assert '<a id="pay004"></a>' in render()
 
 
 def test_cli_codes_are_unique_and_complete() -> None:
@@ -100,6 +106,8 @@ def test_a_coded_cli_error_prints_code_message_link() -> None:
     ],
 )
 def test_explain_prints_why_and_fix(code: str, fragment: str) -> None:
+    if code.startswith("PAY"):
+        require_modules("karni-payments")
     result = runner.invoke(app, ["explain", code])
     assert result.exit_code == 0, result.output
     assert result.output.startswith(code.upper())

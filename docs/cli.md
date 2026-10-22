@@ -14,6 +14,13 @@ service (`--docker/--no-docker` forces one; `--service` / `KARNI_COMPOSE_SERVICE
 names it). Put `--` before passthrough arguments that clash with karni's own
 options.
 
+On the host, a command that starts Django first checks that the database
+driver loads, and one that opens the database (`migrate`, `seed`,
+`serve --local`, `test`, ...) that the server answers. A missing driver or an
+unreachable database is a coded error with the fix
+([C012](errors.md#c012), [C013](errors.md#c013)) instead of Django's
+traceback; `KARNI_DB_CHECK=false` skips the check.
+
 ## Contents
 
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
