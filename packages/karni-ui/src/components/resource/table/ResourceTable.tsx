@@ -621,7 +621,15 @@ export function ResourceTable<T = Record<string, unknown>>(
     setDeleteTarget({ row, trigger });
   }, []);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const cardListRef = React.useRef<HTMLUListElement>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  // Where focus lands when the control that had it is gone (a deleted row, the
+  // bulk toolbar once its action ran): the table's scroll region, or the card
+  // list below the card breakpoint. Both take focus by script.
+  const fallbackFocus = React.useCallback(
+    (): HTMLElement | null => scrollRef.current ?? cardListRef.current ?? rootRef.current,
+    [],
+  );
 
   // columns
   const hasBulkSelect = bulkActions !== undefined && bulkActions.length > 0;
@@ -970,6 +978,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             onOrderingChange={(ordering) => handleSortingChange(orderingToSorting(ordering))}
             busy={transitioning}
             dimmed={dimmed}
+            listRef={cardListRef}
           />
         ) : (
           <TableView
@@ -1123,7 +1132,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             setConfirmTarget(null);
             setConfirmError(null);
           }}
-          fallbackFocus={() => scrollRef.current ?? rootRef.current}
+          fallbackFocus={fallbackFocus}
         />
       )}
       {enableDelete === true && (
@@ -1136,7 +1145,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             setAnnouncement(`Deleted “${label}”.`);
             setDeleteTarget(null);
           }}
-          fallbackFocus={() => scrollRef.current ?? rootRef.current}
+          fallbackFocus={fallbackFocus}
         />
       )}
     </div>

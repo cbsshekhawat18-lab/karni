@@ -1,10 +1,13 @@
-import { Button, Page, ResourceTable, usePermission } from "@karni/ui";
+import { Button, Page, ResourceTable, usePermission, useResourceMutations } from "@karni/ui";
 import { useNavigate } from "@tanstack/react-router";
 
 export default function EventsPage() {
     const navigate = useNavigate();
     const { hasRole } = usePermission();
     const organizer = hasRole("organizer") || hasRole("staff");
+    const { remove } = useResourceMutations("events");
+    const deleteAll = (ids: string[]) =>
+        Promise.all(ids.map((id) => remove.mutateAsync(id))).then(() => undefined);
     return (
         <Page
             title="Events"
@@ -36,6 +39,10 @@ export default function EventsPage() {
                                   params: { id: String(row.id) },
                               })
                         : undefined
+                }
+                enableDelete={organizer}
+                bulkActions={
+                    organizer ? [{ label: "Delete", destructive: true, onClick: deleteAll }] : undefined
                 }
             />
         </Page>

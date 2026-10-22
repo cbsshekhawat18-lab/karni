@@ -846,6 +846,76 @@ describe("cards in a narrow container", () => {
     renderTable({ cardBreakpoint: 0 });
     expect(screen.getByRole("table", { name: "Events" })).toBeInTheDocument();
   });
+
+  it("a sort chosen from the keyboard keeps focus on the Sort by choice while the page loads", async () => {
+    stubWidth(400);
+    const user = userEvent.setup();
+    // The sorted page is on its way: the table is busy until it lands.
+    mockUseResourceList.mockImplementation((_resource: string, params?: ResourceListParams) =>
+      params?.ordering === "-capacity"
+        ? listResult({ isFetching: true, isPlaceholderData: true })
+        : listResult(),
+    );
+    renderTable();
+    const sort = screen.getByRole("combobox", { name: "Sort by" });
+    sort.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("listbox");
+    // From "Sort: default order" (the current choice): Title ↑↓, then Capacity ↑↓.
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}");
+    expect(screen.getByRole("option", { name: "Capacity, descending" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(lastParams()?.ordering).toBe("-capacity");
+    // The list says it is busy; the choice stays enabled, so it keeps the keyboard.
+    expect(screen.getByRole("list", { name: "Events" })).toHaveAttribute("aria-busy", "true");
+    expect(sort).toBeEnabled();
+    await waitFor(() => expect(sort).toHaveFocus());
+  });
+
+  it("after a bulk action ran, focus lands on the list, not on <body>", async () => {
+    stubWidth(400);
+    const user = userEvent.setup();
+    renderTable({
+      bulkActions: [{ label: "Delete", destructive: true, onClick: async () => undefined }],
+    });
+    screen.getByRole("checkbox", { name: "Select Spring Gala" }).focus();
+    await user.keyboard(" ");
+    screen.getByRole("button", { name: "Delete" }).focus();
+    await user.keyboard("{Enter}");
+    const dialog = screen.getByRole("dialog", { name: "Delete 1 event?" });
+    within(dialog).getByRole("button", { name: "Delete 1 event" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // The toolbar that opened the dialog is gone with the selection: the list takes over.
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+    const list = screen.getByRole("list", { name: "Events" });
+    expect(list).toHaveAttribute("tabindex", "-1");
+    expect(list).toHaveFocus();
+  });
+
+  it("a row deleted from its card hands focus to the list", async () => {
+    stubWidth(400);
+    const user = userEvent.setup();
+    mockUseResourceMutations.mockReturnValue({
+      create: { mutate: vi.fn(), isPending: false },
+      update: { mutate: vi.fn(), isPending: false },
+      remove: {
+        mutate: vi.fn((_id: unknown, options?: { onSuccess?: () => void }) =>
+          options?.onSuccess?.(),
+        ),
+        isPending: false,
+      },
+    });
+    renderTable({ enableDelete: true });
+    (screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement).focus();
+    await user.keyboard("{Enter}");
+    const dialog = screen.getByRole("dialog", { name: "Delete “Spring Gala”?" });
+    within(dialog).getByRole("button", { name: "Delete" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(liveRegion()).toHaveTextContent("Deleted “Spring Gala”.");
+    expect(screen.getByRole("list", { name: "Events" })).toHaveFocus();
+  });
 });
 
 // keyboard and screen readers

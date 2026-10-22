@@ -28,8 +28,15 @@ export interface CardListProps<T> {
   /** The current ordering and a way to change it ("" is the default order). */
   ordering: string;
   onOrderingChange: (ordering: string) => void;
+  /** A sort or page change is loading: the list announces busy. */
   busy: boolean;
   dimmed: boolean;
+  /**
+   * The list element. Focusable by script only (tabIndex -1): where focus
+   * lands when the control that had it is gone (a deleted row, the bulk
+   * toolbar after its action), as the table layout's scroll region is.
+   */
+  listRef?: React.Ref<HTMLUListElement>;
 }
 
 function cellOf<T>(row: Row<T>, columnId: string): React.ReactNode {
@@ -53,6 +60,7 @@ export function CardList<T>(props: CardListProps<T>): React.ReactElement {
     onOrderingChange,
     busy,
     dimmed,
+    listRef,
   } = props;
   const columns = table.getVisibleLeafColumns();
   const selectable = columns.some((column) => column.id === SELECT_COLUMN);
@@ -98,6 +106,9 @@ export function CardList<T>(props: CardListProps<T>): React.ReactElement {
             <span />
           )}
           {sortOptions.length > 0 && (
+            // Never disabled while a page loads: a disabled trigger cannot hold
+            // focus, so the keyboard would drop to <body> right after choosing.
+            // A choice is an absolute ordering, so applying it twice is harmless.
             <Select
               aria-label="Sort by"
               className="h-9 w-auto min-w-40"
@@ -105,14 +116,22 @@ export function CardList<T>(props: CardListProps<T>): React.ReactElement {
               placeholder="Sort by"
               clearable
               clearLabel="Sort: default order"
-              disabled={busy}
               options={sortOptions}
               onValueChange={(next) => onOrderingChange(next ?? "")}
             />
           )}
         </div>
       )}
-      <ul aria-label={caption} className={cn("flex flex-col gap-3", dimmed && "opacity-60")}>
+      <ul
+        ref={listRef}
+        aria-label={caption}
+        aria-busy={busy || undefined}
+        tabIndex={-1}
+        className={cn(
+          "flex flex-col gap-3 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          dimmed && "opacity-60",
+        )}
+      >
         {table.getRowModel().rows.map((row) => {
           const title =
             useRowLabelAsTitle || titleColumn === undefined
