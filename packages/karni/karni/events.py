@@ -41,6 +41,10 @@ Semantics (each listener receives the model instance only):
   signals, exactly as in plain Django, so they fire nothing.
 * Like Django signals, the sender is the exact class: a listener on a parent
   model does not hear its subclasses or proxies.
+* ``on_transition`` — a ``StateField`` moved along a declared transition
+  (``karni.lifecycle.state_changed``), optionally only into ``to=`` or out of
+  ``source=`` states. It fires after the row is written, inside the save's
+  transaction, once per transition.
 
 Plain listeners run inline, inside the caller's transaction. ``queued=True``
 (or :func:`queued`) is Laravel's ``ShouldQueue``: the work is handed to a
@@ -82,6 +86,7 @@ __all__ = [
     "is_soft_delete",
     "on_created",
     "on_deleted",
+    "on_transition",
     "on_updated",
     "queued",
 ]
@@ -416,3 +421,68 @@ def _connect(event: str, model: ModelRef, listener: Callable[[Any], Any]) -> Non
 
     post_save.connect(on_soft_delete, sender=model, weak=False, dispatch_uid=f"{uid}:soft")
     post_delete.connect(on_hard_delete, sender=model, weak=False, dispatch_uid=f"{uid}:hard")
+
+
+# lifecycle transitions (karni.lifecycle)
+
+
+def _states(value: Any) -> frozenset[str] | None:
+    if value is None:
+        return None
+    items = [value] if isinstance(value, str) else list(value)
+    return frozenset(str(getattr(item, "value", item)) for item in items)
+
+
+def on_transition(
+    model: ModelRef,
+    field: str | None = None,
+    *,
+    to: Any = None,
+    source: Any = None,
+    queued: bool = False,
+) -> Callable[[F], F]:
+    """Run the decorated ``listener(instance)`` after a ``StateField`` transition of ``model``.
+
+    ``@on_transition(Booking, "status", to="cancelled")`` hears every move
+    into ``cancelled``; ``source=`` narrows to moves out of the given
+    state(s); ``field`` defaults to every StateField of the model. The
+    listener runs inside the save's transaction (it may raise to undo the
+    transition), or in a Celery worker after commit with ``queued=True``.
+    For the states themselves, receive :data:`karni.lifecycle.state_changed`
+    (``source``, ``target`` and ``field`` arrive as keyword arguments).
+    """
+    if not isinstance(model, str) and not (
+        isinstance(model, type) and issubclass(model, models.Model)
+    ):
+        raise KarniTypeError(
+            "karni.events.on_transition() takes a model class or an 'app_label.ModelName' "
+            f"string, got {model!r}.",
+            code="E402",
+        )
+    targets, sources = _states(to), _states(source)
+
+    def decorate(listener: F) -> F:
+        from karni.lifecycle import state_changed
+
+        prepared = _prepare(listener, queued)
+        label = _model_label(model)
+
+        def on_change(sender: Any, instance: Any, **kw: Any) -> None:
+            if sender._meta.label != label and sender._meta.label_lower != label.lower():
+                return
+            if field is not None and kw.get("field") != field:
+                return
+            if targets is not None and kw.get("target") not in targets:
+                return
+            if sources is not None and kw.get("source") not in sources:
+                return
+            _invoke(prepared, instance, kw.get("using"), snapshot=False)
+
+        uid = (
+            f"karni.events:transition:{label}:{field}:{sorted(targets or ())}:"
+            f"{sorted(sources or ())}:{_listener_id(prepared)}"
+        )
+        state_changed.connect(on_change, weak=False, dispatch_uid=uid)
+        return listener
+
+    return decorate

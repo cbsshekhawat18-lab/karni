@@ -68,7 +68,7 @@ What you get with no other code:
 - permissions: everyone reads, organizers and staff write
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
-All of EventHub, with payments, e-mail and four roles, is 593 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
+All of EventHub, with payments, e-mail and four roles, is 597 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
 
 ## Why not just use Django or a boilerplate?
 
@@ -252,7 +252,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
 
-Base classes: `AuditedModel`, `BaseModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
+Base classes: `AuditedModel`, `BaseModel`, `GuardedModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
 <!-- /generated:models -->
 
 Full reference: [base classes](docs/REFERENCE.md#base-classes) and [`class Karni` keys](docs/REFERENCE.md#model-metadata-class-karni).
@@ -391,7 +391,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 33 conventions, each with a code, in 402 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 36 conventions, each with a code, in 429 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

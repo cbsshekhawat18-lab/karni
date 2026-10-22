@@ -307,6 +307,34 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C37x field DSL: lifecycle columns and limited resources
+    _c(
+        "C370",
+        "A state field spec is invalid",
+        "karni make model (name:state:...)",
+        "A state column lists its states (draft,confirmed,cancelled) or its moves "
+        "(draft>confirmed|draft>cancelled); the first state is where rows start, so every "
+        "other state must be reachable from it, and a state column is never optional.",
+        "Write e.g. 'status:state:draft>confirmed>refunded|draft>cancelled', or list the states "
+        "and edit the generated transitions={...}.",
+    ),
+    _c(
+        "C371",
+        "A range field spec is invalid",
+        "karni make model (name:daterange, name:datetimerange)",
+        "Range columns take no arguments: daterange is a PostgreSQL daterange, "
+        "datetimerange a tstzrange.",
+        "Write 'during:datetimerange' or 'nights:daterange' (add ? for an optional one).",
+    ),
+    _c(
+        "C372",
+        "A capacity field spec is invalid",
+        "karni make model (name:capacity[:total])",
+        "A capacity counter optionally names the integer field holding the total, which must "
+        "be declared in the same command; it is never optional.",
+        "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
+        "counter that starts at 0.",
+    ),
 )
 
 

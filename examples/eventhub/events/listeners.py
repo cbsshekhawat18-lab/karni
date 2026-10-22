@@ -1,6 +1,7 @@
 from django.core.mail import send_mail
 from django.utils import timezone
-from karni.events import on_updated
+from karni.capacity import release
+from karni.events import on_deleted, on_transition, on_updated
 from karni_payments.models import Payment
 
 from events.models import Booking
@@ -12,9 +13,19 @@ def confirm_paid_booking(payment: Payment) -> None:
     if payment.status != Payment.Status.SUCCEEDED:
         return
     for booking in Booking.objects.filter(payment=payment, status=Booking.Status.PENDING):
-        booking.status = Booking.Status.CONFIRMED
-        booking.confirmed_at = timezone.now()
-        booking.save(update_fields=["status", "confirmed_at", "updated_at"])
+        booking.transition("status", Booking.Status.CONFIRMED, confirmed_at=timezone.now())
+
+
+@on_transition(Booking, "status", to=Booking.Status.CANCELLED)
+def release_seats(booking: Booking) -> None:
+    """A cancelled booking gives its seats back, in the cancelling transaction."""
+    release(booking.tier, booking.quantity)
+
+
+@on_deleted(Booking)
+def release_deleted_seats(booking: Booking) -> None:
+    if booking.status != Booking.Status.CANCELLED:  # a cancelled one already gave them back
+        release(booking.tier, booking.quantity)
 
 
 @on_updated(Booking, queued=True)

@@ -166,10 +166,15 @@ class AutoFactory(DjangoModelFactory):
 
     @classmethod
     def _generate(cls, strategy: Any, params: dict[str, Any]) -> Any:
+        from karni.lifecycle import any_initial_state
+
         model = cls._meta.get_model_class()
         token = _CHAIN.set((*_CHAIN.get(), model))
         try:
-            return super()._generate(strategy, params)
+            # Test data and seeds may start a row in any declared state
+            # (StateField's initial rule is for application writes).
+            with any_initial_state("karni.testing factory (test data / seed)"):
+                return super()._generate(strategy, params)
         finally:
             _CHAIN.reset(token)
 

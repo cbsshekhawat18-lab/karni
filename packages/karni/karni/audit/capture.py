@@ -316,7 +316,16 @@ def _post_save(
         record(instance, "create", diff)
         return
     diff = diff_values(before, after)
+    for name in _transition_fields(sender):
+        diff.pop(name, None)  # recorded as its own "transition" entry (karni.lifecycle)
     record(instance, _action(before, diff, deleted=False), diff)
+
+
+def _transition_fields(model: type[models.Model]) -> tuple[str, ...]:
+    """StateFields that record their transitions themselves (``StateField(audit=True)``)."""
+    from karni.lifecycle import state_fields
+
+    return tuple(field.name for field in state_fields(model) if field.audit)
 
 
 def _post_delete(sender: type[models.Model], instance: models.Model, **kwargs: Any) -> None:

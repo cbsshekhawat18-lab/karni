@@ -22,6 +22,7 @@ const ACTION_LABEL: Record<ChangeLogEntry["action"], string> = {
   update: "Updated",
   delete: "Deleted",
   restore: "Restored",
+  transition: "Transitioned",
 };
 
 function formatWhen(value: string): string {

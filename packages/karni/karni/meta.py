@@ -18,6 +18,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             import_lookup = {"customer": "email"}       # FK column → target field
             import_transform = "shop.imports.clean_order_row"
             after_import = "shop.imports.reindex"
+            no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
@@ -153,6 +154,15 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`None`",
         "A callable, or its dotted path, run once an import commits, with the result.",
         'after_import = "shop.imports.reindex"',
+    ),
+    # lifecycle and limited resources (karni.constraints)
+    Option(
+        "no_overlap",
+        "`None`",
+        "Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the "
+        "resource field(s) then the range, or a list of them. PostgreSQL enforces it with an "
+        "`EXCLUDE` constraint the model's migration creates; soft-deleted rows never block.",
+        'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
     ),
 )
 

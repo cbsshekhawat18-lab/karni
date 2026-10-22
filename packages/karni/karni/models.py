@@ -25,9 +25,11 @@ import uuid
 from typing import Any, ClassVar
 
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, router, transaction
 from django.utils import timezone
 
+from karni import constraints as _constraints  # noqa: F401 - connects class Karni: no_overlap
+from karni import guards
 from karni.managers import (
     AuditedQuerySet,
     BaseManager,
@@ -43,6 +45,7 @@ from karni.signals import pre_write
 __all__ = [
     "AuditedModel",
     "BaseModel",
+    "GuardedModel",
     "SoftDeleteManager",
     "SoftDeleteModel",
     "SoftDeleteQuerySet",
@@ -199,8 +202,108 @@ class AuditedModel(models.Model):
         super().save(*args, **kwargs)
 
 
-class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
-    """The base every Karni project model inherits: all four mixins.
+class GuardedModel(models.Model):
+    """The model half of ``StateField``, ``CapacityField`` and ``no_overlap``.
+
+    Adds no field. For a model that has any of them (others pay one cached
+    lookup per save):
+
+    * ``from_db()`` / ``refresh_from_db()`` remember what the row held, so a
+      state change is checked from the loaded state, not a stale copy;
+    * ``save()`` checks every state change before any SQL (``E980`` /
+      ``E982``), runs the write in a transaction (a savepoint when nested),
+      records transitions in the change log, sends
+      ``karni.lifecycle.state_changed``, and turns an ``IntegrityError`` from
+      a Karni constraint into a named error (``E984`` / ``E985``, HTTP 409);
+    * ``_do_update()`` makes the ``UPDATE`` conditional on the loaded state
+      (``AND "status" = 'draft'``): a concurrent transition makes it match
+      nothing and raises ``StateConflict`` (``E981``) instead of overwriting;
+    * ``transition(field, to, **values)`` / ``allowed_transitions(field)``.
+
+    :class:`BaseModel` includes it. Override / escape hatch: override any of
+    these methods; :mod:`karni.guards` holds the engine.
+    """
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def from_db(cls, db: str | None, field_names: Any, values: Any) -> Any:
+        instance = super().from_db(db, field_names, values)
+        guards.remember(instance)
+        return instance
+
+    def refresh_from_db(
+        self, using: str | None = None, fields: Any = None, from_queryset: Any = None
+    ) -> None:
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+        guards.remember(self, fields)
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        plan = guards.plan_write(self, kwargs.get("update_fields"))
+        if plan is None:
+            super().save(*args, **kwargs)
+            return
+        if plan.extra_fields and kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = {*kwargs["update_fields"], *plan.extra_fields}
+        using = kwargs.get("using") or router.db_for_write(type(self), instance=self)
+        guards.begin(self, plan)
+        try:
+            with transaction.atomic(using=using):
+                super().save(*args, **kwargs)
+                guards.after_write(self, plan, using)
+        except IntegrityError as exc:
+            from karni.conflicts import translate
+
+            error = translate(exc, instance=self, using=using)
+            if error is None or error is exc:
+                raise
+            raise error from exc
+        finally:
+            guards.end(self)
+
+    def _do_update(
+        self,
+        base_qs: Any,
+        using: Any,
+        pk_val: Any,
+        values: Any,
+        update_fields: Any,
+        forced_update: Any,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        expected = guards.expected_states(self, values)
+        if expected:
+            base_qs = base_qs.filter(**expected)
+        updated = super()._do_update(
+            base_qs, using, pk_val, values, update_fields, forced_update, *args, **kwargs
+        )
+        if expected and not updated:
+            conflict = guards.state_moved(
+                self, base_qs.model._base_manager.using(using), pk_val, expected
+            )
+            if conflict is not None:
+                raise conflict
+        return updated
+
+    def transition(self, field: str, to: Any, **values: Any) -> None:
+        """Move ``field`` to ``to`` and save it (:func:`karni.lifecycle.transition`)."""
+        from karni.lifecycle import transition
+
+        transition(self, field, to, **values)
+
+    transition.alters_data = True  # type: ignore[attr-defined]
+
+    def allowed_transitions(self, field: str) -> tuple[str, ...]:
+        """The states ``field`` may move to from its loaded state."""
+        from karni.lifecycle import allowed_transitions
+
+        return allowed_transitions(self, field)
+
+
+class BaseModel(GuardedModel, UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
+    """The base every Karni project model inherits: all four mixins (plus :class:`GuardedModel`).
 
     UUID primary key, timestamps, soft delete and audit users. ``id``,
     ``created_at``, ``updated_at``, ``created_by``, ``updated_by`` and
@@ -227,6 +330,8 @@ class BaseModel(UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         if not getattr(self, "_karni_in_delete", False):
+            # An illegal state change is refused before anyone may defer it.
+            guards.plan_write(self, kwargs.get("update_fields"))
             pre_write.send(
                 sender=type(self),
                 instance=self,

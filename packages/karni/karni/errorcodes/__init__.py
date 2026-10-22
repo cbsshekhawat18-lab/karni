@@ -16,7 +16,9 @@ Code ranges
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
-``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog).
+``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
+``E8xx`` import and export · ``E98x``/``W98x`` lifecycle and limited resources
+(``StateField``, capacity, ``no_overlap``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1136,6 +1138,128 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    # E98x lifecycle (StateField) and limited resources (capacity, no_overlap)
+    _e(
+        "E980",
+        "A StateField change the declared lifecycle does not allow",
+        "exception",
+        "karni.lifecycle (save(), transition(), StateField.validate, the generated serializer)",
+        "A StateField declares its states and the transitions between them. Moving a row "
+        "along an undeclared transition (out of a terminal state, backwards, or to a value "
+        "that is not a state) is refused before any SQL: from the ORM, the admin (a form "
+        "error), the API (a 400 on the field), commands and tasks alike. The column's CHECK "
+        "constraint refuses an undeclared value from raw SQL too.",
+        "Move the row to one of the legal states the message lists (instance.transition("
+        "'<field>', '<state>'), or allowed_transitions('<field>') to ask), or add the "
+        "transition to the field's transitions= if the lifecycle should allow it.",
+    ),
+    _e(
+        "E981",
+        "The row's state changed since it was loaded",
+        "exception",
+        "karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)",
+        "A save that writes a StateField updates the row only if it still holds the state it "
+        "was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed "
+        "it first, so nothing was written; two concurrent transitions from one state can "
+        "never both succeed. The API answers 409.",
+        "Reload the row (refresh_from_db()) and decide again from the state the message "
+        "names; in a UI, show the new state and let the user retry.",
+    ),
+    _e(
+        "E982",
+        "A new row starts in a state that is not an initial state",
+        "exception",
+        "karni.lifecycle (save() of a new row, the generated serializer's create)",
+        "A StateField row is created in one of its initial states (default: the default "
+        "state) and reaches the others through transitions, so a client cannot create an "
+        "order that is already 'paid'. Karni's factories and seeders may create any state "
+        "(karni.lifecycle.any_initial_state).",
+        "Create the row in an initial state and call .transition(...), list the state in "
+        "initial= if rows may legitimately start there, or wrap data loading in "
+        "any_initial_state(reason='...').",
+    ),
+    _e(
+        "E983",
+        "A StateField is declared or named wrongly",
+        "exception",
+        "karni.fields.StateField; karni.lifecycle.transition",
+        "The lifecycle must be complete and unambiguous: every state named in transitions or "
+        "initial is declared, states use letters, digits, _ and - (they go into a CHECK "
+        "constraint), every state is reachable, and transition() names a StateField.",
+        "Fix the declaration the message names: declare the missing state, drop the "
+        "self-transition, add a transition into an unreachable state, or name the right "
+        "field.",
+    ),
+    _e(
+        "E984",
+        "The slot overlaps an existing row",
+        "exception",
+        "karni.constraints.NoOverlap (class Karni: no_overlap)",
+        "PostgreSQL's EXCLUDE constraint refused the row because another live row of the same "
+        "resource overlaps its range. The check runs in the database, so it holds under "
+        "concurrency and against raw SQL; soft-deleted rows and the states listed in "
+        "ignore= never block. The API answers 409 naming the existing row.",
+        "Pick a free slot, or cancel or delete the row the message names first. Touching "
+        "ranges ([10:00, 11:00) and [11:00, 12:00)) do not overlap.",
+    ),
+    _e(
+        "E985",
+        "Not enough capacity left",
+        "exception",
+        "karni.capacity.reserve; the CapacityField CHECK constraint",
+        "A CapacityField counts what is left of a limited resource and its CHECK keeps it at "
+        "or above zero. reserve() locks the row and refuses when fewer units remain than were "
+        "asked for; lowering the total below what is already reserved is refused the same "
+        "way. The API answers 409 with the resource and the remaining count.",
+        "Ask for at most the remaining count the message gives, offer another resource or a "
+        "waiting list, or release reservations before lowering the total.",
+    ),
+    _e(
+        "E986",
+        "A capacity counter is used the wrong way",
+        "exception",
+        "karni.capacity.reserve / release; CapacityField; karni.checks",
+        "Capacity is consumed only through reserve() and release(), inside "
+        "transaction.atomic() together with the write that uses it, by a positive quantity. "
+        "Assigning the counter directly would let a stale instance overwrite reservations; "
+        "releasing more than was reserved means a double release.",
+        "Call reserve(resource, quantity) / release(...) inside transaction.atomic(); change "
+        "the total field to resize; point CapacityField(total=...) at an integer field of the "
+        "same model.",
+    ),
+    _e(
+        "E987",
+        "A no_overlap declaration is invalid",
+        "check",
+        "karni.constraints.NoOverlap; karni.checks.check_guarded_models",
+        "NoOverlap takes the resource field(s) and then the range: a range field "
+        "(DateTimeRangeField, DateRangeField) or a (start, end) pair of date, date-time or "
+        "number fields. ignore= must name model fields and, for a StateField, declared states.",
+        "Fix the declaration the message names, e.g. no_overlap = NoOverlap('room', 'during', "
+        "ignore={'status': ['cancelled']}).",
+    ),
+    _e(
+        "E988",
+        "A guarded field on a model without GuardedModel",
+        "check",
+        "karni.checks.check_guarded_models",
+        "StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the "
+        "loaded-state tracking, the conditional UPDATE, the transition history and the named "
+        "conflicts. Without it saves would skip all of that silently.",
+        "Inherit karni.models.BaseModel (which includes GuardedModel), or add "
+        "karni.models.GuardedModel to the model's bases.",
+    ),
+    _e(
+        "W980",
+        "no_overlap is not enforced on this database",
+        "warning",
+        "karni.checks.check_guarded_models",
+        "Only PostgreSQL has EXCLUDE constraints. On SQLite (or any other backend) the "
+        "NoOverlap constraint creates nothing, so overlapping rows are accepted. The "
+        "StateField and CapacityField CHECK constraints do work on SQLite.",
+        "Use PostgreSQL wherever overlaps matter (production, CI); silence karni.W980 only "
+        "for a development database where accepting overlaps is fine.",
     ),
 )
 

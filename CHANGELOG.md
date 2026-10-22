@@ -11,6 +11,30 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Lifecycle columns and limited resources, enforced by the database**
+  ([docs/lifecycle-and-capacity.md](docs/lifecycle-and-capacity.md)).
+  `karni.fields.StateField(states=..., transitions=...)` declares a status
+  column's states (a `CHECK` on the column) and its legal moves:
+  `row.transition("status", "confirmed")` or assignment + `save()` is checked
+  against the state the row was loaded with (`E980`, `E982`, a 400 in the
+  API), written with a conditional `UPDATE ... WHERE status = <loaded>` so two
+  concurrent transitions never both succeed (`E981`, a 409), recorded in the
+  change log (action `transition`) and announced by
+  `karni.lifecycle.state_changed` / `@on_transition`. The OpenAPI schema
+  carries `x-karni-transitions` and `x-karni-initial`.
+  `karni.fields.CapacityField(total=...)` is a counter the database keeps
+  between zero and its total, consumed only with `karni.capacity.reserve()` /
+  `release()` (a locked, conditional `UPDATE`; `E985`, a 409, names what is
+  left). `class Karni: no_overlap = NoOverlap("room", "during", ignore=...)`
+  adds a PostgreSQL `EXCLUDE USING gist` constraint (creating `btree_gist`
+  when first applied) that ignores soft-deleted and released rows (`E984`, a
+  409 naming the existing row); off PostgreSQL it is not enforced and
+  `karni.W980` says so. New: `karni.fields.DateRangeField` /
+  `DateTimeRangeField`, `karni.models.GuardedModel` (part of `BaseModel`),
+  `karni make model` types `state`, `daterange`, `datetimerange` and
+  `capacity`, agent rules `K114` and `K115`, codes `E980`–`E988`, `W980` and
+  `C370`–`C372`. EventHub's ticket tiers and bookings use them (597 lines of
+  project code, measured).
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

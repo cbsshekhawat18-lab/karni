@@ -71,6 +71,7 @@ class ChangeLog(models.Model):
         UPDATE = "update", "Updated"
         DELETE = "delete", "Deleted"
         RESTORE = "restore", "Restored"
+        TRANSITION = "transition", "Transitioned"
 
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, related_name="+")
     object_id = models.CharField(max_length=64, db_index=True)

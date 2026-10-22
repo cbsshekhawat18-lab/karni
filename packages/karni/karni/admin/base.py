@@ -57,6 +57,7 @@ from karni.admin.derive import (
 from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
 from karni.admin.transfer import TransferAdminMixin
+from karni.conflicts import KarniConflict
 from karni.exceptions import KarniImproperlyConfigured, KarniWriteDeferred
 from karni.meta import STANDARD_ACTIONS
 from karni.models import SoftDeleteModel
@@ -441,7 +442,9 @@ class KarniAdminMixin(admin.ModelAdmin):
         their own form classes and never read the stash).
         """
         setattr(request, _REQUEST_OBJ_ATTR, obj)
-        return super().get_form(request, obj=obj, change=change, **kwargs)
+        form: type[ModelForm] = super().get_form(request, obj=obj, change=change, **kwargs)
+        _offer_legal_states(form, self.model, obj)
+        return form
 
     def formfield_for_foreignkey(
         self, db_field: models.ForeignKey, request: HttpRequest, **kwargs: Any
@@ -486,6 +489,10 @@ class KarniAdminMixin(admin.ModelAdmin):
 
     def _deferred_redirect(self, request: HttpRequest) -> HttpResponseRedirect | None:
         """After a deferred write: the receiver's message, then back to the changelist."""
+        conflict = getattr(request, _CONFLICT_ATTR, None)
+        if conflict is not None:
+            self.message_user(request, str(conflict), messages.ERROR)
+            return HttpResponseRedirect(request.get_full_path())
         exc = getattr(request, self._DEFERRED_ATTR, None)
         if exc is None:
             return None
@@ -496,16 +503,35 @@ class KarniAdminMixin(admin.ModelAdmin):
         )
 
     def save_model(self, request: HttpRequest, obj: Any, form: Any, change: bool) -> None:
-        """Save, unless a ``pre_write`` receiver defers the write (karni-approvals)."""
+        """Save, unless a ``pre_write`` receiver defers the write (karni-approvals).
+
+        A conflict the database reports while saving (a taken slot, a sold-out
+        resource, a state another user just changed: ``E981`` / ``E984`` /
+        ``E985``) is shown as an error on the same form; nothing is written.
+        """
         try:
             super().save_model(request, obj, form, change)
         except KarniWriteDeferred as exc:
             self._defer(request, exc)
+        except KarniConflict as exc:
+            setattr(request, _CONFLICT_ATTR, exc)
 
     def save_related(self, request: HttpRequest, form: Any, formsets: Any, change: bool) -> None:
         if getattr(request, self._DEFERRED_ATTR, None) is not None:
             return  # the parent was not written; its inlines must not be either
+        if getattr(request, _CONFLICT_ATTR, None) is not None:
+            return
         super().save_related(request, form, formsets, change)
+
+    def log_addition(self, request: HttpRequest, obj: Any, message: Any) -> Any:
+        if getattr(request, _CONFLICT_ATTR, None) is not None:
+            return None  # nothing was added
+        return super().log_addition(request, obj, message)
+
+    def log_change(self, request: HttpRequest, obj: Any, message: Any) -> Any:
+        if getattr(request, _CONFLICT_ATTR, None) is not None:
+            return None  # nothing was changed
+        return super().log_change(request, obj, message)
 
     def delete_model(self, request: HttpRequest, obj: Any) -> None:
         try:
@@ -621,3 +647,29 @@ def build_model_admin(
     else:
         bases = (KarniModelAdmin,)
     return type(f"{model.__name__}Admin", bases, attrs)
+
+
+# lifecycle columns (karni.fields.StateField)
+
+#: Request attribute carrying a conflict raised by ``save_model`` (E981/E984/E985).
+_CONFLICT_ATTR = "_karni_write_conflict"
+
+
+def _offer_legal_states(form: type[ModelForm], model: type[models.Model], obj: Any) -> None:
+    """Limit each StateField's select to the current state and the legal next ones.
+
+    A new row offers its initial states. The model still checks the
+    transition on save; this only keeps illegal choices out of the menu.
+    """
+    from karni.lifecycle import allowed_transitions, state_fields
+
+    for state in state_fields(model):
+        formfield = form.base_fields.get(state.name)
+        if formfield is None or not hasattr(formfield, "choices"):
+            continue
+        if obj is None or obj._state.adding:
+            offered = list(state.machine.initial)
+        else:
+            current = getattr(obj, state.attname)
+            offered = [current, *allowed_transitions(obj, state.name)]
+        formfield.choices = [(value, state.machine.labels.get(value, value)) for value in offered]

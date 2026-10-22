@@ -1011,6 +1011,106 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
 
+<a id="e980"></a>
+
+#### E980 — A StateField change the declared lifecycle does not allow
+
+*exception* · from `karni.lifecycle (save(), transition(), StateField.validate, the generated serializer)`
+
+**Why Karni objects.** A StateField declares its states and the transitions between them. Moving a row along an undeclared transition (out of a terminal state, backwards, or to a value that is not a state) is refused before any SQL: from the ORM, the admin (a form error), the API (a 400 on the field), commands and tasks alike. The column's CHECK constraint refuses an undeclared value from raw SQL too.
+
+**Fix.** Move the row to one of the legal states the message lists (instance.transition('<field>', '<state>'), or allowed_transitions('<field>') to ask), or add the transition to the field's transitions= if the lifecycle should allow it.
+
+<a id="w980"></a>
+
+#### W980 — no_overlap is not enforced on this database
+
+*system check (warning)* · from `karni.checks.check_guarded_models`
+
+**Why Karni objects.** Only PostgreSQL has EXCLUDE constraints. On SQLite (or any other backend) the NoOverlap constraint creates nothing, so overlapping rows are accepted. The StateField and CapacityField CHECK constraints do work on SQLite.
+
+**Fix.** Use PostgreSQL wherever overlaps matter (production, CI); silence karni.W980 only for a development database where accepting overlaps is fine.
+
+<a id="e981"></a>
+
+#### E981 — The row's state changed since it was loaded
+
+*exception* · from `karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)`
+
+**Why Karni objects.** A save that writes a StateField updates the row only if it still holds the state it was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed it first, so nothing was written; two concurrent transitions from one state can never both succeed. The API answers 409.
+
+**Fix.** Reload the row (refresh_from_db()) and decide again from the state the message names; in a UI, show the new state and let the user retry.
+
+<a id="e982"></a>
+
+#### E982 — A new row starts in a state that is not an initial state
+
+*exception* · from `karni.lifecycle (save() of a new row, the generated serializer's create)`
+
+**Why Karni objects.** A StateField row is created in one of its initial states (default: the default state) and reaches the others through transitions, so a client cannot create an order that is already 'paid'. Karni's factories and seeders may create any state (karni.lifecycle.any_initial_state).
+
+**Fix.** Create the row in an initial state and call .transition(...), list the state in initial= if rows may legitimately start there, or wrap data loading in any_initial_state(reason='...').
+
+<a id="e983"></a>
+
+#### E983 — A StateField is declared or named wrongly
+
+*exception* · from `karni.fields.StateField; karni.lifecycle.transition`
+
+**Why Karni objects.** The lifecycle must be complete and unambiguous: every state named in transitions or initial is declared, states use letters, digits, _ and - (they go into a CHECK constraint), every state is reachable, and transition() names a StateField.
+
+**Fix.** Fix the declaration the message names: declare the missing state, drop the self-transition, add a transition into an unreachable state, or name the right field.
+
+<a id="e984"></a>
+
+#### E984 — The slot overlaps an existing row
+
+*exception* · from `karni.constraints.NoOverlap (class Karni: no_overlap)`
+
+**Why Karni objects.** PostgreSQL's EXCLUDE constraint refused the row because another live row of the same resource overlaps its range. The check runs in the database, so it holds under concurrency and against raw SQL; soft-deleted rows and the states listed in ignore= never block. The API answers 409 naming the existing row.
+
+**Fix.** Pick a free slot, or cancel or delete the row the message names first. Touching ranges ([10:00, 11:00) and [11:00, 12:00)) do not overlap.
+
+<a id="e985"></a>
+
+#### E985 — Not enough capacity left
+
+*exception* · from `karni.capacity.reserve; the CapacityField CHECK constraint`
+
+**Why Karni objects.** A CapacityField counts what is left of a limited resource and its CHECK keeps it at or above zero. reserve() locks the row and refuses when fewer units remain than were asked for; lowering the total below what is already reserved is refused the same way. The API answers 409 with the resource and the remaining count.
+
+**Fix.** Ask for at most the remaining count the message gives, offer another resource or a waiting list, or release reservations before lowering the total.
+
+<a id="e986"></a>
+
+#### E986 — A capacity counter is used the wrong way
+
+*exception* · from `karni.capacity.reserve / release; CapacityField; karni.checks`
+
+**Why Karni objects.** Capacity is consumed only through reserve() and release(), inside transaction.atomic() together with the write that uses it, by a positive quantity. Assigning the counter directly would let a stale instance overwrite reservations; releasing more than was reserved means a double release.
+
+**Fix.** Call reserve(resource, quantity) / release(...) inside transaction.atomic(); change the total field to resize; point CapacityField(total=...) at an integer field of the same model.
+
+<a id="e987"></a>
+
+#### E987 — A no_overlap declaration is invalid
+
+*system check (error)* · from `karni.constraints.NoOverlap; karni.checks.check_guarded_models`
+
+**Why Karni objects.** NoOverlap takes the resource field(s) and then the range: a range field (DateTimeRangeField, DateRangeField) or a (start, end) pair of date, date-time or number fields. ignore= must name model fields and, for a StateField, declared states.
+
+**Fix.** Fix the declaration the message names, e.g. no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']}).
+
+<a id="e988"></a>
+
+#### E988 — A guarded field on a model without GuardedModel
+
+*system check (error)* · from `karni.checks.check_guarded_models`
+
+**Why Karni objects.** StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the loaded-state tracking, the conditional UPDATE, the transition history and the named conflicts. Without it saves would skip all of that silently.
+
+**Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>
@@ -1569,6 +1669,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
 
+<a id="c370"></a>
+
+### C370 — A state field spec is invalid
+
+*karni command* · from `karni make model (name:state:...)`
+
+**Why Karni objects.** A state column lists its states (draft,confirmed,cancelled) or its moves (draft>confirmed|draft>cancelled); the first state is where rows start, so every other state must be reachable from it, and a state column is never optional.
+
+**Fix.** Write e.g. 'status:state:draft>confirmed>refunded|draft>cancelled', or list the states and edit the generated transitions={...}.
+
+<a id="c371"></a>
+
+### C371 — A range field spec is invalid
+
+*karni command* · from `karni make model (name:daterange, name:datetimerange)`
+
+**Why Karni objects.** Range columns take no arguments: daterange is a PostgreSQL daterange, datetimerange a tstzrange.
+
+**Fix.** Write 'during:datetimerange' or 'nights:daterange' (add ? for an optional one).
+
+<a id="c372"></a>
+
+### C372 — A capacity field spec is invalid
+
+*karni command* · from `karni make model (name:capacity[:total])`
+
+**Why Karni objects.** A capacity counter optionally names the integer field holding the total, which must be declared in the same command; it is never optional.
+
+**Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -1812,6 +1942,30 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A silent gap in the history is exactly the bug someone discovers during an audit; the rule names every bulk write on an audited model at build time.
 
 **Fix.** Loop and save(), or add the allow marker with the reason.
+
+<a id="k114"></a>
+
+### K114 — Status column: StateField + transitions.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** A lifecycle column (status, state, stage) is `karni.fields.StateField(states=[...], transitions={...})`, never a free or choices `CharField`. Move it with `row.transition("status", "confirmed")` (or assign and `save()`), never with `QuerySet.update()`. The column CHECKs the declared states; an illegal move is E980 (a 400), a concurrent one E981 (a 409).
+
+**Why Karni objects.** A free status column takes any value in any order from any code path; tests pass and production rows end up refunded without ever being paid.
+
+**Fix.** status = StateField(states=[...], transitions={...}); karni make model ... 'status:state:draft>confirmed|draft>cancelled'.
+
+<a id="k115"></a>
+
+### K115 — Stock/slots: reserve(), no_overlap; no check-then-write.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Anything with a limited quantity (seats, stock, licences) is a `CapacityField` consumed only with `karni.capacity.reserve(row, n)` / `release()` inside `transaction.atomic()`; anything that must not overlap in time (rooms, slots, appointments) declares `class Karni: no_overlap = NoOverlap("<resource>", "<range>", ignore={...})`. Never count, compare and then write in Python.
+
+**Why Karni objects.** A read-then-write check never fails in tests and double-books in production: two requests pass it together. The database refuses the oversell or the overlap (CHECK, EXCLUDE) and Karni names it (E985 / E984, a 409).
+
+**Fix.** with transaction.atomic(): reserve(tier, n); create the booking. Slots: no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']}).
 
 <a id="k201"></a>
 

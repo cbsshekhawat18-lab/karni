@@ -27,6 +27,7 @@ class BookingFactory(ModelFactory):
 
     # A booking's event is its tier's event (events.serializers checks it).
     event = factory.LazyAttribute(lambda booking: booking.tier.event)
+    quantity = 1  # each booking reserves seats from its tier (karni.capacity)
 
     # Declare only the fields to change, e.g.:
     # title = factory.Faker("catch_phrase")

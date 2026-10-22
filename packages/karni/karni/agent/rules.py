@@ -442,6 +442,50 @@ RULES: tuple[Rule, ...] = (
         fix="Loop and save(), or add the allow marker with the reason.",
         enforced_by=("audited-bulk-write",),
     ),
+    # lifecycle and limited resources (karni.fields, karni.capacity, karni.constraints)
+    Rule(
+        code="K114",
+        category="backend",
+        severity="must",
+        summary="Status column: StateField + transitions.",
+        rule=(
+            "A lifecycle column (status, state, stage) is "
+            "`karni.fields.StateField(states=[...], transitions={...})`, never a free or "
+            'choices `CharField`. Move it with `row.transition("status", "confirmed")` '
+            "(or assign and `save()`), never with `QuerySet.update()`. The column CHECKs the "
+            "declared states; an illegal move is E980 (a 400), a concurrent one E981 (a 409)."
+        ),
+        rationale=(
+            "A free status column takes any value in any order from any code path; tests pass "
+            "and production rows end up refunded without ever being paid."
+        ),
+        fix=(
+            "status = StateField(states=[...], transitions={...}); "
+            "karni make model ... 'status:state:draft>confirmed|draft>cancelled'."
+        ),
+    ),
+    Rule(
+        code="K115",
+        category="backend",
+        severity="must",
+        summary="Stock/slots: reserve(), no_overlap; no check-then-write.",
+        rule=(
+            "Anything with a limited quantity (seats, stock, licences) is a `CapacityField` "
+            "consumed only with `karni.capacity.reserve(row, n)` / `release()` inside "
+            "`transaction.atomic()`; anything that must not overlap in time (rooms, slots, "
+            'appointments) declares `class Karni: no_overlap = NoOverlap("<resource>", '
+            '"<range>", ignore={...})`. Never count, compare and then write in Python.'
+        ),
+        rationale=(
+            "A read-then-write check never fails in tests and double-books in production: two "
+            "requests pass it together. The database refuses the oversell or the overlap "
+            "(CHECK, EXCLUDE) and Karni names it (E985 / E984, a 409)."
+        ),
+        fix=(
+            "with transaction.atomic(): reserve(tier, n); create the booking. Slots: "
+            "no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']})."
+        ),
+    ),
     Rule(
         code="K103",
         category="backend",
@@ -592,7 +636,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Total new code should be well under 20 lines. If it isn't, stop — you are "
             "reimplementing something Karni provides."
         ),
-        rules=("K009", "K101", "K102", "K109", "K108", "K302", "K305", "K003"),
+        rules=("K009", "K101", "K102", "K109", "K108", "K114", "K115", "K302", "K305", "K003"),
     ),
     Procedure(
         name="new-page",

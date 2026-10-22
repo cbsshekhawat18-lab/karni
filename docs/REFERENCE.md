@@ -598,6 +598,9 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `doc:file / photo:image` | FileField / ImageField(upload_to="&lt;app&gt;/&lt;model&gt;/") — image needs Pillow |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
+| `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
+| `during:datetimerange / nights:daterange` | DateTimeRangeField() / DateRangeField() (PostgreSQL range columns, karni.fields) |
+| `remaining:capacity:quantity` | CapacityField(total="quantity"): consumed with karni.capacity.reserve(); without :total, CapacityField(default=0) |
 | `owner:fk:User` | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) |
 | `venue:fk:Venue / fk:shop.Venue` | ForeignKey("Venue") in the same app, or "app.Model" |
 | `tags:m2m:Tag / profile:o2o:User` | ManyToManyField / OneToOneField |
@@ -937,7 +940,8 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `AuditedModel` | model | `created_by` / `updated_by`, stamped from the current user on save. | fields `created_by`, `updated_by`; managers `objects` (ManagerFromAuditedQuerySet) |
-| `BaseModel` | model | The base every Karni project model inherits: all four mixins. | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`; managers `objects` (BaseManager), `all_objects` |
+| `BaseModel` | model | The base every Karni project model inherits: all four mixins (plus `GuardedModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`; managers `objects` (BaseManager), `all_objects` |
+| `GuardedModel` | model | The model half of `StateField`, `CapacityField` and `no_overlap`. |  |
 | `SoftDeleteManager` | manager | Default manager of `karni.models.SoftDeleteModel`. |  |
 | `SoftDeleteModel` | model | Rows are hidden by `delete()` instead of removed. | fields `deleted_at`; managers `objects` (SoftDeleteManager), `all_objects` |
 | `SoftDeleteQuerySet` | queryset | QuerySet whose `delete()` soft-deletes by stamping `deleted_at`. | methods `delete`, `hard_delete`, `restore`, `alive`, `dead` |
@@ -968,7 +972,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `DEFAULT_ADMIN_EXCLUDE` | constant | `DEFAULT_ADMIN_EXCLUDE`: `sessions`, `contenttypes`, `admin`, `auth.Permission`, `django_celery_results.ChordCounter` |  |
-| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
 | `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
@@ -1012,6 +1016,7 @@ class Lead(BaseModel):
 | `import_lookup` | karni | `{}` | For a relation field, the field of the related model that its import column carries. | `import_lookup = {"customer": "email"}` |
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
+| `no_overlap` | karni | `None` | Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the resource field(s) then the range, or a list of them. PostgreSQL enforces it with an `EXCLUDE` constraint the model's migration creates; soft-deleted rows never block. | `no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})` |
 | `requires_approval` | karni-approvals | unset: never held | Hold changes for a second person's approval: a list of guarded fields, or `True` for any change, create and delete included. | `requires_approval = ["amount", "status"]` |
 | `approvals_required` | karni-approvals | `KARNI_APPROVALS_REQUIRED` (1) | Approvals a pending change needs before it is applied. | `approvals_required = 2` |
 | `approver_roles` | karni-approvals | `KARNI_APPROVALS_APPROVER_ROLES` | Roles that may approve, on top of holding the approve permission. | `approver_roles = ["finance"]` |
@@ -1378,6 +1383,16 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E980`](errors.md#e980) | exception | A StateField change the declared lifecycle does not allow |
+| [`W980`](errors.md#w980) | warning | no_overlap is not enforced on this database |
+| [`E981`](errors.md#e981) | exception | The row's state changed since it was loaded |
+| [`E982`](errors.md#e982) | exception | A new row starts in a state that is not an initial state |
+| [`E983`](errors.md#e983) | exception | A StateField is declared or named wrongly |
+| [`E984`](errors.md#e984) | exception | The slot overlaps an existing row |
+| [`E985`](errors.md#e985) | exception | Not enough capacity left |
+| [`E986`](errors.md#e986) | exception | A capacity counter is used the wrong way |
+| [`E987`](errors.md#e987) | check | A no_overlap declaration is invalid |
+| [`E988`](errors.md#e988) | check | A guarded field on a model without GuardedModel |
 
 ### Modules
 
@@ -1443,6 +1458,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C370`](errors.md#c370) | cli | A state field spec is invalid |
+| [`C371`](errors.md#c371) | cli | A range field spec is invalid |
+| [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
 
 ### Agent rules (`K`)
 
@@ -1468,6 +1486,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K110`](errors.md#k110) | rule | Row rules: in access. |
 | [`K111`](errors.md#k111) | rule | Paginate lists; no N+1. |
 | [`K113`](errors.md#k113) | rule | Audited models: no update()/bulk_update(). |
+| [`K114`](errors.md#k114) | rule | Status column: StateField + transitions. |
+| [`K115`](errors.md#k115) | rule | Stock/slots: reserve(), no_overlap; no check-then-write. |
 | [`K201`](errors.md#k201) | rule | Compose @karni/ui; no raw table/form/input. |
 | [`K202`](errors.md#k202) | rule | Pages: max 50 lines. |
 | [`K203`](errors.md#k203) | rule | Import only the @karni/ui barrel. |

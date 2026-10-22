@@ -150,7 +150,20 @@
                 "$ref": "#/components/schemas/EventsBookingStatusEnum"
               }
             ],
-            "readOnly": true
+            "readOnly": true,
+            "x-karni-initial": [
+              "pending"
+            ],
+            "x-karni-transitions": {
+              "cancelled": [],
+              "confirmed": [
+                "cancelled"
+              ],
+              "pending": [
+                "confirmed",
+                "cancelled"
+              ]
+            }
           },
           "tier": {
             "format": "uuid",
@@ -412,6 +425,10 @@
           "quantity": {
             "type": "integer"
           },
+          "remaining": {
+            "readOnly": true,
+            "type": "integer"
+          },
           "updated_at": {
             "format": "date-time",
             "readOnly": true,
@@ -432,6 +449,7 @@
           "name",
           "price",
           "quantity",
+          "remaining",
           "updated_at",
           "updated_by"
         ],
@@ -6550,6 +6568,27 @@
           {
             "in": "query",
             "name": "quantity__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remaining",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remaining__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remaining__lte",
             "schema": {
               "type": "integer"
             }
