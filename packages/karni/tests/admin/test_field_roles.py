@@ -22,9 +22,13 @@ from tests.testapp.models import Customer
 pytestmark = pytest.mark.django_db
 
 
+#: Random values a page carries: UUIDs (row ids) and long tokens (CSRF, nonces).
+_RANDOM = re.compile(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}|[A-Za-z0-9]{32,}")
+
+
 def _visible(response: Any) -> str:
-    """The page without its random tokens (CSRF, nonces), which can contain "vip" or "9000"."""
-    return re.sub(r"[A-Za-z0-9]{32,}", "", response.content.decode())
+    """The page without its random values, which can contain "vip" or "9000" by chance."""
+    return _RANDOM.sub("", response.content.decode())
 
 
 def _staff(email: str, *roles: str) -> Any:
