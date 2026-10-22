@@ -285,8 +285,20 @@ jobs:
       # Trusted publishing needs npm >= 11.5.1; Node 20 ships npm 10.
       - run: npm install -g npm@^11.5.1
       - name: Build and publish (@karni/ui first; payments-ui peers on it)
+        env:
+          # An NPM_TOKEN secret (an npm automation or granular publish token for
+          # the @karni scope), when set, is used instead of trusted publishing,
+          # like PYPI_API_TOKEN for PyPI. Provenance still comes from this job's
+          # OIDC token.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -n "$NPM_TOKEN" ]; then
+            export NODE_AUTH_TOKEN="$NPM_TOKEN"
+            echo "Using the NPM_TOKEN secret."
+          else
+            echo "No NPM_TOKEN secret: npm trusted publishing."
+          fi
           for d in packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui; do
             (cd "$d" && npm ci && npm run build && npm publish --provenance --access public)
           done
