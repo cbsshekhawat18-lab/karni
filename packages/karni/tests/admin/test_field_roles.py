@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import Any
 
@@ -18,7 +19,13 @@ from karni.accounts.permissions import assign_role
 from karni.admin.base import build_model_admin
 from tests.testapp.models import Customer
 
+
 pytestmark = pytest.mark.django_db
+
+
+def _visible(response: Any) -> str:
+    """The page without its random tokens (CSRF, nonces), which can contain "vip" or "9000"."""
+    return re.sub(r"[A-Za-z0-9]{32,}", "", response.content.decode())
 
 
 def _staff(email: str, *roles: str) -> Any:
@@ -85,7 +92,7 @@ def test_through_the_admin_site() -> None:
     client = Client()
     client.force_login(member)
     changelist = reverse("admin:testapp_customer_changelist")
-    page = client.get(changelist).content.decode()
+    page = _visible(client.get(changelist))
 
     def around(token: str) -> str:
         index = page.find(token)
@@ -100,6 +107,6 @@ def test_through_the_admin_site() -> None:
     assert client.get(changelist, {"q": "Ada"}).context_data["cl"].queryset.count() == 1
     change = client.get(reverse("admin:testapp_customer_change", args=[customer.pk]))
     assert change.status_code == 200
-    body = change.content.decode()
+    body = _visible(change)
     assert "9000" not in body and "vip" not in body
     assert 'name="phone"' not in body and "+1 555 0100" in body  # read-only, still shown
