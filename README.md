@@ -15,6 +15,7 @@ Karni is an open-source Django + React framework for building with AI coding age
   <a href="https://www.npmjs.com/package/@karni/ui"><img alt="npm" src="https://img.shields.io/npm/v/@karni/ui"></a>
   <a href="https://github.com/cbsshekhawat18-lab/karni/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <a href="https://cbsshekhawat18-lab.github.io/karni/"><img alt="Docs" src="https://img.shields.io/badge/docs-online-blue"></a>
+  <a href="https://github.com/cbsshekhawat18-lab/karni/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/cbsshekhawat18-lab/karni?style=social"></a>
 </p>
 
 <p align="center">
@@ -81,6 +82,9 @@ What you get with no other code:
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
 All of EventHub, with payments, e-mail and four roles, is 615 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
+
+> ⭐ **If Karni is useful to you, please star the repo** — it helps other
+> people building Django + React apps with AI coding agents find the project.
 
 ## Why not just use Django or a boilerplate?
 
