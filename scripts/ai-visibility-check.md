@@ -85,6 +85,26 @@ Neither stand-in is the consumer Claude app with its default settings.
 | 2026-10-22 | WebSearch tool, standard, first page | 8 | No | - | - | proxy-dev.blitzz.co, dzone.com, github.com, medium.com |
 | 2026-10-22 | WebSearch tool, standard, first page | 9 | No | - | - | pypi.org |
 | 2026-10-22 | WebSearch tool, standard, first page | 10 | No | - | Tool summary: "I wasn't able to find any information about something called "Karni" as a Django framework." | en.wikipedia.org, blog.webhostpython.com, medium.com, scribd.com, packages.fedoraproject.org |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 1 | no | - | - | github.com |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 2 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 3 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 4 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 5 | no | - | - | github.com |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 6 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 7 | no | - | - | github.com |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 8 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 9 | no | - | - | none |
+| 2026-10-23 | ChatGPT (gpt-6-luna via the Codex CLI on a signed-in ChatGPT account, search on) | 10 | yes | 1 | Karni is a Django and React framework for building web applications. Its idea is to keep shared infrastructure in a versioned dependency: you define your app’s models and access rules, and Karni provides pieces such as REST APIs, an admin interface, permissions, tests, and seed data. It also includes a CLI for scaffolding and generating code. | pypi.org |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 1 | no | - | - | awesome.ecosyste.ms, djangopackages.org, docs.saaspegasus.com, getunblocked.com |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 2 | no | - | - | cursor.directory, github.com |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 3 | no | - | - | none |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 4 | no | - | - | none |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 5 | no | - | - | none |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 6 | no | - | - | github.com |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 7 | no | - | - | cruft.github.io, github.com |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 8 | no | - | - | none |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 9 | no | - | - | none |
+| 2026-10-23 | Claude (claude-opus-5-5 via the Claude Code CLI on a signed-in account, search on) | 10 | no (web search found nothing) | - | not counted: the CLI then read the repository on the local disk, which a public user cannot | none |
 
 The sources column lists the domains of the top five results for the search
 rows.
@@ -96,9 +116,21 @@ had not picked up the site, the repository or the packages. Without search
 the model could not know Karni, because its training data ends before the
 release.
 
-ChatGPT, Perplexity, Gemini and the Claude app with its default settings
-were not run, because they need a person signed in. The person running the
-protocol should run those four and add their rows here.
+Second run: 2026-10-23, with signed-in accounts. ChatGPT (`gpt-6-luna`
+through the Codex CLI) and Claude (`claude-opus-5-5` through the Claude Code
+CLI) each answered the ten questions in fresh sessions with web search on.
+The full answers are in `ai-visibility-2026-10-23.md`. Neither is the
+consumer web app, so these are the closest signed-in stand-ins.
+
+Karni appeared in none of the nine general questions for either assistant.
+Asked about Karni by name, ChatGPT found its PyPI page and described it in
+the canonical framing (a Django and React framework that keeps shared
+infrastructure in a versioned dependency, so you write your models and
+access rules). Claude's web search found nothing, so its answer to question
+10 is not counted.
+
+Gemini and Perplexity have not been run. They need a person signed in to
+those apps, and that person should add their rows here.
 
 What to compare across runs: the share of questions where Karni appears (per
 assistant), its average position, and whether the description repeats the

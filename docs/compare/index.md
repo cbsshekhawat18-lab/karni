@@ -6,7 +6,7 @@ description: How Karni compares with cookiecutter-django, SaaS Pegasus, plain Dj
 
 Each page says what Karni and the alternative both do, where each is the
 better choice, and who should pick which. Every page includes the rows where
-Karni loses: it is version 0.3, released in October 2026, with no known
+Karni loses: it is version 0.4, released in October 2026, with no known
 production deployment and no community yet. Facts about other projects were
 checked on 2026-10-21 and link to their sources.
 

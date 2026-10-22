@@ -26,10 +26,10 @@ and an explicit serializer or view is always allowed.
 - **Flexibility.** Every package is chosen and replaceable, and nothing sits
   between the project and Django. Karni adds conventions (UUID keys, a base
   model, an `access` rule per resource) that a project accepts with it.
-- **Versions.** DRF supports Django 5.2, 6.0 and 6.1, while Karni 0.3 supports
+- **Versions.** DRF supports Django 5.2, 6.0 and 6.1, while Karni 0.4 supports
   Django 5.2 LTS only.
 - **Long-term support.** Django's release and security policy is documented
-  and proven over two decades. Karni is version 0.3 under a stability promise
+  and proven over two decades. Karni is version 0.4 under a stability promise
   that has not yet been tested across a major release.
 
 ## Where Karni is the better choice

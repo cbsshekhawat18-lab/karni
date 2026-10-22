@@ -31,7 +31,7 @@ have a documented way to bring a new release into an existing project.
 - **Front-end choice.** Pegasus offers HTMX or React (and a Vue example) with
   several CSS frameworks. Karni supports React only.
 - **Newer Django.** Pegasus's open-source edition targets Django 6 on Python
-  3.14, while Karni 0.3 supports Django 5.2 LTS on Python 3.12 to 3.14.
+  3.14, while Karni 0.4 supports Django 5.2 LTS on Python 3.12 to 3.14.
 
 ## Where Karni is the better choice
 

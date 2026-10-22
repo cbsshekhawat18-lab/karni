@@ -129,7 +129,7 @@ Without Python 3.12 on your machine, run the `karni` command from its container 
 | Serializers, viewsets, admin, permissions per model | you write them | you write them | generated once, then yours | derived from the model and its `access` rule |
 | An upstream fix reaches your code | only for Django itself | no | by regenerating and merging | through `karni upgrade` |
 | Teams, subscriptions, multi-tenancy | no | no | yes, mature | no (payments only, as a module) |
-| Maturity | the standard | large community, many years in production | large, actively supported | version 0.3, two reference apps |
+| Maturity | the standard | large community, many years in production | large, actively supported | version 0.4, two reference apps |
 | Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated Docker Compose stack, not yet verified end to end |
 | AI agent guidance in the project | none | none in the generated project | rule files, CLAUDE.md / AGENTS.md, Claude Code skills and MCP | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
 

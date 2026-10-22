@@ -30,7 +30,7 @@ assembling a project by hand.
 - **No runtime dependency.** The generated project is plain Django, so nothing
   ties it to cookiecutter-django after generation. A Karni project depends on
   the `karni` package at runtime.
-- **Newer Django.** cookiecutter-django targets Django 6.0, while Karni 0.3 supports
+- **Newer Django.** cookiecutter-django targets Django 6.0, while Karni 0.4 supports
   Django 5.2 LTS only.
 - **Community.** cookiecutter-django has a Discord server, a Stack Overflow tag
   and a listing in awesome-django. Karni has none of these yet.
@@ -66,7 +66,7 @@ framework is an acceptable risk.
 | | cookiecutter-django | Karni |
 |---|---|---|
 | What you get | a generated project you own | a dependency you upgrade, plus a scaffold |
-| First release / maturity | 2013, about 480 contributors | October 2026, version 0.3 |
+| First release / maturity | 2013, about 480 contributors | October 2026, version 0.4 |
 | Django version | 6.0 | 5.2 LTS |
 | React front end | not offered | `@karni/ui`, schema-driven |
 | REST API | optional DRF or Django Ninja, written per model | DRF, derived from each model and its `access` rule |
