@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import keyword
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from karni_cli.generators import lifecycle_fields
 from karni_cli.generators.naming import pascal, snake
 from karni_cli.generators.pysource import Import, call, pystr
 from karni_cli.project import CliError
@@ -27,17 +29,28 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ("price:decimal[:max:places]", "DecimalField(max_digits=max, decimal_places=places) — 10, 2"),
     ("done:bool", "BooleanField(default=False)"),
     ("day:date / at:datetime", "DateField() / DateTimeField()"),
+    ("site:url[:len]", "URLField()"),
+    # typed fields (karni.fields): the column, constraint and index the intent needs
+    ("price:money:EUR", 'MoneyField(currency="EUR") — NUMERIC(19,4), Decimal only'),
     (
-        "email:email / site:url / slug:slug",
-        "EmailField() / URLField() / SlugField() (:len optional)",
+        "price:money",
+        'MoneyField(currency_field="price_currency") + price_currency = CurrencyField()',
     ),
-    ("meta:json", "JSONField(default=dict)"),
+    ("rate:percent[:min:max]", "PercentField() — CHECK between the bounds (0..100)"),
+    ("stock:quantity", "QuantityField(default=0) — CHECK >= 0"),
+    ("email:email[:unique]", "EmailField() — unique=True is case-insensitive (LOWER index)"),
+    ("slug:slug[:source]", 'SlugField(populate_from="source") — unique among live rows (:len too)'),
+    ("phone:phone", "PhoneField() — E.164, CHECK format"),
+    ("country:country / currency:currency", "CountryField() / CurrencyField() — CHECK ISO list"),
+    ("meta:json[:queried]", "JSONField(default=dict) — queried adds a GIN index"),
+    ("tags:array:str[:len]", "ArrayField(models.CharField(...)) — PostgreSQL only, GIN index"),
     (
         "doc:file / photo:image",
         'FileField / ImageField(upload_to="<app>/<model>/") — image needs Pillow',
     ),
     ("ref:uuid", "UUIDField(default=uuid.uuid4)"),
     ("status:choice:draft|live", "a TextChoices class + CharField(choices=..., default=first)"),
+    *lifecycle_fields.FIELD_DOCS,  # state, ranges, capacity
     ("owner:fk:User", "ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)"),
     ("venue:fk:Venue / fk:shop.Venue", 'ForeignKey("Venue") in the same app, or "app.Model"'),
     ("tags:m2m:Tag / profile:o2o:User", "ManyToManyField / OneToOneField"),
@@ -76,7 +89,8 @@ ALIASES = {
     "onetoone": "o2o",
 }
 
-TYPES = (
+#: Django-field types rendered inline by :func:`render_model_body`.
+_DJANGO_TYPES = (
     "str",
     "text",
     "int",
@@ -85,20 +99,32 @@ TYPES = (
     "bool",
     "date",
     "datetime",
-    "email",
     "url",
-    "slug",
-    "json",
     "file",
     "image",
     "uuid",
     "choice",
+    *lifecycle_fields.TYPES,  # state, daterange, datetimerange, capacity
     "fk",
     "m2m",
     "o2o",
 )
 
-_STRINGISH = frozenset({"str", "text", "email", "url", "slug", "file", "image", "choice"})
+_STRINGISH = frozenset(
+    {
+        "str",
+        "text",
+        "email",
+        "url",
+        "slug",
+        "file",
+        "image",
+        "choice",
+        "phone",
+        "country",
+        "currency",
+    }
+)
 _RELATIONS = {"fk": "ForeignKey", "o2o": "OneToOneField", "m2m": "ManyToManyField"}
 _SIMPLE = {
     "text": "TextField",
@@ -225,10 +251,12 @@ def render_model_body(
     targets = [resolve[s.name].key for s in specs if s.is_relation]
     for spec in specs:
         head = f"{spec.name} = models."
-        if spec.kind in {"str", "email", "url", "slug"}:
-            django = {"str": "CharField", "email": "EmailField", "url": "URLField"}.get(
-                spec.kind, "SlugField"
-            )
+        typed = TYPED.get(spec.kind)
+        if typed is not None:
+            typed(spec, out, indent, line_length, specs)
+            continue
+        if spec.kind in {"str", "url"}:
+            django = {"str": "CharField", "url": "URLField"}[spec.kind]
             args: list[str] = []
             if spec.kind == "str":
                 args.append(f"max_length={_int_arg(spec, 0, 255, 'max_length')}")
@@ -254,9 +282,6 @@ def render_model_body(
         elif spec.kind == "bool":
             args = _optional_kwargs(spec) or ["default=False"]
             out.lines.append(call(head + "BooleanField", args, indent, line_length))
-        elif spec.kind == "json":
-            args = _optional_kwargs(spec) or ["default=dict"]
-            out.lines.append(call(head + "JSONField", args, indent, line_length))
         elif spec.kind == "uuid":
             if spec.optional:
                 args = _optional_kwargs(spec)
@@ -276,6 +301,9 @@ def render_model_body(
                 )
         elif spec.kind == "choice":
             _render_choice(spec, out, indent, line_length)
+        elif spec.kind in lifecycle_fields.TYPES:
+            names = {s.name for s in specs}
+            lifecycle_fields.render(spec, out, indent, line_length, model, names)
         else:
             target = resolve[spec.name]
             args = [target.expr]
@@ -341,3 +369,197 @@ def relation_name(spec: FieldSpec) -> str:
 
 def is_user_target(name: str) -> bool:
     return name.lower() in _USER_NAMES
+
+
+# --- typed fields (karni.fields) ---------------------------------------------
+# One renderer per DSL type, in TYPED below: adding a type is one function and
+# one entry (plus its FIELD_DOCS line). Renderers import from karni.fields and
+# never import it: the CLI does not need Django.
+
+TypedRenderer = Callable[[FieldSpec, Rendered, str, int, list[FieldSpec]], None]
+
+_CURRENCY = re.compile(r"^[A-Z]{3}$")
+_ARRAY_BASES = {
+    "str": "CharField",
+    "text": "TextField",
+    "int": "IntegerField",
+    "bool": "BooleanField",
+    "date": "DateField",
+    "datetime": "DateTimeField",
+    "uuid": "UUIDField",
+}
+
+
+def _typed_line(
+    spec: FieldSpec, out: Rendered, kind: str, args: list[str], indent: str, line_length: int
+) -> None:
+    out.lines.append(call(f"{spec.name} = {kind}", args, indent, line_length))
+    out.imports.append(Import("karni.fields", kind))
+
+
+def _render_money(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    currency = spec.args[0].upper() if spec.args and spec.args[0] else ""
+    if currency and not _CURRENCY.match(currency):
+        raise CliError(
+            f"Field {spec.name}: money currency {spec.args[0]!r} is not an ISO 4217 code — "
+            f"write {spec.name}:money:EUR (three letters), or {spec.name}:money for a "
+            "currency per row.",
+            code="C360",
+        )
+    if currency:
+        _typed_line(
+            spec,
+            out,
+            "MoneyField",
+            [f"currency={pystr(currency)}", *_optional_kwargs(spec)],
+            indent,
+            line_length,
+        )
+        return
+    companion = f"{spec.name}_currency"
+    if any(other.name == companion for other in specs):
+        raise CliError(
+            f"Field {spec.name}: {spec.name}:money adds {companion} = CurrencyField(), but "
+            f"{companion} is declared too — drop it, or write {spec.name}:money:EUR.",
+            code="C360",
+        )
+    companion_args = ["blank=True"] if spec.optional else []  # a string: blank, never null
+    out.lines.append(call(f"{companion} = CurrencyField", companion_args, indent, line_length))
+    out.imports.append(Import("karni.fields", "CurrencyField"))
+    args = [f"currency_field={pystr(companion)}", *_optional_kwargs(spec)]
+    _typed_line(spec, out, "MoneyField", args, indent, line_length)
+
+
+def _number_arg(spec: FieldSpec, index: int, what: str) -> str | None:
+    if len(spec.args) <= index or spec.args[index] == "":
+        return None
+    value = spec.args[index]
+    if not re.fullmatch(r"-?\d+", value):
+        raise CliError(f"Field {spec.name}: {what} must be an integer, got {value!r}.", code="C360")
+    return value
+
+
+def _render_percent(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    low, high = _number_arg(spec, 0, "min_value"), _number_arg(spec, 1, "max_value")
+    if low is not None and high is not None and int(low) > int(high):
+        raise CliError(
+            f"Field {spec.name}: percent bounds {low}..{high} are reversed.", code="C360"
+        )
+    args = [*([f"min_value={low}"] if low else []), *([f"max_value={high}"] if high else [])]
+    _typed_line(
+        spec,
+        out,
+        "PercentField",
+        args + (_optional_kwargs(spec) or ["default=0"]),
+        indent,
+        line_length,
+    )
+
+
+def _render_quantity(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    _typed_line(
+        spec, out, "QuantityField", _optional_kwargs(spec) or ["default=0"], indent, line_length
+    )
+
+
+def _render_email(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    flag = spec.args[0] if spec.args else ""
+    if flag not in ("", "unique"):
+        raise CliError(
+            f"Field {spec.name}: email takes :unique or nothing, got {flag!r} "
+            f"(e.g. {spec.name}:email:unique).",
+            code="C360",
+        )
+    args = ["unique=True"] if flag == "unique" else []
+    _typed_line(spec, out, "EmailField", args + _optional_kwargs(spec), indent, line_length)
+
+
+def _render_slug(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    arg = spec.args[0] if spec.args else ""
+    args: list[str] = []
+    if arg.isdigit():
+        args.append(f"max_length={_int_arg(spec, 0, 50, 'max_length')}")
+    elif arg:
+        if not any(other.name == arg for other in specs):
+            raise CliError(
+                f"Field {spec.name}: slug source {arg!r} is not a field of this model — "
+                f"declare it (e.g. {arg}:str:200) or name another, {spec.name}:slug:title.",
+                code="C360",
+            )
+        args.append(f"populate_from={pystr(arg)}")
+    _typed_line(spec, out, "SlugField", args + _optional_kwargs(spec), indent, line_length)
+
+
+def _code_renderer(kind: str) -> TypedRenderer:
+    def render(
+        spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+    ) -> None:
+        _typed_line(spec, out, kind, _optional_kwargs(spec), indent, line_length)
+
+    return render
+
+
+def _render_json(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    flag = spec.args[0] if spec.args else ""
+    if flag not in ("", "queried"):
+        raise CliError(
+            f"Field {spec.name}: json takes :queried or nothing, got {flag!r}.", code="C360"
+        )
+    args = (_optional_kwargs(spec) or ["default=dict"]) + (["queried=True"] if flag else [])
+    _typed_line(spec, out, "JSONField", args, indent, line_length)
+
+
+def _render_array(
+    spec: FieldSpec, out: Rendered, indent: str, line_length: int, specs: list[FieldSpec]
+) -> None:
+    base = spec.args[0] if spec.args else ""
+    if base not in _ARRAY_BASES:
+        raise CliError(
+            f"Field {spec.name}: array needs a base type ({', '.join(_ARRAY_BASES)}), e.g. "
+            f"{spec.name}:array:str:40. Arrays are PostgreSQL-only; json works everywhere.",
+            code="C360",
+        )
+    inner = f"models.{_ARRAY_BASES[base]}"
+    if base == "str":
+        length = _int_arg(
+            FieldSpec(spec.name, spec.kind, spec.args[1:], False), 0, 50, "max_length"
+        )
+        inner += f"(max_length={length})"
+    else:
+        inner += "()"
+    args = [inner, *(_optional_kwargs(spec) or ["default=list", "blank=True"])]
+    _typed_line(spec, out, "ArrayField", args, indent, line_length)
+    out.imports.append(Import("django.db", "models"))
+    out.notes.append(
+        f"note: {spec.name} is an ArrayField — PostgreSQL only (karni.E964 on any other "
+        "database); json is the portable list."
+    )
+
+
+#: DSL type -> renderer for Karni's typed fields (see the section comment).
+TYPED: dict[str, TypedRenderer] = {
+    "money": _render_money,
+    "percent": _render_percent,
+    "quantity": _render_quantity,
+    "email": _render_email,
+    "slug": _render_slug,
+    "phone": _code_renderer("PhoneField"),
+    "country": _code_renderer("CountryField"),
+    "currency": _code_renderer("CurrencyField"),
+    "json": _render_json,
+    "array": _render_array,
+}
+
+TYPES = (*_DJANGO_TYPES, *TYPED)

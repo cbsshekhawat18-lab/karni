@@ -432,6 +432,55 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and "
         "reinstall), then run karni queries again. karni doctor shows both versions.",
     ),
+    # C36x typed fields (karni.fields): the make model DSL and karni schema
+    _c(
+        "C360",
+        "A typed-field argument in the model DSL is invalid",
+        "karni make model (money, percent, email, slug, json, array fields)",
+        "Typed fields take arguments that name the database guarantee: a money field's ISO "
+        "4217 currency, a percentage's integer bounds, the field a slug is built from (it must "
+        "be declared in the same command), an array's base type.",
+        "Fix the field the message names: price:money:EUR, rate:percent:0:100, "
+        "slug:slug:title, email:email:unique, meta:json:queried, tags:array:str:40. "
+        "`karni make model --help` lists them.",
+    ),
+    _c(
+        "C361",
+        "The project's karni has no karni schema",
+        "karni schema",
+        "karni schema runs `manage.py karni_schema` in the project's interpreter; a karni "
+        "older than the typed field layer does not have it.",
+        "Upgrade the project's karni (karni upgrade, then reinstall the project's "
+        "dependencies); `karni doctor` shows which karni the project uses.",
+    ),
+    # C37x field DSL: lifecycle columns and limited resources
+    _c(
+        "C370",
+        "A state field spec is invalid",
+        "karni make model (name:state:...)",
+        "A state column lists its states (draft,confirmed,cancelled) or its moves "
+        "(draft>confirmed|draft>cancelled); the first state is where rows start, so every "
+        "other state must be reachable from it, and a state column is never optional.",
+        "Write e.g. 'status:state:draft>confirmed>refunded|draft>cancelled', or list the states "
+        "and edit the generated transitions={...}.",
+    ),
+    _c(
+        "C371",
+        "A range field spec is invalid",
+        "karni make model (name:daterange, name:datetimerange)",
+        "Range columns take no arguments: daterange is a PostgreSQL daterange, "
+        "datetimerange a tstzrange.",
+        "Write 'during:datetimerange' or 'nights:daterange' (add ? for an optional one).",
+    ),
+    _c(
+        "C372",
+        "A capacity field spec is invalid",
+        "karni make model (name:capacity[:total])",
+        "A capacity counter optionally names the integer field holding the total, which must "
+        "be declared in the same command; it is never optional.",
+        "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
+        "counter that starts at 0.",
+    ),
 )
 
 

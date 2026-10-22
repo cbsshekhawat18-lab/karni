@@ -1864,7 +1864,7 @@
     "/api/auth/permissions/effective/{user_id}/": {
       "get": {
         "description": "``GET permissions/effective/[<user id>/]`` \u2014 what a user may do, and why.",
-        "operationId": "auth_permissions_effective_retrieve_2",
+        "operationId": "auth_permissions_effective_by_user_id_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -2561,7 +2561,7 @@
     "/api/events/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "events_import_retrieve_2",
+        "operationId": "events_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -3365,7 +3365,7 @@
     "/api/loose-slots/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "loose_slots_import_retrieve_2",
+        "operationId": "loose_slots_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -4150,7 +4150,7 @@
     "/api/slots/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "slots_import_retrieve_2",
+        "operationId": "slots_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -4970,7 +4970,7 @@
     "/api/users/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "users_import_retrieve_2",
+        "operationId": "users_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -5772,7 +5772,7 @@
     "/api/venues/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "venues_import_retrieve_2",
+        "operationId": "venues_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",

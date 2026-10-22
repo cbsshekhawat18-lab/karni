@@ -495,3 +495,10 @@ def _stand_in_user(user_model: Any) -> Any:
     pk = user_model._meta.pk
     value: Any = uuid.uuid4() if isinstance(pk, dj_models.UUIDField) else 1
     return user_model(pk=value)
+
+
+# Registered by importing the modules; each check lives with what it guards:
+# lifecycle and limited resources, E986 / E987 / E988 / W980 (karni.guard_checks),
+# and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
+from karni import guard_checks as _guard_checks  # noqa: E402,F401
+from karni.fields import checks as _field_checks  # noqa: E402,F401

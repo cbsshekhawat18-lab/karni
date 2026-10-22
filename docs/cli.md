@@ -27,7 +27,7 @@ traceback; `KARNI_DB_CHECK=false` skips the check.
 - **Frontend**: [ui](#karni-ui)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Debugging**: [queries](#karni-queries)
-- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
@@ -370,6 +370,31 @@ karni routes [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+### `karni schema`
+
+Every column, constraint and index, and the declaration behind each — wraps `manage.py karni_schema`.
+
+Per model: column types and CHECKs, unique constraints (partial on soft-deletable models), indexes (Django's FK indexes, Karni's GIN/BRIN), each with why it exists and whether the database has it; the columns viewsets search, filter or order by, with the index serving each.
+
+Example:
+
+```sh
+karni schema events --json
+```
+
+```
+karni schema [OPTIONS] [LABELS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `LABELS...` |  | App labels or app.Model (default: every model of your own apps). |
+| `--json` |  | Print the report as JSON (for agents). |
+| `--no-db` |  | Report the declarations only; do not read the database. |
+| `--database` TEXT | `default` | Database alias to describe. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### `karni worker`
 
 Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`.
@@ -618,11 +643,23 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `price:decimal[:max:places]` | DecimalField(max_digits=max, decimal_places=places) — 10, 2 |
 | `done:bool` | BooleanField(default=False) |
 | `day:date / at:datetime` | DateField() / DateTimeField() |
-| `email:email / site:url / slug:slug` | EmailField() / URLField() / SlugField() (:len optional) |
-| `meta:json` | JSONField(default=dict) |
+| `site:url[:len]` | URLField() |
+| `price:money:EUR` | MoneyField(currency="EUR") — NUMERIC(19,4), Decimal only |
+| `price:money` | MoneyField(currency_field="price_currency") + price_currency = CurrencyField() |
+| `rate:percent[:min:max]` | PercentField() — CHECK between the bounds (0..100) |
+| `stock:quantity` | QuantityField(default=0) — CHECK &gt;= 0 |
+| `email:email[:unique]` | EmailField() — unique=True is case-insensitive (LOWER index) |
+| `slug:slug[:source]` | SlugField(populate_from="source") — unique among live rows (:len too) |
+| `phone:phone` | PhoneField() — E.164, CHECK format |
+| `country:country / currency:currency` | CountryField() / CurrencyField() — CHECK ISO list |
+| `meta:json[:queried]` | JSONField(default=dict) — queried adds a GIN index |
+| `tags:array:str[:len]` | ArrayField(models.CharField(...)) — PostgreSQL only, GIN index |
 | `doc:file / photo:image` | FileField / ImageField(upload_to="&lt;app&gt;/&lt;model&gt;/") — image needs Pillow |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
+| `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
+| `during:datetimerange / nights:daterange` | DateTimeRangeField() / DateRangeField() (PostgreSQL range columns, karni.fields) |
+| `remaining:capacity:quantity` | CapacityField(total="quantity"): consumed with karni.capacity.reserve(); without :total, CapacityField(default=0) |
 | `owner:fk:User` | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) |
 | `venue:fk:Venue / fk:shop.Venue` | ForeignKey("Venue") in the same app, or "app.Model" |
 | `tags:m2m:Tag / profile:o2o:User` | ManyToManyField / OneToOneField |
@@ -661,7 +698,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `NAME` (required) |  | Model class name, PascalCase (e.g. Event). |
-| `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime email url slug json file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; trailing ? = optional. |
+| `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime url file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; typed (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] slug[:source] phone country currency json[:queried] array:str; trailing ? = optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |

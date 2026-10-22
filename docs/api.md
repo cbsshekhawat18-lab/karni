@@ -329,14 +329,19 @@ class Event(BaseModel):
 ```python
 class Booking(BaseModel):
     def clean(self):
-        if self.quantity > self.tier.remaining:
-            raise ValidationError({"quantity": f"Only {self.tier.remaining} seats left."})
+        if self.tier.event_id != self.event_id:
+            raise ValidationError({"tier": "This ticket tier belongs to another event."})
 ```
 
 The generated serializer runs `clean()` on the would-be row before every
 create and update — including the values the viewset stamps on save, such as
 owner fields — and a `django.core.exceptions.ValidationError` becomes the 400
 response, keyed by field. No serializer is needed for a cross-field rule.
+A rule that depends on *other* rows ("only N seats left", "the room is free")
+does not belong in `clean()`: two requests pass the check together. Declare it
+so the database enforces it — a `CapacityField` consumed with
+`karni.capacity.reserve()`, or `class Karni: no_overlap` — and the API answers
+409 naming the conflict ([lifecycle and capacity](lifecycle-and-capacity.md)).
 Opt out per model with `APIMeta.validate = False`; an explicit
 `serializer_class` built on `KarniModelSerializer` keeps the behaviour and can
 override `run_model_clean()`.
@@ -634,6 +639,12 @@ class CatalogueViewSet(BaseViewSet):
 - `karni.api.search.simple.SimpleSearchProvider` — OR of `icontains` across
   `search_fields`; works on any database (karni's own test suite uses it on
   sqlite).
+
+With a [`SearchField`](fields.md#jsonfield-searchfield-arrayfield) on the
+model (named in `search_fields`, or covering every listed field), the
+PostgreSQL provider matches through its stored, GIN-indexed tsvector instead:
+every word is a prefix, all words must match, rows rank by `ts_rank`, and no
+trigram leg is added (`similarity()` cannot use an index).
 
 Rank ordering vs `?ordering=`: search runs **after** ordering in the filter
 pipeline; when the client did not pass an explicit `?ordering=`, results are

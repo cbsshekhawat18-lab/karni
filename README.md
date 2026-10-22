@@ -81,7 +81,7 @@ What you get with no other code:
 - permissions: everyone reads, organizers and staff write
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
-All of EventHub, with payments, e-mail and four roles, is 608 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
+All of EventHub, with payments, e-mail and four roles, is 615 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
 
 > ⭐ **If Karni is useful to you, please star the repo.** It helps other
 > people building Django + React apps with AI coding agents find the project.
@@ -245,6 +245,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni test`](docs/REFERENCE.md#karni-test) | Run the test suite — wraps `python -m pytest [ARGS]` |
 | [`karni shell`](docs/REFERENCE.md#karni-shell) | Open a Django shell — wraps `manage.py shell [ARGS]` |
 | [`karni routes`](docs/REFERENCE.md#karni-routes) | List every URL: methods, name, view, model, access — wraps `manage.py karni_routes` |
+| [`karni schema`](docs/REFERENCE.md#karni-schema) | Every column, constraint and index, and the declaration behind each — wraps `manage.py karni_schema` |
 | [`karni worker`](docs/REFERENCE.md#karni-worker) | Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]` |
 | [`karni beat`](docs/REFERENCE.md#karni-beat) | Run Celery beat — wraps `python -m celery -A config beat -l info [ARGS]` |
 | [`karni schedule`](docs/REFERENCE.md#karni-schedule) | Celery beat schedules — wraps `manage.py karni_schedules`: [list](docs/REFERENCE.md#karni-schedule-list), [run](docs/REFERENCE.md#karni-schedule-run) |
@@ -278,7 +279,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
 
-Base classes: `AuditedModel`, `BaseModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
+Base classes: `AuditedModel`, `BaseModel`, `GuardedModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
 <!-- /generated:models -->
 
 Full reference: [base classes](docs/REFERENCE.md#base-classes) and [`class Karni` keys](docs/REFERENCE.md#model-metadata-class-karni).
@@ -419,7 +420,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 40 conventions, each with a code, in 498 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 43 conventions, each with a code, in 535 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

@@ -177,8 +177,10 @@ def command(
         None,
         help=(
             "Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] "
-            "bool date datetime email url slug json file image uuid choice:a|b fk:Model "
-            "m2m:Model o2o:Model; trailing ? = optional."
+            "bool date datetime url file image uuid choice:a|b fk:Model m2m:Model o2o:Model; "
+            "typed (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] "
+            "slug[:source] phone country currency json[:queried] array:str; "
+            "trailing ? = optional."
         ),
         show_default=False,
     ),

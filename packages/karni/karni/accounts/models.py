@@ -207,6 +207,9 @@ class Role(BaseModel):
         """Every change to a role is history (``karni.audit``, ADR 0002 P5)."""
 
         audit = True
+        cascade: ClassVar[dict[str, str]] = {
+            "group": "a role is the Karni face of its auth Group and cannot outlive it",
+        }
 
     def __str__(self) -> str:
         return self.name
@@ -284,6 +287,10 @@ class RolePermission(BaseModel):
         """The permission system's own audit trail: who changed which grant, from what."""
 
         audit = True
+        cascade: ClassVar[dict[str, str]] = {
+            "role": "a grant is part of its role; deleting the role revokes it",
+            "permission": "a grant of a permission that no longer exists grants nothing",
+        }
 
     def __str__(self) -> str:
         suffix = f":{self.scope_path}" if self.scope_path else ""

@@ -11,6 +11,82 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Fixed: exporting a nested relation crashed.** A serializer that nests
+  related rows (`many=True`, or `?expand=`) made CSV and XLSX exports fail
+  with `TypeError: unhashable type: 'dict'`. Nested rows now export by the
+  related model's natural key, the same as a plain relation.
+- **Fixed: restoring a deleted row skipped its listeners.** New
+  `karni.events.on_restored`, the counterpart of `on_deleted`. It runs inside
+  the restore's transaction, so a listener that raises undoes the restore.
+  `SoftDeleteModel.delete()` and `restore()` now run in a transaction with
+  their listeners. The admin's delete and restore actions now go row by row,
+  so `on_deleted` and `on_restored` run there too (they used one bulk
+  `UPDATE` and fired nothing). A row a listener refuses is reported and the
+  rest are restored. EventHub uses this to take a restored booking's seats
+  again. A sold-out tier refuses the restore with E985.
+- **Fixed: duplicate OpenAPI operation IDs.** `GET <resource>/import/` and
+  `GET <resource>/import/{job}/` shared one ID, and so did the two
+  effective-permissions routes, so generated clients got `_retrieve_2`
+  names. A route that ends in a path parameter now gets `_by_<param>`, for
+  example `events_import_by_job_retrieve`. Clients generated from the schema
+  rename those two functions. The standard detail IDs do not change.
+- **Fixed: booking one slot at the same moment could fail with a 500.**
+  PostgreSQL sometimes settled several concurrent writes against a
+  `no_overlap` constraint with a deadlock instead of the overlap error.
+  Writes to one resource (one room, say) now take turns through a
+  transaction-scoped advisory lock, so the second writer sees the first
+  one's row and gets the 409 (E984).
+- Query budgets no longer count `SAVEPOINT` statements or those advisory
+  locks. They come from `transaction.atomic()` nesting and locking, not from
+  reading data.
+- **Typed fields: the database enforces what a value is (`karni.fields`).**
+  `MoneyField` (NUMERIC(19,4), a declared currency, floats refused with
+  `E962`, a declared rounding rule; `quantize`/`split`/`allocate` never lose
+  a cent), `PercentField` and `QuantityField` (CHECK bounds),
+  `EmailField` (unique on `LOWER(email)`), `SlugField` (generated,
+  collision-free), `PhoneField` (E.164 CHECK), `CountryField`/`CurrencyField`
+  (CHECK against shipped ISO 3166-1 / ISO 4217 lists), `JSONField(queried=True)`
+  and `ArrayField` (GIN), and `SearchField` (a generated tsvector with a GIN
+  index the default search provider matches through). Unique Karni fields and
+  the new `LiveUniqueConstraint` are partial on soft-deletable models, so a
+  deleted row frees its value. Every guarantee is proven with raw SQL on
+  PostgreSQL and, where portable, SQLite. New checks: `E960` (a FloatField
+  named like money fails boot), `W965` (CASCADE on a financial or audited
+  model), `E964`/`W964` (a field or guarantee the configured database lacks),
+  `W967` (a searched, filtered or ordered column without an index), plus
+  `E961`, `E963`, `E968`, `E970`; `class Karni:` gains `append_only` (BRIN),
+  `cascade`, `financial` and `not_money`. `karni schema` (`manage.py
+  karni_schema`, `--json`) lists every column, constraint and index, why it
+  exists and whether the database has it. `karni.accounts` 0005 creates
+  `btree_gist`; `CreateExtension` names the exact SQL (`E966`) when the role
+  may not. `karni make model` gains `money[:EUR]`, `percent`, `quantity`,
+  `email[:unique]`, `slug[:source]`, `phone`, `country`, `currency`,
+  `json[:queried]` and `array:<type>` (`email`, `slug` and `json` now write
+  the Karni fields). Rule K114. See [docs/fields.md](docs/fields.md).
+- **Lifecycle columns and limited resources, enforced by the database**
+  ([docs/lifecycle-and-capacity.md](docs/lifecycle-and-capacity.md)).
+  `karni.fields.StateField(states=..., transitions=...)` declares a status
+  column's states (a `CHECK` on the column) and its legal moves:
+  `row.transition("status", "confirmed")` or assignment + `save()` is checked
+  against the state the row was loaded with (`E980`, `E982`, a 400 in the
+  API), written with a conditional `UPDATE ... WHERE status = <loaded>` so two
+  concurrent transitions never both succeed (`E981`, a 409), recorded in the
+  change log (action `transition`) and announced by
+  `karni.lifecycle.state_changed` / `@on_transition`. The OpenAPI schema
+  carries `x-karni-transitions` and `x-karni-initial`.
+  `karni.fields.CapacityField(total=...)` is a counter the database keeps
+  between zero and its total, consumed only with `karni.capacity.reserve()` /
+  `release()` (a locked, conditional `UPDATE`; `E985`, a 409, names what is
+  left). `class Karni: no_overlap = NoOverlap("room", "during", ignore=...)`
+  adds a PostgreSQL `EXCLUDE USING gist` constraint (creating `btree_gist`
+  when first applied) that ignores soft-deleted and released rows (`E984`, a
+  409 naming the existing row); off PostgreSQL it is not enforced and
+  `karni.W980` says so. New: `karni.fields.DateRangeField` /
+  `DateTimeRangeField`, `karni.models.GuardedModel` (part of `BaseModel`),
+  `karni make model` types `state`, `daterange`, `datetimerange` and
+  `capacity`, agent rules `K115` and `K116`, codes `E980`–`E988`, `W980` and
+  `C370`–`C372`. EventHub's ticket tiers and bookings use them (615 lines of
+  project code, measured).
 - **`karni why`: an access decision explained by the code that makes it.**
   `karni why events/<id> --as alice@example.com [--action update]`,
   `karni why events.<field> --as ...`, `karni why-empty events --as ...` and

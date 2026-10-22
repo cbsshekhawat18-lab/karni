@@ -1195,6 +1195,226 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the exception the traceback names (karni explain - explains a pasted traceback), then run karni queries again.
 
+<a id="e960"></a>
+
+#### E960 — A FloatField holds money
+
+*system check (error)* · from `karni.fields.checks.check_money_floats`
+
+**Why Karni objects.** A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, ...) is a FloatField. Binary floats cannot represent most cent values, so sums drift (0.1 + 0.2 != 0.3) and totals stop reconciling; no test with round numbers notices.
+
+**Fix.** Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from karni.fields, a PercentField for a rate, then karni make migration. If the field is not money, declare `class Karni: not_money = {"field": "<what it is>"}`.
+
+<a id="e961"></a>
+
+#### E961 — A MoneyField's currency is not declared
+
+*exception* · from `karni.fields.MoneyField; karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** An amount without a currency is ambiguous: 10.00 of what? MoneyField needs exactly one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model that holds each row's currency.
+
+**Fix.** Write `MoneyField(currency="EUR")`, or `MoneyField(currency_field="currency")` with `currency = CurrencyField()` on the model.
+
+<a id="e962"></a>
+
+#### E962 — A float reached a MoneyField
+
+*exception* · from `karni.fields.MoneyField; karni.fields.quantize / allocate / split`
+
+**Why Karni objects.** Money is stored and computed as Decimal. A float has already lost the exact value before Karni sees it (Decimal(0.1) is 0.1000000000000000055...), so assigning one or using one in a lookup is refused rather than silently rounded.
+
+**Fix.** Pass a Decimal (`Decimal("9.99")`), an int, or a string. Parse user input with Decimal(str), never float(str).
+
+<a id="e963"></a>
+
+#### E963 — A typed field declaration cannot work
+
+*exception* · from `karni.fields (PercentField, SlugField, SearchField, CountryField, CurrencyField, MoneyField); karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** The arguments contradict each other or name something the model lacks: bounds that do not fit max_digits, a populate_from or SearchField source that is not a field, a code outside the ISO list, an unknown rounding mode or text search configuration.
+
+**Fix.** Fix the argument the message names; docs/fields.md lists every field's arguments.
+
+<a id="e964"></a>
+
+#### E964 — A field cannot work on the configured database
+
+*system check (error)* · from `karni.fields.checks.check_backends`
+
+**Why Karni objects.** The field needs PostgreSQL (an ArrayField: array columns exist nowhere else), but a database in DATABASES that migrates this model is another backend. migrate would fail with a syntax error; the check says which field instead.
+
+**Fix.** Point that database at PostgreSQL, or replace the field with the portable one the message names (a JSONField holding a list instead of an ArrayField).
+
+<a id="w964"></a>
+
+#### W964 — A PostgreSQL guarantee is missing on the configured database
+
+*system check (warning)* · from `karni.fields.checks.check_backends`
+
+**Why Karni objects.** The model works on this database but without something PostgreSQL provides: exact NUMERIC storage (SQLite keeps NUMERIC as a binary float), a GIN index, the tsvector column, the E.164 CHECK, or partial unique indexes.
+
+**Fix.** Fine for tests and local development on SQLite; run production on PostgreSQL. Silence karni.W964 where the difference is deliberate.
+
+<a id="w965"></a>
+
+#### W965 — A foreign key on a financial or audited model cascades
+
+*system check (warning)* · from `karni.fields.checks.check_cascades`
+
+**Why Karni objects.** on_delete=CASCADE on a model that holds money (a MoneyField, a money-named decimal, a payments-like model) or keeps history (Karni.audit) means hard-deleting the referenced row silently deletes those rows too: payments, refunds or audit trails vanish.
+
+**Fix.** Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL (null=True), then karni make migration. If the cascade is intended, declare it with the reason: `class Karni: cascade = {"<field>": "<why>"}`.
+
+<a id="e966"></a>
+
+#### E966 — A PostgreSQL extension could not be created
+
+*exception* · from `karni.fields.extensions.ensure_extension / CreateExtension (karni.accounts 0005)`
+
+**Why Karni objects.** A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database; the others need a superuser.
+
+**Fix.** Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON DATABASE "<db>" TO "<role>";`. Then migrate again.
+
+<a id="w967"></a>
+
+#### W967 — A searched, filtered or ordered column has no index
+
+*system check (warning)* · from `karni.fields.checks.check_usage_indexes; karni schema`
+
+**Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production.
+
+**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then karni make migration; `karni schema <app>` shows what serves each column. Silence karni.W967 for a table small enough to scan.
+
+<a id="e968"></a>
+
+#### E968 — LiveUniqueConstraint on a model without soft delete
+
+*system check (error)* · from `karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL; a model without soft delete has no deleted_at, so the constraint cannot be created.
+
+**Fix.** Use models.UniqueConstraint, or inherit karni.models.BaseModel (or SoftDeleteModel).
+
+<a id="e969"></a>
+
+#### E969 — karni schema was given an unknown app or model
+
+*exception* · from `manage.py karni_schema (karni schema)`
+
+**Why Karni objects.** karni schema reports the models you name, by app label or app.Model.
+
+**Fix.** Pass labels `karni context` lists (events, events.Event), or none for every model of your own apps.
+
+<a id="e970"></a>
+
+#### E970 — A field-layer Karni option is malformed
+
+*system check (error)* · from `karni.fields.checks (Karni.not_money, Karni.cascade, Karni.append_only)`
+
+**Why Karni objects.** Opt-outs need a reason per field so the next reader knows the choice was deliberate; append_only names columns that only grow.
+
+**Fix.** Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, `append_only = True` or a list of existing timestamp columns.
+
+<a id="e980"></a>
+
+#### E980 — A StateField change the declared lifecycle does not allow
+
+*exception* · from `karni.lifecycle (save(), transition(), StateField.validate, the generated serializer)`
+
+**Why Karni objects.** A StateField declares its states and the transitions between them. Moving a row along an undeclared transition (out of a terminal state, backwards, or to a value that is not a state) is refused before any SQL: from the ORM, the admin (a form error), the API (a 400 on the field), commands and tasks alike. The column's CHECK constraint refuses an undeclared value from raw SQL too.
+
+**Fix.** Move the row to one of the legal states the message lists (instance.transition('<field>', '<state>'), or allowed_transitions('<field>') to ask), or add the transition to the field's transitions= if the lifecycle should allow it.
+
+<a id="w980"></a>
+
+#### W980 — no_overlap is not enforced on this database
+
+*system check (warning)* · from `karni.checks.check_guarded_models`
+
+**Why Karni objects.** Only PostgreSQL has EXCLUDE constraints. On SQLite (or any other backend) the NoOverlap constraint creates nothing, so overlapping rows are accepted. The StateField and CapacityField CHECK constraints do work on SQLite.
+
+**Fix.** Use PostgreSQL wherever overlaps matter (production, CI); silence karni.W980 only for a development database where accepting overlaps is fine.
+
+<a id="e981"></a>
+
+#### E981 — The row's state changed since it was loaded
+
+*exception* · from `karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)`
+
+**Why Karni objects.** A save that writes a StateField updates the row only if it still holds the state it was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed it first, so nothing was written; two concurrent transitions from one state can never both succeed. The API answers 409.
+
+**Fix.** Reload the row (refresh_from_db()) and decide again from the state the message names; in a UI, show the new state and let the user retry.
+
+<a id="e982"></a>
+
+#### E982 — A new row starts in a state that is not an initial state
+
+*exception* · from `karni.lifecycle (save() of a new row, the generated serializer's create)`
+
+**Why Karni objects.** A StateField row is created in one of its initial states (default: the default state) and reaches the others through transitions, so a client cannot create an order that is already 'paid'. Karni's factories and seeders may create any state (karni.lifecycle.any_initial_state).
+
+**Fix.** Create the row in an initial state and call .transition(...), list the state in initial= if rows may legitimately start there, or wrap data loading in any_initial_state(reason='...').
+
+<a id="e983"></a>
+
+#### E983 — A StateField is declared or named wrongly
+
+*exception* · from `karni.fields.StateField; karni.lifecycle.transition`
+
+**Why Karni objects.** The lifecycle must be complete and unambiguous: every state named in transitions or initial is declared, states use letters, digits, _ and - (they go into a CHECK constraint), every state is reachable, and transition() names a StateField.
+
+**Fix.** Fix the declaration the message names: declare the missing state, drop the self-transition, add a transition into an unreachable state, or name the right field.
+
+<a id="e984"></a>
+
+#### E984 — The slot overlaps an existing row
+
+*exception* · from `karni.constraints.NoOverlap (class Karni: no_overlap)`
+
+**Why Karni objects.** PostgreSQL's EXCLUDE constraint refused the row because another live row of the same resource overlaps its range. The check runs in the database, so it holds under concurrency and against raw SQL; soft-deleted rows and the states listed in ignore= never block. The API answers 409 naming the existing row.
+
+**Fix.** Pick a free slot, or cancel or delete the row the message names first. Touching ranges ([10:00, 11:00) and [11:00, 12:00)) do not overlap.
+
+<a id="e985"></a>
+
+#### E985 — Not enough capacity left
+
+*exception* · from `karni.capacity.reserve; the CapacityField CHECK constraint`
+
+**Why Karni objects.** A CapacityField counts what is left of a limited resource and its CHECK keeps it at or above zero. reserve() locks the row and refuses when fewer units remain than were asked for; lowering the total below what is already reserved is refused the same way. The API answers 409 with the resource and the remaining count.
+
+**Fix.** Ask for at most the remaining count the message gives, offer another resource or a waiting list, or release reservations before lowering the total.
+
+<a id="e986"></a>
+
+#### E986 — A capacity counter is used the wrong way
+
+*exception* · from `karni.capacity.reserve / release; CapacityField; karni.checks`
+
+**Why Karni objects.** Capacity is consumed only through reserve() and release(), inside transaction.atomic() together with the write that uses it, by a positive quantity. Assigning the counter directly would let a stale instance overwrite reservations; releasing more than was reserved means a double release.
+
+**Fix.** Call reserve(resource, quantity) / release(...) inside transaction.atomic(); change the total field to resize; point CapacityField(total=...) at an integer field of the same model.
+
+<a id="e987"></a>
+
+#### E987 — A no_overlap declaration is invalid
+
+*system check (error)* · from `karni.constraints.NoOverlap; karni.checks.check_guarded_models`
+
+**Why Karni objects.** NoOverlap takes the resource field(s) and then the range: a range field (DateTimeRangeField, DateRangeField) or a (start, end) pair of date, date-time or number fields. ignore= must name model fields and, for a StateField, declared states.
+
+**Fix.** Fix the declaration the message names, e.g. no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']}).
+
+<a id="e988"></a>
+
+#### E988 — A guarded field on a model without GuardedModel
+
+*system check (error)* · from `karni.checks.check_guarded_models`
+
+**Why Karni objects.** StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the loaded-state tracking, the conditional UPDATE, the transition history and the named conflicts. Without it saves would skip all of that silently.
+
+**Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>
@@ -1883,6 +2103,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and reinstall), then run karni queries again. karni doctor shows both versions.
 
+<a id="c360"></a>
+
+### C360 — A typed-field argument in the model DSL is invalid
+
+*karni command* · from `karni make model (money, percent, email, slug, json, array fields)`
+
+**Why Karni objects.** Typed fields take arguments that name the database guarantee: a money field's ISO 4217 currency, a percentage's integer bounds, the field a slug is built from (it must be declared in the same command), an array's base type.
+
+**Fix.** Fix the field the message names: price:money:EUR, rate:percent:0:100, slug:slug:title, email:email:unique, meta:json:queried, tags:array:str:40. `karni make model --help` lists them.
+
+<a id="c361"></a>
+
+### C361 — The project's karni has no karni schema
+
+*karni command* · from `karni schema`
+
+**Why Karni objects.** karni schema runs `manage.py karni_schema` in the project's interpreter; a karni older than the typed field layer does not have it.
+
+**Fix.** Upgrade the project's karni (karni upgrade, then reinstall the project's dependencies); `karni doctor` shows which karni the project uses.
+
+<a id="c370"></a>
+
+### C370 — A state field spec is invalid
+
+*karni command* · from `karni make model (name:state:...)`
+
+**Why Karni objects.** A state column lists its states (draft,confirmed,cancelled) or its moves (draft>confirmed|draft>cancelled); the first state is where rows start, so every other state must be reachable from it, and a state column is never optional.
+
+**Fix.** Write e.g. 'status:state:draft>confirmed>refunded|draft>cancelled', or list the states and edit the generated transitions={...}.
+
+<a id="c371"></a>
+
+### C371 — A range field spec is invalid
+
+*karni command* · from `karni make model (name:daterange, name:datetimerange)`
+
+**Why Karni objects.** Range columns take no arguments: daterange is a PostgreSQL daterange, datetimerange a tstzrange.
+
+**Fix.** Write 'during:datetimerange' or 'nights:daterange' (add ? for an optional one).
+
+<a id="c372"></a>
+
+### C372 — A capacity field spec is invalid
+
+*karni command* · from `karni make model (name:capacity[:total])`
+
+**Why Karni objects.** A capacity counter optionally names the integer field holding the total, which must be declared in the same command; it is never optional.
+
+**Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -2198,6 +2468,42 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A silent gap in the history is exactly the bug someone discovers during an audit; the rule names every bulk write on an audited model at build time.
 
 **Fix.** Loop and save(), or add the allow marker with the reason.
+
+<a id="k114"></a>
+
+### K114 — Money: MoneyField, never float.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists.
+
+**Why Karni objects.** Float money, free-text codes and case-sensitive unique emails pass every test and fail in production; a database constraint is the one layer raw SQL, bulk updates and other services cannot skip.
+
+**Fix.** karni make model Product price:money:EUR stock:quantity country:country email:email:unique (field types: karni make model --help).
+
+<a id="k115"></a>
+
+### K115 — Status column: StateField + transitions.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** A lifecycle column (status, state, stage) is `karni.fields.StateField(states=[...], transitions={...})`, never a free or choices `CharField`. Move it with `row.transition("status", "confirmed")` (or assign and `save()`), never with `QuerySet.update()`. The column CHECKs the declared states; an illegal move is E980 (a 400), a concurrent one E981 (a 409).
+
+**Why Karni objects.** A free status column takes any value in any order from any code path; tests pass and production rows end up refunded without ever being paid.
+
+**Fix.** status = StateField(states=[...], transitions={...}); karni make model ... 'status:state:draft>confirmed|draft>cancelled'.
+
+<a id="k116"></a>
+
+### K116 — Stock/slots: reserve(), no_overlap; no check-then-write.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Anything with a limited quantity (seats, stock, licences) is a `CapacityField` consumed only with `karni.capacity.reserve(row, n)` / `release()` inside `transaction.atomic()`; anything that must not overlap in time (rooms, slots, appointments) declares `class Karni: no_overlap = NoOverlap("<resource>", "<range>", ignore={...})`. Never count, compare and then write in Python.
+
+**Why Karni objects.** A read-then-write check never fails in tests and double-books in production: two requests pass it together. The database refuses the oversell or the overlap (CHECK, EXCLUDE) and Karni names it (E985 / E984, a 409).
+
+**Fix.** with transaction.atomic(): reserve(tier, n); create the booking. Slots: no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']}).
 
 <a id="k201"></a>
 

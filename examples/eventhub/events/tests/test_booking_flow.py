@@ -5,6 +5,8 @@ from decimal import Decimal
 
 import pytest
 from django.core import mail
+from karni.capacity import CapacityExceeded
+from karni.lifecycle import IllegalTransition
 from karni.testing.factories import create
 from karni_payments.models import Payment
 from karni_payments.providers.test import TestProvider
@@ -79,9 +81,55 @@ def test_an_attendee_books_pays_and_is_confirmed_by_the_webhook(
 def test_bookings_never_exceed_the_tier(client_as):
     tier = create(TicketTier, quantity=3)
     client = client_as("attendee")
-    assert book(client, tier, quantity=3).status_code == 201
+    first = book(client, tier, quantity=3)
+    assert first.status_code == 201
     over = book(client, tier, quantity=1)
-    assert over.status_code == 400 and "0 seats left" in over.json()["quantity"][0]
+    assert over.status_code == 409 and over.json()["code"] == "E985"  # the database refused it
+    assert over.json()["conflict"]["remaining"] == 0 and "is sold out" in over.json()["detail"]
+    # Cancelling gives the seats back; changing the tickets of a booking is refused.
+    cancelled = client.post(f"/api/bookings/{first.json()['id']}/cancel/")
+    assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled"
+    tier.refresh_from_db()
+    assert tier.remaining == 3
+    again = book(client, tier, quantity=2)
+    edit = client.patch(
+        f"/api/bookings/{again.json()['id']}/", json.dumps({"quantity": 3}),
+        content_type="application/json",
+    )
+    assert edit.status_code == 400 and "book again" in edit.json()["quantity"][0]
+    assert client.delete(f"/api/bookings/{again.json()['id']}/").status_code == 204
+    tier.refresh_from_db()
+    assert tier.remaining == 3  # a deleted booking frees its seats too
+
+
+def test_a_restored_booking_takes_its_seats_again(client_as):
+    tier = create(TicketTier, quantity=3)
+    client = client_as("attendee")
+    booking = Booking.objects.get(pk=book(client, tier, quantity=2).json()["id"])
+    booking.delete()
+    tier.refresh_from_db()
+    assert tier.remaining == 3  # deleting gave the seats back
+    booking.restore()
+    tier.refresh_from_db()
+    assert tier.remaining == 1  # restoring took them again
+    # Sold out in the meantime: the restore is refused and the booking stays deleted.
+    booking.delete()
+    assert book(client, tier, quantity=3).status_code == 201
+    with pytest.raises(CapacityExceeded):
+        booking.restore()
+    assert booking.is_deleted
+    booking.refresh_from_db()
+    assert booking.is_deleted
+    tier.refresh_from_db()
+    assert tier.remaining == 0
+
+
+def test_a_confirmed_booking_cannot_go_back_to_pending(client_as):
+    tier = create(TicketTier, quantity=5)
+    booking = Booking.objects.get(pk=book(client_as("attendee"), tier).json()["id"])
+    booking.transition("status", "confirmed")
+    with pytest.raises(IllegalTransition, match="legal transitions are: 'cancelled'"):
+        booking.transition("status", "pending")
 
 
 def test_only_published_events_take_bookings(client_as):

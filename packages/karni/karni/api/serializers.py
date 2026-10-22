@@ -59,8 +59,10 @@ from rest_framework.relations import (
     ManyRelatedField,
     PrimaryKeyRelatedField,
 )
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.api.lifecycle import StateChoiceField, lifecycle_errors, serializer_field
 from karni.api.related import readable_related, related_scope
 from karni.exceptions import KarniImproperlyConfigured
 
@@ -277,6 +279,17 @@ class KarniModelSerializer(serializers.ModelSerializer):
         stay with the model.
         """
         field_class, kwargs = super().build_standard_field(field_name, model_field)
+        live_unique = _live_unique_validator(model_field)
+        if live_unique is not None:
+            kwargs["validators"] = [
+                v for v in kwargs.get("validators", []) if not isinstance(v, UniqueValidator)
+            ] + [live_unique]
+        lifecycle = serializer_field(model_field)  # StateField / range fields (karni.api.lifecycle)
+        if lifecycle is not None:
+            field_class = lifecycle[0]
+            kwargs.update(lifecycle[1])
+            if field_class is not StateChoiceField:
+                kwargs.pop("choices", None)
         default = model_field.default if model_field.has_default() else None
         if (
             model_field.has_default()
@@ -288,13 +301,48 @@ class KarniModelSerializer(serializers.ModelSerializer):
             kwargs["default"] = default
         return field_class, kwargs
 
+    def get_unique_together_validators(self) -> list[Any]:
+        """DRF's, plus one per multi-field ``LiveUniqueConstraint`` (live rows only).
+
+        DRF skips a constraint whose condition names a field the serializer
+        lacks (``deleted_at``); the default manager already hides deleted
+        rows, so checking it is exactly the constraint's condition.
+        """
+        from karni.fields.constraints import LiveUniqueConstraint
+
+        validators = list(super().get_unique_together_validators())
+        model = self.Meta.model
+        writable = {name for name, f in self.fields.items() if not f.read_only}
+        for constraint in model._meta.constraints:
+            names = list(constraint.fields) if isinstance(constraint, LiveUniqueConstraint) else []
+            if len(names) < 2 or constraint.extra_condition is not None:
+                continue
+            if set(names) <= writable:
+                validators.append(
+                    UniqueTogetherValidator(queryset=model._default_manager.all(), fields=names)
+                )
+        return validators
+
     def create(self, validated_data: dict[str, Any]) -> Any:
+        self.run_lifecycle_checks(validated_data)
         self.run_model_clean(validated_data)
         return super().create(validated_data)
 
     def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
+        self.run_lifecycle_checks(validated_data, instance)
         self.run_model_clean(validated_data, instance)
         return super().update(instance, validated_data)
+
+    def run_lifecycle_checks(self, validated_data: dict[str, Any], instance: Any = None) -> None:
+        """A StateField change the lifecycle forbids is a 400 on the field (``E980`` / ``E982``).
+
+        Checked against the state the row was loaded with; the save repeats
+        the check and makes the ``UPDATE`` conditional, so a concurrent
+        change still cannot slip through. Override to skip or extend it.
+        """
+        errors = lifecycle_errors(self.Meta.model, validated_data, instance)
+        if errors:
+            raise serializers.ValidationError(errors)
 
     def run_model_clean(self, validated_data: dict[str, Any], instance: Any = None) -> None:
         """Run ``Model.clean()`` on the would-be row; its errors become a 400.
@@ -318,6 +366,37 @@ class KarniModelSerializer(serializers.ModelSerializer):
             probe.clean()
         except DjangoValidationError as exc:
             raise serializers.ValidationError(serializers.as_serializer_error(exc)) from exc
+
+
+def _live_unique_validator(model_field: Any) -> UniqueValidator | None:
+    """The uniqueness check for a Karni unique field or a one-field ``LiveUniqueConstraint``.
+
+    DRF derives none for them (the constraint names ``deleted_at`` or an
+    expression), so a duplicate would reach the database as an IntegrityError
+    instead of a 400. The default manager hides deleted rows, matching the
+    partial index; a case-insensitive field compares with ``iexact``.
+    """
+    from karni.fields.constraints import LiveUniqueConstraint
+
+    model = getattr(model_field, "model", None)
+    if model is None:
+        return None
+    single_live = any(
+        isinstance(c, LiveUniqueConstraint)
+        and list(c.fields) == [model_field.name]
+        and c.extra_condition is None
+        for c in model._meta.constraints
+    )
+    if not (getattr(model_field, "karni_unique", False) or single_live):
+        return None
+    lookup = "iexact" if getattr(model_field, "case_insensitive_unique", False) else "exact"
+    return UniqueValidator(
+        queryset=model._default_manager.all(),
+        lookup=lookup,
+        message=(
+            f"A {model._meta.verbose_name} with this {model_field.verbose_name} already exists."
+        ),
+    )
 
 
 def serializer_name(model: type[Model], expand: frozenset[str] = frozenset()) -> str:
@@ -447,8 +526,16 @@ def _is_user_model(model: type[Model]) -> bool:
 
 
 def _default_field_names(model: type[Model]) -> list[str]:
-    """Default field set: concrete fields plus declared M2Ms, sans password."""
-    names = [field.name for field in model._meta.concrete_fields]
+    """Default field set: concrete fields plus declared M2Ms, sans password.
+
+    Generated columns (a ``karni.fields.SearchField``) are left out: they are
+    an index of the data, not data.
+    """
+    names = [
+        field.name
+        for field in model._meta.concrete_fields
+        if not getattr(field, "generated", False)
+    ]
     names += [field.name for field in model._meta.many_to_many]
     return [name for name in names if name not in ("password", "deleted_at")]
 

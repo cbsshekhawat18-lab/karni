@@ -17,8 +17,11 @@ viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
 ``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
-``E8xx`` import and export · ``E9xx``/``W9xx`` debugging (``karni why``, request
-ids, the development capture, ``karni trace``, ``karni replay``, ``karni queries``).
+``E8xx`` import and export · ``E90x``–``E94x``/``W92x`` debugging (``karni
+why``, request ids, the development capture, ``karni trace``, ``karni replay``,
+``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
+(``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
+(``StateField``, capacity, ``no_overlap``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1329,6 +1332,260 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "and what karni explain recognises in it.",
         "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
         "then run karni queries again.",
+    ),
+    # E96x-E97x typed fields and database guarantees (karni.fields: E960-E970, W964-W967)
+    _e(
+        "E960",
+        "A FloatField holds money",
+        "check",
+        "karni.fields.checks.check_money_floats",
+        "A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, "
+        "...) is a FloatField. Binary floats cannot represent most cent values, so sums drift "
+        "(0.1 + 0.2 != 0.3) and totals stop reconciling; no test with round numbers notices.",
+        'Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from '
+        "karni.fields, a PercentField for a rate, then karni make migration. If the field is "
+        'not money, declare `class Karni: not_money = {"field": "<what it is>"}`.',
+    ),
+    _e(
+        "E961",
+        "A MoneyField's currency is not declared",
+        "exception",
+        "karni.fields.MoneyField; karni.fields.checks.check_field_declarations",
+        "An amount without a currency is ambiguous: 10.00 of what? MoneyField needs exactly "
+        "one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model that "
+        "holds each row's currency.",
+        'Write `MoneyField(currency="EUR")`, or `MoneyField(currency_field="currency")` '
+        "with `currency = CurrencyField()` on the model.",
+    ),
+    _e(
+        "E962",
+        "A float reached a MoneyField",
+        "exception",
+        "karni.fields.MoneyField; karni.fields.quantize / allocate / split",
+        "Money is stored and computed as Decimal. A float has already lost the exact value "
+        "before Karni sees it (Decimal(0.1) is 0.1000000000000000055...), so assigning one or "
+        "using one in a lookup is refused rather than silently rounded.",
+        'Pass a Decimal (`Decimal("9.99")`), an int, or a string. Parse user input with '
+        "Decimal(str), never float(str).",
+    ),
+    _e(
+        "E963",
+        "A typed field declaration cannot work",
+        "exception",
+        "karni.fields (PercentField, SlugField, SearchField, CountryField, CurrencyField, "
+        "MoneyField); karni.fields.checks.check_field_declarations",
+        "The arguments contradict each other or name something the model lacks: bounds that "
+        "do not fit max_digits, a populate_from or SearchField source that is not a field, a "
+        "code outside the ISO list, an unknown rounding mode or text search configuration.",
+        "Fix the argument the message names; docs/fields.md lists every field's arguments.",
+    ),
+    _e(
+        "E964",
+        "A field cannot work on the configured database",
+        "check",
+        "karni.fields.checks.check_backends",
+        "The field needs PostgreSQL (an ArrayField: array columns exist nowhere else), but a "
+        "database in DATABASES that migrates this model is another backend. migrate would fail "
+        "with a syntax error; the check says which field instead.",
+        "Point that database at PostgreSQL, or replace the field with the portable one the "
+        "message names (a JSONField holding a list instead of an ArrayField).",
+    ),
+    _e(
+        "W964",
+        "A PostgreSQL guarantee is missing on the configured database",
+        "warning",
+        "karni.fields.checks.check_backends",
+        "The model works on this database but without something PostgreSQL provides: exact "
+        "NUMERIC storage (SQLite keeps NUMERIC as a binary float), a GIN index, the tsvector "
+        "column, the E.164 CHECK, or partial unique indexes.",
+        "Fine for tests and local development on SQLite; run production on PostgreSQL. "
+        "Silence karni.W964 where the difference is deliberate.",
+    ),
+    _e(
+        "W965",
+        "A foreign key on a financial or audited model cascades",
+        "warning",
+        "karni.fields.checks.check_cascades",
+        "on_delete=CASCADE on a model that holds money (a MoneyField, a money-named decimal, a "
+        "payments-like model) or keeps history (Karni.audit) means hard-deleting the referenced "
+        "row silently deletes those rows too: payments, refunds or audit trails vanish.",
+        "Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL "
+        "(null=True), then karni make migration. If the cascade is intended, declare it with "
+        'the reason: `class Karni: cascade = {"<field>": "<why>"}`.',
+    ),
+    _e(
+        "E966",
+        "A PostgreSQL extension could not be created",
+        "exception",
+        "karni.fields.extensions.ensure_extension / CreateExtension (karni.accounts 0005)",
+        "A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may "
+        "not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database; the "
+        "others need a superuser.",
+        "Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a "
+        "superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON "
+        'DATABASE "<db>" TO "<role>";`. Then migrate again.',
+    ),
+    _e(
+        "W967",
+        "A searched, filtered or ordered column has no index",
+        "warning",
+        "karni.fields.checks.check_usage_indexes; karni schema",
+        "A routed viewset declares search_fields, filterset_fields, ordering_fields or an "
+        "ordering on a column no index covers, so every such list request reads the whole "
+        "table. Fast with seed data, slow in production.",
+        "Add the index the message names to Meta.indexes (a SearchField for search), then karni "
+        "make migration; `karni schema <app>` shows what serves each column. Silence "
+        "karni.W967 for a table small enough to scan.",
+    ),
+    _e(
+        "E968",
+        "LiveUniqueConstraint on a model without soft delete",
+        "check",
+        "karni.fields.checks.check_field_declarations",
+        "LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL; a model "
+        "without soft delete has no deleted_at, so the constraint cannot be created.",
+        "Use models.UniqueConstraint, or inherit karni.models.BaseModel (or SoftDeleteModel).",
+    ),
+    _e(
+        "E969",
+        "karni schema was given an unknown app or model",
+        "exception",
+        "manage.py karni_schema (karni schema)",
+        "karni schema reports the models you name, by app label or app.Model.",
+        "Pass labels `karni context` lists (events, events.Event), or none for every model of "
+        "your own apps.",
+    ),
+    _e(
+        "E970",
+        "A field-layer Karni option is malformed",
+        "check",
+        "karni.fields.checks (Karni.not_money, Karni.cascade, Karni.append_only)",
+        "Opt-outs need a reason per field so the next reader knows the choice was deliberate; "
+        "append_only names columns that only grow.",
+        'Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, '
+        "`append_only = True` or a list of existing timestamp columns.",
+    ),
+    # E98x lifecycle (StateField) and limited resources (capacity, no_overlap)
+    _e(
+        "E980",
+        "A StateField change the declared lifecycle does not allow",
+        "exception",
+        "karni.lifecycle (save(), transition(), StateField.validate, the generated serializer)",
+        "A StateField declares its states and the transitions between them. Moving a row "
+        "along an undeclared transition (out of a terminal state, backwards, or to a value "
+        "that is not a state) is refused before any SQL: from the ORM, the admin (a form "
+        "error), the API (a 400 on the field), commands and tasks alike. The column's CHECK "
+        "constraint refuses an undeclared value from raw SQL too.",
+        "Move the row to one of the legal states the message lists (instance.transition("
+        "'<field>', '<state>'), or allowed_transitions('<field>') to ask), or add the "
+        "transition to the field's transitions= if the lifecycle should allow it.",
+    ),
+    _e(
+        "E981",
+        "The row's state changed since it was loaded",
+        "exception",
+        "karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)",
+        "A save that writes a StateField updates the row only if it still holds the state it "
+        "was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed "
+        "it first, so nothing was written; two concurrent transitions from one state can "
+        "never both succeed. The API answers 409.",
+        "Reload the row (refresh_from_db()) and decide again from the state the message "
+        "names; in a UI, show the new state and let the user retry.",
+    ),
+    _e(
+        "E982",
+        "A new row starts in a state that is not an initial state",
+        "exception",
+        "karni.lifecycle (save() of a new row, the generated serializer's create)",
+        "A StateField row is created in one of its initial states (default: the default "
+        "state) and reaches the others through transitions, so a client cannot create an "
+        "order that is already 'paid'. Karni's factories and seeders may create any state "
+        "(karni.lifecycle.any_initial_state).",
+        "Create the row in an initial state and call .transition(...), list the state in "
+        "initial= if rows may legitimately start there, or wrap data loading in "
+        "any_initial_state(reason='...').",
+    ),
+    _e(
+        "E983",
+        "A StateField is declared or named wrongly",
+        "exception",
+        "karni.fields.StateField; karni.lifecycle.transition",
+        "The lifecycle must be complete and unambiguous: every state named in transitions or "
+        "initial is declared, states use letters, digits, _ and - (they go into a CHECK "
+        "constraint), every state is reachable, and transition() names a StateField.",
+        "Fix the declaration the message names: declare the missing state, drop the "
+        "self-transition, add a transition into an unreachable state, or name the right "
+        "field.",
+    ),
+    _e(
+        "E984",
+        "The slot overlaps an existing row",
+        "exception",
+        "karni.constraints.NoOverlap (class Karni: no_overlap)",
+        "PostgreSQL's EXCLUDE constraint refused the row because another live row of the same "
+        "resource overlaps its range. The check runs in the database, so it holds under "
+        "concurrency and against raw SQL; soft-deleted rows and the states listed in "
+        "ignore= never block. The API answers 409 naming the existing row.",
+        "Pick a free slot, or cancel or delete the row the message names first. Touching "
+        "ranges ([10:00, 11:00) and [11:00, 12:00)) do not overlap.",
+    ),
+    _e(
+        "E985",
+        "Not enough capacity left",
+        "exception",
+        "karni.capacity.reserve; the CapacityField CHECK constraint",
+        "A CapacityField counts what is left of a limited resource and its CHECK keeps it at "
+        "or above zero. reserve() locks the row and refuses when fewer units remain than were "
+        "asked for; lowering the total below what is already reserved is refused the same "
+        "way. The API answers 409 with the resource and the remaining count.",
+        "Ask for at most the remaining count the message gives, offer another resource or a "
+        "waiting list, or release reservations before lowering the total.",
+    ),
+    _e(
+        "E986",
+        "A capacity counter is used the wrong way",
+        "exception",
+        "karni.capacity.reserve / release; CapacityField; karni.checks",
+        "Capacity is consumed only through reserve() and release(), inside "
+        "transaction.atomic() together with the write that uses it, by a positive quantity. "
+        "Assigning the counter directly would let a stale instance overwrite reservations; "
+        "releasing more than was reserved means a double release.",
+        "Call reserve(resource, quantity) / release(...) inside transaction.atomic(); change "
+        "the total field to resize; point CapacityField(total=...) at an integer field of the "
+        "same model.",
+    ),
+    _e(
+        "E987",
+        "A no_overlap declaration is invalid",
+        "check",
+        "karni.constraints.NoOverlap; karni.checks.check_guarded_models",
+        "NoOverlap takes the resource field(s) and then the range: a range field "
+        "(DateTimeRangeField, DateRangeField) or a (start, end) pair of date, date-time or "
+        "number fields. ignore= must name model fields and, for a StateField, declared states.",
+        "Fix the declaration the message names, e.g. no_overlap = NoOverlap('room', 'during', "
+        "ignore={'status': ['cancelled']}).",
+    ),
+    _e(
+        "E988",
+        "A guarded field on a model without GuardedModel",
+        "check",
+        "karni.checks.check_guarded_models",
+        "StateField, CapacityField and NoOverlap rely on karni.models.GuardedModel for the "
+        "loaded-state tracking, the conditional UPDATE, the transition history and the named "
+        "conflicts. Without it saves would skip all of that silently.",
+        "Inherit karni.models.BaseModel (which includes GuardedModel), or add "
+        "karni.models.GuardedModel to the model's bases.",
+    ),
+    _e(
+        "W980",
+        "no_overlap is not enforced on this database",
+        "warning",
+        "karni.checks.check_guarded_models",
+        "Only PostgreSQL has EXCLUDE constraints. On SQLite (or any other backend) the "
+        "NoOverlap constraint creates nothing, so overlapping rows are accepted. The "
+        "StateField and CapacityField CHECK constraints do work on SQLite.",
+        "Use PostgreSQL wherever overlaps matter (production, CI); silence karni.W980 only "
+        "for a development database where accepting overlaps is fine.",
     ),
 )
 

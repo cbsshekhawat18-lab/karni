@@ -735,6 +735,21 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         """
         return Response(exc.payload, status=exc.status)
 
+    def handle_exception(self, exc: Exception) -> Response:
+        """Lifecycle and capacity errors become API answers, from any action.
+
+        An illegal transition (``E980`` / ``E982``) is a 400 on the field; a
+        conflict (``E981`` state changed concurrently, ``E984`` slot taken,
+        ``E985`` sold out, or an ``IntegrityError`` from those constraints) is
+        a 409 whose body names it (:func:`karni.conflicts.api_exception`).
+        Override / escape hatch: override this method, or catch the error in
+        the action.
+        """
+        from karni.conflicts import api_exception
+
+        response: Response = super().handle_exception(api_exception(exc) or exc)
+        return response
+
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         try:
             response: Response = super().create(request, *args, **kwargs)

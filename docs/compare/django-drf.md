@@ -39,7 +39,7 @@ and an explicit serializer or view is always allowed.
   entry, a front-end data layer and tests; in Karni the model and an `access`
   rule produce them ([the API](../api.md), [testing](../testing.md)). Karni's
   reference application, with ticketing, payments, a Celery email and four
-  roles, is 608 lines of project code ([tutorial](../tutorial.md)).
+  roles, is 615 lines of project code ([tutorial](../tutorial.md)).
 - **Row-level permissions.** One `access` rule is compiled into both the
   request check and the queryset filter, and a row outside the user's scope is
   a 404 on every endpoint, filter, export and expansion

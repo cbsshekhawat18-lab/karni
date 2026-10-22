@@ -44,7 +44,7 @@ A Karni resource needs the model, an `access` rule and whatever is specific to
 the domain; the REST API, admin, permissions, React table and form, tests and
 seed data come from the framework. In Karni's reference application, EventHub,
 the `Venue` resource is a five-line model and a four-line viewset, and the
-whole application (ticketing, payments, a Celery email, four roles) is 608
+whole application (ticketing, payments, a Celery email, four roles) is 615
 lines of project code, as measured in the [tutorial](tutorial.md).
 
 ## Is Karni production-ready?

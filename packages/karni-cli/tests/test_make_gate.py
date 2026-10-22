@@ -45,12 +45,19 @@ SEQUENCE: list[list[str]] = [
     ["make", "model", "Tag", "label:slug", "--app", "shop", "--with", "viewset",
      "--access", "public-read"],
     ["make", "model", "Venue", "name:str:120", "city:str?", "--app", "events"],
+    ["make", "model", "Product", "name:str:120", "slug:slug:name", "price:money:EUR",
+     "cost:money?", "rate:percent:0:100", "stock:quantity", "phone:phone?", "country:country?",
+     "currency:currency?", "email:email:unique", "meta:json:queried", "tags:array:str:30?",
+     "--app", "shop"],
     ["make:model", "Event", "title:str:200", "body:text?", "starts_at:datetime",
      "day:date?", "status:choice:draft|published|in-review", "organizer:fk:User",
      "venue:fk:Venue?", "capacity:int?", "ratio:float?", "price:decimal:8:2?",
      "is_open:bool", "contact:email?", "site:url?", "code:slug:40?", "meta:json",
      "ref:uuid", "doc:file?", "photo:image?", "tags:m2m:shop.Tag?", "profile:o2o:User?",
      "--app", "events", "-a", "--access", "owned:organizer", "--search", "title,status"],
+    ["make", "model", "Booking", "venue:fk:Venue", "during:datetimerange", "nights:daterange?",
+     "status:state:held>confirmed|held>cancelled|confirmed>cancelled", "seats:int",
+     "left:capacity:seats", "--app", "events", "--with", "viewset"],
     ["make", "viewset", "Venue", "--app", "events", "--access", "staff"],
     ["make:test", "Venue", "--app", "events"],
     ["make", "factory", "Venue", "--app", "events"],
@@ -292,6 +299,29 @@ response = staff_client.get("/api/venues/")
 assert response.status_code == 200 and response.json()["count"] == 1
 
 assert client.delete(f"/api/events/{event.pk}/").status_code == 204
+
+# lifecycle and capacity: the generated StateField / CapacityField hold
+from django.db import transaction
+from events.models import Order
+from karni.capacity import CapacityExceeded, reserve
+
+created = client.post("/api/orders/", {"title": "First", "seats": 2}, format="json")
+assert created.status_code == 201, created.content
+assert created.json()["status"] == "draft" and created.json()["left"] == 2, created.json()
+order_url = f"/api/orders/{created.json()['id']}/"
+refused = client.patch(order_url, {"status": "refunded"}, format="json")
+assert refused.status_code == 400 and refused.json()["status"][0].startswith("E980"), refused.content
+assert client.patch(order_url, {"status": "confirmed"}, format="json").status_code == 200
+order = Order.objects.get(pk=created.json()["id"])
+with transaction.atomic():
+    reserve(order, 2)
+try:
+    with transaction.atomic():
+        reserve(order, 1)
+except CapacityExceeded:
+    pass
+else:
+    raise SystemExit("oversold")
 assert post_save.has_listeners(Event)
 assert "events.middleware.RequestTimingMiddleware" in settings.MIDDLEWARE
 names = {row["name"] for row in describe_schedules()}
@@ -327,8 +357,16 @@ def test_generated_backend_runs_for_real(
          "capacity:int?", "--with", "viewset", "--access", "owned:organizer",
          "--search", "title"],
         ["make", "viewset", "Venue", "--access", "staff"],
+        ["make", "model", "Product", "name:str:120", "slug:slug:name", "price:money:EUR",
+         "cost:money", "rate:percent", "stock:quantity", "phone:phone?", "country:country?",
+         "email:email:unique", "meta:json:queried", "--with", "viewset", "--access", "staff"],
+        ["make", "model", "Order", "title:str:80",
+         "status:state:draft>confirmed>refunded|draft>cancelled|confirmed>cancelled",
+         "seats:int", "left:capacity:seats", "--with", "viewset", "--access", "authenticated",
+         "--search", "title"],
         ["make", "serializer", "Venue", "--reason", "explicit field list"],
         ["make", "test", "Event"],
+        ["make", "test", "Order"],
         ["make", "test", "Venue"],
         ["make", "seeder", "Venue", "--count", "4"],
         ["make", "factory", "Event"],
@@ -354,6 +392,10 @@ def test_generated_backend_runs_for_real(
     assert (project / "events" / "migrations" / "0001_initial.py").is_file()
     ok("migrate")
     ok("manage", "check")
+    # karni schema explains what the typed fields created, read back from the database.
+    described = ok("schema", "events.Product")
+    assert 'LOWER("email")' in described.output and "[ok] constraint" in described.output
+    assert "why: QuantityField: integer, CHECK >= 0" in described.output
     verify = subprocess.run(
         [str(python), "-c", textwrap.dedent(VERIFY)],
         cwd=project,
@@ -376,6 +418,7 @@ def test_generated_backend_runs_for_real(
     assert seeded.returncode == 0, seeded.stdout[-3000:] + seeded.stderr[-3000:]
     report = json.loads(seeded.stdout)
     assert report["rows"]["events.Event"] == 6 and report["rows"]["events.Venue"] == 4
+    assert report["rows"]["events.Product"] == 6  # ISO codes, E.164, bounds: CHECKs accept them
     assert report["demo"] == "demo@example.com" and "staff" in report["roles"]
 
     # The API tests `karni make test` wrote pass: CRUD surface + owner isolation.
@@ -387,7 +430,8 @@ def test_generated_backend_runs_for_real(
         check=False,
     )
     assert tests.returncode == 0, tests.stdout[-4000:] + tests.stderr[-3000:]
-    assert "3 passed" in tests.stdout, tests.stdout[-2000:]  # Event: crud + isolation; Venue
+    # Event: crud + isolation; Venue; Order (StateField + CapacityField): crud
+    assert "4 passed" in tests.stdout, tests.stdout[-2000:]
 
     # A generated module's standalone suite passes too, even inside a project tree.
     if importlib.util.find_spec("pytest_django") is not None:

@@ -11,14 +11,15 @@ It lives in the Karni repository and runs in CI, so a framework change that
 breaks a real app breaks the build. Read it instead of the reference docs:
 each section below names the Karni feature and the file that uses it.
 
-**Project code: 608 lines** (models 83, viewsets 87, pages 306, other 132),
+**Project code: 615 lines** (models 84, viewsets 86, pages 306, other 139),
 measured with `python scripts/loc.py --pristine <karni new output>` —
 non-blank, non-comment lines of everything EventHub wrote, excluding tests,
 migrations, lockfiles and the untouched scaffold. The first build measured
 656; the framework fixes that [FRICTION.md](FRICTION.md) asked for brought it
-to 582, declaring the roles in `KARNI_ROLES` added eleven, the keyboard-only
-walk's delete, bulk delete, sign-out and unsaved-changes wiring added fifteen,
-and the 108 lines still over Karni's 500-line target are attributed there.
+to 582. Declaring the roles in `KARNI_ROLES`, moving seat capacity and the
+booking lifecycle into the database (below), and the keyboard-only walk's
+delete, bulk delete, sign-out and unsaved-changes wiring brought it to 615;
+the 115 lines still over Karni's 500-line target are attributed there.
 
 ## Run it
 
@@ -61,11 +62,11 @@ karni make model Booking event:fk:Event tier:fk:TicketTier attendee:fk:User quan
 
 Every model is a `karni.models.BaseModel`: UUID keys, timestamps, soft delete
 and audit stamps come for free, and `DELETE` on the API hides rows instead
-of removing them. The hand-written parts are two properties
-(`TicketTier.remaining`, `Booking.total`), two status columns, an `APIMeta`
-that keeps `status` and `payment` read-only, and `Booking.clean()` — the
-capacity rule and the tier/event cross-check, which the generated serializer
-runs on every create and update.
+of removing them. The hand-written parts are `Booking.total`, two status
+columns (the booking's a `StateField`), a `CapacityField` for the seats left,
+an `APIMeta` that keeps `status` and `payment` read-only, `Booking.save()`
+reserving the seats, and `Booking.clean()` — the tier/event cross-check, which
+the generated serializer runs on every create and update.
 
 ### Access — `events/viewsets.py`
 
@@ -115,13 +116,23 @@ Celery worker after the commit: Django's `send_mail`, stamped once with
 `confirmation_sent_at`. No signal wiring, no `AppConfig.ready()`: Karni
 imports `listeners.py` for every app at startup.
 
-### Domain rules — `Booking.clean()`
+### Domain rules — `Booking.clean()`, capacity and the booking lifecycle
 
-The capacity rule ("only N seats left in VIP") and the tier/event cross-check
-live in the model's `clean()`. Karni's generated serializer runs it before
-every create and update, with the values the viewset stamps (the attendee),
-and turns its `ValidationError` into the 400 response, so no serializer is
-written for a domain rule.
+The tier/event cross-check lives in the model's `clean()`. Karni's generated
+serializer runs it before every create and update, with the values the
+viewset stamps (the attendee), and turns its `ValidationError` into the 400
+response, so no serializer is written for a domain rule.
+
+Seats are not a `clean()` rule: two requests would pass the check together.
+`TicketTier.remaining` is a `CapacityField(total="quantity")` the database
+keeps between 0 and the quantity; `Booking.save()` takes the seats with
+`karni.capacity.reserve(tier, quantity)` in the same transaction as the row,
+so the last seat goes to exactly one buyer and the other gets a 409 naming
+what is left. `Booking.status` is a `StateField` (pending → confirmed →
+cancelled): the payments listener and the `cancel` action call
+`booking.transition(...)`, an illegal move is refused everywhere, and
+`events/listeners.py` gives the seats back on cancellation (`@on_transition`)
+or deletion. See [docs/lifecycle-and-capacity.md](../../docs/lifecycle-and-capacity.md).
 
 ### Admin
 
@@ -163,8 +174,8 @@ class BookingAPITests(APITestCase):
 ```
 
 `test_booking_flow.py` drives the money path end to end — book, pay, signed
-webhook, confirmed, email in `mail.outbox` — plus the capacity rule, the
-checkout validator and the organizer's view. `tests/test_api_schema.py` pins
+webhook, confirmed, email in `mail.outbox` — plus the sold-out 409, seats
+returned on cancellation, the checkout validator and the organizer's view. `tests/test_api_schema.py` pins
 the OpenAPI contract: `karni test` fails on an accidental API break.
 
 ### Seeds — `events/seeds.py`

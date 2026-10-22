@@ -117,12 +117,33 @@ def test_soft_delete_fires_deleted_not_updated(received: list[tuple[str, str, An
 
 
 @pytest.mark.django_db
-def test_restore_is_an_update(received: list[tuple[str, str, Any]]) -> None:
+def test_restore_is_an_update_and_a_restore(received: list[tuple[str, str, Any]]) -> None:
     shelf = Shelf.objects.create(name="Fiction")
     shelf.delete()
     received.clear()
     shelf.restore()
+    assert sorted(_events(received)) == ["restored", "updated"]
+    received.clear()
+    shelf.save()  # a plain update is not a restore
     assert _events(received) == ["updated"]
+
+
+@pytest.mark.django_db
+def test_a_refusing_restore_listener_undoes_the_restore(
+    received: list[tuple[str, str, Any]],
+) -> None:
+    from karni.exceptions import KarniValueError
+
+    shelf = Shelf.objects.create(name="Fiction")
+    shelf.delete()
+    listeners.refuse_restore.append(True)
+    try:
+        with pytest.raises(KarniValueError):
+            shelf.restore()
+    finally:
+        listeners.refuse_restore.clear()
+    assert shelf.is_deleted  # the instance keeps its deleted_at
+    assert Shelf._base_manager.get(pk=shelf.pk).is_deleted  # and so does the row
 
 
 @pytest.mark.django_db

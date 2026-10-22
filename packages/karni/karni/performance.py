@@ -99,12 +99,24 @@ class RecordedQuery:
     origin: str = ""
 
 
+#: Transaction and lock control (``atomic()`` nesting, the no-overlap locks):
+#: it reads no data, so a budget does not count it.
+_TRANSACTION_CONTROL = (
+    "SAVEPOINT ",
+    "RELEASE SAVEPOINT ",
+    "ROLLBACK TO SAVEPOINT ",
+    "SELECT PG_ADVISORY_XACT_LOCK(",
+)
+
+
 class QueryRecorder:
     """A ``connection.execute_wrapper`` that records every statement it sees.
 
-    The origin of a statement (serializer field and/or project frame) is
-    captured the first time its SQL text repeats — the moment it becomes a
-    duplicate — so the common no-duplicate path costs one ``Counter`` update.
+    Savepoint statements are executed but not recorded: they come from
+    ``transaction.atomic()`` nesting, not from data access. The origin of a
+    statement (serializer field and/or project frame) is captured the first
+    time its SQL text repeats, the moment it becomes a duplicate, so the
+    common no-duplicate path costs one ``Counter`` update.
     """
 
     def __init__(self) -> None:
@@ -119,6 +131,8 @@ class QueryRecorder:
         many: bool,
         context: Mapping[str, Any],
     ) -> Any:
+        if sql.lstrip().upper().startswith(_TRANSACTION_CONTROL):
+            return execute(sql, params, many, context)
         start = time.perf_counter()
         try:
             return execute(sql, params, many, context)

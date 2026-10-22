@@ -131,7 +131,9 @@ def _audited_fields(model: type[models.Model]) -> tuple[str, ...] | None:
         return None
     names = [field.name for field in model._meta.concrete_fields]
     if declared is True:
-        return tuple(name for name in names if name not in _ALWAYS_SKIPPED)
+        # Generated columns (a SearchField) are derived data, not changes anyone made.
+        generated = {f.name for f in model._meta.concrete_fields if getattr(f, "generated", False)}
+        return tuple(name for name in names if name not in _ALWAYS_SKIPPED | generated)
     if isinstance(declared, str) or not all(isinstance(name, str) for name in declared):
         raise KarniImproperlyConfigured(
             f"{model.__name__}.Karni.audit must be True or a list of field names.", code="E007"
@@ -331,7 +333,16 @@ def _post_save(
         record(instance, "create", diff)
         return
     diff = diff_values(before, after)
+    for name in _transition_fields(sender):
+        diff.pop(name, None)  # recorded as its own "transition" entry (karni.lifecycle)
     record(instance, _action(before, diff, deleted=False), diff)
+
+
+def _transition_fields(model: type[models.Model]) -> tuple[str, ...]:
+    """StateFields that record their transitions themselves (``StateField(audit=True)``)."""
+    from karni.lifecycle import state_fields
+
+    return tuple(field.name for field in state_fields(model) if field.audit)
 
 
 def _post_delete(sender: type[models.Model], instance: models.Model, **kwargs: Any) -> None:

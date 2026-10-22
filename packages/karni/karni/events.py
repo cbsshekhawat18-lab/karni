@@ -34,13 +34,21 @@ Semantics (each listener receives the model instance only):
   by :func:`is_soft_delete`) or a hard delete (``post_delete``) of a row that
   was still live. It fires once per row: purging an already soft-deleted row
   (``hard_delete()``) does not fire it again.
+* ``on_restored`` — ``SoftDeleteModel.restore()`` (detected by
+  :func:`is_restore`), inside the restore's transaction: raising undoes the
+  restore. What a delete listener gave back, a restore listener takes again.
 * Fixture loading (``raw=True`` saves) never fires a listener.
 * Bulk operations that bypass ``save()``/``delete()`` — ``QuerySet.update()``,
-  ``bulk_create``, and the soft ``QuerySet.delete()`` of
-  :class:`~karni.managers.SoftDeleteQuerySet` (one ``UPDATE``) — send no
-  signals, exactly as in plain Django, so they fire nothing.
+  ``bulk_create``, and the soft ``QuerySet.delete()`` and ``QuerySet.restore()``
+  of :class:`~karni.managers.SoftDeleteQuerySet` (one ``UPDATE``) — send no
+  signals, exactly as in plain Django, so they fire nothing. Karni's admin
+  deletes and restores row by row, so its actions do fire them.
 * Like Django signals, the sender is the exact class: a listener on a parent
   model does not hear its subclasses or proxies.
+* ``on_transition`` — a ``StateField`` moved along a declared transition
+  (``karni.lifecycle.state_changed``), optionally only into ``to=`` or out of
+  ``source=`` states. It fires after the row is written, inside the save's
+  transaction, once per transition.
 
 Plain listeners run inline, inside the caller's transaction. ``queued=True``
 (or :func:`queued`) is Laravel's ``ShouldQueue``: the work is handed to a
@@ -79,9 +87,12 @@ __all__ = [
     "AUTODISCOVER_MODULES",
     "QueuedListener",
     "autodiscover",
+    "is_restore",
     "is_soft_delete",
     "on_created",
     "on_deleted",
+    "on_restored",
+    "on_transition",
     "on_updated",
     "queued",
 ]
@@ -139,6 +150,17 @@ def is_soft_delete(instance: models.Model, update_fields: Any) -> bool:
     if update_fields is None or _SOFT_DELETE_FIELD not in update_fields:
         return False
     return _is_soft_deleted(instance)
+
+
+def is_restore(instance: models.Model, update_fields: Any) -> bool:
+    """Whether a ``post_save`` is a restore: the save wrote ``deleted_at`` and cleared it.
+
+    Exactly what :meth:`karni.models.SoftDeleteModel.restore` does. Public,
+    like :func:`is_soft_delete`, so plain receivers can reuse the rule.
+    """
+    if update_fields is None or _SOFT_DELETE_FIELD not in update_fields:
+        return False
+    return _has_soft_delete_field(instance) and getattr(instance, _SOFT_DELETE_FIELD) is None
 
 
 # queued dispatch
@@ -365,6 +387,20 @@ def on_deleted(model: ModelRef, *, queued: bool = False) -> Callable[[F], F]:
     return _decorator("deleted", model, queued)
 
 
+def on_restored(model: ModelRef, *, queued: bool = False) -> Callable[[F], F]:
+    """Run the decorated ``listener(instance)`` after a soft-deleted row of ``model`` is restored.
+
+    The counterpart of :func:`on_deleted`: what a delete gave back (seats,
+    stock, a slot), a restore takes again. It runs inside the restore's
+    transaction, so raising undoes the restore (``reserve()`` on a sold-out
+    tier refuses it with E985). A restore is also an update, so
+    :func:`on_updated` listeners hear it too. ``QuerySet.restore()`` is a bulk
+    ``UPDATE`` and fires nothing, like ``QuerySet.delete()``; Karni's admin
+    restores row by row. Parameters as :func:`on_created`.
+    """
+    return _decorator("restored", model, queued)
+
+
 def _decorator(event: str, model: ModelRef, queued_: bool) -> Callable[[F], F]:
     if not isinstance(model, str) and not (
         isinstance(model, type) and issubclass(model, models.Model)
@@ -394,6 +430,16 @@ def _connect(event: str, model: ModelRef, listener: Callable[[Any], Any]) -> Non
         post_save.connect(on_create, sender=model, weak=False, dispatch_uid=uid)
         return
 
+    if event == "restored":
+
+        def on_restore(sender: Any, instance: Any, created: bool = False, **kw: Any) -> None:
+            if created or kw.get("raw") or not is_restore(instance, kw.get("update_fields")):
+                return
+            _invoke(listener, instance, kw.get("using"), snapshot=False)
+
+        post_save.connect(on_restore, sender=model, weak=False, dispatch_uid=uid)
+        return
+
     if event == "updated":
 
         def on_update(sender: Any, instance: Any, created: bool = False, **kw: Any) -> None:
@@ -416,3 +462,68 @@ def _connect(event: str, model: ModelRef, listener: Callable[[Any], Any]) -> Non
 
     post_save.connect(on_soft_delete, sender=model, weak=False, dispatch_uid=f"{uid}:soft")
     post_delete.connect(on_hard_delete, sender=model, weak=False, dispatch_uid=f"{uid}:hard")
+
+
+# lifecycle transitions (karni.lifecycle)
+
+
+def _states(value: Any) -> frozenset[str] | None:
+    if value is None:
+        return None
+    items = [value] if isinstance(value, str) else list(value)
+    return frozenset(str(getattr(item, "value", item)) for item in items)
+
+
+def on_transition(
+    model: ModelRef,
+    field: str | None = None,
+    *,
+    to: Any = None,
+    source: Any = None,
+    queued: bool = False,
+) -> Callable[[F], F]:
+    """Run the decorated ``listener(instance)`` after a ``StateField`` transition of ``model``.
+
+    ``@on_transition(Booking, "status", to="cancelled")`` hears every move
+    into ``cancelled``; ``source=`` narrows to moves out of the given
+    state(s); ``field`` defaults to every StateField of the model. The
+    listener runs inside the save's transaction (it may raise to undo the
+    transition), or in a Celery worker after commit with ``queued=True``.
+    For the states themselves, receive :data:`karni.lifecycle.state_changed`
+    (``source``, ``target`` and ``field`` arrive as keyword arguments).
+    """
+    if not isinstance(model, str) and not (
+        isinstance(model, type) and issubclass(model, models.Model)
+    ):
+        raise KarniTypeError(
+            "karni.events.on_transition() takes a model class or an 'app_label.ModelName' "
+            f"string, got {model!r}.",
+            code="E402",
+        )
+    targets, sources = _states(to), _states(source)
+
+    def decorate(listener: F) -> F:
+        from karni.lifecycle import state_changed
+
+        prepared = _prepare(listener, queued)
+        label = _model_label(model)
+
+        def on_change(sender: Any, instance: Any, **kw: Any) -> None:
+            if sender._meta.label != label and sender._meta.label_lower != label.lower():
+                return
+            if field is not None and kw.get("field") != field:
+                return
+            if targets is not None and kw.get("target") not in targets:
+                return
+            if sources is not None and kw.get("source") not in sources:
+                return
+            _invoke(prepared, instance, kw.get("using"), snapshot=False)
+
+        uid = (
+            f"karni.events:transition:{label}:{field}:{sorted(targets or ())}:"
+            f"{sorted(sources or ())}:{_listener_id(prepared)}"
+        )
+        state_changed.connect(on_change, weak=False, dispatch_uid=uid)
+        return listener
+
+    return decorate

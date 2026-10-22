@@ -82,6 +82,16 @@ def test_recorder_groups_duplicates_and_names_the_origin() -> None:
     assert "6 queries, 4 duplicated" in rendered
 
 
+def test_savepoints_are_not_counted() -> None:
+    """atomic() nesting adds SAVEPOINT/RELEASE statements; they read no data."""
+    from django.db import transaction
+
+    with record_queries() as recorder:
+        with transaction.atomic():  # inside the test's transaction: a savepoint
+            list(Publisher.objects.all())
+    assert recorder.report().count == 1
+
+
 def test_report_without_duplicates_is_one_line() -> None:
     with record_queries() as recorder:
         list(Publisher.objects.all())

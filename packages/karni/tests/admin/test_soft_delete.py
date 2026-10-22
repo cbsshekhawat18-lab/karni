@@ -119,6 +119,42 @@ class TestActions:
         assert response.status_code == 302
         assert Note.objects.filter(pk=note.pk).exists()
 
+    def test_the_actions_run_each_rows_delete_and_restore(self, admin_client: Client) -> None:
+        """Row by row, so on_deleted / on_restored listeners run; a refused row is reported."""
+        from django.db.models.signals import post_save
+
+        from karni.events import is_restore, is_soft_delete
+        from karni.exceptions import KarniValueError
+
+        heard: list[tuple[str, str]] = []
+
+        def listener(sender: Any, instance: Note, **kw: Any) -> None:
+            if is_soft_delete(instance, kw.get("update_fields")):
+                heard.append(("deleted", instance.title))
+            elif is_restore(instance, kw.get("update_fields")):
+                if instance.title == "Sold out":
+                    raise KarniValueError("No seats left for Sold out.", code="E402")
+                heard.append(("restored", instance.title))
+
+        post_save.connect(listener, sender=Note, dispatch_uid="test-soft-delete-actions")
+        try:
+            kept, refused = _note("Kept"), _note("Sold out")
+            pks = [str(kept.pk), str(refused.pk)]
+            delete = {"action": "delete_selected", helpers.ACTION_CHECKBOX_NAME: pks, "post": "yes"}
+            assert admin_client.post(CHANGELIST_URL, delete).status_code == 302
+            assert sorted(heard) == [("deleted", "Kept"), ("deleted", "Sold out")]
+            heard.clear()
+            restore = {"action": "restore_selected", helpers.ACTION_CHECKBOX_NAME: pks}
+            response = admin_client.post(f"{CHANGELIST_URL}?deleted=all", restore, follow=True)
+        finally:
+            post_save.disconnect(sender=Note, dispatch_uid="test-soft-delete-actions")
+        assert heard == [("restored", "Kept")]
+        assert Note.objects.filter(pk=kept.pk).exists()
+        assert not Note.objects.filter(pk=refused.pk).exists()  # refused: still deleted
+        shown = [str(m) for m in response.context["messages"]]
+        assert any("Restored 1" in m for m in shown)
+        assert any(m.startswith("Not restored: Sold out:") and "No seats left" in m for m in shown)
+
     def test_hard_delete_confirms_then_really_deletes_with_cascade(
         self, admin_client: Client
     ) -> None:

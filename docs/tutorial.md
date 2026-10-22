@@ -8,7 +8,7 @@ EventHub is Karni's reference application: an event ticketing platform where
 organizers create events with venues, ticket tiers and capacity, attendees
 browse, search, book and pay, organizers read a dashboard and export their
 attendees, a confirmation email goes out through Celery, and four roles decide
-who sees what. It is 608 lines of project code, it lives in the repository
+who sees what. It is 615 lines of project code, it lives in the repository
 under `examples/eventhub`, and CI builds, seeds, tests and drives it with
 Playwright on every change.
 
@@ -56,32 +56,55 @@ files and relations, including a relation into an installed module
 **Concept: the auto-router.** A `BaseViewSet` with a `model` is routed at
 `/api/<kebab-plural>/` without a `urls.py` entry. `karni routes` lists them.
 
-What the generators left for you to write is the domain: two properties and
-the rules a booking must obey.
+What the generators left for you to write is the domain: the seats, the
+booking lifecycle and the rules a booking must obey. Seats and the lifecycle
+are declared so the database enforces them
+([lifecycle and capacity](lifecycle-and-capacity.md)):
 
 <!-- karni:snippet examples/eventhub/events/models.py -->
 ```python
-    @property
-    def remaining(self) -> int:
-        """Seats not held by a pending or confirmed booking."""
-        held = self.booking_set.exclude(status=Booking.Status.CANCELLED)
-        return self.quantity - (held.aggregate(total=Sum("quantity"))["total"] or 0)
+    quantity = models.IntegerField()
+    remaining = CapacityField(total="quantity")  # the database never lets it drop below 0
 ```
 
 <!-- karni:snippet examples/eventhub/events/models.py -->
 ```python
+    status = StateField(
+        states=Status,
+        transitions={Status.PENDING: [Status.CONFIRMED, Status.CANCELLED],
+                     Status.CONFIRMED: [Status.CANCELLED]},
+    )
+```
+
+<!-- karni:snippet examples/eventhub/events/models.py -->
+```python
+    def save(self, *args, **kwargs) -> None:
+        with transaction.atomic():  # the seats are taken with the row, or neither is
+            if self._state.adding:
+                reserve(self.tier, self.quantity)  # sold out: 409 naming what is left
+            super().save(*args, **kwargs)
+
     def clean(self) -> None:
-        """Only published events; the tier must be the event's; never over capacity."""
+        """Only published events; the tier must be the event's; tickets fixed once booked."""
         if self.event_id and self.event.status != Event.Status.PUBLISHED:
             raise ValidationError({"event": "Only published events can be booked."})
         if self.tier_id and self.event_id and self.tier.event_id != self.event_id:
             raise ValidationError({"tier": "This ticket tier belongs to another event."})
 ```
 
+**Concept: the database is the referee.** "Only N seats left" is not a
+`clean()` rule: two requests would pass the check together. `remaining` is a
+`CapacityField` the database keeps between 0 and `quantity`, and
+`karni.capacity.reserve()` takes seats with a locked, conditional `UPDATE`,
+so the last seat goes to exactly one buyer and the other gets a 409. The
+`StateField` refuses an illegal move (`confirmed` back to `pending`) from the
+API, the admin and the shell alike.
+
 **Concept: model validation runs in the API.** The generated serializer calls
 `clean()` before every create and update, with the values the viewset stamps
 on save, and turns its `ValidationError` into the 400 response keyed by
-field. A domain rule is a method on the model, not a serializer.
+field. A domain rule about the row itself is a method on the model, not a
+serializer.
 
 ## 2. Who sees what: `access`
 
@@ -166,9 +189,13 @@ def confirm_paid_booking(payment: Payment) -> None:
     if payment.status != Payment.Status.SUCCEEDED:
         return
     for booking in Booking.objects.filter(payment=payment, status=Booking.Status.PENDING):
-        booking.status = Booking.Status.CONFIRMED
-        booking.confirmed_at = timezone.now()
-        booking.save(update_fields=["status", "confirmed_at", "updated_at"])
+        booking.transition("status", Booking.Status.CONFIRMED, confirmed_at=timezone.now())
+
+
+@on_transition(Booking, "status", to=Booking.Status.CANCELLED)
+def release_seats(booking: Booking) -> None:
+    """A cancelled booking gives its seats back, in the cancelling transaction."""
+    release(booking.tier, booking.quantity)
 ```
 
 <!-- karni:snippet examples/eventhub/events/listeners.py -->
@@ -179,7 +206,8 @@ def send_booking_confirmation(booking: Booking) -> None:
 
 **Concept: events.** `events/listeners.py` is imported for every app at
 startup, in the web, worker and beat processes alike. `@on_updated(Payment)`
-runs inline when the webhook task saves the payment; `queued=True` makes the
+runs inline when the webhook task saves the payment; `@on_transition` runs
+inside the transaction that cancels the booking; `queued=True` makes the
 email listener its own Celery task, dispatched after the commit and re-fetching
 the row in the worker. No signal wiring, no `AppConfig.ready()`.
 
@@ -278,10 +306,10 @@ Redis on every push.
 
 | Group | Lines | What is in it |
 |---|---|---|
-| models | 83 | four models, two properties, `Booking.clean()`, `APIMeta` |
-| viewsets | 87 | four `access` declarations, `pay`, `cancel`, `dashboard`, `attendees` |
+| models | 81 | four models, a `StateField`, a `CapacityField`, `Booking.save()` / `clean()`, `APIMeta` |
+| viewsets | 86 | four `access` declarations, `pay`, `cancel`, `dashboard`, `attendees` |
 | pages | 291 | nine pages and one component, each under 50 lines |
-| other | 121 | two listeners, the checkout validator, seeders, two factories, four lines of settings and URL wiring |
+| other | 139 | four listeners, the checkout validator, seeders, two factories, settings and URL wiring |
 
 Measured by `scripts/loc.py`; everything else — serializers, permissions,
 admin, filters, pagination, the optimizer, forms, tables, auth, the test

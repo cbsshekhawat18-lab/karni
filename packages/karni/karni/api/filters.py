@@ -44,8 +44,30 @@ def searchable_fields(view: Any, request: Any) -> tuple[str, ...]:
     if model is None or not fields:
         return fields
     write_only = frozenset(getattr(getattr(model, "APIMeta", None), "write_only", None) or ())
-    kept = [name for name in fields if str(name).lstrip("^=@$").split("__", 1)[0] not in write_only]
-    return tuple(visible(model, getattr(request, "user", None), kept))
+    user = getattr(request, "user", None)
+    kept: list[str] = []
+    for name in fields:
+        sources = _search_sources(model, str(name))
+        if sources is None:
+            kept.append(name)
+            continue
+        # A SearchField searches all its sources at once: only when the requester may
+        # read every one of them; otherwise search just the ones they may read.
+        allowed = visible(model, user, [s for s in sources if s not in write_only])
+        kept.extend([name] if list(allowed) == list(sources) else allowed)
+    kept = [name for name in kept if str(name).lstrip("^=@$").split("__", 1)[0] not in write_only]
+    return tuple(visible(model, user, kept))
+
+
+def _search_sources(model: type[models.Model], name: str) -> list[str] | None:
+    """The source fields of SearchField ``name``, or ``None`` when it is not one."""
+    from karni.fields.search import SearchField
+
+    try:
+        field = model._meta.get_field(name)
+    except Exception:  # noqa: BLE001 - a plain or related path
+        return None
+    return list(field.sources) if isinstance(field, SearchField) else None
 
 
 def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:

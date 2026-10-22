@@ -447,6 +447,31 @@ karni routes [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+#### `karni schema`
+
+Every column, constraint and index, and the declaration behind each — wraps `manage.py karni_schema`.
+
+Per model: column types and CHECKs, unique constraints (partial on soft-deletable models), indexes (Django's FK indexes, Karni's GIN/BRIN), each with why it exists and whether the database has it; the columns viewsets search, filter or order by, with the index serving each.
+
+Example:
+
+```sh
+karni schema events --json
+```
+
+```
+karni schema [OPTIONS] [LABELS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `LABELS...` |  | App labels or app.Model (default: every model of your own apps). |
+| `--json` |  | Print the report as JSON (for agents). |
+| `--no-db` |  | Report the declarations only; do not read the database. |
+| `--database` TEXT | `default` | Database alias to describe. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 #### `karni worker`
 
 Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`.
@@ -695,11 +720,23 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `price:decimal[:max:places]` | DecimalField(max_digits=max, decimal_places=places) — 10, 2 |
 | `done:bool` | BooleanField(default=False) |
 | `day:date / at:datetime` | DateField() / DateTimeField() |
-| `email:email / site:url / slug:slug` | EmailField() / URLField() / SlugField() (:len optional) |
-| `meta:json` | JSONField(default=dict) |
+| `site:url[:len]` | URLField() |
+| `price:money:EUR` | MoneyField(currency="EUR") — NUMERIC(19,4), Decimal only |
+| `price:money` | MoneyField(currency_field="price_currency") + price_currency = CurrencyField() |
+| `rate:percent[:min:max]` | PercentField() — CHECK between the bounds (0..100) |
+| `stock:quantity` | QuantityField(default=0) — CHECK &gt;= 0 |
+| `email:email[:unique]` | EmailField() — unique=True is case-insensitive (LOWER index) |
+| `slug:slug[:source]` | SlugField(populate_from="source") — unique among live rows (:len too) |
+| `phone:phone` | PhoneField() — E.164, CHECK format |
+| `country:country / currency:currency` | CountryField() / CurrencyField() — CHECK ISO list |
+| `meta:json[:queried]` | JSONField(default=dict) — queried adds a GIN index |
+| `tags:array:str[:len]` | ArrayField(models.CharField(...)) — PostgreSQL only, GIN index |
 | `doc:file / photo:image` | FileField / ImageField(upload_to="&lt;app&gt;/&lt;model&gt;/") — image needs Pillow |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
+| `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
+| `during:datetimerange / nights:daterange` | DateTimeRangeField() / DateRangeField() (PostgreSQL range columns, karni.fields) |
+| `remaining:capacity:quantity` | CapacityField(total="quantity"): consumed with karni.capacity.reserve(); without :total, CapacityField(default=0) |
 | `owner:fk:User` | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) |
 | `venue:fk:Venue / fk:shop.Venue` | ForeignKey("Venue") in the same app, or "app.Model" |
 | `tags:m2m:Tag / profile:o2o:User` | ManyToManyField / OneToOneField |
@@ -738,7 +775,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `NAME` (required) |  | Model class name, PascalCase (e.g. Event). |
-| `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime email url slug json file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; trailing ? = optional. |
+| `FIELDS...` |  | Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] bool date datetime url file image uuid choice:a\|b fk:Model m2m:Model o2o:Model; typed (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] slug[:source] phone country currency json[:queried] array:str; trailing ? = optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |
@@ -1076,7 +1113,8 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `AuditedModel` | model | `created_by` / `updated_by`, stamped from the current user on save. | fields `created_by`, `updated_by`; managers `objects` (ManagerFromAuditedQuerySet) |
-| `BaseModel` | model | The base every Karni project model inherits: all four mixins. | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`; managers `objects` (BaseManager), `all_objects` |
+| `BaseModel` | model | The base every Karni project model inherits: all four mixins (plus `GuardedModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by`; managers `objects` (BaseManager), `all_objects` |
+| `GuardedModel` | model | The model half of `StateField`, `CapacityField` and `no_overlap`. |  |
 | `SoftDeleteManager` | manager | Default manager of `karni.models.SoftDeleteModel`. |  |
 | `SoftDeleteModel` | model | Rows are hidden by `delete()` instead of removed. | fields `deleted_at`; managers `objects` (SoftDeleteManager), `all_objects` |
 | `SoftDeleteQuerySet` | queryset | QuerySet whose `delete()` soft-deletes by stamping `deleted_at`. | methods `delete`, `hard_delete`, `restore`, `alive`, `dead` |
@@ -1107,9 +1145,9 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `DEFAULT_ADMIN_EXCLUDE` | constant | `DEFAULT_ADMIN_EXCLUDE`: `sessions`, `contenttypes`, `admin`, `auth.Permission`, `django_celery_results.ChordCounter` |  |
-| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
-| `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results` |
+| `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `delete_queryset` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
 | `autodiscover` | function | Register a derived admin for every unregistered, non-excluded model. | `autodiscover(site: AdminSite \| None = None) -> None` |
 
@@ -1151,6 +1189,11 @@ class Lead(BaseModel):
 | `import_lookup` | karni | `{}` | For a relation field, the field of the related model that its import column carries. | `import_lookup = {"customer": "email"}` |
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
+| `append_only` | karni | `False` | The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` timestamps (`True`) or on the listed columns. | `append_only = True` |
+| `cascade` | karni | `{}` | Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited model, each with the reason (silences `karni.W965` for that field). | `cascade = {"order": "a line item cannot outlive its order"}` |
+| `financial` | karni | inferred | Whether the model holds money for the CASCADE check; inferred from money fields and payments-like model names. | `financial = True` |
+| `not_money` | karni | `{}` | FloatFields whose money-like name is not money, each with what it is (silences `karni.E960` for that field). | `not_money = {"total_score": "a game score"}` |
+| `no_overlap` | karni | `None` | Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the resource field(s) then the range, or a list of them. PostgreSQL enforces it with an `EXCLUDE` constraint the model's migration creates; soft-deleted rows never block. | `no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})` |
 | `requires_approval` | karni-approvals | unset: never held | Hold changes for a second person's approval: a list of guarded fields, or `True` for any change, create and delete included. | `requires_approval = ["amount", "status"]` |
 | `approvals_required` | karni-approvals | `KARNI_APPROVALS_REQUIRED` (1) | Approvals a pending change needs before it is applied. | `approvals_required = 2` |
 | `approver_roles` | karni-approvals | `KARNI_APPROVALS_APPROVER_ROLES` | Roles that may approve, on top of holding the approve permission. | `approver_roles = ["finance"]` |
@@ -1583,6 +1626,28 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
 | [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
 | [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
+| [`E960`](errors.md#e960) | check | A FloatField holds money |
+| [`E961`](errors.md#e961) | exception | A MoneyField's currency is not declared |
+| [`E962`](errors.md#e962) | exception | A float reached a MoneyField |
+| [`E963`](errors.md#e963) | exception | A typed field declaration cannot work |
+| [`E964`](errors.md#e964) | check | A field cannot work on the configured database |
+| [`W964`](errors.md#w964) | warning | A PostgreSQL guarantee is missing on the configured database |
+| [`W965`](errors.md#w965) | warning | A foreign key on a financial or audited model cascades |
+| [`E966`](errors.md#e966) | exception | A PostgreSQL extension could not be created |
+| [`W967`](errors.md#w967) | warning | A searched, filtered or ordered column has no index |
+| [`E968`](errors.md#e968) | check | LiveUniqueConstraint on a model without soft delete |
+| [`E969`](errors.md#e969) | exception | karni schema was given an unknown app or model |
+| [`E970`](errors.md#e970) | check | A field-layer Karni option is malformed |
+| [`E980`](errors.md#e980) | exception | A StateField change the declared lifecycle does not allow |
+| [`W980`](errors.md#w980) | warning | no_overlap is not enforced on this database |
+| [`E981`](errors.md#e981) | exception | The row's state changed since it was loaded |
+| [`E982`](errors.md#e982) | exception | A new row starts in a state that is not an initial state |
+| [`E983`](errors.md#e983) | exception | A StateField is declared or named wrongly |
+| [`E984`](errors.md#e984) | exception | The slot overlaps an existing row |
+| [`E985`](errors.md#e985) | exception | Not enough capacity left |
+| [`E986`](errors.md#e986) | exception | A capacity counter is used the wrong way |
+| [`E987`](errors.md#e987) | check | A no_overlap declaration is invalid |
+| [`E988`](errors.md#e988) | check | A guarded field on a model without GuardedModel |
 
 ### Modules
 
@@ -1661,6 +1726,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
 | [`C340`](errors.md#c340) | cli | Nothing to explain |
 | [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
+| [`C360`](errors.md#c360) | cli | A typed-field argument in the model DSL is invalid |
+| [`C361`](errors.md#c361) | cli | The project's karni has no karni schema |
+| [`C370`](errors.md#c370) | cli | A state field spec is invalid |
+| [`C371`](errors.md#c371) | cli | A range field spec is invalid |
+| [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
 
 ### Agent rules (`K`)
 
@@ -1692,6 +1762,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K110`](errors.md#k110) | rule | Row rules: in access. |
 | [`K111`](errors.md#k111) | rule | Paginate lists; no N+1. |
 | [`K113`](errors.md#k113) | rule | Audited models: no update()/bulk_update(). |
+| [`K114`](errors.md#k114) | rule | Money: MoneyField, never float. |
+| [`K115`](errors.md#k115) | rule | Status column: StateField + transitions. |
+| [`K116`](errors.md#k116) | rule | Stock/slots: reserve(), no_overlap; no check-then-write. |
 | [`K201`](errors.md#k201) | rule | Compose @karni/ui; no raw table/form/input. |
 | [`K202`](errors.md#k202) | rule | Pages: max 50 lines. |
 | [`K203`](errors.md#k203) | rule | Import only the @karni/ui barrel. |

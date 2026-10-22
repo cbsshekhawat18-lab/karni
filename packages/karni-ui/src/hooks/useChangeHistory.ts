@@ -12,7 +12,8 @@ import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "./keys";
 import { detailPath } from "./params";
 
-export type ChangeAction = "create" | "update" | "delete" | "restore";
+/** `transition`: a StateField moved along a declared transition (`diff` holds `[from, to]`). */
+export type ChangeAction = "create" | "update" | "delete" | "restore" | "transition";
 
 export interface ChangeLogEntry {
   id: number;

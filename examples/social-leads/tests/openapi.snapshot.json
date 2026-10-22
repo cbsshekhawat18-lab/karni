@@ -2,12 +2,13 @@
   "components": {
     "schemas": {
       "ActionEnum": {
-        "description": "* `create` - Created\n* `update` - Updated\n* `delete` - Deleted\n* `restore` - Restored",
+        "description": "* `create` - Created\n* `update` - Updated\n* `delete` - Deleted\n* `restore` - Restored\n* `transition` - Transitioned",
         "enum": [
           "create",
           "update",
           "delete",
-          "restore"
+          "restore",
+          "transition"
         ],
         "type": "string"
       },
@@ -2169,7 +2170,7 @@
     "/api/auth/permissions/effective/{user_id}/": {
       "get": {
         "description": "``GET permissions/effective/[<user id>/]`` \u2014 what a user may do, and why.",
-        "operationId": "auth_permissions_effective_retrieve_2",
+        "operationId": "auth_permissions_effective_by_user_id_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -2833,7 +2834,7 @@
     "/api/contacts/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "contacts_import_retrieve_2",
+        "operationId": "contacts_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -3672,7 +3673,7 @@
     "/api/lead-activities/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "lead_activities_import_retrieve_2",
+        "operationId": "lead_activities_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -4842,7 +4843,7 @@
     "/api/leads/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "leads_import_retrieve_2",
+        "operationId": "leads_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -6548,7 +6549,7 @@
     "/api/workspaces/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "workspaces_import_retrieve_2",
+        "operationId": "workspaces_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",

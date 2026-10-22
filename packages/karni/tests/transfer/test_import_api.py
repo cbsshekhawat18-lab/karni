@@ -132,3 +132,17 @@ def test_the_schema_documents_export_and_import(make_user: Any) -> None:
     assert "multipart/form-data" in upload["requestBody"]["content"]
     assert "/events/import/{job}/preview/" in paths and "/events/import/{job}/commit/" in paths
     assert "/events/import/template/" in paths
+
+
+def test_every_operation_id_is_unique(make_user: Any) -> None:
+    """``GET import/`` and ``GET import/{job}/`` used to share an ID (a client got ``_2``)."""
+    paths = SchemaGenerator(patterns=build_router().urls).get_schema(request=None, public=True)[
+        "paths"
+    ]
+    ids = [
+        op["operationId"] for item in paths.values() for op in item.values() if "operationId" in op
+    ]
+    assert len(ids) == len(set(ids))
+    assert paths["/events/import/{job}/"]["get"]["operationId"] == "events_import_by_job_retrieve"
+    assert paths["/events/import/"]["get"]["operationId"] == "events_import_retrieve"
+    assert paths["/events/{id}/"]["get"]["operationId"] == "events_retrieve"  # detail unchanged

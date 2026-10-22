@@ -102,6 +102,5 @@ class BookingViewSet(BaseViewSet):
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         booking = self.get_object()
-        booking.status = Booking.Status.CANCELLED
-        booking.save(update_fields=["status", "updated_at"])
+        booking.transition("status", Booking.Status.CANCELLED)  # releases the seats
         return Response(self.get_serializer(booking).data)

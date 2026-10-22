@@ -150,7 +150,20 @@
                 "$ref": "#/components/schemas/EventsBookingStatusEnum"
               }
             ],
-            "readOnly": true
+            "readOnly": true,
+            "x-karni-initial": [
+              "pending"
+            ],
+            "x-karni-transitions": {
+              "cancelled": [],
+              "confirmed": [
+                "cancelled"
+              ],
+              "pending": [
+                "confirmed",
+                "cancelled"
+              ]
+            }
           },
           "tier": {
             "format": "uuid",
@@ -412,6 +425,10 @@
           "quantity": {
             "type": "integer"
           },
+          "remaining": {
+            "readOnly": true,
+            "type": "integer"
+          },
           "updated_at": {
             "format": "date-time",
             "readOnly": true,
@@ -432,6 +449,7 @@
           "name",
           "price",
           "quantity",
+          "remaining",
           "updated_at",
           "updated_by"
         ],
@@ -2240,7 +2258,7 @@
     "/api/auth/permissions/effective/{user_id}/": {
       "get": {
         "description": "``GET permissions/effective/[<user id>/]`` \u2014 what a user may do, and why.",
-        "operationId": "auth_permissions_effective_retrieve_2",
+        "operationId": "auth_permissions_effective_by_user_id_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -2958,7 +2976,7 @@
     "/api/bookings/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "bookings_import_retrieve_2",
+        "operationId": "bookings_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -4029,7 +4047,7 @@
     "/api/events/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "events_import_retrieve_2",
+        "operationId": "events_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -5136,7 +5154,7 @@
     "/api/payments/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "payments_import_retrieve_2",
+        "operationId": "payments_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -6045,7 +6063,7 @@
     "/api/refunds/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "refunds_import_retrieve_2",
+        "operationId": "refunds_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -6556,6 +6574,27 @@
           },
           {
             "in": "query",
+            "name": "remaining",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remaining__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "remaining__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
             "name": "updated_at",
             "schema": {
               "format": "date-time",
@@ -6927,7 +6966,7 @@
     "/api/ticket-tiers/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "ticket_tiers_import_retrieve_2",
+        "operationId": "ticket_tiers_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",
@@ -7826,7 +7865,7 @@
     "/api/venues/import/{job}/": {
       "get": {
         "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
-        "operationId": "venues_import_retrieve_2",
+        "operationId": "venues_import_by_job_retrieve",
         "parameters": [
           {
             "in": "path",

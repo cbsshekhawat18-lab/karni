@@ -48,7 +48,9 @@ class SimpleSearchProvider(SearchProvider):
         """Return rows where any of ``fields`` contains ``query``."""
         if not query or not fields:
             return queryset
+        from karni.fields.search import expand_search_fields
+
         condition = Q()
-        for field in fields:
+        for field in expand_search_fields(queryset.model, fields):
             condition |= Q(**{f"{field}__{self.lookup}": query})
         return queryset.filter(condition)

@@ -72,6 +72,9 @@ class PendingChange(BaseModel):
         audit = True
         actions = ["approve", "reject"]
         owner_field = "maker"
+        cascade = {
+            "content_type": "a proposal for a model that no longer exists cannot be decided",
+        }
 
     class APIMeta:
         """A read-only resource: decisions come through the approve/reject actions."""
@@ -137,6 +140,7 @@ class Decision(BaseModel):
 
     class Karni:
         audit = True
+        cascade = {"pending": "a decision is part of the pending change it decides"}
 
     class APIMeta:
         read_only = ["pending", "checker", "verdict", "reason"]
