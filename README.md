@@ -451,7 +451,7 @@ Yes. Nothing in Karni calls a language model, and every generator, such as `karn
 The model, an `access` rule and whatever is specific to your domain. In the reference app EventHub, the `Venue` resource is a five-line model and a four-line viewset.
 
 **Is it production-ready?**
-Not yet. Version 0.3.1 has two reference applications and CI on every push, but no known production deployment and a Docker path that has not been tested end to end.
+Not yet. Version 0.4.0 has two reference applications and CI on every push, but no known production deployment and a Docker path that has not been tested end to end.
 
 **What happens when Karni releases a breaking change?**
 A public name keeps working for at least one minor release, with a `KarniDeprecationWarning` that names the release that removes it. `karni upgrade --to <version>` applies the mechanical changes and lists, by file and line, what it could not change ([stability promise](docs/stability.md)).
@@ -465,7 +465,7 @@ A public name keeps working for at least one minor release, with a `KarniDepreca
 
 ## Status and roadmap
 
-Version 0.3.1 was released on 2026-10-20, with Django 5.2 LTS and Python 3.12 to 3.14. Each capability's status is in the [reference](docs/REFERENCE.md#capabilities-and-status).
+Version 0.4.0 was released on 2026-10-22, with Django 5.2 LTS and Python 3.12 to 3.14. Each capability's status is in the [reference](docs/REFERENCE.md#capabilities-and-status).
 
 - **Stable:** models, the API with `access`, roles with the `all` and `own` scopes, the admin, the schema-driven components, change history, import and export, the testing helpers and the agent tooling.
 - **Built, not yet used by a reference app:** the `related:` and `custom:` scopes, field visibility per role, row scope in the admin, and the approvals and impersonation modules.

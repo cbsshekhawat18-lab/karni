@@ -1,7 +1,7 @@
 [project]
 name = "eventhub"
 version = "0.1.0"
-description = "EventHub — a Karni project."
+description = "EventHub, a Karni project."
 requires-python = ">=3.12"
 dependencies = [
     "karni",

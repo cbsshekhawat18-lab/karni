@@ -1,0 +1,101 @@
+# Karni 0.4.0: what changed since 0.3 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.4.md.
+# None has a codemod: `karni upgrade` reports each one with its note.
+version = "0.4.0"
+
+[[change]]
+id = "operation-ids-by-param"
+kind = "api-change"
+symbol = "OpenAPI operationId"
+summary = """\
+A route that ends in a path parameter has `_by_<param>` in its operation ID, \
+so two routes no longer share one. Generated client functions such as \
+`..._retrieve_2` get new names. Run `karni types` and rename the calls."""
+mechanical = false
+migration = "migrations/0.4.md#generated-api-clients-operation-ids"
+
+[[change]]
+id = "enum-names-by-model"
+kind = "api-change"
+symbol = "OpenAPI enum components"
+summary = """\
+Choice enums whose field name collides are named after the model and field \
+(RefundStatusEnum) instead of a hash (Status469Enum). Run `karni types` and \
+accept the OpenAPI snapshot."""
+mechanical = false
+migration = "migrations/0.4.md#enum-names-in-the-openapi-schema"
+
+[[change]]
+id = "agent-files-reworded"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The rules, procedures and adapter header are reworded in plain sentences. \
+Run `karni rules sync`, or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.md#the-agent-files-run-karni-rules-sync"
+
+[[change]]
+id = "messages-reworded"
+kind = "behaviour"
+symbol = "Karni's messages and log lines"
+summary = """\
+Messages no longer use semicolons or em dashes. The query log reads \
+`GET /path 200: 3 queries` and a budget overrun reads `against a budget of`. \
+Tests and log searches that match the old wording need the new text."""
+mechanical = false
+migration = "migrations/0.4.md#messages-and-log-lines-are-reworded"
+
+[[change]]
+id = "resource-table-grid"
+kind = "behaviour"
+symbol = "@karni/ui ResourceTable"
+summary = """\
+ResourceTable is a WAI-ARIA grid with one Tab stop, and its role is `grid`. \
+Tests that use getByRole("table") for it must use "grid". \
+keyboardNavigation="native" keeps the old behaviour."""
+mechanical = false
+migration = "migrations/0.4.md#resourcetable-is-a-grid"
+
+[[change]]
+id = "layout-route-focus"
+kind = "behaviour"
+symbol = "@karni/ui Layout"
+summary = """\
+After a client-side route change, Layout moves focus to the new page's heading \
+and announces its title. routeFocus={false} turns it off."""
+mechanical = false
+migration = "migrations/0.4.md#focus-moves-after-navigation"
+
+[[change]]
+id = "colour-token-names"
+kind = "api-change"
+symbol = "@karni/ui --karni-<colour> tokens"
+summary = """\
+The 0.3 colour tokens, which held HSL triplets, are deprecated in favour of \
+--karni-color-<colour>, which holds a plain CSS colour and defaults to the old \
+value, so a 0.3 theme keeps working. 1.0 removes the old names."""
+mechanical = false
+migration = "migrations/0.4.md#the-03-colour-token-names"
+
+[[change]]
+id = "admin-brand"
+kind = "behaviour"
+symbol = "UNFOLD"
+summary = """\
+The admin's default UNFOLD setting uses @karni/ui's design tokens, so its \
+colours, radius and font change. Nothing breaks. Set UNFOLD["STYLES"] = [] \
+to keep unfold's own look."""
+mechanical = false
+migration = "migrations/0.4.md#the-admin-wears-karniuis-brand"
+
+[[change]]
+id = "auth-guard-explain"
+kind = "behaviour"
+symbol = "@karni/ui AuthGuard"
+summary = """\
+An AuthGuard can explain a refusal with `explain`. Without a fallback it still \
+renders nothing in 0.4 and warns once in development. 1.0 makes `explain` the \
+default."""
+mechanical = false
+migration = "migrations/0.4.md#authguard-will-explain-a-refusal-by-default"

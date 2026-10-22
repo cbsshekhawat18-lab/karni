@@ -2,12 +2,12 @@
 # Multi-stage build for EventHub.
 #
 # Targets:
-#   dev  — used by docker-compose; runserver-friendly, source bind-mounted over /app.
-#   prod — fresh slim image, non-root user, gunicorn with uvicorn workers.
+#   dev:  used by docker-compose. Runserver-friendly, source bind-mounted over /app.
+#   prod: fresh slim image, non-root user, gunicorn with uvicorn workers.
 #
 # Build arg KARNI_SRC: path *inside this project* to a local karni checkout,
 # installed before (and therefore instead of) the PyPI release. Until karni is
-# published, vendor it and set KARNI_SRC in .env — see README.md.
+# published, vendor it and set KARNI_SRC in .env (see README.md).
 
 FROM python:3.12-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \

@@ -5,7 +5,7 @@
 # django runs migrations before serving, so worker and beat (which need the
 # django-celery-beat / django-celery-results tables) wait on django's
 # healthcheck, not just on db/redis.
-# KARNI_SRC (from .env) optionally installs a vendored karni checkout — see README.md.
+# KARNI_SRC (from .env) optionally installs a vendored karni checkout (see README.md).
 
 services:
   django:
@@ -28,7 +28,7 @@ services:
         condition: service_healthy
     healthcheck:
       # Liveness endpoint only responds once migrations have finished and
-      # runserver is up — downstream services key off this.
+      # runserver is up. Downstream services key off this.
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/')"]
       interval: 5s
       timeout: 5s

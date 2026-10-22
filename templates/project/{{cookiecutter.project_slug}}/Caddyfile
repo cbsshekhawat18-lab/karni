@@ -2,7 +2,7 @@
 #
 # Caddy provisions TLS automatically for the DOMAIN env var (defaults to
 # localhost, which uses a self-signed local CA). Static and media files are
-# served straight from /data — share the /data volume with the django
+# served straight from /data. Share the /data volume with the django
 # container (STATIC_ROOT=/data/static, MEDIA_ROOT=/data/media).
 
 {$DOMAIN:localhost} {
