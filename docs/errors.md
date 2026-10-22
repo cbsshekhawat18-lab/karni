@@ -981,6 +981,8 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Maintainers: fix the entries the message lists (schema in karni/changelog/__init__.py). Users: reinstall karni-cli.
 
+### 8xx · Import and export
+
 <a id="e801"></a>
 
 #### E801 — An import cannot proceed as asked
@@ -1010,6 +1012,8 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** KARNI_IMPORT_MAX_ROWS caps an upload and KARNI_EXPORT_MAX_ROWS an export so one request cannot pin a worker or build an unbounded file.
 
 **Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
+
+### 9xx · Debugging: karni queries, karni explain
 
 <a id="e901"></a>
 
@@ -1150,6 +1154,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses.
 
 **Fix.** Pass --as with an existing user's email, username or primary key, or --anonymous; pass only one of the two.
+
+<a id="e940"></a>
+
+#### E940 — karni queries cannot find the endpoint
+
+*exception* · from `karni.api.diagnose.resolve_endpoint (manage.py karni_queries)`
+
+**Why Karni objects.** karni queries requests the endpoint in-process, so it must resolve to a URL the project serves: a path, a routed resource (events, events/<id>) or a routed viewset (EventViewSet.list). A detail action named by its viewset needs a row the user can read.
+
+**Fix.** Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or resource/<id>; the message lists the routed resources or viewsets.
+
+<a id="e941"></a>
+
+#### E941 — karni queries cannot find the user (--as)
+
+*exception* · from `karni.api.diagnose.resolve_user (manage.py karni_queries --as)`
+
+**Why Karni objects.** The request runs force-authenticated as one user, named by primary key, email or username; the value matched none (or several).
+
+**Fix.** Pass a user that exists in this database (the message shows a few), seed some with karni seed, or drop --as for an anonymous request.
+
+<a id="e942"></a>
+
+#### E942 — karni queries cannot build the request
+
+*exception* · from `karni.api.diagnose.run (manage.py karni_queries --method / --data)`
+
+**Why Karni objects.** --method must be an HTTP method the view answers at that URL, and --data a JSON body.
+
+**Fix.** Use a method the message lists for that URL, and pass --data as JSON (--data '{"title": "Launch"}').
+
+<a id="e943"></a>
+
+#### E943 — The view raised while karni queries requested it
+
+*exception* · from `manage.py karni_queries`
+
+**Why Karni objects.** There is no query report for a request that raised; the message shows the traceback and what karni explain recognises in it.
+
+**Fix.** Fix the exception the traceback names (karni explain - explains a pasted traceback), then run karni queries again.
 
 ## APR (`APR`)
 
@@ -1779,6 +1823,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Run the command it names with `karni manage ...` to see the full output, fix what it reports, then retry.
 
+<a id="c340"></a>
+
+### C340 — Nothing to explain
+
+*karni command* · from `karni explain`
+
+**Why Karni objects.** karni explain answers for a code (karni explain E104) or for pasted text: a traceback, a test failure or a log line read from stdin. It got neither: no code, and stdin was a terminal or empty.
+
+**Fix.** Pass a code (karni explain E104), or pipe the text in: karni explain - < traceback.txt, or pbpaste | karni explain -. Agents: the explain_text MCP tool takes the text as an argument.
+
+<a id="c341"></a>
+
+### C341 — The project's karni has no karni_queries command
+
+*karni command* · from `karni queries`
+
+**Why Karni objects.** karni queries runs manage.py karni_queries in the project's interpreter; that command ships with karni from the release that added karni queries, and the project has an older karni installed.
+
+**Fix.** Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and reinstall), then run karni queries again. karni doctor shows both versions.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -1878,6 +1942,30 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Generators emit the conventions in one step (BaseModel, a mandatory access declaration, settings and route markers, ruff-clean imports) and are tested to pass every rule; hand-written scaffolding drifts.
 
 **Fix.** Delete the hand-written scaffold and run the matching `karni make` command.
+
+<a id="k013"></a>
+
+### K013 — Traceback: karni explain - first.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Paste a traceback, a test failure or a log line into `karni explain -` (stdin; MCP tool `explain_text`) before reading it by hand. It names the Karni failure class, the cause, where (the first project frame, file:line), the fix and the docs link, and says plainly when it does not recognise the failure.
+
+**Why Karni objects.** Rebuilding context from a traceback is the expensive part of debugging; the catalogue already knows Karni's failure classes (codes, query budgets, access outcomes, database, migrations, settings, CSRF/CORS) and their fixes.
+
+**Fix.** 
+
+<a id="k014"></a>
+
+### K014 — N+1: karni queries URL --as USER first.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Before hunting an N+1 in serializers, run `karni queries <endpoint> --as <user>` (MCP tool `queries`). It runs the endpoint in-process, groups the repeated queries by the serializer field and relation that caused them, says why the optimiser did not fetch them and prints the hint that fixes it.
+
+**Why Karni objects.** The optimiser derives select_related/prefetch_related itself and records what it cannot see (method fields, properties, to_representation), so the cause and the fix come from the same knowledge instead of guesswork.
+
+**Fix.** 
 
 <a id="k015"></a>
 

@@ -107,11 +107,19 @@ def test_explain_still_explains_codes_without_a_project(tmp_path: Path, monkeypa
     assert "Nothing was captured for this request id" in result.output
 
 
-@pytest.mark.parametrize("argv", [["explain"], ["explain", "E104", "--failure", "last"]])
-def test_explain_needs_exactly_one_thing(project: Path, manage: Manage, argv: list[str]) -> None:
+@pytest.mark.parametrize(
+    ("argv", "code"),
+    [
+        (["explain"], "C340"),  # nothing given: nothing to explain (an empty stdin)
+        (["explain", "E104", "--failure", "last"], "C320"),  # a code and --failure at once
+    ],
+)
+def test_explain_needs_exactly_one_thing(
+    project: Path, manage: Manage, argv: list[str], code: str
+) -> None:
     result = runner.invoke(app, argv)
     assert result.exit_code != 0
-    assert "C320" in str(result.exception) and not manage.calls
+    assert code in str(result.exception) and not manage.calls
 
 
 def test_a_coded_project_error_keeps_its_code(project: Path, monkeypatch: Any) -> None:

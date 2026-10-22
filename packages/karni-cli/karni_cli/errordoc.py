@@ -30,6 +30,8 @@ RANGES: tuple[tuple[str, str], ...] = (
     ("500", "Settings and optional dependencies"),
     ("600", "Testing and seeding"),
     ("700", "Agent tooling: karni check, karni.rules.py, changelog"),
+    ("800", "Import and export"),
+    ("900", "Debugging: karni queries, karni explain"),
 )
 
 INTRO = """\

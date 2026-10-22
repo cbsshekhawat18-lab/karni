@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from typing import Any
 
@@ -217,8 +218,7 @@ def test_an_order_that_repeats_rows(world: World) -> None:
     world.mine.tags.add(Tag.objects.create(name="two"))
     Event.objects.create(title="Second", starts_at=timezone.now(), organizer=world.alice)
     with LEAKY_ROUTES:
-        _leaks(
-            "ordering: GET /api/tag-ordered-events/?ordering=-tags repeats row(s)",
+        message = _leaks(
             "Leave to-many relations out of ordering_fields",
             client=client_as(user=world.alice),
             resource="/api/tag-ordered-events/",
@@ -226,6 +226,10 @@ def test_an_order_that_repeats_rows(world: World) -> None:
             visible=world.mine,
             checks=["ordering"],
         )
+    # Either direction proves it: the database decides which one repeats a row
+    # first (PostgreSQL sorts NULLs last ascending, SQLite first).
+    repeated = r"ordering: GET /api/tag-ordered-events/\?ordering=-?tags repeats row"
+    assert re.search(repeated, message), message
 
 
 def test_a_count_that_includes_hidden_rows(world: World) -> None:

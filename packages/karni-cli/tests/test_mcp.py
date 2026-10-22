@@ -65,6 +65,8 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
         "check",
         "context",
         "explain_failure",
+        "explain_text",
+        "queries",
         "replay",
         "rules",
         "trace",
@@ -78,5 +80,13 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
     }
     assert "path" in schemas["check"]["properties"]
     assert set(schemas["rules"]["properties"]) == {"code", "procedure"}
+    assert set(schemas["explain_text"]["properties"]) == {"text"}
+    assert set(schemas["queries"]["properties"]) == {
+        "endpoint",
+        "as_user",
+        "method",
+        "data",
+        "explain",
+    }
     # The --project root is what the tools use, wherever the server was started.
     assert mcp_server._project() == generated_project

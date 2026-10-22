@@ -215,9 +215,10 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni context`](docs/REFERENCE.md#karni-context) | Print a compact machine-readable project inventory |
 | [`karni rules`](docs/REFERENCE.md#karni-rules) | Karni's conventions for humans and AI agents (no Django needed): [sync](docs/REFERENCE.md#karni-rules-sync) |
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
-| [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106): why and the fix |
+| [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules and check as MCP tools (needs karni-cli[mcp]) |
+| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp]) |
+| [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries` |
 | [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack — wraps `docker compose up` (or `manage.py runserver` with --local) |
 | [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations — wraps `manage.py migrate [ARGS]` |
 | [`karni test`](docs/REFERENCE.md#karni-test) | Run the test suite — wraps `python -m pytest [ARGS]` |
@@ -396,7 +397,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 33 conventions, each with a code, in 402 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 36 conventions, each with a code, in 430 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

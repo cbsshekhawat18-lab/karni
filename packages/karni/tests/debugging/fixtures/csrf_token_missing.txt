@@ -1,0 +1,6 @@
+[2m2026-10-21T07:56:30.648952Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/bookings/'[0m [36mrequest_id[0m=[35maa6b779f-a520-40a9-97a4-fe9155543760[0m [36muser_agent[0m=[35mpython-requests/2.34.2[0m [36muser_id[0m=[35m32e70629-8fad-41a6-86cb-0fb39a1de644[0m
+[2m2026-10-21T07:56:30.650696Z[0m [[33m[1mwarning  [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m403[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/bookings/'[0m [36mrequest_id[0m=[35maa6b779f-a520-40a9-97a4-fe9155543760[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-21T07:56:30.651113Z[0m [[32m[1minfo     [0m] [1mPOST /api/bookings/ 403 — 2 queries, 0 duplicated, 0.3 ms in SQL, 7.8 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-21T07:56:30.651273Z[0m [[33m[1mwarning  [0m] [1mForbidden: /api/bookings/     [0m [[0m[1m[34mdjango.request[0m][0m
+"POST /api/bookings/ HTTP/1.1" 403 45
+{"detail":"CSRF Failed: CSRF token missing."}

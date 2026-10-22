@@ -1,0 +1,3 @@
+error: C012: DATABASES['default'] in config.settings uses django.db.backends.postgresql, but its driver does not load in the project interpreter (/home/dev/eventhub/.venv/bin/python): Error loading psycopg2 or psycopg module. Django loads the driver as it starts, so every project command would stop with a traceback.
+Install the driver there: /home/dev/eventhub/.venv/bin/python -m pip install "psycopg[binary]" (`pip install -e .` installs all the project's dependencies). Or use Docker: `karni serve -d` starts the stack, whose image has the driver, and --docker runs a project command inside it. KARNI_DB_CHECK=false skips this check.
+See https://cbsshekhawat18-lab.github.io/karni/errors/#c012

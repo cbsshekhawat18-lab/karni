@@ -24,7 +24,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Final, NamedTuple
 
-__all__ = ["CODES", "CliCode", "core_module", "docs_url", "lookup"]
+__all__ = ["CODES", "CliCode", "core_module", "docs_url", "failures_module", "lookup"]
 
 _MODULE_NAME = "karni_cli._bundled_karni_errorcodes"
 _FALLBACK_BASE = "https://cbsshekhawat18-lab.github.io/karni/"
@@ -370,6 +370,28 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Run the command it names with `karni manage ...` to see the full output, fix what "
         "it reports, then retry.",
     ),
+    # C34x debugging: karni explain -, karni queries
+    _c(
+        "C340",
+        "Nothing to explain",
+        "karni explain",
+        "karni explain answers for a code (karni explain E104) or for pasted text: a traceback, "
+        "a test failure or a log line read from stdin. It got neither: no code, and stdin was "
+        "a terminal or empty.",
+        "Pass a code (karni explain E104), or pipe the text in: karni explain - < "
+        "traceback.txt, or pbpaste | karni explain -. Agents: the explain_text MCP tool takes "
+        "the text as an argument.",
+    ),
+    _c(
+        "C341",
+        "The project's karni has no karni_queries command",
+        "karni queries",
+        "karni queries runs manage.py karni_queries in the project's interpreter; that command "
+        "ships with karni from the release that added karni queries, and the project has an "
+        "older karni installed.",
+        "Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and "
+        "reinstall), then run karni queries again. karni doctor shows both versions.",
+    ),
 )
 
 
@@ -402,6 +424,32 @@ def core_module() -> ModuleType | None:
         spec.loader.exec_module(loaded)
     except Exception:
         del sys.modules[_MODULE_NAME]
+        raise
+    return loaded
+
+
+def failures_module() -> ModuleType | None:
+    """``karni.errorcodes.failures`` (the ``karni explain -`` catalogue), loaded by path.
+
+    It sits beside the registry (and inside its bundled copy), imports only
+    the stdlib and its parent package, so it loads under the same private
+    name as :func:`core_module` without Django or a project.
+    """
+    name = f"{_MODULE_NAME}.failures"
+    if name in sys.modules:
+        return sys.modules[name]
+    directory = core_source_dir()
+    if directory is None or core_module() is None or not (directory / "failures.py").is_file():
+        return None
+    spec = importlib.util.spec_from_file_location(name, directory / "failures.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - importlib contract
+        return None
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[name] = loaded
+    try:
+        spec.loader.exec_module(loaded)
+    except Exception:
+        del sys.modules[name]
         raise
     return loaded
 

@@ -1,0 +1,5 @@
+[2m2026-10-21T07:56:28.456874Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/bookings/'[0m [36mrequest_id[0m=[35m11da5c7a-4266-428e-a065-93d02a791077[0m [36muser_agent[0m=[35mpython-requests/2.34.2[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-21T07:56:28.462977Z[0m [[33m[1mwarning  [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m401[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/bookings/'[0m [36mrequest_id[0m=[35m11da5c7a-4266-428e-a065-93d02a791077[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-21T07:56:28.464367Z[0m [[33m[1mwarning  [0m] [1mUnauthorized: /api/bookings/  [0m [[0m[1m[34mdjango.request[0m][0m
+"GET /api/bookings/ HTTP/1.1" 401 58
+{"detail":"Authentication credentials were not provided."}

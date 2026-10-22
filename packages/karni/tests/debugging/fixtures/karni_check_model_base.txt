@@ -1,0 +1,4 @@
+architecture: [model-base] /home/dev/eventhub/events/models.py:109: Note inherits django.db.models.Model directly (inherit karni.models.BaseModel (or compose its mixins))
+KarniCommandError: E702: karni check found 1 problem(s), listed above. Fix each one (each names its K or E code; `karni explain <code>` explains it). See https://cbsshekhawat18-lab.github.io/karni/errors/#e702
+System check identified no issues (0 silenced).
+karni check: FAILED

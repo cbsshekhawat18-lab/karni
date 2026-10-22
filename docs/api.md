@@ -482,6 +482,16 @@ hints; override `optimize_queryset(queryset, serializer_class=None)` for a
 hand-built strategy. Custom actions are not optimised automatically — return
 `self.paginated_response(qs)` (which is) or call `self.optimize_queryset(qs)`.
 
+What the walker cannot see it records on the plan as blind spots
+(`karni.api.optimizer.blind_spots(serializer, model)`: method fields,
+properties named by `source`, `to_representation` overrides, whole-object
+fields). [`karni queries`](debugging/queries.md) reads them to say which
+field repeats a query and which hint fixes it:
+
+```sh
+karni queries /api/events/ --as organizer@example.com
+```
+
 ### Query budgets
 
 Every `BaseViewSet` request is counted (auth, role lookups and the

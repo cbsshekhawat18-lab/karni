@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/dev/eventhub/events/models.py", line 9, in <module>
+    from karni.models import BaseModel
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/models.py", line 61, in <module>
+    class UUIDModel(models.Model):
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/db/models/base.py", line 131, in __new__
+    app_config = apps.get_containing_app_config(module)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/apps/registry.py", line 260, in get_containing_app_config
+    self.check_apps_ready()
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/apps/registry.py", line 137, in check_apps_ready
+    settings.INSTALLED_APPS
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/conf/__init__.py", line 81, in __getattr__
+    self._setup(name)
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/conf/__init__.py", line 61, in _setup
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Requested setting INSTALLED_APPS, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.

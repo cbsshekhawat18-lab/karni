@@ -238,6 +238,41 @@ RULES: tuple[Rule, ...] = (
         fix="Run the matching `karni why` command and apply the fix it prints.",
     ),
     # --- end debugging ----------------------------------------------------------
+    # workflow: debugging (karni explain -, karni queries)
+    Rule(
+        code="K013",
+        category="workflow",
+        severity="must",
+        summary="Traceback: karni explain - first.",
+        rule=(
+            "Paste a traceback, a test failure or a log line into `karni explain -` (stdin; MCP "
+            "tool `explain_text`) before reading it by hand. It names the Karni failure class, "
+            "the cause, where (the first project frame, file:line), the fix and the docs link, "
+            "and says plainly when it does not recognise the failure."
+        ),
+        rationale=(
+            "Rebuilding context from a traceback is the expensive part of debugging; the "
+            "catalogue already knows Karni's failure classes (codes, query budgets, access "
+            "outcomes, database, migrations, settings, CSRF/CORS) and their fixes."
+        ),
+    ),
+    Rule(
+        code="K014",
+        category="workflow",
+        severity="must",
+        summary="N+1: karni queries URL --as USER first.",
+        rule=(
+            "Before hunting an N+1 in serializers, run `karni queries <endpoint> --as <user>` "
+            "(MCP tool `queries`). It runs the endpoint in-process, groups the repeated queries "
+            "by the serializer field and relation that caused them, says why the optimiser did "
+            "not fetch them and prints the hint that fixes it."
+        ),
+        rationale=(
+            "The optimiser derives select_related/prefetch_related itself and records what it "
+            "cannot see (method fields, properties, to_representation), so the cause and the "
+            "fix come from the same knowledge instead of guesswork."
+        ),
+    ),
     # architecture
     Rule(
         code="K301",

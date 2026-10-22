@@ -1,0 +1,8 @@
+[2m2026-10-21T07:56:30.620791Z[0m [[33m[1mwarning  [0m] [1mGET /api/events/?page_size=50 200 — 30 queries, 24 duplicated, 7.2 ms in SQL, 307.5 ms total
+  12× SELECT … FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."tier_id" = %s AND NOT ("events_booking"."…
+      ← TicketTierSerializer.remaining (events/models.py:56 in remaining)
+  6× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventSerializer.venue_city (events/serializers.py:26 in get_venue_city)
+  6× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventSerializer.organizer_email (events/serializers.py:29 in get_organizer_email)[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-21T07:56:30.630324Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/events/ff9ab5c2-9f04-4aed-b552-332702627f73/'[0m [36mrequest_id[0m=[35m150fbb5f-08fe-4968-b07e-737780b8edaa[0m [36muser_agent[0m=[35mpython-requests/2.34.2[0m [36muser_id[0m=[35m32e70629-8fad-41a6-86cb-0fb39a1de644[0m

@@ -1,0 +1,33 @@
+Traceback (most recent call last):
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/conf/validation.py", line 453, in validate_settings
+    KarniSettingsModel.model_validate(data)
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/pydantic/main.py", line 790, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for KarniSettingsModel
+  Value error, KARNI_STORAGE='s3' requires AWS_STORAGE_BUCKET_NAME to be set [type=value_error, input_value={'DEBUG': True, 'SECRET_K...oken', 'secret', 'key']}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/value_error
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/dev/eventhub/manage.py", line 23, in <module>
+    main()
+  File "/home/dev/eventhub/manage.py", line 19, in main
+    execute_from_command_line(sys.argv)
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/apps.py", line 44, in ready
+    validate_settings(settings)
+  File "/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/conf/validation.py", line 461, in validate_settings
+    raise KarniImproperlyConfigured(
+karni.exceptions.KarniImproperlyConfigured: E504: Karni settings validation failed:
+  - KARNI_STORAGE='s3' requires AWS_STORAGE_BUCKET_NAME to be set
+(set KARNI_VALIDATE = False in settings.py to skip startup validation)
+See https://cbsshekhawat18-lab.github.io/karni/errors/#e504
