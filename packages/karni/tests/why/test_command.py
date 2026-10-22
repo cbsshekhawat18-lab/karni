@@ -27,7 +27,7 @@ def test_a_row_filtered_out_by_the_read_scope(world: Any) -> None:
     assert lines[0].startswith("user     alice@example.com")
     assert lines[1] == "roles    organizer"
     assert "row      Event" in text and "organizer=bob@example.com" in text
-    assert "result   404 Not Found — the row exists but access.read filters it out" in text
+    assert "result   404 Not Found: the row exists but access.read filters it out" in text
     assert "tests/why/routes.py" in text and "karni/api/viewsets.py" in text
     assert "fix      " in text
 
@@ -43,7 +43,7 @@ def test_a_grant_scope_names_the_role_and_the_rows(world: Any) -> None:
 def test_a_write_refused_on_a_readable_row(world: Any) -> None:
     row = world.rows["bob-published"]
     text = _run(f"declared-events/{row.pk}", "--as", "alice@example.com", "--action", "update")
-    assert "result   403 Forbidden — the row is readable" in text
+    assert "result   403 Forbidden: the row is readable" in text
     assert "make alice@example.com the row's organizer (now bob@example.com)" in text
 
 
@@ -60,7 +60,7 @@ def test_json_for_agents(world: Any) -> None:
 
 def test_a_hidden_field_and_a_read_only_field(world: Any) -> None:
     hidden = _run("customers.salary", "--as", "alice@example.com")
-    assert "result   hidden — salary is absent" in hidden
+    assert "result   hidden: salary is absent" in hidden
     assert "Customer.Karni.field_roles['salary']: read needs one of staff" in hidden
     owner = _run("declared-events.organizer", "--as", "alice@example.com")
     assert "result   read-only" in owner and "owner field" in owner
@@ -90,7 +90,7 @@ def test_why_empty_names_the_owner_field_an_owned_path_missed(world: Any) -> Non
     # The rows are alice's through `organizer`; the rule asks for `created_by`.
     text = _run("misowned-events", "--empty", "--as", "alice@example.com")
     assert (
-        "near     Owned('organizer') would match 2 row(s) where Owned('created_by') matches none — "
+        "near     Owned('organizer') would match 2 row(s) where Owned('created_by') matches none: "
     ) in text
     assert "DeclaredEvents.access" in text and "owns Event through organizer" in text
     assert (

@@ -82,7 +82,7 @@ def _ensure(directory: Path) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     ignore = directory / ".gitignore"
     if not ignore.exists():
-        ignore.write_text("# Karni development capture (DEBUG only); never committed.\n*\n")
+        ignore.write_text("# Karni development capture (DEBUG only). Never committed.\n*\n")
     return directory
 
 

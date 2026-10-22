@@ -1,6 +1,6 @@
 /**
- * <AuthGuard> — renders children only for authenticated users (optionally
- * holding one of the given roles); otherwise it renders a fallback or says
+ * <AuthGuard> renders children only for authenticated users (optionally
+ * holding one of the given roles). Otherwise it renders a fallback or says
  * why, in plain words (contract "Hooks + auth").
  *
  * Two different refusals: with `explain`, a visitor who is not signed in sees
@@ -11,7 +11,7 @@
  *
  * Deprecation (0.4 → 1.0): a guard with none of `explain`, `fallback`,
  * `anonymous`, `denied` or `slots` renders nothing when it refuses, as in
- * 0.3, and warns once in development; 1.0 makes `explain` the default. A
+ * 0.3, and warns once in development. 1.0 makes `explain` the default. A
  * guard that hides a piece of UI passes `fallback={null}`.
  *
  * While the initial auth state resolves, the `loading` slot renders
@@ -46,7 +46,7 @@ export interface AuthGuardDeniedProps {
 }
 
 /**
- * The replaceable refusals of AuthGuard. Pass any subset as `slots`;
+ * The replaceable refusals of AuthGuard. Pass any subset as `slots`.
  * `defaultAuthGuardSlots` holds Karni's own, to wrap them.
  */
 export interface AuthGuardSlots {
@@ -69,14 +69,14 @@ export interface AuthGuardProps {
   anonymous?: ReactNode;
   /** Rendered for a signed-in user whose role lacks access (wins over `fallback`). */
   denied?: ReactNode;
-  /** Rendered while the auth status is still "loading"; default nothing. */
+  /** Rendered while the auth status is still "loading". Default: nothing. */
   loading?: ReactNode;
   /** Replace the default refusals: Anonymous (sign-in prompt), Denied (PermissionDenied). */
   slots?: Partial<AuthGuardSlots>;
   /**
    * Say why instead of rendering nothing: the sign-in prompt for a visitor,
-   * PermissionDenied for a role mismatch. The default from 1.0; until then a
-   * guard with no fallback and no `explain` renders nothing (and warns).
+   * PermissionDenied for a role mismatch. It is the default from 1.0. Until
+   * then a guard with no fallback and no `explain` renders nothing (and warns).
    */
   explain?: boolean;
   /** Merged onto the default refusal's root. */

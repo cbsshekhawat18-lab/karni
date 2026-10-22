@@ -67,7 +67,7 @@ export const CustomRendering: Story = {
     <PaymentStatus paymentId="succeeded" statusLabels={{ succeeded: "Paid" }}>
       {(payment) => (
         <span className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-card-foreground">
-          Payment {payment.id}: {payment.status} — {payment.amount} {payment.currency.toUpperCase()}
+          Payment {payment.id}: {payment.status} ({payment.amount} {payment.currency.toUpperCase()})
         </span>
       )}
     </PaymentStatus>

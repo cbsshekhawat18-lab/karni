@@ -68,7 +68,7 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout
     expect(screen.getByRole("heading", { level: 1, name: "Events" })).toBeInTheDocument();
 
     // Populated: a full default page of rows (header row + 25).
-    const table = await screen.findByRole("table", undefined, { timeout: 5000 });
+    const table = await screen.findByRole("grid", undefined, { timeout: 5000 });
     await waitFor(() => expect(within(table).getAllByRole("row")).toHaveLength(26), {
       timeout: 5000,
     });
@@ -104,7 +104,7 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout
     await user.click(screen.getByRole("button", { name: "Title" }));
     await waitFor(
       () =>
-        expect(within(screen.getByRole("table")).getAllByRole("row")[1]).toHaveTextContent(
+        expect(within(screen.getByRole("grid")).getAllByRole("row")[1]).toHaveTextContent(
           "Event 01",
         ),
       { timeout: 5000 },
@@ -121,7 +121,7 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout
     });
     await waitFor(
       () =>
-        expect(within(screen.getByRole("table")).getAllByRole("row")[1]).toHaveTextContent(
+        expect(within(screen.getByRole("grid")).getAllByRole("row")[1]).toHaveTextContent(
           "Event 26",
         ),
       { timeout: 5000 },
@@ -130,14 +130,14 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout
 
   it("narrows through the declared search param end to end", async () => {
     mountTargetUsage();
-    await screen.findByRole("table", undefined, { timeout: 5000 });
+    await screen.findByRole("grid", undefined, { timeout: 5000 });
 
     const user = userEvent.setup();
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "Event 03");
 
     // 300ms debounce, then one filtered page.
     await waitFor(
-      () => expect(within(screen.getByRole("table")).getAllByRole("row")).toHaveLength(2),
+      () => expect(within(screen.getByRole("grid")).getAllByRole("row")).toHaveLength(2),
       { timeout: 5000 },
     );
     expect(screen.getByText("Event 03")).toBeInTheDocument();
@@ -148,7 +148,7 @@ describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout
     // Start on page 2 of the 57-event dataset, then shrink the dataset to a
     // single page by swapping handlers — the stale page is now out of range.
     mountTargetUsage();
-    await screen.findByRole("table", undefined, { timeout: 5000 });
+    await screen.findByRole("grid", undefined, { timeout: 5000 });
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Next" }));

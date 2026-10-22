@@ -2,7 +2,7 @@
  * The question ResourceTable asks before destructive work (a row delete, a
  * destructive bulk action): a Modal (Radix dialog, so focus is trapped and
  * Escape cancels) naming the action and how many rows it touches. While the
- * work runs the confirm button shows progress; a failure is reported inside
+ * work runs the confirm button shows progress. A failure is reported inside
  * the dialog in plain words, with the button kept for another try when
  * trying again can help. Focus returns to the control that opened it.
  * Internal to @karni/ui.

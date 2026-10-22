@@ -1,19 +1,19 @@
 /**
- * createKarniClient — the typed fetch wrapper every @karni/ui layer sits on
+ * createKarniClient: the typed fetch wrapper every @karni/ui layer sits on
  * (contract "Schema client" + D6).
  *
  * Responsibilities:
  * - URL joining + query-string serialization (arrays become repeated keys,
  *   null/undefined are dropped),
- * - JSON request/response handling; a FormData body is passed through
+ * - JSON request/response handling. A FormData body is passed through
  *   untouched with NO manual Content-Type (the D2 multipart rule),
  * - DRF error passthrough: non-2xx responses throw KarniApiError carrying the
  *   parsed body (field errors / detail / non_field_errors) verbatim,
  * - auth hook points per D6's client-owns-tokens design: the auth layer (not
  *   React) registers token injection, extra headers (session CSRF),
  *   credentials mode and a 401 handler via `setAuthHooks`. The client calls
- *   `onUnauthorized` at most ONCE per request and retries at most ONCE — a
- *   request that 401s again after a successful refresh is surfaced, never
+ *   `onUnauthorized` at most ONCE per request and retries at most ONCE. A
+ *   request that 401s again after a successful refresh is surfaced and never
  *   re-triggers refresh (the single-flight refresh promise itself lives in
  *   the auth layer behind this hook).
  */
@@ -28,7 +28,7 @@ export interface KarniClientOptions {
   baseUrl: string;
   /** Path of the OpenAPI document. Default "/api/schema/". */
   schemaUrl?: string;
-  /** Initial access-token getter; `setAuthHooks` can replace it later (D6). */
+  /** Initial access-token getter. `setAuthHooks` can replace it later (D6). */
   getAccessToken?: () => string | null;
   /** Custom fetch implementation (tests, SSR). Resolved per request. */
   fetch?: typeof globalThis.fetch;
@@ -55,10 +55,10 @@ export interface KarniRequestOptions {
 /**
  * Hook points the auth layer registers on the client (D6). Keys present in
  * the object passed to `setAuthHooks` override the current value (an explicit
- * `undefined` clears one); absent keys are kept.
+ * `undefined` clears one). Absent keys are kept.
  */
 export interface KarniAuthHooks {
-  /** Called before every request; a non-null return is sent as Bearer. */
+  /** Called before every request. A non-null return is sent as Bearer. */
   getAccessToken?: () => string | null;
   /**
    * Called once when a request gets a 401 (unless `skipAuthRefresh`). Return
@@ -68,7 +68,7 @@ export interface KarniAuthHooks {
   onUnauthorized?: (error: KarniApiError) => Promise<boolean>;
   /** Extra headers merged into every request (session-mode X-CSRFToken). */
   getHeaders?: () => Record<string, string>;
-  /** fetch credentials mode; session mode sets "include". */
+  /** fetch credentials mode. Session mode sets "include". */
   credentials?: RequestCredentials;
 }
 
@@ -101,7 +101,7 @@ export interface KarniClient {
   request<T>(path: string, options?: KarniRequestOptions): Promise<T>;
   /**
    * The same request (auth, query, 401 retry) returning the raw `Response`
-   * instead of a parsed body — for file downloads (`GET /<resource>/export/`).
+   * instead of a parsed body, for file downloads (`GET /<resource>/export/`).
    * Non-2xx responses still throw `KarniApiError` with the parsed error body.
    */
   requestRaw(path: string, options?: KarniRequestOptions): Promise<Response>;

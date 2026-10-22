@@ -2,13 +2,13 @@
  * ResourceTable's search box + declared-params-derived filter bar (D5).
  *
  * The parent decides WHICH fields filter (enum/boolean/relation fields ∩ the
- * list operation's declared query params, cap 4, `filters` prop overrides);
- * this component only renders the controls:
+ * list operation's declared query params, cap 4, `filters` prop overrides).
+ * This component only renders the controls:
  * - enum   → clearable <Select> ("All" clears),
  * - boolean → clearable Yes/No <Select>,
  * - relation → <ResourceSelect> (multiple for many-relations).
  *
- * Internal to @karni/ui — the public surface is ResourceTable's props.
+ * Internal to @karni/ui. The public surface is ResourceTable's props.
  */
 import * as React from "react";
 import type { FilterValue } from "../../../hooks/types";

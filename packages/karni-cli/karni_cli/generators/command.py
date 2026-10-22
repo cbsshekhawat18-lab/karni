@@ -64,7 +64,7 @@ def plan(ws: Workspace, app: App, name: str) -> None:
     require_snake(name, "Command name")
     if name in BUILTIN:
         raise CliError(
-            f"`{name}` is a Django/Karni command — an app command of that name would be "
+            f"`{name}` is a Django/Karni command, so an app command of that name would be "
             "shadowed. Choose another name.",
             code="C103",
         )

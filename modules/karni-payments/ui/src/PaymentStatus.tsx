@@ -1,12 +1,12 @@
 /**
- * <PaymentStatus> — live status badge + amount for one payment (contract
+ * <PaymentStatus>: live status badge + amount for one payment (contract
  * "@karni/payments-ui").
  *
  * Fetches via `useResourceItem<Payment>("payments", paymentId)`, so it shares
  * the `["karni", "payments", "detail", id]` cache entry with every other
  * @karni/ui consumer and is refreshed by <CheckoutButton>'s invalidation.
  * `poll` (a number of milliseconds) maps to TanStack Query's
- * `refetchInterval` — useful while a webhook-driven status is settling.
+ * `refetchInterval`, which helps while a webhook-driven status is settling.
  *
  * Styling uses @karni/ui design tokens only (bg-muted, bg-primary,
  * bg-destructive, bg-secondary, ...), so it inherits any theme override.
@@ -20,7 +20,7 @@ import { Skeleton, cn, useResourceItem } from "@karni/ui";
 import type { ReactElement, ReactNode } from "react";
 import type { Payment, PaymentStatusValue } from "./types";
 
-/** Token-only badge classes per status; unknown statuses fall back to muted. */
+/** Token-only badge classes per status. Unknown statuses fall back to muted. */
 const STATUS_CLASSES: Record<PaymentStatusValue, string> = {
   pending: "bg-muted text-muted-foreground",
   processing: "bg-muted text-muted-foreground",
@@ -35,21 +35,21 @@ const FALLBACK_STATUS_CLASS = "bg-muted text-muted-foreground";
 
 export interface PaymentStatusProps {
   paymentId: string | number;
-  /** `false` (default) = fetch once; a number = refetch every N milliseconds. */
+  /** `false` (default) fetches once. A number refetches every N milliseconds. */
   poll?: false | number;
   /** Merged onto the wrapper element. */
   className?: string;
-  /** Per-status label overrides (i18n hatch); default is the status with spaces. */
+  /** Per-status label overrides (i18n hatch). Default: the status with spaces. */
   statusLabels?: Partial<Record<PaymentStatusValue, string>>;
-  /** Per-status badge class overrides; replaces the default classes for that status. */
+  /** Per-status badge class overrides. Replaces the default classes for that status. */
   statusClassNames?: Partial<Record<PaymentStatusValue, string>>;
   /** Replaces the default Intl currency formatting of amount/currency. */
   formatAmount?: (payment: Payment) => string;
-  /** Shown while loading; defaults to a token-styled skeleton. */
+  /** Shown while loading. Defaults to a token-styled skeleton. */
   loadingFallback?: ReactNode;
-  /** Shown when the fetch fails; defaults to a destructive-toned message. */
+  /** Shown when the fetch fails. Defaults to a destructive-toned message. */
   errorFallback?: ReactNode | ((error: unknown) => ReactNode);
-  /** Full render override — receives the fetched payment. */
+  /** Full render override. It receives the fetched payment. */
   children?: (payment: Payment) => ReactNode;
 }
 

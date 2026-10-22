@@ -52,7 +52,7 @@ def _stripe_sdk() -> Any:
         import stripe
     except ImportError as exc:
         raise KarniImproperlyConfigured(
-            "The Stripe provider needs the stripe SDK — install the extra: "
+            "The Stripe provider needs the stripe SDK. Install the extra: "
             'pip install "karni-payments[stripe]".',
             code="PAY003",
         ) from exc
@@ -76,7 +76,7 @@ class StripeProvider(PaymentProvider):
         key = str(conf.get("STRIPE_SECRET_KEY"))
         if not key:
             raise KarniImproperlyConfigured(
-                "STRIPE_SECRET_KEY is not set — the Stripe provider cannot make API calls. "
+                "STRIPE_SECRET_KEY is not set, so the Stripe provider cannot make API calls. "
                 "Set it in the environment (.env in development), or use "
                 "KARNI_PAYMENTS_PROVIDER = 'test' locally.",
                 code="PAY004",
@@ -124,8 +124,8 @@ class StripeProvider(PaymentProvider):
         secret = str(conf.get("STRIPE_WEBHOOK_SECRET"))
         if not secret:
             raise KarniImproperlyConfigured(
-                "STRIPE_WEBHOOK_SECRET is not set — Stripe webhooks cannot be verified, so "
-                "they are refused. Copy the endpoint's signing secret (whsec_...) from the "
+                "STRIPE_WEBHOOK_SECRET is not set, so Stripe webhooks cannot be verified and "
+                "are refused. Copy the endpoint's signing secret (whsec_...) from the "
                 "Stripe dashboard.",
                 code="PAY005",
             )

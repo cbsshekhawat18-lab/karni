@@ -382,7 +382,7 @@ def _from_viewset(name: str, action: str, query: str, user: Any) -> str:
     if action not in ("list", "create", "retrieve", "update", "partial_update", "destroy"):
         if action not in extra:
             raise KarniLookupError(
-                f"{name} has no action {action!r}; its actions: list, retrieve"
+                f"{name} has no action {action!r}. Its actions: list, retrieve"
                 + "".join(f", {a}" for a in sorted(extra))
                 + ".",
                 code="E940",
@@ -445,7 +445,7 @@ def resolve_endpoint(endpoint: str, method: str = "GET", user: Any = None) -> Ta
         match = resolve(urlsplit(path).path)
     except Resolver404:
         raise KarniLookupError(
-            f"No URL matches {urlsplit(path).path}; `karni routes` lists every route.",
+            f"No URL matches {urlsplit(path).path}. `karni routes` lists every route.",
             code="E940",
         ) from None
     view = getattr(match.func, "cls", None) or getattr(match.func, "view_class", None)
@@ -455,7 +455,7 @@ def resolve_endpoint(endpoint: str, method: str = "GET", user: Any = None) -> Ta
         allowed = ", ".join(m.upper() for m in actions)
         raise KarniValueError(
             f"{getattr(view, '__name__', 'The view')} does not answer {method.upper()} at "
-            f"{urlsplit(path).path}; it answers {allowed}.",
+            f"{urlsplit(path).path}. It answers {allowed}.",
             code="E942",
         )
     return Target(path, view, action, dict(match.kwargs))
@@ -536,7 +536,7 @@ class Report:
 
     def headline(self) -> str:
         parts = [f"{cause.count} from {cause.summary}" for cause in self.causes[:4]]
-        tail = f" — {', '.join(parts)}" if parts else " — no statement repeats"
+        tail = f": {', '.join(parts)}" if parts else ", no statement repeats"
         return f"{self.total} queries{tail}"
 
     def as_dict(self, *, every: bool = False) -> dict[str, Any]:
@@ -573,7 +573,7 @@ class Report:
         totals = f"{self.duration_ms:.1f} ms in SQL"
         if self.budget is not None:
             over = self.total - self.budget
-            totals += f"; budget {self.budget}" + (f", {over} over" if over > 0 else ", within")
+            totals += f", budget {self.budget}" + (f" ({over} over)" if over > 0 else " (within)")
         lines.append(totals)
         for cause in self.causes:
             lines.append("")
@@ -881,13 +881,13 @@ def _aggregate_fix(
     )
     if not prefix:
         return (
-            "no prefetch can serve a per-row aggregate; compute it in the list query: override "
+            "no prefetch can serve a per-row aggregate, so compute it in the list query: override "
             f"get_queryset() on {ctx.name} to return super().get_queryset().annotate("
             f"{expression}){same}, then {render}"
         )
     level = prefix.rstrip("_")
     return (
-        "no prefetch can serve a per-row aggregate; annotate it where the "
+        "no prefetch can serve a per-row aggregate, so annotate it where the "
         f'{model} rows are fetched: prefetch_related = [Prefetch("{level}", queryset='
         f"{model}.objects.annotate({expression}))] on {ctx.name}{same}, then {render}"
     )
@@ -1010,7 +1010,7 @@ def _explain(
         fix = special or _hint(relation, level, ctx)
         if spot.kind == "method" and relation.kind == "one" and not special:
             fix += (
-                f"; or, if {spot.attribute}() only reads {relation.name}.<attr>, declare "
+                f". Or, if {spot.attribute}() only reads {relation.name}.<attr>, declare "
                 f'serializers.CharField(source="{relation.name}.<attr>", read_only=True) '
                 f"instead and the optimiser joins {relation.name} itself"
             )

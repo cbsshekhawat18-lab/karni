@@ -19,7 +19,7 @@
   <p class="karni-note">
     {% blocktranslate trimmed %}
       Upload a CSV or XLSX file, map its columns to fields, preview what would change, then commit.
-      Nothing is written before the preview; rows with errors are skipped and listed.
+      Nothing is written before the preview. Rows with errors are skipped and listed.
     {% endblocktranslate %}
   </p>
   <div class="karni-toolbar">
@@ -42,18 +42,18 @@
           <tr>
             <td><code>{{ spec.name }}</code>{% if spec.name == key %} <span class="karni-note">({% translate "matches existing rows" %})</span>{% endif %}</td>
             <td>{{ spec.kind }}</td>
-            <td>{% if spec.required %}{% translate "yes" %}{% else %}—{% endif %}</td>
+            <td>{% if spec.required %}{% translate "yes" %}{% else %}-{% endif %}</td>
             <td>
               {% if spec.choices %}{% for value, label in spec.choices %}<code>{{ value }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
               {% elif spec.target %}{% blocktranslate with lookup=spec.lookup|default:"id" target=spec.target %}the {{ lookup }} of a {{ target }}{% endblocktranslate %}
-              {% else %}—{% endif %}
+              {% else %}-{% endif %}
             </td>
           </tr>
         {% endfor %}
       </tbody>
     </table></div>
   {% else %}
-    <p><strong>{{ job.original_name }}</strong> — {{ job.rows_total }} {% translate "rows" %}, {% translate "status" %}: {{ job.get_status_display }}</p>
+    <p><strong>{{ job.original_name }}</strong>: {{ job.rows_total }} {% translate "rows" %}, {% translate "status" %}: {{ job.get_status_display }}</p>
 
     {% if state.status == "uploaded" or state.status == "failed" %}
       {% if state.error %}<p role="alert" class="karni-problem"><strong>{{ state.error }}</strong></p>{% endif %}
@@ -69,7 +69,7 @@
                 <td>{{ column.header }}</td>
                 <td>
                   <select class="karni-field" name="map:{{ column.index }}" aria-label="{{ column.header }}">
-                    <option value="" {% if not column.value %}selected{% endif %}>{% translate "— ignore —" %}</option>
+                    <option value="" {% if not column.value %}selected{% endif %}>{% translate "Ignore this column" %}</option>
                     {% for name, label, required in column.options %}
                       <option value="{{ name }}" {% if column.value == name %}selected{% endif %}>{{ name }}{% if required %} *{% endif %}</option>
                     {% endfor %}
@@ -88,7 +88,7 @@
     {% elif state.status == "previewing" or state.status == "committing" %}
       <p id="karni-import-progress-text">{{ state.rows_done }} / {{ state.rows_total }}</p>
       <div class="karni-progress"><span id="karni-import-progress-bar"></span></div>
-      <p class="karni-note">{% translate "Running in the background; this page refreshes itself." %}</p>
+      <p class="karni-note">{% translate "Running in the background. This page refreshes itself." %}</p>
       <script>
         (function () {
           var url = "{{ state_url|escapejs }}";
@@ -119,7 +119,7 @@
           <thead><tr><th>{% translate "Row" %}</th><th>{% translate "Field" %}</th><th>{% translate "Problem" %}</th></tr></thead>
           <tbody>
             {% for problem in state.problems %}
-              <tr class="karni-problem"><td>{{ problem.row }}</td><td>{{ problem.field|default:"—" }}</td><td>{{ problem.message }}</td></tr>
+              <tr class="karni-problem"><td>{{ problem.row }}</td><td>{{ problem.field|default:"-" }}</td><td>{{ problem.message }}</td></tr>
             {% endfor %}
           </tbody>
         </table></div>

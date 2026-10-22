@@ -222,7 +222,7 @@ def locate(explicit: Path | None) -> Frontend:
                 package = json.loads(manifest.read_text(encoding="utf-8"))
             except (OSError, ValueError) as exc:
                 raise CliError(
-                    f"{manifest} is not valid JSON ({exc}); karni ui detect reads the "
+                    f"{manifest} is not valid JSON ({exc}). karni ui detect reads the "
                     "frontend's dependencies from it. Fix the file, then re-run.",
                     code="C303",
                 ) from None

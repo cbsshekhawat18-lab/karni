@@ -47,7 +47,7 @@ def plan(ws: Workspace, app: App, model_name: str, *, count: int | None = None) 
         [
             f"class {class_name}(Seeder):",
             docstring(
-                f"Demo rows for {model.name}; undeclared fields are inferred from their names.",
+                f"Demo rows for {model.name}. Undeclared fields are inferred from their names.",
                 "    ",
                 line,
             ),
@@ -62,7 +62,7 @@ def plan(ws: Workspace, app: App, model_name: str, *, count: int | None = None) 
         ws, rel, text, [Import("karni.seeding", "Seeder"), Import(model.import_module, model.name)]
     )
     ws.write(path, replace_or_append(ws, rel, text, class_name, block))
-    ws.note(f"seeder: {model.app.module}.seeds.{class_name} — run: karni seed")
+    ws.note(f"seeder: {model.app.module}.seeds.{class_name} (run: karni seed)")
     return class_name
 
 

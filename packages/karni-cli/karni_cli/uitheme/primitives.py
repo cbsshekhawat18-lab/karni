@@ -96,11 +96,11 @@ def _library_problem(role: str, source: str, rel: str) -> str | None:
     if other:
         return (
             f"{rel} is built on {other.group(1)}, whose props differ from Karni's {role} "
-            "contract (Radix-style props); register an adapter by hand"
+            "contract (Radix-style props). Register an adapter by hand"
         )
     if role in RADIX_ROLES and not _RADIX.search(source):
         return (
-            f"{rel} does not import Radix; Karni's {role} contract is Radix's props, so "
+            f"{rel} does not import Radix. Karni's {role} contract is Radix's props, so "
             "register an adapter by hand"
         )
     return None
@@ -154,7 +154,7 @@ def plan(frontend: Frontend, config: ShadcnConfig) -> PrimitivePlan | Unmapped:
         result.missing.append(
             Unmapped(
                 "select",
-                f"{rel} does not export {', '.join(absent)}; the select family is registered "
+                f"{rel} does not export {', '.join(absent)}. The select family is registered "
                 "whole or not at all (Radix parts share one context)",
             )
         )

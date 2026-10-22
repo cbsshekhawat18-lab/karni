@@ -4,7 +4,7 @@
  * Every public name of the package is re-exported here, explicitly, so that
  * scripts/generate-manifest.mjs can parse this file and emit dist/manifest.json
  * (contract D7). Keep exports in the explicit `export { ... } from` /
- * `export type { ... } from` form — no `export *`.
+ * `export type { ... } from` form, never `export *`.
  */
 
 // lib
@@ -126,6 +126,7 @@ export type {
   ResourceTableCardField,
   ResourceTableDensity,
   ResourceTableForbiddenProps,
+  ResourceTableKeyboardNavigation,
   ResourceTableLoadingProps,
   ResourceTableNoRecordsProps,
   ResourceTableNoResultsProps,
@@ -320,6 +321,7 @@ export type {
   LayoutNavLinkProps,
   LayoutMobileDrawerProps,
   LayoutSkipLinkProps,
+  LayoutRouteFocusOptions,
 } from "./components/layout/layout";
 
 export { KarniMark } from "./components/brand/karni-mark";

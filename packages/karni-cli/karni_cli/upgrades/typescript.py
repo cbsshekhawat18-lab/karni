@@ -126,7 +126,7 @@ class JscodeshiftCodemod(Codemod):
                 detail = (proc.stderr or proc.stdout).strip().splitlines()
                 return Outcome(
                     skipped=f"jscodeshift failed (exit {proc.returncode}): "
-                    f"{detail[-1] if detail else 'no output'}; make this change by hand"
+                    f"{detail[-1] if detail else 'no output'}. Make this change by hand"
                 )
             for match in _REPORT.finditer(proc.stdout):
                 path = match.group("path").strip()

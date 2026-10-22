@@ -10,7 +10,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The default size (28px) draws the small-size variant; it is an image named "Karni". */
+/** The default size (28px) draws the small-size variant. It is an image named "Karni". */
 export const Playground: Story = {};
 
 /** `auto` switches to the full drawing above 32px. */

@@ -3,7 +3,7 @@
  * 50-column resource, a 100,000-row list computed page by page, an events
  * schema with `x-karni-access` rules, and an in-memory state store.
  *
- * Test/story support only — never imported by shipped component code.
+ * Test/story support only. Shipped component code never imports it.
  */
 import { http, HttpResponse, type RequestHandler } from "msw";
 import type { ResourceTableStateStore } from "./url-state";
@@ -146,7 +146,7 @@ function largeEvent(id: number): Record<string, unknown> {
   };
 }
 
-/** `/api/events/` with `total` rows; only the requested page is ever built. */
+/** `/api/events/` with `total` rows. Only the requested page is ever built. */
 export function largeHandlers(total = LARGE_EVENT_COUNT): RequestHandler[] {
   return [
     http.get("*/api/schema/", () => HttpResponse.json(eventsOpenApi)),

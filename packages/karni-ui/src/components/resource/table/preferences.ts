@@ -2,11 +2,11 @@
  * Per-user table preferences kept in localStorage: row density (one choice
  * per user, for every table) and the columns a user hid (per table). The key
  * carries the signed-in user's id when an AuthProvider knows it, so people
- * sharing a browser keep their own; without one it is "anonymous".
+ * sharing a browser keep their own. Without one it is "anonymous".
  *
  * Storage failures (private mode, quota, a server render) fall back to the
  * defaults silently: a preference is a convenience, never a requirement.
- * Internal to @karni/ui; ResourceTable's `density` / `onDensityChange` props
+ * Internal to @karni/ui. ResourceTable's `density` / `onDensityChange` props
  * are the escape hatch.
  */
 import * as React from "react";
@@ -40,7 +40,7 @@ function writeStorage(key: string, value: string): void {
 }
 
 /**
- * A value remembered under `key`; re-read when the key changes (another user
+ * A value remembered under `key`, re-read when the key changes (another user
  * signs in). `parse` returns undefined for anything it does not recognise.
  */
 export function useStoredPreference<V>(

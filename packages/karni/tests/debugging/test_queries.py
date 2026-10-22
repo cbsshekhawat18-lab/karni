@@ -86,7 +86,7 @@ def test_method_fields_are_attributed_to_the_relation_they_read(novels: list[Nov
     count = _cause(report, "MethodNovelSerializer.chapter_count")
     assert count.summary == "Novel.chapters (an aggregate per row)"
     assert 'annotate(count_rows=Count("chapters"))' in count.fix
-    assert report.headline().startswith(f"{report.total} queries — 4 from ")
+    assert report.headline().startswith(f"{report.total} queries: 4 from ")
 
 
 def test_a_filtered_related_manager_is_named(novels: list[Novel]) -> None:

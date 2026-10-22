@@ -76,7 +76,7 @@ const meta = {
     a11y: {
       disableRules: {
         "scrollable-region-focusable":
-          "The options are reached from the search input (aria-activedescendant: arrows, Home/End, PageUp/PageDown), which scrolls the active one into view; a tab stop on the list would be a second, dead focus target.",
+          "The options are reached from the search input (aria-activedescendant: arrows, Home/End, PageUp/PageDown), which scrolls the active one into view. A tab stop on the list would be a second, dead focus target.",
       },
     },
   },

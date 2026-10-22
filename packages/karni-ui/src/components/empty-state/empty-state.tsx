@@ -11,9 +11,9 @@ export interface EmptyStateSlotProps {
 
 /** The parts of the placeholder a project can replace (`slots={{ Title: MyHeading }}`). */
 export interface EmptyStateSlots {
-  /** Wraps `icon`; decorative, hidden from assistive tech. */
+  /** Wraps `icon`. It is decorative and hidden from assistive tech. */
   Icon: React.ComponentType<EmptyStateSlotProps>;
-  /** The headline; the default is an <h3>. */
+  /** The headline. The default is an <h3>. */
   Title: React.ComponentType<EmptyStateSlotProps>;
   /** The supporting copy. */
   Description: React.ComponentType<EmptyStateSlotProps>;
@@ -30,7 +30,7 @@ export interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   description?: React.ReactNode;
   /** Slot for a call to action (e.g. a "Create" button). */
   action?: React.ReactNode;
-  /** Replaces the Icon, Title, Description or Actions; see EmptyStateSlots. */
+  /** Replaces the Icon, Title, Description or Actions. See EmptyStateSlots. */
   slots?: Partial<EmptyStateSlots>;
   children?: React.ReactNode;
 }
@@ -67,9 +67,9 @@ export const defaultEmptyStateSlots: EmptyStateSlots = {
  * Centered placeholder for empty collections: icon, title, description and
  * an action slot. Used by ResourceTable's `empty` slot and reusable anywhere.
  *
- * Escape hatches: `slots` replaces the Icon, Title (an <h3> by default; swap
- * it for the heading level your page needs), Description or Actions;
- * `className` merges via cn(); extra children render under the action.
+ * Escape hatches: `slots` replaces the Icon, Title (an <h3> by default: swap
+ * it for the heading level your page needs), Description or Actions.
+ * `className` merges via cn(), and extra children render under the action.
  */
 export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
   ({ icon, title, description, action, slots, className, children, ...props }, ref) => {

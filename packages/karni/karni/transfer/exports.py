@@ -183,7 +183,7 @@ def export_response(
     total = queryset.count()
     if total > cap:
         raise KarniValueError(
-            f"This export would have {total} rows; the limit is {cap} (KARNI_EXPORT_MAX_ROWS). "
+            f"This export would have {total} rows, but the limit is {cap} (KARNI_EXPORT_MAX_ROWS). "
             "Narrow the filters or export in parts.",
             code="E803",
         )

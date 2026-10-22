@@ -194,7 +194,7 @@ def parse_field(token: str) -> FieldSpec:
         )
     if name in RESERVED:
         raise CliError(
-            f"Field {token!r}: {name!r} is reserved — BaseModel already provides it "
+            f"Field {token!r}: {name!r} is reserved. BaseModel already provides it "
             "(id, created_at, updated_at, deleted_at, created_by, updated_by) or uses the name.",
             code="C104",
         )
@@ -302,7 +302,7 @@ def render_model_body(
             out.lines.append(call(head + django, args, indent, line_length))
             if spec.kind == "image":
                 out.notes.append(
-                    f"note: {model}.{spec.name} is an ImageField — the project needs Pillow "
+                    f"note: {model}.{spec.name} is an ImageField, so the project needs Pillow "
                     "(pip install 'karni[images]')."
                 )
         elif spec.kind == "choice":
@@ -409,8 +409,8 @@ def _render_money(
     currency = spec.args[0].upper() if spec.args and spec.args[0] else ""
     if currency and not _CURRENCY.match(currency):
         raise CliError(
-            f"Field {spec.name}: money currency {spec.args[0]!r} is not an ISO 4217 code — "
-            f"write {spec.name}:money:EUR (three letters), or {spec.name}:money for a "
+            f"Field {spec.name}: money currency {spec.args[0]!r} is not an ISO 4217 code. "
+            f"Write {spec.name}:money:EUR (three letters), or {spec.name}:money for a "
             "currency per row.",
             code="C360",
         )
@@ -428,7 +428,7 @@ def _render_money(
     if any(other.name == companion for other in specs):
         raise CliError(
             f"Field {spec.name}: {spec.name}:money adds {companion} = CurrencyField(), but "
-            f"{companion} is declared too — drop it, or write {spec.name}:money:EUR.",
+            f"{companion} is declared too. Drop it, or write {spec.name}:money:EUR.",
             code="C360",
         )
     companion_args = ["blank=True"] if spec.optional else []  # a string: blank, never null
@@ -498,8 +498,8 @@ def _render_slug(
     elif arg:
         if not any(other.name == arg for other in specs):
             raise CliError(
-                f"Field {spec.name}: slug source {arg!r} is not a field of this model — "
-                f"declare it (e.g. {arg}:str:200) or name another, {spec.name}:slug:title.",
+                f"Field {spec.name}: slug source {arg!r} is not a field of this model. "
+                f"Declare it (e.g. {arg}:str:200) or name another, {spec.name}:slug:title.",
                 code="C360",
             )
         args.append(f"populate_from={pystr(arg)}")
@@ -534,7 +534,7 @@ def _render_array(
     if base not in _ARRAY_BASES:
         raise CliError(
             f"Field {spec.name}: array needs a base type ({', '.join(_ARRAY_BASES)}), e.g. "
-            f"{spec.name}:array:str:40. Arrays are PostgreSQL-only; json works everywhere.",
+            f"{spec.name}:array:str:40. Arrays are PostgreSQL-only, but json works everywhere.",
             code="C360",
         )
     inner = f"models.{_ARRAY_BASES[base]}"
@@ -549,8 +549,8 @@ def _render_array(
     _typed_line(spec, out, "ArrayField", args, indent, line_length)
     out.imports.append(Import("django.db", "models"))
     out.notes.append(
-        f"note: {spec.name} is an ArrayField — PostgreSQL only (karni.E964 on any other "
-        "database); json is the portable list."
+        f"note: {spec.name} is an ArrayField, which is PostgreSQL only (karni.E964 on any "
+        "other database), while json is the portable list."
     )
 
 

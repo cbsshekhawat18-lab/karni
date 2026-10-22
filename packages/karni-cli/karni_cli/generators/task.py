@@ -63,7 +63,7 @@ def plan(
     ws.write(path, replace_or_append(ws, rel, text, name, block))
     dotted = f"{app.module}.tasks.{name}"
     if announce:
-        ws.note(f"task: {dotted} — schedule it with: karni make schedule {name} --every 1h")
+        ws.note(f"task: {dotted} (schedule it with: karni make schedule {name} --every 1h)")
     else:
         ws.note(f"task: {dotted}")
     return dotted

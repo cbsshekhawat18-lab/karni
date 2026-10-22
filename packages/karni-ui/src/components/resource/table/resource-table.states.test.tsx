@@ -10,6 +10,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { AuthContext, type AuthContextValue } from "../../../auth/provider";
 import type { Paginated, ResourceListParams } from "../../../hooks/types";
@@ -18,6 +19,12 @@ import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import { KarniApiError } from "../../../schema/client";
 import type { FieldDef, ResourceSchema } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../primitives/dropdown-menu";
 import { ResourceTable, type ResourceTableProps } from "./ResourceTable";
 import { memoryStateStore } from "./story-fixtures";
 
@@ -178,7 +185,7 @@ describe("loading", () => {
     expect(outline.querySelectorAll("tbody tr")).toHaveLength(10);
     // The real toolbar is up as soon as the schema is: no toolbar outline.
     expect(screen.getByRole("searchbox", { name: "Search" })).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
   });
 
   it("outlines the toolbar too while the schema loads", () => {
@@ -690,7 +697,7 @@ describe("view state in the URL", () => {
         <ResourceTable resource="events" urlNamespace="archive" caption="Archived events" />
       </QueryClientProvider>,
     );
-    expect(screen.getByRole("table", { name: "Archived events" })).toBeInTheDocument();
+    expect(screen.getByRole("grid", { name: "Archived events" })).toBeInTheDocument();
     const nexts = screen.getAllByRole("button", { name: "Next" });
     await user.click(nexts[1] as HTMLElement);
     expect(window.location.search).toBe("?archive.page=2");
@@ -833,7 +840,7 @@ describe("cards in a narrow container", () => {
     const onEdit = vi.fn();
     const onRowClick = vi.fn();
     renderTable({ onEdit, onRowClick, bulkActions: [{ label: "Archive", onClick: vi.fn() }] });
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
     const cards = within(screen.getByRole("list", { name: "Events" })).getAllByRole("listitem");
     expect(cards).toHaveLength(3);
     const first = cards[0] as HTMLElement;
@@ -854,11 +861,11 @@ describe("cards in a narrow container", () => {
   it("stays a table above the breakpoint, and cardBreakpoint={0} never switches", () => {
     stubWidth(900);
     const { unmount } = renderTable();
-    expect(screen.getByRole("table", { name: "Events" })).toBeInTheDocument();
+    expect(screen.getByRole("grid", { name: "Events" })).toBeInTheDocument();
     unmount();
     stubWidth(300);
     renderTable({ cardBreakpoint: 0 });
-    expect(screen.getByRole("table", { name: "Events" })).toBeInTheDocument();
+    expect(screen.getByRole("grid", { name: "Events" })).toBeInTheDocument();
   });
 
   it("a sort chosen from the keyboard keeps focus on the Sort by choice while the page loads", async () => {
@@ -937,7 +944,7 @@ describe("cards in a narrow container", () => {
 describe("keyboard and assistive technology", () => {
   it("names the table, labels each checkbox after its row, and says what all means", () => {
     renderTable({ bulkActions: [{ label: "Archive", onClick: vi.fn() }] });
-    expect(screen.getByRole("table", { name: "Events" })).toHaveAttribute("aria-rowcount", "61");
+    expect(screen.getByRole("grid", { name: "Events" })).toHaveAttribute("aria-rowcount", "61");
     expect(
       screen.getByRole("checkbox", { name: "Select all events on this page" }),
     ).toBeInTheDocument();
@@ -949,7 +956,7 @@ describe("keyboard and assistive technology", () => {
     const onRowClick = vi.fn();
     renderTable({ onRowClick, bulkActions: [{ label: "Archive", onClick: vi.fn() }] });
 
-    // The scroll region is focusable (keyboard scrolling), then the header controls.
+    // Every control in the grid takes focus by script, whatever its tabindex.
     await user.tab(); // search
     const title = screen.getByRole("button", { name: "Title" });
     title.focus();
@@ -976,11 +983,332 @@ describe("keyboard and assistive technology", () => {
     await waitFor(() => expect(liveRegion()).toHaveTextContent("Showing page 2 of 3."));
   });
 
-  it("the scroll region is reachable by Tab, so wide tables scroll from the keyboard", async () => {
+  it("Tab goes from the search box into the grid, and the grid scrolls the cell it focuses", async () => {
     const user = userEvent.setup();
     renderTable({ filters: false, exportFormats: false, viewOptions: false });
     await user.tab(); // the search box
     await user.tab();
+    // The first row's first cell: the scroll box is no Tab stop of its own any more.
+    expect(screen.getByText("Spring Gala").closest("td")).toHaveFocus();
+    expect(screen.getByRole("region", { name: "Events" })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it('keyboardNavigation="native": the scroll region is a Tab stop, so wide tables scroll from the keyboard', async () => {
+    const user = userEvent.setup();
+    renderTable({
+      filters: false,
+      exportFormats: false,
+      viewOptions: false,
+      keyboardNavigation: "native",
+    });
+    await user.tab(); // the search box
+    await user.tab();
     expect(screen.getByRole("region", { name: "Events" })).toHaveFocus();
+  });
+});
+
+// the table is a grid: one Tab stop, arrows inside (WAI-ARIA grid pattern)
+
+describe("keyboard: the table is one Tab stop (grid)", () => {
+  type User = ReturnType<typeof userEvent.setup>;
+
+  const FULL: Partial<ResourceTableProps<Row>> = {
+    filters: false,
+    exportFormats: false,
+    viewOptions: false,
+    bulkActions: [{ label: "Archive", onClick: vi.fn() }],
+    onEdit: vi.fn(),
+    enableDelete: true,
+  };
+
+  function manyRows(count: number, firstId = 1): Row[] {
+    return Array.from({ length: count }, (_, index) => ({
+      id: firstId + index,
+      title: `Event ${firstId + index}`,
+      capacity: 10 + index,
+      status: "DRAFT",
+      organizer: 7,
+    }));
+  }
+
+  /** The elements in the Tab order: tabindex 0 or more, enabled. */
+  function tabbable(container: HTMLElement): HTMLElement[] {
+    return [container, ...Array.from(container.querySelectorAll<HTMLElement>("*"))].filter(
+      (element) => element.tabIndex >= 0 && !element.matches(":disabled"),
+    );
+  }
+
+  /** Tabs from the start of the page and counts the presses spent inside `container`. */
+  async function tabStopsInside(user: User, container: HTMLElement): Promise<number> {
+    let inside = 0;
+    for (let press = 0; press < 400; press += 1) {
+      await user.tab();
+      if (container.contains(document.activeElement)) inside += 1;
+      else if (inside > 0) break;
+    }
+    return inside;
+  }
+
+  function grid(): HTMLElement {
+    return screen.getByRole("grid", { name: "Events" });
+  }
+
+  function cellWith(text: string): HTMLElement {
+    const cell = screen.getByText(text).closest("td");
+    if (cell === null) throw new Error(`no cell holds ${text}`);
+    return cell;
+  }
+
+  async function enterGrid(user: User): Promise<void> {
+    await user.tab(); // the search box
+    await user.tab(); // the grid's one stop
+    expect(grid()).toContainElement(document.activeElement as HTMLElement);
+  }
+
+  it("a 50-row page is one Tab stop, where each row had 4 before (native)", async () => {
+    mockUseResourceList.mockImplementation(() =>
+      listResult({ data: page(manyRows(50), { count: 50, next: null }) }),
+    );
+    const user = userEvent.setup();
+    const { unmount } = renderTable({ ...FULL, onRowClick: vi.fn(), pageSize: 50 });
+    const rows = within(grid()).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(50);
+    expect(tabbable(grid())).toHaveLength(1);
+    for (const row of rows.slice(1)) expect(tabbable(row)).toHaveLength(0);
+    expect(await tabStopsInside(user, screen.getByRole("region", { name: "Events" }))).toBe(1);
+    unmount();
+
+    // The same page as a plain table: checkbox, row button, Edit and Delete in every row.
+    renderTable({ ...FULL, onRowClick: vi.fn(), pageSize: 50, keyboardNavigation: "native" });
+    const table = screen.getByRole("table", { name: "Events" });
+    for (const row of within(table).getAllByRole("row").slice(1)) {
+      expect(tabbable(row)).toHaveLength(4);
+    }
+    // The scroll box, the select-all checkbox and three sort buttons, then 4 per row.
+    expect(tabbable(screen.getByRole("region", { name: "Events" }))).toHaveLength(205);
+  });
+
+  it("Tab enters at the first row and leaves, and Shift+Tab comes back to the last cell used", async () => {
+    const user = userEvent.setup();
+    renderTable({ ...FULL, onRowClick: vi.fn() });
+    await enterGrid(user);
+    const first = screen.getByRole("checkbox", { name: "Select Spring Gala" });
+    expect(first).toHaveFocus();
+    await user.keyboard("{ArrowDown}{ArrowRight}");
+    const autumn = screen.getByRole("button", { name: "Autumn Fair" });
+    expect(autumn).toHaveFocus();
+    await user.tab();
+    expect(grid()).not.toContainElement(document.activeElement as HTMLElement);
+    await user.tab({ shift: true });
+    expect(autumn).toHaveFocus();
+    expect(tabbable(grid())).toEqual([autumn]);
+  });
+
+  it("arrows move between cells and rows, Home and End along a row, Ctrl+Home and Ctrl+End to the corners", async () => {
+    const user = userEvent.setup();
+    renderTable({ ...FULL, onRowClick: vi.fn() });
+    await enterGrid(user);
+    const deletes = screen.getAllByRole("button", { name: "Delete" });
+    const edits = screen.getAllByRole("button", { name: "Edit" });
+
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("button", { name: "Spring Gala" })).toHaveFocus();
+    // A cell without a control is a stop itself.
+    await user.keyboard("{ArrowRight}");
+    expect(cellWith("150")).toHaveFocus();
+    // The actions cell holds two controls: each is a stop.
+    await user.keyboard("{End}");
+    expect(deletes[0]).toHaveFocus();
+    await user.keyboard("{ArrowLeft}");
+    expect(edits[0]).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(edits[1]).toHaveFocus();
+    await user.keyboard("{Home}");
+    expect(screen.getByRole("checkbox", { name: "Select Autumn Fair" })).toHaveFocus();
+    await user.keyboard("{ArrowRight}{ArrowUp}{ArrowUp}");
+    // The header row is part of the grid: its sort buttons are stops too.
+    expect(screen.getByRole("button", { name: "Title" })).toHaveFocus();
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("button", { name: "Title" })).toHaveFocus();
+    await user.keyboard("{Control>}{End}{/Control}");
+    expect(deletes[2]).toHaveFocus();
+    await user.keyboard("{ArrowDown}{ArrowRight}");
+    expect(deletes[2]).toHaveFocus();
+    await user.keyboard("{Control>}{Home}{/Control}");
+    expect(screen.getByRole("checkbox", { name: "Select all events on this page" })).toHaveFocus();
+    expect(tabbable(grid())).toHaveLength(1);
+  });
+
+  it("Enter on a cell or the checkbox opens the row, Space on a cell selects it", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    renderTable({ ...FULL, onRowClick });
+    await enterGrid(user);
+    await user.keyboard("{ArrowDown}{ArrowRight}{ArrowRight}");
+    expect(cellWith("80")).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenLastCalledWith(expect.objectContaining({ id: 2 }));
+
+    await user.keyboard(" ");
+    const autumn = screen.getByRole("checkbox", { name: "Select Autumn Fair" });
+    expect(autumn).toBeChecked();
+    expect(cellWith("80").closest("tr")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    await user.keyboard(" ");
+    expect(autumn).not.toBeChecked();
+    expect(cellWith("80").closest("tr")).toHaveAttribute("aria-selected", "false");
+
+    // On the checkbox, Space toggles it once and Enter opens the row.
+    await user.keyboard("{Home} ");
+    expect(autumn).toBeChecked();
+    await user.keyboard("{Enter}");
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+
+    // The row's button opens it once, not twice.
+    await user.keyboard("{ArrowRight}{Enter}");
+    expect(onRowClick).toHaveBeenCalledTimes(3);
+
+    // A modifier leaves Enter alone (Ctrl or Cmd+Enter is "new tab" on a link).
+    await user.keyboard("{ArrowRight}{Control>}{Enter}{/Control}");
+    expect(onRowClick).toHaveBeenCalledTimes(3);
+    expect(grid()).toHaveAttribute("aria-multiselectable", "true");
+  });
+
+  it("row actions, the delete dialog and sorting keep working from the grid", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    renderTable({ ...FULL, onEdit });
+    await enterGrid(user);
+    await user.keyboard("{End}{ArrowLeft}{Enter}");
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+
+    await user.keyboard("{ArrowRight}{Enter}");
+    const dialog = screen.getByRole("dialog", { name: "Delete “Spring Gala”?" });
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const remove = screen.getAllByRole("button", { name: "Delete" })[0] as HTMLElement;
+    expect(remove).toHaveFocus();
+    // Focus came back from the dialog: Tab returns there too.
+    expect(tabbable(grid())).toEqual([remove]);
+
+    await user.keyboard("{Control>}{Home}{/Control}{ArrowRight}{Enter}");
+    expect(lastParams()?.ordering).toBe("title");
+  });
+
+  it("a menu in a row's actions keeps its arrow keys, and Escape returns to the grid", async () => {
+    const user = userEvent.setup();
+    const onDuplicate = vi.fn();
+    renderTable({
+      filters: false,
+      exportFormats: false,
+      viewOptions: false,
+      rowActions: (row) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger aria-label={`More for ${String(row.title)}`}>
+            More
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onSelect={() => onDuplicate(row)}>Duplicate</DropdownMenuItem>
+            <DropdownMenuItem>Archive</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    });
+    await enterGrid(user);
+    await user.keyboard("{End}");
+    const trigger = screen.getByRole("button", { name: "More for Spring Gala" });
+    expect(trigger).toHaveFocus();
+    // ArrowDown opens the menu instead of moving to the next row.
+    await user.keyboard("{ArrowDown}");
+    const menu = await screen.findByRole("menu");
+    await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement));
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("menuitem", { name: "Archive" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(trigger).toHaveFocus());
+    // Back in the grid, the arrows move again.
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toHaveFocus();
+    await user.keyboard("{ArrowDown}");
+    expect(trigger).toHaveFocus();
+    await user.keyboard("{Enter}");
+    await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+    expect(onDuplicate).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  it("a link in a cell is a stop that keeps its own keys and clicks", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    renderTable({
+      ...FULL,
+      onRowClick,
+      extraColumns: [
+        {
+          id: "page",
+          header: "Page",
+          cell: ({ row }) => <a href={`#event-${String(row.original.id)}`}>Details</a>,
+        },
+      ],
+    });
+    await enterGrid(user);
+    await user.keyboard("{End}{ArrowLeft}{ArrowLeft}");
+    const link = screen.getAllByRole("link", { name: "Details" })[0] as HTMLElement;
+    expect(link).toHaveFocus();
+    expect(link).toHaveAttribute("href", "#event-1");
+    // Nothing cancels Ctrl+Enter or a Ctrl+click, so the browser opens a new tab.
+    expect(fireEvent.keyDown(link, { key: "Enter", ctrlKey: true })).toBe(true);
+    expect(fireEvent.click(link, { ctrlKey: true })).toBe(true);
+    // Links do not use Space: it selects the row.
+    await user.keyboard(" ");
+    expect(screen.getByRole("checkbox", { name: "Select Spring Gala" })).toBeChecked();
+  });
+
+  it("the mouse works as before: a click opens the row, the checkbox only selects", async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    renderTable({ ...FULL, onRowClick });
+    await user.click(cellWith("150"));
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("checkbox", { name: "Select Winter Ball" }));
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    // The clicked control is where Tab comes back to.
+    expect(tabbable(grid())).toEqual([
+      screen.getByRole("checkbox", { name: "Select Winter Ball" }),
+    ]);
+  });
+
+  it("the Tab stop follows its row when the rows move, and keeps its place when they are new", async () => {
+    const { rerender, queryClient } = renderTable({ ...FULL });
+    const autumn = screen.getByRole("checkbox", { name: "Select Autumn Fair" });
+    act(() => autumn.focus());
+    const show = (rows: Row[]): void => {
+      mockUseResourceList.mockImplementation(() => listResult({ data: page(rows, { count: 60 }) }));
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <ResourceTable<Row> resource="events" {...FULL} />
+        </QueryClientProvider>,
+      );
+    };
+    // Sorted: Autumn Fair is first now, and still the stop.
+    show([ROWS[1], ROWS[2], ROWS[0]] as Row[]);
+    await waitFor(() => expect(tabbable(grid())).toEqual([autumn]));
+    // The next page: its rows are new, the stop stays in the same place (first row, checkbox).
+    show(manyRows(3, 26));
+    await waitFor(() =>
+      expect(tabbable(grid())).toEqual([screen.getByRole("checkbox", { name: "Select Event 26" })]),
+    );
+  });
+
+  it("passes axe as a grid", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    renderTable({ ...FULL, onRowClick: vi.fn() });
+    const results = await axe.run(document.body, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
+      rules: { "color-contrast": { enabled: false } },
+    });
+    expect(results.violations.map((violation) => violation.id)).toEqual([]);
   });
 });

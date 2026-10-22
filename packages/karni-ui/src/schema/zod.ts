@@ -1,23 +1,23 @@
 /**
- * zodFor — runtime Zod schema generation from a ResourceSchema (contract
+ * zodFor: runtime Zod schema generation from a ResourceSchema (contract
  * "Schema client" + D3).
  *
  * Rules:
  * - mode "create": the create request's required fields are required, the
- *   rest are `.optional()`; mode "update": ALL fields are optional, with
+ *   rest are `.optional()`. Mode "update": ALL fields are optional, with
  *   `.nullable()` nested INSIDE `.optional()` so `undefined` means "not
  *   touched" and `null` means "clear this nullable field".
  * - readOnly fields are excluded, writeOnly fields are included.
  * - nullable / maxLength / min / max and the email / url / uuid string
  *   formats map onto the obvious Zod validators.
  * - enum → z.enum when every member is a string, otherwise a union of
- *   z.literal; "" (BlankEnum) and null (NullEnum) are never members — the
- *   parser already stripped them, nullability travels on the field.
+ *   z.literal. "" (BlankEnum) and null (NullEnum) are never members: the
+ *   parser already stripped them, and nullability travels on the field.
  * - relation values take their schema from the property's own emitted
  *   type/format (integer pk vs uuid pk), arrays of it when `many`.
- * - file → File-or-string; when `File` does not exist (SSR) it degrades to
+ * - file → File-or-string. When `File` does not exist (SSR) it degrades to
  *   z.string() so imports never crash.
- * - json → z.unknown(); number/integer coerce (form inputs produce strings).
+ * - json → z.unknown(), number/integer coerce (form inputs produce strings).
  * - datetime accepts datetime-local input ("YYYY-MM-DDTHH:mm[:ss]") and
  *   transforms it to full ISO-8601 with offset on submit (D3).
  */
@@ -89,8 +89,8 @@ function relationValueSchema(field: FieldDef, coerce: boolean): ZodTypeAny {
 /**
  * A single relation input left empty arrives as "" (an untouched select) or
  * null (a cleared one). A nullable relation then carries null (DRF's
- * allow_null); a required non-nullable one fails with REQUIRED_MESSAGE
- * instead of "Invalid uuid" / "Expected string, received null"; an optional
+ * allow_null). A required non-nullable one fails with REQUIRED_MESSAGE
+ * instead of "Invalid uuid" / "Expected string, received null". An optional
  * non-nullable one is omitted. Integer ids typed as strings are coerced.
  */
 function singleRelationSchema(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {

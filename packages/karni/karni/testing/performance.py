@@ -128,8 +128,8 @@ class ScalingResult:
     def message(self) -> str:
         return (
             f"{self.case.id}: {self.small} queries with {SCALING_SMALL} rows, {self.large} with "
-            f"{SCALING_LARGE} — the query count grows with the data (N+1).\n{self.report}\n"
-            "The optimiser derives select_related/prefetch_related from the serializer; a "
+            f"{SCALING_LARGE}: the query count grows with the data (N+1).\n{self.report}\n"
+            "The optimiser derives select_related/prefetch_related from the serializer, but a "
             "SerializerMethodField or property needs select_related/prefetch_related hints on "
             f"{self.case.viewset.__name__} (or APIMeta.select/prefetch). Opt out only with "
             f"# karni: allow({RULE}): <reason> above the class."

@@ -1,17 +1,17 @@
 /**
  * Schema → TanStack column derivation (contract "ResourceTable" + D5).
  *
- * - Domain fields first, in declaration order; writeOnly / json / file /
+ * - Domain fields first, in declaration order. writeOnly / json / file /
  *   unknown fields are skipped unless the consumer explicitly names them in
  *   the `columns` prop.
  * - Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
  *   updated_by) are hidden by default. A `columns` entry naming one (without
  *   `hidden: true`) or `showAuditFields` brings it back, after the domain
  *   columns, in AUDIT_FIELDS order.
- * - Column ids equal schema field names verbatim — that IS the DRF `ordering`
+ * - Column ids equal schema field names verbatim: that IS the DRF `ordering`
  *   contract (D5).
  * - relation / json / file / array / unknown columns are unsortable by
- *   default; the per-field `sortable` override wins both ways.
+ *   default. The per-field `sortable` override wins both ways.
  * - Cells: booleans → check icon, dates localized, enum labels prettified,
  *   relations → displayLabel of the expanded object else the raw id in
  *   <code>. The label heuristic is overridable via `getRowLabel`.
@@ -173,7 +173,7 @@ export function renderFieldCell(
   }
 }
 
-/** ColumnDef.header only takes a string or a render function — wrap nodes. */
+/** ColumnDef.header only takes a string or a render function, so nodes get wrapped. */
 function headerTemplate<T>(content: React.ReactNode): ColumnDef<T>["header"] {
   return typeof content === "string" ? content : () => content;
 }
@@ -207,9 +207,9 @@ function columnForField<T>(
 /**
  * Builds the derived column set: domain columns (schema order), then any
  * shown audit columns (AUDIT_FIELDS order), then `columns` entries naming
- * fields the schema does not declare — plain accessor columns (escape hatch
+ * fields the schema does not declare, as plain accessor columns (escape hatch
  * for computed or server-extra keys). `columns` overrides merge onto their
- * fields; naming a default-skipped field (json, audit, ...) shows it.
+ * fields, and naming a default-skipped field (json, audit, ...) shows it.
  */
 export function deriveColumns<T>(args: DeriveColumnsArgs<T>): Array<ColumnDef<T>> {
   const pending = new Map<string, ResourceColumn<T>>(

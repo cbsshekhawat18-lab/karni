@@ -1,10 +1,10 @@
 /**
- * describeError — any failure in plain words, never a raw status code.
+ * describeError: any failure in plain words, never a raw status code.
  *
  * Every Karni component that shows an error goes through this, so a 403 reads
  * "You can't delete events" everywhere and a dropped connection reads "You're
  * offline" rather than "Failed to fetch". Projects call it too, for their own
- * error UI; replace a component's whole error panel through its `slots`.
+ * error UI. Replace a component's whole error panel through its `slots`.
  */
 import { KarniApiError } from "../schema/client";
 
@@ -39,7 +39,7 @@ export interface KarniErrorDescription {
   retryable: boolean;
   /** The server's own explanation, when it gave one worth showing (never for 5xx). */
   detail?: string;
-  /** The HTTP status, for logs and project code; never shown to the user. */
+  /** The HTTP status, for logs and project code. Never shown to the user. */
   status?: number;
 }
 

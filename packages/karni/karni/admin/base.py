@@ -122,7 +122,7 @@ def resolve_admin_base() -> type[admin.ModelAdmin]:
     if not (isinstance(base, type) and issubclass(base, admin.ModelAdmin)):
         raise KarniImproperlyConfigured(
             f"KARNI_ADMIN_BASE must name a django.contrib.admin.ModelAdmin "
-            f"subclass; {path!r} is not one.",
+            f"subclass, and {path!r} is not one.",
             code="E301",
         )
     return base

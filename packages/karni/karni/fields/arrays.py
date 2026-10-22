@@ -54,7 +54,7 @@ class ArrayField(KarniField, DjangoArrayField):
 
     def postgres_only_text(self) -> str:
         return (
-            "array columns exist only on PostgreSQL; the table cannot be created here. Use "
+            "array columns exist only on PostgreSQL, so the table cannot be created here. Use "
             "karni.fields.JSONField (a list) for a portable model"
         )
 

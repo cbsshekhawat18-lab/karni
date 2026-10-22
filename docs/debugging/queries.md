@@ -39,28 +39,28 @@ EventHub with a slow `EventSerializer` added for the demonstration: a
 
 ```text
 GET /api/events/ as organizer@example.com → 200 · EventViewSet.list
-28 queries — 12 from TicketTier.booking_set (an aggregate per row), 6 from Event.venue not prefetched, 6 from Event.organizer not prefetched
-4.1 ms in SQL; budget 8, 20 over
+28 queries: 12 from TicketTier.booking_set (an aggregate per row), 6 from Event.venue not prefetched, 6 from Event.organizer not prefetched
+4.1 ms in SQL, budget 8 (20 over)
 
 12× TicketTier.booking_set (an aggregate per row)
   field  EventSerializer.tiers → TicketTierSerializer.remaining
   where  events/models.py:56 in remaining
   why    TicketTierSerializer.remaining is a model property, TicketTier.remaining (events/models.py:52): the optimiser follows relations, not code, so it cannot see what TicketTier.remaining reads (karni/api/optimizer.py).
-  fix    no prefetch can serve a per-row aggregate; annotate it where the TicketTier rows are fetched: prefetch_related = [Prefetch("tickettier_set", queryset=TicketTier.objects.annotate(sum_quantity=Sum("booking__quantity", filter=~Q(booking__status=Booking.Status.CANCELLED))))] on EventViewSet, then render it from that value: a field with source="sum_quantity" (read_only=True), or compute from it what the property returned
+  fix    no prefetch can serve a per-row aggregate, so annotate it where the TicketTier rows are fetched: prefetch_related = [Prefetch("tickettier_set", queryset=TicketTier.objects.annotate(sum_quantity=Sum("booking__quantity", filter=~Q(booking__status=Booking.Status.CANCELLED))))] on EventViewSet, then render it from that value: a field with source="sum_quantity" (read_only=True), or compute from it what the property returned
   sql    12× SELECT SUM("events_booking"."quantity") AS "total" FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking".…
 
 6× Event.venue not prefetched
   field  EventSerializer.venue_city
   where  events/serializers.py:26 in get_venue_city
   why    EventSerializer.venue_city is a SerializerMethodField (get_venue_city, events/serializers.py:25): the optimiser treats a SerializerMethodField as opaque and cannot see what get_venue_city() reads (karni/api/optimizer.py).
-  fix    select_related = ["venue"] on EventViewSet; or, if get_venue_city() only reads venue.<attr>, declare serializers.CharField(source="venue.<attr>", read_only=True) instead and the optimiser joins venue itself
+  fix    select_related = ["venue"] on EventViewSet. Or, if get_venue_city() only reads venue.<attr>, declare serializers.CharField(source="venue.<attr>", read_only=True) instead and the optimiser joins venue itself
   sql    6× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
 
 6× Event.organizer not prefetched
   field  EventSerializer.organizer_email
   where  events/serializers.py:29 in get_organizer_email
   why    EventSerializer.organizer_email is a SerializerMethodField (get_organizer_email, events/serializers.py:28): the optimiser treats a SerializerMethodField as opaque and cannot see what get_organizer_email() reads (karni/api/optimizer.py).
-  fix    select_related = ["organizer"] on EventViewSet; or, if get_organizer_email() only reads organizer.<attr>, declare serializers.CharField(source="organizer.<attr>", read_only=True) instead and the optimiser joins organizer itself
+  fix    select_related = ["organizer"] on EventViewSet. Or, if get_organizer_email() only reads organizer.<attr>, declare serializers.CharField(source="organizer.<attr>", read_only=True) instead and the optimiser joins organizer itself
   sql    6× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
 
 Ran once each (4):

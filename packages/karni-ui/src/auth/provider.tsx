@@ -1,21 +1,21 @@
 /**
  * <AuthProvider> + useAuth (contract "Hooks + auth" + D6).
  *
- * The provider instantiates the non-React AuthEngine — which owns the tokens
+ * The provider instantiates the non-React AuthEngine (which owns the tokens
  * and the single-flight refresh machinery, and registers itself on the
- * KarniClient's auth hook points (see ./engine.ts) — and mirrors its state
+ * KarniClient's auth hook points, see ./engine.ts) and mirrors its state
  * into React. It must be rendered inside <KarniProvider>: it takes the
  * KarniClient from context and uses the shared QueryClient to peek at the
  * cached schema for `x-karni-auth-mode`.
  *
  * Because the engine hooks into the client itself, EVERY request made
- * through the client while an <AuthProvider> is mounted — resource hooks,
- * schema loading, custom `client.request` calls — carries credentials
- * (Bearer in JWT mode; CSRF header + `credentials: "include"` in session
+ * through the client while an <AuthProvider> is mounted (resource hooks,
+ * schema loading, custom `client.request` calls) carries credentials
+ * (Bearer in JWT mode, CSRF header + `credentials: "include"` in session
  * mode) and takes part in the 401 → refresh → retry flow.
  *
- * Escape hatches: `mode` pins the auth mode (skipping schema detection —
- * recommended for cross-origin session setups so the very first requests
+ * Escape hatches: `mode` pins the auth mode and skips schema detection
+ * (recommended for cross-origin session setups so the very first requests
  * already include cookies), `tokenStorage` swaps the refresh-token store,
  * `csrfCookieName` / `csrfHeaderName` re-pin the session CSRF names (A4),
  * and `authBasePath` moves the auth endpoints off `/auth`.
@@ -26,10 +26,10 @@
  * provider invalidates the cached schema, so tables, forms and detail views
  * follow the new user's field set without any per-role component code.
  *
- * Known limitations (D6): browser tabs do not coordinate refreshes — with
+ * Known limitations (D6): browser tabs do not coordinate refreshes. With
  * refresh-token rotation, a refresh in one tab can log another tab out on
  * its next refresh. Identity changes also do not auto-invalidate resource
- * queries; call `queryClient.invalidateQueries({ queryKey:
+ * queries, so call `queryClient.invalidateQueries({ queryKey:
  * karniKeys.resource(...) })` after login/logout where it matters.
  */
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,18 +51,18 @@ import type { AuthStatus, KarniUser, LoginResult } from "./types";
 
 export interface AuthProviderProps {
   /**
-   * "jwt" | "session"; when omitted, the mode comes from the schema root's
+   * "jwt" | "session". When omitted, the mode comes from the schema root's
    * x-karni-auth-mode (D6), falling back to "jwt" when the schema does not
    * declare one.
    */
   mode?: "jwt" | "session";
-  /** JWT mode refresh-token storage; default localStorage adapter. */
+  /** JWT mode refresh-token storage. Defaults to the localStorage adapter. */
   tokenStorage?: TokenStorage;
-  /** Session mode CSRF cookie name; default "csrftoken" (D6/A4). */
+  /** Session mode CSRF cookie name. Default "csrftoken" (D6/A4). */
   csrfCookieName?: string;
-  /** Session mode CSRF header name; default "X-CSRFToken" (D6/A4). */
+  /** Session mode CSRF header name. Default "X-CSRFToken" (D6/A4). */
   csrfHeaderName?: string;
-  /** Path prefix of the auth endpoints relative to baseUrl; default "/auth". */
+  /** Path prefix of the auth endpoints relative to baseUrl. Default "/auth". */
   authBasePath?: string;
   children?: ReactNode;
 }
@@ -75,15 +75,15 @@ export interface AuthContextValue {
   logout(): Promise<void>;
   refresh(): Promise<void>;
   /**
-   * Adopts tokens issued out of band (JWT mode; session mode re-syncs `/me/`),
-   * e.g. after starting or stopping an impersonated session.
+   * Adopts tokens issued out of band (JWT mode, or a `/me/` re-sync in session
+   * mode), e.g. after starting or stopping an impersonated session.
    */
   adoptTokens(access: string | null, refresh: string | null): Promise<void>;
 }
 
 /**
  * The React mirror of the auth engine's state. Exported for advanced
- * composition (stories, tests, custom providers); application code should
+ * composition (stories, tests, custom providers). Application code should
  * use <AuthProvider> + useAuth().
  */
 export const AuthContext = createContext<AuthContextValue | null>(null);

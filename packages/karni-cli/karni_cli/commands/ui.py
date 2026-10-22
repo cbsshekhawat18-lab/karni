@@ -94,7 +94,7 @@ def _detect(
         if found is not None:
             return found, passed
         if source is not None:
-            raise _not_found(candidate.value, "; ".join(passed) or "no theme values found")
+            raise _not_found(candidate.value, ". ".join(passed) or "no theme values found")
     raise AssertionError("defaults always detects")  # pragma: no cover
 
 
@@ -177,8 +177,8 @@ def _guard(outcome: Outcome, force: bool) -> None:
         rel = outcome.frontend.rel(planned.path)
         raise CliError(
             f"{rel} was edited since karni ui detect wrote it (or was not written by it), so "
-            "it is not overwritten. Keep your edits: compare with --dry-run and copy what you "
-            f"need; or overwrite it with --force; or write elsewhere with --output.",
+            "it is not overwritten. To keep your edits, compare with --dry-run and copy what "
+            "you need. Otherwise, overwrite it with --force or write elsewhere with --output.",
             code="C302",
         )
 

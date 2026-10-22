@@ -196,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
         for path in sync(root):
             print(f"updated {path}")
         for entry in stale_prose(root):
-            print(f"still stale (prose; use `sync --rewrite OLD NEW`): {entry}")
+            print(f"still stale in prose (use `sync --rewrite OLD NEW`): {entry}")
         return 0
     if len(args) == 4 and args[:2] == ["sync", "--rewrite"]:
         for path in [*sync(root), *rewrite_prose(root, args[2], args[3])]:

@@ -50,11 +50,11 @@ function systemTheme(): ResolvedTheme {
 }
 
 export interface ThemeProviderProps {
-  /** Used until the user chooses; "system" by default. */
+  /** Used until the user chooses, "system" by default. */
   defaultTheme?: ThemePreference;
-  /** localStorage key for the user's choice; change it to keep apps on one origin apart. */
+  /** localStorage key for the user's choice. Change it to keep apps on one origin apart. */
   storageKey?: string;
-  /** The element that gets the `dark` class; <html> by default. */
+  /** The element that gets the `dark` class, <html> by default. */
   target?: () => HTMLElement;
   children?: React.ReactNode;
 }

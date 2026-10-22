@@ -50,7 +50,7 @@ class KarniDeprecationWarning(DeprecationWarning):
 def deprecation_message(old: str, new: str, *, removed_in: str, doc_anchor: str) -> str:
     """The stable message text :func:`warn_deprecated` emits."""
     return (
-        f"{old} is deprecated; use {new} instead. "
+        f"{old} is deprecated. Use {new} instead. "
         f"It will be removed in Karni {removed_in}. See {docs_url(doc_anchor)}"
     )
 

@@ -195,8 +195,8 @@ class PaymentProvider(ABC):
     """
 
     name: ClassVar[str]
-    """Unique short name; stored on ``Payment.provider`` and used in the
-    webhook URL (``webhook/<name>/``)."""
+    """Unique short name. It is stored on ``Payment.provider`` and used in
+    the webhook URL (``webhook/<name>/``)."""
 
     @abstractmethod
     def create_checkout(

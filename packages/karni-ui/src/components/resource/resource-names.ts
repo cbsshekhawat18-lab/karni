@@ -1,6 +1,6 @@
 /**
  * How a resource is named in a sentence: "No venues yet", "You can't edit
- * this event". The router prefix is plural ("events", "loose-slots"); the
+ * this event". The router prefix is plural ("events", "loose-slots"). The
  * singular is derived with English rules that cover the common cases, and a
  * component's `resourceLabel` prop is the escape hatch for the rest
  * ("people" / "person").

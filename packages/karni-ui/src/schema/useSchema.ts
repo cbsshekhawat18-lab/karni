@@ -1,5 +1,5 @@
 /**
- * useSchema — the schema registry hook (contract "Schema client").
+ * useSchema: the schema registry hook (contract "Schema client").
  *
  * The OpenAPI document is fetched under the pinned ["karni", "$schema"] key
  * with staleTime Infinity and parsed ONCE inside the query function, so every
@@ -8,8 +8,8 @@
  * modules are bound to the same D4-pinned shape and neither imports the
  * other at runtime.
  *
- * Asking for a resource the backend does not expose — after the schema has
- * loaded — throws during render (error-boundary friendly) with the list of
+ * Asking for a resource the backend does not expose (after the schema has
+ * loaded) throws during render (error-boundary friendly) with the list of
  * known resources, which catches typos immediately instead of rendering an
  * empty table.
  */
@@ -24,7 +24,7 @@ export const SCHEMA_QUERY_KEY = ["karni", "$schema"] as const;
 
 /**
  * The whole parsed registry (resources + root x-karni-auth-mode). Internal to
- * the package — the auth layer reads `data.authMode` from here; apps use
+ * the package: the auth layer reads `data.authMode` from here. Apps use
  * useSchema(resource).
  */
 export function useParsedSchema(): UseQueryResult<ParsedSchema> {
@@ -56,7 +56,7 @@ export function useSchema(resource: string): UseSchemaResult {
       const known = Object.keys(query.data.resources).sort();
       throw new Error(
         `Unknown resource "${resource}". Known resources: ` +
-          `${known.length > 0 ? known.join(", ") : "(none — does the schema expose x-karni-resource?)"}.`,
+          `${known.length > 0 ? known.join(", ") : "none (does the schema expose x-karni-resource?)"}.`,
       );
     }
     return { data: schema, isLoading: false, error: query.error };

@@ -6,7 +6,7 @@
  * `columns` entries and `showAuditFields`), ResourceDetail renders them last
  * in a muted "Record" group.
  *
- * This list is the single source of truth — edit it here and every generic
+ * This list is the single source of truth. Edit it here and every generic
  * component follows. Its order is also the display order whenever audit
  * fields are shown, whatever order the schema declares them in.
  */
@@ -23,7 +23,7 @@ export const AUDIT_FIELDS: readonly string[] = Object.freeze([
 
 /**
  * True for a schema field that is one of AUDIT_FIELDS. The backend always
- * emits these readOnly; a writable field that merely shares a name (a natural
+ * emits these readOnly. A writable field that merely shares a name (a natural
  * `id` key, say) is domain data and is never treated as audit.
  */
 export function isAuditField(field: Pick<FieldDef, "name" | "readOnly">): boolean {

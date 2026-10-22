@@ -79,7 +79,7 @@ class ApprovalPolicy:
     """What a model's ``class Karni`` says about approvals."""
 
     fields: tuple[str, ...] | None
-    """The guarded fields; ``None`` means any change, including create and delete."""
+    """The guarded fields. ``None`` means any change, including create and delete."""
 
     approvals: int
     roles: tuple[str, ...]

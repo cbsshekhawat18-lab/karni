@@ -1,12 +1,12 @@
 /**
  * Hooks over the impersonation API, on @karni/ui's client, auth and query keys.
  *
- * - `useImpersonation()` — `GET /impersonation-sessions/current/`: the session
- *   this user is in, or null;
- * - `useStartImpersonation()` — `POST …/start/`; in JWT mode the tokens the
- *   backend returns are adopted through `useAuth().adoptTokens`, in session
- *   mode `/me/` is re-synced; every resource query is invalidated either way;
- * - `useStopImpersonation()` — `POST …/stop/`, the mirror image.
+ * - `useImpersonation()`: `GET /impersonation-sessions/current/`, the session
+ *   this user is in, or null.
+ * - `useStartImpersonation()`: `POST …/start/`. In JWT mode the tokens the
+ *   backend returns are adopted through `useAuth().adoptTokens`, and in session
+ *   mode `/me/` is re-synced. Every resource query is invalidated either way.
+ * - `useStopImpersonation()`: `POST …/stop/`, the mirror image.
  */
 import { karniKeys, useAuth, useKarniClient } from "@karni/ui";
 import {
@@ -25,7 +25,7 @@ export function impersonationKey(): readonly unknown[] {
 }
 
 export interface UseImpersonationOptions {
-  /** `false` (default) = fetch once; a number = refetch every N milliseconds (watch the clock). */
+  /** `false` (default) = fetch once, a number = refetch every N milliseconds (watch the clock). */
   poll?: false | number;
 }
 

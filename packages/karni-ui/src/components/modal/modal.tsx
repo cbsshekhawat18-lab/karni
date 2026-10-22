@@ -82,11 +82,11 @@ export interface ModalCloseButtonProps {
 
 /** The parts of the dialog a project can replace (`slots={{ Footer: StickyFooter }}`). */
 export interface ModalSlots {
-  /** Title and description; must render ModalTitle. */
+  /** Title and description. It must render ModalTitle. */
   Header: React.ComponentType<ModalHeaderProps>;
   /** The actions row. */
   Footer: React.ComponentType<ModalFooterProps>;
-  /** The top-right close button; must close through ModalClose. */
+  /** The top-right close button. It must close through ModalClose. */
   CloseButton: React.ComponentType<ModalCloseButtonProps>;
 }
 
@@ -120,7 +120,7 @@ export const defaultModalSlots: ModalSlots = {
 };
 
 export interface ModalProps {
-  /** Dialog title — always rendered (Radix requires it for accessibility). */
+  /** Dialog title, always rendered (Radix requires it for accessibility). */
   title: React.ReactNode;
   /** Optional description under the title, linked via aria-describedby. */
   description?: React.ReactNode;
@@ -140,7 +140,7 @@ export interface ModalProps {
   onOpenChange?: (open: boolean) => void;
   /** Hides the top-right X button. */
   hideCloseButton?: boolean;
-  /** Replaces the Header, Footer or CloseButton; see ModalSlots. */
+  /** Replaces the Header, Footer or CloseButton. See ModalSlots. */
   slots?: Partial<ModalSlots>;
   /** Extra classes for the content panel. */
   className?: string;
@@ -159,7 +159,7 @@ export interface ModalProps {
  * uncontrolled via the `trigger` slot, and `footer` is the actions row.
  *
  * Keyboard and screen readers: the dialog is named by its title and
- * described by its description; focus moves into it on open, Tab stays
+ * described by its description. Focus moves into it on open, Tab stays
  * inside, Escape closes, and focus returns to what opened it.
  *
  * Escape hatches: `slots` replaces the Header, Footer or CloseButton,

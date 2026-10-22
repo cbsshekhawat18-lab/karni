@@ -6,7 +6,7 @@
  *
  * While a page is on its way (`busy`) the buttons stay focusable but ignore
  * clicks (`aria-disabled`), so a double click never skips a page and a
- * keyboard user's focus stays put; after 500ms the clicked button shows
+ * keyboard user's focus stays put. After 500ms the clicked button shows
  * progress. The default of ResourceTable's `Pagination` slot.
  */
 import * as React from "react";
@@ -24,11 +24,11 @@ export interface PaginationControlsProps {
   pageCount: number;
   /** Total item count across all pages (DRF `count`). */
   totalCount: number;
-  /** From DRF `previous` / `next` — the server is the authority. */
+  /** From DRF `previous` / `next`. The server is the authority. */
   hasPrevious: boolean;
   hasNext: boolean;
   onPageChange: (page: number) => void;
-  /** Rows per page; with `onPageSizeChange` and `pageSizeOptions` it renders the size choice. */
+  /** Rows per page. With `onPageSizeChange` and `pageSizeOptions` it renders the size choice. */
   pageSize?: number;
   pageSizeOptions?: readonly number[];
   onPageSizeChange?: (pageSize: number) => void;
@@ -41,7 +41,7 @@ type Target = "first" | "previous" | "next" | "last" | "jump";
 
 interface NavButtonProps {
   label: string;
-  /** Shown as text; icon-only buttons pass `null` and keep `label` as their name. */
+  /** Shown as text. Icon-only buttons pass `null` and keep `label` as their name. */
   text: React.ReactNode;
   icon?: React.ReactNode;
   iconAfter?: boolean;

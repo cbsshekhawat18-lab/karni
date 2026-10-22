@@ -267,8 +267,8 @@ class Predicate:
 
     def __bool__(self) -> bool:
         raise KarniTypeError(
-            "Access predicates combine with | and & (e.g. Owned('user') | HasRole('staff')); "
-            "`or`, `and` and `not` would silently drop one side.",
+            "Access predicates combine with | and & (e.g. Owned('user') | HasRole('staff')), "
+            "because `or`, `and` and `not` would silently drop one side.",
             code="E109",
         )
 
@@ -714,8 +714,8 @@ class Where(Predicate):
     def __post_init__(self) -> None:
         if not callable(self.fn):
             raise KarniImproperlyConfigured(
-                f"Where() takes a function of the request, got {self.fn!r}; "
-                "e.g. Where(lambda request: Q(published=True)).",
+                "Where() takes a function of the request, e.g. "
+                f"Where(lambda request: Q(published=True)). Got {self.fn!r}.",
                 code="E106",
             )
 
@@ -724,7 +724,7 @@ class Where(Predicate):
         if isinstance(value, Q | bool):
             return value
         raise KarniImproperlyConfigured(
-            f"{self!r} returned {value!r}; a Where() function must return a Q or a bool.",
+            f"{self!r} returned {value!r}, but a Where() function must return a Q or a bool.",
             code="E106",
         )
 
@@ -1044,7 +1044,7 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
         )
         raise KarniImproperlyConfigured(
             f"{name}.access must be an Access(...) or Unscoped(...) declaration, got "
-            f"{declaration!r}; write {hint}.",
+            f"{declaration!r}. Write {hint}.",
             code="E102",
         )
     owned: list[Owned] = list(declaration.owned()) if isinstance(declaration, Access) else []
@@ -1091,7 +1091,7 @@ def validate_access(view_class: type[Any], model: type[Model] | None) -> None:
             if label != model._meta.label_lower:
                 raise KarniImproperlyConfigured(
                     f"{name}: Can({key!r}) names {label}, but the viewset's model is "
-                    f"{model._meta.label_lower}; the row filter is built against the "
+                    f"{model._meta.label_lower}, and the row filter is built against the "
                     f"permission's model. Use Can('{model._meta.label_lower}:"
                     f"{key.rsplit(':', 1)[1]}'), or HasRole(...) to gate on another model's "
                     "permission.",

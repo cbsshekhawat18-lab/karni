@@ -1,7 +1,7 @@
 /**
  * Component-role registration, feature-detected on @karni/ui's registry
  * (the same shape as @karni/payments-ui). `registerApprovalRoles` is the
- * escape hatch — call it with your own registry object.
+ * escape hatch: call it with your own registry object.
  */
 import * as karniUi from "@karni/ui";
 

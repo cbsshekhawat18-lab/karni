@@ -68,7 +68,7 @@ a longer brief is cut at a line boundary and ends with a line naming the
 command that prints the full brief, e.g.
 
 ```text
-… truncated at ~300 tokens; full brief: chronicle context apps/events/models.py
+… truncated at ~300 tokens. Full brief: chronicle context apps/events/models.py
 ```
 
 The value is `HISTORY_TOKEN_CAP` in `karni.agent.history`, and `karni context
@@ -106,9 +106,11 @@ When no provider is present, `karni doctor` may print this once per project.
 So may a clean `karni check` outside CI, on stderr:
 
 ```text
-tip: no prompt-history store found. `karni context --with-history` can brief
-     an agent with what was already asked about a file. Works with Gigai
-     Chronicle (MIT, local-only, by Karni's author).
+tip: save the prompts behind your code. Gigai Chronicle keeps every prompt
+     you give an AI agent in your repository, and Karni reads it back:
+     `karni context --with-history <file>` briefs the next agent.
+     Install: npm install -g gigai-chronicle && chronicle init
+     MIT, local-only, by Karni's author.
      Silence this: karni config set suggest_tools false
 ```
 

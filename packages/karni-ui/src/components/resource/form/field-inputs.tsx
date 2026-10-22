@@ -8,7 +8,7 @@
  * focus to it), `aria-invalid`, `aria-describedby` (help text and error) and,
  * where its role supports it, `aria-required`. A field that shows an error
  * re-validates on every change, so the error goes away as soon as the value
- * is fixed; a field without one validates when it loses focus.
+ * is fixed. A field without one validates when it loses focus.
  */
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";

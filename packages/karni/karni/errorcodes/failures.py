@@ -336,7 +336,7 @@ def _block(finding: Finding) -> str:
 
 _UNKNOWN_NEXT = (
     "Karni does not know this failure, so it will not guess. Read the innermost project frame "
-    "(Where) and the exception's own message; `karni doctor` checks the environment and "
+    "(Where) and the exception's own message. `karni doctor` checks the environment and "
     "`karni check` the declarations."
 )
 
@@ -463,8 +463,8 @@ def _codes(text: Text, ctx: _Context) -> list[Finding]:
 # query budgets and counts
 
 _RAN = re.compile(
-    r"(?P<label>(?P<viewset>\w+)\.(?P<action>\w+)) ran (?P<count>\d+) queries; "
-    r"budget is (?P<limit>\d+)"
+    r"(?P<label>(?P<viewset>\w+)\.(?P<action>\w+)) ran (?P<count>\d+) queries"
+    r"(?: against a budget of|; budget is) (?P<limit>\d+)"
 )
 _GROWS = re.compile(
     r"(?P<viewset>\w+)\.(?P<action>\w+)(?P<query>\?\S+)?: (?P<small>\d+) queries with \d+ rows, "
@@ -515,7 +515,7 @@ def _describe_repeats(repeats: Sequence[tuple[int, str, str]]) -> str:
     parts = []
     for count, table, origin in repeats[:3]:
         parts.append(f"{count}× {table}" + (f" from {origin}" if origin else ""))
-    return "; ".join(parts)
+    return ", ".join(parts)
 
 
 def _origin_frame(repeats: Sequence[tuple[int, str, str]]) -> Frame | None:
@@ -586,8 +586,8 @@ _CLIENT_CALL = re.compile(
     r"\.(?P<method>get|post|put|patch|delete)\(\s*f?[\"'](?P<path>/[^\"'{]*)[\"']"
 )
 _DEV_LOG = re.compile(
-    r"(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/\S*) (?P<status>\d{3}) — (?P<count>\d+) "
-    r"queries, (?P<dups>\d+) duplicated"
+    r"(?P<method>GET|POST|PUT|PATCH|DELETE) (?P<path>/\S*) (?P<status>\d{3})(?::| —) "
+    r"(?P<count>\d+) queries, (?P<dups>\d+) duplicated"
 )
 
 
@@ -611,7 +611,7 @@ def _query_counts(text: Text, ctx: _Context) -> list[Finding]:
         repeats = _captured_repeats(text)
         call = text.search(_CLIENT_CALL)
         endpoint = call["path"] if call else "<the endpoint the test requests>"
-        cause = f"The block ran {match['done']} queries; the test expects {match['expected']}."
+        cause = f"The block ran {match['done']} queries, but the test expects {match['expected']}."
         if repeats:
             cause += f" Repeated: {_describe_repeats(repeats)}."
         return [
@@ -627,7 +627,7 @@ def _query_counts(text: Text, ctx: _Context) -> list[Finding]:
     ran = text.search(_RAN)
     if ran and "E117" not in text.flat:
         repeats = _repeats(text, after=ran.group(0))
-        cause = f"{ran['label']} ran {ran['count']} queries; budget is {ran['limit']}."
+        cause = f"{ran['label']} ran {ran['count']} queries against a budget of {ran['limit']}."
         if repeats:
             cause += f" Repeated: {_describe_repeats(repeats)}."
         return [
@@ -789,7 +789,7 @@ def _csrf(text: Text, ctx: _Context) -> list[Finding]:
         fix = (
             "Use @karni/ui's KarniClient (it bootstraps the cookie with GET /api/auth/csrf/ and "
             "sends X-CSRFToken). A hand-written client must do both. In tests, APIClient skips "
-            "CSRF unless enforce_csrf_checks=True; JWT mode (KARNI_AUTH_MODE=jwt) has no CSRF."
+            "CSRF unless enforce_csrf_checks=True. JWT mode (KARNI_AUTH_MODE=jwt) has no CSRF."
         )
     return [_finding(text, "csrf", "CSRF check failed (session mode)", cause, fix)]
 
@@ -805,7 +805,7 @@ def _cors(text: Text, ctx: _Context) -> list[Finding]:
             "cors",
             "The browser blocked a cross-origin API call (CORS)",
             f"{who} called the API on another origin and the response did not allow it. Karni's "
-            "dev profile allows every origin; outside dev, CORS is closed unless "
+            "dev profile allows every origin. Outside dev, CORS is closed unless "
             "CORS_ALLOWED_ORIGINS lists the origin.",
             "List the SPA's origin in CORS_ALLOWED_ORIGINS (comma-separated, in .env), or serve "
             "the SPA and the API from one origin (a reverse proxy such as the Caddyfile, or the "
@@ -863,7 +863,7 @@ def _access(text: Text, ctx: _Context) -> list[Finding]:
                 f"{match['model']} row, exactly as when the row does not exist (so a 404 never "
                 f"confirms the row). Its read rule is {match['read'].strip()}.",
                 "Check which part of the read rule should admit this user, and whether the row "
-                "exists; the command below evaluates the rule for this user and row and names the "
+                "exists. The command below evaluates the rule for this user and row and names the "
                 "predicate that refused it. Change the rule, the user's roles or the row, never "
                 "the queryset.",
                 next_step=_why(path, method),
@@ -878,7 +878,7 @@ def _access(text: Text, ctx: _Context) -> list[Finding]:
                 "403 from a Karni viewset: the row is readable, the action is not allowed",
                 f"The requester can read this row but the action requires {match['rule'].strip()}.",
                 "Give the user what the rule requires (the owner, a role), or change the write "
-                "rule on the viewset's access; the command below shows the decision.",
+                "rule on the viewset's access. The command below shows the decision.",
                 next_step=_why(path, method or "PATCH"),
             )
         ]
@@ -890,7 +890,7 @@ def _access(text: Text, ctx: _Context) -> list[Finding]:
                 "The request carried no credentials",
                 f"{path} needs a signed-in user and the request had neither a session cookie "
                 "(session mode) nor an Authorization: Bearer token (jwt mode).",
-                "Sign in first (POST /api/auth/login/; KarniClient keeps the session or the "
+                "Sign in first with POST /api/auth/login/ (KarniClient keeps the session or the "
                 "tokens), or in tests authenticate the client (client.force_authenticate(user), "
                 "or the role clients of karni.testing.APITestCase). A Public() read rule makes "
                 "a read anonymous.",
@@ -905,7 +905,7 @@ def _access(text: Text, ctx: _Context) -> list[Finding]:
                 "403 from a viewset: the access rule refused the request",
                 f"The viewset's access declaration refused {method or 'the'} request to {path} "
                 "for this user.",
-                "See which predicate refused it with the command below; change the rule or the "
+                "See which predicate refused it with the command below. Change the rule or the "
                 "user's roles, never the permission classes.",
                 next_step=_why(path, method),
             )
@@ -925,8 +925,8 @@ def _access(text: Text, ctx: _Context) -> list[Finding]:
                 f"{code} from {path}",
                 f"The server answered {code} for {path}. From a Karni viewset, a 404 also means "
                 "a row outside the requester's read scope and a 403 an action the access rule "
-                "refuses; from anything else, no route matched (404).",
-                "Run the command below for the access decision; `karni routes` lists every "
+                "refuses. From anything else, no route matched (404).",
+                "Run the command below for the access decision. `karni routes` lists every "
                 "route with its viewset and access.",
                 next_step=_why(path, method),
             )
@@ -980,8 +980,8 @@ def _database(text: Text, ctx: _Context) -> list[Finding]:
                 f"DATABASE_URL names a server database, and its driver ({module}) is not "
                 "installed in the interpreter that ran this. Django loads it as it starts.",
                 'Install it into the project interpreter: pip install "psycopg[binary]" for '
-                "PostgreSQL (or pip install -e . for every dependency); or run in Docker "
-                "(`karni serve -d`, then --docker); or use DATABASE_URL=sqlite:///db.sqlite3.",
+                "PostgreSQL (or pip install -e . for every dependency). Or run in Docker "
+                "(`karni serve -d`, then --docker), or use DATABASE_URL=sqlite:///db.sqlite3.",
                 code="C012",
                 ctx=ctx,
             )
@@ -1003,8 +1003,8 @@ def _database(text: Text, ctx: _Context) -> list[Finding]:
                 "The database cannot be reached",
                 f"Django could not open a connection: {unreachable['error'].strip()}.{compose}",
                 "Start the database (`karni serve -d` runs the compose stack with PostgreSQL), or "
-                "point DATABASE_URL in .env at a server that runs (cp .env.example .env first; "
-                "DATABASE_URL=sqlite:///db.sqlite3 needs no server).",
+                "point DATABASE_URL in .env at a server that runs (cp .env.example .env first). "
+                "DATABASE_URL=sqlite:///db.sqlite3 needs no server.",
                 code="C013",
                 ctx=ctx,
             )
@@ -1091,7 +1091,7 @@ def _settings(text: Text, ctx: _Context) -> list[Finding]:
                 "Run it through the project: `karni shell` or `python manage.py <command>` (a "
                 "management command for scripts). In a standalone script set "
                 "DJANGO_SETTINGS_MODULE=config.settings and call django.setup() before importing "
-                "models; for pytest keep DJANGO_SETTINGS_MODULE in [tool.pytest.ini_options].",
+                "models. For pytest, keep DJANGO_SETTINGS_MODULE in [tool.pytest.ini_options].",
             )
         )
     env = text.search(_ENV_VAR)
@@ -1104,7 +1104,7 @@ def _settings(text: Text, ctx: _Context) -> list[Finding]:
                 f"Settings read {env['name']} from the environment (django-environ) and it is "
                 "neither in the environment nor in .env.",
                 f"cp .env.example .env (the scaffold's file lists every variable), then set "
-                f"{env['name']} there; or export it in the shell or the service definition.",
+                f"{env['name']} there, or export it in the shell or the service definition.",
             )
         )
     host = text.search(_BAD_HOST)
@@ -1117,7 +1117,7 @@ def _settings(text: Text, ctx: _Context) -> list[Finding]:
                 f"Django refused the Host header '{host['host']}' (400): ALLOWED_HOSTS does not "
                 "list it.",
                 f"Add it to ALLOWED_HOSTS in .env (comma-separated, e.g. "
-                f"ALLOWED_HOSTS={host['host']},localhost); `*` is accepted in dev only.",
+                f"ALLOWED_HOSTS={host['host']},localhost). `*` is accepted in dev only.",
             )
         )
     redis = text.search(_REDIS)
@@ -1163,7 +1163,7 @@ def _schema(text: Text, ctx: _Context) -> list[Finding]:
                     "schema-method-type",
                     "OpenAPI schema: a SerializerMethodField has no return type",
                     f"{owner}.{hint['func']} has no return annotation, so drf-spectacular "
-                    "documents the field as a string; `karni types` then generates the wrong "
+                    "documents the field as a string, and `karni types` then generates the wrong "
                     "TypeScript type for it.",
                     f"Annotate the return type of {hint['func']} (def {hint['func']}(self, obj) "
                     "-> str: …, with the type it really returns), or decorate it with "

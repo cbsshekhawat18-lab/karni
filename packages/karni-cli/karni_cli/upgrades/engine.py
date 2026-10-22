@@ -172,7 +172,7 @@ def run(
             except Exception as exc:
                 raise CliError(
                     f"codemod {change.codemod} ({change.id}) failed: {exc!r}. "
-                    "Nothing was written; please report this with the file it stopped on.",
+                    "Nothing was written. Please report this with the file it stopped on.",
                     code="C199",
                 ) from exc
             _record(report, change, codemod, outcome)
@@ -212,7 +212,7 @@ def render(report: Report) -> str:
         lines += [f"  {change.id}: {reason}" for change, reason in report.skipped]
     files = len(report.changes)
     if report.dry_run:
-        lines.append(f"Dry run: {files} file(s) would change; nothing was written.")
+        lines.append(f"Dry run: {files} file(s) would change. Nothing was written.")
     else:
         lines.append(f"{files} file(s) changed.")
         lines.append(

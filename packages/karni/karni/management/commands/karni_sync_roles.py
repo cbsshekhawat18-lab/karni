@@ -22,11 +22,13 @@ from karni.accounts.roles import sync_roles
 
 
 class Command(BaseCommand):
-    help = "Create or update the roles and grants KARNI_ROLES declares; never deletes."
+    help = "Create or update the roles and grants KARNI_ROLES declares (never deletes)."
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
-            "--dry-run", action="store_true", help="Report what would change; write nothing."
+            "--dry-run",
+            action="store_true",
+            help="Report what would change without writing anything.",
         )
         parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
 

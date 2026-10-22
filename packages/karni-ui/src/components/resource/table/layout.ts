@@ -5,7 +5,7 @@
  */
 import type { ResourceTableDensity } from "./preferences";
 
-/** Row and header geometry per density; every value is a spacing token. */
+/** Row and header geometry per density. Every value is a spacing token. */
 export const DENSITY_CLASSES: Record<
   ResourceTableDensity,
   { head: string; cell: string; action: string; card: string }
@@ -27,11 +27,21 @@ export const DENSITY_CLASSES: Record<
 /**
  * The scrolling box: both directions scroll inside it, so 50 columns never
  * push the page sideways and the header can stick. Its height is capped by
- * the `--karni-table-max-height` token (70vh); set it to `none` to let the
+ * the `--karni-table-max-height` token (70vh). Set it to `none` to let the
  * page scroll instead.
  */
 export const SCROLL_BOX =
   "group/scroll relative w-full max-h-[var(--karni-table-max-height)] overflow-auto rounded-md border border-border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * The scroll box of a grid: a cell or control the keyboard focuses scrolls
+ * into view below the sticky header, not under it.
+ */
+export const GRID_SCROLL_BOX = "scroll-pt-10";
+
+/** A grid cell without a control takes focus itself, and shows it inside its edges. */
+export const GRID_CELL =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
 export const TABLE = "w-full border-separate border-spacing-0 text-sm";
 

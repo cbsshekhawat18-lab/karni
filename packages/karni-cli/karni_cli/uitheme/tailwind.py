@@ -199,7 +199,9 @@ def map_colour(
     """One entry of a colour scale (Tailwind colors, Chakra colors, ...)."""
     role = color_role(name)
     if is_function(value):
-        detection.skip(source, "a function, evaluated by Tailwind at build time; Karni maps values")
+        detection.skip(
+            source, "a function, evaluated by Tailwind at build time, while Karni maps values"
+        )
         return
     if isinstance(value, str):
         if references_karni(value):
@@ -246,7 +248,7 @@ def map_colour(
         if role is not None:
             detection.skip(
                 source,
-                f"a palette ({', '.join(sorted(value, key=_shade_key))}) with no DEFAULT; Karni "
+                f"a palette ({', '.join(sorted(value, key=_shade_key))}) with no DEFAULT. Karni "
                 f"needs one colour for {role}. Pick a shade",
                 line,
             )
@@ -395,7 +397,7 @@ def map_config_theme(
             elif section == "borderRadius" and name == "DEFAULT":
                 detection.skip(
                     source,
-                    "Karni's bare `rounded` reads --karni-radius-sm; set it if you want both",
+                    "Karni's bare `rounded` reads --karni-radius-sm. Set it if you want both",
                     f"--karni-radius-sm: {text};",
                 )
             else:
@@ -696,7 +698,7 @@ def detect(
     if not detection.found:
         return None
     version = f"Tailwind {major}" if major else "Tailwind"
-    detection.label = f"{version} theme ({'; '.join(sources)})"
+    detection.label = f"{version} theme ({', plus '.join(sources)})"
     if any(m.scheme == "light" and "-color-" in m.token for m in detection.mappings):
         detection.notes.append(
             "Tailwind colours are not per scheme: dark mode keeps Karni's default dark colours "

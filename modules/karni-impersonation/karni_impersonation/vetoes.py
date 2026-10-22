@@ -21,6 +21,6 @@ def blocked_while_impersonating(context: VetoContext) -> str | None:
         return None
     return (
         f"{BLOCKED_CODE}: {context.action} is blocked while impersonating "
-        f"({services._email(session.actor)} acting as {services._email(session.target)}; "
+        f"({services._email(session.actor)} acting as {services._email(session.target)}, "
         f"pattern {pattern!r})."
     )

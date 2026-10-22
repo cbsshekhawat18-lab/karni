@@ -520,7 +520,7 @@ profile (a log line with the grouped duplicate report), `off` in production
 rendered it:
 
 ```
-EventViewSet.list ran 14 queries; budget is 8.
+EventViewSet.list ran 14 queries against a budget of 8.
 14 queries, 12 duplicated, 3.1 ms in SQL
   12× SELECT … FROM "app_tag" INNER JOIN "app_event_tags" ON … WHERE … = %s
       ← EventSerializer.tag_names (app/serializers.py:41 in get_tag_names)

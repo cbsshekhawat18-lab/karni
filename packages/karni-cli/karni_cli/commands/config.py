@@ -63,8 +63,8 @@ def set_command(
         project = find_project()
         if project is None:
             raise CliError(
-                "Not inside a Karni project (no manage.py here or above) — "
-                "use --global to set it for every project.",
+                "Not inside a Karni project (no manage.py here or above). "
+                "Use --global to set it for every project.",
                 code="C001",
             )
         path = config_mod.project_path(project)

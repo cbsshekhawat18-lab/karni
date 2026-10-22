@@ -48,7 +48,7 @@ class ImpersonationMiddleware:
         request.impersonation = session
         if dead_token:
             return JsonResponse(
-                {"detail": f"{ENDED_CODE}: this impersonation session has ended; sign in again."},
+                {"detail": f"{ENDED_CODE}: this impersonation session has ended. Sign in again."},
                 status=401,
             )
         if session is None:

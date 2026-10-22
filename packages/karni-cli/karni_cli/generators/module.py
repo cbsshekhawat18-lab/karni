@@ -125,7 +125,7 @@ overridable methods, swappable classes).
         f"{app}/AGENTS.fragment.md": f"""## {title} ({dist})
 - What the module provides, and the one `config/urls.py` include line if it ships URLs.
 - Env vars it reads (prefix {upper}_).
-- Configure it only through its documented settings; never patch its internals.
+- Configure it only through its documented settings, never by patching its internals.
 """,
         f"{app}/apps.py": f'''"""Django app configuration for ``{app}``."""
 
@@ -136,7 +136,7 @@ class {config}(AppConfig):
     """App config for the {title} module (label ``{app}``).
 
     Override / escape hatch: subclass this config in your project and point
-    ``INSTALLED_APPS`` at the subclass; keep the label ``{app}`` so the
+    ``INSTALLED_APPS`` at the subclass. Keep the label ``{app}`` so the
     shipped migrations keep applying.
     """
 
@@ -222,7 +222,7 @@ def plan(ws: Workspace, name: str, parent: Path) -> Path:
         )
     if name == "karni" or name.startswith(("karni-", "karni_")):
         raise CliError(
-            f"Module name {name!r}: drop the karni prefix — it is added for you.", code="C103"
+            f"Module name {name!r}: drop the karni prefix. It is added for you.", code="C103"
         )
     target = parent / f"karni-{name.replace('_', '-')}"
     ws.create_skeleton({target / rel: content for rel, content in files(name).items()})

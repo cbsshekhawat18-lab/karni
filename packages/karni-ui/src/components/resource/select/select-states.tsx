@@ -22,9 +22,9 @@ export interface ResourceSelectOptionProps {
 export interface ResourceSelectChipProps {
   /** The selected row's label, or what to say when it could not be loaded. */
   label: React.ReactNode;
-  /** "loading" while the row behind a preselected id loads; "failed" when it could not. */
+  /** "loading" while the row behind a preselected id loads, "failed" when it could not. */
   state: "loaded" | "loading" | "failed";
-  /** Removes the value; absent when the select is disabled. */
+  /** Removes the value. Absent when the select is disabled. */
   onRemove?: () => void;
   /** The accessible name of the remove button: "Remove Aurora Hall". */
   removeLabel: string;

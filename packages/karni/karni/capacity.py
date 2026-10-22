@@ -83,7 +83,7 @@ def _field(model: type[models.Model], name: str | None) -> CapacityField:
         return fields[0]
     names = ", ".join(field.name for field in fields) or "none"
     if name is None and len(fields) > 1:
-        problem = f"{model.__name__} has several CapacityFields ({names}); pass field='<name>'."
+        problem = f"{model.__name__} has several CapacityFields ({names}). Pass field='<name>'."
     elif name is None:
         problem = (
             f"{model.__name__} has no CapacityField. Declare one, e.g. remaining = "
@@ -134,7 +134,7 @@ def _locked(manager: Any, resource: models.Model, field: CapacityField) -> Any:
     )
     if row is None:
         raise KarniValueError(
-            f"{_name(resource)} no longer exists; there is no capacity to use.", code="E986"
+            f"{_name(resource)} no longer exists, so there is no capacity to use.", code="E986"
         )
     return row
 
@@ -197,13 +197,13 @@ def _exceeded(
     asked = f"{requested} {'was' if requested == 1 else 'were'} requested"
     if remaining <= 0:
         message = (
-            f"{_name(resource)} is sold out ({field.name} = 0); {asked}. Offer another "
+            f"{_name(resource)} is sold out ({field.name} = 0), but {asked}. Offer another "
             "resource or a waiting list."
         )
     else:
         message = (
-            f"{_name(resource)} has only {remaining} left ({field.name} = {remaining}); "
-            f"{asked}. Ask for at most {remaining}, or offer another resource."
+            f"{_name(resource)} has only {remaining} left ({field.name} = {remaining}), "
+            f"but {asked}. Ask for at most {remaining}, or offer another resource."
         )
     return CapacityExceeded(
         message,

@@ -128,7 +128,7 @@ export interface ToasterProps {
   viewportClassName?: string;
   /** Extra classes for every toast root. */
   toastClassName?: string;
-  /** Replaces the Title, Description or CloseButton of every toast; see ToasterSlots. */
+  /** Replaces the Title, Description or CloseButton of every toast (see ToasterSlots). */
   slots?: Partial<ToasterSlots>;
 }
 
@@ -138,10 +138,10 @@ export interface ToasterProps {
  * `className` (it merges via cn(), so e.g. "top-0 bottom-auto" wins).
  *
  * Keyboard and screen readers: an error is announced at once (assertive),
- * other toasts politely. F8 moves focus to the toasts; Tab reaches each one
- * and its buttons, Escape dismisses the focused toast. A toast's timer pauses
- * while the pointer is over the toasts or focus is inside them, and while
- * the window is in the background.
+ * other toasts politely. F8 moves focus to the toasts. Tab reaches each one
+ * and its buttons, and Escape dismisses the focused toast. A toast's timer
+ * pauses while the pointer is over the toasts or focus is inside them, and
+ * while the window is in the background.
  */
 export function Toaster({
   duration = 5000,

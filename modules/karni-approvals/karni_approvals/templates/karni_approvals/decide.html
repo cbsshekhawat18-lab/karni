@@ -23,7 +23,7 @@
   </p>
   <ul>
     {% for pending in queryset %}
-      <li>{{ pending.summary }} — {{ pending.get_action_display }} ({{ pending.approvals }}/{{ pending.required }})</li>
+      <li>{{ pending.get_action_display }}: {{ pending.summary }} ({{ pending.approvals }}/{{ pending.required }})</li>
       <input type="hidden" name="{{ action_checkbox_name }}" value="{{ pending.pk }}">
     {% endfor %}
   </ul>

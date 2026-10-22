@@ -1,7 +1,7 @@
 /**
  * ResourceTable's slots: every state screen and structural part a project
  * can replace with its own component, `slots={{ NoRecords: OurEmpty }}`.
- * Each slot receives the props type exported next to it; the defaults are
+ * Each slot receives the props type exported next to it. The defaults are
  * exported as `defaultResourceTableSlots`, so a replacement can wrap one
  * (`(props) => <defaultResourceTableSlots.Error {...props} />`).
  */

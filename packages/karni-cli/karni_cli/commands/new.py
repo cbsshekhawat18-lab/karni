@@ -38,15 +38,15 @@ def prepare_ui_source(source: Path) -> None:
     if not scaffold.ui_dist_missing(source):
         if scaffold.ui_dist_stale(source):
             typer.echo(
-                f"warning: {source}/dist is older than its sources — rebuild it with "
+                f"warning: {source}/dist is older than its sources. Rebuild it with "
                 f"{rebuild} before `npm install` in frontend/.",
                 err=True,
             )
         return
     steps = " && ".join(" ".join(argv) for argv in scaffold.ui_build_commands(source))
     typer.echo(
-        f"Building @karni/ui in {source} (dist/ is missing; file: installs ship dist/): "
-        f"{steps}. This writes node_modules/ and dist/ there, both git-ignored; files git "
+        f"Building @karni/ui in {source} (dist/ is missing and file: installs ship dist/): "
+        f"{steps}. This writes node_modules/ and dist/ there, both git-ignored. Files git "
         "tracks, package-lock.json included, are left as they are."
     )
     failure = scaffold.build_ui_dist(source)

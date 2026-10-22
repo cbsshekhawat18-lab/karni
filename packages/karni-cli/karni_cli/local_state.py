@@ -20,7 +20,7 @@ from typing import Any
 
 LOCAL_DIR = Path(".karni") / "local"
 STATE_FILE = "state.json"
-GITIGNORE = "# Machine-local karni state (karni_cli.local_state); never commit it.\n*\n"
+GITIGNORE = "# Machine-local karni state (karni_cli.local_state). Never commit it.\n*\n"
 
 
 def state_path(project: Path) -> Path:

@@ -7,7 +7,7 @@
  * `page_size`, expand → comma-joined per api contract B9, filters spread
  * flat). `normalizeParams` produces the canonical representation used inside
  * query keys (D4): undefined/null dropped, keys sorted recursively, values
- * stringified exactly as they hit the query string — so two call sites that
+ * stringified exactly as they hit the query string, so two call sites that
  * describe the same request always share one cache entry.
  *
  * Internal module: not re-exported from the barrel.
@@ -103,7 +103,7 @@ export function listPath(resource: string): string {
   return `/${trimmed}/`;
 }
 
-/** `/events/5/` — ids are encoded so UUIDs and slugs are safe. */
+/** `/events/5/`. Ids are encoded so UUIDs and slugs are safe. */
 export function detailPath(resource: string, id: string | number): string {
   return `${listPath(resource)}${encodeURIComponent(String(id))}/`;
 }

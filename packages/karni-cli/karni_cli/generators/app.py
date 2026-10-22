@@ -37,11 +37,11 @@ def plan(ws: Workspace, name: str) -> str:
     require_snake(name, "App name")
     if name in _TAKEN or name in sys.stdlib_module_names:
         raise CliError(
-            f"App name {name!r} would shadow an existing module — choose another.", code="C103"
+            f"App name {name!r} would shadow an existing module. Choose another.", code="C103"
         )
     if name.startswith("karni_"):
         raise CliError(
-            f"App name {name!r}: karni_* names belong to Karni modules — use "
+            f"App name {name!r}: karni_* names belong to Karni modules. Use "
             "`karni make module` for a reusable module, or drop the prefix.",
             code="C103",
         )
@@ -49,7 +49,7 @@ def plan(ws: Workspace, name: str) -> str:
     root = ws.path(name)
     if ws.exists(ws.path(f"{name}.py")):
         raise CliError(
-            f"{name}.py exists in the project root — an app {name}/ would clash.", code="C103"
+            f"{name}.py exists in the project root, so an app {name}/ would clash.", code="C103"
         )
     line = ws.line_length
     files = {
