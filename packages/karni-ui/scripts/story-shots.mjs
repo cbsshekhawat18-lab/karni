@@ -4,12 +4,13 @@
  * light and dark: the raw material of a contact sheet.
  *
  *   npm run build-storybook -- -o storybook-static
- *   node scripts/story-shots.mjs storybook-static <out dir> [--widths 390,820,1280]
+ *   node scripts/story-shots.mjs storybook-static <out dir> [--widths 390,820,1280] [--only a,b]
  *
  * Writes <out>/<story id>--<width>--<theme>.png (full page) and
- * <out>/index.json listing every shot with its story title.
+ * <out>/index.json listing every shot with its story title. With --only, the
+ * shots taken replace those stories' entries in an existing index.json.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { listStories, openStory, serveStatic } from "./lib/storybook.mjs";
@@ -53,9 +54,15 @@ for (const width of WIDTHS) {
 }
 await browser.close();
 close();
+const indexFile = path.join(out, "index.json");
+const retaken = new Set(stories.map((story) => story.id));
+const kept =
+  process.argv.includes("--only") && existsSync(indexFile)
+    ? JSON.parse(readFileSync(indexFile, "utf8")).shots.filter((shot) => !retaken.has(shot.id))
+    : [];
 writeFileSync(
-  path.join(out, "index.json"),
-  JSON.stringify({ widths: WIDTHS, themes: THEMES, shots }, null, 2),
+  indexFile,
+  JSON.stringify({ widths: WIDTHS, themes: THEMES, shots: [...kept, ...shots] }, null, 2),
 );
 const blank = shots.filter((shot) => !shot.rendered);
 console.log(

@@ -3,14 +3,15 @@
  * axe-core over every Storybook story, in a real browser, in both themes.
  *
  *   npm run build-storybook -- -o storybook-static
- *   node scripts/a11y-stories.mjs storybook-static
+ *   node scripts/a11y-stories.mjs storybook-static [--only a,b]
  *
  * Opens every story's iframe in Chromium (light, then `globals=theme:dark`),
  * lets it settle (stories that fetch through msw included), runs axe's WCAG
  * 2.0, 2.1 and 2.2 A and AA rules (colour contrast included, on the real
  * styles) and fails on any violation, listing the story, theme, rule and
  * elements. A story opts out only with a reason:
- * `parameters: { a11y: { disable: true, reason: "..." } }`.
+ * `parameters: { a11y: { disable: true, reason: "..." } }`, or one rule only:
+ * `parameters: { a11y: { disableRules: { "rule-id": "why it does not apply" } } }`.
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -41,6 +42,12 @@ for (const story of stories) {
         skipped.push(`${story.id}: ${parameters.reason ?? "(no reason given)"}`);
       continue;
     }
+    // `disableRules: { "rule-id": "why it does not apply here" }` turns off one rule.
+    const disabled = Object.entries(parameters?.disableRules ?? {});
+    for (const [rule, reason] of disabled) {
+      if (!reason) throw new Error(`${story.id}: disableRules.${rule} needs a reason`);
+      if (theme === "light") skipped.push(`${story.id} (${rule} only): ${reason}`);
+    }
     if (!rendered) {
       failures.push({
         story: story.id,
@@ -53,16 +60,26 @@ for (const story of stories) {
       continue;
     }
     await page.addScriptTag({ content: AXE });
-    const violations = await page.evaluate(async (tags) => {
-      // axe is the script tag injected just above; eslint cannot see it.
-      const result = await globalThis.axe.run(document, { runOnly: { type: "tag", values: tags } });
-      return result.violations.map((violation) => ({
-        id: violation.id,
-        impact: violation.impact,
-        help: violation.help,
-        nodes: violation.nodes.slice(0, 5).map((node) => node.target.join(" ")),
-      }));
-    }, TAGS);
+    const violations = await page.evaluate(
+      async ({ tags, off }) => {
+        // axe is the script tag injected just above; eslint cannot see it.
+        const rules = Object.fromEntries(off.map((rule) => [rule, { enabled: false }]));
+        const result = await globalThis.axe.run(document, {
+          runOnly: { type: "tag", values: tags },
+          rules,
+        });
+        return result.violations.map((violation) => ({
+          id: violation.id,
+          impact: violation.impact,
+          help: violation.help,
+          nodes: violation.nodes.slice(0, 5).map((node) => {
+            const why = (node.failureSummary ?? "").split("\n").slice(1, 2).join("").trim();
+            return `${node.target.join(" ")}  — ${why}`;
+          }),
+        }));
+      },
+      { tags: TAGS, off: disabled.map(([rule]) => rule) },
+    );
     checked += 1;
     for (const violation of violations) failures.push({ story: story.id, theme, ...violation });
   }

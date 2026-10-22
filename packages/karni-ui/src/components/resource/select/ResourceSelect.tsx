@@ -576,7 +576,7 @@ export const ResourceSelect = React.forwardRef<HTMLInputElement, ResourceSelectP
         aria-labelledby={props["aria-labelledby"]}
         aria-multiselectable={multiple || undefined}
         aria-busy={firstLoad || searching || undefined}
-        className={cn("p-1 transition-opacity", searching && "opacity-60")}
+        className={cn("p-1", searching && "cursor-progress")}
         style={
           virtual
             ? { paddingTop: start * rowHeight, paddingBottom: (count - end) * rowHeight }

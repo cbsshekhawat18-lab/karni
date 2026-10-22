@@ -112,7 +112,7 @@ export function CardList<T>(props: CardListProps<T>): React.ReactElement {
           )}
         </div>
       )}
-      <ul aria-label={caption} className={cn("flex flex-col gap-3", dimmed && "opacity-60")}>
+      <ul aria-label={caption} className={cn("flex flex-col gap-3", dimmed && "cursor-progress")}>
         {table.getRowModel().rows.map((row) => {
           const title =
             useRowLabelAsTitle || titleColumn === undefined

@@ -198,7 +198,9 @@ export function Modal({
           {...clearDescribedBy}
           className={cn(
             // Centred, with a gutter on phones: inset-x-4 + mx-auto under max-w-128.
-            "fixed inset-x-4 top-1/2 z-modal mx-auto grid max-w-128 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 text-foreground shadow-lg",
+            // Never taller than the viewport (a phone on its side, an open
+            // keyboard): it scrolls inside, since the page behind is locked.
+            "fixed inset-x-4 top-1/2 z-modal mx-auto grid max-h-full max-w-128 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border border-border bg-background p-6 text-foreground shadow-lg",
             className,
           )}
         >

@@ -94,7 +94,7 @@ import {
   orderingToSorting,
   pageCountFor,
   resourceWords,
-  shouldRetryList,
+  listRetry,
   singular,
   sortingToOrdering,
   statusOf,
@@ -517,11 +517,14 @@ export function ResourceTable<T = Record<string, unknown>>(
     [view, activeSearch, params, expandList],
   );
 
+  const appRetry = queryClient.getDefaultOptions().queries?.retry;
+  const retry = React.useMemo(() => listRetry(appRetry), [appRetry]);
   const list = useResourceList<T>(resource, listParams, {
     enabled: schema !== undefined,
     placeholderData: keepPreviousData,
-    // A 4xx answers the same way again (a 404 is the page-clamp signal, D5).
-    retry: shouldRetryList,
+    // A 4xx answers the same way again (a 404 is the page-clamp signal, D5);
+    // the rest follows the app's QueryClient.
+    retry,
   });
 
   // The last page that loaded, kept so a failed refresh never wipes the table.

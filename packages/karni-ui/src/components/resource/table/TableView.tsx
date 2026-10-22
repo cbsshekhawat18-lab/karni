@@ -109,7 +109,7 @@ export function TableView<T>(props: TableViewProps<T>): React.ReactElement {
         aria-labelledby={captionId}
         tabIndex={0}
         onScroll={onScroll}
-        className={cn(SCROLL_BOX, dimmed && "opacity-60")}
+        className={cn(SCROLL_BOX, dimmed && "cursor-progress")}
       >
         <table
           className={TABLE}

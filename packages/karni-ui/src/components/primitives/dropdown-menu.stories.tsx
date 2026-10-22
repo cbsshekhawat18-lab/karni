@@ -52,5 +52,13 @@ export const Playground: Story = {
  * one, typing jumps to an item, Escape closes and returns focus to the trigger.
  */
 export const Open: Story = {
+  parameters: {
+    a11y: {
+      disableRules: {
+        "aria-hidden-focus":
+          "Radix hides the page with aria-hidden while the open menu traps focus, so the trigger behind it cannot be reached; axe counts it anyway.",
+      },
+    },
+  },
   render: () => <RowActionsDemo defaultOpen />,
 };

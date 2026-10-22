@@ -586,7 +586,7 @@ export function ResourceImport({
             variant="link"
             size="sm"
             className="h-auto px-0 underline"
-            aria-label="Download template (CSV)"
+            aria-label="CSV template"
             onClick={() => handleTemplate("csv")}
           >
             CSV

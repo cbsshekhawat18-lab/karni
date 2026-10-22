@@ -71,7 +71,15 @@ const meta = {
   title: "Resource/ResourceSelect",
   component: Field,
   args: { resource: "venues", value: null, placeholder: "Choose a venue" },
-  parameters: backend(),
+  parameters: {
+    ...backend(),
+    a11y: {
+      disableRules: {
+        "scrollable-region-focusable":
+          "The options are reached from the search input (aria-activedescendant: arrows, Home/End, PageUp/PageDown), which scrolls the active one into view; a tab stop on the list would be a second, dead focus target.",
+      },
+    },
+  },
   decorators: [
     (Story) => (
       <Providers>

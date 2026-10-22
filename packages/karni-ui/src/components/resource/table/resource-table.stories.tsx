@@ -241,7 +241,10 @@ export const FiftyColumns: Story = {
     const canvas = within(canvasElement);
     const region = await canvas.findByRole("region", { name: "Metrics" }, { timeout: 5000 });
     region.scrollLeft = 480;
-    region.scrollTop = 160;
+    // Whole rows: a row half under the sticky header leaves a sliver of its
+    // checkbox within 24px of the header's, which axe counts as a target.
+    const row = region.querySelector("tbody tr")?.getBoundingClientRect().height ?? 48;
+    region.scrollTop = 3 * row;
     region.dispatchEvent(new Event("scroll"));
   },
 };

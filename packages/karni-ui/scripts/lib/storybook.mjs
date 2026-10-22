@@ -35,15 +35,25 @@ export async function serveStatic(root) {
   return { base: `http://127.0.0.1:${server.address().port}`, close: () => server.close() };
 }
 
-/** The stories of a static build (its index.json), in Storybook's order. */
-export function listStories(root) {
+/**
+ * The stories of a static build (its index.json), in Storybook's order.
+ * `--only a,b` on the command line keeps the stories whose id contains one of
+ * the words (`--only resourcetable,dropdownmenu`), to recheck after a fix.
+ */
+export function listStories(root, argv = process.argv) {
   const index = path.join(root, "index.json");
   if (!existsSync(index)) {
     throw new Error(`No Storybook build at ${root}: run npm run build-storybook -- -o ${root}`);
   }
-  return Object.values(JSON.parse(readFileSync(index, "utf8")).entries).filter(
+  const stories = Object.values(JSON.parse(readFileSync(index, "utf8")).entries).filter(
     (entry) => entry.type === "story",
   );
+  const flag = argv.indexOf("--only");
+  if (flag === -1) return stories;
+  const words = (argv[flag + 1] ?? "").split(",").filter(Boolean);
+  const kept = stories.filter((story) => words.some((word) => story.id.includes(word)));
+  if (kept.length === 0) throw new Error(`--only ${words.join(",")} matches no story id`);
+  return kept;
 }
 
 /**
@@ -69,11 +79,18 @@ export async function openStory(page, base, story, theme, { settle = 700 } = {})
     .catch(() => false);
 }
 
-/** The story's `parameters` as the preview resolved them (null when unavailable). */
-export function storyParameters(page) {
-  return page.evaluate(() => {
+/**
+ * The story's `parameters` as the preview resolved them, read from the story's
+ * render. Throws when the preview has no render for the story: a Storybook that
+ * moved them must not quietly turn every `a11y` opt-out into nothing.
+ */
+export async function storyParameters(page) {
+  const found = await page.evaluate(() => {
     const preview = window.__STORYBOOK_PREVIEW__;
     const id = new URLSearchParams(location.search).get("id");
-    return preview?.storyStoreValue?.fromId?.(id)?.parameters ?? null;
+    const render = (preview?.storyRenders ?? []).find((each) => each.id === id);
+    return render ? { parameters: render.story?.parameters ?? {} } : null;
   });
+  if (!found) throw new Error(`no story render in the preview for ${page.url()}`);
+  return found.parameters;
 }

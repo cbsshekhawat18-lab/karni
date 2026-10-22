@@ -117,7 +117,7 @@ describe("ResourceImport before the upload", () => {
     expect(input).toHaveAccessibleDescription(
       "CSV or XLSX with a header row, up to 100,000 rows. The template lists the columns.",
     );
-    expect(screen.getByRole("button", { name: "Download template (CSV)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "CSV template" })).toBeInTheDocument();
   });
 });
 

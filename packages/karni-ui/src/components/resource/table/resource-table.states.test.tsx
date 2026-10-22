@@ -8,7 +8,7 @@
  * module boundary so every state is reachable deterministically.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { AuthContext, type AuthContextValue } from "../../../auth/provider";
@@ -327,13 +327,27 @@ describe("errors", () => {
   });
 
   it("the list query does not retry a 403 (nor any 4xx but 408 and 429)", () => {
-    renderTable();
-    const options = (mockUseResourceList.mock.lastCall as unknown[])[2] as {
-      retry: (count: number, error: unknown) => boolean;
-    };
-    expect(options.retry(0, new KarniApiError(403, {}))).toBe(false);
-    expect(options.retry(0, new KarniApiError(429, {}))).toBe(true);
-    expect(options.retry(0, new KarniApiError(500, {}))).toBe(true);
+    const { queryClient } = renderTable();
+    const retryOf = (): ((count: number, error: unknown) => boolean) =>
+      (
+        (mockUseResourceList.mock.lastCall as unknown[])[2] as {
+          retry: (count: number, error: unknown) => boolean;
+        }
+      ).retry;
+    // The rest follows the app's QueryClient: this one says retry: false...
+    expect(retryOf()(0, new KarniApiError(403, {}))).toBe(false);
+    expect(retryOf()(0, new KarniApiError(500, {}))).toBe(false);
+    // ...and with TanStack's own default, a 5xx or a rate limit is retried.
+    cleanup();
+    queryClient.setDefaultOptions({ queries: {} });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResourceTable<Row> resource="events" />
+      </QueryClientProvider>,
+    );
+    expect(retryOf()(0, new KarniApiError(403, {}))).toBe(false);
+    expect(retryOf()(0, new KarniApiError(429, {}))).toBe(true);
+    expect(retryOf()(0, new KarniApiError(500, {}))).toBe(true);
   });
 
   it("a request that never got an answer offers a retry", () => {

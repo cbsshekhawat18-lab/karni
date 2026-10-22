@@ -73,7 +73,7 @@ function NavButton(props: NavButtonProps): React.ReactElement {
         if (!busy) onActivate();
       }}
     >
-      <span className={cn("inline-flex items-center gap-1", spinning && "invisible")}>
+      <span className={cn("inline-flex items-center gap-1", spinning && "text-transparent")}>
         {!iconAfter && icon}
         {text}
         {iconAfter === true && icon}

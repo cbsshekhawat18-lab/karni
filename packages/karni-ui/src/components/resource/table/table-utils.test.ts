@@ -7,7 +7,7 @@ import {
   orderingToSorting,
   pageCountFor,
   resourceWords,
-  shouldRetryList,
+  listRetry,
   singular,
   sortingToOrdering,
 } from "./table-utils";
@@ -23,16 +23,27 @@ describe("orderingToSorting", () => {
   });
 });
 
-describe("shouldRetryList", () => {
+describe("listRetry", () => {
   it("never retries a refusal (4xx) except a timeout or a rate limit", () => {
+    const retry = listRetry(undefined);
     for (const status of [400, 401, 403, 404, 409, 422]) {
-      expect(shouldRetryList(0, new KarniApiError(status, {}))).toBe(false);
+      expect(retry(0, new KarniApiError(status, {}))).toBe(false);
     }
-    expect(shouldRetryList(0, new KarniApiError(408, {}))).toBe(true);
-    expect(shouldRetryList(0, new KarniApiError(429, {}))).toBe(true);
-    expect(shouldRetryList(0, new KarniApiError(503, {}))).toBe(true);
-    expect(shouldRetryList(0, new TypeError("Failed to fetch"))).toBe(true);
-    expect(shouldRetryList(3, new KarniApiError(503, {}))).toBe(false);
+    expect(retry(0, new KarniApiError(408, {}))).toBe(true);
+    expect(retry(0, new KarniApiError(429, {}))).toBe(true);
+    expect(retry(0, new KarniApiError(503, {}))).toBe(true);
+    expect(retry(0, new TypeError("Failed to fetch"))).toBe(true);
+    expect(retry(3, new KarniApiError(503, {}))).toBe(false);
+  });
+
+  it("follows the app's QueryClient retry default for everything else", () => {
+    const server = new KarniApiError(503, {});
+    expect(listRetry(false)(0, server)).toBe(false);
+    expect(listRetry(1)(0, server)).toBe(true);
+    expect(listRetry(1)(1, server)).toBe(false);
+    expect(listRetry(() => true)(9, server)).toBe(true);
+    // ...but never past the 4xx rule.
+    expect(listRetry(true)(0, new KarniApiError(403, {}))).toBe(false);
   });
 });
 
