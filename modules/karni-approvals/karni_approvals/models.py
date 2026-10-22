@@ -18,6 +18,15 @@ from karni.models import BaseModel
 __all__ = ["Decision", "PendingChange"]
 
 
+def _in_field_order(content_type_id: int, changes: dict[str, Any]) -> dict[str, Any]:
+    """``changes`` with the target model's fields first, in declaration order."""
+    model = ContentType.objects.get_for_id(content_type_id).model_class()
+    if model is None:
+        return changes
+    order = {field.name: index for index, field in enumerate(model._meta.get_fields())}
+    return dict(sorted(changes.items(), key=lambda item: order.get(item[0], len(order))))
+
+
 class PendingChange(BaseModel):
     """A change someone proposed that is waiting for a second person.
 
@@ -98,6 +107,20 @@ class PendingChange(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.get_action_display()} {self.summary or self.object_id} ({self.status})"
+
+    @classmethod
+    def from_db(cls, db: str | None, field_names: Any, values: Any) -> PendingChange:
+        """Load ``changes`` in the target model's field order.
+
+        PostgreSQL's ``jsonb`` stores keys shortest first, so without this the
+        admin, the checker email and the API would list changed fields in a
+        different order on PostgreSQL than on SQLite.
+        """
+        instance = super().from_db(db, field_names, values)
+        loaded = instance.__dict__
+        if isinstance(loaded.get("changes"), dict) and loaded.get("content_type_id"):
+            instance.changes = _in_field_order(loaded["content_type_id"], loaded["changes"])
+        return instance
 
     @property
     def model_class(self) -> type[models.Model] | None:
