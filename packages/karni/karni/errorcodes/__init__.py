@@ -16,7 +16,8 @@ Code ranges
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
-``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog).
+``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
+``E8xx`` import and export · ``E9xx`` debugging (``karni queries``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1136,6 +1137,47 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    # E94x debugging: karni queries (karni.api.diagnose)
+    _e(
+        "E940",
+        "karni queries cannot find the endpoint",
+        "exception",
+        "karni.api.diagnose.resolve_endpoint (manage.py karni_queries)",
+        "karni queries requests the endpoint in-process, so it must resolve to a URL the "
+        "project serves: a path, a routed resource (events, events/<id>) or a routed viewset "
+        "(EventViewSet.list). A detail action named by its viewset needs a row the user can read.",
+        "Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or "
+        "resource/<id>; the message lists the routed resources or viewsets.",
+    ),
+    _e(
+        "E941",
+        "karni queries cannot find the user (--as)",
+        "exception",
+        "karni.api.diagnose.resolve_user (manage.py karni_queries --as)",
+        "The request runs force-authenticated as one user, named by primary key, email or "
+        "username; the value matched none (or several).",
+        "Pass a user that exists in this database (the message shows a few), seed some with "
+        "karni seed, or drop --as for an anonymous request.",
+    ),
+    _e(
+        "E942",
+        "karni queries cannot build the request",
+        "exception",
+        "karni.api.diagnose.run (manage.py karni_queries --method / --data)",
+        "--method must be an HTTP method the view answers at that URL, and --data a JSON body.",
+        "Use a method the message lists for that URL, and pass --data as JSON "
+        '(--data \'{"title": "Launch"}\').',
+    ),
+    _e(
+        "E943",
+        "The view raised while karni queries requested it",
+        "exception",
+        "manage.py karni_queries",
+        "There is no query report for a request that raised; the message shows the traceback "
+        "and what karni explain recognises in it.",
+        "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
+        "then run karni queries again.",
     ),
 )
 

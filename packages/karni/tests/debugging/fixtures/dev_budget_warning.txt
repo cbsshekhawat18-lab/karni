@@ -1,0 +1,11 @@
+[2m2026-10-21T07:56:30.583107Z[0m [[33m[1mwarning  [0m] [1mEventViewSet.list ran 28 queries; budget is 8.
+28 queries, 24 duplicated, 4.7 ms in SQL
+  12× SELECT … FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."tier_id" = %s AND NOT ("events_booking"."…
+      ← TicketTierSerializer.remaining (events/models.py:56 in remaining)
+  6× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+      ← EventSerializer.venue_city (events/serializers.py:26 in get_venue_city)
+  6× SELECT … FROM "karni_accounts_user" WHERE "karni_accounts_user"."id" = %s LIMIT 21
+      ← EventSerializer.organizer_email (events/serializers.py:29 in get_organizer_email)
+Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on EventViewSet), or declare query_budget = Budget(list=N, reason=...).[0m [[0m[1m[34mkarni.performance[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest_id[0m=[35m92b906bd-7f88-4349-a777-9150c9d4fbe5[0m [36muser_id[0m=[35m392456de-3eb1-4b90-8668-5257bdd640fb[0m
+[2m2026-10-21T07:56:30.596106Z[0m [[32m[1minfo     [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m200[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'GET /api/events/?page_size=50'[0m [36mrequest_id[0m=[35m92b906bd-7f88-4349-a777-9150c9d4fbe5[0m [36muser_id[0m=[35m392456de-3eb1-4b90-8668-5257bdd640fb[0m
+[2m2026-10-21T07:56:30.620791Z[0m [[33m[1mwarning  [0m] [1mGET /api/events/?page_size=50 200 — 30 queries, 24 duplicated, 7.2 ms in SQL, 307.5 ms total

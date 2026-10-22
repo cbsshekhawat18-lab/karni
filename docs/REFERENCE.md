@@ -272,15 +272,15 @@ karni check [OPTIONS]
 
 #### `karni explain`
 
-Explain an error code (E104, C101, PAY004, K106): why and the fix
+Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 
 #### `karni types`
@@ -300,7 +300,7 @@ karni types [OPTIONS]
 
 #### `karni mcp`
 
-Serve context, rules and check as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -309,6 +309,28 @@ karni mcp [OPTIONS]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `--project` PATH |  | Project root (default: found from the working directory). |
+
+### Debugging
+
+#### `karni queries`
+
+Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries`.
+
+```
+karni queries [OPTIONS] ENDPOINT
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ENDPOINT` (required) |  | A path (/api/events/?page=2), a resource (events, events/&lt;id&gt;) or a viewset (EventViewSet, EventViewSet.retrieve). |
+| `--as` TEXT |  | The user: email, username or primary key (default: anonymous). |
+| `--method` TEXT | `GET` | HTTP method. |
+| `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
+| `--json` |  | Machine-readable output. |
+| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--all` |  | List every statement, not only repeats. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ### Runners
 
@@ -1378,6 +1400,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E940`](errors.md#e940) | exception | karni queries cannot find the endpoint |
+| [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
+| [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
+| [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
 
 ### Modules
 
@@ -1443,6 +1469,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C340`](errors.md#c340) | cli | Nothing to explain |
+| [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 
 ### Agent rules (`K`)
 
@@ -1456,6 +1484,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K006`](errors.md#k006) | rule | Procedures: karni rules --procedure NAME. |
 | [`K007`](errors.md#k007) | rule | Commands: karni --help. |
 | [`K009`](errors.md#k009) | rule | Scaffold with karni make. |
+| [`K013`](errors.md#k013) | rule | Traceback: karni explain - first. |
+| [`K014`](errors.md#k014) | rule | N+1: karni queries URL --as USER first. |
 | [`K101`](errors.md#k101) | rule | Models inherit BaseModel or compose its mixins. |
 | [`K102`](errors.md#k102) | rule | Viewsets inherit BaseViewSet. |
 | [`K103`](errors.md#k103) | rule | No ModelAdmin; use AdminMeta. |

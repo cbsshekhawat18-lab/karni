@@ -77,6 +77,9 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+  - Debugging:
+      - Explain a traceback: debugging/explain.md
+      - Find an N+1: debugging/queries.md
   - Concepts:
       - Why serializers are generated: concepts/generated-serializers.md
       - Permissions at the queryset: concepts/queryset-permissions.md

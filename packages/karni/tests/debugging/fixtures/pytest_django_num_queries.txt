@@ -1,0 +1,71 @@
+__________________________ test_count_queries_pytest ___________________________
+
+db = None
+django_assert_num_queries = functools.partial(<function _assert_num_queries at 0x108e74220>, <_pytest.config.Config object at 0x108333230>)
+
+    def test_count_queries_pytest(db, django_assert_num_queries) -> None:
+        for _ in range(5):
+            EventFactory()
+        user = get_user_model().objects.create_user(email="viewer3@example.com", password="x")
+        client = APIClient()
+        client.force_authenticate(user)
+>       with django_assert_num_queries(4):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+events/tests/test_scratch_listing.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/contextlib.py:144: in __exit__
+    next(self.gen)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = <_pytest.config.Config object at 0x108333230>, num = 4, exact = True
+connection = None, info = None, using = None
+
+    @contextmanager
+    def _assert_num_queries(
+        config: pytest.Config,
+        num: int,
+        exact: bool = True,
+        connection: Any | None = None,
+        info: str | None = None,
+        *,
+        using: str | None = None,
+    ) -> Generator[django.test.utils.CaptureQueriesContext]:
+        from django.db import connection as default_conn, connections
+        from django.test.utils import CaptureQueriesContext
+    
+        if connection and using:
+            raise ValueError('The "connection" and "using" parameter cannot be used together')
+    
+        if connection is not None:
+            conn = connection
+        elif using is not None:
+            conn = connections[using]
+        else:
+            conn = default_conn
+    
+        verbose = config.getoption("verbose") > 0
+        with CaptureQueriesContext(conn) as context:
+            yield context
+            num_performed = len(context)
+            if exact:
+                failed = num != num_performed
+            else:
+                failed = num_performed > num
+            if failed:
+                msg = f"Expected to perform {num} queries "
+                if not exact:
+                    msg += "or less "
+                verb = "was" if num_performed == 1 else "were"
+                msg += f"but {num_performed} {verb} done"
+                if info:
+                    msg += f"\n{info}"
+                if verbose:
+                    sqls = (q["sql"] for q in context.captured_queries)
+                    msg += "\n\nQueries:\n========\n\n" + "\n\n".join(sqls)
+                else:
+                    msg += " (add -v option to show queries)"
+>               pytest.fail(msg)
+E               Failed: Expected to perform 4 queries but 9 were done (add -v option to show queries)
+
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/pytest_django/fixtures.py:727: Failed

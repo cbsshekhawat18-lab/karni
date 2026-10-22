@@ -25,6 +25,7 @@ traceback; `KARNI_DB_CHECK=false` skips the check.
 
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
+- **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Generators**: [make](#karni-make)
 
@@ -193,15 +194,15 @@ karni check [OPTIONS]
 
 ### `karni explain`
 
-Explain an error code (E104, C101, PAY004, K106): why and the fix
+Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 
 ### `karni types`
@@ -221,7 +222,7 @@ karni types [OPTIONS]
 
 ### `karni mcp`
 
-Serve context, rules and check as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -230,6 +231,28 @@ karni mcp [OPTIONS]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `--project` PATH |  | Project root (default: found from the working directory). |
+
+## Debugging
+
+### `karni queries`
+
+Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries`.
+
+```
+karni queries [OPTIONS] ENDPOINT
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ENDPOINT` (required) |  | A path (/api/events/?page=2), a resource (events, events/&lt;id&gt;) or a viewset (EventViewSet, EventViewSet.retrieve). |
+| `--as` TEXT |  | The user: email, username or primary key (default: anonymous). |
+| `--method` TEXT | `GET` | HTTP method. |
+| `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
+| `--json` |  | Machine-readable output. |
+| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--all` |  | List every statement, not only repeats. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ## Runners
 

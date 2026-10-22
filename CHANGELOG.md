@@ -11,6 +11,20 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Debugging: `karni explain -` and `karni queries`.** `karni explain -`
+  reads a pasted traceback, test failure or log line (stdin) and names the
+  Karni failure in it: a registered code, an agent rule, a query-count
+  failure, a CSRF/CORS refusal, an access outcome or a documented
+  framework-adjacent failure (driver, database, migrations, settings, Redis,
+  OpenAPI), with the cause, the first project frame, the fix and the docs
+  link, or says plainly that it does not recognise it. `karni queries
+  <endpoint> --as <user>` runs one endpoint in-process (writes rolled back),
+  records every SQL statement with its stack and groups the repeated ones by
+  the serializer field and relation behind them, with the optimiser's reason
+  and the exact hint (`--json`, `--explain`, `--all`). The optimiser now
+  records its blind spots (`karni.api.optimizer.blind_spots`). MCP tools
+  `explain_text` and `queries`; agent rules K013 and K014; codes E940–E943,
+  C340, C341. See [debugging](docs/debugging/explain.md).
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

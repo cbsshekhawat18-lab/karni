@@ -26,7 +26,9 @@ follow what they return.
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
 | `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
-| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check` |
+| `karni explain - < traceback.txt` | The Karni failure in a pasted traceback, test failure or log line: class, cause, `file:line`, fix, docs ([debugging](debugging/explain.md)) |
+| `karni queries /api/events/ --as USER` | Every query one endpoint runs; repeated ones grouped by the field and relation behind them, with the fix ([debugging](debugging/queries.md)) |
+| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, `explain_text`, `queries` |
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
@@ -178,6 +180,11 @@ karni mcp                 # stdio; --project PATH when not started inside the pr
 
 Tools: `context()`, `rules(code="", procedure="")`, `check(path)`. Each
 returns the same text as the CLI.
+
+Debugging tools: `explain_text(text)` (`karni explain -` on a pasted
+traceback or log line) and `queries(endpoint, as_user="", method="GET",
+data="", explain=False)` (`karni queries`). Rules K013 and K014 tell an agent
+to call them before reading a traceback or hunting an N+1 by hand.
 
 Claude Code:
 
