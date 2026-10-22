@@ -136,10 +136,11 @@ def build_context_text(
 
 _WITH_HISTORY_HELP = (
     "Append what a history provider (e.g. Gigai Chronicle) recorded about PATH under a "
-    "HISTORY: heading — without PATH, the project's recorded decisions, from providers "
-    f"that offer them. Capped at ~{HISTORY_TOKEN_CAP} tokens (~{4 * HISTORY_TOKEN_CAP} "
-    "characters), cut at line boundaries with a last line naming the command for the full "
-    "brief. With no history store detected, prints the plain inventory and nothing else."
+    "HISTORY: heading. Without PATH, append the project's recorded decisions, from the "
+    f"providers that offer them. The block is capped at ~{HISTORY_TOKEN_CAP} tokens "
+    f"(~{4 * HISTORY_TOKEN_CAP} characters) and cut at line boundaries, with a last line "
+    "naming the command for the full brief. With no history store detected, it prints the "
+    "plain inventory and nothing else."
 )
 
 

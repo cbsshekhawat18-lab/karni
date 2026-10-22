@@ -20,7 +20,7 @@ def manage(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run any management command — wraps `manage.py ARGS` (raw passthrough)."""
+    """Run any management command. It wraps `manage.py ARGS` (raw passthrough)."""
     project = require_project()
     # Most management commands without a dedicated runner read or write the
     # database (showmigrations, dbshell, loaddata, ...), so check it is up.

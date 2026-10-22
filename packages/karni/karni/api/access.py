@@ -662,7 +662,7 @@ class Granted(Predicate):
 
 @dataclass(frozen=True, repr=False)
 class Authenticated(Predicate):
-    """Any authenticated user; every row."""
+    """Any authenticated user, on every row."""
 
     def allows(self, request: Any) -> bool:
         return _authenticated(request)
@@ -682,7 +682,7 @@ class Authenticated(Predicate):
 
 @dataclass(frozen=True, repr=False)
 class Public(Predicate):
-    """Everyone, anonymous included; every row. The explicit public form."""
+    """Everyone, anonymous included, on every row. The explicit public form."""
 
     def allows(self, request: Any) -> bool:
         return True

@@ -181,25 +181,27 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
 
 
 def command(
-    model: str = typer.Argument(..., help="Model class name (e.g. Event); it needs a viewset."),
+    model: str = typer.Argument(
+        ..., help="Model class name (e.g. Event). The model needs a viewset."
+    ),
     role: str | None = typer.Option(
         None,
         "--role",
-        help="The role the test acts as. Default: the first HasRole the viewset declares; "
-        "for Granted() the first KARNI_ROLES role whose grant reaches the model (own/related "
-        "first); else any signed-in user.",
+        help="The role the test acts as. By default it is the first HasRole the viewset "
+        "declares. For Granted() it is the first KARNI_ROLES role whose grant reaches the model "
+        "(own/related first). Otherwise the test uses any signed-in user.",
     ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add APP/tests/test_<model>.py — the resource's whole API surface in a few lines.
+    """Add `APP/tests/test_<model>.py`: the resource's whole API surface in a few lines.
 
-    One APITestCase: `assert_crud` checks list, retrieve, create, update,
-    delete, the denials the access declaration promises, pagination,
-    filtering and the OpenAPI contract; `assert_isolated` (when reads are
-    Owned, or Granted() with an own/related grant) checks another scope's
-    rows are out of reach on every surface. Run it with `karni test`.
+    It writes one APITestCase. `assert_crud` checks list, retrieve, create,
+    update, delete, the denials the access declaration promises, pagination,
+    filtering and the OpenAPI contract. `assert_isolated` (when reads are
+    Owned, or Granted() with an own/related grant) checks that another
+    scope's rows are out of reach on every surface. Run it with `karni test`.
     """
     ws = project_workspace(force)
     plan(ws, resolve_app(ws, app), model, role=role)

@@ -8,25 +8,25 @@
   {
     "id": "karni/max-page-lines",
     "title": "A page file is longer than its cap (50 lines by default)",
-    "why": "Pages compose @karni/ui components; a long page is rebuilding something Karni ships.",
+    "why": "Pages compose @karni/ui components. A long page is rebuilding something Karni ships.",
     "fix": "Compose Page / ResourceTable / ResourceForm / ResourceDetail and their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`."
   },
   {
     "id": "karni/no-deep-imports",
     "title": "An import reaches into @karni/ui internals",
-    "why": "Only the package root is public API (docs/stability.md); internals change without notice, and a vendored copy forks the component.",
+    "why": "Only the package root is public API (docs/stability.md). Internals change without notice, and a vendored copy forks the component.",
     "fix": "Import from \"@karni/ui\" and compose or extend the exported component. Opt out only with `// eslint-disable-next-line karni/no-deep-imports -- <reason>`."
   },
   {
     "id": "karni/no-direct-http",
     "title": "fetch / axios / XMLHttpRequest / WebSocket outside the api client",
-    "why": "The generated typed hooks and KarniClient handle auth, errors, retries and types in one place; ad-hoc HTTP calls bypass all of it.",
-    "fix": "Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui; keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`."
+    "why": "The generated typed hooks and KarniClient handle auth, errors, retries and types in one place. Ad-hoc HTTP calls bypass all of it.",
+    "fix": "Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui, and keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`."
   },
   {
     "id": "karni/no-style-literals",
     "title": "A class or inline style holds a literal value instead of a design token",
     "why": "@karni/ui's preset resolves every colour, spacing step, radius, type size, shadow, z-index, opacity and duration from a --karni-* custom property, so one stylesheet (or `karni ui detect`) rethemes every component. A literal (`w-[13px]`, `bg-slate-500`, `bg-primary/90`, `style={{ color: \"#333\" }}`) is out of the theme's reach.",
-    "fix": "Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source; a project opts in with `\"karni/no-style-literals\": \"error\"`. Opt out only with `// eslint-disable-next-line karni/no-style-literals -- <reason>`."
+    "fix": "Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source. A project opts in with `\"karni/no-style-literals\": \"error\"`. Opt out only with `// eslint-disable-next-line karni/no-style-literals -- <reason>`."
   }
 ]

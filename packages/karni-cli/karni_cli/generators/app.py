@@ -90,7 +90,7 @@ def command(
     ),
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Create a local app — replaces `manage.py startapp`.
+    """Create a local app. It replaces `manage.py startapp`.
 
     Writes NAME/{__init__,apps,models,viewsets}.py, NAME/migrations/ and
     NAME/tests/, and adds NAME to the `# karni:apps` block of

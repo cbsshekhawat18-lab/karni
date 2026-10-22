@@ -23,7 +23,7 @@ def beat(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run Celery beat — wraps `python -m celery -A config beat -l info [ARGS]`."""
+    """Run Celery beat. It wraps `python -m celery -A config beat -l info [ARGS]`."""
     project = require_project()
     proc = project_mod.run_python(
         project,

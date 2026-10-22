@@ -18,7 +18,7 @@ const KarniInput = React.forwardRef<HTMLInputElement, InputProps>(
 );
 KarniInput.displayName = "Input";
 
-/** Themed text input; every native `<input>` prop passes through.
+/** Themed text input that passes every native `<input>` prop through.
  *
  * A project replaces it with its own through `primitives={{ input: ... }}` on KarniProvider.
  */

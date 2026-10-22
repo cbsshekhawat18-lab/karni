@@ -13,7 +13,7 @@ without changing anything:
 
 - **with the commands**: told to use `karni why`, `why-empty`, `queries`,
   `explain`, `trace` and `replay`, and to read source only if they were not
-  enough, saying what was missing;
+  enough, saying what was missing.
 - **without them**: barred from those six commands, free to read any file
   (the project's and Karni's), use the Django shell and run tests.
 
@@ -34,7 +34,7 @@ karni queries /api/events/ --as organizer@example.com
 karni why venues.capacity --as organizer@example.com
 ```
 
-In the second and third rows the first command already held the answer; the
+In the second and third rows the first command already held the answer. The
 agents then ran `karni context` and `--help` to confirm it.
 
 ## How it was counted
@@ -62,4 +62,4 @@ same model that do match rows, owner fields first. The rerun above took
 ## Limits
 
 One run per cell and one model. EventHub is small, so the agents without the
-commands had little source to read; a larger project was not measured.
+commands had little source to read. A larger project was not measured.

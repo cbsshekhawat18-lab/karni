@@ -1,18 +1,18 @@
 # @karni/ui
 
 Schema-driven React components for [Karni](https://github.com/cbsshekhawat18-lab/karni#readme) backends. Point it at a
-Karni API's OpenAPI schema and get working tables, forms, detail views and auth —
-plus the themable primitives they are built from — without regenerating boilerplate.
+Karni API's OpenAPI schema and you get working tables, forms, detail views and
+auth, plus the themable primitives they are built from, without regenerating boilerplate.
 
-- **Resource components** — `ResourceTable`, `ResourceForm`, `ResourceDetail`,
+- **Resource components**: `ResourceTable`, `ResourceForm`, `ResourceDetail`,
   `ResourceSelect` render themselves from the backend schema (`/api/schema/`).
-- **Hooks** — `useResourceList`, `useResourceItem`, `useResourceMutations`,
+- **Hooks**: `useResourceList`, `useResourceItem`, `useResourceMutations`,
   `useSchema` on TanStack Query, with a shared `karniKeys` key factory.
-- **Auth** — `AuthProvider`, `useAuth`, `AuthGuard`, `usePermission` for Karni's
+- **Auth**: `AuthProvider`, `useAuth`, `AuthGuard`, `usePermission` for Karni's
   JWT or session auth modes.
-- **Primitives** — Button, Input, Textarea, Select, Checkbox, Switch, Label,
-  Tabs, DropdownMenu, Skeleton: Radix-based, token-themed, `forwardRef`,
-  `className`-mergeable.
+- **Primitives**: Button, Input, Textarea, Select, Checkbox, Switch, Label,
+  Tabs, DropdownMenu, Skeleton. They are Radix-based, token-themed, `forwardRef`
+  and `className`-mergeable.
 
 The package ships **dual ESM/CJS** output plus `.d.ts` files: `import` resolves
 `dist/index.js`, `require()` resolves `dist/index.cjs` (same for
@@ -28,8 +28,8 @@ npm install @karni/ui @tanstack/react-query @tanstack/react-table react-hook-for
 
 Peer dependencies: `react` / `react-dom` (18 or 19), `@tanstack/react-query` v5,
 `@tanstack/react-table` v8, `react-hook-form` v7, `@hookform/resolvers` and `zod` v3.
-The project also needs `tailwindcss` (v3.4+ or v4) as a build tool — a
-devDependency, as `karni new` sets it up: it compiles the classes the
+The project also needs `tailwindcss` (v3.4+ or v4) as a build tool. It is a
+devDependency, which is how `karni new` sets it up. It compiles the classes the
 components use and is never imported at runtime, so it is not a peer.
 
 ## Quick start
@@ -53,7 +53,7 @@ export function App() {
 
 `KarniProvider` creates a TanStack `QueryClient` when you do not pass one
 (`queryClient` prop is the escape hatch). `AuthProvider` reads the auth mode from
-the schema root (`x-karni-auth-mode`); override it with `mode="jwt" | "session"`.
+the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`.
 
 ## Styling
 
@@ -100,7 +100,7 @@ import "./index.css"; // your @tailwind base/components/utilities file
 ### Tailwind v4 (what `karni new` sets up)
 
 Keep the same `tailwind.config.ts` (the preset and the content paths) and load
-it with `@config`; add the `@tailwindcss/vite` plugin to `vite.config.ts`:
+it with `@config`. Add the `@tailwindcss/vite` plugin to `vite.config.ts`:
 
 ```css
 /* src/index.css (main.tsx imports @karni/ui/styles.css first) */
@@ -119,7 +119,7 @@ under Tailwind 3 and 4, light and dark.
 #### Alternative: no JavaScript config
 
 Map the tokens in CSS instead of loading the preset. This covers colours,
-spacing, type, radius, shadow and motion; the named stacking classes
+spacing, type, radius, shadow and motion. The named stacking classes
 (`z-popover`, …) and the token-backed opacity steps come only with the preset.
 
 ```css
@@ -277,7 +277,7 @@ the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css`:
 The report lists every token mapped (from, to, value) and every value not
 mapped with the reason (a palette is never turned into `primary`
 silently: the line to add is printed). Re-running never overwrites a file
-you edited unless you pass `--force`; `--json` prints the report for agents.
+you edited unless you pass `--force`. `--json` prints the report for agents.
 See [Theming](https://cbsshekhawat18-lab.github.io/karni/theming/) for each
 source in detail.
 
@@ -286,7 +286,7 @@ source in detail.
 Every component words failures the same way, through `describeError(error,
 { action, resource })`: a 403 reads "You can't delete events", a dropped
 connection "You're offline", a 5xx "Something went wrong on our side". A status
-code is never shown; the server's own explanation is, when it gave one. The
+code is never shown, but the server's own explanation is, when it gave one. The
 building blocks are exported for your own screens:
 
 - `ErrorState`: what failed and what to do, with "Try again" when retrying can
@@ -302,13 +302,13 @@ everywhere, as `EmptyValue`: a muted en dash that screen readers read as
 "empty" (`label` changes the word). ResourceTable's cells, ResourceDetail's
 rows and ChangeHistory's before/after values all use it. A field the role may
 not read (`Karni.field_roles`) is different: it is absent from the per-role
-schema and from the payload, so it gets no row and no cell at all — never a
-dash that would hint it exists.
+schema and from the payload, so it gets no row and no cell at all. It never
+gets a dash that would hint it exists.
 
 ### Replacing a state: `slots`
 
 The resource and auth components take `slots`, an object of components that
-replace one part each; `defaultXSlots` (`defaultResourceDetailSlots`, ...)
+replace one part each. `defaultXSlots` (`defaultResourceDetailSlots`, ...)
 holds Karni's own, so a project can wrap one instead of rewriting it. Every
 `Error` slot receives `ErrorSlotProps` (`error`, `context`, `onRetry`,
 `retrying`), so one project error panel fits all of them.
@@ -337,8 +337,8 @@ never flashes them and nothing moves when the data arrives.
 ## Resource components
 
 Every resource component takes the backend's resource name (the router prefix)
-and renders from the schema. They are defaults, not cages — each one exposes
-override props, and you can always drop down to the hooks + primitives.
+and renders from the schema. These are defaults. Each one exposes override
+props, and you can always drop down to the hooks + primitives.
 
 ```tsx
 // Table: server-driven pagination, sorting, search and filters
@@ -384,23 +384,24 @@ override props, and you can always drop down to the hooks + primitives.
 A 404 reads "Couldn't find this event" with the `back` action and no retry.
 Karni answers 404 for a record outside the user's scope too, so the words never
 say the record exists. A 403 reads "You can't view this event". Other failures
-offer "Try again" (it refetches the schema too when that is what failed);
-offline says so and reloads when the connection returns. `resourceLabel`
+offer "Try again" (it refetches the schema too when that is what failed).
+Offline, it says so and reloads when the connection returns. `resourceLabel`
 ("event") names the resource in these messages when the router prefix does not
 singularize well.
 
 `ResourceImport` shows no upload form when the role may not import ("You
 can't import events"). A failed upload keeps the chosen file, moves focus to
-the error and offers "Try again" when it can help; a preview's rows with errors
-are a captioned table; Commit asks for confirmation with the counts
+the error and offers "Try again" when it can help. A preview's rows with errors
+are a captioned table. Commit asks for confirmation with the counts
 (created, updated, unchanged, failed). Background progress is a
 `progressbar` announced by the quarter, not every poll. `ChangeHistory` words
 its failures the same way ("You can't view the history of this event").
 
-Audit fields — `AUDIT_FIELDS`: `id`, `created_at`, `updated_at`, `created_by`,
-`updated_by`, which every Karni resource carries — never lead the screen.
+Audit fields never lead the screen. These are the `AUDIT_FIELDS` (`id`,
+`created_at`, `updated_at`, `created_by`, `updated_by`), which every Karni
+resource carries.
 `ResourceTable` hides their columns by default (domain fields come first, in
-schema order; rows are still keyed by `id`). Show one by naming it in `columns`
+schema order, and rows are still keyed by `id`). Show one by naming it in `columns`
 (`{ field: "created_at" }`), or show all of them after the domain columns with
 `showAuditFields`. `ResourceDetail` lists them last, in a muted "Record" group,
 and still honours `fields` overrides for them. `ResourceForm` never renders them
@@ -410,7 +411,7 @@ A create form starts from the schema's defaults (a model's `default=`), and a
 cleared optional field is left out of the request rather than sent as `null`
 (`null` is sent only for nullable fields).
 
-Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`;
+Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`.
 `displayLabel(obj)` picks a human label for relation objects.
 
 ### ResourceTable in every state
@@ -419,18 +420,18 @@ Each state is its own screen, and each is a slot you can replace:
 
 | State                         | What the user sees                                                                                                                      | Slot           |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| first load                    | the real layout in outline: header with the real column count, a full page of rows, the pagination row; nothing moves when data arrives | `Loading`      |
+| first load                    | the real layout in outline: header with the real column count, a full page of rows, the pagination row. Nothing moves when data arrives | `Loading`      |
 | no records yet                | "No events yet", and the create action when `onCreate` is set and the role may create                                                   | `NoRecords`    |
 | nothing matches               | "No events match", what is narrowing the list (search, each filter) and "Clear filters" (pinned `params` stay)                          | `NoResults`    |
 | the list failed               | `ErrorState`: plain words, "Try again" when it can help                                                                                 | `Error`        |
-| a refresh failed              | the rows stay; one line above them says so, with "Try again"                                                                            | `RefetchError` |
+| a refresh failed              | the rows stay, and one line above them says so, with "Try again"                                                                        | `RefetchError` |
 | 403 on the list               | "You can't view events", no retry (4xx are not retried, except 408 and 429)                                                             | `Forbidden`    |
-| offline                       | a line over the rows it has, or the offline panel; the list reloads by itself when the connection is back                               | `Offline`      |
-| slow (500ms, `SLOW_AFTER_MS`) | a progress bar, dimmed rows, "Loading events…" announced; the clicked control shows progress and ignores repeat clicks                  | —              |
+| offline                       | a line over the rows it has, or the offline panel. The list reloads by itself when the connection is back                               | `Offline`      |
+| slow (500ms, `SLOW_AFTER_MS`) | a progress bar, dimmed rows, "Loading events…" announced. The clicked control shows progress and ignores repeat clicks                  | none           |
 
 The other slots are `Pagination`, `BulkActions` and `RowCard`. Every slot
 receives the props type exported next to it (`ResourceTableLoadingProps`,
-`ResourceTableNoResultsProps`, … ; `Error` and `RefetchError` take
+`ResourceTableNoResultsProps`, …, while `Error` and `RefetchError` take
 `ErrorSlotProps`), and the defaults are exported as
 `defaultResourceTableSlots`, so a replacement can wrap one:
 
@@ -445,10 +446,10 @@ receives the props type exported next to it (`ResourceTableLoadingProps`,
 />
 ```
 
-The `empty` prop still replaces both empty screens; the `NoRecords` and
+The `empty` prop still replaces both empty screens, but the `NoRecords` and
 `NoResults` slots are preferred, because they tell "nothing yet" from
 "nothing matches". `resourceLabel` ("events") and `itemLabel` ("event") word
-every message; by default they come from the resource name.
+every message. By default they come from the resource name.
 
 **Permissions.** Columns follow the role's schema (a field the role cannot
 read is not in its schema, so its column and filter are absent). Row actions
@@ -462,7 +463,7 @@ the create rule allows it. Rules only the server can answer (grants, custom
 replace the schema's answer.
 
 **Deletes and bulk actions.** `enableDelete` asks in a dialog ("Delete
-“Spring Gala”?"); a failure is reported in the dialog, with "Try again" when
+“Spring Gala”?"). A failure is reported in the dialog, with "Try again" when
 it can help. A destructive bulk action (or one with `confirm: true`) asks
 first with the count ("Delete 3 events?"). An action may return a promise:
 the button shows progress after 500ms, the rows that succeeded are
@@ -476,11 +477,11 @@ more rows match.
 page number to jump to. Wide tables scroll inside their own box (the page
 never scrolls sideways): the header sticks, the first column stays put and
 shows an edge once the table scrolls. The box is at most
-`--karni-table-max-height` (70vh) tall; set it to `none` to let the page
-scroll. The "View" menu toggles compact rows and hides columns; both are
+`--karni-table-max-height` (70vh) tall. Set it to `none` to let the page
+scroll. The "View" menu toggles compact rows and hides columns, and both are
 remembered per user (in `localStorage`, under the signed-in user's id).
 `density` / `onDensityChange` control density from outside. Below
-`cardBreakpoint` (640px of the table's own width, not the viewport's; `0`
+`cardBreakpoint` (640px of the table's own width, not the viewport's, and `0`
 turns cards off) each row is a card: its title, then label and value pairs,
 with its checkbox and actions, and a sort choice above the cards. The sort
 choice keeps keyboard focus while the sorted page loads (the list says it is
@@ -491,7 +492,7 @@ as it lands on the scroll region in the table layout.
 **View state in the URL.** Page, page size, ordering, search and filters are
 query parameters under the table's namespace (`?events.page=2&events.ordering=-starts_at`),
 so a view can be shared and Back returns to the previous one. A value equal
-to the default is left out; pinned `params` never appear. `urlNamespace`
+to the default is left out, and pinned `params` never appear. `urlNamespace`
 keeps two tables on one page apart, `syncUrl={false}` keeps the view in
 component state, and `stateStore` plugs in a router. A store reads the
 current query values, writes changes (`null` removes a key, `push` adds a
@@ -533,25 +534,25 @@ Sortable headers are buttons with `aria-sort`. With `onRowClick`, the first
 cell of each row is a button, so a row opens with Enter or Space. Each
 checkbox is named after its row ("Select Spring Gala"). Page changes,
 sorting, the selection count and slow loading are announced in a polite live
-region; errors are announced as alerts.
+region. Errors are announced as alerts.
 
 ### ResourceForm: states, errors and the keyboard
 
 - **Loading** draws the form's own layout: once the schema is known (edit
   mode while the row loads) it has the real rows, labels and submit row, so
   nothing moves when the values arrive.
-- **A failed load** (schema or row) is an `ErrorState` with "Try again"; a 403
+- **A failed load** (schema or row) is an `ErrorState` with "Try again". A 403
   on the row reads "You can't edit this event" (`PermissionDenied`). Fields a
   role may not see or write are absent from its schema, so the form has no
   row for them: no blank row, no dash.
-- **Validation runs when a field loses focus**, not on every keystroke; a
+- **Validation runs when a field loses focus**, not on every keystroke. A
   field that shows an error re-checks on every change, so the error clears as
   soon as it is fixed. `validationMode` and `reValidateMode` (react-hook-form's
   `mode` / `reValidateMode`) change it.
 - **Server errors** land on their field for every DRF shape (field lists,
   strings, nested serializers, list serializers, `non_field_errors`, `detail`,
   keys the form does not show). When more than one thing fails, a summary at
-  the top lists them, each a link to its field, and takes focus; with one
+  the top lists them, each a link to its field, and takes focus. With one
   failing field, focus moves to it. Errors are announced, and every control
   carries `aria-invalid`, `aria-describedby` (help text and error) and, where
   its role allows, `aria-required`.
@@ -560,13 +561,13 @@ region; errors are announced as alerts.
   5xx) is a banner in plain words, with "Try again" when it can help. **The
   typed values are never lost**, whatever the failure.
 - **Submitting** disables the fields and the button (`PendingButton`: progress
-  after 500ms, same width). Enter submits from a one-line input, Ctrl/Cmd+Enter
-  from anywhere (a textarea included); Enter inside an open relation picker
-  chooses an option. The first field takes focus on create (`autoFocus` to
-  change it; edit mode does not unless asked).
+  after 500ms, same width). Enter submits from a one-line input, and Ctrl/Cmd+Enter
+  from anywhere (a textarea included). Enter inside an open relation picker
+  chooses an option. The first field takes focus on create, and `autoFocus`
+  changes that. Edit mode does not focus a field unless asked.
 
 Replace any state through `slots` (`Loading`, `Error`, `Forbidden`,
-`ErrorSummary`, `SubmitError`); the defaults are exported as
+`ErrorSummary`, `SubmitError`). The defaults are exported as
 `defaultResourceFormSlots` to wrap. `submitLabel` renames the button and
 `resourceLabel={{ singular: "person", plural: "people" }}` fixes the
 resource's name in messages.
@@ -598,7 +599,7 @@ function EditEvent({ id }: { id: string }) {
 
 ResourceForm reports itself clean just before `onSuccess`, so navigating there
 is never blocked. `useUnsavedChangesGuard({ confirm })` swaps
-`window.confirm` for your own dialog; `useUnsavedChangesGuard({ dirty })`
+`window.confirm` for your own dialog, and `useUnsavedChangesGuard({ dirty })`
 guards a form of your own.
 
 ### ResourceSelect: thousands of options
@@ -610,22 +611,22 @@ guards a form of your own.
   of 10,000 — type to narrow".
 - Typing searches (`?search=`, debounced by `searchDebounceMs`), keeping the
   previous results on screen and saying "Searching…". A related viewset with
-  no `search_fields` documents no `search` parameter; then typing narrows the
-  loaded rows and the list says search is not available. `searchable`
+  no `search_fields` documents no `search` parameter. Then typing narrows the
+  loaded rows, and the list says search is not available. `searchable`
   overrides what the schema says.
-- Empty reads "No venues yet" or "No venues match “ber”"; a failure reads "You
+- Empty reads "No venues yet" or "No venues match “ber”". A failure reads "You
   can't view venues", "Couldn't reach the server" or "Something went wrong on
   our side", with "Try again" when it can help.
 - Preselected ids are labelled in one request when the list documents
-  `id__in` (Karni's derived filters do not include it; add it on the viewset
+  `id__in` (Karni's derived filters do not include it, so add it on the viewset
   with `filterset_fields = {"id": ["exact", "in"]}`), otherwise one detail
   request per id, in parallel. `idsFilter` names another filter or (`false`)
   forces per-id requests. An id that cannot be loaded says "Couldn't load venue
   12" instead of showing the bare id.
 - It is an ARIA 1.2 combobox (`aria-expanded`, `aria-controls`,
-  `aria-activedescendant`); arrows, Home/End and PageUp/PageDown move through
-  every loaded page; chips remove with their button, Backspace/Delete, or
-  Backspace in the empty input. The ref is the input; `onBlur`,
+  `aria-activedescendant`). Arrows, Home/End and PageUp/PageDown move through
+  every loaded page. Chips remove with their button, Backspace/Delete, or
+  Backspace in the empty input. The ref is the input, and `onBlur`,
   `aria-describedby`, `aria-invalid` and `aria-required` make it a form field.
   `slots` replaces `Option`, `Chip`, `Loading`, `Empty` and `Error`
   (`defaultResourceSelectSlots`).
@@ -647,7 +648,7 @@ const { create, update, remove } = useResourceMutations<Event>("events");
 
 List responses are DRF pages: `{ count, next, previous, results }`
 (the `Paginated<T>` type). Mutations invalidate `karniKeys.resource(resource)`
-on success; pass `invalidateKeys` to invalidate more. Use `karniKeys` for any
+on success. Pass `invalidateKeys` to invalidate more. Use `karniKeys` for any
 manual cache work so your keys and the library's keys never drift.
 
 ## Auth
@@ -663,24 +664,24 @@ const { hasRole, isAuthenticated } = usePermission();
 
 With `explain`, `AuthGuard` says why it refuses. A visitor who is not signed in
 sees a sign-in prompt with a `LoginForm` (signing in reveals the content in
-place); a signed-in user whose role lacks access sees `PermissionDenied` naming
+place). A signed-in user whose role lacks access sees `PermissionDenied` naming
 who is signed in. Replace one case with `anonymous={...}` or `denied={...}` (or
-the `Anonymous` / `Denied` slots); `fallback` still covers both, and
+the `Anonymous` / `Denied` slots). `fallback` still covers both, and
 `fallback={null}` renders nothing. Without any of these a guard renders
 nothing, as in 0.3, and warns once in development: 1.0 makes `explain` the
 default. To hide a piece of UI from a role, prefer `usePermission().hasRole(...)`.
 
 `LoginForm` tells wrong credentials ("That email and password do not match")
 from throttling ("Too many sign-in attempts. Wait 42 seconds"), a server error
-and a dropped connection. The message is announced; both fields point at it
+and a dropped connection. The message is announced. Both fields point at it
 (`aria-describedby`) and are marked invalid when they are the problem. The
-email stays after a failure; wrong credentials clear and focus the password.
+email stays after a failure, and wrong credentials clear and focus the password.
 The email field takes focus on mount (`autoFocus={false}` turns that off).
 
-In JWT mode the refresh token is stored via a pluggable `TokenStorage`; the
-default is `localStorage` (simple, but readable by any XSS on your page — use
-`createMemoryTokenStorage()` or your own adapter for stricter setups, at the
-cost of logout-on-reload). Session mode uses cookies + CSRF headers and needs no
+In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
+The default is `localStorage`, which is simple but readable by any XSS on your
+page. For stricter setups use `createMemoryTokenStorage()` or your own adapter,
+at the cost of logout-on-reload. Session mode uses cookies + CSRF headers and needs no
 token storage.
 
 ## Primitives and escape hatches
@@ -691,14 +692,14 @@ three rules:
 1. **`className` always merges** via `cn()` (clsx + tailwind-merge), so your
    classes win over the component's own.
 2. **Refs are forwarded** to the underlying element.
-3. **Composition over configuration** — e.g. `buttonVariants()` is exported to
+3. **Composition over configuration**: for example, `buttonVariants()` is exported to
    style any element as a button, and the styled Radix parts
    (`SelectRoot`/`SelectTrigger`/`SelectContent`/`SelectItem`, the
    `DropdownMenu*` family, `Tabs*`) are exported for fully custom composition.
 
 `Select` note: Radix reserves the empty string, so the composed `Select` maps
 "no selection" through an internal `"__karni_empty__"` sentinel. Consumers only
-ever see `null`; pass `clearable` to render a clear item that emits `null`.
+ever see `null`. Pass `clearable` to render a clear item that emits `null`.
 Option values `""` and `"__karni_empty__"` are reserved.
 
 The `variants()` helper (a dependency-free cva-style utility) and `cn()` are
@@ -708,8 +709,8 @@ Leaf primitives have no `slots`: there is nothing inside them to replace, and
 each one is replaced whole through the registry below (or restyled with
 `className`). `Input`, `Textarea`, `SelectTrigger` (and the composed `Select`)
 and `Checkbox` show a destructive border while `aria-invalid` is true, so a
-form marks a field invalid with the same attribute screen readers announce;
-the composed `Select` passes `aria-invalid`, `aria-describedby` and
+form marks a field invalid with the same attribute screen readers announce.
+The composed `Select` passes `aria-invalid`, `aria-describedby` and
 `aria-labelledby` to its trigger.
 
 ### Your design system's primitives
@@ -744,8 +745,8 @@ import * as select from "@/components/ui/select";
 
 The roles are `button`, `input`, `textarea`, `checkbox`, `switch`, `label`,
 `skeleton` and the `select` family. A registered component receives the props
-of Karni's primitive (`ButtonProps`, `InputProps`, …) and its ref; shadcn/ui's
-components take them as they are, and another design system registers a small
+of Karni's primitive (`ButtonProps`, `InputProps`, …) and its ref. Components
+from shadcn/ui take them as they are, and another design system registers a small
 adapter (its own button with Karni's `variant` and `size` names mapped onto
 its own). `select` is replaced as a whole family because Radix parts share a
 context. A registered component may wrap Karni's own primitive: inside it, the
@@ -797,12 +798,12 @@ is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
 (use `Header`, which still receives the title, description and actions),
 `DataChart`'s `renderTooltip` (use `Tooltip`), `Toaster`'s `viewportClassName`
 (use `className`). A custom `Modal` `Header` renders `ModalTitle` (and
-`ModalDescription`) so the dialog stays labelled; a custom `CloseButton` wraps
+`ModalDescription`) so the dialog stays labelled. A custom `CloseButton` wraps
 its button in `ModalClose`.
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
-`onMobileNavOpenChange` to control the drawer; `Stat` and `DataChart` take
-`loading`; `DataChart` takes `summary`; `FileUpload` takes `error`,
+`onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take
+`loading`, and `DataChart` also takes `summary`. `FileUpload` takes `error`,
 `uploading`, `rejectionMessage`, `aria-invalid`, `aria-describedby` and
 `aria-labelledby`.
 
@@ -818,8 +819,8 @@ What each one does for keyboard and screen-reader users:
   menu button's `aria-controls` names the drawer only while it is open. The
   drawer closes itself if the window grows past `md`. Nav links show a focus
   ring and mark the current page with `aria-current="page"`.
-- **Modal**: named by its title, described by its description; focus moves in,
-  Tab stays inside, Escape closes, focus returns to what opened it.
+- **Modal**: named by its title and described by its description. Focus moves
+  in, Tab stays inside, Escape closes, and focus returns to what opened it.
 - **Toaster**: an error toast is announced at once (assertive), the others
   politely. F8 moves focus to the toasts, Tab walks them and their buttons,
   Escape dismisses the focused one. A toast's timer pauses while the pointer is
@@ -828,19 +829,19 @@ What each one does for keyboard and screen-reader users:
   picker), named by its text, `aria-label`, `aria-labelledby` or a
   `<label htmlFor={id}>`. A refused file ("notes.txt isn't an accepted file
   type.") and the `error` prop are announced and linked with
-  `aria-describedby`; `aria-invalid` gives the invalid style. While
+  `aria-describedby`, and `aria-invalid` gives the invalid style. While
   `uploading` it is busy and says so. Removing a file returns focus to the
   dropzone.
 - **DataChart**: an image named by its title and described by its description
-  plus a generated summary (each series' lowest and highest value); every
-  value is in a visually hidden table. Tab focuses the chart; the arrow keys,
-  Home and End move the tooltip from point to point and announce each one;
+  plus a generated summary (each series' lowest and highest value). Every
+  value is in a visually hidden table. Tab focuses the chart. The arrow keys,
+  Home and End move the tooltip from point to point and announce each one, and
   Escape hides it. On a narrow screen the tick labels stay at 11px.
 - **Stat**: a change is spoken ("Increased by", "Decreased by", "Unchanged")
-  and drawn with an arrow or a dash, not by colour alone; `loading` sets
+  and drawn with an arrow or a dash, not by colour alone. `loading` sets
   `aria-busy`.
 - **Primitives**: every control shows a focus ring on keyboard focus
-  (`focus-visible`, the `--karni-color-ring` token); Tabs, DropdownMenu,
+  (`focus-visible`, the `--karni-color-ring` token). Tabs, DropdownMenu,
   Select, Checkbox and Switch follow the WAI-ARIA keyboard patterns through
   Radix.
 
@@ -848,8 +849,8 @@ Contrast: every text and background pair the components use reaches 4.5:1 in
 both themes, and field boundaries, the switch track, focus rings, icon-only
 buttons and chart series reach 3:1. `tests/contrast.test.ts` computes the
 ratios from the tokens in `styles.css`, so a token change cannot lower one
-unnoticed; if you override tokens, check the same pairs. Motion reads
-`--karni-duration`, which is 0ms under `prefers-reduced-motion`; nothing
+unnoticed. If you override tokens, check the same pairs. Motion reads
+`--karni-duration`, which is 0ms under `prefers-reduced-motion`, and nothing
 animates from JavaScript.
 
 `tests/a11y.test.tsx` runs axe-core (the WCAG A and AA rules) over every
@@ -857,10 +858,10 @@ story of these components.
 
 ## Manifest for coding agents
 
-The published package contains `dist/manifest.json` —
-`{ "components": [...], "hooks": [...], "roles": {...} }` — generated from the
-public barrel (and a static scan of the `registerComponentRole` call sites) at
-build time. AI coding agents can read it (export path
+The published package contains `dist/manifest.json`, shaped
+`{ "components": [...], "hooks": [...], "roles": {...} }`. It is generated from
+the public barrel (and a static scan of the `registerComponentRole` call sites)
+at build time. AI coding agents can read it (export path
 `@karni/ui/manifest.json`) to discover what exists instead of crawling source.
 
 ## ESLint plugin
@@ -878,7 +879,7 @@ import karni from "@karni/ui/eslint-plugin";
 export default [...karni.configs.recommended];
 ```
 
-Every rule is an error; opt-outs are disable comments with a REQUIRED reason
+Every rule is an error. Opt-outs are disable comments with a REQUIRED reason
 (`// eslint-disable-next-line karni/no-direct-http -- <reason>`). See
 `docs/enforcement.md` at the repo root.
 
@@ -895,6 +896,6 @@ npm run storybook  # Storybook 8 (react-vite) with a light/dark toolbar
 Before the first `npm run storybook`, generate the MSW worker once:
 `npx msw init public/`.
 
-The source of truth for color discipline is enforced by tests: no Tailwind
-palette classes or raw color literals in component source — tokens only
+Tests enforce the color discipline: component source uses tokens only, with no
+Tailwind palette classes or raw color literals
 (see `src/components/primitives/no-color-literals.test.ts`).

@@ -222,7 +222,7 @@ APP_OPTION = typer.Option(
 )
 FORCE_OPTION = typer.Option(False, "--force", help="Overwrite / replace existing targets.")
 DRY_RUN_OPTION = typer.Option(
-    False, "--dry-run", help="Print the files and diff it would write; write nothing."
+    False, "--dry-run", help="Print the files and diff it would write, but write nothing."
 )
 
 

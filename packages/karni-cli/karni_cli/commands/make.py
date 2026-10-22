@@ -16,7 +16,7 @@ from karni_cli.generators import GENERATORS
 make_app = typer.Typer(
     help=(
         "Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages "
-        "... (`karni make --list`). Never overwrites without --force; --dry-run previews."
+        "... (`karni make --list`). It never overwrites without --force, and --dry-run previews."
     ),
     no_args_is_help=False,
     add_completion=False,

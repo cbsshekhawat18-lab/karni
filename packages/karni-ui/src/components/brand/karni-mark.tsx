@@ -15,7 +15,7 @@ export interface KarniMarkProps extends Omit<React.SVGAttributes<SVGSVGElement>,
 }
 
 /**
- * The Karni mark, inline SVG — no asset to load or bundle.
+ * The Karni mark as inline SVG, so there is no asset to load or bundle.
  *
  * It is the default content of `<Layout>`'s `sidebarHeader` slot so a bare
  * shell is never nameless; a project replaces it by passing its own

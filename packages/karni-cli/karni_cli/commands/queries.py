@@ -65,8 +65,8 @@ def run_queries(
 def queries(
     endpoint: str = typer.Argument(
         ...,
-        help="A path (/api/events/?page=2), a resource (events, events/<id>) or a viewset "
-        "(EventViewSet, EventViewSet.retrieve).",
+        help="A path (`/api/events/?page=2`), a resource (`events`, `events/<id>`) or a "
+        "viewset (`EventViewSet`, `EventViewSet.retrieve`).",
     ),
     user: str | None = typer.Option(
         None, "--as", help="The user: email, username or primary key (default: anonymous)."
@@ -83,9 +83,12 @@ def queries(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run one endpoint in-process as a user: query count and time, repeated queries grouped
-    by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps
-    `manage.py karni_queries`."""
+    """Run one endpoint in-process as a user and report its queries.
+
+    The report has the query count and time, the repeated queries grouped by cause
+    (field, relation, why the optimiser did not fetch it) and the fix. It wraps
+    `manage.py karni_queries`.
+    """
     project = require_project()
     args = queries_args(endpoint, user, method, data, as_json, explain, every)
     code, out, err = run_queries(project, args, docker=docker, service=service)

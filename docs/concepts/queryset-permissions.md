@@ -4,8 +4,8 @@ description: "Why Karni enforces permissions at the queryset rather than the vie
 
 # Permissions at the queryset
 
-Most permission systems answer one question — *may this request reach this
-view?* — and leave the second, *which rows?*, to whoever writes
+Most permission systems answer one question (*may this request reach this
+view?*) and leave the second (*which rows?*) to whoever writes
 `get_queryset()`. The leak everyone eventually ships is a `retrieve` that
 forgot to filter, a relation field that accepts any primary key, or an
 `?expand=` that embeds a row the requester could never list. Karni compiles
@@ -38,8 +38,8 @@ Every predicate has a request-level answer and a row-level answer:
 The **gate** runs first, as a DRF permission, before any query. The **row
 filter** is applied in `get_queryset()`, and it is authoritative: lists,
 details, custom actions, relation-field validation and `?expand=` all go
-through it. A row outside `read` does not exist for that request — a 404
-with no existence oracle — and a readable row outside `write` is a 403.
+through it. A row outside `read` does not exist for that request. It is a 404
+with no existence oracle. A readable row outside `write` is a 403.
 
 ## Why the queryset, not the object
 
@@ -54,7 +54,7 @@ every code path that asks for rows inherits it:
 - **Relation fields** (`booking.event`) accept only primary keys of rows the
   requester can read through the *target* model's viewset. An out-of-scope
   id fails exactly like a missing one.
-- **Expansion** embeds only readable rows; a to-one target outside the scope
+- **Expansion** embeds only readable rows. A to-one target outside the scope
   renders as `null`.
 - **Owner stamping**: a direct foreign key to the user named by `Owned` in
   `write` or `create` is set from `request.user` on create and is read-only
@@ -81,17 +81,17 @@ class BookingAPITests(APITestCase):
 ```
 
 `assert_crud` derives the expected status of every action from the
-declaration and checks the API against it, including the 404-not-403 rule;
+declaration and checks the API against it, including the 404-not-403 rule.
 `assert_isolated` creates rows for two owners and proves one cannot see,
 change or reference the other's.
 
 ## Escape hatches, least to most drastic
 
 1. Change the declaration.
-2. `Where(...)` for arbitrary row logic; `@action(access=...)` for one
-   action; `get_access()` to compute the declaration per request.
-3. Override `filter_queryset_for_user(queryset)` — it receives the scoped
-   queryset — with a `# karni: allow(access-override): <reason>` marker.
+2. `Where(...)` for arbitrary row logic, `@action(access=...)` for one
+   action, or `get_access()` to compute the declaration per request.
+3. Override `filter_queryset_for_user(queryset)` (it receives the scoped
+   queryset) with a `# karni: allow(access-override): <reason>` marker.
 4. `access = Unscoped(reason="...")`: plain DRF permissions, rows limited
    only by model scopes. The reason is published in the schema.
 

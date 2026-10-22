@@ -21,16 +21,16 @@ start.mutate({ user: "customer@example.com", reason: "ticket #7" });
 ```
 
 - `<ImpersonationBanner>` reads `GET /api/impersonation-sessions/current/`
-  and renders nothing outside a session; inside one it names both
-  identities, the minutes left, and **Stop impersonating**, which posts
-  `…/stop/`, adopts the impersonator's tokens (JWT mode — through
+  and renders nothing outside a session. Inside one it names both
+  identities, the minutes left, and **Stop impersonating**. That button posts
+  `…/stop/`, adopts the impersonator's tokens (JWT mode, through
   `useAuth().adoptTokens`) or re-syncs `/me/` (session mode), and drops every
   cached resource query so the app re-reads as the right person.
 - `useStartImpersonation()` does the same in the other direction after
   `POST …/start/` (the backend enforces the permission, the no-escalation
-  rule and the reason; its refusal is the mutation's error).
+  rule and the reason, and its refusal is the mutation's error).
 - `useImpersonation()` is the query behind the banner.
 
 Peer dependencies: `@karni/ui ^0.1`, React 18/19, `@tanstack/react-query` 5.
-Tokens only; registers the `impersonation-banner` role on `@karni/ui`'s role
+It uses tokens only, and registers the `impersonation-banner` role on `@karni/ui`'s role
 registry when it is present.

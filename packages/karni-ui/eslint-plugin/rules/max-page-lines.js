@@ -34,7 +34,7 @@ export default {
     messages: {
       tooLong:
         "Page file is {{count}} physical lines (max {{max}}). Past the cap you are rebuilding " +
-        "something @karni/ui ships — compose Page/ResourceTable/ResourceForm/ResourceDetail and " +
+        "something @karni/ui ships. Compose Page/ResourceTable/ResourceForm/ResourceDetail and " +
         "their props, or move logic into hooks/components. " +
         "Opt out only with an explained disable: /* eslint-disable karni/max-page-lines -- <reason> */",
     },

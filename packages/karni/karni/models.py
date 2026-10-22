@@ -65,7 +65,7 @@ def _with_field(update_fields: Any, *names: str) -> Any:
 
 
 class UUIDModel(models.Model):
-    """Random UUID primary key — safe to expose in URLs, no enumeration."""
+    """Random UUID primary key, safe to expose in URLs (no enumeration)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 

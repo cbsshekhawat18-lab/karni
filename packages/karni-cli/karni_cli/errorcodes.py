@@ -85,8 +85,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C005",
         "This karni-cli install is incomplete",
         "karni_cli (bundled templates, agent rules, changelog, error codes)",
-        "The wheel bundles the project template, agent rules, changelog and error codes; "
-        "one is missing, so the install is broken.",
+        "The wheel bundles the project template, agent rules, changelog and error codes. One is "
+        "missing, so the install is broken.",
         "Reinstall karni-cli (pipx reinstall karni-cli, or pip install --force-reinstall "
         "karni-cli).",
     ),
@@ -113,8 +113,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "A file cannot be written",
         "karni config, karni ui detect",
         "The file or its directory is not writable.",
-        "Check the path's permissions; for karni config set the value per project instead of "
-        "--global, for karni ui detect choose another place with --output.",
+        "Check the path's permissions. For karni config, set the value per project instead of "
+        "--global. For karni ui detect, choose another place with --output.",
     ),
     _c(
         "C009",
@@ -136,7 +136,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "pytest is not installed in the project interpreter",
         "karni test",
         "karni test runs `python -m pytest` through the project's interpreter (its .venv, the "
-        "active virtualenv, or the compose service); pytest and pytest-django are in the "
+        "active virtualenv, or the compose service). pytest and pytest-django are in the "
         "project's dev dependency group, not in karni.",
         "Install them there: pip install pytest pytest-django (or `uv sync` for the dev "
         "group), then run karni test again.",
@@ -162,10 +162,10 @@ CODES: Final[tuple[CliCode, ...]] = (
         "These commands open the database at DATABASE_URL first. A server that is not "
         "running, a host that does not resolve (the compose default `db`, from the host) or "
         "rejected credentials would stop them with a traceback.",
-        "Start the database (`karni serve -d` runs the compose stack with PostgreSQL), or "
-        "point DATABASE_URL in .env at one that runs (cp .env.example .env first; "
-        "DATABASE_URL=sqlite:///db.sqlite3 needs no server). The message names the address "
-        "and the driver's error. KARNI_DB_CHECK=false skips the check.",
+        "Start the database (`karni serve -d` runs the compose stack with PostgreSQL), or point "
+        "DATABASE_URL in .env at one that runs (cp .env.example .env first). "
+        "DATABASE_URL=sqlite:///db.sqlite3 needs no server. The message names the address and the "
+        "driver's error. KARNI_DB_CHECK=false skips the check.",
     ),
     # C1xx karni make
     _c(
@@ -197,9 +197,9 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C104",
         "A field spec is invalid",
         "karni make model (name:type[:arg][?] fields)",
-        "Fields are written as name:type[:arg][?], e.g. title:str:200 or "
-        "starts_at:datetime?; relations name their target model.",
-        "Fix the field the message names; `karni make model --help` lists the types.",
+        "Fields are written as name:type[:arg][?], e.g. title:str:200 or starts_at:datetime?, and "
+        "relations name their target model.",
+        "Fix the field the message names. `karni make model --help` lists the types.",
     ),
     _c(
         "C105",
@@ -228,8 +228,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C108",
         "A karni marker is missing from a project file",
         "karni make, karni add (settings.py and routes.tsx markers)",
-        "Generators insert code at `# karni:` / `// karni:` markers that karni new writes; "
-        "older or hand-edited projects may lack them.",
+        "Generators insert code at `# karni:` / `// karni:` markers that karni new writes. Older "
+        "or hand-edited projects may lack them.",
         "Add the change by hand as the message shows, or restore the marker from a fresh "
         "karni new project.",
     ),
@@ -237,7 +237,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C109",
         "An explicit serializer needs a reason",
         "karni make serializer",
-        "BaseViewSet generates the serializer from the model (rule K106); a hand-written one "
+        "BaseViewSet generates the serializer from the model (rule K106), so a hand-written one "
         "must say why it exists.",
         'Pass --reason "<why>", or tune the generated serializer with APIMeta instead.',
     ),
@@ -252,7 +252,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C199",
         "Internal error in karni",
         "karni make, karni upgrade",
-        "A generator or codemod hit a case it does not handle; nothing was written.",
+        "A generator or codemod hit a case it does not handle. Nothing was written.",
         "Report it with the command and the file it stopped on. Meanwhile, make the change "
         "by hand.",
     ),
@@ -261,7 +261,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C201",
         "karni upgrade needs a clean git work tree",
         "karni upgrade",
-        "Codemods rewrite many files; a clean tree lets you review and undo them with git.",
+        "Codemods rewrite many files. A clean tree lets you review and undo them with git.",
         "Commit or stash first, preview with --dry-run, or pass --allow-dirty to write anyway.",
     ),
     _c(
@@ -289,7 +289,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C205",
         "The agent adapter configuration is invalid",
         "karni rules sync (karni.rules.py ADAPTERS)",
-        "Adapters are the generated agent guidance files; each has an id and a line cap.",
+        "Adapters are the generated agent guidance files. Each has an id and a line cap.",
         "Use the adapter ids the message lists, and shorten project rules feeding an adapter "
         "that exceeds its cap.",
     ),
@@ -323,10 +323,10 @@ CODES: Final[tuple[CliCode, ...]] = (
         "A generated file was edited, so karni ui detect does not overwrite it",
         "karni ui detect (karni-theme.css, karni-primitives.tsx)",
         "The files karni ui detect writes belong to the project. Each carries a digest of what "
-        "was generated; a file whose content no longer matches it (or that has none) was "
-        "edited by hand, and a re-run must not lose those edits silently.",
-        "Compare with `karni ui detect --dry-run` and copy what you need; or overwrite with "
-        "--force; or write the new file elsewhere with --output.",
+        "was generated. A file whose content no longer matches it (or that has none) was edited "
+        "by hand, and a re-run must not silently lose those edits.",
+        "Compare with `karni ui detect --dry-run` and copy what you need, overwrite with --force, "
+        "or write the new file elsewhere with --output.",
     ),
     _c(
         "C303",
@@ -342,8 +342,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C304",
         "The frontend has no theme of the --source kind",
         "karni ui detect --source",
-        "--source makes karni ui detect read one source (shadcn, tailwind, mui, chakra, "
-        "mantine) instead of detecting; that source is not in this frontend.",
+        "--source makes karni ui detect read one source (shadcn, tailwind, mui, chakra, mantine) "
+        "instead of detecting. That source is not in this frontend.",
         "Run karni ui detect without --source to detect what the frontend has, or name a "
         "source it uses.",
     ),
@@ -361,14 +361,14 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C311",
         "karni why: --as is missing",
         "karni why, karni why-empty",
-        "An access decision is always for one user; only a recorded request carries its own.",
+        "An access decision is always for one user, and only a recorded request carries its own.",
         "Pass --as with an email, username or primary key, or --as anonymous.",
     ),
     _c(
         "C312",
         "karni why: the project's karni is too old",
         "karni why, karni why-empty",
-        "The question runs as manage.py karni_why in the project, which ships with karni; a "
+        "The question runs as manage.py karni_why in the project, which ships with karni. A "
         "project on an older karni does not have it.",
         "Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask "
         "again.",
@@ -397,7 +397,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "The project's karni has no debugging commands",
         "karni trace, karni replay, karni explain --failure",
         "These commands run manage.py karni_trace, karni_replay and karni_failure in the "
-        "project's interpreter; a karni older than the CLI does not have them.",
+        "project's interpreter. A karni older than the CLI does not have them.",
         "Upgrade karni in the project: `karni upgrade`, or bump karni in pyproject.toml and "
         "reinstall (`uv pip install -r pyproject.toml`, or rebuild the image).",
     ),
@@ -426,9 +426,9 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C341",
         "The project's karni has no karni_queries command",
         "karni queries",
-        "karni queries runs manage.py karni_queries in the project's interpreter; that command "
-        "ships with karni from the release that added karni queries, and the project has an "
-        "older karni installed.",
+        "karni queries runs manage.py karni_queries in the project's interpreter. That command "
+        "ships with karni from the release that added karni queries, and the project has an older "
+        "karni installed.",
         "Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and "
         "reinstall), then run karni queries again. karni doctor shows both versions.",
     ),
@@ -448,10 +448,10 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C361",
         "The project's karni has no karni schema",
         "karni schema",
-        "karni schema runs `manage.py karni_schema` in the project's interpreter; a karni "
-        "older than the typed field layer does not have it.",
-        "Upgrade the project's karni (karni upgrade, then reinstall the project's "
-        "dependencies); `karni doctor` shows which karni the project uses.",
+        "karni schema runs `manage.py karni_schema` in the project's interpreter. A karni older "
+        "than the typed field layer does not have it.",
+        "Upgrade the project's karni (karni upgrade, then reinstall the project's dependencies). "
+        "`karni doctor` shows which karni the project uses.",
     ),
     # C37x field DSL: lifecycle columns and limited resources
     _c(
@@ -459,8 +459,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "A state field spec is invalid",
         "karni make model (name:state:...)",
         "A state column lists its states (draft,confirmed,cancelled) or its moves "
-        "(draft>confirmed|draft>cancelled); the first state is where rows start, so every "
-        "other state must be reachable from it, and a state column is never optional.",
+        "(draft>confirmed|draft>cancelled). The first state is where rows start, so every other "
+        "state must be reachable from it. A state column is never optional.",
         "Write e.g. 'status:state:draft>confirmed>refunded|draft>cancelled', or list the states "
         "and edit the generated transitions={...}.",
     ),
@@ -476,8 +476,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C372",
         "A capacity field spec is invalid",
         "karni make model (name:capacity[:total])",
-        "A capacity counter optionally names the integer field holding the total, which must "
-        "be declared in the same command; it is never optional.",
+        "A capacity counter can name the integer field holding the total, which must be declared "
+        "in the same command. The counter is never optional.",
         "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
         "counter that starts at 0.",
     ),

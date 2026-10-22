@@ -30,7 +30,7 @@ export default {
     messages: {
       deepImport:
         'Deep import "{{source}}" reaches into @karni/ui internals. Import from the public ' +
-        'barrel "@karni/ui" and compose/extend the exported component — vendoring an internal ' +
+        'barrel "@karni/ui" and compose/extend the exported component. Vendoring an internal ' +
         "copy forks it. " +
         "Opt out only with an explained disable: " +
         "// eslint-disable-next-line karni/no-deep-imports -- <reason>",

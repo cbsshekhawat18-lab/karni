@@ -77,8 +77,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="The currency or amount cannot be charged exactly",
         kind="exception",
         source=f"{_SOURCE}.providers.base.to_minor_units",
-        why="Providers charge integer minor units (cents); Karni never rounds money "
-        "silently, and 3-decimal currencies are not supported yet.",
+        why=(
+            "Providers charge integer minor units (cents). Karni never rounds money silently, and "
+            "3-decimal currencies are not supported yet."
+        ),
         fix="Round the amount to the currency's minor unit before charging (e.g. "
         "Decimal('10.50')), and charge in a 0- or 2-decimal currency.",
     ),
@@ -96,8 +98,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="A webhook event matches no local payment",
         kind="exception",
         source=f"{_SOURCE}.services (webhook processing task)",
-        why="Providers can deliver a webhook before the checkout that created the payment "
-        "is committed; the task retries instead of dropping the event.",
+        why=(
+            "Providers can deliver a webhook before the checkout that created the payment is "
+            "committed. The task retries instead of dropping the event."
+        ),
         fix="Usually nothing: the retry succeeds. If it keeps failing, the payment was "
         "created outside Karni (or in another environment sharing the webhook): check "
         "the provider ids in the message.",

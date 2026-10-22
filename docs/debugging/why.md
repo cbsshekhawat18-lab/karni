@@ -22,7 +22,7 @@ karni why 403 <request-id>                                   # a request the dev
 `--as` takes an email, username, primary key or `anonymous`. Resources are
 named as the API names them: the route prefix (`events`), the router basename
 (`events-event`) or the model label (`events.Event`). `--action` takes `view`
-(the default), `update`, `delete`, `create`, `list` or an `@action` name;
+(the default), `update`, `delete`, `create`, `list` or an `@action` name.
 `--param key=value` adds a query parameter (a page's `params={...}`, a filter).
 `--json` prints the same verdict as one JSON object.
 
@@ -64,7 +64,7 @@ fix      the row must match status = 'published' (events/viewsets.py:16); it has
 |---|---|
 | `user`, `roles` | Who is asking, and the roles (Django groups) they hold. A superuser holds every grant at scope `all`. |
 | `request` | The method, path and viewset action, and which part of `access` governs it. |
-| `access` | The declaration and its `file:line`; for `Granted()`, the permission it binds to (`Can('events.event:view')`). An `@action(access=...)` or an overridden `get_access()` is shown too. |
+| `access` | The declaration and its `file:line`. For `Granted()`, also the permission it binds to (`Can('events.event:view')`). An `@action(access=...)` or an overridden `get_access()` is shown too. |
 | `gate` | The request gate (`AccessPermission.has_permission`), part by part: who passes and why. |
 | `veto` | A [veto](../api.md#vetoes) that refused after the gate passed, with its name and `file:line`. |
 | `grants` | For `Granted()`/`Can()`: each grant consulted, its scope, the role that gives it and where (`KARNI_ROLES` and its line, the permission matrix, superuser), and the rows it reaches. |
@@ -103,9 +103,9 @@ fix      make attendee@example.com the row's organizer (now organizer@example.co
          or: give attendee@example.com the role 'staff': assign_role(user, 'staff') or the admin
 ```
 
-A grant scope, under `access = Granted()` (Karni's own test app; in a
+A grant scope, under `access = Granted()`, from Karni's own test app. In a
 project, `KARNI_ROLES` is followed by the settings line that declares the
-role):
+role:
 
 ```text
 access   GrantedEvents.access  tests/why/routes.py:51
@@ -125,9 +125,9 @@ fix      make alice@example.com the row's organizer (now bob@example.com) — th
 ## Empty lists: `karni why-empty`
 
 `why-empty` counts the rows each step of the [read pipeline](../api.md#access-control)
-leaves — the table, each model scope, the viewset's queryset, `access.read`
+leaves: the table, each model scope, the viewset's queryset, `access.read`
 part by part, `filter_queryset_for_user` and each filter backend with the
-request's parameters — and names the step that empties the list:
+request's parameters. Then it names the step that empties the list:
 
 ```text
 $ karni why-empty bookings --as organizer@example.com
@@ -151,8 +151,8 @@ fix      change Owned('event__created_by') to Owned('event__organizer') in Booki
 ```
 
 `near` lists, for each `Owned(...)` part that matches no row, the other
-foreign keys to the user on the same model that do — first the ones a routed
-viewset (or `Karni.owner_field`) owns that model through. Here the rule walks
+foreign keys to the user on the same model that do. The ones a routed
+viewset (or `Karni.owner_field`) owns that model through come first. Here the rule walks
 to `created_by`, the audit stamp, while the events belong to their
 `organizer`. The list is in `--json` as `near_misses`, and it is printed even
 when the list is not empty, for a list that is merely missing rows.
@@ -165,7 +165,7 @@ refusal, not as an empty list.
 ## Fields
 
 `karni why <resource>.<field>` says whether the user sees the field and may
-change it, and why — [`Karni.field_roles`](../api.md#field-visibility),
+change it, and why. The reason is one of [`Karni.field_roles`](../api.md#field-visibility),
 `APIMeta.exclude`/`fields`/`read_only`/`write_only`, an owner field stamped
 from the request, the always-read-only key and timestamps, or an explicit
 `serializer_class`:
@@ -202,9 +202,9 @@ user     attendee@example.com  ...
 
 When the answer differs from the recorded one, a `note` says so: roles,
 grants or the row changed since, or the refusal depended on request state a
-replay does not have — a request refused while impersonating (`IMP006`) is
-not impersonated when replayed. No record ([`E903`](../errors.md#e903)) means
-the request was not made against the dev server with `DEBUG` on: reproduce it
+replay does not have. For example, a request refused while impersonating
+(`IMP006`) is not impersonated when replayed. No record ([`E903`](../errors.md#e903))
+means the request was not made against the dev server with `DEBUG` on. Reproduce it
 there, or ask about the row directly with `karni why <resource>/<id> --as
 <user>`.
 
@@ -229,8 +229,8 @@ refused.
 
 - **The decision is the API's.** It builds the viewset the way the router
   does (same class, initkwargs and method map), wraps a request for the user
-  as DRF's test client does, and runs DRF's own `initial()` — authentication,
-  then `check_permissions` with `AccessPermission` first — and the action's
+  as DRF's test client does, and runs DRF's own `initial()` (authentication,
+  then `check_permissions` with `AccessPermission` first) and the action's
   lookup (`get_object()`, or `filter_queryset(get_queryset())` for a list).
   Exceptions go through the view's own `handle_exception`, so 401 versus 403
   is the API's answer too. The handler body never runs, nothing is written
@@ -243,10 +243,10 @@ refused.
   recombines them with the same folds `|` and `&` use, then applies each
   leaf's row filter to the row with the read pipeline's `apply_rows`. If an
   explanation ever disagreed with the recorded decision (a `Where` reading
-  the clock), a `note` would say so; the status shown is always the API's.
+  the clock), a `note` would say so. The status shown is always the API's.
 - **A test matrix proves it.** `packages/karni/tests/why/test_matrix.py`
-  compares the verdict with what the API actually returns — the router's own
-  view, dispatched for real — for every combination of eight users (anonymous,
+  compares the verdict with what the API actually returns (the router's own
+  view, dispatched for real) for every combination of eight users (anonymous,
   owners, staff, a reader, a `related:` scope, no role, a superuser), four
   viewsets (`Granted()`, a hand-written rule with an `@action(access=...)`, a
   veto, `Unscoped`), six rows (one soft-deleted) and every action: status,
@@ -260,10 +260,10 @@ refused.
 - An `@action`'s own code, and validation of the body (a 400), are not access
   decisions and do not run.
 - `--as` loads the user from the database. A `related:<key>` scope reads
-  `user.<key>`; an attribute that only middleware sets on the request's user
+  `user.<key>`. An attribute that only middleware sets on the request's user
   is absent, and the verdict says the scope reaches no row.
-- Like the rest of the dev tooling it reads the database it is pointed at;
-  run it against development data.
+- Like the rest of the dev tooling, it reads the database it is pointed at.
+  Run it against development data.
 
-Errors: `E901`–`E908` (core) and `C310`–`C312` (the command), all in
+Errors: `E901` to `E908` (core) and `C310` to `C312` (the command), all in
 [error codes](../errors.md).

@@ -2,11 +2,11 @@
 description: "ADR 0001: the tenancy shape, permission depth and performance defaults Karni's core is built on, with the code that implements each decision."
 ---
 
-# ADR 0001 — Core architecture: tenancy shape, permission depth, performance defaults
+# ADR 0001: Core architecture (tenancy shape, permission depth, performance defaults)
 
 | | |
 |---|---|
-| Status | **Accepted 2026-10-02.** The author accepted all recommendations; the binding rulings are in §7. |
+| Status | **Accepted 2026-10-02.** The author accepted all recommendations. The binding rulings are in §7. |
 | Date | 2026-10-02 |
 | Scope | The query layer (`karni.managers`, `karni.models`), `BaseViewSet`, the generated serializers, pagination, and the testing/enforcement surface |
 | Evidence | `.learning/PATTERNS.md` (P6, P19, P24, P25, P36, P37, weak practices 2, 8, 9), `.learning/GAPS.md` (§3 karni-tenancy, §4.2, §4.3, §4.7, §5.1), and the current source (cited as `path:line`) |
@@ -41,20 +41,20 @@ These current facts drive the decisions below. All were found by reading the cod
 | F1 | Every auto-registered viewset can be read anonymously by default. | `conf/base.py:244`, `docs/api.md:3-8` |
 | F2 | Row scoping is an opt-in override hook that does nothing by default. | `accounts/permissions.py:190-201` |
 | F3 | If a subclass overrides `get_queryset()` without calling `super()`, row scoping and expand optimisation are both silently lost. | `api/viewsets.py:157-177` |
-| F4 | `IsOwner` is object-level only, so DRF never runs it on `list`. Owner-only lists need `filter_queryset_for_user` as well. karni-payments does both by hand. | `accounts/permissions.py:115-143`; `modules/karni-payments/karni_payments/viewsets.py:78,81-93,150-158` |
+| F4 | `IsOwner` is object-level only, so DRF never runs it on `list`. Owner-only lists need `filter_queryset_for_user` as well. karni-payments does both by hand. | `accounts/permissions.py:115-143`, `modules/karni-payments/karni_payments/viewsets.py:78,81-93,150-158` |
 | F5 | Generated relation fields validate PKs against `related_model._default_manager` (DRF's default). The target's viewset scoping does not apply, so a client can attach another user's object by PK (by reading). | `api/serializers.py:67-109` |
-| F6 | `BaseModel` now carries `created_by`/`updated_by` FKs to the user. `?expand=` allows every non-auto-created FK, and the user serializer exposes `email`. Under F1, `GET /api/<any>/?expand=created_by` therefore returns creators' emails to anonymous callers (by reading). | `models.py:164-179`; `api/expansion.py:55-59`; `accounts/models.py:65-74` |
-| F7 | Unexpanded M2M fields are in the default serializer field set. `ManyRelatedField` runs `.all()` once per row, so every list endpoint of a model with an M2M is N+1 out of the box (by reading). Nested serializers' own M2Ms are not prefetched either. | `api/serializers.py:230-234`; `api/expansion.py:172-204` |
+| F6 | `BaseModel` now carries `created_by`/`updated_by` FKs to the user. `?expand=` allows every non-auto-created FK, and the user serializer exposes `email`. Under F1, `GET /api/<any>/?expand=created_by` therefore returns creators' emails to anonymous callers (by reading). | `models.py:164-179`, `api/expansion.py:55-59`, `accounts/models.py:65-74` |
+| F7 | Unexpanded M2M fields are in the default serializer field set. `ManyRelatedField` runs `.all()` once per row, so every list endpoint of a model with an M2M is N+1 out of the box (by reading). Nested serializers' own M2Ms are not prefetched either. | `api/serializers.py:230-234`, `api/expansion.py:172-204` |
 | F8 | One test asserts a query count, and only on the expanded path. The framework has no per-endpoint budget. | `tests/api/test_expand.py:222-237` |
-| F9 | Pagination can be switched off three ways with no error: `pagination_class = None` on a view, `REST_FRAMEWORK["PAGE_SIZE"] = None` (validation skips `None`), or a list-returning `@action`. | `conf/validation.py:185-191`; `pagination.py` |
+| F9 | Pagination can be switched off three ways with no error: `pagination_class = None` on a view, `REST_FRAMEWORK["PAGE_SIZE"] = None` (validation skips `None`), or a list-returning `@action`. | `conf/validation.py:185-191`, `pagination.py` |
 | F10 | The derived admin already prevents changelist N+1 for FKs in `list_display`. | `admin/derive.py:186-197` |
-| F11 | Two "see everything" managers exist that bypass any default-manager filter: `all_objects` on `SoftDeleteModel`/`BaseModel` and `SoftDeleteAdminMixin`'s queryset. | `models.py:106,211`; `admin/soft_delete.py:133` |
+| F11 | Two "see everything" managers exist that bypass any default-manager filter: `all_objects` on `SoftDeleteModel`/`BaseModel` and `SoftDeleteAdminMixin`'s queryset. | `models.py:106,211`, `admin/soft_delete.py:133` |
 | F12 | `all_with_deleted()` is `super().get_queryset()`. What it drops depends on MRO position, not on a name. | `managers.py:124-140` |
 | F13 | Module settings fragments may only add new top-level names. They cannot touch `MIDDLEWARE`, `INSTALLED_APPS` or `REST_FRAMEWORK`. | `docs/modules.md:93-102` |
 
 ---
 
-## Decision 1 — Multi-tenancy
+## Decision 1: Multi-tenancy
 
 ### Evidence
 
@@ -167,9 +167,9 @@ fails, with the usual `# karni: allow(manager-base): <reason>` opt-out. A plain
 The existing `raw-sql` rule (`testing/architecture.py:177-202`) becomes the tenant-leak guard. The
 module makes `sql_allowed` paths subject to RLS.
 
-**Residual cost, stated honestly.** Even with S1–S8, adopting tenancy needs these changes:
-(1) every `unique=True` / `UniqueConstraint` on a scoped model must become per-tenant, which is a
-project edit plus a migration; (2) raw SQL under `sql_allowed` must be reviewed; (3) models meant
+**Residual cost, stated honestly.** Even with S1–S8, adopting tenancy needs three changes.
+(1) Every `unique=True` / `UniqueConstraint` on a scoped model must become per-tenant, which is a
+project edit plus a migration. (2) Raw SQL under `sql_allowed` must be reviewed. (3) Models meant
 to be global need a one-line `ScopeMeta`. Nothing else changes in hand-written code.
 
 ### Implementation sketch
@@ -211,7 +211,7 @@ unscoped.
   databases, which is ops-heavy but mechanical. Deployment-per-tenant stays available as a parallel
   offering at any time.
 
-> **Questions for the author — Decision 1**
+> **Questions for the author on Decision 1**
 > 1. **Q1.1** Confirm: v1 is single-tenant. In-process tenancy will be (a) shared schema via a `karni-tenancy` module. (c) is offered only as deployment-per-tenant. (b) is declined.
 > 2. **Q1.2** Where does the tenant filter live: **model-level scope pipeline (this ADR)** or **viewset-level `filter_queryset_for_user` mixin (GAPS §3 / xperso)**?
 > 3. **Q1.3** When a scoped model is queried with no tenant bound (shell, command, task): **raise (recommended)**, return empty, or run unscoped?
@@ -223,7 +223,7 @@ unscoped.
 
 ---
 
-## Decision 2 — Permission enforcement depth
+## Decision 2: Permission enforcement depth
 
 ### Evidence
 
@@ -295,7 +295,7 @@ answer. What changes is what a viewset **with no `access` declaration** does:
 
 | §4.2 option | Missing `access` means | For | Against |
 |---|---|---|---|
-| (a) `IsAuthenticated` default; public reads are explicit (`access = Public(read=True)`) | Authenticated users see every row. | Smallest change; DRF-conventional; the agent's first request works. | Still fails open **inside** the authenticated population, which is the multi-user leak. |
+| (a) `IsAuthenticated` default, with public reads made explicit (`access = Public(read=True)`) | Authenticated users see every row. | Smallest change. DRF-conventional. The agent's first request works. | Still fails open **inside** the authenticated population, which is the multi-user leak. |
 | (b) Every `BaseViewSet` must declare `access`. Missing it is a build failure (architecture rule `viewset-access`) and deny-all at runtime. | Nothing. It does not build. | Closest to bhukailasa ("a route cannot exist without a gate"). Turns the silent failure into a loud one. | One more line per viewset. `docs/adding-an-entity.md`'s six-line viewset becomes seven. |
 | (c) Keep `IsAuthenticatedOrReadOnly` + warning | Anonymous read. | No change. | F1 + F6. This is PATTERNS weak practice 2. |
 
@@ -376,7 +376,7 @@ predicate can lift a model-level scope** (tenant, soft delete). Lifting one need
 - **The `access` declaration:** additive. `filter_queryset_for_user` and `IsOwner` remain valid for
   one deprecation cycle.
 
-> **Questions for the author — Decision 2**
+> **Questions for the author on Decision 2**
 > 1. **Q2.1 (GAPS §4.2)** Default posture: (a) `IsAuthenticated` + explicit `Public(...)`, (b) mandatory `access` per viewset (build failure + runtime deny-all), or (c) status quo? Note F6 under (c).
 > 2. **Q2.2 (GAPS §4.3)** Does the request-level predicate stay `HasRole` over Groups, or gain `Can("area:action")` over DB grants, with Groups as the light tier?
 > 3. **Q2.3** Approve "layered, queryset authoritative, one `access` declaration compiled into both layers" as the enforcement model?
@@ -388,7 +388,7 @@ predicate can lift a model-level scope** (tenant, soft delete). Lifting one need
 
 ---
 
-## Decision 3 — Performance defaults
+## Decision 3: Performance defaults
 
 ### Evidence
 
@@ -478,7 +478,7 @@ new one.
 - **Pagination guard:** loosening later is non-breaking. Tightening later breaks every project that
   disabled it, so **decide strict now**.
 
-> **Questions for the author — Decision 3**
+> **Questions for the author on Decision 3**
 > 1. **Q3.1** Approve the serializer-walking optimizer replacing expansion-only lookups? Does the answer change if GAPS §5.1 drops `?expand=`?
 > 2. **Q3.2** Scaling check data: require a factory-boy factory per routed model (a missing one fails `karni check`, with opt-out), or ship a minimal auto-fill in `karni.testing` (more magic, no project code)?
 > 3. **Q3.3** Budget numbers (8/12/10/15) and modes (raise in tests / warn in dev / **off** in prod): or **log** in prod?
@@ -517,7 +517,7 @@ WRITE (save / bulk_create)
 | **R7. Out of scope at steps 1–3 returns 404. Visible but not writable returns 403.** | No existence oracle across tenants or owners. |
 
 Tie to GAPS §4.7: if the author reverses the rebuilt `BaseModel`'s soft-delete default back to hard
-delete plus audit snapshot, step 1a is simply not registered for those models. Nothing else in the
+delete plus audit snapshot, step 1a is not registered for those models. Nothing else in the
 pipeline changes, which is the point of S1.
 
 ---
@@ -529,7 +529,7 @@ Paths are repository-relative. Only files that exist today are listed. New files
 `karni/testing/performance.py`, `karni/testing/pytest_plugin.py`, `modules/karni-tenancy/`) are
 **not** listed.
 
-### Decision 1 — Tenancy shape (now) and karni-tenancy (later)
+### Decision 1: Tenancy shape (now) and karni-tenancy (later)
 
 | File | Change | When |
 |---|---|---|
@@ -556,7 +556,7 @@ Paths are repository-relative. Only files that exist today are listed. New files
 | `docs/modules.md`, `docs/api.md`, `docs/admin.md`, `docs/enforcement.md` | Scope entry-point contract, `without()`, `manager-base` rule. | now |
 | `templates/project/{{cookiecutter.project_slug}}/AGENTS.md` | "Model scopes and how to lift one" guidance. | now |
 
-### Decision 2 — Permission enforcement
+### Decision 2: Permission enforcement
 
 | File | Change |
 |---|---|
@@ -575,9 +575,9 @@ Paths are repository-relative. Only files that exist today are listed. New files
 | `packages/karni-ui/src/auth/usePermission.ts`, `packages/karni-ui/src/schema/parse.ts`, `packages/karni-ui/src/schema/types.ts` | Read `x-karni-access` as display hints only. |
 | `packages/karni/tests/api/*`, `packages/karni/tests/accounts/*` | Scoping, 404/403, relation and expansion tests. |
 | `docs/api.md` (posture warning `:3-8`), `docs/accounts.md`, `docs/adding-an-entity.md`, `docs/enforcement.md` | Document `access` and the new rules. |
-| `templates/project/{{cookiecutter.project_slug}}/AGENTS.md` | "Declare `access`; never override `get_queryset` to widen". |
+| `templates/project/{{cookiecutter.project_slug}}/AGENTS.md` | "Declare `access`. Never override `get_queryset` to widen". |
 
-### Decision 3 — Performance defaults
+### Decision 3: Performance defaults
 
 | File | Change |
 |---|---|
@@ -611,31 +611,31 @@ Paths are repository-relative. Only files that exist today are listed. New files
 ## 7. Rulings (accepted 2026-10-02)
 
 The author accepted all recommendations. Where a question carried no bolded pick, the ruling
-follows this document's own analysis; those are marked *(from analysis)*.
+follows this document's own analysis. Those rulings are marked *(from analysis)*.
 
 | Q | Ruling |
 |---|---|
-| 1.1 | v1 single-tenant. Later in-process tenancy = (a) shared schema via a `karni-tenancy` module; (c) only as deployment-per-tenant, documented; (b) declined. |
-| 1.2 | Tenant filter lives at the **model level**: a named scope in the default-manager pipeline, failing closed; GAPS §3's isolation-test helper is kept. |
+| 1.1 | v1 is single-tenant. Later in-process tenancy is (a), a shared schema via a `karni-tenancy` module. (c) is offered only as deployment-per-tenant, and documented. (b) is declined. |
+| 1.2 | Tenant filter lives at the **model level**: a named scope in the default-manager pipeline, failing closed. GAPS §3's isolation-test helper is kept. |
 | 1.3 | A scoped model queried with no tenant bound **raises**. |
-| 1.4 | **Yes, now.** Named-scope removal `objects.without("soft_delete", reason=...)` replaces `all_objects` and the `super()`-based `all_with_deleted()` / `deleted_only()`; the old names go through a deprecation cycle (warn in 0.2, remove in 1.0). |
-| 1.5 | *(from analysis)* Shared users + `Membership(user, tenant, role)`; roles become per-tenant. Module-time decision, no v1 code. |
+| 1.4 | **Yes, now.** Named-scope removal `objects.without("soft_delete", reason=...)` replaces `all_objects` and the `super()`-based `all_with_deleted()` / `deleted_only()`. The old names go through a deprecation cycle (warn in 0.2, remove in 1.0). |
+| 1.5 | *(from analysis)* Shared users + `Membership(user, tenant, role)`. Roles become per-tenant. Module-time decision, no v1 code. |
 | 1.6 | With the module installed, every project `BaseModel` is scoped unless `ScopeMeta.tenant = "shared"`. |
 | 1.7 | Accepted: global unique constraints on scoped models are a one-time change when tenancy is adopted. |
 | 1.8 | *(from analysis)* Postgres RLS ships in the module as optional hardening (`KARNI_TENANCY_RLS`, off by default). Module-time. |
 | 2.1 | **(b)** Every `BaseViewSet` must declare `access`. Missing it fails the build (`viewset-access` architecture rule) and denies everything at runtime. |
-| 2.2 | *(from analysis)* `HasRole(...)` over Django Groups now. The `Can("area:action")` slot is reserved for a later DB-grants tier; declarations written against `HasRole` keep working. |
+| 2.2 | *(from analysis)* `HasRole(...)` over Django Groups now. The `Can("area:action")` slot is reserved for a later DB-grants tier. Declarations written against `HasRole` keep working. |
 | 2.3 | Layered, queryset authoritative, compiled from one `access` declaration. |
 | 2.4 | Out of scope → **404**. Readable but not writable → 403. |
 | 2.5 | Yes: relation-field PK validation and `?expand=` respect the target viewset's read scope. |
-| 2.6 | *(from analysis)* The owner field must be named. `Owned()` without an argument is a class-definition error whose message names the fix; `created_by` is allowed only when written explicitly (`Owned("created_by")`). |
-| 2.7 | *(from analysis)* `BaseViewSet.__init_subclass__` auto-wraps an overridden `get_queryset` so the scope always applies; overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <reason>`. |
+| 2.6 | *(from analysis)* The owner field must be named. `Owned()` without an argument is a class-definition error whose message names the fix. `created_by` is allowed only when written explicitly (`Owned("created_by")`). |
+| 2.7 | *(from analysis)* `BaseViewSet.__init_subclass__` auto-wraps an overridden `get_queryset` so the scope always applies. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <reason>`. |
 | 2.8 | Closed vocabulary: `Owned`, `HasRole` (+ reserved `Can`), `Authenticated`, `Public`, `Where`, `Unscoped`, `|`, `&`. |
 | 3.1 | Serializer-walking optimizer replaces expansion-only lookups. `?expand=` stays for now (GAPS §5.1 removal is a separate question). |
-| 3.2 | *(from analysis, aligned with Phase 13)* Automatic factories from `karni.testing`; an explicit `<app>/factories.py` factory overrides. No project code required. |
+| 3.2 | *(from analysis, aligned with Phase 13)* Automatic factories from `karni.testing`. An explicit `<app>/factories.py` factory overrides them. No project code required. |
 | 3.3 | Budgets list/retrieve 8, create/update 12, destroy 10, other 15. Modes: raise in tests, warn in dev, off in prod. |
 | 3.4 | `max_page_size` 500 → 100 (`KARNI_MAX_PAGE_SIZE`). |
-| 3.5 | `pagination_class = None` is a class-definition error (hatch: `Unpaginated(max_rows, reason)`); boot refuses `PAGE_SIZE = None`. |
+| 3.5 | `pagination_class = None` is a class-definition error (hatch: `Unpaginated(max_rows, reason)`). Boot refuses `PAGE_SIZE = None`. |
 | 3.6 | *(from analysis)* Both: the build-failing `unpaginated-action` rule and the `paginated_response()` helper. |
-| — | Soft delete stays in `BaseModel` (the author's prompt sequence); GAPS §4.7 is closed in its favour. |
+| n/a | Soft delete stays in `BaseModel` (the author's prompt sequence). GAPS §4.7 is closed in its favour. |
 

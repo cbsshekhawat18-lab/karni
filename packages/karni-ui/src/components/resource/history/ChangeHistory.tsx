@@ -163,7 +163,7 @@ const PLACEHOLDER_ENTRIES = 3;
 /**
  * The field-level change history of one row: when, by whom, what changed
  * from what to what. Reads `GET /<resource>/<id>/history/` (models that opt
- * in with `class Karni: audit = True`); fields the role may not see are
+ * in with `class Karni: audit = True`). Fields the role may not see are
  * already absent from each diff, redacted ones say so, and an empty value
  * is the shared EmptyValue (a dash, read as "empty").
  *

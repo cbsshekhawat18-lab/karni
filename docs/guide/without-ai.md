@@ -74,8 +74,8 @@ screens, seed data and a test file per resource.
 | Demo data | `events/seeds.py` | field overrides and `seed()` |
 | Tests | `events/tests/` | `assert_crud`, `assert_isolated`, plus your flows |
 
-The architecture rules (`karni rules`) say where things go; `karni rules
---check <file>` says when something is in the wrong place, and
+The architecture rules (`karni rules`) say where things go.
+`karni rules --check <file>` says when something is in the wrong place, and
 `karni check` runs all of it before a commit.
 
 ## Reading an error
@@ -93,7 +93,7 @@ objects and the general fix. [Error codes](../errors.md) lists them all.
 
 ## Upgrading
 
-Karni is a dependency. `pip install -U karni karni-cli` then `karni upgrade
---dry-run` shows every change between your version and the new one as a
-diff; `karni upgrade` applies the mechanical ones and lists the rest with a
-link to its migration note. See the [stability promise](../stability.md).
+Karni is a dependency. Run `pip install -U karni karni-cli`, then
+`karni upgrade --dry-run` shows every change between your version and the new
+one as a diff. `karni upgrade` applies the mechanical ones and lists the rest
+with a link to its migration note. See the [stability promise](../stability.md).

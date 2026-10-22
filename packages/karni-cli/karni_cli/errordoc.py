@@ -97,7 +97,7 @@ def _entry(entry: Mapping[str, str]) -> str:
         [
             f'<a id="{code.lower()}"></a>',
             "",
-            f"### {code} — {entry['title']}",
+            f"### {code}: {entry['title']}",
             "",
             f"*{KIND_LABEL.get(entry['kind'], entry['kind'])}* · from `{entry['source']}`",
             "",
@@ -150,7 +150,7 @@ def _rule_section() -> str:
             [
                 f'<a id="{str(rule["code"]).lower()}"></a>',
                 "",
-                f"### {rule['code']} — {rule['summary']}",
+                f"### {rule['code']}: {rule['summary']}",
                 "",
                 f"*agent rule, {rule['severity']}* · enforced by "
                 + ", ".join(f"`{name}`" for name in rule.get("enforced_by") or ["review"]),
@@ -168,7 +168,7 @@ def _rule_section() -> str:
     return (
         "## Agent rules (`K`)\n\n"
         + (
-            "`karni rules` lists them in one screen; `karni check` and the architecture tests "
+            "`karni rules` lists them in one screen. `karni check` and the architecture tests "
             "(`pytest --pyargs karni.testing.architecture`) enforce them.\n\n"
         )
         + "\n".join(blocks)
@@ -190,7 +190,7 @@ def _eslint_section() -> str:
             [
                 f'<a id="{item["id"].replace("/", "-")}"></a>',
                 "",
-                f"### `{item['id']}` — {item['title']}",
+                f"### `{item['id']}`: {item['title']}",
                 "",
                 f"**Why Karni objects.** {item['why']}",
                 "",
@@ -203,7 +203,7 @@ def _eslint_section() -> str:
     return (
         "## ESLint rules (`@karni/ui/eslint-plugin`)\n\n"
         + (
-            "Every rule is an error in `karni.configs.recommended`; an opt-out needs an "
+            "Every rule is an error in `karni.configs.recommended`. An opt-out needs an "
             "`eslint-disable` comment with a `-- reason`.\n\n"
         )
         + "\n".join(blocks)

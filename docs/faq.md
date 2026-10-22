@@ -1,5 +1,5 @@
 ---
-description: Short, self-contained answers about Karni, the Django + React framework built to be extended by AI coding agents — what it is, who it is for, and its limits.
+description: Short, self-contained answers about Karni, the Django + React framework built to be extended by AI coding agents. They cover what it is, who it is for, and its limits.
 faq: true
 ---
 
@@ -41,10 +41,10 @@ same workflow by hand.
 ## How much code does a Karni project need per model?
 
 A Karni resource needs the model, an `access` rule and whatever is specific to
-the domain; the REST API, admin, permissions, React table and form, tests and
+the domain. The REST API, admin, permissions, React table and form, tests and
 seed data come from the framework. In Karni's reference application, EventHub,
 the `Venue` resource is a five-line model and a four-line viewset, and the
-whole application (ticketing, payments, a Celery email, four roles) is 615
+whole application (ticketing, payments, a Celery email, four roles) is 619
 lines of project code, as measured in the [tutorial](tutorial.md).
 
 ## Is Karni production-ready?
@@ -60,7 +60,7 @@ weigh that before choosing Karni ([comparisons](compare/index.md)).
 A public name in Karni keeps working for at least one minor release and raises
 a `KarniDeprecationWarning` that names the release that removes it.
 `karni upgrade --to <version>` applies the mechanical changes with codemods
-and lists, by file and line, what it could not change; the rules are in
+and lists, by file and line, what it could not change. The rules are in
 Karni's [stability promise](stability.md).
 
 ## Can an existing Django project adopt Karni?
@@ -74,8 +74,8 @@ better served by its current stack until such a path exists.
 ## Which Python, Django and React versions does Karni support?
 
 Karni 0.3.1 supports Python 3.12, 3.13 and 3.14, Django 5.2 LTS, Django REST
-Framework and React 18 with TypeScript; CI tests every Python version on each
-push. Python 3.12 is the floor because Karni's admin is built on
+Framework and React 18 with TypeScript, and CI tests every Python version on
+each push. Python 3.12 is the floor because Karni's admin is built on
 django-unfold, whose current releases require Python 3.12.
 
 ## How does Karni handle permissions?

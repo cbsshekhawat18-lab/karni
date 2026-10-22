@@ -92,7 +92,7 @@ export const defaultPageSlots: PageSlots = {
 };
 
 /**
- * Standard page chrome: an <h1> title row with an actions slot, then the
+ * Standard page chrome: an `<h1>` title row with an actions slot, then the
  * content. The target usage `<Page title="Events"><ResourceTable … /></Page>`
  * is a complete screen.
  *

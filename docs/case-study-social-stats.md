@@ -1,5 +1,5 @@
 ---
-description: One module of a real Django + React product, Social Stats' leads/CRM, rebuilt on Karni with the same data model, endpoints, screens and permission rule — measured before and after, with the friction it found.
+description: One module of a real Django + React product, Social Stats' leads/CRM, rebuilt on Karni with the same data model, endpoints, screens and permission rule. Measured before and after, with the friction it found.
 ---
 
 # Case study: Social Stats' leads module, rebuilt on Karni
@@ -9,7 +9,7 @@ is an open-source social media management product built by hand on Django
 4.2, DRF and React 18. Its leads/CRM module was rebuilt as a fresh Karni
 project, [`examples/social-leads`](https://github.com/cbsshekhawat18-lab/karni/tree/main/examples/social-leads),
 using only Karni's documented public surface. Every number below comes from a
-command in that directory; where something could not be measured, this page
+command in that directory. Where something could not be measured, this page
 says so instead of estimating.
 
 The rebuild found 14 friction points. The three high-severity ones were fixed
@@ -41,7 +41,7 @@ alike: `ruff format` (88 columns) for Python and Prettier (80 columns) for
 JavaScript and TypeScript, both with their defaults. Social Stats is styled by
 hand and the rebuild is not, so counting each as written compares formatting
 habits, not code. Migrations, lockfiles, generated API types and the
-untouched `karni new` scaffold are left out; a scaffold file the rebuild
+untouched `karni new` scaffold are left out. A scaffold file the rebuild
 edited counts only the lines it added. Reproduce with:
 
 ```sh
@@ -51,9 +51,9 @@ PRETTIER=<path to prettier> python scripts/measure.py --normalise \
     --pristine <a fresh `karni new "Social Leads"`>
 ```
 
-The backend went from 603 lines to 308; the frontend from 1,743 to 472.
+The backend went from 603 lines to 308, and the frontend from 1,743 to 472.
 "After the fixes" moves workspace membership from a custom scope onto
-`own` with an owner path (the scope file goes; three `owner_field` lines
+`own` with an owner path (the scope file goes, and three `owner_field` lines
 join the models) and replaces hand-written isolation tests with Karni's
 generated ones. Both rebuild totals *include* tests the original never had.
 
@@ -76,10 +76,10 @@ tenant mixin, hand-written serializers, and pages with inline components.
 The "before" boundary is what the module itself contains: the two model
 classes, their three serializers, `lead_views.py`, the router line, the two
 lead pages, the `leadAPI` client block, two routes and one sidebar entry.
-Shared code it leans on — `TenantScopedMixin`, the axios instance, the
-design tokens — is counted on neither side. Social Stats has no admin screen
-for leads and no test file dedicated to them; 12 test functions in 5 files
-touch leads as a side effect of testing the event bus, notifications,
+Shared code it leans on (`TenantScopedMixin`, the axios instance, the
+design tokens) is counted on neither side. Social Stats has no admin screen
+for leads and no test file dedicated to them, though 12 test functions in 5
+files touch leads as a side effect of testing the event bus, notifications,
 dashboard counts and the AI tools.
 
 ## What the rebuild covers
@@ -90,20 +90,20 @@ dashboard counts and the AI tools.
   16 after the fixes, outside the totals.
 - **Endpoints.** CRUD plus `assign`, `status`, `activity`, `convert`,
   `timeline`, `bulk-assign` and `score-with-ai`, at the original paths.
-  Export, import and three filter names differ; see the table under
-  [caveats](#honest-caveats).
-- **Screens.** The list as a table (the original's columns, search, status
-  filter, bulk status change, import, CSV/XLSX export) and as a board with
-  drag-and-drop between statuses; the detail with status picker, Score,
-  Convert and the activity timeline with "add a note"; a form. Driven in
-  headless Chromium against the running app: login, table, bulk status,
-  board, drag to Converted, add a note, score, convert — every step passed,
-  with no console errors and no server errors.
-- **Permission rule.** Staff see every workspace; a member sees and changes
-  only the leads of workspaces they belong to; someone in two workspaces sees
-  both. After the fixes it is `own` with an owner path through the
+  Export, import and three filter names differ (see the table under
+  [caveats](#honest-caveats)).
+- **Screens.** The list appears as a table (the original's columns, search,
+  status filter, bulk status change, import, CSV/XLSX export) and as a board
+  with drag-and-drop between statuses. The detail has a status picker, Score,
+  Convert and the activity timeline with "add a note", and there is a form.
+  They were driven in headless Chromium against the running app through
+  login, table, bulk status, board, drag to Converted, add a note, score and
+  convert. Every step passed, with no console errors and no server errors.
+- **Permission rule.** Staff see every workspace. A member sees and changes
+  only the leads of workspaces they belong to, and someone in two workspaces
+  sees both. After the fixes it is `own` with an owner path through the
   membership many-to-many (`owner_field = "workspace__members"`), and Karni's
-  `assert_crud` and `assert_isolated` prove it for all four models; four
+  `assert_crud` and `assert_isolated` prove it for all four models. Four
   hand-written tests cover what they do not reach: custom actions
   (`convert` on another workspace's lead is a 404), a member of two
   workspaces, staff, and creating a lead in someone else's workspace
@@ -117,12 +117,12 @@ Each item was checked in the running rebuild, not read off the docs.
 |---|---|---|
 | Serializers (list and detail) | 35 lines | generated |
 | URL routing | 2 lines | auto-router |
-| Filters and search (`get_queryset` parsing 10 query parameters) | in the viewset | derived from the model; `search_fields` is one line |
+| Filters and search (`get_queryset` parsing 10 query parameters) | in the viewset | derived from the model, and `search_fields` is one line |
 | CSV export | `export_csv` and a streaming writer | `/export/?format=csv` and `xlsx`, row scope applied |
-| CSV import | one-step `import_csv` + a modal | upload, mandatory dry-run preview, commit; `<ResourceImport/>` |
+| CSV import | one-step `import_csv` + a modal | upload, mandatory dry-run preview, commit, with `<ResourceImport/>` |
 | Row scope on custom actions, export, import | the mixin, per viewset | applied by the access declaration everywhere |
-| Admin | none for leads | list and change screens for all four models; history and import (checked on `Lead`) |
-| Field-level change history | none (the pipeline actions write `LeadActivity` rows; the general action log is not called for leads) | every `Lead` field change with its author (`Karni.audit = True`) |
+| Admin | none for leads | list and change screens for all four models, plus history and import (checked on `Lead`) |
+| Field-level change history | none (the pipeline actions write `LeadActivity` rows, but the general action log is not called for leads) | every `Lead` field change with its author (`Karni.audit = True`) |
 | OpenAPI schema and docs | none for this module | generated, with a snapshot test |
 | List, detail and form screens | 1,715 lines of pages | 152 lines composing `ResourceTable`, `ResourceDetail`, `ResourceForm` |
 | CRUD and isolation tests | none | after the fixes, generated: `assert_crud` + `assert_isolated` per model |
@@ -153,10 +153,10 @@ with `/usr/bin/time -p`:
 | Generated (`git diff --stat`) | 7 files, 92 lines | 7 files, 95 lines |
 | The generated test | CRUD as `staff`, no isolation, no word about it | CRUD and isolation as `member` |
 | By hand | 1 line in the custom scope + a 10-line isolation test | 2 lines: `class Karni: owner_field = "lead__workspace__members"` |
-| What a member got before the hand edit | **500** on `/api/follow-ups/`, generated test green | only the follow-ups they created (the `created_by` default owner), generated tests green — the hand line is what makes it the workspace's |
+| What a member got before the hand edit | **500** on `/api/follow-ups/`, generated test green | only the follow-ups they created (the `created_by` default owner), generated tests green. The hand line is what makes it the workspace's |
 
 Tokens of the text an agent types and reads for that entity, counted with
-tiktoken — this is the size of the inputs and outputs, **not** the tokens an
+tiktoken. This is the size of the inputs and outputs, **not** the tokens an
 agent consumed:
 
 | Text (cl100k / o200k) | As built | After the fixes |
@@ -173,8 +173,8 @@ agent consumed:
 ## Not measured
 
 - **Tokens consumed doing the rebuild.** The rebuild ran inside one long
-  agent session that also fixed Karni's CI and polished another repository;
-  the session's counters cover all of it and there is no per-task split.
+  agent session that also fixed Karni's CI and polished another repository.
+  The session's counters cover all of it, and there is no per-task split.
   To measure it, run the rebuild alone in a fresh Claude Code session and
   read `/cost` at the end.
 - **Active build time.** The rebuild's files are timestamped from 02:12 to
@@ -195,9 +195,9 @@ agent consumed:
 - **Four foreign keys to other modules were dropped:** the source bot flow,
   bot conversation, post and WhatsApp campaign. So were the model's four
   database indexes. The detail page's Conversation tab (bot steps) is gone
-  with them; `timeline` answers `bot_steps: []`.
+  with them, and `timeline` answers `bot_steps: []`.
 - **AI scoring is a heuristic.** The original asks Anthropic's Claude for a
-  0–100 score; the rebuild keeps the endpoint and its contract with a
+  0–100 score. The rebuild keeps the endpoint and its contract with a
   deterministic rule (budget, interest, email, spam), so it runs without an
   API key.
 - **The API is not identical:**
@@ -211,8 +211,8 @@ agent consumed:
 
   An old `?q=` is ignored rather than refused, so it returns the whole list.
 - **The screens match in function, not pixels.** Karni's components and
-  tokens replace the original's inline styles; status and score colours are
-  not reproduced.
+  tokens replace the original's inline styles, and status and score colours
+  are not reproduced.
 - **Line counts follow formatting.** The same files count very differently
   at different widths: the rebuild's hand-written lead tests are 128 lines as
   written and 226 after `ruff format` at 88 columns. The table formats both
@@ -230,13 +230,13 @@ In order of severity:
 
 | # | Finding | Severity | Status |
 |---|---|---|---|
-| 2 | A custom scope names every model's path; a new model 500s for members and `karni check` says ok | high | **fixed**: `karni check` resolves every scope path ([`E214`](errors.md#e214)) |
-| 3 | Generated tests cannot drive a custom scope, and the generator drops the isolation test without a word | high | **fixed**: membership as `own` with an owner path is driven by `assert_isolated` (a factory bug fixed); the generator now says why it leaves isolation out |
+| 2 | A custom scope names every model's path. A new model 500s for members and `karni check` says ok | high | **fixed**: `karni check` resolves every scope path ([`E214`](errors.md#e214)) |
+| 3 | Generated tests cannot drive a custom scope, and the generator drops the isolation test without a word | high | **fixed**: membership as `own` with an owner path is driven by `assert_isolated` (a factory bug fixed), and the generator now says why it leaves isolation out |
 | 14 | Python 3.14 installs, then every admin page 500s (Django 5.1) | high | **fixed**: Django 5.2 LTS, Python 3.14 in CI |
 | 1 | No scope for membership through a many-to-many | medium | **was possible, now documented**: `own` with `owner_field = "workspace__members"` ([accounts](accounts.md#membership-workspaces-teams-client-accounts)) |
 | 6 | No filter for "this JSON list contains X" | medium | open |
 | 7 | No way to attach a note to a change-history entry, so the timeline is project code | medium | open |
-| 8 | Export, import and filter names differ from the original; unknown filters are ignored | medium | open |
+| 8 | Export, import and filter names differ from the original, and unknown filters are ignored | medium | open |
 | 10 | No documented way to refresh a resource after a custom action in the UI | medium | open |
 | 11 | No board component | medium | open |
 | 13 | A foreign key to the user model renders as "[object Object]" | medium | open |

@@ -43,7 +43,7 @@ export interface ResourceMutations<T> {
   remove: UseMutationResult<void, unknown, string | number>;
 }
 
-/** Create, update and remove mutations for a resource; each success refreshes the resource's cached lists and items. */
+/** Create, update and remove mutations for a resource that refresh the resource's cached lists and items on each success. */
 export function useResourceMutations<T = Record<string, unknown>>(
   resource: string,
   options?: ResourceMutationsOptions,

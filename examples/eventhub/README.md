@@ -1,25 +1,26 @@
-# EventHub — the Karni reference application
+# EventHub: the Karni reference application
 
-An event ticketing platform built with nothing but Karni's documented surface:
-organizers create events with venues, ticket tiers, capacity and cover images;
-attendees browse, search, book and pay; organizers get a dashboard with
-bookings, revenue and an attendee export; the admin covers everything; a
-confirmation email goes out through Celery; four roles (anonymous, attendee,
-organizer, staff) decide who sees what.
+An event ticketing platform built with nothing but Karni's documented surface.
+Organizers create events with venues, ticket tiers, capacity and cover images.
+Attendees browse, search, book and pay. Organizers get a dashboard with
+bookings, revenue and an attendee export. The admin covers everything, a
+confirmation email goes out through Celery, and four roles (anonymous,
+attendee, organizer, staff) decide who sees what.
 
 It lives in the Karni repository and runs in CI, so a framework change that
 breaks a real app breaks the build. Read it instead of the reference docs:
 each section below names the Karni feature and the file that uses it.
 
-**Project code: 615 lines** (models 84, viewsets 86, pages 306, other 139),
-measured with `python scripts/loc.py --pristine <karni new output>` —
-non-blank, non-comment lines of everything EventHub wrote, excluding tests,
-migrations, lockfiles and the untouched scaffold. The first build measured
-656; the framework fixes that [FRICTION.md](FRICTION.md) asked for brought it
-to 582. Declaring the roles in `KARNI_ROLES`, moving seat capacity and the
-booking lifecycle into the database (below), and the keyboard-only walk's
-delete, bulk delete, sign-out and unsaved-changes wiring brought it to 615;
-the 115 lines still over Karni's 500-line target are attributed there.
+**Project code: 619 lines** (models 84, viewsets 86, pages 306, other 143),
+measured with `python scripts/loc.py --pristine <karni new output>`. That
+counts the non-blank, non-comment lines of everything EventHub wrote,
+excluding tests, migrations, lockfiles and the untouched scaffold. The first
+build measured 656, and the framework fixes that [FRICTION.md](FRICTION.md)
+asked for brought it to 582. Declaring the roles in `KARNI_ROLES`, moving seat capacity and the
+booking lifecycle into the database (below), the keyboard-only walk's
+delete, bulk delete, sign-out and unsaved-changes wiring, and the listener
+that takes seats back when a deleted booking is restored brought it to 619.
+The 119 lines still over Karni's 500-line target are attributed in FRICTION.md.
 
 ## Run it
 
@@ -40,13 +41,13 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 `karni seed` prints the demo login (`demo@example.com`, every role) and the
 two `KARNI_SEED_LOGINS` (`organizer@example.com`, `attendee@example.com`,
-password `karni-password`); the seeds add three venues, six events (five
-published), two tiers each and ten bookings — the same rows on every machine. Docker Compose works too
+password `karni-password`). The seeds add three venues, six events (five
+published), two tiers each and ten bookings, the same rows on every machine. Docker Compose works too
 (`cp .env.example .env && karni serve`), with the webhook worker included.
 
 ## The walkthrough
 
-### Models — `events/models.py`
+### Models: `events/models.py`
 
 Four `karni make model` calls produced the whole data layer:
 
@@ -65,13 +66,13 @@ and audit stamps come for free, and `DELETE` on the API hides rows instead
 of removing them. The hand-written parts are `Booking.total`, two status
 columns (the booking's a `StateField`), a `CapacityField` for the seats left,
 an `APIMeta` that keeps `status` and `payment` read-only, `Booking.save()`
-reserving the seats, and `Booking.clean()` — the tier/event cross-check, which
+reserving the seats, and `Booking.clean()` (the tier/event cross-check), which
 the generated serializer runs on every create and update.
 
-### Access — `events/viewsets.py`
+### Access: `events/viewsets.py`
 
 One declaration per viewset is the whole permission system
-([docs/api.md](../../docs/api.md#access-control)); it compiles into the
+([docs/api.md](../../docs/api.md#access-control)). It compiles into the
 request gate *and* the row filter, so a list, a detail, `?expand=` and a
 relation field all agree:
 
@@ -88,35 +89,35 @@ class EventViewSet(BaseViewSet):
 `Owned("event__organizer")` lets organizers manage tiers of their events.
 A booking is readable by its attendee *and* the event's organizer, but
 writable only by the attendee (the organizer gets a 403, as the tests prove).
-Roles are Django groups; `KARNI_ACCOUNTS_DEFAULT_ROLES=attendee` gives every
+Roles are Django groups. `KARNI_ACCOUNTS_DEFAULT_ROLES=attendee` gives every
 new user the `attendee` role.
 
 ### Custom actions
 
 Three `@action`s cover what CRUD does not: `POST /api/bookings/{id}/pay/`
 opens a checkout, `GET /api/events/{id}/dashboard/` aggregates confirmed
-bookings, `GET /api/events/{id}/attendees/` streams a CSV. Each takes its own
+bookings, and `GET /api/events/{id}/attendees/` streams a CSV. Each takes its own
 `access=` predicate, and the row lookup still goes through `read`.
 
-### Payments — `karni add payments`
+### Payments: `karni add payments`
 
 `karni add payments` wired the module (dependency, `INSTALLED_APPS`, agent
 guidance). `pay` calls `karni_payments.services.create_checkout()` with the
-booking's own total; `events/payments.py` is the
+booking's own total. `events/payments.py` is the
 `KARNI_PAYMENTS_CHECKOUT_VALIDATOR`, so no client can charge another amount.
 When the provider's webhook moves the payment to `succeeded`, the module saves
 the `Payment` and `events/listeners.py::confirm_paid_booking`
 (`@on_updated(Payment)`) confirms the booking. Locally and in CI the in-memory
 `test` provider plays the gateway.
 
-### Events and email — `events/listeners.py`
+### Events and email: `events/listeners.py`
 
 `@on_updated(Booking, queued=True)` runs `send_booking_confirmation` in a
 Celery worker after the commit: Django's `send_mail`, stamped once with
 `confirmation_sent_at`. No signal wiring, no `AppConfig.ready()`: Karni
 imports `listeners.py` for every app at startup.
 
-### Domain rules — `Booking.clean()`, capacity and the booking lifecycle
+### Domain rules: `Booking.clean()`, capacity and the booking lifecycle
 
 The tier/event cross-check lives in the model's `clean()`. Karni's generated
 serializer runs it before every create and update, with the values the
@@ -125,7 +126,7 @@ response, so no serializer is written for a domain rule.
 
 Seats are not a `clean()` rule: two requests would pass the check together.
 `TicketTier.remaining` is a `CapacityField(total="quantity")` the database
-keeps between 0 and the quantity; `Booking.save()` takes the seats with
+keeps between 0 and the quantity. `Booking.save()` takes the seats with
 `karni.capacity.reserve(tier, quantity)` in the same transaction as the row,
 so the last seat goes to exactly one buyer and the other gets a 409 naming
 what is left. `Booking.status` is a `StateField` (pending → confirmed →
@@ -139,28 +140,28 @@ or deletion. See [docs/lifecycle-and-capacity.md](../../docs/lifecycle-and-capac
 There is no `admin.py`. Every model is registered with derived list columns,
 filters, search and soft-delete actions at `/admin/`.
 
-### Frontend — `frontend/src/pages/*.tsx`
+### Frontend: `frontend/src/pages/*.tsx`
 
-`karni make model ... -a` generated the list, detail and form pages; each is
+`karni make model ... -a` generated the list, detail and form pages. Each is
 a few lines composing `ResourceTable`, `ResourceDetail` and `ResourceForm`,
 which render from the OpenAPI schema (columns, labels, validation, relation
 pickers). EventHub adds:
 
-- `events.tsx` — the public catalogue with server-side search, "New event"
-  only for `usePermission().hasRole("organizer")`;
-- `event-detail.tsx` + `components/TierList.tsx` — tiers with a Book button
-  (`karni make component TierList`);
-- `booking-detail.tsx` — "Pay now" calls the `pay` action and follows the
-  checkout URL;
-- `event-dashboard.tsx` — three `Stat` tiles, this event's bookings
-  (`ResourceTable params={{ event: id }}`) and the CSV export link;
-- `login.tsx` — `karni make page login --kind login`: @karni/ui's `LoginForm`.
+- `events.tsx`: the public catalogue with server-side search, and "New event"
+  only for `usePermission().hasRole("organizer")`.
+- `event-detail.tsx` + `components/TierList.tsx`: tiers with a Book button
+  (`karni make component TierList`).
+- `booking-detail.tsx`: "Pay now" calls the `pay` action and follows the
+  checkout URL.
+- `event-dashboard.tsx`: three `Stat` tiles, this event's bookings
+  (`ResourceTable params={{ event: id }}`) and the CSV export link.
+- `login.tsx`: @karni/ui's `LoginForm`, from `karni make page login --kind login`.
 
 Every page stays under the 50-line cap enforced by `karni/max-page-lines`.
 
-### Tests — `events/tests/`
+### Tests: `events/tests/`
 
-`karni make test` wrote one file per resource; the Booking one shows the whole
+`karni make test` wrote one file per resource. The Booking one shows the whole
 API surface in two calls:
 
 ```python
@@ -173,33 +174,33 @@ class BookingAPITests(APITestCase):
         self.assert_isolated(BookingViewSet)                        # one line against the leak everyone forgets
 ```
 
-`test_booking_flow.py` drives the money path end to end — book, pay, signed
-webhook, confirmed, email in `mail.outbox` — plus the sold-out 409, seats
+`test_booking_flow.py` drives the money path end to end (book, pay, signed
+webhook, confirmed, email in `mail.outbox`), plus the sold-out 409, seats
 returned on cancellation, the checkout validator and the organizer's view. `tests/test_api_schema.py` pins
 the OpenAPI contract: `karni test` fails on an accidental API break.
 
-### Seeds — `events/seeds.py`
+### Seeds: `events/seeds.py`
 
 `karni make seeder` wrote one class per model. Attribute overrides give the
-venues and events names; `seed()` overrides make tiers and bookings consistent.
+venues and events names, and `seed()` overrides make tiers and bookings consistent.
 The known logins come from `KARNI_SEED_LOGINS`. `karni seed --seed 42`
 reproduces the same rows, UUIDs included.
 
-### End to end — `frontend/e2e/`
+### End to end: `frontend/e2e/`
 
 `scripts/e2e.sh` builds the frontend, migrates, seeds, starts Django and a
 Celery worker, and runs Playwright against the production build
-(`vite preview` proxying to Django). Three journeys: anonymous browse and
-search; attendee books, pays (the test provider's hosted page is mocked) and
-is confirmed by a signed webhook processed by the worker; organizer creates an
-event through the schema-driven form, reads the dashboard numbers and
-downloads the attendee CSV. CI runs the same script (`eventhub` job).
+(`vite preview` proxying to Django). It covers three journeys. An anonymous
+visitor browses and searches. An attendee books, pays (the test provider's
+hosted page is mocked) and is confirmed by a signed webhook processed by the
+worker. An organizer creates an event through the schema-driven form, reads
+the dashboard numbers and downloads the attendee CSV. CI runs the same script (`eventhub` job).
 
 ### Agent guidance
 
-`karni new` wrote `AGENTS.md`, `CLAUDE.md` and the editor adapters; `karni
-add payments` appended the module's guidance; `karni rules sync --check`
-keeps them current. `karni check` (architecture rules, duplication, the
+`karni new` wrote `AGENTS.md`, `CLAUDE.md` and the editor adapters.
+`karni add payments` appended the module's guidance, and
+`karni rules sync --check` keeps them current. `karni check` (architecture rules, duplication, the
 ESLint preset) is clean.
 
 ## Commands used

@@ -21,12 +21,16 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="The change was sent for approval instead of being written",
         kind="api",
         source=f"{_SOURCE}.interception",
-        why="The model declares requires_approval and the change touches a guarded field, so "
-        "a pending change holds it until a second person approves (the API answers 202 "
-        "with the pending change; the admin says so; code gets KarniWriteDeferred).",
-        fix="Nothing is wrong. Have a checker approve it (the admin queue, "
-        "/api/pending-changes/, <ApprovalsQueue/>); trusted code may write inside "
-        "karni_approvals.interception.bypass(reason=...).",
+        why=(
+            "The model declares requires_approval and the change touches a guarded field, so a "
+            "pending change holds it until a second person approves. The API answers 202 with the "
+            "pending change, the admin says so, and code gets KarniWriteDeferred."
+        ),
+        fix=(
+            "Nothing is wrong. Have a checker approve it (the admin queue, /api/pending-changes/, "
+            "<ApprovalsQueue/>). Trusted code may write inside "
+            "karni_approvals.interception.bypass(reason=...)."
+        ),
     ),
     ErrorCode(
         code="APR002",
@@ -53,7 +57,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="This checker has already decided this change",
         kind="api",
         source=f"{_SOURCE}.services.decide",
-        why="One decision per person per change; a second one would count twice.",
+        why="One decision per person per change. A second one would count twice.",
         fix="Another checker must supply the remaining approvals.",
     ),
     ErrorCode(
@@ -61,7 +65,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="The pending change is no longer pending",
         kind="api",
         source=f"{_SOURCE}.services.decide",
-        why="It was already approved, rejected, expired or failed; decisions are final.",
+        why="It was already approved, rejected, expired or failed, and decisions are final.",
         fix="Propose the change again if it is still wanted.",
     ),
     ErrorCode(
@@ -78,10 +82,15 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="The model's approval policy is malformed",
         kind="check",
         source=f"{_SOURCE}.meta.approval_policy",
-        why="requires_approval, approvals_required, approver_roles, approval_timeout and "
-        "approval_on_timeout are read at boot; a typo would silently hold or release changes.",
-        fix="requires_approval = True or a list of field names; approvals_required a positive "
-        "int; approver_roles / approval_escalation_roles lists of KARNI_ROLES slugs; "
-        "approval_timeout a timedelta or hours; approval_on_timeout 'expire' or 'escalate'.",
+        why=(
+            "requires_approval, approvals_required, approver_roles, approval_timeout and "
+            "approval_on_timeout are read at boot. A typo would silently hold or release changes."
+        ),
+        fix=(
+            "Set requires_approval to True or a list of field names, approvals_required to a "
+            "positive int, approver_roles / approval_escalation_roles to lists of KARNI_ROLES "
+            "slugs, approval_timeout to a timedelta or hours, and approval_on_timeout to 'expire' "
+            "or 'escalate'."
+        ),
     ),
 )

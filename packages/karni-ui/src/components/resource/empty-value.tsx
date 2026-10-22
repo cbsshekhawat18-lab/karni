@@ -12,8 +12,8 @@ export interface EmptyValueProps extends React.HTMLAttributes<HTMLSpanElement> {
 /**
  * A field that has no value (null, "", an empty list), the same in every
  * Karni component: ResourceTable's cells, ResourceDetail's rows and
- * ChangeHistory's before/after values. Sighted users see a muted en dash;
- * screen readers hear "empty" instead of "dash" or nothing.
+ * ChangeHistory's before/after values. Sighted users see a muted en dash,
+ * and screen readers hear "empty" instead of "dash" or nothing.
  *
  * A field the role may not read is never rendered as empty: it has no row
  * or cell at all, so an empty value never hints that a hidden one exists.

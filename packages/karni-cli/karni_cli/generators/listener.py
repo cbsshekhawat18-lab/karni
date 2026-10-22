@@ -158,10 +158,11 @@ def command(
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add a listener to APP/listeners.py (autodiscovered — no AppConfig.ready wiring).
+    """Add a listener to APP/listeners.py (autodiscovered, so no AppConfig.ready wiring).
 
-    --on Event.created|updated|deleted uses karni.events (soft deletes count
-    as deleted); --on order_shipped receives a custom event from events.py.
+    With --on Event.created|updated|deleted it uses karni.events (soft deletes
+    count as deleted). With --on order_shipped it receives a custom event from
+    events.py.
     """
     ws = project_workspace(force)
     plan(ws, resolve_app(ws, app), name, on=on, queued=queued)

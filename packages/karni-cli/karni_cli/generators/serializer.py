@@ -156,7 +156,7 @@ def command(
     """Add `<Model>Serializer` to APP/serializers.py and set the viewset's serializer_class.
 
     BaseViewSet generates the serializer and APIMeta steers it, so an
-    explicit one needs --reason; it is recorded as the
+    explicit one needs --reason. The reason is recorded as the
     `# karni: allow(redundant-serializer): <reason>` marker.
     """
     ws = project_workspace(force)

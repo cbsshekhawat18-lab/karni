@@ -28,7 +28,7 @@ from karni_cli.generators.pysource import (
 from karni_cli.project import CliError
 
 NAME = "task"
-SUMMARY = "Add a Celery task (@shared_task) to <app>/tasks.py; --retry N."
+SUMMARY = "Add a Celery task (@shared_task) to <app>/tasks.py, optionally with --retry N."
 
 
 def plan(

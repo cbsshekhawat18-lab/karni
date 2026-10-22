@@ -242,7 +242,7 @@ def command(
     ),
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Create modules/karni-NAME/ — a reusable module per docs/modules.md.
+    """Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
     The karni-NAME distribution with the karni_NAME app, a range-pinned
     karni dependency, the karni.settings fragment, AGENTS.fragment.md and a

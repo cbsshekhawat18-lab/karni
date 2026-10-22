@@ -154,7 +154,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     # admin
     Capability(
         "admin",
-        "Every model registered with derived columns, filters and search; no `admin.py`",
+        "Every model registered with derived columns, filters and search, with no `admin.py`",
         ((f"{EH}/config/urls.py", 'path("admin/", admin.site.urls)'),),
     ),
     Capability(
@@ -321,7 +321,7 @@ STATUS_NOTE = (
     "`stable`: public under the [stability promise](stability.md) and used by a reference "
     "application (EventHub or the Social Stats rebuild). `experimental`: public and "
     "covered by Karni's own tests, but no reference application uses it yet, so expect "
-    "rough edges. `planned`: documented as coming; not in the code."
+    "rough edges. `planned`: documented as coming, but not in the code."
 )
 
 
@@ -523,7 +523,7 @@ def _model_gets(cls: type) -> str:
     ]
     if managers:
         parts.append(f"managers {', '.join(managers)}")
-    return "; ".join(parts)
+    return " and ".join(parts)
 
 
 def _own_methods(cls: type) -> list[str]:
@@ -551,7 +551,7 @@ def _viewset_gets(cls: type) -> str:
         for action in cls.get_extra_actions()  # type: ignore[attr-defined]
     )
     return (
-        f"declare {', '.join(f'`{n}`' for n in declared)}; endpoints "
+        f"declare {', '.join(f'`{n}`' for n in declared)} and get the endpoints "
         f"{', '.join(f'`{e}`' for e in endpoints + extra)}"
     )
 
@@ -677,8 +677,8 @@ def options_section() -> list[str]:
         "## Model metadata (`class Karni`)",
         "",
         "A model declares what Karni's data-driven layers need to know in a nested "
-        "`class Karni`, next to `Meta`. Every key is optional. Modules add their own keys; "
-        "the *From* column says which package reads it.",
+        "`class Karni`, next to `Meta`. Every key is optional. Modules add their own keys. "
+        "The *From* column says which package reads each key.",
         "",
         "```python",
         "class Lead(BaseModel):",
@@ -732,7 +732,7 @@ def _module_settings(module_dir: Path) -> list[tuple[str, str, str, str]]:
             rows.append(
                 (
                     f"`{key.value}`",
-                    f"`{env}`" if env else "—",
+                    f"`{env}`" if env else "",
                     f"`{' '.join(default.split())}`",
                     " ".join(comments),
                 )
@@ -746,8 +746,8 @@ def settings_section() -> list[str]:
     out = [
         "## Settings",
         "",
-        "`karni_settings(globals())` in `config/settings.py` defines every setting below; "
-        "anything assigned after the call wins. Each is read from the environment variable "
+        "`karni_settings(globals())` in `config/settings.py` defines every setting below. "
+        "Anything assigned after the call wins. Each is read from the environment variable "
         "in the *Env* column when one is named. The Django and DRF settings Karni derives "
         "are described in [settings](settings.md).",
         "",
@@ -764,7 +764,7 @@ def settings_section() -> list[str]:
         rows.append(
             (
                 f"`{entry.name}`",
-                f"`{entry.env}`" if entry.env else "—",
+                f"`{entry.env}`" if entry.env else "",
                 f"`{entry.default}`",
                 entry.description,
             )
@@ -805,13 +805,13 @@ def ui_section(exports: list[dict[str, Any]]) -> list[str]:
 
     def props(entry: dict[str, Any]) -> str:
         required = entry.get("required") or []
-        return ", ".join(f"`{p['name']}: {p['type']}`" for p in required) or "—"
+        return ", ".join(f"`{p['name']}: {p['type']}`" for p in required)
 
     out = [
         "## Components and hooks",
         "",
         "Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the "
-        "TypeScript compiler. *Required props* are the props without a default; every "
+        "TypeScript compiler. *Required props* are the props without a default. Every "
         "component takes more ([UI guide](ui.md)).",
         "",
         "### Components",
@@ -830,7 +830,7 @@ def ui_section(exports: list[dict[str, Any]]) -> list[str]:
             [
                 (
                     f"`{e['name']}`",
-                    ", ".join(f"`{p}`" for p in e.get("parameters", [])) or "—",
+                    ", ".join(f"`{p}`" for p in e.get("parameters", [])),
                     e["summary"],
                     _source_link(e["source"]),
                 )
@@ -914,8 +914,8 @@ def modules_section() -> list[str]:
                 (
                     f"`{m['name']}`",
                     "planned",
-                    "—",
-                    "—",
+                    "",
+                    "",
                     f"[documented]({m['path'].removeprefix('docs/')})",
                 )
             )
@@ -978,8 +978,8 @@ def errors_section() -> list[str]:
         "## Error codes",
         "",
         "Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin can "
-        "report. The [error page](errors.md) has why each happens and the fix; "
-        "`karni explain <code>` prints the same offline.",
+        "report. The [error page](errors.md) explains why each one happens and gives the "
+        "fix. `karni explain <code>` prints the same offline.",
         "",
     ]
     for title, rows in groups:
@@ -1015,7 +1015,9 @@ def procedures() -> tuple[list[Any], list[dict[str, Any]]]:
 
 
 def make_and_slash_section() -> list[str]:
-    targets = [(f"`make {t}`", "; ".join(f"`{c}`" for c in cmds)) for t, cmds in make_targets()]
+    targets = [
+        (f"`make {t}`", ", then ".join(f"`{c}`" for c in cmds)) for t, cmds in make_targets()
+    ]
     procs, adapters = procedures()
     where = [(a["tool"], f"`{a['dir']}/<name>{a['suffix']}`") for a in adapters]
     return [
@@ -1027,7 +1029,7 @@ def make_and_slash_section() -> list[str]:
         "## Slash commands",
         "",
         "One per routine task, written for each agent tool by `karni new` and "
-        "`karni rules sync`; `karni rules --procedure <name>` prints the same steps.",
+        "`karni rules sync`. `karni rules --procedure <name>` prints the same steps.",
         "",
         *table(
             ("Command", "Arguments", "What it does"),
@@ -1149,7 +1151,7 @@ def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
             for n in components
             if n.startswith(("Resource", "Auth", "Login", "Page", "Layout"))
         )
-        + "; hooks "
+        + ". The hooks are "
         + ", ".join(f"`{n}`" for n in hooks)
         + ".",
     ]

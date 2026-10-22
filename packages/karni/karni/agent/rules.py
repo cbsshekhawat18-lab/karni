@@ -91,7 +91,7 @@ RULES: tuple[Rule, ...] = (
         code="K001",
         category="workflow",
         severity="must",
-        summary="karni context first; trust it.",
+        summary="karni context first. Trust it.",
         rule=(
             "Run `karni context` before reading any files. It prints the current apps, "
             "models, viewsets, UI components, hooks, pages and installed modules in a few "
@@ -109,8 +109,8 @@ RULES: tuple[Rule, ...] = (
         severity="must",
         summary="Rules beat other frameworks' habits.",
         rule=(
-            "Run `karni rules` at the start of a session and follow what it returns; the "
-            "adapter files (AGENTS.md, CLAUDE.md, ...) only point here."
+            "Run `karni rules` at the start of a session and follow what it returns. The adapter "
+            "files (AGENTS.md, CLAUDE.md, ...) only point here."
         ),
         rationale="One source of truth exposed through the CLI cannot drift between tools.",
     ),
@@ -118,23 +118,23 @@ RULES: tuple[Rule, ...] = (
         code="K003",
         category="workflow",
         severity="must",
-        summary="Model changed: make migrate; karni types.",
+        summary="Model changed: make migrate, then karni types.",
         rule="After any model change run `make migrate && karni types`.",
         rationale=(
-            "Migrations and the frontend's TS types + typed hooks are derived from the "
-            "models; skipping either leaves the API and the UI out of sync."
+            "Migrations and the frontend's TS types + typed hooks are derived from the models. "
+            "Skipping either leaves the API and the UI out of sync."
         ),
     ),
     Rule(
         code="K004",
         category="workflow",
         severity="must",
-        summary="karni rules --check FILE; karni check pre-commit.",
+        summary="karni rules --check FILE, then karni check pre-commit.",
         rule=(
             "Run `karni rules --check <file>` on files you write and `karni check` before "
-            "committing — every enforced rule fails the build, nothing only warns."
+            "committing. Every enforced rule fails the build, and nothing only warns."
         ),
-        rationale="Enforced rules fail CI anyway; catching them while editing is cheaper.",
+        rationale="Enforced rules fail CI anyway, so catching them while editing is cheaper.",
     ),
     Rule(
         code="K005",
@@ -142,14 +142,14 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Opt-outs need an inline reason.",
         rule=(
-            "Opt-outs are inline and REQUIRE a reason: Python "
-            "`# karni: allow(<rule-id>): <why>`; ESLint "
-            "`// eslint-disable-next-line karni/<rule> -- <why>`; jscpd "
+            "Opt-outs are inline and REQUIRE a reason. Python: "
+            "`# karni: allow(<rule-id>): <why>`. ESLint: "
+            "`// eslint-disable-next-line karni/<rule> -- <why>`. jscpd: "
             "`// jscpd:ignore-start -- <why>`."
         ),
         rationale=(
-            "Rules without escape hatches cause forks, and a fork is worse than a "
-            "duplicate — but every exception must say why so it can be reviewed."
+            "Rules without escape hatches cause forks, and a fork is worse than a duplicate. "
+            "Every exception must still say why, so it can be reviewed."
         ),
         fix="Write the reason after the marker.",
         enforced_by=("opt-out-reason", "eslint-comments/require-description"),
@@ -160,8 +160,8 @@ RULES: tuple[Rule, ...] = (
         severity="should",
         summary="Procedures: karni rules --procedure NAME.",
         rule=(
-            "Prefer the standard procedures for routine work: new-model, new-page, "
-            "add-module, new-module — `karni rules --procedure <name>`, or the matching "
+            "Prefer the standard procedures for routine work: new-model, new-page, add-module, "
+            "new-module. Run one with `karni rules --procedure <name>`, or with the matching "
             "slash command where your tool has one."
         ),
         rationale="The procedures encode the shortest correct path for routine work.",
@@ -172,12 +172,12 @@ RULES: tuple[Rule, ...] = (
         severity="should",
         summary="Commands: karni --help.",
         rule=(
-            "Use the project commands (`karni --help` lists them all): `make up` starts the "
-            "stack; `make migrate` runs makemigrations + migrate; `karni types` regenerates "
-            "TS types + typed hooks from the API schema; `karni check` runs architecture and "
-            "system checks; `karni context` prints the inventory; `karni make <type>` "
-            "scaffolds; runners like `karni test`, `karni shell`, `karni routes`, "
-            "`karni worker`, `karni schedule list` wrap manage.py/celery/pytest."
+            "Use the project commands (`karni --help` lists them all). `make up` starts the "
+            "stack. `make migrate` runs makemigrations + migrate. `karni types` regenerates TS "
+            "types + typed hooks from the API schema. `karni check` runs architecture and system "
+            "checks. `karni context` prints the inventory. `karni make <type>` scaffolds. Runners "
+            "like `karni test`, `karni shell`, `karni routes`, `karni worker`, "
+            "`karni schedule list` wrap manage.py/celery/pytest."
         ),
         rationale="They run inside the right interpreter (project .venv or compose service).",
     ),
@@ -192,8 +192,8 @@ RULES: tuple[Rule, ...] = (
             "section, so you do not redo a decision that was already made and reverted."
         ),
         rationale=(
-            "The inventory shows what the code contains now; the history provider shows "
-            "what was already asked, decided and abandoned for that file."
+            "The inventory shows what the code contains now. The history provider shows what was "
+            "already asked, decided and abandoned for that file."
         ),
         when="history",
     ),
@@ -204,15 +204,15 @@ RULES: tuple[Rule, ...] = (
         summary="Scaffold with karni make.",
         rule=(
             "Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, "
-            "listeners, management commands, services, middleware, pages, components and "
-            "modules with `karni make <type>` (`karni make --list`; `--dry-run` previews, "
-            "`--help` per type). Never hand-create a file, class or route a generator makes "
-            "— run it, then edit what it wrote."
+            "listeners, management commands, services, middleware, pages, components and modules "
+            "with `karni make <type>` (`karni make --list` lists the types, `--dry-run` previews, "
+            "`--help` works per type). Never hand-create a file, class or route a generator "
+            "makes. Run the generator, then edit what it wrote."
         ),
         rationale=(
             "Generators emit the conventions in one step (BaseModel, a mandatory access "
-            "declaration, settings and route markers, ruff-clean imports) and are tested to "
-            "pass every rule; hand-written scaffolding drifts."
+            "declaration, settings and route markers, ruff-clean imports) and are tested to pass "
+            "every rule. Hand-written scaffolding drifts."
         ),
         fix="Delete the hand-written scaffold and run the matching `karni make` command.",
     ),
@@ -233,7 +233,7 @@ RULES: tuple[Rule, ...] = (
             "Access bugs raise no error: the row is just absent. karni why computes the decision "
             "with the code that enforces it and prints the user's roles, the grants and where "
             "each comes from, the predicate that decided, the row's values, file:line and the "
-            "fix — one call instead of reconstructing the rules from source."
+            "fix. That is one call instead of reconstructing the rules from source."
         ),
         fix="Run the matching `karni why` command and apply the fix it prints.",
     ),
@@ -245,13 +245,13 @@ RULES: tuple[Rule, ...] = (
         severity="must",
         summary="Traceback: karni explain - first.",
         rule=(
-            "Paste a traceback, a test failure or a log line into `karni explain -` (stdin; MCP "
-            "tool `explain_text`) before reading it by hand. It names the Karni failure class, "
-            "the cause, where (the first project frame, file:line), the fix and the docs link, "
-            "and says plainly when it does not recognise the failure."
+            "Paste a traceback, a test failure or a log line into `karni explain -` (stdin, or "
+            "the MCP tool `explain_text`) before reading it by hand. It names the Karni failure "
+            "class, the cause, where (the first project frame, file:line), the fix and the docs "
+            "link, and says plainly when it does not recognise the failure."
         ),
         rationale=(
-            "Rebuilding context from a traceback is the expensive part of debugging; the "
+            "Rebuilding context from a traceback is the expensive part of debugging. The "
             "catalogue already knows Karni's failure classes (codes, query budgets, access "
             "outcomes, database, migrations, settings, CSRF/CORS) and their fixes."
         ),
@@ -278,10 +278,10 @@ RULES: tuple[Rule, ...] = (
         code="K301",
         category="architecture",
         severity="must",
-        summary="Domain code only; extend Karni.",
+        summary="Domain code only. Extend Karni.",
         rule=(
-            "Karni already implements everything generic; you write only domain code. "
-            "Extending Karni is always cheaper than reinventing it."
+            "Karni already implements everything generic. You write only domain code. Extending "
+            "Karni is always cheaper than reinventing it."
         ),
         rationale="Generic code written per project is the boilerplate Karni exists to remove.",
     ),
@@ -305,7 +305,7 @@ RULES: tuple[Rule, ...] = (
         code="K303",
         category="architecture",
         severity="must",
-        summary="Extend via props/methods; never fork.",
+        summary="Extend via props/methods, never fork.",
         rule=(
             "If an existing component or base class almost fits, extend it through its "
             "override props / hooks (`columns`, `fields`, `slots`, `AdminMeta`, `APIMeta`, "
@@ -332,9 +332,9 @@ RULES: tuple[Rule, ...] = (
         severity="must",
         summary="Per entity: models.py and viewsets.py.",
         rule=(
-            "Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py` — "
-            "nothing else. No admin.py, serializers.py, forms.py; urls.py only for non-API "
-            "endpoints such as webhooks (viewsets ride the auto-router)."
+            "Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py`, nothing "
+            "else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints "
+            "such as webhooks (viewsets ride the auto-router)."
         ),
         rationale="Admin, serializers, filters, routes and schema are derived from those two.",
     ),
@@ -356,7 +356,7 @@ RULES: tuple[Rule, ...] = (
         summary="Cross-project code: a Karni module.",
         rule=(
             "Anything reusable across projects belongs in a Karni module (a `karni_<name>` "
-            "package), not in this project — say so instead of building it."
+            "package), not in this project. Say so instead of building it."
         ),
         rationale="Code that would be written more than once belongs in Karni, never per project.",
     ),
@@ -366,8 +366,8 @@ RULES: tuple[Rule, ...] = (
         severity="must",
         summary="Modules: configure via settings.",
         rule=(
-            "Configure an installed module only through the settings it documents; never "
-            "patch its internals."
+            "Configure an installed module only through the settings it documents. Never patch "
+            "its internals."
         ),
         rationale="Patched internals break on the module's next release.",
     ),
@@ -405,7 +405,10 @@ RULES: tuple[Rule, ...] = (
         rationale=(
             "One stamping path keeps the audit trail trustworthy under WSGI, ASGI and workers."
         ),
-        fix="from karni.middleware import current_user; with current_user(user): ...",
+        fix=(
+            "Import current_user from karni.middleware and wrap the writes in "
+            "`with current_user(user): ...`."
+        ),
     ),
     Rule(
         code="K102",
@@ -413,8 +416,8 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Viewsets inherit BaseViewSet.",
         rule=(
-            "Viewsets inherit `karni.api.BaseViewSet` — usually just `model = X` plus its "
-            "`access` declaration (K109) (+ `search_fields`); the auto-router registers it."
+            "Viewsets inherit `karni.api.BaseViewSet`, usually just `model = X` plus its `access` "
+            "declaration (K109) (+ `search_fields`). The auto-router registers it."
         ),
         rationale="BaseViewSet derives serializer, filters, pagination, permissions and schema.",
         fix="Inherit karni.api.BaseViewSet and set `model = X`.",
@@ -426,16 +429,16 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Viewsets declare access.",
         rule=(
-            "Every `BaseViewSet` declares `access`: `Granted()` (the roles' grants for the "
-            "model, row-scoped; the default) or `Access(read=..., write=...)` built from "
+            "Every `BaseViewSet` declares `access`: `Granted()` (the default: the roles' grants "
+            "for the model, row-scoped) or `Access(read=..., write=...)` built from "
             '`Owned("<fk to user>")`, `HasRole(...)`, `Authenticated()`, `Public()` and '
-            "`Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you "
-            "write `Public()`. No `access` denies every request; `Unscoped(reason=...)` is "
-            "the explicit opt-out."
+            "`Where(lambda request: Q(...))` with `|` / `&`. Reads are public only when you write "
+            "`Public()`. No `access` denies every request. `Unscoped(reason=...)` is the explicit "
+            "opt-out."
         ),
         rationale=(
-            "One declaration compiles into both the request gate and the row filter, so "
-            "neither can be forgotten; a forgotten permission class fails open silently."
+            "One declaration compiles into both the request gate and the row filter, so neither "
+            "can be forgotten. A forgotten permission class fails open silently."
         ),
         fix="Add `access = Granted()` (or `Access(read=..., write=...)` for a custom rule).",
         enforced_by=("viewset-access",),
@@ -447,9 +450,9 @@ RULES: tuple[Rule, ...] = (
         summary="Row rules: in access.",
         rule=(
             "Express who sees which rows in `access` (`Where(...)` for custom logic, "
-            "`@action(..., access=...)` for one action). An overridden `get_queryset` is "
-            "still read-scoped — never use it to widen. Overriding `filter_queryset_for_user` "
-            "needs `# karni: allow(access-override): <why>`."
+            "`@action(..., access=...)` for one action). An overridden `get_queryset` is still "
+            "read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs "
+            "`# karni: allow(access-override): <why>`."
         ),
         rationale=(
             "The queryset is the authoritative layer: lists, details, actions, relation "
@@ -462,23 +465,22 @@ RULES: tuple[Rule, ...] = (
         code="K111",
         category="backend",
         severity="error",
-        summary="Paginate lists; no N+1.",
+        summary="Paginate lists. No N+1.",
         rule=(
             "Lists stay bounded and flat. A list-returning `@action` returns "
-            "`self.paginated_response(queryset)`, never `Serializer(qs, many=True).data`; "
-            "`pagination_class = None` needs `pagination = Unpaginated(max_rows=N, "
-            "reason=...)`. Query counts must not grow with rows: BaseViewSet derives "
-            "select_related/prefetch_related from the serializer, so hint only what it cannot "
-            "see (SerializerMethodField, properties) with `select_related = [...]` / "
+            "`self.paginated_response(queryset)`, never `Serializer(qs, many=True).data`. "
+            "`pagination_class = None` needs `pagination = Unpaginated(max_rows=N, reason=...)`. "
+            "Query counts must not grow with rows: BaseViewSet derives "
+            "select_related/prefetch_related from the serializer, so hint only what it cannot see "
+            "(SerializerMethodField, properties) with `select_related = [...]` / "
             "`prefetch_related = [...]` on the viewset. Raise a budget only with "
             "`query_budget = Budget(list=N, reason=...)`."
         ),
         rationale=(
-            "An unpaginated list or an N+1 passes with test data and falls over with real "
-            "data; the scaling check (2 vs 12 rows) and per-action query budgets catch both "
-            "in CI."
+            "An unpaginated list or an N+1 passes with test data and falls over with real data. "
+            "The scaling check (2 vs 12 rows) and per-action query budgets catch both in CI."
         ),
-        fix="Return self.paginated_response(qs); hint opaque fields with prefetch_related.",
+        fix="Return self.paginated_response(qs) and hint opaque fields with prefetch_related.",
         enforced_by=("unpaginated-action", "query-scaling"),
     ),
     Rule(
@@ -487,14 +489,14 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Audited models: no update()/bulk_update().",
         rule=(
-            "A model with `class Karni: audit = True` keeps field-level change history "
-            "through save() and delete(); `QuerySet.update()` and `bulk_update()` bypass it "
-            "and leave no entry. Save the instances instead, or opt out with "
+            "A model with `class Karni: audit = True` keeps field-level change history through "
+            "save() and delete(). `QuerySet.update()` and `bulk_update()` bypass it and leave no "
+            "entry. Save the instances instead, or opt out with "
             "`# karni: allow(audited-bulk-write): <reason>`."
         ),
         rationale=(
-            "A silent gap in the history is exactly the bug someone discovers during an "
-            "audit; the rule names every bulk write on an audited model at build time."
+            "A silent gap in the history is exactly the bug someone discovers during an audit. "
+            "The rule names every bulk write on an audited model at build time."
         ),
         fix="Loop and save(), or add the allow marker with the reason.",
         enforced_by=("audited-bulk-write",),
@@ -518,8 +520,8 @@ RULES: tuple[Rule, ...] = (
         ),
         rationale=(
             "Float money, free-text codes and case-sensitive unique emails pass every test and "
-            "fail in production; a database constraint is the one layer raw SQL, bulk updates "
-            "and other services cannot skip."
+            "fail in production. A database constraint is the one layer raw SQL, bulk updates and "
+            "other services cannot skip."
         ),
         fix=(
             "karni make model Product price:money:EUR stock:quantity country:country "
@@ -534,31 +536,32 @@ RULES: tuple[Rule, ...] = (
         summary="Status column: StateField + transitions.",
         rule=(
             "A lifecycle column (status, state, stage) is "
-            "`karni.fields.StateField(states=[...], transitions={...})`, never a free or "
-            'choices `CharField`. Move it with `row.transition("status", "confirmed")` '
-            "(or assign and `save()`), never with `QuerySet.update()`. The column CHECKs the "
-            "declared states; an illegal move is E980 (a 400), a concurrent one E981 (a 409)."
+            "`karni.fields.StateField(states=[...], transitions={...})`, never a free or choices "
+            '`CharField`. Move it with `row.transition("status", "confirmed")` (or assign and '
+            "`save()`), never with `QuerySet.update()`. The column CHECKs the declared states. An "
+            "illegal move is E980 (a 400), a concurrent one E981 (a 409)."
         ),
         rationale=(
-            "A free status column takes any value in any order from any code path; tests pass "
-            "and production rows end up refunded without ever being paid."
+            "A free status column takes any value in any order from any code path. Tests pass and "
+            "production rows end up refunded without ever being paid."
         ),
         fix=(
-            "status = StateField(states=[...], transitions={...}); "
-            "karni make model ... 'status:state:draft>confirmed|draft>cancelled'."
+            "status = StateField(states=[...], transitions={...}), or generate it: karni make "
+            "model ... 'status:state:draft>confirmed|draft>cancelled'."
         ),
     ),
     Rule(
         code="K116",
         category="backend",
         severity="must",
-        summary="Stock/slots: reserve(), no_overlap; no check-then-write.",
+        summary="Stock/slots: reserve(), no_overlap. No check-then-write.",
         rule=(
             "Anything with a limited quantity (seats, stock, licences) is a `CapacityField` "
             "consumed only with `karni.capacity.reserve(row, n)` / `release()` inside "
-            "`transaction.atomic()`; anything that must not overlap in time (rooms, slots, "
-            'appointments) declares `class Karni: no_overlap = NoOverlap("<resource>", '
-            '"<range>", ignore={...})`. Never count, compare and then write in Python.'
+            "`transaction.atomic()`. Anything that must not overlap in time (rooms, slots, "
+            "appointments) declares "
+            '`class Karni: no_overlap = NoOverlap("<resource>", "<range>", ignore={...})`. Never '
+            "count, compare and then write in Python."
         ),
         rationale=(
             "A read-then-write check never fails in tests and double-books in production: two "
@@ -566,15 +569,15 @@ RULES: tuple[Rule, ...] = (
             "(CHECK, EXCLUDE) and Karni names it (E985 / E984, a 409)."
         ),
         fix=(
-            "with transaction.atomic(): reserve(tier, n); create the booking. Slots: "
-            "no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']})."
+            "Inside with transaction.atomic(), call reserve(tier, n), then create the booking. "
+            "Slots: no_overlap = NoOverlap('room', 'during', ignore={'status': ['cancelled']})."
         ),
     ),
     Rule(
         code="K103",
         category="backend",
         severity="error",
-        summary="No ModelAdmin; use AdminMeta.",
+        summary="No ModelAdmin. Use AdminMeta.",
         rule=(
             "Do not register a plain `ModelAdmin`. Declare `AdminMeta` on the model (the "
             "admin is derived), or subclass `karni.admin.KarniModelAdmin`."
@@ -611,9 +614,9 @@ RULES: tuple[Rule, ...] = (
         category="backend",
         severity="error",
         summary="No Meta-only ModelSerializer.",
-        rule="Never write a Meta-only `ModelSerializer`; `BaseViewSet(model=X)` generates it.",
+        rule="Never write a Meta-only `ModelSerializer`. `BaseViewSet(model=X)` generates it.",
         rationale="A redundant serializer silently diverges from the generated one.",
-        fix="Delete it; customise via APIMeta or override get_serializer_class().",
+        fix="Delete it. Customise via APIMeta or override get_serializer_class().",
         enforced_by=("redundant-serializer",),
     ),
     Rule(
@@ -622,8 +625,8 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="No duplicated code.",
         rule=(
-            "No structurally duplicated code (8+ identical statements in two places); reuse "
-            "the named Karni API or extract one implementation."
+            "No structurally duplicated code (8+ identical statements in two places). Reuse the "
+            "named Karni API or extract one implementation."
         ),
         rationale="Duplicates are where boilerplate creeps back in.",
         fix="Call the existing implementation instead of copying it.",
@@ -634,7 +637,7 @@ RULES: tuple[Rule, ...] = (
         code="K201",
         category="frontend",
         severity="error",
-        summary="Compose @karni/ui; no raw table/form/input.",
+        summary="Compose @karni/ui. No raw table/form/input.",
         rule=(
             "Screens compose `@karni/ui` components (`Page`, `ResourceTable`, "
             "`ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw "
@@ -650,11 +653,11 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Pages: max 50 lines.",
         rule=(
-            "Page files stay at 50 lines or fewer. Past that you are rebuilding something "
-            "Karni ships — use the component's props."
+            "Page files stay at 50 lines or fewer. Past that you are rebuilding something Karni "
+            "ships, so use the component's props."
         ),
         rationale="A long page is reimplementing a component.",
-        fix="Use the components' props; move logic into hooks.",
+        fix="Use the components' props and move logic into hooks.",
         enforced_by=("karni/max-page-lines",),
     ),
     Rule(
@@ -663,7 +666,7 @@ RULES: tuple[Rule, ...] = (
         severity="error",
         summary="Import only the @karni/ui barrel.",
         rule="Import only the public `@karni/ui` barrel, never `@karni/ui/dist/*` or `/src/*`.",
-        rationale="Internals change without notice; the barrel is the versioned API.",
+        rationale="Internals change without notice. The barrel is the versioned API.",
         fix='Import from "@karni/ui".',
         enforced_by=("karni/no-deep-imports",),
     ),
@@ -671,7 +674,7 @@ RULES: tuple[Rule, ...] = (
         code="K204",
         category="frontend",
         severity="error",
-        summary="Data only via Karni hooks; no fetch/axios.",
+        summary="Data only via Karni hooks. No fetch/axios.",
         rule=(
             "Data access only via @karni/ui hooks (`useResourceList`, `useResourceItem`, "
             "`useResourceMutations`, the KarniClient) and the typed hooks generated by "
@@ -704,7 +707,7 @@ RULES: tuple[Rule, ...] = (
             "frame with its locals, the user and their roles, the SQL and the next steps."
         ),
         rationale=(
-            "The snapshot was taken when it failed, with secrets redacted; reconstructing the "
+            "The snapshot was taken when it failed, with secrets redacted. Reconstructing the "
             "same context from a traceback and the code costs far more."
         ),
     ),
@@ -719,8 +722,8 @@ RULES: tuple[Rule, ...] = (
             "response header, or `last`) instead of correlating log timestamps."
         ),
         rationale=(
-            "The request's tasks, retries, email and audit entries all carry its id, so the "
-            "trace is exact; timestamps from several processes are not."
+            "The request's tasks, retries, email and audit entries all carry its id, so the trace "
+            "is exact. Timestamps from several processes are not."
         ),
     ),
     Rule(
@@ -730,9 +733,9 @@ RULES: tuple[Rule, ...] = (
         summary="Confirm a fix: karni replay ID --as USER.",
         rule=(
             "After changing access, roles or fixing a bug a request hit, confirm it with "
-            "`karni replay <request-id> [--as <email|username|pk>]`: it re-runs the captured "
-            'request against the current code and prints what changed ("was 403, now '
-            '200"); writes are rolled back unless `--commit`.'
+            "`karni replay <request-id> [--as <email|username|pk>]`. It re-runs the captured "
+            'request against the current code and prints what changed ("was 403, now 200"). '
+            "Writes are rolled back unless you pass `--commit`."
         ),
         rationale=(
             "Replaying the real request as the real user tests the case that failed, not "
@@ -743,12 +746,12 @@ RULES: tuple[Rule, ...] = (
         code="K206",
         category="frontend",
         severity="error",
-        summary="Style with token classes; no literal values.",
+        summary="Style with token classes. No literal values.",
         rule=(
             "Style with the @karni/ui preset's classes (`bg-primary`, `p-4`, `rounded-md`, "
-            "`z-popover`), which read `--karni-*` tokens; no arbitrary literals (`w-[13px]`, "
-            "`bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. A failing "
-            "build where the project enables `karni/no-style-literals`."
+            "`z-popover`), which read `--karni-*` tokens. No arbitrary literals (`w-[13px]`, "
+            "`bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. It fails "
+            "the build where the project enables `karni/no-style-literals`."
         ),
         rationale="One stylesheet (or `karni ui detect`) then rethemes every screen.",
         fix="Use a preset class, or add the token to the project's karni-theme.css.",
@@ -769,18 +772,18 @@ PROCEDURES: tuple[Procedure, ...] = (
             "[--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and "
             "its viewset (`-a` also adds list/detail/form pages). Field types: "
             "`karni make model --help`. `--access`: authenticated (default), public-read, "
-            "owned:<fk to user>, staff, role:<name>; edit the generated `access` for anything "
+            "owned:<fk to user>, staff, role:<name>. Edit the generated `access` for anything "
             "richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, "
-            "serializer or router: the auto-router registers it; admin, filters, schema are "
-            "derived.",
+            "serializer or router. The auto-router registers it, and the admin, filters and "
+            "schema are derived.",
             "Add `class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, "
             "read-only or write-only.",
             "`karni make migration && karni migrate && karni types`",
-            "Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works "
+            "Verify: `karni context` lists the model and viewset, and GET /api/<plural>/ works "
             "for a caller `access` admits and is refused (401/403) or empty for one it does not.",
         ),
         outro=(
-            "Total new code should be well under 20 lines. If it isn't, stop — you are "
+            "Total new code should be well under 20 lines. If it isn't, stop: you are "
             "reimplementing something Karni provides."
         ),
         rules=(
@@ -810,7 +813,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "(frontend/src/routes.tsx). Without `--resource` it is a bare `<Page>`. Never "
             "hand-roll tables, forms or fetching.",
             "Custom behaviour goes through props (`columns`, `fields`, `rowActions`, slots, "
-            "custom cell/field renderers) — extend, never fork a variant.",
+            "custom cell/field renderers). Extend, never fork a variant.",
             "Keep the file at 50 lines or fewer. Data access only via @karni/ui hooks "
             "(`useResourceList`, `useResourceItem`, `useResourceMutations`) and the typed "
             "hooks generated by `karni types`.",
@@ -824,16 +827,16 @@ PROCEDURES: tuple[Procedure, ...] = (
         argument_hint="<module> (e.g. payments)",
         intro="Install Karni module: {arguments}",
         steps=(
-            "Run `karni add <module>` — it adds the `karni-<module>` dependency to "
+            "Run `karni add <module>`. It adds the `karni-<module>` dependency to "
             "pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked "
             "`# karni:apps` in config/settings.py, and (once installed) records the "
             "module's agent guidance.",
             "Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` "
-            "in a host venv), then `make migrate`; run `karni add <module>` again if it "
+            "in a host venv), then `make migrate`. Run `karni add <module>` again if it "
             "asked you to.",
-            "Run `karni context` — the module must appear under MODULES; `karni rules` now "
+            "Run `karni context`. The module must appear under MODULES, and `karni rules` now "
             "includes its guidance.",
-            "Configure only settings the module documents; do not patch its internals.",
+            "Configure only the settings the module documents. Do not patch its internals.",
             "To create a new reusable module instead: `karni make module <name>` "
             "(modules/karni-<name>/, docs/modules.md).",
         ),
@@ -845,17 +848,17 @@ PROCEDURES: tuple[Procedure, ...] = (
         argument_hint="<app_name>",
         intro="Create a local app: {arguments}",
         steps=(
-            "Run `karni context` first — confirm the domain isn't already covered.",
+            "Run `karni context` first to confirm the domain isn't already covered.",
             "`karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, "
             "`viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` "
-            "block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py — "
+            "block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py: "
             "Karni derives all of that.",
             "Add models with `karni make model <Name> <field:type ...> --app <app_name> "
             "--with viewset --access <who>` (procedure new-model).",
             "`karni make migration && karni migrate && karni types`, then `karni context` "
             "to verify.",
             "Anything reusable across projects belongs in a Karni module: "
-            "`karni make module <name>`, not in this project — say so instead of building it.",
+            "`karni make module <name>`, not in this project. Say so instead of building it.",
         ),
         rules=("K009", "K305", "K307"),
     ),

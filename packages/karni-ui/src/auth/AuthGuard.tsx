@@ -148,7 +148,7 @@ function warnImplicitNothing(): void {
   );
 }
 
-/** Renders its children only for a signed-in user, optionally with one of the given roles; otherwise says why. */
+/** Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. */
 export function AuthGuard(props: AuthGuardProps): ReactElement | null {
   const { roles, fallback, anonymous, denied, loading = null, slots, className, children } = props;
   const Slots: AuthGuardSlots = { ...defaultAuthGuardSlots, ...slots };

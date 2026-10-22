@@ -30,8 +30,8 @@ function CloseIcon(props: IconProps): React.ReactElement {
 }
 
 /**
- * Per-variant toast styling — colors resolve through --karni-* tokens only
- * (success leans on primary, error on destructive, info on muted).
+ * Per-variant toast styling, with colors that resolve through --karni-* tokens
+ * only (success leans on primary, error on destructive, info on muted).
  */
 export const toastVariants = variants({
   base: "pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-md border p-4 pr-8 shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -134,7 +134,7 @@ export interface ToasterProps {
 
 /**
  * Renders the toasts pushed through useToast(). Mount exactly one near the
- * app root. Position defaults to the bottom-right corner; override with
+ * app root. Position defaults to the bottom-right corner. Override it with
  * `className` (it merges via cn(), so e.g. "top-0 bottom-auto" wins).
  *
  * Keyboard and screen readers: an error is announced at once (assertive),

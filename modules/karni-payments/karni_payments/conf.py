@@ -39,16 +39,16 @@ DEFAULTS: dict[str, Any] = {
     # Default ISO currency code used when create_checkout gets none.
     "KARNI_PAYMENTS_CURRENCY": env("KARNI_PAYMENTS_CURRENCY", default="usd"),
     # Dotted path called with (user=, amount=, currency=, metadata=) BEFORE a
-    # Payment is created — the server-side pricing authority. The default is
-    # a pass-through; production projects should replace it (never trust
-    # client amounts).
+    # Payment is created. It is the server-side pricing authority. The default
+    # is a pass-through, and production projects should replace it (never
+    # trust client amounts).
     "KARNI_PAYMENTS_CHECKOUT_VALIDATOR": ("karni_payments.services.default_checkout_validator"),
     # Dotted path of the webhook state machine applied by the Celery task.
     "KARNI_PAYMENTS_EVENT_HANDLER": "karni_payments.services.apply_event",
     # Extra URLs whose origins are allowed as checkout success/cancel
     # redirects, on top of KARNI_FRONTEND_URL's origin.
     "KARNI_PAYMENTS_ALLOWED_REDIRECTS": env.list("KARNI_PAYMENTS_ALLOWED_REDIRECTS", default=[]),
-    # Provider credentials — blank by default, validated lazily at use.
+    # Provider credentials: blank by default, validated lazily at use.
     "STRIPE_SECRET_KEY": env("STRIPE_SECRET_KEY", default=""),
     "STRIPE_WEBHOOK_SECRET": env("STRIPE_WEBHOOK_SECRET", default=""),
     "RAZORPAY_KEY_ID": env("RAZORPAY_KEY_ID", default=""),

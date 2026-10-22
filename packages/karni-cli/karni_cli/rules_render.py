@@ -66,7 +66,7 @@ def render_prompts_doc(data: AgentData) -> str:
     for procedure in data.procedures:
         name = procedure["name"]
         lines += [
-            f"### `{name}` — {procedure['description']}",
+            f"### `{name}`: {procedure['description']}",
             "",
             "Prompt for tools without slash commands (replace the placeholder):",
             "",

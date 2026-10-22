@@ -17,13 +17,13 @@ def seed(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Fill every model with realistic demo data — wraps `manage.py karni_seed [ARGS]`.
+    """Fill every model with realistic demo data. It wraps `manage.py karni_seed [ARGS]`.
 
     Values come from field names and types (an `email` gets an email,
-    `price` money, `starts_at` a near-future date); relations point at
-    seeded rows; the same --seed gives the same rows. Prints a demo login
-    (demo@example.com / karni-password). Per-model overrides live in
-    <app>/seeds.py (`karni make seeder <Model>`).
+    `price` money, `starts_at` a near-future date). Relations point at
+    seeded rows, and the same --seed gives the same rows. It prints a demo
+    login (demo@example.com / karni-password). Per-model overrides live in
+    `<app>/seeds.py` (`karni make seeder <Model>`).
 
     Example: karni seed --count 20 --seed 42 --reset
     """

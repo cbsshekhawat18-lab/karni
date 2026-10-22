@@ -14,18 +14,19 @@ def schema(
     ),
     as_json: bool = typer.Option(False, "--json", help="Print the report as JSON (for agents)."),
     no_db: bool = typer.Option(
-        False, "--no-db", help="Report the declarations only; do not read the database."
+        False, "--no-db", help="Report the declarations only, without reading the database."
     ),
     database: str = typer.Option("default", "--database", help="Database alias to describe."),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Every column, constraint and index, and the declaration behind each — wraps `manage.py karni_schema`.
+    """Show every column, constraint and index, and the declaration behind each.
 
-    Per model: column types and CHECKs, unique constraints (partial on
-    soft-deletable models), indexes (Django's FK indexes, Karni's GIN/BRIN),
-    each with why it exists and whether the database has it; the columns
-    viewsets search, filter or order by, with the index serving each.
+    It wraps `manage.py karni_schema`. Per model it lists column types and CHECKs,
+    unique constraints (partial on soft-deletable models) and indexes (Django's FK
+    indexes, Karni's GIN/BRIN), each with why it exists and whether the database has
+    it. It also lists the columns viewsets search, filter or order by, with the index
+    serving each.
 
     Example: karni schema events --json
     """

@@ -28,7 +28,7 @@ export interface KarniProviderProps {
 
 const NO_PRIMITIVES: KarniPrimitiveOverrides = {};
 
-/** Provides the Karni client and a TanStack QueryClient to everything inside it; render it once at the app root. */
+/** Rendered once at the app root, it provides the Karni client and a TanStack QueryClient to everything inside it. */
 export function KarniProvider(props: KarniProviderProps): ReactElement {
   const { client, queryClient, primitives = NO_PRIMITIVES, children } = props;
   // Lazy initial state so the fallback QueryClient is created exactly once
@@ -43,7 +43,7 @@ export function KarniProvider(props: KarniProviderProps): ReactElement {
   );
 }
 
-/** Returns the Karni client from `KarniProvider`; throws a descriptive error outside one. */
+/** Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. */
 export function useKarniClient(): KarniClient {
   const client = useContext(KarniClientContext);
   if (client === null) {

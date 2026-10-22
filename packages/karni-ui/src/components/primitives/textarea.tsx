@@ -18,7 +18,7 @@ const KarniTextarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 KarniTextarea.displayName = "Textarea";
 
-/** Themed multi-line text input; every native `<textarea>` prop passes through.
+/** Themed multi-line text input that passes every native `<textarea>` prop through.
  *
  * A project replaces it with its own through `primitives={{ textarea: ... }}` on KarniProvider.
  */

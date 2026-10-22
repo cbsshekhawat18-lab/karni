@@ -59,7 +59,7 @@ export interface ThemeProviderProps {
   children?: React.ReactNode;
 }
 
-/** Applies the user's theme choice and keeps it; render it once around the app. */
+/** Rendered once around the app, it applies the user's theme choice and keeps it. */
 export function ThemeProvider({
   defaultTheme = "system",
   storageKey = THEME_STORAGE_KEY,
@@ -106,7 +106,7 @@ export function ThemeProvider({
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-/** The theme choice and a setter; throws a descriptive error outside ThemeProvider. */
+/** Returns the theme choice and a setter, and throws a descriptive error outside ThemeProvider. */
 export function useTheme(): ThemeContextValue {
   const value = React.useContext(ThemeContext);
   if (value === null) {

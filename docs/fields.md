@@ -6,7 +6,7 @@ description: karni.fields - typed model fields (money, percent, quantity, email,
 
 An agent writing a model reaches for `FloatField` for money, a free-text
 `CharField` for a country and a case-sensitive unique email. None of that
-fails a test; all of it fails in production. `karni.fields` makes the correct
+fails a test, but all of it fails in production. `karni.fields` makes the correct
 column, constraint and index the default: you declare what a value **is**,
 and the database enforces it, so raw SQL, bulk updates, imports and other
 services writing the table cannot get around it.
@@ -38,14 +38,14 @@ class Customer(BaseModel):
 ## The field set
 
 Every field is the plain Django field plus what the database must
-guarantee. "Backends" says what holds where: PostgreSQL gets everything;
+guarantee. "Backends" says what holds where. PostgreSQL gets everything.
 SQLite (tests, local development) gets the portable part, and system check
-`karni.W964` says what is missing there; `karni.E964` stops a field that
+`karni.W964` says what is missing there. `karni.E964` stops a field that
 cannot work at all.
 
 | Field | Column | Constraint | Index | Backends | Plain Django replacement |
 |---|---|---|---|---|---|
-| `MoneyField(currency=` or `currency_field=)` | `NUMERIC(19,4)` | `CHECK` from `min_value`/`max_value` | - | exact on PostgreSQL; SQLite stores NUMERIC as a binary float (W964) | `models.DecimalField(max_digits=19, decimal_places=4)` |
+| `MoneyField(currency=` or `currency_field=)` | `NUMERIC(19,4)` | `CHECK` from `min_value`/`max_value` | - | exact on PostgreSQL, while SQLite stores NUMERIC as a binary float (W964) | `models.DecimalField(max_digits=19, decimal_places=4)` |
 | `PercentField(min_value=0, max_value=100)` | `NUMERIC(p,2)` | `CHECK` between the bounds | - | all | `DecimalField` + `CheckConstraint` |
 | `QuantityField` | `integer` | `CHECK (col >= 0)` | - | all | `models.PositiveIntegerField` |
 | `EmailField(unique=True)` | `varchar(254)` | unique on `LOWER(email)` (partial on soft-deletable models) | the unique index | all | `models.EmailField` + `UniqueConstraint(Lower("email"))` |
@@ -54,7 +54,7 @@ cannot work at all.
 | `CountryField` | `varchar(2)` | `CHECK (col IN (...ISO 3166-1 alpha-2...))` | - | all | `models.CharField(max_length=2, choices=...)` |
 | `CurrencyField` | `varchar(3)` | `CHECK (col IN (...ISO 4217...))` | - | all | `models.CharField(max_length=3, choices=...)` |
 | `JSONField(queried=True)` | `jsonb` | - | GIN when `queried=True` | GIN on PostgreSQL only (W964) | `models.JSONField` + `GinIndex` |
-| `SearchField(sources=[...])` | generated `tsvector` | - | GIN | PostgreSQL; elsewhere a plain-text column and portable search (W964) | `GeneratedField(SearchVector(...))` + `GinIndex` |
+| `SearchField(sources=[...])` | generated `tsvector` | - | GIN | PostgreSQL, and elsewhere a plain-text column and portable search (W964) | `GeneratedField(SearchVector(...))` + `GinIndex` |
 | `ArrayField(base_field)` | `type[]` | - | GIN unless `indexed=False` | PostgreSQL only (E964 elsewhere) | `django.contrib.postgres.fields.ArrayField` |
 
 Every field accepts all of its Django base field's arguments (`null`,
@@ -73,7 +73,7 @@ breaks a migration.
 - **Decimal only.** Assigning a float (`product.price = 9.99`), passing one to
   `create()`, a lookup or `update()` raises `karni.E962`: a binary float has
   lost the exact cent value before Karni sees it. Ints and `Decimal` are
-  exact; strings are parsed by Django as usual. Mixing a float into an `F()`
+  exact. Strings are parsed by Django as usual. Mixing a float into an `F()`
   expression is already refused by Django.
 - **A declared rounding rule.** Values are quantized to `decimal_places` with
   `rounding=` (default `decimal.ROUND_HALF_EVEN`) before they reach the
@@ -87,7 +87,7 @@ breaks a migration.
 ### PercentField and QuantityField
 
 `PercentField` takes `min_value`/`max_value` (0 and 100 by default) and
-derives `max_digits` from them; `decimal_places` defaults to 2. The bounds
+derives `max_digits` from them. `decimal_places` defaults to 2. The bounds
 are a column CHECK and validators, so forms and the API reject them too.
 `QuantityField` is a `PositiveIntegerField`: a decrement that would take
 stock below zero fails at the database even when two requests race.
@@ -97,7 +97,7 @@ stock below zero fails at the database even when two requests race.
 `unique=True` is case-insensitive: the constraint is a unique index on
 `LOWER(email)`, so `Alice@x.com` and `alice@x.com` cannot both exist, not even
 through raw SQL. The domain is lower-cased on save and in lookups
-(`filter(email="Alice@EXAMPLE.com")` finds `Alice@example.com`); the local
+(`filter(email="Alice@EXAMPLE.com")` finds `Alice@example.com`). The local
 part keeps its case. Django 5 removed the `CI*` fields and Karni does not
 need `citext`. The generated serializer checks the same rule with `iexact`,
 so a duplicate is a 400, not a database error.
@@ -105,7 +105,7 @@ so a duplicate is a 400, not a database error.
 ### SlugField
 
 Unique by default (`unique=False` to opt out). With `populate_from="name"` an
-empty slug is generated on save; a value a live row holds gets `-2`, `-3`,
+empty slug is generated on save. A value a live row holds gets `-2`, `-3`,
 ... and, after 50 tries, a random suffix. The unique constraint still rejects
 a duplicate from a concurrent insert. A number as the DSL argument
 (`code:slug:40`) is a `max_length`, as before.
@@ -115,18 +115,18 @@ a duplicate from a concurrent insert. A number as the DSL argument
 Stored in E.164: `+`, country code and number, at most 15 digits
 (`+14155552671`). Input may carry spaces, dashes, dots, parentheses, a
 `(0)` trunk marker or a `00` prefix (`"+44 (0)20 7946 0958"` is stored as
-`+442079460958`); a national number without a country code is rejected, not
+`+442079460958`). A national number without a country code is rejected, not
 guessed. There is no dependency: per-country number plans need Google's
 `phonenumbers` (megabytes of metadata). Add `validators=[...]` built on it
-when you must know a number is assignable, not just well formed.
+when well formed is not enough and you must know a number is assignable.
 
 ### CountryField and CurrencyField
 
 Both carry the ISO list as `choices` (so the admin, forms and the OpenAPI
 enum get it) and as a database CHECK. `codes=[...]` narrows to a subset,
 `extra_codes=[...]` widens it (`"XK"`). The lists ship with Karni
-(`karni.fields.iso_data`: 249 country codes; ISO 4217 list one, 179 codes,
-including fund and metal codes). The CHECK is a named constraint that lists
+(`karni.fields.iso_data`: 249 country codes, and ISO 4217 list one with 179
+codes, including fund and metal codes). The CHECK is a named constraint that lists
 the codes: when a Karni release updates a list, `makemigrations` replaces it,
 and each field records the list's `iso_revision`.
 
@@ -147,7 +147,7 @@ and each field records the list's `iso_revision`.
   `Karni.field_roles`) turns it back into a search of the readable sources.
 - `ArrayField(models.CharField(max_length=40))` adds a GIN index for
   `contains`/`overlap`/`contained_by`. It needs a PostgreSQL driver to import
-  and PostgreSQL to migrate; use `JSONField` for a portable list.
+  and PostgreSQL to migrate. Use `JSONField` for a portable list.
 
 ## Uniqueness that respects soft delete
 
@@ -158,9 +158,9 @@ live rows (`WHERE deleted_at IS NULL`, a partial unique index PostgreSQL and
 SQLite both enforce):
 
 - `unique=True` on any Karni field. On a `SoftDeleteModel` it becomes a
-  `LiveUniqueConstraint`; elsewhere a plain `UniqueConstraint`. The column
-  itself never carries `UNIQUE`, so `field.unique` is `False`; use
-  `karni.fields.is_unique(field)`.
+  `LiveUniqueConstraint`, and elsewhere a plain `UniqueConstraint`. The column
+  itself never carries `UNIQUE`, so `field.unique` is `False`. Use
+  `karni.fields.is_unique(field)` instead.
 - `LiveUniqueConstraint` for anything else, including several fields:
 
   ```python
@@ -188,7 +188,7 @@ SQLite both enforce):
 | `karni.E964` | error | a field the configured database cannot run (an `ArrayField` on SQLite) | another field, or PostgreSQL |
 | `karni.W964` | warning | a PostgreSQL guarantee missing on the configured database (exact NUMERIC, GIN, tsvector, the E.164 CHECK, partial unique indexes) | `SILENCED_SYSTEM_CHECKS` |
 | `karni.W965` | warning | `on_delete=CASCADE` on a financial model (a money field, a money-named decimal, a payments-like name, or `Karni.financial = True`) or an audited one (`Karni.audit`) | `class Karni: cascade = {"field": "<why>"}` |
-| `karni.W967` | warning | a column a routed viewset searches, filters or orders by with no index | add the index; `SILENCED_SYSTEM_CHECKS` for a small table |
+| `karni.W967` | warning | a column a routed viewset searches, filters or orders by with no index | add the index, or `SILENCED_SYSTEM_CHECKS` for a small table |
 | `karni.E968` | error | `LiveUniqueConstraint` on a model without soft delete | `models.UniqueConstraint` |
 | `karni.E970` | error | a malformed `not_money`, `cascade` or `append_only` option | - |
 
@@ -206,7 +206,7 @@ pass `null=True`, whatever `blank` says.
 
 | Declared | Index | Who adds it |
 |---|---|---|
-| a foreign key | B-tree on `<fk>_id` | Django (`ForeignKey(db_index=True)`); Karni adds none |
+| a foreign key | B-tree on `<fk>_id` | Django (`ForeignKey(db_index=True)`). Karni adds none |
 | `SearchField` | GIN on the tsvector | the field |
 | `JSONField(queried=True)` | GIN | the field |
 | `ArrayField` | GIN | the field |
@@ -309,10 +309,10 @@ A trailing `?` makes any of them optional. A bad argument is `C360`.
 
 - Replace any field with its plain Django field (the table above): the
   column type stays, and the constraint goes unless you declare it.
-- `unique=False` drops the unique constraint; `queried=False` / `indexed=False`
-  drop a GIN index; `codes=`/`extra_codes=` change an ISO list.
+- `unique=False` drops the unique constraint, `queried=False` / `indexed=False`
+  drop a GIN index, and `codes=`/`extra_codes=` change an ISO list.
 - Subclass a field and override `karni_constraints(model)` or
-  `karni_indexes(model)` to change what it contributes;
+  `karni_indexes(model)` to change what it contributes.
   `karni.fields.contribute_index(model, index, why)` adds an index (with its
   reason) from your own field type.
 - Opt-outs that need a reason: `Karni.not_money`, `Karni.cascade`.

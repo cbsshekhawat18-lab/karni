@@ -7,7 +7,7 @@ description: Periodic and background work declared in an app's schedules.py and 
 Declare periodic work next to the app that owns it, in `<app>/schedules.py`.
 There's no `CELERY_BEAT_SCHEDULE` dict to maintain by hand. `karni make
 schedule <name> --every 15m` (or `--cron "0 3 * * *"`) writes the entry and
-the task it runs; `karni make task <name>` writes a task alone:
+the task it runs. `karni make task <name>` writes a task alone:
 
 ```python
 # shop/schedules.py
@@ -85,7 +85,7 @@ environment without editing code. `karni schedule list` shows such a row as
 Karni's own daily `karni-flush-expired-tokens` entry lives in
 `CELERY_BEAT_SCHEDULE` (see `karni.conf`).
 
-Removing a declaration does not delete its `PeriodicTask` row; beat simply
+Removing a declaration does not delete its `PeriodicTask` row. Beat just
 stops refreshing it. Disable or delete the row in the admin
 (*Periodic tasks*). The same applies to any row you disabled there: beat
 never re-enables it.
@@ -95,15 +95,15 @@ never re-enables it.
 | Command | Wraps | What it does |
 |---|---|---|
 | `karni schedule list [--json]` | `manage.py karni_schedules` | every merged schedule: name, task, timing, source |
-| `karni schedule run <name>` | `manage.py karni_schedules --run <name>` | runs the task once, synchronously, with its args; exits non-zero if it raised |
+| `karni schedule run <name>` | `manage.py karni_schedules --run <name>` | runs the task once, synchronously, with its args, and exits non-zero if it raised |
 | `karni worker [ARGS]` | `python -m celery -A config worker -l info` | a worker (`-Q`, `--concurrency` … pass through) |
-| `karni beat [ARGS]` | `python -m celery -A config beat -l info` | the scheduler; run exactly one |
+| `karni beat [ARGS]` | `python -m celery -A config beat -l info` | the scheduler. Run exactly one |
 
 All four run through the project interpreter: the project's `.venv` if there
 is one, otherwise the running compose service. With `docker compose up`, the
 scaffold's `worker` and `beat` services already run. `karni worker` and
 `karni beat` are for `.venv` development (`karni serve --local`) or a one-off
-extra worker; use `-A/--app` (or `KARNI_CELERY_APP`) if your Celery app is
+extra worker. Use `-A/--app` (or `KARNI_CELERY_APP`) if your Celery app is
 not `config`.
 
 `karni schedule run` executes in-process with Celery's `Task.apply()`, so no
@@ -115,7 +115,7 @@ task works.
 - `CELERY_BEAT_SCHEDULE` entries win on a name conflict, and you can keep
   using it for everything.
 - `KARNI_SCHEDULES_AUTODISCOVER = False` stops the import of
-  `<app>/schedules.py`. Import the modules you want yourself; their
+  `<app>/schedules.py`. Import the modules you want yourself, and their
   declarations still merge.
 - `every(..., registry=ScheduleRegistry())` declares into your own registry,
   and `merge_beat_schedule(configured, entries)` builds a `beat_schedule`

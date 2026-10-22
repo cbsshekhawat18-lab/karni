@@ -1,5 +1,5 @@
 ---
-description: Karni compared with cookiecutter-django — what each generates, how each is kept up to date, and who should pick which. Includes where Karni loses.
+description: How Karni and cookiecutter-django differ in what each generates, how each is kept up to date, and who should pick which, including where Karni loses.
 ---
 
 # Karni vs cookiecutter-django
@@ -20,35 +20,35 @@ assembling a project by hand.
 ## Where cookiecutter-django is the better choice
 
 - **Maturity.** cookiecutter-django has been developed since 2013 by about 480
-  contributors, has around 13,600 GitHub stars and releases almost daily;
+  contributors, has around 13,600 GitHub stars and releases almost daily.
   Karni's first release was in October 2026 and it has no known production
   deployment.
 - **Deployment breadth.** cookiecutter-django documents Docker with Traefik and
   Let's Encrypt, Heroku and PythonAnywhere, with options for AWS, GCP and
-  Azure storage and four CI providers; Karni generates a Docker Compose stack
+  Azure storage and four CI providers. Karni generates a Docker Compose stack
   that has not yet been tested end to end.
 - **No runtime dependency.** The generated project is plain Django, so nothing
-  ties it to cookiecutter-django after generation; a Karni project depends on
+  ties it to cookiecutter-django after generation. A Karni project depends on
   the `karni` package at runtime.
-- **Newer Django.** cookiecutter-django targets Django 6.0; Karni 0.3 supports
+- **Newer Django.** cookiecutter-django targets Django 6.0, while Karni 0.3 supports
   Django 5.2 LTS only.
 - **Community.** cookiecutter-django has a Discord server, a Stack Overflow tag
-  and a listing in awesome-django; Karni has none of these yet.
+  and a listing in awesome-django. Karni has none of these yet.
 
 ## Where Karni is the better choice
 
 - **A React front end.** cookiecutter-django's maintainers have said they do
-  not intend to add React; Karni ships `@karni/ui`, React components that read
+  not intend to add React. Karni ships `@karni/ui`, React components that read
   the API's OpenAPI schema to render tables, forms and detail views.
 - **Per-model code.** cookiecutter-django leaves serializers, viewsets,
-  permission classes, filters and admin classes to be written per model; Karni
+  permission classes, filters and admin classes to be written per model. Karni
   derives them from the model and its `access` rule ([the API](../api.md)).
 - **Upgrades.** cookiecutter-django has no official way to bring template
-  changes into an existing project (its maintainers point to cruft or Copier);
+  changes into an existing project (its maintainers point to cruft or Copier).
   Karni upgrades like any dependency, and `karni upgrade` applies code changes
   with codemods ([stability promise](../stability.md)).
 - **AI coding agents.** A generated cookiecutter-django project has no
-  AGENTS.md or CLAUDE.md; a Karni project ships instruction files for eight
+  AGENTS.md or CLAUDE.md. A Karni project ships instruction files for eight
   agent tools from one rule set, an MCP server and lint rules that fail when
   an agent hand-writes what Karni provides ([agents](../agents.md)).
 

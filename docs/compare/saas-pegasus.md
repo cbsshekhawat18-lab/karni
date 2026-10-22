@@ -1,5 +1,5 @@
 ---
-description: Karni compared with SaaS Pegasus — a commercial Django SaaS boilerplate against an open-source framework you upgrade. Includes where Karni loses.
+description: Karni, an open-source framework you upgrade, compared with SaaS Pegasus, a commercial Django SaaS boilerplate. Includes where Karni loses.
 ---
 
 # Karni vs SaaS Pegasus
@@ -21,31 +21,31 @@ have a documented way to bring a new release into an existing project.
 ## Where SaaS Pegasus is the better choice
 
 - **SaaS features.** Pegasus ships Stripe subscriptions, teams and
-  multi-tenancy, AI chat and agents, one-click deploys and Wagtail; Karni has
+  multi-tenancy, AI chat and agents, one-click deploys and Wagtail. Karni has
   a payments module (Stripe and Razorpay checkout) but no subscriptions, teams
   or multi-tenancy.
 - **Maturity and support.** Pegasus has been sold since 2019, states that 1,910
   developers and businesses use it, releases about monthly and offers email
-  and Slack support; Karni's first release was in October 2026, with no known
+  and Slack support. Karni's first release was in October 2026, with no known
   production deployment and no commercial support.
 - **Front-end choice.** Pegasus offers HTMX or React (and a Vue example) with
-  several CSS frameworks; Karni supports React only.
+  several CSS frameworks. Karni supports React only.
 - **Newer Django.** Pegasus's open-source edition targets Django 6 on Python
-  3.14; Karni 0.3 supports Django 5.2 LTS on Python 3.12 to 3.14.
+  3.14, while Karni 0.3 supports Django 5.2 LTS on Python 3.12 to 3.14.
 
 ## Where Karni is the better choice
 
-- **Licence and price.** Karni is free and Apache-2.0 licensed; Pegasus's paid
+- **Licence and price.** Karni is free and Apache-2.0 licensed. Pegasus's paid
   tiers are a one-time $449 (one project) or $649 (unlimited projects), each
   with one year of updates, under a licence that does not allow redistributing
   the code (an MIT-licensed open-source edition covers a smaller feature set).
 - **How upgrades work.** Pegasus upgrades by regenerating code into your
-  repository and merging it with git, resolving conflicts by hand; Karni keeps
+  repository and merging it with git, resolving conflicts by hand. Karni keeps
   the generic code in versioned packages, and `karni upgrade` applies code
   changes with codemods and lists what it could not change
   ([stability promise](../stability.md)).
 - **Per-model code.** In a Pegasus project the generated code is yours to
-  maintain; in Karni a resource is its model and its `access` rule, and the
+  maintain. In Karni a resource is its model and its `access` rule, and the
   serializer, viewset, admin, permissions and React screens are derived from
   them ([the API](../api.md)).
 - **Agent enforcement.** Beyond rule files, Karni's lint rules and
@@ -65,7 +65,7 @@ and where a young, unsupported framework is an acceptable risk.
 | | SaaS Pegasus | Karni |
 |---|---|---|
 | What you get | a generated codebase you own | a dependency you upgrade, plus a scaffold |
-| Price and licence | $449 / $649 one-time (1 year of updates); MIT open-source edition | free, Apache-2.0 |
+| Price and licence | $449 / $649 one-time (1 year of updates), or the MIT open-source edition | free, Apache-2.0 |
 | In market since | 2019, 1,910 customers stated | October 2026 |
 | Subscriptions, teams, multi-tenancy | yes | no (payments module only) |
 | Front end | HTMX or React (Vue example) | React only |

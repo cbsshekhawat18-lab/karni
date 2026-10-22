@@ -15,7 +15,7 @@ def test(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run the test suite — wraps `python -m pytest [ARGS]`."""
+    """Run the test suite. It wraps `python -m pytest [ARGS]`."""
     project = require_project()
     probe = project_mod.run_python(
         project, ["-c", "import pytest"], docker=docker, service=service, capture=True

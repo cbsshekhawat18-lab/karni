@@ -5,7 +5,7 @@ description: "Events and listeners: react to model changes from an app's listene
 # Events and listeners
 
 React to things that happen to your data without wiring signals by hand.
-Put listeners in `<app>/listeners.py`; Karni imports that module for every
+Put listeners in `<app>/listeners.py`. Karni imports that module for every
 installed app at startup (`KarniAppConfig.ready()`), in web, worker and beat
 processes alike. There's no `AppConfig.ready()` boilerplate and no import to
 remember. Generate them: `karni make listener <name> --on Order.created
@@ -166,4 +166,4 @@ inside `transaction.on_commit(...)`.
   `events.py` and `listeners.py`. Import your listener modules yourself, for
   example from your own `AppConfig.ready()`.
 - **`karni.events.autodiscover()`** is the function Karni calls. You can call
-  it yourself after disabling the setting; it is idempotent.
+  it yourself after disabling the setting. It is idempotent.

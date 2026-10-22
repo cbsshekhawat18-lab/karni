@@ -14,7 +14,7 @@ returns a short brief of what was asked and decided about one file.
 installed: `karni context --with-history` prints the plain inventory, the
 history rule is not emitted, and no provider code runs beyond a cheap
 "is there a store?" directory check. This is a concept page, not a
-quickstart step — a new project has no history to read on day one.
+quickstart step. A new project has no history to read on day one.
 
 ## What Karni does with one
 
@@ -37,11 +37,11 @@ When a provider detects a store for the project:
 
    `PATH` is relative to your current directory (or absolute) and must lie
    inside the project. Without `PATH`, providers that offer a project-level
-   brief contribute one (`HISTORY: project (...)`); the others add nothing.
-   With no store detected — or nothing recorded for that file — the output is
-   byte-for-byte the plain `karni context` output: no warning, no placeholder.
-   stdout stays machine-readable in every mode; anything a provider prints is
-   discarded.
+   brief contribute one (`HISTORY: project (...)`). The others add nothing.
+   With no store detected, or nothing recorded for that file, the output is
+   byte-for-byte the plain `karni context` output, with no warning and no
+   placeholder. stdout stays machine-readable in every mode, and anything a
+   provider prints is discarded.
 
 2. **`karni rules`** gains one rule, and only in a project with a store:
 
@@ -49,7 +49,7 @@ When a provider detects a store for the project:
    K008 Before editing a file: karni context --with-history FILE.
    ```
 
-   The generated adapters (`AGENTS.md`, `CLAUDE.md`, …) do not change — they
+   The generated adapters (`AGENTS.md`, `CLAUDE.md`, …) do not change. They
    tell the agent to run `karni rules`, and the CLI decides what to say.
    `karni rules sync --check` passes the same with or without a store.
    Disable the rule like any other: `DISABLE = ["K008"]` in `karni.rules.py`.
@@ -59,9 +59,9 @@ When a provider detects a store for the project:
 
 ### The cap
 
-Everything `--with-history` appends — headings included — is capped at
-**~300 tokens**, measured as characters ÷ 4 (the same approximation the
-`karni rules` 400-token budget test uses; about 1,200 characters). With the
+Everything `--with-history` appends, headings included, is capped at
+**~300 tokens**, measured as characters ÷ 4 (about 1,200 characters, by the
+same approximation the `karni rules` 400-token budget test uses). With the
 inventory (a few hundred tokens for a typical project) the combined output stays
 within a few hundred tokens. The cap is enforced by Karni, not by providers:
 a longer brief is cut at a line boundary and ends with a line naming the
@@ -71,7 +71,7 @@ command that prints the full brief, e.g.
 … truncated at ~300 tokens; full brief: chronicle context apps/events/models.py
 ```
 
-The value is `HISTORY_TOKEN_CAP` in `karni.agent.history`; `karni context
+The value is `HISTORY_TOKEN_CAP` in `karni.agent.history`, and `karni context
 --help` states it.
 
 ## Gigai Chronicle (built in)
@@ -79,11 +79,11 @@ The value is `HISTORY_TOKEN_CAP` in `karni.agent.history`; `karni context
 Karni ships one provider, for [Gigai
 Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle): MIT
 licensed, local-only (no network by default), and written by Karni's author.
-Karni never imports it and never lists it as a dependency; the provider
+Karni never imports it and never lists it as a dependency. The provider
 (`karni.agent.history_chronicle`) only:
 
 - **detects** the nearest `.chronicle/` directory at or above the project
-  root — the same walk-up Chronicle does. No process is started for this.
+  root, using the same walk-up Chronicle does. No process is started for this.
 - **briefs** a file by running, from the directory holding `.chronicle/`,
   `chronicle context <repo-relative path> --json --limit 5`, and compacts the
   `markdown` of the JSON reply: title, italic boilerplate and footer dropped,
@@ -102,8 +102,8 @@ your repository.
 
 ## The one-time suggestion
 
-When no provider is present, `karni doctor` — and a clean `karni check`
-outside CI, on stderr — may print this once per project:
+When no provider is present, `karni doctor` may print this once per project.
+So may a clean `karni check` outside CI, on stderr:
 
 ```text
 tip: no prompt-history store found. `karni context --with-history` can brief
@@ -114,16 +114,16 @@ tip: no prompt-history store found. `karni context --with-history` can brief
 
 It names its author's relationship to the tool on purpose. It is never shown:
 
-- more than once per project — recorded in `.karni/local/state.json`, which is
-  never committed (`.karni/local/` carries its own `.gitignore` containing `*`,
-  and the scaffold's `.gitignore` lists it);
-- in CI (`CI`, `GITHUB_ACTIONS`, `GITLAB_CI`, `BUILDKITE`, `CIRCLECI`,
+- More than once per project. Once shown, it is recorded in
+  `.karni/local/state.json`, which is never committed (`.karni/local/` carries
+  its own `.gitignore` containing `*`, and the scaffold's `.gitignore` lists it).
+- In CI (`CI`, `GITHUB_ACTIONS`, `GITLAB_CI`, `BUILDKITE`, `CIRCLECI`,
   `JENKINS_URL`, `TF_BUILD`, `TEAMCITY_VERSION`, `BITBUCKET_BUILD_NUMBER`,
-  `CODEBUILD_BUILD_ID`);
-- with `suggest_tools = false` (project or `--global`) or `-q`/`--quiet`;
-- when a provider detects a store, or any third-party provider is installed;
-- on `karni context`, `karni types`, `karni rules` or `karni new` — a tip in
-  machine-readable output corrupts it.
+  `CODEBUILD_BUILD_ID`).
+- With `suggest_tools = false` (project or `--global`) or `-q`/`--quiet`.
+- When a provider detects a store, or any third-party provider is installed.
+- On `karni context`, `karni types`, `karni rules` or `karni new`, since a tip
+  in machine-readable output corrupts it.
 
 `karni config get|set|list` manages the setting: `.karni/config.toml` in the
 project (committed, team-wide) by default, `--global` for
@@ -132,8 +132,8 @@ wins.
 
 ## Writing a provider
 
-A provider is any object with this shape — no base class, nothing to import
-from Karni:
+A provider is any object with this shape. There is no base class and nothing
+to import from Karni:
 
 ```python
 # my_history/karni_provider.py
@@ -175,11 +175,11 @@ or an instance. Rules for providers:
 
 - **Never print, never raise.** Karni discards whatever you write to
   `sys.stdout`/`sys.stderr` and treats an exception as "no brief", but a
-  subprocess you start inherits the real file descriptors — capture or
+  subprocess you start inherits the real file descriptors. Capture or
   discard its output yourself.
 - **`detect` must be cheap.** It runs for `karni rules`, `karni doctor` and
-  every `--with-history`; never start a process there.
-- **Bound every external call** with a timeout; return `None` on failure.
+  every `--with-history`. Never start a process there.
+- **Bound every external call** with a timeout, and return `None` on failure.
 - **Do not enforce a length.** Karni applies the ~300-token cap to all
   providers together.
 
@@ -188,12 +188,12 @@ karni-cli (`pipx inject karni-cli my-history`, or the same virtualenv). When
 the CLI answers `karni rules` through the project's interpreter, it hands its
 own detection over (the `KARNI_AGENT_CONDITIONS` variable), so the rule and
 `--with-history` always agree. Setting `KARNI_AGENT_CONDITIONS=` (empty)
-yourself turns the conditional rule off; `KARNI_AGENT_CONDITIONS=history`
+yourself turns the conditional rule off, and `KARNI_AGENT_CONDITIONS=history`
 forces it on.
 
-To replace the built-in Chronicle provider — say, with a longer timeout —
-register your own object under the same entry-point name, `gigai-chronicle`;
-an entry point always wins over the built-in:
+To replace the built-in Chronicle provider (say, with a longer timeout),
+register your own object under the same entry-point name, `gigai-chronicle`.
+An entry point always wins over the built-in:
 
 ```toml
 [project.entry-points."karni.history_providers"]

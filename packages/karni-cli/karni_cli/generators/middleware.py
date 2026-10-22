@@ -87,7 +87,7 @@ def command(
     """Add a middleware class to APP/middleware.py and wire it into MIDDLEWARE.
 
     Wiring goes through the `# karni:middleware` block of config/settings.py
-    (appended after Karni's middleware); without that block the command
+    (appended after Karni's middleware). Without that block the command
     prints the line to add.
     """
     ws = project_workspace(force)

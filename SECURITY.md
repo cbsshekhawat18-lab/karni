@@ -13,12 +13,12 @@ cannot use GitHub, email the maintainer at cbsshekhawat18@gmail.com with
 Include as much of this as you can:
 
 - the affected package (`karni`, `karni-cli`, `@karni/ui`, a module such as
-  `karni-payments`, or the project scaffold) and version;
+  `karni-payments`, or the project scaffold) and version
 - what an attacker can do, and what they need first (an account, a role, a
-  particular setting);
-- steps to reproduce: ideally a minimal model, viewset or `access`
-  declaration, and the request that goes wrong;
-- any fix you have in mind.
+  particular setting)
+- steps to reproduce, ideally with a minimal model, viewset or `access`
+  declaration, and the request that goes wrong
+- any fix you have in mind
 
 ## What happens next
 
@@ -26,7 +26,7 @@ Include as much of this as you can:
 |---|---|
 | Acknowledge your report | within 3 working days |
 | Confirm or rule out the issue, with a severity | within 10 working days |
-| Release a fix | as soon as practical; we agree the date with you |
+| Release a fix | as soon as practical, on a date we agree with you |
 | Publish an advisory (GitHub Security Advisory, plus a CVE where it applies) | when the fix is released |
 
 We ask you to keep the issue private until the fix ships, and for no longer
@@ -36,8 +36,8 @@ reporters in the advisory unless you ask us not to.
 ## Supported versions
 
 Karni is in 0.x. Security fixes go into the **latest minor release** only.
-Upgrade with `karni upgrade`; every breaking change between releases is
-recorded and, where it can be, applied for you.
+Upgrade with `karni upgrade`. Every breaking change between releases is
+recorded and, where possible, applied for you.
 
 From 1.0 onwards, fixes go into the latest minor of the current major and of
 the previous major for six months after a new major ships.
@@ -64,15 +64,15 @@ vulnerabilities:
   do. That includes `karni upgrade` codemods writing outside the project.
 
 Not in scope: vulnerabilities in your own project's code, unless Karni's
-documented behaviour led you there (then we want to hear about it: it is a
-documentation or design problem); and issues in third-party dependencies,
-which you should report upstream. Do tell us if Karni's pinned range keeps you
+documented behaviour led you there. In that case we want to hear about it,
+because it is a documentation or design problem. Issues in third-party
+dependencies are also out of scope, so report those upstream. Do tell us if Karni's pinned range keeps you
 on a vulnerable version.
 
 ## What Karni enforces by default
 
-The security baseline a project gets without configuration — access
+The security baseline a project gets without configuration (access
 enforcement, authentication, throttling, headers, logging and supply-chain
-scanning — is documented at
+scanning) is documented at
 <https://cbsshekhawat18-lab.github.io/karni/security/#what-karni-does-by-default>
 (`docs/security.md` in this repository).

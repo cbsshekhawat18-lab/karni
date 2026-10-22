@@ -27,9 +27,9 @@ run with `DEBUG = False` (a production database) unless you pass `--force`.
   are used once.
 - **Values inferred from field names and types**, from the same engine the
   test factories use (`karni.testing.values`):
-  - a field called `email` gets an email at example.com;
-  - `price` gets money;
-  - `starts_at` gets a near-future datetime, and `ends_at` falls after it;
+  - A field called `email` gets an email at example.com.
+  - `price` gets money.
+  - `starts_at` gets a near-future datetime, and `ends_at` falls after it.
   - `slug` follows `title`.
 
   Optional fields are mostly filled.
@@ -42,8 +42,8 @@ run with `DEBUG = False` (a production database) unless you pass `--force`.
   re-running never duplicates them and `--reset` never deletes them.
 - **Known logins.** `KARNI_SEED_LOGINS = {"organizer@example.com": ["organizer"],
   "attendee@example.com": ["attendee"]}` (env: JSON) creates those users with
-  the demo password and the roles listed — the accounts a demo script or an
-  end-to-end suite signs in with. Re-runs reuse them.
+  the demo password and the roles listed. These are the accounts a demo script
+  or an end-to-end suite signs in with. Re-runs reuse them.
 - **Determinism.** `--seed` drives every random choice. The same seed and
   count give the same rows, including UUIDs and dates, which come from a
   fixed anchor rather than "now".
@@ -82,7 +82,7 @@ class EventSeeder(Seeder):
 ```
 
 Any class attribute other than `Meta` is a field override, using any
-factory-boy declaration. Override `seed()` for full control; `context.create()`
+factory-boy declaration. Override `seed()` for full control. `context.create()`
 builds rows with everything inferred except what you pass.
 
 ## Escape hatches

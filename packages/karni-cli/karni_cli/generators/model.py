@@ -44,7 +44,7 @@ from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace
 from karni_cli.project import CliError
 
 NAME = "model"
-SUMMARY = "Add a model on BaseModel from a field DSL; --with viewset,page,test or -a chains them."
+SUMMARY = "Add a model on BaseModel from a field DSL (--with viewset,page,test or -a chains them)."
 
 #: What ``--with`` can chain, in run order.
 CHAINABLE = ("viewset", "page", "test", "factory", "seeder")
@@ -176,11 +176,11 @@ def command(
     fields: list[str] | None = typer.Argument(
         None,
         help=(
-            "Fields as name:type[:arg][?] — str[:len] text int float decimal[:max:places] "
-            "bool date datetime url file image uuid choice:a|b fk:Model m2m:Model o2o:Model; "
-            "typed (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] "
-            "slug[:source] phone country currency json[:queried] array:str; "
-            "trailing ? = optional."
+            "Fields as name:type[:arg][?]. Types: str[:len] text int float "
+            "decimal[:max:places] bool date datetime url file image uuid choice:a|b fk:Model "
+            "m2m:Model o2o:Model. Typed fields (karni.fields): money[:EUR] percent[:min:max] "
+            "quantity email[:unique] slug[:source] phone country currency json[:queried] "
+            "array:str. A trailing ? makes the field optional."
         ),
         show_default=False,
     ),

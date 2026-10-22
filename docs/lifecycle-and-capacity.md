@@ -23,7 +23,7 @@ Karni moves both rules into the database and names the refusal:
 Every model that inherits `karni.models.BaseModel` gets the model half
 (`karni.models.GuardedModel`) without asking. The examples below are the
 models of Karni's own test suite (`packages/karni/tests/lifecycleapp`), and
-the SQL is what those models generate; a test compares this page with it.
+the SQL is what those models generate. A test compares this page with it.
 
 ## StateField: declared states and legal transitions
 
@@ -283,7 +283,7 @@ CONSTRAINT "lifecycleapp_slot_room_starts_at_ends_at_no_overlap" EXCLUDE USING G
 - **Touching is not overlapping.** Ranges are half-open (`[)`), so 10:00–11:00
   and 11:00–12:00 are both fine. `bounds="[]"` makes a pair inclusive.
 - **The refusal is named.** A conflicting save raises `OverlapConflict`
-  (`E984`, an `IntegrityError`; the API answers 409). Its message and its
+  (`E984`, an `IntegrityError`, and the API answers 409). Its message and its
   `conflict.existing` name the row in the way: `Reservation 7c1e… (room …,
   during [10:00, 12:00), status 'held')`. The admin catches it as a form
   error before saving (`full_clean()` runs the same query). A raw SQL `INSERT`
@@ -321,7 +321,7 @@ karni make model Booking room:fk:Room during:datetimerange \
 state to the next one, ready to edit. `>` declares the moves instead. The
 first state is the default. `during:datetimerange` and `nights:daterange`
 create the range columns. `left:capacity:seats` creates
-`CapacityField(total="seats")`. Mistakes are `C370`–`C372` ([the CLI
+`CapacityField(total="seats")`. Mistakes are `C370` to `C372` ([the CLI
 reference](cli.md)).
 
 The agent rules say the same thing (`karni rules --explain K115`, `K116`): a

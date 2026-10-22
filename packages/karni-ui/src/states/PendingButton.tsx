@@ -13,7 +13,7 @@ export interface PendingButtonProps extends ButtonProps {
 
 /**
  * A button for work that takes time. While `pending` it is disabled and
- * `aria-busy`; once the work is slow (500ms) a spinner covers the label,
+ * `aria-busy`. Once the work is slow (500ms), a spinner covers the label,
  * which stays in the layout, so the button never changes width or freezes
  * silently. Renders the registered `button` primitive, so it follows the
  * project's design system.

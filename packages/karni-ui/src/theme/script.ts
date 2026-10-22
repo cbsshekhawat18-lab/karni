@@ -7,7 +7,7 @@
 export const THEME_STORAGE_KEY = "karni-theme";
 
 /**
- * Inline script for index.html's <head>: applies the stored (or system) theme
+ * Inline script for index.html's `<head>`: applies the stored (or system) theme
  * before the first paint. Uses the default storage key. In a Vite app,
  * `karniTheme()` from `@karni/ui/vite` puts it there.
  */

@@ -81,7 +81,7 @@ function defaultMessage(status: number, data: unknown): string {
   return `Karni API request failed with status ${status}`;
 }
 
-/** Thrown for non-2xx responses; `data` carries the parsed DRF error body. */
+/** Thrown for non-2xx responses, with the parsed DRF error body in `data`. */
 export class KarniApiError extends Error {
   readonly status: number;
   /** Parsed body when JSON (field errors, detail, non_field_errors), else text. */

@@ -155,7 +155,7 @@ const KarniSelectItem = React.forwardRef<
 ));
 KarniSelectItem.displayName = "SelectItem";
 
-/** One selectable option; `value` is what the select reports.
+/** One selectable option, whose `value` is what the select reports.
  *
  * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
  */

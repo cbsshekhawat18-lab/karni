@@ -32,7 +32,7 @@ def replay(
         False, "--drop-redacted", help="Leave redacted values out instead of supplying them."
     ),
     commit: bool = typer.Option(
-        False, "--commit", help="Keep the writes; by default the replay is rolled back."
+        False, "--commit", help="Keep the writes. By default the replay is rolled back."
     ),
     as_json: bool = typer.Option(False, "--json", help="Print the result as JSON."),
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),

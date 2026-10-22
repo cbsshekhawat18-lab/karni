@@ -1,5 +1,5 @@
 ---
-description: karni trace follows one request through its Celery tasks, retries, email, webhooks and change log; karni replay re-runs it against the current code as any user; karni explain --failure turns a crash into a brief.
+description: karni trace follows one request through its Celery tasks, retries, email, webhooks and change log. karni replay re-runs it against the current code as any user, and karni explain --failure turns a crash into a brief.
 ---
 
 # Trace, replay and failure briefs
@@ -8,7 +8,7 @@ Three commands read the [development capture](capture.md): they need
 `DEBUG` on when the request ran, and nothing else. Each takes `last` for the
 newest capture, and `--json` for agents. They run in the project's
 interpreter (its `.venv`, else the running compose service), like every
-runner; the same three are MCP tools on `karni mcp` (`trace`, `replay`,
+runner. The same three are MCP tools on `karni mcp` (`trace`, `replay`,
 `explain_failure`).
 
 The output below is real: EventHub (`examples/eventhub`) on SQLite with
@@ -21,7 +21,7 @@ the checkout.
 Every response carries `X-Request-ID`. Pass it (or `last`) and Karni prints
 everything that carried that id, in order: the request, the Celery tasks it
 enqueued, their retries minutes later, email, webhooks, change-log entries
-(read from the database when it is reachable; the files alone otherwise).
+(read from the database when it is reachable, and from the files alone otherwise).
 
 ```
 $ karni trace 0caa83ad-4e00-4135-bb12-dbe23bad6ca1
@@ -76,8 +76,8 @@ With no capture, `karni trace` says so and how to enable it (`E921`).
 Re-sends the captured method, path, query, body and plain headers through
 Django's test client, in-process (no server), force-authenticated as the
 captured user or `--as` someone else (an email, a username or a primary
-key; `--anonymous` for none), against the **current** code — no restart
-needed after an edit. It prints the status, a short redacted body excerpt
+key, or `--anonymous` for none). It runs against the **current** code, so no
+restart is needed after an edit. It prints the status, a short redacted body excerpt
 and what changed against the captured status.
 
 ```
@@ -103,7 +103,7 @@ transaction. Calls the view makes to outside services are not contained.
 `--commit` keeps the writes and uses the real mail backend and broker.
 
 **Redacted values cannot be replayed.** The capture never stored the
-password; replaying the literal `"[redacted]"` could set a password to it,
+password. Replaying the literal `"[redacted]"` could set a password to it,
 so the replay stops and names what to supply:
 
 ```
@@ -117,8 +117,8 @@ Replayed POST /api/auth/login/ as anonymous (rolled back)
   new request 6ac58d6c-ed48-4d0b-b535-ddd268ae2380: karni trace 6ac58d6c-ed48-4d0b-b535-ddd268ae2380
 ```
 
-`--set` takes a dotted body path (`card.token=tok_1`) or `query:<name>`;
-the value is parsed as JSON when it can be. Credential headers are never
+`--set` takes a dotted body path (`card.token=tok_1`) or `query:<name>`.
+The value is parsed as JSON when it can be. Credential headers are never
 replayed (the client is force-authenticated), and uploaded files are not
 captured, so a multipart replay sends the fields only. `karni replay`
 refuses with `DEBUG` off (`E920`): it acts as any user on the configured
@@ -126,9 +126,9 @@ database.
 
 ## `karni explain --failure <id>`
 
-An unhandled exception writes a failure snapshot; its id is on the request
+An unhandled exception writes a failure snapshot. Its id is on the request
 record and in `karni trace`. `karni explain --failure` (a failure id, the
-failed request's id, or `last`) prints it as a brief — read it before the
+failed request's id, or `last`) prints it as a brief. Read it before the
 traceback:
 
 ```
@@ -181,7 +181,7 @@ The brief adds the Karni code and `karni explain <code>` when the exception
 carries one, a hint for common database errors (a missing table: `karni
 migrate`), and the N+1 suspects when statements repeated. A Celery task that
 fails for good gets a snapshot too (its arguments by parameter name,
-redacted like everything else). `karni explain E104` is unchanged; pass a
+redacted like everything else). `karni explain E104` is unchanged. Pass a
 code or `--failure`, not both (`C320`).
 
 ## Codes
@@ -194,6 +194,6 @@ code or `--failure`, not both (`C320`).
 | `E923` | a redacted value must be supplied with `--set` (or `--drop-redacted`) |
 | `E924` | the user to replay as cannot be found |
 | `W920` | `RequestIdMiddleware` runs after django-structlog's `RequestMiddleware` |
-| `C320`–`C323` | the CLI side: `explain` usage, a malformed `--set`, a project karni without these commands, an uncoded failure |
+| `C320` to `C323` | the CLI side: `explain` usage, a malformed `--set`, a project karni without these commands, an uncoded failure |
 
 Each is explained by `karni explain <code>` and in [error codes](../errors.md).

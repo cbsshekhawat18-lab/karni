@@ -4,7 +4,7 @@ description: The rules Karni enforces at build time for backend and frontend cod
 
 # Enforcement
 
-Every rule fails a build — nothing warns. Every rule has an explicit, inline
+Every rule fails a build. Nothing warns. Every rule has an explicit, inline
 opt-out that requires a reason, because rules without escape hatches cause
 forks, and a fork is worse than a duplicate.
 
@@ -17,32 +17,33 @@ fast single-file subset of these checks. See [Karni for AI agents](agents.md).
 
 Run in CI as `pytest --pyargs karni.testing.architecture`, and on every
 `karni check` via the `karni.checks` entry points (`architecture`,
-`duplication`). Only project code is scanned — apps whose source lives under
-the project root (`BASE_DIR` when the settings define it, else the parent of
-the settings package, which is where a Karni scaffold keeps `config/`);
-installed packages (including Karni modules) are never scanned and must
+`duplication`). Only project code is scanned, meaning apps whose source lives
+under the project root (`BASE_DIR` when the settings define it, else the parent
+of the settings package, which is where a Karni scaffold keeps `config/`).
+Installed packages (including Karni modules) are never scanned and must
 pass these rules in their own CI. `query-scaling` needs a database,
-so it runs only under pytest (the architecture suite carries it; `pytest
---pyargs karni.testing.performance` runs it alone), never in `karni check`.
+so it runs only under pytest, never in `karni check`. The architecture suite
+carries it, and `pytest
+--pyargs karni.testing.performance` runs it alone.
 
 | Rule id | Fails when | Fix |
 |---|---|---|
 | `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` / `SoftDeleteModel` |
 | `viewset-base` | a GenericViewSet subclass bypasses `BaseViewSet` | inherit `karni.api.BaseViewSet` |
-| `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` — inherited declarations and an overridden `get_access()` count | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
+| `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` (inherited declarations and an overridden `get_access()` count) | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
 | `unpaginated-action` | an `@action` (or a view's `list`) serialises `many=True` (without `data=`) and never calls `paginate_queryset` / `paginated_response` / `get_paginated_response` | `return self.paginated_response(queryset)` |
-| `query-scaling` | a routed project `BaseViewSet`'s `list` or `retrieve` runs more queries with 12 rows than with 2 (an N+1) — needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
+| `query-scaling` | a routed project `BaseViewSet`'s `list` or `retrieve` runs more queries with 12 rows than with 2 (an N+1). Needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
 | `admin-convention` | a registered admin for a project model isn't a `KarniModelAdmin` | use `AdminMeta` on the model, or subclass `KarniModelAdmin` |
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
-| `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it — `BaseViewSet(model=X)` generates it |
-| `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code — signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
+| `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it, since `BaseViewSet(model=X)` generates it |
+| `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code. Signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 
-Opt-out (same line, the line above a class or method, or the line above its
-first decorator; `opt-out-reason` itself cannot be suppressed):
+Opt-out goes on the same line, the line above a class or method, or the line
+above its first decorator. `opt-out-reason` itself cannot be suppressed:
 
 ```python
 # karni: allow(raw-sql): aggregation too complex for the ORM, reviewed 2026-10
@@ -59,11 +60,11 @@ class InvoiceViewSet(BaseViewSet):
 ```
 
 The two access rules guard ADR 0001 Decision 2. `viewset-access` makes a
-forgotten declaration a build failure; at runtime such a viewset already
+forgotten declaration a build failure. At runtime such a viewset already
 denies every request, and opting out of the rule does not change that.
 `access-override` makes widening the row policy visible: the hook receives
 the access-scoped queryset, and only replacing it can widen it. An
-overridden `get_queryset` needs no marker — it is wrapped, so the read scope
+overridden `get_queryset` needs no marker. It is wrapped, so the read scope
 still applies to whatever it returns.
 
 The two performance rules guard ADR 0001 Decision 3. `unpaginated-action` is
@@ -82,7 +83,7 @@ def recent(self, request):
 seeds 2 then 12 rows with the automatic factories (an explicit
 `<app>/factories.py` factory wins), as a requester holding every role and
 owning every `Owned` path of the `read` predicate, and requires the same
-query count — see [testing](testing.md#3-the-scaling-check). Its opt-out goes
+query count (see [testing](testing.md#3-the-scaling-check)). Its opt-out goes
 above the viewset class, like the other class rules:
 
 ```python
@@ -92,12 +93,12 @@ class AttachmentViewSet(BaseViewSet):
 ```
 
 A viewset whose seeded rows the generated requester cannot see (a `Where`
-rule, a traversal `Owned` path) is skipped with that reason, not passed —
-give the model an explicit factory that produces readable rows. Absolute
-per-action query budgets (`raise` in tests) are not an architecture rule;
-see [api](api.md#query-budgets).
+rule, a traversal `Owned` path) is skipped with that reason, not passed.
+Give the model an explicit factory that produces readable rows. Absolute
+per-action query budgets (`raise` in tests) are not an architecture rule.
+See [api](api.md#query-budgets).
 
-Configuration — `KARNI_ARCHITECTURE` in settings (all keys optional):
+Configuration is `KARNI_ARCHITECTURE` in settings (all keys optional):
 
 ```python
 KARNI_ARCHITECTURE = {
@@ -113,22 +114,22 @@ KARNI_ARCHITECTURE = {
 `karni check` also runs the frontend's ESLint (the scaffold's
 `eslint.config.js` with the `@karni/ui` preset below, warnings counted as
 failures) and jscpd (pinned in the scaffold's frontend devDependencies,
-configured by `frontend/.jscpd.json`) — duplication above the threshold
+configured by `frontend/.jscpd.json`). Duplication above the threshold
 fails with the full clone report. Opt-out:
-`// jscpd:ignore-start -- <reason>` … `// jscpd:ignore-end`; a bare
+`// jscpd:ignore-start -- <reason>` … `// jscpd:ignore-end`. A bare
 `ignore-start` without a reason fails. jscpd compares the project's files
 with each other: a `@karni/ui` component copied into the project is not a
 clone of anything in `src/`, so it is the ESLint rules (`no-raw-elements`,
 `no-deep-imports`) that catch it, and a reasoned disable directive is the
-deliberate way past them — review those directives, not the clone report.
+deliberate way past them. Review those directives, not the clone report.
 
-The `@karni/ui` ESLint plugin (`@karni/ui/eslint-plugin`, flat config only —
-ESLint >= 9 — via `configs.recommended`) ships four rules, all `"error"`:
+The `@karni/ui` ESLint plugin (`@karni/ui/eslint-plugin`, flat config only,
+ESLint >= 9, via `configs.recommended`) ships four rules, all `"error"`:
 
 | Rule | Fails when | Fix |
 |---|---|---|
 | `karni/no-raw-elements` | raw `<table>/<form>/<input>/<select>/<textarea>` JSX outside the UI package | compose `ResourceTable`/`ResourceForm`/`Input`/… |
-| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props; move logic into hooks |
+| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props, and move logic into hooks |
 | `karni/no-deep-imports` | any import from `@karni/ui/dist/*` or `@karni/ui/src/*` | import the public barrel `@karni/ui` |
 | `karni/no-direct-http` | `fetch`/`axios`/`XMLHttpRequest`/`new WebSocket` outside `allowPatterns` (default `**/api/**`) | use the generated typed hooks / `KarniClient` |
 
@@ -138,17 +139,17 @@ The preset also turns `karni/no-direct-http` off for `**/*.test.*`,
 description on every disable comment
 (`@eslint-community/eslint-comments/require-description`). Opt-out is
 ESLint's own, with the reason mandatory:
-`// eslint-disable-next-line karni/no-direct-http -- <reason>` — a bare
+`// eslint-disable-next-line karni/no-direct-http -- <reason>`. A bare
 disable, or an unused one, is itself an error.
 
 Component roles: every top-level component claims a semantic role via
-`registerComponentRole(role, name)` — the `role` argument must be a string
+`registerComponentRole(role, name)`. The `role` argument must be a string
 literal, because `generate-manifest.mjs` statically scans the call sites,
 fails the build on duplicate roles (and on non-literal roles), and emits the
 `"roles"` map into `dist/manifest.json`. At runtime, re-registering the same
-role + name is idempotent; a different name throws at import time (vitest and
+role + name is idempotent. A different name throws at import time (vitest and
 prod builds fail), except under the Vite dev server's HMR, where it replaces
 and logs a `console.error` instead of killing the app. Replacing on purpose:
-`registerComponentRole(role, name, { replace: true, reason: "..." })` — an
+`registerComponentRole(role, name, { replace: true, reason: "..." })`. An
 empty reason throws. The registry (`getRoleRegistry()`) reflects imported
 modules only.

@@ -39,7 +39,7 @@ export type ErrorSlotProps = Pick<ErrorStateProps, "error" | "context" | "onRetr
 
 /**
  * What failed and what to do, in plain words (see describeError). Never shows
- * a raw status code; shows the server's own explanation when it gave one.
+ * a raw status code, but shows the server's own explanation when it gave one.
  * Announced to screen readers when it appears.
  */
 export const ErrorState = React.forwardRef<HTMLDivElement, ErrorStateProps>(
@@ -107,9 +107,9 @@ export interface PermissionDeniedProps extends Omit<React.HTMLAttributes<HTMLDiv
 }
 
 /**
- * Says, in plain words, which action the user's role does not allow — for
- * screens that know before asking the server (a role check) as well as
- * after a 403.
+ * Says, in plain words, which action the user's role does not allow, both
+ * on screens that know before asking the server (a role check) and after
+ * a 403.
  */
 export const PermissionDenied = React.forwardRef<HTMLDivElement, PermissionDeniedProps>(
   ({ action, resource, description, actions, className, ...props }, ref) => {

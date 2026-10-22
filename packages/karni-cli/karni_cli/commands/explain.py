@@ -77,8 +77,8 @@ def _stdin_text() -> str:
 def explain(
     code: str | None = typer.Argument(
         None,
-        help="An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or "
-        "log line from stdin.",
+        help="An error code such as E104, W101, C101, PAY004 or K106. Pass - to read a "
+        "traceback or log line from stdin.",
         show_default=False,
     ),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),

@@ -3,11 +3,11 @@ description: Create a new local Django app following Karni conventions
 ---
 Create a local app: the request typed after the command
 
-1. Run `karni context` first — confirm the domain isn't already covered.
-2. `karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, `viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py — Karni derives all of that.
+1. Run `karni context` first to confirm the domain isn't already covered.
+2. `karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, `viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py: Karni derives all of that.
 3. Add models with `karni make model <Name> <field:type ...> --app <app_name> --with viewset --access <who>` (procedure new-model).
 4. `karni make migration && karni migrate && karni types`, then `karni context` to verify.
-5. Anything reusable across projects belongs in a Karni module: `karni make module <name>`, not in this project — say so instead of building it.
+5. Anything reusable across projects belongs in a Karni module: `karni make module <name>`, not in this project. Say so instead of building it.
 
 Rules that apply: K009, K305, K307 (`karni rules --explain <code>`).
 
