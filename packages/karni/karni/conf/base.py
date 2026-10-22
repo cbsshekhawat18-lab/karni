@@ -341,10 +341,12 @@ BASE: dict[str, Any] = {
         # Split request/response components so file-upload fields keep their
         # binary format on the request side (frontend codegen relies on it).
         "COMPONENT_SPLIT_REQUEST": True,
-        # Keep spectacular's default enum postprocessing, then stamp the root
+        # spectacular's enum postprocessing, with colliding enums named by
+        # model and field (BookingStatusEnum, not Status469Enum), then the root
         # x-karni-auth-mode extension @karni/ui's AuthProvider defaults from.
+        # ENUM_NAME_OVERRIDES still wins over Karni's enum names.
         "POSTPROCESSING_HOOKS": [
-            "drf_spectacular.hooks.postprocess_schema_enums",
+            "karni.api.schema.postprocess_schema_enums",
             "karni.api.schema.add_auth_mode",
         ],
     },
