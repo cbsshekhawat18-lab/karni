@@ -1313,9 +1313,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C006 — An optional tool is not installed
 
-*karni command* · from `karni mcp, karni types`
+*karni command* · from `karni mcp, karni types, karni ui detect`
 
-**Why Karni objects.** Some commands need extra tools: the MCP SDK for karni mcp, Node and openapi-typescript for karni types.
+**Why Karni objects.** Some commands need extra tools: the MCP SDK for karni mcp, Node and openapi-typescript for karni types, Node for karni ui detect to evaluate a tailwind.config.
 
 **Fix.** Install what the message names, e.g. pip install 'karni-cli[mcp]', or add openapi-typescript to frontend devDependencies (Node 20+).
 
@@ -1333,11 +1333,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C008 — A file cannot be written
 
-*karni command* · from `karni config`
+*karni command* · from `karni config, karni ui detect`
 
 **Why Karni objects.** The file or its directory is not writable.
 
-**Fix.** Check the path's permissions, or set the value per project instead of --global.
+**Fix.** Check the path's permissions; for karni config set the value per project instead of --global, for karni ui detect choose another place with --output.
 
 <a id="c009"></a>
 
@@ -1443,7 +1443,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C106 — An option value is invalid
 
-*karni command* · from `karni make, karni types`
+*karni command* · from `karni make, karni types, karni ui detect`
 
 **Why Karni objects.** The option accepts specific values (the message lists them).
 
@@ -1568,6 +1568,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni add manages the [project].dependencies table of the project's pyproject.toml.
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
+
+<a id="c301"></a>
+
+### C301 — No frontend found
+
+*karni command* · from `karni ui detect`
+
+**Why Karni objects.** karni ui detect reads a frontend: its package.json, stylesheets and theme files. It looks in the current directory, in ./frontend, and in the Karni project's frontend/.
+
+**Fix.** Run it in the frontend directory (the one with package.json), or pass --frontend <dir>.
+
+<a id="c302"></a>
+
+### C302 — A generated file was edited, so karni ui detect does not overwrite it
+
+*karni command* · from `karni ui detect (karni-theme.css, karni-primitives.tsx)`
+
+**Why Karni objects.** The files karni ui detect writes belong to the project. Each carries a digest of what was generated; a file whose content no longer matches it (or that has none) was edited by hand, and a re-run must not lose those edits silently.
+
+**Fix.** Compare with `karni ui detect --dry-run` and copy what you need; or overwrite with --force; or write the new file elsewhere with --output.
+
+<a id="c303"></a>
+
+### C303 — A theme source cannot be read
+
+*karni command* · from `karni ui detect (components.json, the stylesheet it names, tailwind.config)`
+
+**Why Karni objects.** karni ui detect maps the project's theme from its files: shadcn/ui's components.json and the stylesheet it names, or a tailwind.config that Node evaluates in the project (with the project's own packages). The message names the file and what failed.
+
+**Fix.** Fix the file the message names (or run npm install so a config's imports load), or pass --source to read another theme source.
+
+<a id="c304"></a>
+
+### C304 — The frontend has no theme of the --source kind
+
+*karni command* · from `karni ui detect --source`
+
+**Why Karni objects.** --source makes karni ui detect read one source (shadcn, tailwind, mui, chakra, mantine) instead of detecting; that source is not in this frontend.
+
+**Fix.** Run karni ui detect without --source to detect what the frontend has, or name a source it uses.
 
 ## Agent rules (`K`)
 
@@ -1873,6 +1913,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Extract one component or hook, or compose the existing @karni/ui one.
 
+<a id="k206"></a>
+
+### K206 — Style with token classes; no literal values.
+
+*agent rule, error* · enforced by `karni/no-style-literals`
+
+**Rule.** Style with the @karni/ui preset's classes (`bg-primary`, `p-4`, `rounded-md`, `z-popover`), which read `--karni-*` tokens; no arbitrary literals (`w-[13px]`, `bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. A failing build where the project enables `karni/no-style-literals`.
+
+**Why Karni objects.** One stylesheet (or `karni ui detect`) then rethemes every screen.
+
+**Fix.** Use a preset class, or add the token to the project's karni-theme.css.
+
 <a id="k301"></a>
 
 ### K301 — Domain code only; extend Karni.
@@ -2004,3 +2056,11 @@ Every rule is an error in `karni.configs.recommended`; an opt-out needs an `esli
 **Why Karni objects.** The generated typed hooks and KarniClient handle auth, errors, retries and types in one place; ad-hoc HTTP calls bypass all of it.
 
 **Fix.** Use the generated typed hooks (useResourceList / useResourceItem / useResourceMutations) or createKarniClient from @karni/ui; keep transports under the api/ directory. Opt out only with `// eslint-disable-next-line karni/no-direct-http -- <reason>`.
+
+<a id="karni-no-style-literals"></a>
+
+### `karni/no-style-literals` — A class or inline style holds a literal value instead of a design token
+
+**Why Karni objects.** @karni/ui's preset resolves every colour, spacing step, radius, type size, shadow, z-index, opacity and duration from a --karni-* custom property, so one stylesheet (or `karni ui detect`) rethemes every component. A literal (`w-[13px]`, `bg-slate-500`, `bg-primary/90`, `style={{ color: "#333" }}`) is out of the theme's reach.
+
+**Fix.** Use a class from the @karni/ui preset (`bg-primary-hover`, `bg-muted-subtle`, `max-w-96`, `z-popover`), or add the token to styles.css and the preset. @karni/ui enables this rule for its own source; a project opts in with `"karni/no-style-literals": "error"`. Opt out only with `// eslint-disable-next-line karni/no-style-literals -- <reason>`.

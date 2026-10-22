@@ -78,6 +78,7 @@ artifacts = [
     "karni_cli/_agent/",
     "karni_cli/_changelog/",
     "karni_cli/_errorcodes/",
+    "karni_cli/_ui/",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -86,6 +87,7 @@ artifacts = [
     "karni_cli/_agent/",
     "karni_cli/_changelog/",
     "karni_cli/_errorcodes/",
+    "karni_cli/_ui/",
 ]
 
 [tool.hatch.build.hooks.custom]

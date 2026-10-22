@@ -31,7 +31,12 @@ export default function EventDetailPage() {
                 ) : null
             }
         >
-            <ResourceDetail resource="events" id={id} />
+            <ResourceDetail
+                resource="events"
+                id={id}
+                enableDelete={manage}
+                onDeleted={() => void navigate({ to: "/events" })}
+            />
             <h2 className="mt-6 text-lg font-semibold">Tickets</h2>
             <TierList
                 event={id}

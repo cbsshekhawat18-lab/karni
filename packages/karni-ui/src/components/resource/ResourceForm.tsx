@@ -3,5 +3,17 @@
  * ./form/ (resource form builder); every contract-pinned export name is
  * re-exported here so src/index.ts keeps resolving this module.
  */
-export { ResourceForm } from "./form/ResourceForm";
-export type { ResourceFormProps, FieldOverride, KarniFieldProps } from "./form/ResourceForm";
+export { ResourceForm, defaultResourceFormSlots } from "./form/ResourceForm";
+export type {
+  ResourceFormProps,
+  ResourceFormSlots,
+  FieldOverride,
+  KarniFieldProps,
+} from "./form/ResourceForm";
+export type {
+  ResourceFormErrorSummaryProps,
+  ResourceFormFieldError,
+  ResourceFormForbiddenProps,
+  ResourceFormLoadingProps,
+  ResourceFormSubmitErrorProps,
+} from "./form/form-states";

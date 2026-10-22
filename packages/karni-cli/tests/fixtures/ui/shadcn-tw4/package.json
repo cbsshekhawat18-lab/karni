@@ -1,0 +1,11 @@
+{
+  "name": "shadcn-tw4",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@base-ui/react": "^1.0.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.1.0",
+    "tailwindcss": "^4.1.11"
+  }
+}

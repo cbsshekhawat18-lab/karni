@@ -28,7 +28,7 @@ export default defineConfig({
     react(),
     dts({
       entryRoot: ".",
-      include: ["src", "tailwind-preset.ts"],
+      include: ["src", "tailwind-preset.ts", "vite-plugin.ts"],
       exclude: ["**/*.test.*", "**/*.stories.*", "tests/**", "dist/**"],
       tsconfigPath: resolve(root, "tsconfig.json"),
     }),
@@ -42,6 +42,7 @@ export default defineConfig({
       entry: {
         index: resolve(root, "src/index.ts"),
         "tailwind-preset": resolve(root, "tailwind-preset.ts"),
+        "vite-plugin": resolve(root, "vite-plugin.ts"),
       },
       // Dual output: ESM for bundlers (`import`), CJS for `require()` consumers
       // (Jest, tailwind.config.cjs, older tooling). The package is

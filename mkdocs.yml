@@ -86,6 +86,7 @@ nav:
       - Seeding: seeding.md
       - Settings: settings.md
       - "@karni/ui": ui.md
+      - Theming (karni ui detect): theming.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md
@@ -100,6 +101,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.4 (unreleased): migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md
       - Migrating to 0.2: migrations/0.2.md
       - Migrating to 1.0: migrations/1.0.md

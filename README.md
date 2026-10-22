@@ -81,7 +81,7 @@ What you get with no other code:
 - permissions: everyone reads, organizers and staff write
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
-All of EventHub, with payments, e-mail and four roles, is 593 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
+All of EventHub, with payments, e-mail and four roles, is 608 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
 
 > ⭐ **If Karni is useful to you, please star the repo.** It helps other
 > people building Django + React apps with AI coding agents find the project.
@@ -232,6 +232,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
 | [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |
 | [`karni config`](docs/REFERENCE.md#karni-config) | Read and write Karni settings: project .karni/config.toml (committed) or --global ~/.config/karni/config.toml; the project wins: [get](docs/REFERENCE.md#karni-config-get), [set](docs/REFERENCE.md#karni-config-set), [list](docs/REFERENCE.md#karni-config-list) |
+| [`karni ui`](docs/REFERENCE.md#karni-ui) | Fit Karni's components to the project's design system: [detect](docs/REFERENCE.md#karni-ui-detect) |
 | [`karni context`](docs/REFERENCE.md#karni-context) | Print a compact machine-readable project inventory |
 | [`karni rules`](docs/REFERENCE.md#karni-rules) | Karni's conventions for humans and AI agents (no Django needed): [sync](docs/REFERENCE.md#karni-rules-sync) |
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
@@ -325,8 +326,9 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `stable` Import screen with column mapping and preview (`ResourceImport`)
 - `stable` Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState`
 - `experimental` `ChangeHistory`, `DataChart` and `FileUpload`
+- `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives
 
-49 components and 12 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`; hooks `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useToast`.
+58 components and 17 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`; hooks `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).
@@ -411,7 +413,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 33 conventions, each with a code, in 402 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 34 conventions, each with a code, in 414 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

@@ -70,6 +70,17 @@ jobs:
       - name: Pin Django ${{ matrix.django }}
         run: python -m pip install "Django==${{ matrix.django }}"
 
+      # `karni ui detect` evaluates a Tailwind 3 config with Node and the
+      # project's own tailwindcss; karni-cli's test of it runs against this
+      # install (KARNI_TEST_TAILWIND3), and is skipped without it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: tailwindcss 3 for karni ui detect's Tailwind 3 test
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/tailwind3" tailwindcss@3
+          echo "KARNI_TEST_TAILWIND3=$RUNNER_TEMP/tailwind3/node_modules" >> "$GITHUB_ENV"
+
       - name: Versions
         run: python -c "import sys, django; print(sys.version); print('Django', django.get_version())"
 
@@ -430,6 +441,18 @@ jobs:
 
       - name: Build (vite, dual ESM/CJS)
         run: make build-ui
+
+      # Every Storybook story, light and dark, in a real browser: axe's WCAG
+      # 2.x A/AA rules (contrast included) fail the job on any violation.
+      - name: Storybook (static build)
+        working-directory: packages/karni-ui
+        run: npm run build-storybook -- -o storybook-static --quiet
+      - name: Chromium for the accessibility run
+        working-directory: packages/karni-ui
+        run: npx playwright install --with-deps chromium
+      - name: Accessibility (axe over every story, both themes)
+        working-directory: packages/karni-ui
+        run: node scripts/a11y-stories.mjs storybook-static
 
       - name: Smoke-test package entry points (require + import)
         run: |

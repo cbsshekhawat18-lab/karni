@@ -1,7 +1,14 @@
 """Render the welcome page: one HTML document, inline CSS and SVG, no network.
 
-Every dynamic string goes through :func:`html.escape`. The only script is
-the copy button (``navigator.clipboard`` with a selection fallback).
+It wears the same brand as ``@karni/ui`` and the admin: the token stylesheet
+(``karni/tokens.css``, the copy of ``@karni/ui/styles.css`` described in
+:mod:`karni.admin.theme`) is inlined, the page's own rules read only its
+tokens, and dark mode is the ``dark`` class on ``<html>``, set by the same
+rule as @karni/ui's (a stored choice, else the system preference).
+
+Every dynamic string goes through :func:`html.escape`. The scripts are the
+theme switch and the copy button (``navigator.clipboard`` with a selection
+fallback).
 """
 
 from __future__ import annotations
@@ -10,6 +17,7 @@ from html import escape
 from pathlib import Path
 
 import karni.admin
+from karni.admin.theme import tokens_css
 from karni.welcome.inventory import Inventory
 from karni.welcome.status import Status
 
@@ -18,41 +26,78 @@ __all__ = ["render_page"]
 _MARK = Path(karni.admin.__file__).parent / "static" / "karni" / "brand" / "karni-mark.svg"
 
 CSS = """
-:root{--bg:#fff;--fg:#111;--muted:#6b6b6b;--line:#e6e6e6;--card:#fafafa;--code:#f3f3f3;
---accent:#FB5D08;--ok:#1a7f37;--bad:#c62828;--link:#0b57d0}
-@media (prefers-color-scheme:dark){:root{--bg:#0d0d0d;--fg:#f2f2f2;--muted:#a3a3a3;--line:#262626;
---card:#151515;--code:#1c1c1c;--ok:#3fb950;--bad:#ff6b6b;--link:#8ab4f8}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
-font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:880px;margin:0 auto;padding:32px 16px 48px}
-header{display:flex;align-items:center;gap:16px;margin-bottom:8px}
-header svg{width:56px;height:56px;flex:none}h1{font-size:28px;margin:0;font-weight:600}
-.version{color:var(--muted);font-size:14px;margin:0}
-h2{font-size:18px;margin:36px 0 12px;font-weight:600}
-p{margin:0 0 12px}a{color:var(--link)}
-.muted{color:var(--muted)}
-table{border-collapse:collapse;width:100%}td,th{text-align:left;padding:8px 10px;
-border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:500;color:var(--muted);
-font-size:14px}
-.tick{color:var(--ok);font-weight:700}.cross{color:var(--bad);font-weight:700}
-code,pre{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-code{background:var(--code);padding:1px 5px;border-radius:4px}
-pre{background:var(--code);padding:12px 72px 12px 14px;border-radius:8px;overflow:auto;margin:0;
+:root{--s:var(--karni-space-unit);--brand-accent:#FB5D08}
+*{box-sizing:border-box}
+body{margin:0;background:var(--karni-color-background);color:var(--karni-color-foreground);
+font-family:var(--karni-font-sans);font-size:var(--karni-font-size-base);
+line-height:var(--karni-font-leading-base);-webkit-font-smoothing:antialiased}
+main{max-width:880px;margin:0 auto;padding:calc(var(--s)*8) calc(var(--s)*4) calc(var(--s)*12)}
+header{display:flex;align-items:center;gap:calc(var(--s)*4);margin-bottom:calc(var(--s)*2)}
+header svg{width:56px;height:56px;flex:none}
+h1{font-size:1.75rem;line-height:2.25rem;margin:0;font-weight:var(--karni-font-weight-semibold);
+letter-spacing:var(--karni-font-tracking-tight)}
+.version{color:var(--karni-color-muted-foreground);font-size:var(--karni-font-size-sm);margin:0}
+h2{font-size:var(--karni-font-size-lg);line-height:var(--karni-font-leading-lg);
+margin:calc(var(--s)*9) 0 calc(var(--s)*3);font-weight:var(--karni-font-weight-semibold)}
+p{margin:0 0 calc(var(--s)*3)}
+a{color:var(--karni-color-primary);font-weight:var(--karni-font-weight-medium);
+text-decoration:underline;text-underline-offset:var(--karni-font-underline-offset)}
+a:focus-visible,.copy:focus-visible{outline:var(--karni-ring-width) solid var(--karni-color-ring);
+outline-offset:var(--karni-ring-offset-width);border-radius:var(--karni-radius-sm)}
+.muted{color:var(--karni-color-muted-foreground)}
+table{border-collapse:collapse;width:100%;font-size:var(--karni-font-size-sm)}
+td,th{text-align:left;padding:calc(var(--s)*2) calc(var(--s)*2.5);
+border-bottom:var(--karni-border-width) solid var(--karni-color-border);vertical-align:top}
+th{font-weight:var(--karni-font-weight-medium);color:var(--karni-color-muted-foreground)}
+.tick,.cross{display:inline-flex;align-items:center;justify-content:center;width:1.25rem;
+height:1.25rem;border-radius:var(--karni-radius-full);font-size:var(--karni-font-size-xs);
+font-weight:var(--karni-font-weight-bold)}
+.tick{background:var(--karni-color-muted);color:var(--karni-color-foreground)}
+.cross{background:var(--karni-color-destructive);color:var(--karni-color-destructive-foreground)}
+code,pre{font-family:var(--karni-font-mono);font-size:0.8125rem;line-height:1.5}
+code{background:var(--karni-color-muted);padding:1px 5px;border-radius:var(--karni-radius-sm)}
+pre{background:var(--karni-color-muted);border-radius:var(--karni-radius-lg);overflow:auto;margin:0;
+padding:calc(var(--s)*3) calc(var(--s)*21) calc(var(--s)*3) calc(var(--s)*3.5);
 white-space:pre-wrap;word-break:break-word}
-.block{position:relative;margin:8px 0 16px}
-.copy{position:absolute;top:8px;right:8px;font:12px system-ui,sans-serif;color:var(--fg);
-background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
-.copy:hover{border-color:var(--accent);color:var(--accent)}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
-.card a{display:block;font-weight:500}.card span{color:var(--muted);font-size:14px}
-ul{padding-left:20px;margin:0 0 12px}li{margin:4px 0}
-footer{margin-top:40px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);
-padding-top:16px}
+.block{position:relative;margin:calc(var(--s)*2) 0 calc(var(--s)*4)}
+.copy{position:absolute;top:calc(var(--s)*1.5);right:calc(var(--s)*1.5);min-height:calc(var(--s)*8);
+padding:0 calc(var(--s)*3);font:inherit;font-size:var(--karni-font-size-xs);
+font-weight:var(--karni-font-weight-medium);color:var(--karni-color-foreground);
+background:var(--karni-color-background);border-radius:var(--karni-radius-md);
+border:var(--karni-border-width) solid var(--karni-color-input);cursor:pointer}
+.copy:hover{border-color:var(--brand-accent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:calc(var(--s)*2.5)}
+.card{background:var(--karni-color-card);color:var(--karni-color-card-foreground);
+border:var(--karni-border-width) solid var(--karni-color-border);
+border-radius:var(--karni-radius-lg);padding:calc(var(--s)*3) calc(var(--s)*3.5);
+box-shadow:var(--karni-shadow-sm)}
+.card a{display:block}
+.card span{color:var(--karni-color-muted-foreground);font-size:var(--karni-font-size-sm)}
+ul{padding-left:calc(var(--s)*5);margin:0 0 calc(var(--s)*3)}li{margin:var(--s) 0}
+footer{margin-top:calc(var(--s)*10);padding-top:calc(var(--s)*4);font-size:var(--karni-font-size-sm);
+color:var(--karni-color-muted-foreground);border-top:var(--karni-border-width) solid
+var(--karni-color-border)}
 .fix{white-space:nowrap}
-@media (max-width:600px){header svg{width:44px;height:44px}h1{font-size:22px}
+@media (max-width:600px){header svg{width:44px;height:44px}h1{font-size:1.375rem}
 .fix{white-space:normal}}
 """
+"""The page's own rules. Every value is a @karni/ui token from the inlined
+``karni/tokens.css``, except the brand accent: the orange of the mark's rings
+(``assets/brand/README.md``), used once, as the copy button's hover highlight."""
+
+THEME_SCRIPT = """
+(function(){var d=document.documentElement,m=window.matchMedia&&
+window.matchMedia('(prefers-color-scheme: dark)');
+function c(){try{return localStorage.getItem('karni-theme')}catch(e){return null}}
+function s(){var t=c();d.classList.toggle('dark',t==='dark'||
+((t===null||t==='system')&&!!(m&&m.matches)))}
+s();if(m&&m.addEventListener){m.addEventListener('change',s)}})();
+"""
+"""Dark mode the way @karni/ui and the admin do it, the ``dark`` class on
+``<html>``, with @karni/ui's rule (``KARNI_THEME_SCRIPT``): a choice its
+``ThemeProvider`` stored under ``karni-theme`` on this origin, else the
+system preference, followed live. It runs in ``<head>`` so the first paint
+already has the right theme."""
 
 SCRIPT = """
 document.addEventListener('click',function(e){var b=e.target.closest('.copy');if(!b)return;
@@ -246,7 +291,8 @@ def render_page(inventory: Inventory, statuses: list[Status]) -> str:
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         '<meta name="robots" content="noindex">'
         f"<title>Karni is running · {escape(inventory.project)}</title>"
-        f"<style>{CSS}</style></head><body><main>"
+        f"<style>{tokens_css()}</style><style>{CSS}</style>"
+        f"<script>{THEME_SCRIPT}</script></head><body><main>"
         f"<header>{_mark_svg()}<div><h1>Karni is running</h1>"
         f'<p class="version">{escape(version_line)}</p></div></header>'
         f'<p class="muted">Project <code>{escape(inventory.project)}</code>, '

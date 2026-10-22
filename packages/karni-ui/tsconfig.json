@@ -29,6 +29,7 @@
     "tests",
     "env.d.ts",
     "tailwind-preset.ts",
+    "vite-plugin.ts",
     "tailwind.config.ts",
     "vite.config.ts",
     "vitest.config.ts",

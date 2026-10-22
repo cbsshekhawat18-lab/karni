@@ -1,7 +1,9 @@
 /* Tailwind 4. The --karni-* tokens come from @karni/ui/styles.css
-   (imported first in main.tsx); override any token below to retheme. */
+   (imported first in main.tsx); override any token below to retheme, or run
+   `karni ui detect` to adopt a design system (shadcn/ui, a Tailwind theme,
+   MUI, Chakra, Mantine) into src/karni-theme.css. */
 @import "tailwindcss";
-/* @karni/ui under Tailwind 4: a bare `border` uses the --karni-border token. */
+/* @karni/ui under Tailwind 4: a bare `border` uses the --karni-color-border token. */
 @import "@karni/ui/tailwind-v4.css";
 /* The @karni/ui preset and the content paths, from tailwind.config.ts. */
 @config "../tailwind.config.ts";

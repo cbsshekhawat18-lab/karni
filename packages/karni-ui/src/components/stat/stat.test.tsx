@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it } from "vitest";
-import { Stat } from "./stat";
+import { Stat, defaultStatSlots, type StatDeltaProps } from "./stat";
 
 describe("Stat", () => {
   it("renders label and value", () => {
@@ -45,5 +45,51 @@ describe("Stat", () => {
     const root = screen.getByTestId("stat-root");
     expect(root).toHaveClass("w-64");
     expect(ref.current).toBe(root);
+  });
+
+  it("says a zero delta is unchanged instead of an increase", () => {
+    render(<Stat label="Signups" value={420} delta={0} />);
+    expect(screen.getByText(/unchanged/i)).toBeInTheDocument();
+    expect(screen.queryByText(/increased by/i)).not.toBeInTheDocument();
+    expect(screen.getByText("0").closest("p")).toHaveAttribute("data-trend", "flat");
+  });
+
+  it("shows a placeholder and is busy while loading", () => {
+    render(<Stat label="Revenue" value="$10k" delta={4} loading data-testid="stat" />);
+    expect(screen.getByTestId("stat")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByText("Revenue")).toBeInTheDocument();
+    expect(screen.queryByText("$10k")).not.toBeInTheDocument();
+    expect(screen.queryByText(/increased by/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Loading")).toHaveClass("sr-only");
+  });
+
+  it("slots replace the label, value, delta and icon", () => {
+    function GoodWhenDown({ delta, formatDelta }: StatDeltaProps) {
+      return typeof delta === "number" ? (
+        <p data-testid="delta">{formatDelta(delta)} (good)</p>
+      ) : null;
+    }
+    render(
+      <Stat
+        label="Churn"
+        value="2%"
+        delta={-1}
+        icon={<svg data-testid="icon" />}
+        slots={{
+          Label: ({ children }) => <h3>{children}</h3>,
+          Value: ({ children }) => <strong>{children}</strong>,
+          Delta: GoodWhenDown,
+          Icon: ({ children }) => (
+            <span data-testid="icon-slot">
+              <defaultStatSlots.Icon>{children}</defaultStatSlots.Icon>
+            </span>
+          ),
+        }}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Churn" })).toBeInTheDocument();
+    expect(screen.getByText("2%").tagName).toBe("STRONG");
+    expect(screen.getByTestId("delta")).toHaveTextContent("-1 (good)");
+    expect(screen.getByTestId("icon-slot")).toContainElement(screen.getByTestId("icon"));
   });
 });

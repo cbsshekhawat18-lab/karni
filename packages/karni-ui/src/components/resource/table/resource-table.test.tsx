@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import type { Paginated, ResourceListParams } from "../../../hooks/types";
 import { useResourceList } from "../../../hooks/useResourceList";
 import { useResourceMutations } from "../../../hooks/useResourceMutations";
+import { KarniApiError } from "../../../schema/client";
 import type { FieldDef, ResourceSchema } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { AUDIT_FIELDS } from "../audit-fields";
@@ -269,6 +270,9 @@ function renderTable(ui: React.ReactElement): ReturnType<typeof render> {
 }
 
 beforeEach(() => {
+  // The table keeps its view in the URL: each test starts from a clean one.
+  window.history.replaceState(null, "", "/");
+  window.localStorage.clear();
   mockUseSchema.mockReturnValue({ data: eventsSchema, isLoading: false, error: null });
   mockUseResourceList.mockImplementation(defaultListImpl);
   mockUseResourceMutations.mockReturnValue({
@@ -461,7 +465,6 @@ describe("audit fields (BaseModel)", () => {
       update: { mutate: vi.fn(), isPending: false },
       remove: { mutate: remove, isPending: false },
     });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     renderTable(
       <ResourceTable
         resource="events"
@@ -475,9 +478,8 @@ describe("audit fields (BaseModel)", () => {
     expect(screen.queryByRole("columnheader", { name: "Id" })).not.toBeInTheDocument();
 
     // getRowId: bulk selection is keyed by String(row.id).
-    const rowBoxes = screen.getAllByRole("checkbox", { name: "Select row" });
-    await user.click(rowBoxes[0]);
-    await user.click(rowBoxes[2]);
+    await user.click(screen.getByRole("checkbox", { name: "Select Spring Gala" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Winter Ball" }));
     await user.click(screen.getByRole("button", { name: "Archive" }));
     expect(archive).toHaveBeenCalledWith(["1", "3"]);
 
@@ -488,7 +490,8 @@ describe("audit fields (BaseModel)", () => {
     await user.click(screen.getAllByRole("button", { name: "Edit" })[1]);
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
     await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
-    expect(remove).toHaveBeenCalledWith(1);
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+    expect(remove).toHaveBeenCalledWith(1, expect.anything());
   });
 
   it("sorting by a hidden audit field still reaches the server", () => {
@@ -640,7 +643,7 @@ describe("search box and filter bar (D5)", () => {
     expect(lastListParams()?.filters).toEqual({ status: "DRAFT" });
 
     await user.click(screen.getByRole("combobox", { name: "Status" }));
-    await user.click(await screen.findByRole("option", { name: "All" }));
+    await user.click(await screen.findByRole("option", { name: "Status: All" }));
     expect(lastListParams()?.filters).toBeUndefined();
   });
 
@@ -667,7 +670,9 @@ describe("search box and filter bar (D5)", () => {
 
   it("filters={false} disables the bar; filters=[...] overrides the derived set", () => {
     const { unmount } = renderTable(<ResourceTable resource="events" filters={false} />);
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    // (The pagination row's "Rows per page" is a combobox too, so name the filters.)
+    expect(screen.queryByRole("combobox", { name: "Status" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Is public" })).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search" })).toBeInTheDocument();
     unmount();
 
@@ -721,12 +726,12 @@ describe("404 page clamp (D5)", () => {
     expect(screen.getByText("Spring Gala")).toBeInTheDocument();
   });
 
-  it("a 404 on page 1 is a real error", () => {
+  it("a 404 on page 1 is a real error, in plain words", () => {
     mockUseResourceList.mockImplementation((): ListResultShape =>
-      listResult({ data: undefined, error: { status: 404, message: "Not found." } }),
+      listResult({ data: undefined, error: new KarniApiError(404, { detail: "Not found." }) }),
     );
     renderTable(<ResourceTable resource="events" />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Not found.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't find events");
   });
 });
 
@@ -744,9 +749,9 @@ describe("bulk select (D5)", () => {
     renderTable(
       <ResourceTable resource="events" bulkActions={[{ label: "Archive", onClick: archive }]} />,
     );
-    const rowBoxes = screen.getAllByRole("checkbox", { name: "Select row" });
-    await user.click(rowBoxes[0]);
-    await user.click(rowBoxes[1]);
+    // Each checkbox is named after its row.
+    await user.click(screen.getByRole("checkbox", { name: "Select Spring Gala" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Autumn Fair" }));
     expect(screen.getByText("2 selected")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Archive" }));
@@ -761,8 +766,14 @@ describe("bulk select (D5)", () => {
         bulkActions={[{ label: "Delete", onClick: vi.fn(), destructive: true }]}
       />,
     );
-    await user.click(screen.getByRole("checkbox", { name: "Select all rows" }));
+    // It says what "all" means: this page, not every matching row.
+    await user.click(screen.getByRole("checkbox", { name: "Select all events on this page" }));
     expect(screen.getByText("3 selected")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "All 3 events on this page are selected. The other 57 matching events are not.",
+      ),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Clear" }));
     expect(screen.queryByText("3 selected")).not.toBeInTheDocument();
@@ -773,7 +784,7 @@ describe("bulk select (D5)", () => {
     renderTable(
       <ResourceTable resource="events" bulkActions={[{ label: "Tag", onClick: vi.fn() }]} />,
     );
-    await user.click(screen.getAllByRole("checkbox", { name: "Select row" })[0]);
+    await user.click(screen.getByRole("checkbox", { name: "Select Spring Gala" }));
     expect(screen.getByText("1 selected")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Next" }));
@@ -795,7 +806,7 @@ describe("row actions and clicks", () => {
         bulkActions={[{ label: "Archive", onClick: vi.fn() }]}
       />,
     );
-    await user.click(screen.getAllByRole("checkbox", { name: "Select row" })[0]);
+    await user.click(screen.getByRole("checkbox", { name: "Select Spring Gala" }));
     expect(onRowClick).not.toHaveBeenCalled();
 
     await user.click(screen.getByText("Spring Gala"));
@@ -817,22 +828,26 @@ describe("row actions and clicks", () => {
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 2 }));
   });
 
-  it("enableDelete confirms, then calls useResourceMutations().remove", async () => {
+  it("enableDelete confirms in a dialog, then calls useResourceMutations().remove", async () => {
     const user = userEvent.setup();
-    const remove = vi.fn();
+    const remove = vi.fn((_id: string | number, options?: { onSuccess?: () => void }): void =>
+      options?.onSuccess?.(),
+    );
     mockUseResourceMutations.mockReturnValue({
       create: { mutate: vi.fn(), isPending: false },
       update: { mutate: vi.fn(), isPending: false },
       remove: { mutate: remove, isPending: false },
     });
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderTable(<ResourceTable resource="events" enableDelete />);
     await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
-    expect(remove).toHaveBeenCalledWith(1);
+    const dialog = screen.getByRole("dialog", { name: "Delete “Spring Gala”?" });
+    await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+    expect(remove).toHaveBeenCalledWith(1, expect.anything());
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
 
-    confirmSpy.mockReturnValue(false);
+    // Cancel deletes nothing.
     await user.click(screen.getAllByRole("button", { name: "Delete" })[1]);
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
     expect(remove).toHaveBeenCalledTimes(1);
   });
 });
@@ -885,26 +900,36 @@ describe("loading / error / empty states", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
-  it("shows an error panel with a working retry", async () => {
+  it("shows an error panel in plain words with a working retry", async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
     mockUseResourceList.mockImplementation((): ListResultShape =>
-      listResult({ data: undefined, error: { status: 500, message: "Server exploded" }, refetch }),
+      listResult({ data: undefined, error: new KarniApiError(500, {}), refetch }),
     );
     renderTable(<ResourceTable resource="events" />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Server exploded");
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong on our side");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("500");
+    await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a schema error panel", () => {
+  it("shows a schema error panel whose retry reloads the schema", async () => {
+    const user = userEvent.setup();
     mockUseSchema.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: new Error("Unknown resource 'evnts'. Known resources: events."),
+      error: new KarniApiError(503, {}),
     });
-    renderTable(<ResourceTable resource="evnts" />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Unknown resource");
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ResourceTable resource="events" />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong on our side");
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["karni", "$schema"] });
   });
 
   it("renders the default EmptyState and the empty slot override", () => {
@@ -912,7 +937,7 @@ describe("loading / error / empty states", () => {
       listResult({ data: paginated([], { count: 0, next: null, previous: null }) }),
     );
     const { unmount } = renderTable(<ResourceTable resource="events" />);
-    expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
+    expect(screen.getByText("No events yet")).toBeInTheDocument();
     unmount();
 
     renderTable(<ResourceTable resource="events" empty={<p>Custom empty</p>} />);

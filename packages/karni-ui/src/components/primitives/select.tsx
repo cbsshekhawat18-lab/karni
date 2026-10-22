@@ -1,6 +1,7 @@
 import * as SelectPrimitive from "@radix-ui/react-select";
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridableSelectPart } from "../../primitives/registry";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "./icons";
 
 /**
@@ -16,21 +17,20 @@ export const KARNI_SELECT_EMPTY = "__karni_empty__";
 // ---------------------------------------------------------------------------
 
 /** Radix Select root, for composing a custom select from the styled parts. */
-export const SelectRoot = SelectPrimitive.Root;
+export const SelectRoot = overridableSelectPart("Root", SelectPrimitive.Root);
 /** Groups related options inside `SelectContent`. */
-export const SelectGroup = SelectPrimitive.Group;
+export const SelectGroup = overridableSelectPart("Group", SelectPrimitive.Group);
 /** Shows the selected option's label inside `SelectTrigger`. */
-export const SelectValue = SelectPrimitive.Value;
+export const SelectValue = overridableSelectPart("Value", SelectPrimitive.Value);
 
-/** The styled button that opens the select. */
-export const SelectTrigger = React.forwardRef<
+const KarniSelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive [&>span]:line-clamp-1",
       className,
     )}
     {...props}
@@ -41,7 +41,13 @@ export const SelectTrigger = React.forwardRef<
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
-SelectTrigger.displayName = "SelectTrigger";
+KarniSelectTrigger.displayName = "SelectTrigger";
+
+/** The styled button that opens the select.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectTrigger = overridableSelectPart("Trigger", KarniSelectTrigger);
 
 const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
@@ -71,8 +77,7 @@ const SelectScrollDownButton = React.forwardRef<
 ));
 SelectScrollDownButton.displayName = "SelectScrollDownButton";
 
-/** The styled dropdown panel that lists the options. */
-export const SelectContent = React.forwardRef<
+const KarniSelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => (
@@ -81,7 +86,7 @@ export const SelectContent = React.forwardRef<
       ref={ref}
       position={position}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md",
+        "relative z-popover max-h-96 min-w-32 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md",
         position === "popper" &&
           "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
         className,
@@ -102,10 +107,15 @@ export const SelectContent = React.forwardRef<
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ));
-SelectContent.displayName = "SelectContent";
+KarniSelectContent.displayName = "SelectContent";
 
-/** A heading inside a `SelectGroup`. */
-export const SelectLabel = React.forwardRef<
+/** The styled dropdown panel that lists the options.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectContent = overridableSelectPart("Content", KarniSelectContent);
+
+const KarniSelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
 >(({ className, ...props }, ref) => (
@@ -115,10 +125,15 @@ export const SelectLabel = React.forwardRef<
     {...props}
   />
 ));
-SelectLabel.displayName = "SelectLabel";
+KarniSelectLabel.displayName = "SelectLabel";
 
-/** One selectable option; `value` is what the select reports. */
-export const SelectItem = React.forwardRef<
+/** A heading inside a `SelectGroup`.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectLabel = overridableSelectPart("Label", KarniSelectLabel);
+
+const KarniSelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
 >(({ className, children, ...props }, ref) => (
@@ -138,10 +153,15 @@ export const SelectItem = React.forwardRef<
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ));
-SelectItem.displayName = "SelectItem";
+KarniSelectItem.displayName = "SelectItem";
 
-/** A divider line between option groups. */
-export const SelectSeparator = React.forwardRef<
+/** One selectable option; `value` is what the select reports.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectItem = overridableSelectPart("Item", KarniSelectItem);
+
+const KarniSelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
 >(({ className, ...props }, ref) => (
@@ -151,7 +171,13 @@ export const SelectSeparator = React.forwardRef<
     {...props}
   />
 ));
-SelectSeparator.displayName = "SelectSeparator";
+KarniSelectSeparator.displayName = "SelectSeparator";
+
+/** A divider line between option groups.
+ *
+ * Part of the `select` family a project can replace (`primitives={{ select: ... }}` on KarniProvider).
+ */
+export const SelectSeparator = overridableSelectPart("Separator", KarniSelectSeparator);
 
 // ---------------------------------------------------------------------------
 // Composed, options-driven Select (what ResourceForm / the filter bar use)
@@ -186,6 +212,21 @@ export interface SelectProps {
   className?: string;
   contentClassName?: string;
   "aria-label"?: string;
+  /** Forwarded to the trigger, like the other `aria-*` props below. */
+  "aria-labelledby"?: string;
+  /** Ids of the help text and error message that describe the field. */
+  "aria-describedby"?: string;
+  /** Marks the field invalid: the trigger reads it and draws its destructive border. */
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  "aria-required"?: boolean | "true" | "false";
+  /**
+   * Called when focus leaves the select, never when it moves into the open
+   * list, so react-hook-form's onBlur validation does not run while the user
+   * is still choosing.
+   */
+  onBlur?: React.FocusEventHandler<HTMLButtonElement>;
+  /** Called when the list opens or closes. */
+  onOpenChange?: (open: boolean) => void;
   /** Extra <SelectItem>/<SelectGroup> nodes appended after `options` (escape hatch). */
   children?: React.ReactNode;
 }
@@ -211,7 +252,14 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     contentClassName,
     children,
     "aria-label": ariaLabel,
+    "aria-labelledby": ariaLabelledBy,
+    "aria-describedby": ariaDescribedBy,
+    "aria-invalid": ariaInvalid,
+    "aria-required": ariaRequired,
+    onBlur,
+    onOpenChange,
   } = props;
+  const openRef = React.useRef(false);
 
   const safeOptions = React.useMemo(() => {
     const filtered = options.filter(
@@ -242,10 +290,30 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     <SelectRoot
       value={radixValue}
       onValueChange={handleValueChange}
+      onOpenChange={(open) => {
+        openRef.current = open;
+        onOpenChange?.(open);
+      }}
       disabled={disabled}
       name={name}
     >
-      <SelectTrigger ref={ref} id={id} className={className} aria-label={ariaLabel}>
+      <SelectTrigger
+        ref={ref}
+        id={id}
+        className={className}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
+        aria-required={ariaRequired}
+        onBlur={(event) => {
+          // Opening moves focus into the list: that is not leaving the field.
+          if (openRef.current) return;
+          const next = event.relatedTarget;
+          if (next instanceof Element && next.closest("[role='listbox']") !== null) return;
+          onBlur?.(event);
+        }}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className={contentClassName}>

@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 16 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 19 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -77,13 +77,16 @@ describe("generate-manifest role scan", () => {
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
+      "error-state": "ErrorState",
       "file-upload": "FileUpload",
       "layout-shell": "Layout",
       "login-form": "LoginForm",
       modal: "Modal",
       "page-shell": "Page",
+      "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
       stat: "Stat",
+      "theme-toggle": "ThemeToggle",
       toast: "Toaster",
     });
   });

@@ -70,7 +70,7 @@ function EnumFilter({
       options={options}
       placeholder={field.label}
       clearable
-      clearLabel="All"
+      clearLabel={`${field.label}: All`}
       onValueChange={(next) => {
         if (next === null) {
           onFilterChange(field, null);
@@ -104,7 +104,7 @@ function BooleanFilter({
       ]}
       placeholder={field.label}
       clearable
-      clearLabel="All"
+      clearLabel={`${field.label}: All`}
       onValueChange={(next) => onFilterChange(field, next === null ? null : next === "true")}
     />
   );
@@ -132,7 +132,7 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
-          className="h-9 w-full max-w-xs"
+          className="h-9 w-full max-w-80"
         />
       )}
       {filterFields.map((field) => {
@@ -165,6 +165,8 @@ export function FilterBar(props: FilterBarProps): React.ReactElement {
                 multiple={field.relation.many}
                 value={toRelationValue(value)}
                 placeholder={field.label}
+                // A placeholder is not a label: it disappears once a value is chosen.
+                aria-label={field.label}
                 onChange={(next) => onFilterChange(field, next)}
               />
             </div>

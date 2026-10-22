@@ -1,0 +1,9 @@
+{
+  "name": "chakra3-app",
+  "private": true,
+  "dependencies": {
+    "@chakra-ui/react": "^3.2.0",
+    "@karni/ui": "^0.4.0",
+    "react": "^19.0.0"
+  }
+}

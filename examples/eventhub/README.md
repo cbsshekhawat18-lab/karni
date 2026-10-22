@@ -11,13 +11,14 @@ It lives in the Karni repository and runs in CI, so a framework change that
 breaks a real app breaks the build. Read it instead of the reference docs:
 each section below names the Karni feature and the file that uses it.
 
-**Project code: 593 lines** (models 83, viewsets 87, pages 291, other 132),
+**Project code: 608 lines** (models 83, viewsets 87, pages 306, other 132),
 measured with `python scripts/loc.py --pristine <karni new output>` —
 non-blank, non-comment lines of everything EventHub wrote, excluding tests,
 migrations, lockfiles and the untouched scaffold. The first build measured
 656; the framework fixes that [FRICTION.md](FRICTION.md) asked for brought it
-to 582, declaring the roles in `KARNI_ROLES` added eleven, and the 93 lines
-still over Karni's 500-line target are attributed there.
+to 582, declaring the roles in `KARNI_ROLES` added eleven, the keyboard-only
+walk's delete, bulk delete, sign-out and unsaved-changes wiring added fifteen,
+and the 108 lines still over Karni's 500-line target are attributed there.
 
 ## Run it
 
