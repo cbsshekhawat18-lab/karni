@@ -10,7 +10,7 @@ of the page.
 
 ## What is Karni?
 
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
 
 ## How is Karni different from a Django boilerplate or starter template?
 

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
@@ -32,7 +32,7 @@ My own [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-
 
 ## What is Karni
 
-**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, login pages, tables and forms. A boilerplate copies it into your project once; an AI agent writes it again in every project. Either way you pay for it twice: once to produce it, and again to maintain every copy, because a fix made upstream never reaches code that was copied or regenerated.
+**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, login pages, tables and forms. A boilerplate copies it into your project once. An AI agent writes it again in every project. Either way you pay for it twice: once to produce it, and again to maintain every copy, because a fix made upstream never reaches code that was copied or regenerated.
 
 **How Karni solves it.** That code lives in three versioned packages you install and upgrade: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` applies the changes each release needs, so a fix reaches every project that depends on Karni.
 
@@ -83,7 +83,7 @@ What you get with no other code:
 
 All of EventHub, with payments, e-mail and four roles, is 608 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
 
-> ⭐ **If Karni is useful to you, please star the repo** — it helps other
+> ⭐ **If Karni is useful to you, please star the repo.** It helps other
 > people building Django + React apps with AI coding agents find the project.
 
 ## Why not just use Django or a boilerplate?
