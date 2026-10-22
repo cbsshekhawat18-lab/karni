@@ -58,7 +58,7 @@ artifacts = ["karni_impersonation/AGENTS.fragment.md", "karni_impersonation/temp
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["karni_impersonation/migrations"]
+extend-exclude = ["karni_impersonation/migrations", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B"]

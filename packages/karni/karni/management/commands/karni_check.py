@@ -53,4 +53,6 @@ class Command(BaseCommand):
                 "(each names its K or E code; `karni explain <code>` explains it).",
                 code="E702",
             )
-        self.stdout.write("karni check: ok")
+        # A stage of `karni check`, which prints the overall verdict once every
+        # stage (this one, ESLint, duplication) has run.
+        self.stdout.write("backend checks: ok")

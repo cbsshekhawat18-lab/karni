@@ -22,15 +22,25 @@ def test_exit_code_aggregates_backend_and_frontend(runner, tmp_path, monkeypatch
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
     monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
-    assert runner.invoke(app, ["check"]).exit_code == 0
+    monkeypatch.setattr(check_mod, "_frontend_lint", lambda p: 0)
+    result = runner.invoke(app, ["check"])
+    assert result.exit_code == 0 and "karni check: ok" in result.output
 
+    # one verdict: a failing run never says "ok"
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(1))
-    assert runner.invoke(app, ["check"]).exit_code == 1
+    result = runner.invoke(app, ["check"])
+    assert result.exit_code == 1 and "karni check: ok" not in result.output
 
     # frontend failure alone must fail, and the backend step still ran
     monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
     monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 1)
     assert runner.invoke(app, ["check"]).exit_code == 1
+
+    # an eslint failure alone (a raw <table> in a page) must fail too
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_lint", lambda p: 1)
+    result = runner.invoke(app, ["check"])
+    assert result.exit_code == 1 and "karni check: FAILED" in result.output
 
 
 def test_no_frontend_flag_skips_duplication(runner, tmp_path, monkeypatch) -> None:

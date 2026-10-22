@@ -21,7 +21,7 @@ from rest_framework.settings import api_settings
 
 from karni.api.search import get_search_provider
 
-__all__ = ["KarniFilterBackend", "KarniSearchFilter"]
+__all__ = ["KarniFilterBackend", "KarniFilterSet", "KarniOrderingFilter", "KarniSearchFilter"]
 
 _FILTERSET_CACHE: dict[tuple[type, type[models.Model]], type[FilterSet]] = {}
 _NARROWED_CACHE: dict[tuple[type[FilterSet], frozenset[str]], type[FilterSet]] = {}
@@ -73,6 +73,39 @@ def _api_filterable_names(model: type[models.Model]) -> frozenset[str]:
     return frozenset(name for name in effective - excluded - write_only if name != "password")
 
 
+class KarniFilterSet(FilterSet):
+    """The base of every FilterSet Karni's backend builds: relation choices are the readable rows.
+
+    django-filter turns a relation named in ``filterset_fields`` into a
+    ``ModelChoiceFilter`` over every target row, so a value naming a row the
+    requester cannot read filters (200) where a missing one is refused (400):
+    an existence oracle. Here the choices are the target's readable rows
+    (:func:`karni.api.access.readable`), so both are refused alike.
+
+    Override / escape hatch: declare the filter yourself with a ``queryset``,
+    or set ``filterset_base`` on a backend subclass.
+    """
+
+    @classmethod
+    def filter_for_lookup(cls, field: Any, lookup_type: str) -> tuple[Any, dict[str, Any]]:
+        filter_class, params = super().filter_for_lookup(field, lookup_type)
+        queryset = params.get("queryset")
+        if isinstance(queryset, models.QuerySet):
+            params = {**params, "queryset": _readable_choices(queryset)}
+        return filter_class, params
+
+
+def _readable_choices(queryset: models.QuerySet[Any]) -> Any:
+    """``queryset`` narrowed per request to what the requester may read (a filter's choices)."""
+
+    def choices(request: Any) -> models.QuerySet[Any]:
+        from karni.api.access import readable
+
+        return readable(queryset.all(), request)
+
+    return choices
+
+
 class KarniFilterBackend(DjangoFilterBackend):
     """``DjangoFilterBackend`` that derives a sensible FilterSet automatically.
 
@@ -103,7 +136,12 @@ class KarniFilterBackend(DjangoFilterBackend):
     :attr:`lookup_map`, :attr:`pk_filter_map`, :meth:`filterable_fields` or
     :meth:`derive_filterset_class`, then point the view's ``filter_backends``
     (or ``REST_FRAMEWORK["DEFAULT_FILTER_BACKENDS"]``) at your subclass.
+    Filtersets built from ``filterset_fields`` derive from
+    :class:`KarniFilterSet` (``filterset_base``), so their relation choices
+    are the requester's readable rows.
     """
+
+    filterset_base = KarniFilterSet
 
     lookup_map: ClassVar[Mapping[type[models.Field], tuple[str, ...]]] = {
         models.CharField: ("exact", "icontains"),
@@ -240,13 +278,24 @@ class KarniOrderingFilter(OrderingFilter):
     included. This derivation reads the serializer's fields only (write-only
     fields and fields ``Karni.field_roles`` hides from the requester are not
     there, so neither can order the list) and detects properties statically.
-    An explicit ``ordering_fields`` on the view is honoured as DRF does.
+
+    Relations order by what the response shows of them, never by the related
+    rows themselves (which the requester may not be allowed to read): a
+    forward to-one orders by its key column (``?ordering=venue`` is
+    ``venue_id``, not the venue model's ``Meta.ordering``), and to-many or
+    reverse relations are not orderable at all (ordering by one repeats each
+    row once per related row, readable or not, and drops others from the page).
+
+    Override / escape hatch: an explicit ``ordering_fields`` on the view is
+    honoured as DRF does, terms untouched.
     """
 
     def get_default_valid_fields(
         self, queryset: models.QuerySet[Any], view: Any, context: dict[str, Any] | None = None
     ) -> list[tuple[str, str]]:
         import inspect
+
+        from karni.api.optimizer import model_relation
 
         serializer_class = getattr(view, "get_serializer_class", None)
         klass = serializer_class() if callable(serializer_class) else view.serializer_class
@@ -261,8 +310,36 @@ class KarniOrderingFilter(OrderingFilter):
             head = source.split(".", 1)[0]
             if isinstance(inspect.getattr_static(model_class, head, None), property):
                 continue
+            relation = model_relation(model_class, head)
+            if relation is not None and _key_column(relation) is None:
+                continue  # to-many or reverse: one row per related row
             valid.append((source.replace(".", "__"), str(getattr(field, "label", field_name))))
         return valid
+
+    def remove_invalid_fields(
+        self, queryset: models.QuerySet[Any], fields: list[str], view: Any, request: Request
+    ) -> list[str]:
+        """The valid terms, a forward to-one relation's mapped to its key column."""
+        from karni.api.optimizer import model_relation
+
+        kept: list[str] = super().remove_invalid_fields(queryset, fields, view, request)
+        if getattr(view, "ordering_fields", None) is not None:
+            return kept
+        mapped: list[str] = []
+        for term in kept:
+            sign, name = ("-", term[1:]) if term.startswith("-") else ("", term)
+            relation = model_relation(queryset.model, name)
+            column = _key_column(relation) if relation is not None else None
+            mapped.append(f"{sign}{column or name}")
+        return mapped
+
+
+def _key_column(relation: Any) -> str | None:
+    """The column a forward FK/O2O stores its key in (``venue_id``); ``None`` for anything else."""
+    forward = getattr(relation, "concrete", False) and not hasattr(relation, "get_accessor_name")
+    if forward and (relation.many_to_one or relation.one_to_one):
+        return str(relation.attname)
+    return None
 
 
 class KarniSearchFilter(BaseFilterBackend):

@@ -11,6 +11,32 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
+MODULES = ("karni-payments", "karni-approvals", "karni-impersonation")
+#: Set where every module is installed (CI's Python jobs): a test that needs a
+#: module fails without it instead of skipping, so the coverage cannot drop out.
+REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
+
+
+def require_modules(*projects: str) -> None:
+    """Skip the test, naming what to install, unless every optional module in ``projects`` is."""
+    from importlib.metadata import PackageNotFoundError, distribution
+
+    missing = []
+    for project in projects or MODULES:
+        try:
+            distribution(project)
+        except PackageNotFoundError:
+            missing.append(project)
+    if not missing:
+        return
+    install = " ".join(f"-e modules/{project}" for project in missing)
+    reason = (
+        f"needs {', '.join(missing)}, not installed. Install with: pip install {install} "
+        "(make install installs every module)"
+    )
+    if REQUIRE_MODULES:
+        pytest.fail(f"{reason}. KARNI_REQUIRE_MODULES=1 requires every module.")
+    pytest.skip(reason)
 
 
 @pytest.fixture
@@ -85,6 +111,22 @@ def _no_npm(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(scaffold, "run_npm", no_npm)
 
 
+#: Tests marked with it run the database guard's real probe (a subprocess
+#: starting Django); every other test sees a database with nothing wrong.
+DB_PROBE_MARKER = "db_probe"
+
+
+@pytest.fixture(autouse=True)
+def _no_db_probe(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The guard's probe would start the project's Django; the suite's projects have none."""
+    from karni_cli import database
+
+    monkeypatch.delenv(database.ENV, raising=False)
+    monkeypatch.delenv("DJANGO_SETTINGS_MODULE", raising=False)
+    if request.node.get_closest_marker(DB_PROBE_MARKER) is None:
+        monkeypatch.setattr(database, "probe", lambda project, python, use: None)
+
+
 # history providers: the suite runs with none, and none spawns anything
 
 HISTORY_MARKER = "history_provider"
@@ -93,6 +135,9 @@ HISTORY_MARKER = "history_provider"
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", f"{HISTORY_MARKER}: the test runs a history provider's subprocess on purpose"
+    )
+    config.addinivalue_line(
+        "markers", f"{DB_PROBE_MARKER}: the test runs the database guard's real probe"
     )
 
 

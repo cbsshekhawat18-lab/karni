@@ -11,6 +11,59 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Security: a row outside the requester's row scope stays hidden on every
+  response.** An audit probed row-scope denials (a user who may list a
+  resource but not one row in it). The row itself was already treated as
+  missing everywhere (404 on detail and the write verbs, absent from lists,
+  filters, search, ordering, exports and the admin); four paths leaked
+  *related* rows and are fixed:
+  - a write's response (`PATCH`/`PUT`/`POST …?expand=`), and any response of
+    a viewset with `optimize = False` or a `select_related` /
+    `prefetch_related` hint, embedded related rows (and listed to-many ids)
+    outside the target's read scope. The generated serializers now check
+    related rows at render time (`karni.api.related`): no extra query on the
+    optimised path, one per related model and page otherwise;
+  - an export named an unreadable related row by its natural key (a venue's
+    name where the API shows only its id). It now keeps the id, and the
+    admin's export names related rows as far as the admin's row scope shows
+    them;
+  - `?ordering=` on a to-many relation repeated each row once per related
+    row, readable or not (and pushed others off the page), and on a forward
+    relation sorted by the related model's `Meta.ordering`. Behaviour change
+    for API clients: to-many and reverse relations are no longer orderable
+    by default, and `?ordering=<relation>` sorts by its key column. An
+    explicit `ordering_fields` is unchanged;
+  - a relation in explicit `filterset_fields` filtered by the key of a row the
+    requester cannot read (200) but refused a missing one (400). Its choices
+    are now the readable rows (`KarniFilterSet`), so both answer 400.
+- `karni.testing.assert_row_hidden(client, "/api/events/", row, visible=…)`
+  proves in one line that a row outside the client's row scope behaves as
+  "does not exist" on every API surface: detail and write verbs (compared
+  with a missing key), detail actions, the list and its count, filters,
+  search, ordering, `?expand=` and id lists from every related resource
+  (writes included), and every export format.
+  `assert_admin_row_hidden(staff, row, visible=…)` does the same for the
+  admin's changelist, change, history and delete views. Each check runs on
+  its own (`checks=["export"]`), `probe=` takes a `HiddenRowProbe` subclass,
+  and a run that proves nothing (the client cannot list, or sees no row)
+  fails with the new code `E616`. `assert_isolated` now runs the same probe on
+  the other principal's row (and probes PUT; a 403 on a write passes only when
+  a missing row gets 403 too), so tests `karni make test` writes get it
+  without a change.
+- `karni check` exits 1 when only eslint fails (a raw `<table>` in a page, any
+  `karni/*` rule). It printed `FAILED` but exited 0, so CI let it through.
+- `karni` commands no longer end in Django's traceback when the project's
+  database is not ready. On the host, a command that starts Django first
+  checks that the database driver loads, and one that opens the database
+  (`migrate`, `seed`, `sync-roles`, `createsuperuser`, `serve --local`,
+  `test`, `beat`, `manage`) that the server answers. A missing driver is
+  `C012` (install `psycopg[binary]` into the project interpreter, or use
+  Docker) and an unreachable database is `C013` (with the address, the
+  driver's error, and a note when `.env` is missing or `db` is the compose
+  host). Captured commands (`karni context`, `karni types`) are checked only
+  after they fail, so they cost nothing when the project works.
+  `KARNI_DB_CHECK=false` skips the check. `karni check` still runs the
+  frontend checks when the backend cannot start.
 - Releases can publish npm with an `NPM_TOKEN` repository secret instead of
   trusted publishing, like `PYPI_API_TOKEN` for PyPI ([releasing](docs/releasing.md)).
 - The `karni` command as a container image, `ghcr.io/cbsshekhawat18-lab/karni`

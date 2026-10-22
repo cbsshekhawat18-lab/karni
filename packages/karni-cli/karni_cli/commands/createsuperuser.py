@@ -24,5 +24,6 @@ def createsuperuser(
         service=service,
         capture=False,
         interactive=True,
+        database="connect",
     )
     raise typer.Exit(proc.returncode)

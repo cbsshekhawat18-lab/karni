@@ -59,5 +59,6 @@ def worker(
         service=service,
         capture=False,
         interactive=True,
+        database="load",
     )
     raise typer.Exit(proc.returncode)

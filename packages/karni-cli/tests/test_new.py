@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,24 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     assert "cd my_app" in result.output
     # the release the scaffold is written for: `karni upgrade` starts there
     assert 'baseline = "0.3.0"' in (project / "pyproject.toml").read_text()
+
+
+def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeypatch) -> None:
+    """The README's `pip install -e .` installs the dependencies, not a package.
+
+    Without a declared build system and `packages = []`, setuptools' discovery
+    refused the flat layout ("Multiple top-level packages discovered in a
+    flat-layout: ['config', 'frontend']").
+    """
+    import tomllib
+
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    result = runner.invoke(app, ["new", "Shop", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    pyproject = tomllib.loads((tmp_path / "shop" / "pyproject.toml").read_text())
+    assert pyproject["build-system"]["build-backend"] == "setuptools.build_meta"
+    assert pyproject["tool"]["setuptools"]["packages"] == []
+    assert "pip install -e ." in (tmp_path / "shop" / "README.md").read_text()
 
 
 def test_slug_rules() -> None:
@@ -179,8 +198,57 @@ def test_new_builds_a_missing_ui_dist(runner, tmp_path: Path, monkeypatch) -> No
     monkeypatch.setenv("KARNI_UI_SRC", str(ui))
     result = runner.invoke(app, ["new", "Built UI", "-o", str(tmp_path / "out")])
     assert result.exit_code == 0, result.output
-    assert calls == [["npm", "install", "--no-audit"], ["npm", "run", "build"]]
+    assert calls == [["npm", "install", "--no-audit", "--no-package-lock"], ["npm", "run", "build"]]
     assert "Building @karni/ui" in result.output and "warning" not in result.output
+    assert "node_modules/ and dist/" in result.output
+
+
+def test_a_locked_ui_installs_with_npm_ci(tmp_path: Path) -> None:
+    ui = _fake_ui(tmp_path, built=False)
+    (ui / "package-lock.json").write_text("{}")
+    assert scaffold.ui_build_commands(ui) == [["npm", "ci", "--no-audit"], ["npm", "run", "build"]]
+
+
+@pytest.mark.skipif(
+    os.environ.get("KARNI_TEST_UI_BUILD") != "1",
+    reason="builds @karni/ui for real in a clone (npm ci + vite, about a minute, network); "
+    "set KARNI_TEST_UI_BUILD=1 to run it (CI's Quickstart job does)",
+)
+def test_new_from_a_checkout_leaves_git_status_clean(tmp_path: Path) -> None:
+    """``karni new`` run from a clone builds that clone's @karni/ui and changes no tracked file."""
+    clone = tmp_path / "karni"
+    git = ["git", "-C", str(clone)]
+    # init + fetch HEAD, not clone: CI checks a pull request out as a detached commit
+    subprocess.run(["git", "init", "-q", str(clone)], check=True)
+    subprocess.run([*git, "fetch", "-q", "--depth", "1", f"file://{REPO_ROOT}", "HEAD"], check=True)
+    subprocess.run([*git, "checkout", "-q", "FETCH_HEAD"], check=True)
+    ui = clone / "packages" / "karni-ui"
+    assert not (ui / "dist").exists() and not (ui / "node_modules").exists()
+    env = {k: v for k, v in os.environ.items() if k not in {"KARNI_UI_SRC", "KARNI_TEMPLATES"}}
+    env["PYTHONPATH"] = str(clone / "packages" / "karni-cli")  # the clone's CLI finds the clone
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from karni_cli.main import app; app(prog_name='karni')",
+            "new",
+            "Clean Check",
+            "-o",
+            str(tmp_path / "out"),
+        ],
+        cwd=clone,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"Building @karni/ui in {ui}" in result.stdout
+    assert (ui / "dist" / "index.js").is_file(), "the clone's @karni/ui was not built"
+    status = subprocess.run(
+        [*git, "status", "--porcelain"], text=True, capture_output=True, check=True
+    )
+    assert status.stdout == "", f"karni new changed the checkout:\n{status.stdout}"
 
 
 def test_new_warns_when_the_ui_cannot_be_built(runner, tmp_path: Path, monkeypatch) -> None:

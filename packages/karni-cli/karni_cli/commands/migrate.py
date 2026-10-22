@@ -18,6 +18,11 @@ def migrate(
     """Apply migrations — wraps `manage.py migrate [ARGS]`."""
     project = require_project()
     proc = project_mod.run_manage(
-        project, ["migrate", *(args or [])], docker=docker, service=service, capture=False
+        project,
+        ["migrate", *(args or [])],
+        docker=docker,
+        service=service,
+        capture=False,
+        database="connect",
     )
     raise typer.Exit(proc.returncode)

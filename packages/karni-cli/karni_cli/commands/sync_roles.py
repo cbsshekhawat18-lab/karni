@@ -27,6 +27,11 @@ def sync_roles(
     """
     project = require_project()
     proc = project_mod.run_manage(
-        project, ["karni_sync_roles", *(args or [])], docker=docker, service=service, capture=False
+        project,
+        ["karni_sync_roles", *(args or [])],
+        docker=docker,
+        service=service,
+        capture=False,
+        database="connect",
     )
     raise typer.Exit(proc.returncode)

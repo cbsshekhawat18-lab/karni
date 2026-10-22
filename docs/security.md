@@ -27,8 +27,11 @@ nothing to remember. Each line names the setting or check that owns it.
 missing one fails `karni check` and denies every request); the declaration
 is the request gate *and* the row filter, so a row outside the scope answers
 404, never 403. Relation fields and `?expand=` follow the target's read
-scope. Roles are data (`KARNI_ROLES`), checks are cached per request, and
-`assert_isolated` proves the isolation for every resource. See
+scope on every response, writes and exports included. Roles are data
+(`KARNI_ROLES`), checks are cached per request, `assert_isolated` proves the
+isolation for every resource, and `assert_row_hidden` proves one row stays
+hidden from one client on every surface (`assert_admin_row_hidden` in the
+admin). See
 [access control](api.md#access-control) and [roles](accounts.md#roles-as-data).
 
 **Authentication.** Email login with Django's password validators;

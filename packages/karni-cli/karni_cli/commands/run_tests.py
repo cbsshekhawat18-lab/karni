@@ -34,5 +34,6 @@ def test(
         service=service,
         capture=False,
         interactive=True,
+        database="connect",  # pytest-django creates the test database on that server
     )
     raise typer.Exit(proc.returncode)

@@ -79,7 +79,10 @@ jobs:
       - name: Typecheck (mypy, root mypy.ini)
         run: make typecheck-py
 
+      # Every module is installed here, so a test that needs one must not skip.
       - name: Test (pytest, sqlite)
+        env:
+          KARNI_REQUIRE_MODULES: "1"
         run: make test-py
 
       # packages/karni/tests/settings.py pins sqlite and does not read
@@ -126,6 +129,36 @@ jobs:
           PY
 
   # ---------------------------------------------------------------------------
+  # A clone that installs packages/ and never modules/: what a contributor gets
+  # from `pip install -e packages/karni -e packages/karni-cli`. The tests that
+  # need a module skip and name what to install; nothing fails. The job above
+  # installs every module and sets KARNI_REQUIRE_MODULES=1, so the module
+  # coverage runs there.
+  # ---------------------------------------------------------------------------
+  python-core:
+    name: Python core only (no modules)
+    runs-on: ubuntu-latest
+    env:
+      PYTHON: python
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            packages/karni/pyproject.toml
+            packages/karni-cli/pyproject.toml
+      - name: Install packages/ only (editable) + dev tools
+        run: make install-py CORE_ONLY=1
+      - name: No module is installed
+        run: |
+          ! python -m pip show karni-payments karni-approvals karni-impersonation 2>/dev/null | grep -q "^Name:"
+      - name: Test (the module tests skip)
+        run: make test-py CORE_ONLY=1
+
+  # ---------------------------------------------------------------------------
   # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
   # the page, in a fresh venv and an empty directory, with this checkout's
   # packages in place of PyPI's (the one documented substitution).
@@ -141,6 +174,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      # Before the build below: the test fetches this commit into a fresh
+      # checkout, lets `karni new` build that checkout's @karni/ui, and fails
+      # if any tracked file changed (package-lock.json did, with npm install).
+      - name: karni new from a checkout leaves it clean
+        working-directory: packages/karni-cli
+        env:
+          KARNI_TEST_UI_BUILD: "1"
+        run: |
+          python -m pip install -q -e ../karni -e . pytest
+          python -m pytest -q tests/test_new.py -k leaves_git_status_clean
       - name: Build @karni/ui (karni new installs it from the checkout)
         working-directory: packages/karni-ui
         run: npm ci && npm run build

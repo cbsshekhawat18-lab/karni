@@ -801,11 +801,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="e603"></a>
 
-#### E603 — assert_crud(skip=...) names unknown checks
+#### E603 — checks=/skip= names unknown checks
 
-*exception* · from `karni.testing.assert_crud`
+*exception* · from `karni.testing.assert_crud; assert_row_hidden; assert_admin_row_hidden`
 
-**Why Karni objects.** Skipping a check that does not exist would hide nothing and mislead the reader.
+**Why Karni objects.** Skipping (or selecting) a check that does not exist would hide nothing and mislead the reader.
 
 **Fix.** Use the check names the message lists.
 
@@ -833,11 +833,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E606 — Rows leak to a user who must not see them
 
-*test failure* · from `karni.testing.assert_isolated`
+*test failure* · from `karni.testing.assert_isolated; assert_row_hidden; assert_admin_row_hidden`
 
-**Why Karni objects.** One owner (or tenant) could read or change another's rows: a data leak.
+**Why Karni objects.** One owner (or tenant) could read or change another's rows, or learn that a row outside their scope exists (a 403 where a missing row gets 404, a count, an expanded or exported related row): a data leak.
 
-**Fix.** Restrict the viewset's access with Owned('<owner path>') (or the tenant scope), and check custom get_queryset / @action code that bypasses it.
+**Fix.** Fix what each listed line names: usually the viewset's access (Owned('<owner path>'), a scoped grant, the tenant scope), or custom get_queryset / get_object / serializer / @action code that bypasses it.
 
 <a id="e607"></a>
 
@@ -928,6 +928,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** DEBUG = False usually means a production database, and seeding creates a demo superuser with a known password.
 
 **Fix.** Seed a development database. If you really mean it, pass --force.
+
+<a id="e616"></a>
+
+#### E616 — A hidden-row check has nothing to prove against
+
+*test failure* · from `karni.testing.assert_row_hidden; assert_admin_row_hidden`
+
+**Why Karni objects.** A row-scope check only means something when the client can list the resource and sees some row (the positive control); a role-level refusal or an empty list hides every row alike, so every check would pass vacuously.
+
+**Fix.** Pass a client (or staff user) that can list the resource and a row it does see as visible=; test role-level refusals with assert_crud's denials instead.
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
@@ -1358,6 +1368,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni test runs `python -m pytest` through the project's interpreter (its .venv, the active virtualenv, or the compose service); pytest and pytest-django are in the project's dev dependency group, not in karni.
 
 **Fix.** Install them there: pip install pytest pytest-django (or `uv sync` for the dev group), then run karni test again.
+
+<a id="c012"></a>
+
+### C012 — The project's database driver is not installed
+
+*karni command* · from `karni_cli.database (every command that starts Django: check, context, migrate, serve --local, test, ...)`
+
+**Why Karni objects.** Django imports the database driver as it starts (psycopg for PostgreSQL), so without it every project command stops with a traceback. A venv made for the quickstart has none: the quickstart uses SQLite.
+
+**Fix.** Install the driver into the project interpreter: pip install "psycopg[binary]" (or pip install -e . for all of the project's dependencies). Or run in Docker: `karni serve -d` starts the stack, whose image has the driver, and --docker runs a project command inside it. KARNI_DB_CHECK=false skips the check.
+
+<a id="c013"></a>
+
+### C013 — The project's database cannot be reached
+
+*karni command* · from `karni_cli.database (commands that open the database: migrate, seed, sync-roles, createsuperuser, serve --local, test, beat, manage)`
+
+**Why Karni objects.** These commands open the database at DATABASE_URL first. A server that is not running, a host that does not resolve (the compose default `db`, from the host) or rejected credentials would stop them with a traceback.
+
+**Fix.** Start the database (`karni serve -d` runs the compose stack with PostgreSQL), or point DATABASE_URL in .env at one that runs (cp .env.example .env first; DATABASE_URL=sqlite:///db.sqlite3 needs no server). The message names the address and the driver's error. KARNI_DB_CHECK=false skips the check.
 
 <a id="c101"></a>
 
