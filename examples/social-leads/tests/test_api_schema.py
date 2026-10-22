@@ -1,6 +1,6 @@
 """The API contract: the OpenAPI schema must match tests/openapi.snapshot.json.
 
-The first local run writes the snapshot — commit it. From then on any change
+The first local run writes the snapshot. Commit it. From then on any change
 to the API (a removed field, a changed type, a new endpoint) fails here with
 the changes listed. Accept an intended change with
 `KARNI_UPDATE_SNAPSHOTS=1 karni test` and commit the updated file. CI never

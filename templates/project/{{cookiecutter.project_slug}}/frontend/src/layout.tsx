@@ -1,5 +1,5 @@
 // The app shell: @karni/ui's <Layout>, with one nav entry per static route in
-// routes.tsx, in registration order — pages from `karni make page` show up
+// routes.tsx, in registration order. Pages from `karni make page` show up
 // here on their own.
 // Detail/edit routes ($id) and "new" forms are reached from their list page.
 import { Layout, ThemeToggle, type LayoutNavItem } from "@karni/ui";

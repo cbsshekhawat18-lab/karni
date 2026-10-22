@@ -44,7 +44,7 @@ write nothing). The full reference is [The karni command](../cli.md).
 ```sh
 pip install karni karni-cli
 karni new "Ticket Shop" && cd ticket_shop
-cp .env.example .env            # DATABASE_URL=sqlite:///data/db.sqlite3 for a no-Docker start
+cp .env.example .env            # PostgreSQL by default. sqlite:///data/db.sqlite3 for a no-Docker start
 karni make app events
 karni make model Venue name:str:200 city:str:100 capacity:int --with viewset,test --access public-read
 karni make model Event title:str:200 description:text starts_at:datetime ends_at:datetime \

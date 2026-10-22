@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni"
-version = "0.3.1"
+version = "0.4.0"
 description = "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -54,6 +54,9 @@ dependencies = [
     "drf-spectacular>=0.27",
     "django-filter>=24.2",
     "django-environ>=0.11",
+    # PostgreSQL is the default database (DATABASE_URL defaults to it), so the
+    # driver comes with karni. The binary wheel needs no libpq on the machine.
+    "psycopg[binary]>=3.1",
     # The admin builds on unfold's action decorators and templates; move the
     # range deliberately, with the admin suite, not with every release.
     "django-unfold>=0.110,<0.111",

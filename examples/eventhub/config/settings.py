@@ -1,8 +1,8 @@
 """Django settings for EventHub.
 
-karni_settings() fills this module with Karni's defaults — INSTALLED_APPS,
+karni_settings() fills this module with Karni's defaults: INSTALLED_APPS,
 middleware, DRF, Celery, Redis cache, storage, logging, security headers,
-CORS and Sentry — all read from environment variables (see .env.example).
+CORS and Sentry, all read from environment variables (see .env.example).
 
 Overriding: anything assigned *after* the call wins, and any name defined
 *before* the call is never overwritten by Karni.

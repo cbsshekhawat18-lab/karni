@@ -4,8 +4,8 @@ Routes: Django admin, the OpenAPI schema and Swagger UI (drf-spectacular),
 Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), Karni's
 health endpoints (/health/ liveness, /health/ready/ readiness) and, last,
 the welcome page at "/" while DEBUG is on. Add project routes to
-``urlpatterns`` below; to replace a single Karni endpoint, declare your
-``path(...)`` for it BEFORE the include — first match wins. Your own
+``urlpatterns`` below. To replace a single Karni endpoint, declare your
+``path(...)`` for it BEFORE the include, because the first match wins. Your own
 ``path("", ...)`` replaces the welcome page the same way.
 """
 

@@ -33,7 +33,7 @@ For everything listed as public below:
    deprecates are removed in 1.0, not in 0.3.
 2. **Every breaking change is recorded.** Each one is an entry in Karni's
    machine-readable changelog (`karni/changelog/<version>.toml`) and has a
-   section in the migration notes ([0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
+   section in the migration notes ([0.4](migrations/0.4.md), [0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
 3. **Mechanical changes are applied for you.** When a change can be made
    safely by rewriting code (a renamed import, setting, base class or method),
    it ships with a codemod. `karni upgrade --to <version>` runs every codemod
