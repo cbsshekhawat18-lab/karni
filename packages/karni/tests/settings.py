@@ -46,8 +46,9 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 karni_settings(globals(), env_name="dev")
 
 # Test-only apps exercised by the api (tests.testapp), admin (tests.adminapp),
-# scope-pipeline (tests.scopeapp) and performance (tests.perfapp) suites;
-# appended after the call, like a project would.
+# scope-pipeline (tests.scopeapp), performance (tests.perfapp) and lifecycle /
+# limited-resource (tests.lifecycleapp) suites; appended after the call, like a
+# project would.
 INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.testapp",
     "tests.adminapp",
@@ -55,4 +56,5 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.perfapp",
     # Typed field layer (karni.fields): portable fields, no viewsets.
     "tests.fieldsapp",
+    "tests.lifecycleapp",
 ]

@@ -4,9 +4,9 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
-from django.db.models import Sum
-from karni.fields import MoneyField, SearchField
+from django.db import models, transaction
+from karni.capacity import reserve
+from karni.fields import CapacityField, MoneyField, SearchField, StateField
 from karni.models import BaseModel
 
 
@@ -50,18 +50,13 @@ class TicketTier(BaseModel):
     # never negative, Decimal only.
     price = MoneyField(currency="USD", max_digits=10, decimal_places=2, min_value=0)
     quantity = models.IntegerField()
+    remaining = CapacityField(total="quantity")  # the database never lets it drop below 0
 
     class Karni:
         cascade = {"event": "a tier only exists inside its event; events are soft-deleted"}
 
     def __str__(self) -> str:
         return self.name
-
-    @property
-    def remaining(self) -> int:
-        """Seats not held by a pending or confirmed booking."""
-        held = self.booking_set.exclude(status=Booking.Status.CANCELLED)
-        return self.quantity - (held.aggregate(total=Sum("quantity"))["total"] or 0)
 
 
 class Booking(BaseModel):
@@ -74,8 +69,10 @@ class Booking(BaseModel):
     tier = models.ForeignKey("TicketTier", on_delete=models.CASCADE)
     attendee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     quantity = models.IntegerField()
-    status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
+    status = StateField(
+        states=Status,
+        transitions={Status.PENDING: [Status.CONFIRMED, Status.CANCELLED],
+                     Status.CONFIRMED: [Status.CANCELLED]},
     )
     payment = models.ForeignKey(
         "karni_payments.Payment", on_delete=models.SET_NULL, null=True, blank=True
@@ -94,21 +91,20 @@ class Booking(BaseModel):
     def total(self) -> Decimal:
         return self.tier.price * self.quantity
 
+    def save(self, *args, **kwargs) -> None:
+        with transaction.atomic():  # the seats are taken with the row, or neither is
+            if self._state.adding:
+                reserve(self.tier, self.quantity)  # sold out: 409 naming what is left
+            super().save(*args, **kwargs)
+
     def clean(self) -> None:
-        """Only published events; the tier must be the event's; never over capacity."""
+        """Only published events; the tier must be the event's; tickets fixed once booked."""
         if self.event_id and self.event.status != Event.Status.PUBLISHED:
             raise ValidationError({"event": "Only published events can be booked."})
         if self.tier_id and self.event_id and self.tier.event_id != self.event_id:
             raise ValidationError({"tier": "This ticket tier belongs to another event."})
         if self.quantity < 1:
             raise ValidationError({"quantity": "Book at least one ticket."})
-        if self.tier_id:
-            held = 0
-            if self.pk:  # editing: this booking's own seats are not taken by someone else
-                held = Booking.objects.filter(pk=self.pk, tier_id=self.tier_id).exclude(
-                    status=Booking.Status.CANCELLED
-                ).values_list("quantity", flat=True).first() or 0
-            if self.quantity > self.tier.remaining + held:
-                raise ValidationError(
-                    {"quantity": f"Only {self.tier.remaining} seats left in {self.tier.name}."}
-                )
+        booked = Booking.objects.filter(pk=self.pk).exclude(tier=self.tier_id, quantity=self.quantity)
+        if not self._state.adding and booked.exists():
+            raise ValidationError({"quantity": "Cancel this booking and book again to change it."})

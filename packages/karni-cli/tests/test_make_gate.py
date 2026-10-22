@@ -55,6 +55,9 @@ SEQUENCE: list[list[str]] = [
      "is_open:bool", "contact:email?", "site:url?", "code:slug:40?", "meta:json",
      "ref:uuid", "doc:file?", "photo:image?", "tags:m2m:shop.Tag?", "profile:o2o:User?",
      "--app", "events", "-a", "--access", "owned:organizer", "--search", "title,status"],
+    ["make", "model", "Booking", "venue:fk:Venue", "during:datetimerange", "nights:daterange?",
+     "status:state:held>confirmed|held>cancelled|confirmed>cancelled", "seats:int",
+     "left:capacity:seats", "--app", "events", "--with", "viewset"],
     ["make", "viewset", "Venue", "--app", "events", "--access", "staff"],
     ["make:test", "Venue", "--app", "events"],
     ["make", "factory", "Venue", "--app", "events"],
@@ -296,6 +299,29 @@ response = staff_client.get("/api/venues/")
 assert response.status_code == 200 and response.json()["count"] == 1
 
 assert client.delete(f"/api/events/{event.pk}/").status_code == 204
+
+# lifecycle and capacity: the generated StateField / CapacityField hold
+from django.db import transaction
+from events.models import Order
+from karni.capacity import CapacityExceeded, reserve
+
+created = client.post("/api/orders/", {"title": "First", "seats": 2}, format="json")
+assert created.status_code == 201, created.content
+assert created.json()["status"] == "draft" and created.json()["left"] == 2, created.json()
+order_url = f"/api/orders/{created.json()['id']}/"
+refused = client.patch(order_url, {"status": "refunded"}, format="json")
+assert refused.status_code == 400 and refused.json()["status"][0].startswith("E980"), refused.content
+assert client.patch(order_url, {"status": "confirmed"}, format="json").status_code == 200
+order = Order.objects.get(pk=created.json()["id"])
+with transaction.atomic():
+    reserve(order, 2)
+try:
+    with transaction.atomic():
+        reserve(order, 1)
+except CapacityExceeded:
+    pass
+else:
+    raise SystemExit("oversold")
 assert post_save.has_listeners(Event)
 assert "events.middleware.RequestTimingMiddleware" in settings.MIDDLEWARE
 names = {row["name"] for row in describe_schedules()}
@@ -334,8 +360,13 @@ def test_generated_backend_runs_for_real(
         ["make", "model", "Product", "name:str:120", "slug:slug:name", "price:money:EUR",
          "cost:money", "rate:percent", "stock:quantity", "phone:phone?", "country:country?",
          "email:email:unique", "meta:json:queried", "--with", "viewset", "--access", "staff"],
+        ["make", "model", "Order", "title:str:80",
+         "status:state:draft>confirmed>refunded|draft>cancelled|confirmed>cancelled",
+         "seats:int", "left:capacity:seats", "--with", "viewset", "--access", "authenticated",
+         "--search", "title"],
         ["make", "serializer", "Venue", "--reason", "explicit field list"],
         ["make", "test", "Event"],
+        ["make", "test", "Order"],
         ["make", "test", "Venue"],
         ["make", "seeder", "Venue", "--count", "4"],
         ["make", "factory", "Event"],
@@ -399,7 +430,8 @@ def test_generated_backend_runs_for_real(
         check=False,
     )
     assert tests.returncode == 0, tests.stdout[-4000:] + tests.stderr[-3000:]
-    assert "3 passed" in tests.stdout, tests.stdout[-2000:]  # Event: crud + isolation; Venue
+    # Event: crud + isolation; Venue; Order (StateField + CapacityField): crud
+    assert "4 passed" in tests.stdout, tests.stdout[-2000:]
 
     # A generated module's standalone suite passes too, even inside a project tree.
     if importlib.util.find_spec("pytest_django") is not None:

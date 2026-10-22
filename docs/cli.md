@@ -553,6 +553,9 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `doc:file / photo:image` | FileField / ImageField(upload_to="&lt;app&gt;/&lt;model&gt;/") — image needs Pillow |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
+| `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
+| `during:datetimerange / nights:daterange` | DateTimeRangeField() / DateRangeField() (PostgreSQL range columns, karni.fields) |
+| `remaining:capacity:quantity` | CapacityField(total="quantity"): consumed with karni.capacity.reserve(); without :total, CapacityField(default=0) |
 | `owner:fk:User` | ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) |
 | `venue:fk:Venue / fk:shop.Venue` | ForeignKey("Venue") in the same app, or "app.Model" |
 | `tags:m2m:Tag / profile:o2o:User` | ManyToManyField / OneToOneField |

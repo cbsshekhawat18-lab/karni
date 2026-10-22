@@ -15,6 +15,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from karni_cli.generators import lifecycle_fields
 from karni_cli.generators.naming import pascal, snake
 from karni_cli.generators.pysource import Import, call, pystr
 from karni_cli.project import CliError
@@ -49,6 +50,7 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ),
     ("ref:uuid", "UUIDField(default=uuid.uuid4)"),
     ("status:choice:draft|live", "a TextChoices class + CharField(choices=..., default=first)"),
+    *lifecycle_fields.FIELD_DOCS,  # state, ranges, capacity
     ("owner:fk:User", "ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)"),
     ("venue:fk:Venue / fk:shop.Venue", 'ForeignKey("Venue") in the same app, or "app.Model"'),
     ("tags:m2m:Tag / profile:o2o:User", "ManyToManyField / OneToOneField"),
@@ -102,6 +104,7 @@ _DJANGO_TYPES = (
     "image",
     "uuid",
     "choice",
+    *lifecycle_fields.TYPES,  # state, daterange, datetimerange, capacity
     "fk",
     "m2m",
     "o2o",
@@ -298,6 +301,9 @@ def render_model_body(
                 )
         elif spec.kind == "choice":
             _render_choice(spec, out, indent, line_length)
+        elif spec.kind in lifecycle_fields.TYPES:
+            names = {s.name for s in specs}
+            lifecycle_fields.render(spec, out, indent, line_length, model, names)
         else:
             target = resolve[spec.name]
             args = [target.expr]

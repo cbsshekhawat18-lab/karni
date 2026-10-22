@@ -466,6 +466,8 @@ def _stand_in_user(user_model: Any) -> Any:
     return user_model(pk=value)
 
 
-# --- typed field layer (karni.fields): E960-E970, W964-W967 -----------------
-# Registered by importing the module; each check lives with the fields it guards.
+# Registered by importing the modules; each check lives with what it guards:
+# lifecycle and limited resources, E986 / E987 / E988 / W980 (karni.guard_checks),
+# and the typed field layer, E960-E970 / W964-W967 (karni.fields.checks).
+from karni import guard_checks as _guard_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401

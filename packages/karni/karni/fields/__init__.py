@@ -29,6 +29,9 @@ Field                  Column, constraint, index                     Backends
 ``JSONField``          jsonb; GIN when ``queried=True``              GIN on PG
 ``SearchField``        generated tsvector + GIN                      PG (degrades)
 ``ArrayField``         array + GIN                                   PG only
+``StateField``         declared states, CHECK IN, legal moves only   all
+``CapacityField``      remaining count, CHECK >= 0, reserve()        all
+``DateRangeField``     daterange; ``DateTimeRangeField`` tstzrange   PG only
 =====================  ============================================  ==============
 
 ``LiveUniqueConstraint`` declares uniqueness over live rows of a
@@ -36,6 +39,12 @@ soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` are
 PostgreSQL indexes that are a no-op elsewhere; ``CreateExtension`` creates a
 PostgreSQL extension from a migration. ``karni schema`` lists what each
 declaration created and why; ``docs/fields.md`` has the full reference.
+
+Lifecycle and limited resources (``docs/lifecycle-and-capacity.md``):
+``StateField`` moves only along declared transitions, by a conditional
+update (:mod:`karni.fields.state`); ``CapacityField`` is consumed with
+:func:`karni.capacity.reserve` (:mod:`karni.fields.capacity`); the range
+fields back ``class Karni: no_overlap`` (:mod:`karni.fields.ranges`).
 
 Override / escape hatch: every field accepts its Django base field's
 arguments and can be replaced by that plain field (``plain_django`` names
@@ -46,7 +55,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# --- typed fields, constraints, indexes, extensions (karni.fields core) ------
 from karni.fields.base import (
     KarniField,
     SchemaNote,
@@ -56,6 +64,7 @@ from karni.fields.base import (
     is_unique,
     schema_notes,
 )
+from karni.fields.capacity import CapacityField
 from karni.fields.constraints import LiveUniqueConstraint
 from karni.fields.extensions import CreateExtension, ensure_extension
 from karni.fields.indexes import BrinIndex, GinIndex, GistIndex
@@ -63,17 +72,21 @@ from karni.fields.iso import CountryField, CurrencyField, country_codes, currenc
 from karni.fields.money import MoneyField, allocate, quantize, split
 from karni.fields.numbers import PercentField, QuantityField
 from karni.fields.search import SearchField
+from karni.fields.state import StateField
 from karni.fields.structured import JSONField
 from karni.fields.text import E164Format, EmailField, PhoneField, SlugField, normalize_phone
 
-# ArrayField is a lazy re-export (module __getattr__ below): it needs a PostgreSQL
-# driver, and karni.fields must import without one.
+# ArrayField and the range fields are lazy re-exports (module __getattr__
+# below): they need a PostgreSQL driver, and karni.fields must import without one.
 __all__ = [  # noqa: F822
     "ArrayField",
     "BrinIndex",
+    "CapacityField",
     "CountryField",
     "CreateExtension",
     "CurrencyField",
+    "DateRangeField",
+    "DateTimeRangeField",
     "E164Format",
     "EmailField",
     "GinIndex",
@@ -88,6 +101,7 @@ __all__ = [  # noqa: F822
     "SchemaNote",
     "SearchField",
     "SlugField",
+    "StateField",
     "allocate",
     "contribute_constraint",
     "contribute_index",
@@ -102,9 +116,16 @@ __all__ = [  # noqa: F822
     "split",
 ]
 
+#: The range fields: karni.fields.ranges raises E501 itself without psycopg.
+_RANGES = frozenset({"DateRangeField", "DateTimeRangeField"})
+
 
 def __getattr__(name: str) -> Any:
-    """Import ``ArrayField`` on first use (``django.contrib.postgres.fields`` needs psycopg)."""
+    """Import the PostgreSQL-only fields on first use (they need psycopg)."""
+    if name in _RANGES:
+        from karni.fields import ranges
+
+        return getattr(ranges, name)
     if name == "ArrayField":
         try:
             from karni.fields.arrays import ArrayField

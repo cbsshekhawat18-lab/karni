@@ -63,6 +63,7 @@ nav:
       - Everything, generated: REFERENCE.md
       - Models: models.md
       - Typed fields: fields.md
+      - Lifecycle and capacity: lifecycle-and-capacity.md
       - API: api.md
       - Accounts: accounts.md
       - Admin: admin.md

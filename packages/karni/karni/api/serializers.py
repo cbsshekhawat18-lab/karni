@@ -62,6 +62,7 @@ from rest_framework.relations import (
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.api.lifecycle import StateChoiceField, lifecycle_errors, serializer_field
 from karni.api.related import readable_related, related_scope
 from karni.exceptions import KarniImproperlyConfigured
 
@@ -283,6 +284,12 @@ class KarniModelSerializer(serializers.ModelSerializer):
             kwargs["validators"] = [
                 v for v in kwargs.get("validators", []) if not isinstance(v, UniqueValidator)
             ] + [live_unique]
+        lifecycle = serializer_field(model_field)  # StateField / range fields (karni.api.lifecycle)
+        if lifecycle is not None:
+            field_class = lifecycle[0]
+            kwargs.update(lifecycle[1])
+            if field_class is not StateChoiceField:
+                kwargs.pop("choices", None)
         default = model_field.default if model_field.has_default() else None
         if (
             model_field.has_default()
@@ -317,12 +324,25 @@ class KarniModelSerializer(serializers.ModelSerializer):
         return validators
 
     def create(self, validated_data: dict[str, Any]) -> Any:
+        self.run_lifecycle_checks(validated_data)
         self.run_model_clean(validated_data)
         return super().create(validated_data)
 
     def update(self, instance: Any, validated_data: dict[str, Any]) -> Any:
+        self.run_lifecycle_checks(validated_data, instance)
         self.run_model_clean(validated_data, instance)
         return super().update(instance, validated_data)
+
+    def run_lifecycle_checks(self, validated_data: dict[str, Any], instance: Any = None) -> None:
+        """A StateField change the lifecycle forbids is a 400 on the field (``E980`` / ``E982``).
+
+        Checked against the state the row was loaded with; the save repeats
+        the check and makes the ``UPDATE`` conditional, so a concurrent
+        change still cannot slip through. Override to skip or extend it.
+        """
+        errors = lifecycle_errors(self.Meta.model, validated_data, instance)
+        if errors:
+            raise serializers.ValidationError(errors)
 
     def run_model_clean(self, validated_data: dict[str, Any], instance: Any = None) -> None:
         """Run ``Model.clean()`` on the would-be row; its errors become a 400.
