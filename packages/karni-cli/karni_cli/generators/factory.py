@@ -45,7 +45,7 @@ def plan(ws: Workspace, app: App, model_name: str) -> str:
         [
             f"class {class_name}(ModelFactory):",
             docstring(
-                f"Test rows for {model.name}; undeclared fields keep their generated values.",
+                f"Test rows for {model.name}. Undeclared fields keep their generated values.",
                 "    ",
                 line,
             ),

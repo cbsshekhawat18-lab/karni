@@ -42,7 +42,7 @@ def unfold_logo_entries(setting: Any) -> dict[str, Any]:
     else:
         raise KarniImproperlyConfigured(
             f"KARNI_ADMIN_LOGO must be 'karni' or {{'light': <static path>, 'dark': ..., "
-            f"'icon': ...}} with at least 'light'; got {setting!r}.",
+            f"'icon': ...}} with at least 'light', got {setting!r}.",
             code="E303",
         )
     light = paths["light"]

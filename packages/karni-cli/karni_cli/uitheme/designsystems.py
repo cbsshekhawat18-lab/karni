@@ -165,7 +165,7 @@ def _report_rest(detection: Detection, prefix: str, tree: dict[str, Any], used: 
 
 MUI_UNMAPPED_PALETTE = {
     "secondary": (
-        "MUI's secondary is a second brand colour; Karni's secondary is a quiet surface for "
+        "MUI's secondary is a second brand colour. Karni's secondary is a quiet surface for "
         "secondary buttons, so they are not the same role. To use it anyway, add"
     ),
     "warning": "Karni has no warning colour",
@@ -302,7 +302,7 @@ def map_mui(detection: Detection, tree: dict[str, Any]) -> None:
                 if key != "fontFamily":
                     detection.skip(
                         f"typography.{key}",
-                        "MUI's type scale does not line up with Karni's (xs-2xl); not mapped",
+                        "MUI's type scale does not line up with Karni's (xs-2xl), so it is not mapped",
                     )
 
     spacing = tree.get("spacing")
@@ -570,7 +570,7 @@ def map_mantine(detection: Detection, tree: dict[str, Any]) -> None:
                 detection.skip(
                     "primaryColor",
                     f"'{primary}' is not a 10-shade palette in this theme (one of Mantine's own "
-                    "palettes?); its values are not in your source. Mantine exposes it as a CSS "
+                    "palettes?), so its values are not in your source. Mantine exposes it as a CSS "
                     "variable",
                     "--karni-color-primary: var(--mantine-primary-color-filled);",
                 )
@@ -641,7 +641,7 @@ def map_mantine(detection: Detection, tree: dict[str, Any]) -> None:
         if custom_scale:
             detection.skip(
                 "radius (xs-xl)",
-                "Mantine's radius scale does not line up with Karni's sizes; defaultRadius is "
+                "Mantine's radius scale does not line up with Karni's sizes. defaultRadius is "
                 "what its components use",
             )
 

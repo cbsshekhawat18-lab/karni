@@ -164,7 +164,7 @@ def autodiscover(site: AdminSite | None = None) -> None:
             # surprising "why is my model not a Karni admin" is one DEBUG
             # log-level away from its answer.
             logger.debug(
-                "autodiscover: %s is already registered on site %r; skipping.",
+                "autodiscover: %s is already registered on site %r, so it is skipped.",
                 model._meta.label,
                 site.name,
             )

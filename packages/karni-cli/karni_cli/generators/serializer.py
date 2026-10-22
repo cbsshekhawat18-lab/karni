@@ -63,7 +63,7 @@ def plan(ws: Workspace, app: App, model_name: str, reason: str) -> str:
     reason = " ".join(reason.split())
     if not reason:
         raise CliError(
-            "--reason is required: BaseViewSet already generates this serializer (K106) — say "
+            "--reason is required: BaseViewSet already generates this serializer (K106). Say "
             'why an explicit one is needed, e.g. --reason "computed display_name field".',
             code="C109",
         )
@@ -72,7 +72,7 @@ def plan(ws: Workspace, app: App, model_name: str, reason: str) -> str:
     if found is None:
         raise CliError(
             f"No viewset for {model.name} in {ws.rel(viewsets_file(ws, app))} to wire the "
-            f"serializer into — karni make viewset {model.name} first.",
+            f"serializer into. Run karni make viewset {model.name} first.",
             code="C105",
         )
     vs_path, viewset = found
@@ -103,7 +103,7 @@ def plan(ws: Workspace, app: App, model_name: str, reason: str) -> str:
     ws.write(path, replace_or_append(ws, rel, text, class_name, block))
     _wire(ws, vs_path, viewset, class_name, f"{app.module}.serializers")
     ws.note(
-        f"note: BaseViewSet(model={model.name}) generates a serializer already; "
+        f"note: BaseViewSet(model={model.name}) generates a serializer already, and "
         f"{class_name} replaces it. Prefer APIMeta for fields/read_only/write_only."
     )
     return class_name

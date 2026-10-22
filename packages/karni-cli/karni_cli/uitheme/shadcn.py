@@ -158,7 +158,7 @@ def detect(frontend: Frontend, config: ShadcnConfig) -> Detection | None:
             "both",
             note=(
                 "this shadcn/ui version has no --destructive-foreground (its destructive "
-                "button sets its own text colour: white, or text-destructive on a tint); "
+                "button sets its own text colour: white, or text-destructive on a tint). "
                 "Karni's destructive button is solid, so its text is white"
             ),
         )
@@ -174,7 +174,7 @@ def detect(frontend: Frontend, config: ShadcnConfig) -> Detection | None:
     _report_unused(detection, names, used)
     if dark:
         detection.notes.append(
-            f".dark redefines {len(dark)} variables; Karni's tokens follow them through var()."
+            f".dark redefines {len(dark)} variables, and Karni's tokens follow them through var()."
         )
     else:
         detection.notes.append("No .dark block: dark mode keeps the same variables.")
@@ -215,7 +215,7 @@ def _radii_from_theme(detection: Detection, theme: dict[str, str]) -> None:
         return
     if detection.has("--karni-radius"):
         detection.notes.append(
-            "Radii: --karni-radius reads --radius; sm, md and xl derive from it as shadcn/ui "
+            "Radii: --karni-radius reads --radius, and sm, md and xl derive from it as shadcn/ui "
             "derives them (-4px, -2px, +4px)."
         )
 

@@ -46,10 +46,59 @@ Copy this table per run, dated. A "-" means Karni did not appear.
 
 ## Baseline
 
-Not yet run. The assistants above are consumer apps that need a person at the
-keyboard (and accounts). This repository's automation cannot query them, so
-no baseline has been recorded and none may be filled in by estimate. Run the
-protocol once before the first launch post and paste the table here.
+First run: 2026-10-22. Full answers and result lists are in
+`ai-visibility-2026-10-22.md` next to this file.
+
+Two measurable stand-ins were run in place of the four consumer apps:
+
+1. **Claude Opus 5.5 (`claude-opus-5-5`), no web search.** The model running
+   the task answered each question from its own knowledge before any search.
+   Its training cutoff is June 2026, which predates Karni's October 2026
+   release. Knowing Karni from the task's own instructions was not counted.
+2. **WebSearch tool (Claude Code), standard mode, first page.** Each
+   question was searched exactly as written. A row counts Karni as present
+   only if a Karni URL was returned: the site, the GitHub repository, PyPI
+   `karni` or `karni-cli`, or npm `@karni/ui`. This approximates what a
+   search-enabled assistant can retrieve. It is not an assistant's answer.
+
+Neither stand-in is the consumer Claude app with its default settings.
+
+| Date | Assistant (model, search on/off) | Question | Karni appears | Position | How it describes Karni (verbatim) | Sources cited |
+|---|---|---|---|---|---|---|
+| 2026-10-22 | Claude Opus 5.5, search off | 1 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 2 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 3 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 4 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 5 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 6 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 7 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 8 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 9 | No | - | - | None (no search) |
+| 2026-10-22 | Claude Opus 5.5, search off | 10 | No (does not know it) | - | "I'm not aware of a Django framework called Karni." | None (no search) |
+| 2026-10-22 | WebSearch tool, standard, first page | 1 | No | - | - | testdriven.io, pulserevops.com, thepromptshelf.dev |
+| 2026-10-22 | WebSearch tool, standard, first page | 2 | No | - | - | playbooks.com, smartdev.com, thepromptshelf.dev, notes.dsebastien.net, stackhawk.com |
+| 2026-10-22 | WebSearch tool, standard, first page | 3 | No | - | - | getunblocked.com, github.com, dev.to |
+| 2026-10-22 | WebSearch tool, standard, first page | 4 | No | - | - | talkpython.fm, 2026.djangocon.us, eclipsesource.com, blog.jetbrains.com, vintasoftware.com |
+| 2026-10-22 | WebSearch tool, standard, first page | 5 | No | - | - | github.com, best-of-web.builder.io, proxy-ga.blitzz.co |
+| 2026-10-22 | WebSearch tool, standard, first page | 6 | No | - | - | pypi.org, django-upgrade.readthedocs.io |
+| 2026-10-22 | WebSearch tool, standard, first page | 7 | No | - | - | pypi.org, python-basics-tutorial.readthedocs.io |
+| 2026-10-22 | WebSearch tool, standard, first page | 8 | No | - | - | proxy-dev.blitzz.co, dzone.com, github.com, medium.com |
+| 2026-10-22 | WebSearch tool, standard, first page | 9 | No | - | - | pypi.org |
+| 2026-10-22 | WebSearch tool, standard, first page | 10 | No | - | Tool summary: "I wasn't able to find any information about something called "Karni" as a Django framework." | en.wikipedia.org, blog.webhostpython.com, medium.com, scribd.com, packages.fedoraproject.org |
+
+The sources column lists the domains of the top five results for the search
+rows.
+
+Karni appeared in 0 of 10 questions with web search and 0 of 10 without it.
+Bare-name searches for "Karni Django framework", "karni-cli" and "@karni/ui"
+also returned no Karni URL, so on this date the index behind this search tool
+had not picked up the site, the repository or the packages. Without search
+the model could not know Karni, because its training data ends before the
+release.
+
+ChatGPT, Perplexity, Gemini and the Claude app with its default settings
+were not run, because they need a person signed in. The person running the
+protocol should run those four and add their rows here.
 
 What to compare across runs: the share of questions where Karni appears (per
 assistant), its average position, and whether the description repeats the

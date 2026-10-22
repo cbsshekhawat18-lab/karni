@@ -124,7 +124,7 @@ class SearchField(KarniField, models.GeneratedField):
         if bad or stray:
             raise KarniImproperlyConfigured(
                 f"SearchField(weights={weights!r}): weights map source fields to 'A', 'B', 'C' "
-                f"or 'D'{'; not sources: ' + ', '.join(stray) if stray else ''}.",
+                f"or 'D'{' (not sources: ' + ', '.join(stray) + ')' if stray else ''}.",
                 code="E963",
             )
         self.sources = tuple(sources)

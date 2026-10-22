@@ -1,6 +1,6 @@
 /**
  * Barrel-facing path for <ResourceForm>. The implementation lives in
- * ./form/ (resource form builder); every contract-pinned export name is
+ * ./form/ (resource form builder). Every contract-pinned export name is
  * re-exported here so src/index.ts keeps resolving this module.
  */
 export { ResourceForm, defaultResourceFormSlots } from "./form/ResourceForm";

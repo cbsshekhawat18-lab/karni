@@ -1,27 +1,27 @@
 /**
- * The non-React auth core (contract "Hooks + auth" + D6): the client side
- * owns tokens and refresh; <AuthProvider> merely mirrors this engine's state
+ * The non-React auth core (contract "Hooks + auth" + D6). The client side
+ * owns tokens and refresh. <AuthProvider> merely mirrors this engine's state
  * into React.
  *
  * The engine registers itself on the KarniClient via its D6 hook points
  * (`setAuthHooks`): access-token injection, extra headers (session CSRF),
  * credentials mode, and the 401 handler. EVERY request made through the
- * client — resource hooks, schema loading, custom calls — therefore carries
+ * client (resource hooks, schema loading, custom calls) therefore carries
  * credentials and takes part in the refresh flow, with no per-callsite
  * wiring.
  *
  * ## JWT mode (D6)
- * - The access token lives in memory only; the refresh token lives in the
+ * - The access token lives in memory only. The refresh token lives in the
  *   pluggable TokenStorage (localStorage by default).
  * - On a 401 the client calls `onUnauthorized` (at most once per request):
  *   the engine runs ONE shared in-flight refresh (`POST
- *   <authBasePath>/refresh/`) — every concurrent 401 awaits the same
+ *   <authBasePath>/refresh/`), and every concurrent 401 awaits the same
  *   promise. A rotated refresh token is persisted BEFORE that promise
  *   resolves, so queued retries can never observe the stale token. The
- *   client then retries each request exactly once; a request that 401s
+ *   client then retries each request exactly once. A request that 401s
  *   AFTER a successful refresh is surfaced and never re-triggers refresh.
- * - Refresh failure clears the storage and flips the engine to "anonymous";
- *   the original 401s surface to the queued callers.
+ * - Refresh failure clears the storage and flips the engine to "anonymous".
+ *   The original 401s surface to the queued callers.
  * - The engine's own auth calls (login/refresh/me/logout/csrf) set
  *   `skipAuthRefresh`, so a 401 from them can never recurse into another
  *   refresh. During a refresh the in-memory access token is nulled, so the
@@ -33,13 +33,13 @@
  *   Storage events are intentionally not consumed in v0.1.
  *
  * ## Session mode (A4)
- * Django's session cookie authenticates requests; the engine registers
+ * Django's session cookie authenticates requests. The engine registers
  * `credentials: "include"` and a header hook that mirrors the CSRF cookie
- * ("csrftoken") into the CSRF header ("X-CSRFToken") — names pinned by A4,
- * both overridable. When the cookie is absent it is bootstrapped via
+ * ("csrftoken") into the CSRF header ("X-CSRFToken"). A4 pins both names,
+ * and both are overridable. When the cookie is absent it is bootstrapped via
  * `GET <authBasePath>/csrf/` (204 + ensure_csrf_cookie) during initialization
  * and before login. Cross-origin note: `credentials: "include"` is only
- * registered once the mode is known — pass `mode="session"` to
+ * registered once the mode is known. Pass `mode="session"` to
  * <AuthProvider> (skipping async schema detection) so the very first
  * requests already include cookies.
  *
@@ -67,8 +67,9 @@ export interface AuthEngineOptions {
   /** Path prefix of the auth endpoints, relative to the client's baseUrl. */
   authBasePath?: string;
   /**
-   * Reads whatever the schema loader cached under karniKeys.schema() —
-   * consulted (shape-guarded) for `authMode` before fetching the document.
+   * Reads whatever the schema loader cached under karniKeys.schema(). The
+   * engine consults it (shape-guarded) for `authMode` before fetching the
+   * document.
    */
   readCachedSchema?: () => unknown;
 }
@@ -181,9 +182,9 @@ export class AuthEngine {
   }
 
   /**
-   * Clears every hook this engine registered (including a `getAccessToken`
-   * the app passed to createKarniClient — an unmounted AuthProvider leaves
-   * the client fully unauthenticated by design).
+   * Clears every hook this engine registered, including a `getAccessToken`
+   * the app passed to createKarniClient. An unmounted AuthProvider leaves
+   * the client fully unauthenticated by design.
    */
   detach(): void {
     this.client.setAuthHooks({
@@ -203,7 +204,7 @@ export class AuthEngine {
   /**
    * The client calls this at most once per 401-ing request (D6). Returning
    * true makes the client retry that request exactly once with
-   * freshly-injected credentials; the retry's outcome is always surfaced.
+   * freshly-injected credentials. The retry's outcome is always surfaced.
    */
   private async handleUnauthorized(): Promise<boolean> {
     await this.ensureInitialized();
@@ -278,7 +279,7 @@ export class AuthEngine {
     }
   }
 
-  /** Fetches `/me/` and mirrors the result; any failure means anonymous. */
+  /** Fetches `/me/` and mirrors the result. Any failure means anonymous. */
   private async syncUser(): Promise<void> {
     try {
       const data = await this.client.request<unknown>(`${this.authBasePath}/me/`, {
@@ -298,7 +299,7 @@ export class AuthEngine {
   /**
    * Reads the CSRF cookie, bootstrapping it via `GET <authBasePath>/csrf/`
    * when absent (A4). Returns null when the cookie stays unreadable (e.g.
-   * CSRF_COOKIE_HTTPONLY) — requests then go out without the header and the
+   * CSRF_COOKIE_HTTPONLY). Requests then go out without the header and the
    * backend's 403 surfaces, which is the honest failure mode.
    */
   private async ensureCsrfToken(): Promise<string | null> {
@@ -319,7 +320,7 @@ export class AuthEngine {
 
   // refresh (D6)
 
-  /** ONE shared in-flight refresh; resolves true on success. */
+  /** ONE shared in-flight refresh. Resolves true on success. */
   private ensureRefresh(): Promise<boolean> {
     if (this.refreshPromise === null) {
       this.refreshPromise = this.performRefresh().finally(() => {
@@ -406,7 +407,7 @@ export class AuthEngine {
     const { access, refresh } = record;
     if (typeof access !== "string" || typeof refresh !== "string") {
       throw new Error(
-        `Karni auth: unexpected response from POST ${path} — expected ` +
+        `Karni auth: unexpected response from POST ${path}. Expected ` +
           "{ access, refresh } (JWT mode) or { requires_2fa, ephemeral_token }, got " +
           `${describeShape(data)}. Check the backend's KARNI_AUTH_MODE and the ` +
           'AuthProvider "mode" prop.',
@@ -462,10 +463,11 @@ export class AuthEngine {
   }
 
   /**
-   * Adopts tokens issued out of band — what `@karni/impersonation-ui` does
-   * when a support user starts or stops impersonating (the backend answers
-   * with tokens for the other identity). JWT mode only; in session mode the
-   * server-side session already changed, so this just re-syncs `/me/`.
+   * Adopts tokens issued out of band, which is what
+   * `@karni/impersonation-ui` does when a support user starts or stops
+   * impersonating (the backend answers with tokens for the other identity).
+   * JWT mode only. In session mode the server-side session already changed,
+   * so this just re-syncs `/me/`.
    */
   async adoptTokens(access: string | null, refresh: string | null): Promise<void> {
     await this.ensureInitialized();

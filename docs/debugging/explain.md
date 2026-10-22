@@ -38,7 +38,7 @@ EventHub's `events/viewsets.py`:
 Class: E104  Owned() does not name a path to the user
 Cause: EventViewSet: Owned('organiser') does not lead from Event to the user model (Event has no field 'organiser'). Name a relation path ending at the user, e.g. Owned("organizer") or Owned("event__organizer").
 Where: events/viewsets.py:26 in <module>
-Why:   Owned('path') filters rows to those whose path leads to request.user, and stamps the owner on create; a path that does not end at the user model would match nothing or the wrong rows.
+Why:   Owned('path') filters rows to those whose path leads to request.user, and stamps the owner on create. A path that does not end at the user model would match nothing or the wrong rows.
 Fix:   Name the owner relation as a string, following relations with __ and ending at the user model: Owned('organizer') or Owned('event__organizer').
 Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e104
 ```
@@ -58,7 +58,7 @@ A pytest run whose request went over its query budget hands over to
 
 ```text
 Class: E117  A request ran more SQL queries than its budget
-Cause: EventViewSet.list ran 9 queries; budget is 8. Repeated: 5× events_venue from EventSerializer.venue_city (events/serializers.py:25 in get_venue_city).
+Cause: EventViewSet.list ran 9 queries against a budget of 8. Repeated: 5× events_venue from EventSerializer.venue_city (events/serializers.py:25 in get_venue_city).
 Where: events/serializers.py:25 in get_venue_city
 Why:   Repeated statements are almost always an N+1: a relation loaded once per row. Budgets turn that into a failing test instead of a slow production page.
 Fix:   Run the `karni queries` command below: it attributes every repeated query to the serializer field, method or property that issued it and prints the exact hint (select_related / prefetch_related on the viewset, APIMeta.select / prefetch on the model, or an annotation for an aggregate). Raise the budget only for work that is real: query_budget = Budget(<action>=N, reason=...).
@@ -74,7 +74,7 @@ the innermost project frame and the generic next step:
 ```text
 Not a failure Karni recognises: ZeroDivisionError: division by zero
 Where: events/serializers.py:33 in get_capacity_ratio
-Next:  Karni does not know this failure, so it will not guess. Read the innermost project frame (Where) and the exception's own message; `karni doctor` checks the environment and `karni check` the declarations.
+Next:  Karni does not know this failure, so it will not guess. Read the innermost project frame (Where) and the exception's own message. `karni doctor` checks the environment and `karni check` the declarations.
 ```
 
 A log line printed beside a traceback, such as the dev query log, does not
@@ -117,7 +117,7 @@ the test requests.
 
 #### The dev server's query-budget warning
 
-`EventViewSet.list ran 28 queries; budget is 8.`, logged in warn mode (the
+`EventViewSet.list ran 28 queries against a budget of 8.`, logged in warn mode (the
 dev profile) without a code. It is E117. The answer lists the repeated
 statements with the field that issued each and hands over to `karni queries
 EventViewSet.list`.
@@ -126,7 +126,7 @@ EventViewSet.list`.
 
 #### Repeated statements in the dev query log
 
-`GET /api/events/ 200 — 30 queries, 24 duplicated …` from
+`GET /api/events/ 200: 30 queries, 24 duplicated …` from
 `karni.middleware.QueryLogMiddleware`. Fix: `karni queries /api/events/`.
 
 ### CSRF and CORS
@@ -294,7 +294,7 @@ drf-spectacular, with the message as the cause.
 ```json
 {
   "recognised": true,
-  "exception": "karni.performance.QueryBudgetExceeded: E117: EventViewSet.list ran 28 queries; budget is 8.",
+  "exception": "karni.performance.QueryBudgetExceeded: E117: EventViewSet.list ran 28 queries against a budget of 8.",
   "where": "events/tests/test_scratch_listing.py:19",
   "raised_in": "karni/api/viewsets.py:870",
   "findings": [
@@ -302,7 +302,7 @@ drf-spectacular, with the message as the cause.
       "class": "code-e117",
       "code": "E117",
       "title": "A request ran more SQL queries than its budget",
-      "cause": "EventViewSet.list ran 28 queries; budget is 8. Repeated: 12× events_venue from EventSerializer.venue_city (events/serializers.py:25 in get_venue_city); 12× events_booking from TicketTierSerializer.remaining (events/models.py:56 in remaining).",
+      "cause": "EventViewSet.list ran 28 queries against a budget of 8. Repeated: 12× events_venue from EventSerializer.venue_city (events/serializers.py:25 in get_venue_city), 12× events_booking from TicketTierSerializer.remaining (events/models.py:56 in remaining).",
       "where": "events/serializers.py:25 in get_venue_city",
       "fix": "Run the `karni queries` command below: …",
       "next": "karni queries EventViewSet.list --as <user>",

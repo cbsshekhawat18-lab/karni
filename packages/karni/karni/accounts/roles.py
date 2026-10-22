@@ -118,7 +118,7 @@ def _scope_parts(scope: str, where: str) -> tuple[str, str]:
     kind, _, path = str(scope).partition(":")
     if kind not in SCOPES or (kind in ("related", "custom")) != bool(path):
         raise KarniImproperlyConfigured(
-            f"{SETTING}: {where} has scope {scope!r}; a scope is 'all', 'own', "
+            f"{SETTING}: {where} has scope {scope!r}. A scope is 'all', 'own', "
             "'related:<scope path key>' or 'custom:<registered name>'.",
             code="E205",
         )
@@ -206,7 +206,7 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
         if not matched:
             raise KarniImproperlyConfigured(
                 f"{SETTING}[{spec.slug!r}]: grant pattern {pattern!r} matches no permission. "
-                "Keys look like 'events.event:view'; a model's extra actions come from "
+                "Keys look like 'events.event:view'. A model's extra actions come from "
                 "`class Karni: actions = [...]`.",
                 code="E206",
             )
@@ -264,8 +264,8 @@ class SyncReport:
             lines.append(f"  {slug:<20} {count:>4} grant(s)  {state}")
         if self.undeclared_roles:
             lines.append(
-                "In the database but not in KARNI_ROLES (kept; remove them yourself if unwanted): "
-                + ", ".join(self.undeclared_roles)
+                "In the database but not in KARNI_ROLES (kept, so remove them yourself if "
+                "unwanted): " + ", ".join(self.undeclared_roles)
             )
         if self.overridden:
             lines.append(

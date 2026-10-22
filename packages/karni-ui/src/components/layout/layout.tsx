@@ -70,7 +70,7 @@ export interface LayoutNavLinkProps {
   /** The styled class, focus indicator and active state included. */
   className: string;
   "aria-current"?: "page";
-  /** Closes the mobile drawer; call it when the link navigates. */
+  /** Closes the mobile drawer. Call it when the link navigates. */
   onClick: () => void;
   /** The icon and the label. */
   children: React.ReactNode;
@@ -100,7 +100,7 @@ export interface LayoutMobileDrawerProps extends LayoutSidebarProps {
 
 /** What the `Header` slot (the top bar) receives. */
 export interface LayoutHeaderProps {
-  /** The button that opens the drawer below md; render it, or the drawer cannot open. */
+  /** The button that opens the drawer below md. Render it, or the drawer cannot open. */
   menuButton: React.ReactNode;
   /** The `header` prop's content. */
   children?: React.ReactNode;
@@ -121,13 +121,13 @@ export interface LayoutSkipLinkProps {
 export interface LayoutSlots {
   /** The top bar with the menu button and the `header` content. */
   Header: React.ComponentType<LayoutHeaderProps>;
-  /** The static sidebar (md and up); the default hides itself below md. */
+  /** The static sidebar (md and up). The default hides itself below md. */
   Sidebar: React.ComponentType<LayoutSidebarProps>;
-  /** Each derived nav link; replace it with your router's link. */
+  /** Each derived nav link. Replace it with your router's link. */
   NavLink: React.ComponentType<LayoutNavLinkProps>;
   /** The sidebar below md: a modal drawer (focus trapped, Escape closes). */
   MobileDrawer: React.ComponentType<LayoutMobileDrawerProps>;
-  /** "Skip to content", visible only while focused; `() => null` removes it. */
+  /** "Skip to content", visible only while focused. `() => null` removes it. */
   SkipLink: React.ComponentType<LayoutSkipLinkProps>;
 }
 
@@ -136,7 +136,7 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   navItems?: readonly LayoutNavItem[];
   /**
    * Wraps or replaces the default link of one item. `defaultNode` is the
-   * link the layout would render; return it, or your own node (e.g. a
+   * link the layout would render. Return it, or your own node (e.g. a
    * TanStack Router <Link> with `className={defaultClassName}`).
    * Prefer the `NavLink` slot, which also closes the mobile drawer.
    */
@@ -148,7 +148,7 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   sidebar?: React.ReactNode;
   /**
    * Brand/logo slot pinned to the top of the sidebar. Defaults to the Karni
-   * mark (`<KarniMark />`); pass your own brand, or `null` for no header.
+   * mark (`<KarniMark />`). Pass your own brand, or `null` for no header.
    */
   sidebarHeader?: React.ReactNode;
   /** Slot pinned to the bottom of the sidebar (user menu, logout, …). */
@@ -163,7 +163,7 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   defaultMobileNavOpen?: boolean;
   /** Called when the drawer opens or closes (menu button, Escape, backdrop, a link). */
   onMobileNavOpenChange?: (open: boolean) => void;
-  /** Replaces internal pieces of the shell; see LayoutSlots. */
+  /** Replaces internal pieces of the shell. See LayoutSlots. */
   slots?: Partial<LayoutSlots>;
   /**
    * Focus after a client-side navigation. Default `true`: once the new page
@@ -317,9 +317,9 @@ export const defaultLayoutSlots: LayoutSlots = {
  * around your router's outlet, so it sees the route change.
  *
  * Escape hatches: `slots` replaces the Header, Sidebar, NavLink,
- * MobileDrawer or SkipLink; `renderNavItem` wraps each derived link;
- * `sidebar` replaces the derived nav wholesale; `sidebarHeader`,
- * `sidebarFooter` and `header` are free slots; `mobileNavOpen` controls
+ * MobileDrawer or SkipLink. `renderNavItem` wraps each derived link.
+ * `sidebar` replaces the derived nav wholesale. `sidebarHeader`,
+ * `sidebarFooter` and `header` are free slots. `mobileNavOpen` controls
  * the drawer. `routeFocus={false}` turns the focus move off, and an object
  * sets its route key, target or announcement.
  */

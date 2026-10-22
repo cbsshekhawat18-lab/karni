@@ -78,7 +78,7 @@ def create_job(
         raise KarniValueError("The file has no header row.", code="E801")
     if len(rows) > max_import_rows():
         raise KarniValueError(
-            f"The file has {len(rows)} rows; the limit is {max_import_rows()} "
+            f"The file has {len(rows)} rows, but the limit is {max_import_rows()} "
             "(KARNI_IMPORT_MAX_ROWS). Split it.",
             code="E803",
         )
@@ -134,7 +134,9 @@ def start_stage(job: ImportJob, request: Any, stage: str) -> ImportJob:
         ImportJob.Status.COMMITTING,
         ImportJob.Status.DONE,
     ):
-        raise KarniValueError(f"This job is {job.status}; it cannot be previewed now.", code="E801")
+        raise KarniValueError(
+            f"This job is {job.status}, so it cannot be previewed now.", code="E801"
+        )
     user = getattr(request, "user", None)
     if job.rows_total <= inline_rows():
         return run_stage(job, stage, user)

@@ -38,8 +38,8 @@ def diagnose_text(text: str, project: Path | None = None) -> Any:
     module = failures_module()
     if module is None:
         raise CliError(
-            "This karni-cli has no failure catalogue (karni/errorcodes/failures.py); "
-            "the install is incomplete.",
+            "This karni-cli has no failure catalogue (karni/errorcodes/failures.py). "
+            "The install is incomplete.",
             code="C005",
         )
     root = project or find_project() or Path.cwd()

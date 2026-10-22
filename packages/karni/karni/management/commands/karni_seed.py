@@ -32,7 +32,9 @@ class Command(BaseCommand):
             "--count", type=int, default=DEFAULT_COUNT, help="Rows per model (default 10)."
         )
         parser.add_argument(
-            "--seed", default=str(DEFAULT_SEED), help="Random seed; the same seed, the same rows."
+            "--seed",
+            default=str(DEFAULT_SEED),
+            help="Random seed. The same seed gives the same rows.",
         )
         parser.add_argument(
             "--reset",

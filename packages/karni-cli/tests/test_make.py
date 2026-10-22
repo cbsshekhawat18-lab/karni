@@ -131,7 +131,7 @@ def test_never_overwrites_without_force(project: Path) -> None:
     ok("make", "task", "digest", "--retry", "2", "--force")
     after = (project / "events" / "tasks.py").read_text()
     assert after.count("def digest(") == 1 and "max_retries=2" in after
-    fails("make", "app", "events", match="pass --force to create only the missing files")
+    fails("make", "app", "events", match="Pass --force to create only the missing files")
     # --force on a skeleton fills in missing files and never truncates existing ones.
     models = project / "events" / "models.py"
     (project / "events" / "apps.py").unlink()
@@ -182,7 +182,7 @@ def test_app_name_rules(project: Path) -> None:
 def test_model_chain_and_access_default_is_announced(project: Path) -> None:
     ok("make", "app", "events")
     result = ok("make", "model", "Event", "title:str:200", "--with", "viewset", "--search", "title")
-    assert "access: Granted() — the default: what KARNI_ROLES grants for Event" in result.output
+    assert "access: Granted() (the default: what KARNI_ROLES grants for Event" in result.output
     assert "next: karni make migration --app events" in result.output
     viewsets = (project / "events" / "viewsets.py").read_text()
     assert "access = Granted()" in viewsets
@@ -210,7 +210,7 @@ def test_viewset_access_choices(project: Path, access: str, declaration: str) ->
 
 def test_viewset_validation(project: Path) -> None:
     ok("make", "app", "events")
-    fails("make", "viewset", "Event", match="create it first: karni make model Event")
+    fails("make", "viewset", "Event", match="Create it first: karni make model Event")
     ok("make", "model", "Event", "title:str")
     fails("make", "viewset", "Event", "--access", "owned:title", match="not a relation")
     fails("make", "viewset", "Event", "--access", "everyone", match="choose one of")
@@ -251,7 +251,7 @@ def test_serializer_needs_a_reason_and_wires_the_viewset(project: Path) -> None:
 def test_test_generator_follows_the_viewset(project: Path) -> None:
     ok("make", "app", "events")
     ok("make", "model", "Event", "title:str", "organizer:fk:User")
-    fails("make", "test", "Event", match="create it first: karni make viewset Event")
+    fails("make", "test", "Event", match="Create it first: karni make viewset Event")
     ok("make", "viewset", "Event", "--access", "owned:organizer")
     result = ok("make", "test", "Event")
     text = (project / "events" / "tests" / "test_event.py").read_text()
@@ -316,7 +316,7 @@ def test_factory_and_seeder_generators(project: Path) -> None:
     assert "class EventSeeder(Seeder):" in seeds
     assert "        model = Venue\n        count = 0\n" in seeds
     fails("make", "factory", "Venue", match="--force")
-    fails("make", "seeder", "Nope", match="create it first")
+    fails("make", "seeder", "Nope", match="Create it first")
     fails("make", "seeder", "Venue", "--count", "-1", "--force", match="0 or more")
 
 

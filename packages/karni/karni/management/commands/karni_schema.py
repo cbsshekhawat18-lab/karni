@@ -52,7 +52,7 @@ def _resolve(labels: list[str]) -> list[type[models.Model]]:
         except LookupError as exc:
             raise KarniCommandError(
                 f"karni schema {label}: no such app or model ({exc}). Pass an app label "
-                "(events) or app.Model (events.Event); `karni context` lists them.",
+                "(events) or app.Model (events.Event). `karni context` lists them.",
                 code="E969",
             ) from exc
     return chosen
@@ -98,7 +98,7 @@ class Command(BaseCommand):
         parser.add_argument("--json", action="store_true", help="Print the report as JSON.")
         parser.add_argument("--database", default="default", help="Database alias to describe.")
         parser.add_argument(
-            "--no-db", action="store_true", help="Report declarations only; do not query."
+            "--no-db", action="store_true", help="Report declarations only, without querying."
         )
 
     def handle(self, *args: Any, **options: Any) -> None:

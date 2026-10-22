@@ -1,5 +1,5 @@
 /**
- * <KarniProvider> — wires the Karni client into React (contract "Schema
+ * <KarniProvider> wires the Karni client into React (contract "Schema
  * client"). Wraps TanStack's QueryClientProvider, creating a QueryClient when
  * none is given (the `queryClient` prop is the escape hatch for apps that
  * already have one), and provides the client via context for every hook and
@@ -15,7 +15,7 @@ const KarniClientContext = createContext<KarniClient | null>(null);
 
 export interface KarniProviderProps {
   client: KarniClient;
-  /** Bring your own QueryClient; one is created (once) when omitted. */
+  /** Bring your own QueryClient. One is created (once) when omitted. */
   queryClient?: QueryClient;
   /**
    * The project's own primitives, by role: `{ button: Button, input: Input }`.

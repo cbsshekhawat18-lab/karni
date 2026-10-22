@@ -27,6 +27,12 @@ and pagination parameters come from their native classes untouched. v0.1
 documents only the unexpanded response shape — expanded variants never
 appear in the schema.
 
+Two postprocessing hooks run after generation (``SPECTACULAR_SETTINGS
+["POSTPROCESSING_HOOKS"]``): :func:`postprocess_schema_enums` names the
+shared choice enums, by model and field where a plain field name collides
+(``BookingStatusEnum``, never ``Status469Enum``), and :func:`add_auth_mode`
+stamps ``x-karni-auth-mode`` at the root.
+
 Override / escape hatch: subclass and point
 ``REST_FRAMEWORK["DEFAULT_SCHEMA_CLASS"]`` (or a view's ``schema``
 attribute) at your class; replace ``KARNI_API_ROUTER`` to change where
@@ -36,8 +42,10 @@ route prefixes are looked up.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
-from typing import Any
+import sys
+from collections import Counter, defaultdict
+from collections.abc import Callable, Iterator, Mapping
+from typing import Any, NamedTuple
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
@@ -397,3 +405,225 @@ def add_auth_mode(result: dict, generator: object, request: object, public: bool
 
     result["x-karni-auth-mode"] = getattr(settings, "KARNI_AUTH_MODE", "jwt")
     return result
+
+
+_SCHEMA_REF = "#/components/schemas/"
+
+
+class _EnumOwner(NamedTuple):
+    """Who a choice property belongs to: the model, else the serializer component."""
+
+    name: str  # "Booking"
+    qualified: str  # "EventsBooking" (app label first), the fallback on a clash
+    is_model: bool
+
+
+def postprocess_schema_enums(
+    result: dict[str, Any], generator: Any, **kwargs: Any
+) -> dict[str, Any]:
+    """drf-spectacular postprocessing hook: shared choice enums, named by model and field.
+
+    Runs drf-spectacular's ``postprocess_schema_enums`` (every choice set
+    becomes one shared ``<Field>Enum`` component), then renames the enums
+    whose plain name collided. When two models expose a ``status`` field with
+    different choices, drf-spectacular names them ``<Component><Field>Enum``
+    or, when a choice set appears in several components, with a hash such as
+    ``Status469Enum`` that changes whenever the choices do. Karni names them
+    ``<Model><Field>Enum`` instead (``BookingStatusEnum``, ``EventStatusEnum``),
+    so generated TypeScript types keep readable, stable names:
+
+    * A field name used for one choice set keeps drf-spectacular's plain
+      ``<Field>Enum``, so schemas without a collision do not change.
+    * The model is the serializer's ``Meta.model``. A serializer without a
+      model contributes its component name, as drf-spectacular does.
+    * One choice set shared by several models stays one enum, named after
+      all of them in alphabetical order (``InvoiceOrderStatusEnum``).
+    * Two models of the same name in different apps get the app label in
+      front (``EventsBookingStatusEnum``). An enum whose name is still taken
+      keeps drf-spectacular's name.
+    * drf-spectacular's collision warning is dropped for the enums Karni
+      named. Every other warning is reported as usual.
+
+    Override / escape hatch: a choice set listed in
+    ``SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]`` keeps the project's name.
+    For drf-spectacular's own naming, list
+    ``"drf_spectacular.hooks.postprocess_schema_enums"`` in
+    ``POSTPROCESSING_HOOKS`` in place of this hook, or point it at your own.
+    """
+    from drf_spectacular.drainage import GENERATOR_STATS
+    from drf_spectacular.hooks import postprocess_schema_enums as spectacular_enums
+
+    before = set(result.get("components", {}).get("schemas", {}))
+    caches = (GENERATOR_STATS._warn_cache, GENERATOR_STATS._error_cache)
+    reported = [dict(cache) for cache in caches]
+    silent = bool(GENERATOR_STATS.silent)
+    with GENERATOR_STATS.silence():  # held back until Karni knows which collisions it named
+        result = spectacular_enums(result, generator, **kwargs)
+    schemas = result.get("components", {}).get("schemas", {})
+    renames = _enum_renames(schemas, generator, created=set(schemas) - before)
+    if renames:
+        _rename_schemas(result, generator, renames)
+    resolved = tuple(f'resolved with "{old}"' for old in renames)
+    for cache, earlier in zip(caches, reported, strict=True):
+        for message in [m for m in cache if cache[m] > earlier.get(m, 0)]:
+            if any(marker in message for marker in resolved):
+                if message in earlier:
+                    cache[message] = earlier[message]
+                else:
+                    del cache[message]
+            elif not silent and message not in earlier:
+                print(message, file=sys.stderr)  # what drf-spectacular would have printed
+    return result
+
+
+def _enum_renames(
+    schemas: Mapping[str, Any], generator: Any, *, created: set[str]
+) -> dict[str, str]:
+    """``{drf-spectacular's name: Karni's name}`` for the enums whose plain name collided."""
+    from drf_spectacular.plumbing import load_enum_name_overrides
+    from drf_spectacular.settings import spectacular_settings
+
+    suffix = str(spectacular_settings.ENUM_SUFFIX)
+    overridden = set(load_enum_name_overrides().values())
+    users: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for component, properties in _property_maps(schemas):
+        for prop, prop_schema in properties.items():
+            enum = _enum_target(prop_schema)
+            if enum is not None and enum in created:
+                users[enum].append((component, prop))
+    wanted: dict[str, tuple[str, str]] = {}
+    for enum, uses in users.items():
+        if enum in overridden or any(_camelize(prop) + suffix == enum for _, prop in uses):
+            continue  # the project's override, or drf-spectacular's plain <Field>Enum
+        owners = [_enum_owner(generator, component) for component, _ in uses]
+        owners = [owner for owner in owners if owner.is_model] or owners
+        fields = "".join(sorted({_camelize(prop) for _, prop in uses}))
+        wanted[enum] = (
+            "".join(sorted({owner.name for owner in owners})) + fields + suffix,
+            "".join(sorted({owner.qualified for owner in owners})) + fields + suffix,
+        )
+    return _assign_enum_names(wanted, taken=set(schemas))
+
+
+def _assign_enum_names(wanted: Mapping[str, tuple[str, str]], *, taken: set[str]) -> dict[str, str]:
+    """Pick each enum's short name, else its app-qualified one, never a name in use.
+
+    A name two enums want goes to neither (both try the next form), so the
+    result does not depend on order. An enum with no free name is left out
+    and keeps drf-spectacular's name.
+    """
+    chosen: dict[str, str] = {}
+    for form in (0, 1):
+        pending = [enum for enum in sorted(wanted) if enum not in chosen]
+        demand = Counter(wanted[enum][form] for enum in pending)
+        for enum in pending:
+            name = wanted[enum][form]
+            free = name == enum or (name not in taken and name not in chosen.values())
+            if demand[name] == 1 and free:
+                chosen[enum] = name
+    return {old: new for old, new in chosen.items() if old != new}
+
+
+def _property_maps(schemas: Mapping[str, Any]) -> Iterator[tuple[str, Mapping[str, Any]]]:
+    """``(component, properties)`` pairs, as drf-spectacular's enum hook walks them."""
+
+    def walk(name: str, node: Any) -> Iterator[tuple[str, Mapping[str, Any]]]:
+        if isinstance(node, list):
+            for item in node:
+                yield from walk(name, item)
+        elif isinstance(node, dict):
+            properties = node.get("properties")
+            if isinstance(properties, dict) and properties:
+                yield name, properties
+            for key in ("oneOf", "allOf", "anyOf"):
+                yield from walk(name, node.get(key, []))
+
+    for name, schema in schemas.items():
+        yield from walk(name, schema)
+
+
+def _enum_target(schema: Any) -> str | None:
+    """The component a property's choices point at (drf-spectacular puts it first)."""
+    if isinstance(schema, dict) and schema.get("type") == "array":
+        schema = schema.get("items")
+    if not isinstance(schema, dict):
+        return None
+    ref = schema.get("$ref")
+    for key in ("allOf", "oneOf"):
+        branches = schema.get(key)
+        if ref is None and isinstance(branches, list) and branches:
+            first = branches[0]
+            ref = first.get("$ref") if isinstance(first, dict) else None
+    if isinstance(ref, str) and ref.startswith(_SCHEMA_REF):
+        return ref.removeprefix(_SCHEMA_REF)
+    return None
+
+
+def _enum_owner(generator: Any, component: str) -> _EnumOwner:
+    """The model behind ``component``'s serializer, else the component's base name."""
+    from drf_spectacular.settings import spectacular_settings
+
+    model = _serializer_model(generator, component)
+    if model is not None:
+        name = model.__name__
+        return _EnumOwner(name, _camelize(model._meta.app_label) + name, is_model=True)
+    # The request and patch twins of a component share its base name.
+    if spectacular_settings.COMPONENT_SPLIT_PATCH:
+        component = re.sub("^Patched(.+)", r"\1", component)
+    if spectacular_settings.COMPONENT_SPLIT_REQUEST:
+        component = re.sub("(.+)Request$", r"\1", component)
+    return _EnumOwner(component, component, is_model=False)
+
+
+def _serializer_model(generator: Any, component: str) -> type[Model] | None:
+    """``Meta.model`` of the serializer registered as ``component``, if it has one."""
+    from drf_spectacular.plumbing import ResolvedComponent
+
+    registry = getattr(generator, "registry", None)
+    if registry is None:
+        return None
+    try:
+        resolved = registry[(component, ResolvedComponent.SCHEMA)]
+    except KeyError:
+        return None
+    model = getattr(getattr(resolved.object, "Meta", None), "model", None)
+    return model if isinstance(model, type) and issubclass(model, Model) else None
+
+
+def _rename_schemas(result: dict[str, Any], generator: Any, renames: Mapping[str, str]) -> None:
+    """Rename schema components (kept sorted) and every ``$ref`` that points at them."""
+    from drf_spectacular.plumbing import ResolvedComponent
+
+    components = result["components"]
+    renamed = {renames.get(name, name): schema for name, schema in components["schemas"].items()}
+    components["schemas"] = dict(sorted(renamed.items()))
+    _rewrite_refs(result, {_SCHEMA_REF + old: _SCHEMA_REF + new for old, new in renames.items()})
+    registry = getattr(generator, "registry", None)
+    if registry is None:
+        return
+    for old, new in renames.items():  # so a later hook that rebuilds components agrees
+        try:
+            resolved = registry[(old, ResolvedComponent.SCHEMA)]
+        except KeyError:
+            continue
+        del registry[resolved]
+        resolved.name = new
+        registry.register_on_missing(resolved)
+
+
+def _rewrite_refs(node: Any, refs: Mapping[str, str]) -> None:
+    """Point every ``$ref`` found in ``refs`` at its new target, in place."""
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref in refs:
+            node["$ref"] = refs[ref]
+        for value in node.values():
+            _rewrite_refs(value, refs)
+    elif isinstance(node, list):
+        for item in node:
+            _rewrite_refs(item, refs)
+
+
+def _camelize(name: str) -> str:
+    """``device_type`` to ``DeviceType``, the rule drf-spectacular names enums with."""
+    return re.sub(r"(?:^|_)(.)", lambda match: match.group(1).upper(), name)

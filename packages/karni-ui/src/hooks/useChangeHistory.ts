@@ -1,5 +1,5 @@
 /**
- * useChangeHistory — one row's field-level change history (karni.audit, ADR 0002 P4).
+ * useChangeHistory: one row's field-level change history (karni.audit, ADR 0002 P4).
  *
  * `useChangeHistory("prices", id)` fetches `GET /<resource>/<id>/history/`,
  * the paginated list a `BaseViewSet` serves for models that opt in with
@@ -20,7 +20,7 @@ export interface ChangeLogEntry {
   timestamp: string;
   actor: { id: string | number; email?: string } | null;
   action: ChangeAction;
-  /** `{ field: [old, new] }`; a redacted field carries `"[redacted]"` on both sides. */
+  /** `{ field: [old, new] }`. A redacted field carries `"[redacted]"` on both sides. */
   diff: Record<string, [unknown, unknown]>;
   fields_changed: string[];
 }

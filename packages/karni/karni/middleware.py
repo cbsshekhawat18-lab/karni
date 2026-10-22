@@ -151,7 +151,7 @@ class QueryLogMiddleware:
             elapsed = (time.perf_counter() - started) * 1000
             head, _, body = report.render().partition("\n")
             line = (
-                f"{request.method} {request.get_full_path()} {response.status_code} — "
+                f"{request.method} {request.get_full_path()} {response.status_code}: "
                 f"{head}, {elapsed:.1f} ms total"
             )
             level = logging.WARNING if report.duplicates() else logging.INFO

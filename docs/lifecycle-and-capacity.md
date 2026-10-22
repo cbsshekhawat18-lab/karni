@@ -231,7 +231,7 @@ backend without row locks (SQLite).
 `CapacityExceeded` is an `IntegrityError`. The API answers 409:
 
 ```json
-{"detail": "E985: Stock 'VIP' (…) is sold out (remaining = 0); 1 was requested. …",
+{"detail": "E985: Stock 'VIP' (…) is sold out (remaining = 0), but 1 was requested. …",
  "code": "E985", "field": "remaining",
  "conflict": {"resource": "lifecycleapp.Stock", "id": "…", "field": "remaining",
               "remaining": 0, "requested": 1}}

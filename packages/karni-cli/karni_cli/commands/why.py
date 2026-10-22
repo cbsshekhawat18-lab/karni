@@ -54,7 +54,7 @@ def why_args(
         if not request_id:
             raise CliError(
                 f"`karni why {text}` needs the request id: karni why {text} <request-id>. Records "
-                "are written by the dev server under .karni/requests/ (DEBUG only); without "
+                "are written by the dev server under .karni/requests/ (DEBUG only). Without "
                 "one, ask about the row: karni why <resource>/<id> --as <user>.",
                 code="C310",
             )
@@ -63,7 +63,7 @@ def why_args(
         if request_id:
             raise CliError(
                 f"Unexpected {request_id!r} after {text!r}: only a status takes a request id "
-                "(karni why 403 <request-id>); a row is <resource>/<id>.",
+                "(karni why 403 <request-id>). A row is <resource>/<id>.",
                 code="C310",
             )
         if text.endswith("/") or text.startswith("/"):

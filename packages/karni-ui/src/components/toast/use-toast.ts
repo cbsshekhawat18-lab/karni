@@ -42,7 +42,7 @@ const stableApi = {
  * Imperative toast API + the live toast list.
  *
  * Requires a mounted <Toaster/> somewhere in the tree to actually render the
- * toasts; the functions themselves are stable module-level references, safe
+ * toasts. The functions themselves are stable module-level references, safe
  * to use in effects and callbacks without dependency churn.
  */
 export function useToast(): UseToastResult {

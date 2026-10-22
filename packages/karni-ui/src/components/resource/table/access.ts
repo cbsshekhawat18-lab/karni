@@ -7,10 +7,10 @@
  * `{"public": true}`, `{"authenticated": true}`, `{"role": [...]}`,
  * `{"owned": "organizer"}`, `{"any": [...]}`, `{"all": [...]}`, `{"deny": ...}`
  * and predicates only the server can answer (`can`, `granted`, `where`,
- * `unscoped`). The answer is three-valued: `false` only when the rule
- * certainly refuses; `undefined` when the client cannot tell (no
- * AuthProvider, a grant, a custom function), which keeps the action: the
- * server still enforces, and a refusal is then reported in plain words.
+ * `unscoped`). The answer is three-valued. It is `false` only when the rule
+ * certainly refuses, and `undefined` when the client cannot tell (no
+ * AuthProvider, a grant, a custom function). `undefined` keeps the action:
+ * the server still enforces, and a refusal is then reported in plain words.
  *
  * Internal to @karni/ui. Escape hatch: ResourceTable's `canCreate`,
  * `canEdit` and `canDelete` props replace this evaluation.
@@ -19,7 +19,7 @@ import type { KarniUser } from "../../../auth/types";
 import type { KarniAccessRule } from "../../../schema/types";
 import { asRecord } from "./table-utils";
 
-/** Who is asking; `null` when the table renders outside an AuthProvider. */
+/** Who is asking. `null` when the table renders outside an AuthProvider. */
 export interface AccessIdentity {
   status: "loading" | "authenticated" | "anonymous";
   user: KarniUser | null;

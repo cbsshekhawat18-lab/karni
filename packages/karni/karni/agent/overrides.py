@@ -64,7 +64,7 @@ def _literal(node: ast.expr, name: str, path: Path) -> Any:
         return ast.literal_eval(node)
     except ValueError:
         raise OverrideError(
-            f"{path}:{node.lineno}: {name} must be a literal (strings, lists, dicts) — "
+            f"{path}:{node.lineno}: {name} must be a literal (strings, lists, dicts). "
             "karni.rules.py is read statically and never executed."
         ) from None
 

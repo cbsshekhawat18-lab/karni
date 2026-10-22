@@ -100,7 +100,7 @@ export const Loading: Story = {
 
 /**
  * Keyboard: Tab focuses the chart, the arrow keys move the tooltip from
- * month to month and announce each value (Home, End; Escape hides it).
+ * month to month and announce each value (also Home and End). Escape hides it.
  */
 export const KeyboardFocus: Story = {
   args: {

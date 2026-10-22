@@ -28,7 +28,7 @@ from karni_cli.rules_render import render_explain, render_procedure, render_rule
 
 INSTRUCTIONS = (
     "Karni project tools. Call `context` and `rules` before any work and follow what they "
-    "return; call `check` on every file you write. When a row, field or action is "
+    "return. Call `check` on every file you write. When a row, field or action is "
     "unexpectedly missing or refused, call `why` (or `why_empty`) before reading the access "
     "layer."
 )
@@ -69,7 +69,7 @@ def rules_tool(code: str = "", procedure: str = "") -> str:
 
 
 def check_tool(path: str) -> str:
-    """Static check of one file against Karni's rules; returns violations with fixes."""
+    """Static check of one file against Karni's rules. Returns violations with fixes."""
     project = _project()
     target = Path(path)
     if not target.is_absolute() and project is not None:
@@ -114,7 +114,7 @@ def why_tool(
     params: str = "",
     as_json: bool = False,
 ) -> str:
-    """Why an API row, field or action is refused or missing for a user — run this before
+    """Why an API row, field or action is refused or missing for a user. Run this before
     reading the access layer. ``target``: ``<resource>/<id>`` (a row), ``<resource>.<field>``
     (a field), ``<resource>`` (its list), or ``"403 <request-id>"`` (a recorded request).
     ``user``: email, username, pk or ``anonymous``. ``action``: view (default), update,
@@ -181,7 +181,7 @@ def replay_tool(
     commit: bool = False,
 ) -> str:
     """Re-run a captured request against the current code, in-process, as its user or
-    ``as_user`` (email, username or pk); returns the status and what changed ("was 403, now
+    ``as_user`` (email, username or pk). Returns the status and what changed ("was 403, now
     200"). Writes are rolled back unless ``commit``. Redacted values: ``sets`` ["field=value",
     "query:name=value"] or ``drop_redacted``. Use it to confirm a permission or bug fix."""
     from karni_cli.debugging import replay_args
@@ -226,7 +226,7 @@ def explain_text_tool(text: str) -> str:
 def queries_tool(
     endpoint: str, as_user: str = "", method: str = "GET", data: str = "", explain: bool = False
 ) -> str:
-    """Run one endpoint in-process as a user (email, username or pk; empty = anonymous) and
+    """Run one endpoint in-process as a user (email, username or pk, or empty for anonymous) and
     report every SQL query: count and time, repeated queries grouped by cause (serializer
     field, relation, why the optimiser did not fetch it) and the exact fix. endpoint:
     /api/events/, events, events/<id> or EventViewSet.list. Writes are rolled back. Call it

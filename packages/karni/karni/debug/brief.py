@@ -39,7 +39,7 @@ _HINTS: tuple[tuple[str, str, str], ...] = (
         "DoesNotExist",
         "",
         "A .get() found no row: the row is missing or a scope (soft delete, "
-        "access) hides it — use the viewset's get_object() for API lookups.",
+        "access) hides it. Use the viewset's get_object() for API lookups.",
     ),
     ("MultipleObjectsReturned", "", "A .get() matched several rows: filter on a unique field."),
     (
@@ -75,14 +75,14 @@ def resolve_failure(value: str) -> dict[str, Any]:
             snapshot = store.read_failure(str(record["failure_id"]))
         elif record is not None:
             raise KarniCommandError(
-                f"Request {value} did not fail (status {record.get('status')}); there is no "
+                f"Request {value} did not fail (status {record.get('status')}), so there is no "
                 f"failure snapshot for it. Follow it with `karni trace {value}`.",
                 code="E922",
             )
     if snapshot is None:
         raise KarniCommandError(
             f"No failure snapshot {value!r} under .karni/failures/. Snapshots are written on an "
-            f"unhandled exception; the newest {store.keep_count()} are kept. {NO_CAPTURE_HINT}",
+            f"unhandled exception, and the newest {store.keep_count()} are kept. {NO_CAPTURE_HINT}",
             code="E922",
         )
     return snapshot

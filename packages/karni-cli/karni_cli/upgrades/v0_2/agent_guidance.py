@@ -180,9 +180,9 @@ def render_rules_block(migration: Migration, existing: str) -> str:
     lines = []
     if not existing:
         lines += [
-            '"""Project agent rules for `karni rules` (read statically; literals only).',
+            '"""Project agent rules for `karni rules` (read statically, literals only).',
             "",
-            "Schema: ADD / OVERRIDE / DISABLE / ADAPTERS — see docs/agents.md.",
+            "Schema: ADD / OVERRIDE / DISABLE / ADAPTERS. See docs/agents.md.",
             '"""',
             "",
         ]
@@ -233,7 +233,7 @@ def _apply(project: Path, migration: Migration) -> list[str]:
 def _notes(migration: Migration) -> list[tuple[str, str]]:
     """``(file, note)`` for everything a person has to look at."""
     notes = [
-        (rel, "does not look like Karni's file — left untouched, review it")
+        (rel, "does not look like Karni's file, so it was left untouched. Review it")
         for rel in migration.foreign
     ]
     notes += [

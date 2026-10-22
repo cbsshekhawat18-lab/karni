@@ -144,7 +144,7 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
     found = viewset_for(ws, model.app, model.name)
     if found is None:
         raise CliError(
-            f"No viewset routes {model.name} — create it first: karni make viewset "
+            f"No viewset routes {model.name}. Create it first: karni make viewset "
             f"{model.name} --app {model.app.label} (the test drives the resource's URLs).",
             code="C105",
         )
@@ -162,8 +162,8 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
             note = no_isolation_reason(ws, model, explicit=role is not None)
         if chosen is None:
             ws.note(
-                f"no role in KARNI_ROLES grants {model.app.label}.{model.name.lower()}:view; "
-                "as any signed-in user the test is refused everything — pass --role"
+                f"no role in KARNI_ROLES grants {model.app.label}.{model.name.lower()}:view. "
+                "As any signed-in user the test is refused everything. Pass --role"
             )
     module = viewset_module(ws, model.app, path)
     tests = model.app.file("tests")
@@ -175,7 +175,7 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
     who = f"role {chosen!r}" if chosen else "any signed-in user"
     ws.note(f"test: {cls.name} as {who}{how}")
     if note:
-        ws.note(f"isolation: NOT generated — {note}")
+        ws.note(f"isolation: NOT generated because {note}")
     ws.note(f"run: karni test {ws.rel(target)}")
     return ws.rel(target)
 

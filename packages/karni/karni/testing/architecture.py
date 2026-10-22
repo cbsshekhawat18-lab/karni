@@ -169,7 +169,7 @@ def check_viewset_access() -> list[Violation]:
         violations += _class_violation(
             cls,
             "viewset-access",
-            f"{cls.__name__} declares no access — every request is denied",
+            f"{cls.__name__} declares no access, so every request is denied",
             "add access = Access(read=..., write=...), or Unscoped(reason=...)",
         )
     return violations
@@ -380,7 +380,7 @@ def check_redundant_serializer() -> list[Violation]:
                             obj,
                             "redundant-serializer",
                             f"{obj.__name__} is identical to the auto-generated serializer",
-                            f"delete it — BaseViewSet(model={model.__name__}) generates this",
+                            f"delete it, since BaseViewSet(model={model.__name__}) generates this",
                         )
                 except Exception:  # noqa: BLE001 - one bad model must not kill the rule
                     continue
@@ -479,7 +479,7 @@ def run_checks() -> list[str]:
 def _assert_clean(violations: list[Violation]) -> None:
     if violations:
         raise KarniAssertionError(
-            f"{len(violations)} architecture violation(s); each names its rule and fix "
+            f"{len(violations)} architecture violation(s). Each names its rule and fix "
             "(`karni explain <code>` for more):\n" + "\n".join(v.render() for v in violations),
             code="E702",
         )

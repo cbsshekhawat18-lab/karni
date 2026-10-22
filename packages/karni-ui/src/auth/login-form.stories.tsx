@@ -70,7 +70,10 @@ async function failed(canvasElement: HTMLElement): Promise<void> {
 
 export const Default: Story = {};
 
-/** Both fields marked invalid and pointing at the message; the email stays, the password is cleared. */
+/**
+ * Both fields marked invalid and pointing at the message. The email stays and
+ * the password is cleared.
+ */
 export const WrongCredentials: Story = {
   play: async ({ canvasElement }) => failed(canvasElement),
 };

@@ -293,7 +293,7 @@ def render_all(project: Path, data: AgentData, registry: Registry | None = None)
         count = content.count("\n")
         if count > registry.max_lines:
             raise CliError(
-                f"{rel} would be {count} lines (cap {registry.max_lines}); shorten the "
+                f"{rel} would be {count} lines (cap {registry.max_lines}). Shorten the "
                 "project rules or module guidance feeding it.",
                 code="C205",
             )

@@ -5,7 +5,7 @@
  */
 import type { ResourceTableDensity } from "./preferences";
 
-/** Row and header geometry per density; every value is a spacing token. */
+/** Row and header geometry per density. Every value is a spacing token. */
 export const DENSITY_CLASSES: Record<
   ResourceTableDensity,
   { head: string; cell: string; action: string; card: string }
@@ -27,7 +27,7 @@ export const DENSITY_CLASSES: Record<
 /**
  * The scrolling box: both directions scroll inside it, so 50 columns never
  * push the page sideways and the header can stick. Its height is capped by
- * the `--karni-table-max-height` token (70vh); set it to `none` to let the
+ * the `--karni-table-max-height` token (70vh). Set it to `none` to let the
  * page scroll instead.
  */
 export const SCROLL_BOX =

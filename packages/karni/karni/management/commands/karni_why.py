@@ -66,7 +66,7 @@ class Command(BaseCommand):
             "--param",
             action="append",
             default=[],
-            help="A query parameter the request carries (key=value; repeatable).",
+            help="A query parameter the request carries (key=value, repeatable).",
         )
         parser.add_argument(
             "--empty", action="store_true", help="Explain the user's list (why-empty)."
@@ -109,7 +109,7 @@ class Command(BaseCommand):
         if request_id:
             raise WhyError(
                 f"Unexpected {request_id!r} after {target!r}: a request id follows a status "
-                "(karni why 403 <request-id>); a row is <resource>/<id>.",
+                "(karni why 403 <request-id>), and a row is <resource>/<id>.",
                 code="E908",
             )
         if not options.get("user"):

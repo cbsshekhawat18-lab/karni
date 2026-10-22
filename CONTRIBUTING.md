@@ -92,6 +92,23 @@ packages/karni-cli`, or `make install-py test-py CORE_ONLY=1`), those tests
 skip and name the module to install. CI runs both ways. Its full run sets
 `KARNI_REQUIRE_MODULES=1`, so there a missing module fails instead of skipping.
 
+CI also runs `packages/karni` and the three modules on PostgreSQL 16. Each
+suite's `tests/settings.py` pins SQLite, so CI layers the settings overlay
+`.github/ci/karni_postgres_settings.py` on top of it. To do the same locally,
+install `psycopg[binary]`, point `DATABASE_URL` at a server where you may
+create databases, and run pytest from the package's directory:
+
+```sh
+cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation
+PYTHONPATH=../../.github/ci DATABASE_URL=postgres://postgres:postgres@localhost:5432/karni \
+    ../../.venv/bin/python -m pytest --ds=karni_postgres_settings --no-migrations
+```
+
+The test database is `test_` followed by the name in `DATABASE_URL`. The
+`packages/karni` suite also needs the `pg_trgm` extension in it. Create the
+extension in `template1`, or set `KARNI_TEST_DB_TEMPLATE` to a database that
+has it.
+
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for
 real users. Fix the framework, not the example.

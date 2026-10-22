@@ -144,14 +144,16 @@ def _status_rows(statuses: list[Status]) -> str:
 def _models_section(inventory: Inventory) -> str:
     if not inventory.models:
         return (
-            "<p>No models yet. That is the normal first state; "
-            '<a href="#first-model">add your first model</a> and this list fills itself.</p>'
+            "<p>No models yet. That is the normal first state. "
+            '<a href="#first-model">Add your first model</a> and this list fills itself.</p>'
         )
     rows = []
     for link in inventory.models:
-        admin = f'<a href="{escape(link.admin_url)}">admin</a>' if link.admin_url else "—"
+        admin = f'<a href="{escape(link.admin_url)}">admin</a>' if link.admin_url else "none"
         api = (
-            f'<a href="{escape(link.api_url)}">{escape(link.api_url)}</a>' if link.api_url else "—"
+            f'<a href="{escape(link.api_url)}">{escape(link.api_url)}</a>'
+            if link.api_url
+            else "none"
         )
         rows.append(
             f"<tr><td><code>{escape(link.name)}</code></td><td>{admin}</td><td>{api}</td></tr>"
@@ -259,7 +261,7 @@ def _agent_section(inventory: Inventory) -> str:
         )
     if missing and not present:
         adapters_html += (
-            '<p class="muted">No adapter files found next to this project; '
+            '<p class="muted">No adapter files found next to this project. '
             "<code>karni rules sync</code> writes them.</p>"
         )
     elif missing:
@@ -310,6 +312,6 @@ def render_page(inventory: Inventory, statuses: list[Status]) -> str:
         + "<h2>Build it with your agent</h2>"
         + _agent_section(inventory)
         + "<footer>This page is served only while <code>DEBUG</code> is on and no route of yours "
-        "answers <code>/</code>; define one and it is gone.</footer>"
+        "answers <code>/</code>. Define one and it is gone.</footer>"
         f"</main><script>{SCRIPT}</script></body></html>"
     )

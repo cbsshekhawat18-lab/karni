@@ -1,10 +1,10 @@
 /**
  * ResourceTable's export buttons (karni.transfer, ADR 0002 P6): one per
  * format, each downloading `GET /<resource>/export/` with the table's current
- * filters, search and ordering — the backend applies the row scope and the
+ * filters, search and ordering. The backend applies the row scope and the
  * role's field visibility, so the file is exactly what the table may show.
  *
- * Internal to @karni/ui — the public surface is ResourceTable's `exportFormats`.
+ * Internal to @karni/ui. The public surface is ResourceTable's `exportFormats`.
  */
 import * as React from "react";
 import type { ResourceListParams } from "../../../hooks/types";

@@ -3,7 +3,7 @@
  *
  * The OpenAPI document served by the karni backend (drf-spectacular, OAS 3.0.3,
  * COMPONENT_SPLIT_REQUEST=True per api contract B14) is parsed ONCE into these
- * shapes; every generic component consumes FieldDef/ResourceSchema, never raw
+ * shapes. Every generic component consumes FieldDef/ResourceSchema, never raw
  * OpenAPI.
  */
 
@@ -40,7 +40,7 @@ export interface FieldDef {
   /** Flagged writeOnly OR present only in the request component (D1). */
   writeOnly: boolean;
   nullable: boolean;
-  /** Enum members; BlankEnum's "" and NullEnum's null are never members (D1/D3). */
+  /** Enum members. BlankEnum's "" and NullEnum's null are never members (D1/D3). */
   enumValues?: ReadonlyArray<string | number>;
   /** Choice labels by value, from drf-spectacular's "* `value` - Label" description lines. */
   enumLabels?: Readonly<Record<string, string>>;
@@ -56,7 +56,7 @@ export interface FieldDef {
   relation?: RelationRef;
   /**
    * Underlying pk value type of a relation field, derived from the property's
-   * own emitted type/format — never assumed (D3). Drives zodFor's relation
+   * own emitted type/format, never assumed (D3). Drives zodFor's relation
    * value schema (uuid string vs integer).
    */
   relationValueType?: "uuid" | "integer" | "string";
@@ -76,7 +76,7 @@ export interface OperationDef {
   path: string;
   method: "get" | "post" | "put" | "patch" | "delete";
   operationId?: string;
-  /** Declared query parameter names — the filter bar derives from these (D5). */
+  /** Declared query parameter names. The filter bar derives from these (D5). */
   queryParams: readonly string[];
   /** Allowed expand keys when the expand param declares an enum (D5). */
   expandEnum?: readonly string[];
@@ -95,19 +95,19 @@ export interface ResourceSchema {
     create?: OperationDef;
     update?: OperationDef;
     remove?: OperationDef;
-    /** `GET /<resource>/export/` — the list as a CSV/XLSX file (karni.transfer, P6). */
+    /** `GET /<resource>/export/`: the list as a CSV/XLSX file (karni.transfer, P6). */
     export?: OperationDef;
-    /** `POST /<resource>/import/` — the import flow (upload, preview, commit). */
+    /** `POST /<resource>/import/`: the import flow (upload, preview, commit). */
     import?: OperationDef;
   };
-  /** Ordered by declaration; unknown constructs land as kind "unknown". */
+  /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];
 }
 
-/** The whole parsed registry; produced once per schema fetch by parseOpenApi. */
+/** The whole parsed registry, produced once per schema fetch by parseOpenApi. */
 export interface ParsedSchema {
   /** Keyed by router prefix (x-karni-resource). */
   resources: Record<string, ResourceSchema>;
-  /** From the schema root's x-karni-auth-mode (api B14); undefined when absent. */
+  /** From the schema root's x-karni-auth-mode (api B14). Undefined when absent. */
   authMode?: "jwt" | "session";
 }

@@ -20,7 +20,7 @@ from karni.exceptions import KarniCommandError
 __all__ = ["NO_CAPTURE_HINT", "render", "resolve_request_id", "story"]
 
 NO_CAPTURE_HINT = (
-    "Capture runs only with DEBUG on (and KARNI_DEBUG_CAPTURE not False); it writes "
+    "Capture runs only with DEBUG on (and KARNI_DEBUG_CAPTURE not False). It writes "
     ".karni/requests/, .karni/failures/ and .karni/trace/ under the project root. Turn "
     "DEBUG on, repeat the request, and take the id from its X-Request-ID response header "
     "(or use `last`)."
@@ -197,7 +197,7 @@ def describe(event: dict[str, Any]) -> str:
         if get("duration_ms") is not None:
             line += f" in {get('duration_ms')} ms"
         if name == "task.failed":
-            line += f" — {get('exception')}: {get('message')}"
+            line += f": {get('exception')}: {get('message')}"
             if get("failure_id"):
                 line += f" (failure {get('failure_id')})"
         return line

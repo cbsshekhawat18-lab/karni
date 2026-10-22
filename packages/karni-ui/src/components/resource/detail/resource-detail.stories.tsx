@@ -64,7 +64,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Every readable field; empty values (description, organizer, tags) are the shared dash. */
+/** Every readable field. Empty values (description, organizer, tags) are the shared dash. */
 export const Loaded: Story = {};
 
 /** Slow: after 500ms the placeholder draws the record's own layout, header included. */

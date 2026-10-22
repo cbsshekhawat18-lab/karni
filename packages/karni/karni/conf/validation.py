@@ -145,7 +145,7 @@ class KarniSettingsModel(BaseModel):
             return ["SECRET_KEY must not be empty"]
         if not self.DEBUG and self.SECRET_KEY == INSECURE_SECRET_KEY:
             return [
-                "SECRET_KEY is the insecure Karni dev default; set a real "
+                "SECRET_KEY is the insecure Karni dev default. Set a real "
                 "SECRET_KEY environment variable when DEBUG is False"
             ]
         return []
@@ -153,7 +153,7 @@ class KarniSettingsModel(BaseModel):
     def _check_allowed_hosts(self) -> list[str]:
         if not self.DEBUG and not self.ALLOWED_HOSTS:
             return [
-                "ALLOWED_HOSTS must not be empty when DEBUG is False; set the "
+                "ALLOWED_HOSTS must not be empty when DEBUG is False. Set the "
                 "ALLOWED_HOSTS environment variable (comma-separated)"
             ]
         return []
@@ -162,8 +162,8 @@ class KarniSettingsModel(BaseModel):
         default = self.DATABASES.get("default")
         if not isinstance(default, Mapping) or not default.get("ENGINE"):
             return [
-                "DATABASES must define a 'default' connection with an ENGINE; "
-                "set DATABASE_URL or override DATABASES in settings.py"
+                "DATABASES must define a 'default' connection with an ENGINE. "
+                "Set DATABASE_URL or override DATABASES in settings.py"
             ]
         return []
 
@@ -181,7 +181,7 @@ class KarniSettingsModel(BaseModel):
                 if scheme not in _REDIS_SCHEMES:
                     errors.append(
                         f"CACHES['default']['LOCATION'] {loc!r} is not a Redis URL "
-                        "(expected scheme redis://, rediss:// or unix://); check REDIS_URL"
+                        "(expected scheme redis://, rediss:// or unix://). Check REDIS_URL"
                     )
         return errors
 
@@ -192,7 +192,7 @@ class KarniSettingsModel(BaseModel):
         if not scheme:
             return [
                 f"CELERY_BROKER_URL {self.CELERY_BROKER_URL!r} is not a URL "
-                "(expected e.g. redis://redis:6379/0); check REDIS_URL"
+                "(expected e.g. redis://redis:6379/0). Check REDIS_URL"
             ]
         return []
 
@@ -200,7 +200,7 @@ class KarniSettingsModel(BaseModel):
         errors: list[str] = []
         if self.KARNI_STORAGE not in _VALID_STORAGES:
             errors.append(
-                f"KARNI_STORAGE {self.KARNI_STORAGE!r} is invalid; expected 'local' or 's3'"
+                f"KARNI_STORAGE {self.KARNI_STORAGE!r} is invalid (expected 'local' or 's3')"
             )
         elif self.KARNI_STORAGE == "s3" and not self.AWS_STORAGE_BUCKET_NAME:
             errors.append("KARNI_STORAGE='s3' requires AWS_STORAGE_BUCKET_NAME to be set")
@@ -217,7 +217,7 @@ class KarniSettingsModel(BaseModel):
                     errors.append(
                         f"REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'][{scope!r}] = {rate!r} "
                         "is not a valid throttle rate (expected '<number>/<period>', "
-                        "e.g. '100/min'); check THROTTLE_ANON / THROTTLE_USER"
+                        "e.g. '100/min'). Check THROTTLE_ANON / THROTTLE_USER"
                     )
         return errors
 
@@ -245,30 +245,30 @@ class KarniSettingsModel(BaseModel):
         if page_size is None:
             errors.append(
                 "REST_FRAMEWORK['PAGE_SIZE'] is None (or missing), which switches pagination "
-                "off for every list; set a positive integer (KARNI_PAGE_SIZE, default 50). A "
+                "off for every list. Set a positive integer (KARNI_PAGE_SIZE, default 50). A "
                 "viewset that must return plain lists declares pagination = "
                 "Unpaginated(max_rows=N, reason='...')"
             )
         elif not _positive_int(page_size):
             errors.append(
                 f"REST_FRAMEWORK['PAGE_SIZE'] = {page_size!r} must be a positive "
-                "integer; check KARNI_PAGE_SIZE"
+                "integer. Check KARNI_PAGE_SIZE"
             )
         elif cap is not None and page_size > cap:
             errors.append(
                 f"REST_FRAMEWORK['PAGE_SIZE'] = {page_size} exceeds KARNI_MAX_PAGE_SIZE "
-                f"({cap}); lower KARNI_PAGE_SIZE or raise KARNI_MAX_PAGE_SIZE"
+                f"({cap}). Lower KARNI_PAGE_SIZE or raise KARNI_MAX_PAGE_SIZE"
             )
         errors.extend(self._check_pagination_class())
         return errors
 
     def _check_pagination_class(self) -> list[str]:
         dotted = self.REST_FRAMEWORK.get("DEFAULT_PAGINATION_CLASS")
-        fix = "use 'karni.pagination.KarniPageNumberPagination' (or a subclass)"
+        fix = "Use 'karni.pagination.KarniPageNumberPagination' (or a subclass)"
         if dotted is None:
             return [
                 "REST_FRAMEWORK['DEFAULT_PAGINATION_CLASS'] is None (or missing), which "
-                f"switches pagination off for every list; {fix}"
+                f"switches pagination off for every list. {fix}"
             ]
         from django.utils.module_loading import import_string
 
@@ -283,7 +283,7 @@ class KarniSettingsModel(BaseModel):
         if not (isinstance(klass, type) and issubclass(klass, KarniPagination)):
             return [
                 f"REST_FRAMEWORK['DEFAULT_PAGINATION_CLASS'] = {dotted!r} is not a "
-                f"karni.pagination.KarniPagination subclass (it would skip KARNI_MAX_PAGE_SIZE); "
+                f"karni.pagination.KarniPagination subclass (it would skip KARNI_MAX_PAGE_SIZE). "
                 f"{fix}"
             ]
         return []
@@ -293,8 +293,8 @@ class KarniSettingsModel(BaseModel):
         errors: list[str] = []
         if self.KARNI_QUERY_BUDGET_MODE not in _BUDGET_MODES:
             errors.append(
-                f"KARNI_QUERY_BUDGET_MODE {self.KARNI_QUERY_BUDGET_MODE!r} is invalid; expected "
-                "'raise', 'warn' or 'off'"
+                f"KARNI_QUERY_BUDGET_MODE {self.KARNI_QUERY_BUDGET_MODE!r} is invalid (expected "
+                "'raise', 'warn' or 'off')"
             )
         budget = self.KARNI_QUERY_BUDGET
         if not isinstance(budget, Mapping):
@@ -325,22 +325,22 @@ class KarniSettingsModel(BaseModel):
         errors: list[str] = []
         if self.KARNI_AUTH_MODE not in _VALID_AUTH_MODES:
             errors.append(
-                f"KARNI_AUTH_MODE {self.KARNI_AUTH_MODE!r} is invalid; expected 'jwt' or 'session'"
+                f"KARNI_AUTH_MODE {self.KARNI_AUTH_MODE!r} is invalid (expected 'jwt' or 'session')"
             )
         if self.KARNI_SOCIAL_AUTH:
             if self.KARNI_AUTH_MODE == "jwt":
                 errors.append(
                     "KARNI_SOCIAL_AUTH is not supported with KARNI_AUTH_MODE='jwt' "
-                    "in karni 0.1 (social auth is session-mode only; an "
+                    "in karni 0.1 (social auth is session-mode only, and an "
                     "allauth-headless JWT strategy is future work). Set "
                     "KARNI_AUTH_MODE='session' or disable KARNI_SOCIAL_AUTH"
                 )
             if not _importable("allauth"):
                 errors.append(
-                    "KARNI_SOCIAL_AUTH requires django-allauth; run: pip install 'karni[social]'"
+                    "KARNI_SOCIAL_AUTH requires django-allauth. Run: pip install 'karni[social]'"
                 )
         if self.KARNI_2FA and not _importable("django_otp"):
-            errors.append("KARNI_2FA requires django-otp; run: pip install 'karni[2fa]'")
+            errors.append("KARNI_2FA requires django-otp. Run: pip install 'karni[2fa]'")
         for purpose, ttl in self.KARNI_ACCOUNTS_TOKEN_TTL.items():
             if isinstance(ttl, bool) or not isinstance(ttl, int) or ttl <= 0:
                 errors.append(
@@ -387,7 +387,7 @@ class KarniSettingsModel(BaseModel):
                 errors.append(
                     "INSTALLED_APPS must list 'unfold' before "
                     "'django.contrib.admin' (unfold's templates override the "
-                    "admin's); move 'unfold' up or let karni_settings() manage "
+                    "admin's). Move 'unfold' up or let karni_settings() manage "
                     "INSTALLED_APPS"
                 )
         for entry in self.KARNI_ADMIN_EXCLUDE:

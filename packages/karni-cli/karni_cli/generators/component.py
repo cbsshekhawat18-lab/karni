@@ -43,7 +43,7 @@ def _claimed(ws: Workspace, skip: str) -> dict[str, str]:
             roles = {}
         claimed.update({role: f"@karni/ui's {owner}" for role, owner in roles.items()})
     else:
-        ws.note("note: @karni/ui is not installed — its roles could not be checked.")
+        ws.note("note: @karni/ui is not installed, so its roles could not be checked.")
     src = ws.path(FRONTEND / "src")
     if src.is_dir():
         for path in sorted(src.rglob("*.ts*")):

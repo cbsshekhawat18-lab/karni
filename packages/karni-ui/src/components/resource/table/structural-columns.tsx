@@ -56,7 +56,7 @@ export interface RowActionsOptions<T> {
   onEdit?: (row: T) => void;
   /** Whether this row's edit action is offered (the role may change it). */
   canEdit: (row: T) => boolean;
-  /** Present when deletes are enabled; asks to confirm, then deletes. */
+  /** Present when deletes are enabled. Asks to confirm, then deletes. */
   onDelete?: (row: T, trigger: HTMLButtonElement) => void;
   canDelete: (row: T) => boolean;
   /** Button geometry for the current density. */

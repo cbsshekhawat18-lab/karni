@@ -23,7 +23,7 @@ export const Playground: Story = {
     trigger: <Button>Open modal</Button>,
     children: (
       <p className="text-sm text-muted-foreground">
-        Any content renders here — forms, text, a ResourceForm.
+        Any content renders here: forms, text, a ResourceForm.
       </p>
     ),
   },
@@ -46,7 +46,7 @@ export const WithFooterActions: Story = {
 };
 
 /**
- * Open on load: named by its title, described by its description; focus
+ * Open on load: named by its title, described by its description. Focus
  * starts on the first field, Tab stays inside, Escape closes.
  */
 export const Open: Story = {

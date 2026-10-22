@@ -1,10 +1,10 @@
 /**
- * <ApprovalsQueue> — the pending changes the signed-in user may decide,
+ * <ApprovalsQueue> shows the pending changes the signed-in user may decide,
  * each with its diff, its maker, its progress and Approve / Reject with a
- * reason. Reads `GET /pending-changes/` through @karni/ui's `useResourceList`
- * and decides through `POST …/approve/` or `…/reject/`; the backend enforces
- * every rule (the maker cannot decide, scope, roles) and answers 403 with the
- * reason, which is shown on the item.
+ * reason. It reads `GET /pending-changes/` through @karni/ui's
+ * `useResourceList` and decides through `POST …/approve/` or `…/reject/`.
+ * The backend enforces every rule (the maker cannot decide, scope, roles)
+ * and answers 403 with the reason, which is shown on the item.
  *
  * Escape hatches: `renderItem` replaces an item's body, `empty` the empty
  * state, `params` adds list filters, `className` merges onto the list.
@@ -38,9 +38,22 @@ function errorText(error: unknown): string {
   return "The decision could not be recorded.";
 }
 
+/**
+ * No value: a muted dash that screen readers read as `label`. The same markup
+ * as @karni/ui's EmptyValue, which is newer than this package's ^0.3.0 peer range.
+ */
+function Empty({ label = "empty" }: { label?: string }): ReactElement {
+  return (
+    <span className="text-muted-foreground">
+      <span aria-hidden="true">–</span>
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
 function Value({ value }: { value: unknown }): ReactElement {
   if (value === null || value === undefined || value === "") {
-    return <span className="text-muted-foreground">—</span>;
+    return <Empty />;
   }
   return (
     <span className="break-words">
@@ -107,7 +120,8 @@ function Item(props: {
         <div className="space-y-0.5">
           <p className="font-medium">{change.summary || change.model}</p>
           <p className="text-xs text-muted-foreground">
-            {change.action} · {change.model} · by {change.maker?.email ?? "—"} · {change.approvals}/
+            {change.action} · {change.model} · by{" "}
+            {change.maker?.email ?? <Empty label="no user recorded" />} · {change.approvals}/
             {change.required} approvals
           </p>
         </div>
@@ -121,7 +135,7 @@ function Item(props: {
           {change.decisions.map((decision) => (
             <li key={decision.id}>
               {decision.verdict === "approve" ? "Approved" : "Rejected"} by{" "}
-              {decision.checker?.email ?? "—"}
+              {decision.checker?.email ?? <Empty label="no user recorded" />}
               {decision.reason !== "" ? `: ${decision.reason}` : ""}
             </li>
           ))}

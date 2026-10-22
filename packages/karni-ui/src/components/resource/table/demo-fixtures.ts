@@ -5,7 +5,7 @@
  * /api/schema/ and /api/events/ with pagination, search, ordering, filters,
  * expand and the DRF "Invalid page." 404.
  *
- * Test/story support only — never imported by shipped component code.
+ * Test/story support only, never imported by shipped component code.
  */
 import { http, HttpResponse, type RequestHandler } from "msw";
 

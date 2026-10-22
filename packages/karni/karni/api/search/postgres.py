@@ -188,8 +188,8 @@ def __getattr__(name: str) -> Any:
             from django.contrib.postgres.operations import TrigramExtension
         except ImportError as exc:  # pragma: no cover - depends on environment
             raise KarniImportError(
-                "TrigramExtension requires a PostgreSQL driver; "
-                "install psycopg (pip install 'psycopg[binary]').",
+                "TrigramExtension requires a PostgreSQL driver. "
+                "Install psycopg (pip install 'psycopg[binary]').",
                 code="E501",
             ) from exc
         return TrigramExtension

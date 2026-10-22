@@ -189,7 +189,7 @@ def build_machine(
             if target == source:
                 raise KarniImproperlyConfigured(
                     f"{owner}: transitions[{source!r}] lists {source!r} itself. Saving the same "
-                    "state is never a transition; remove it.",
+                    "state is never a transition. Remove it.",
                     code="E983",
                 )
         edges[source] = targets
@@ -282,7 +282,7 @@ class StateField(models.CharField):
             )
         if "choices" in kwargs:
             raise KarniImproperlyConfigured(
-                "StateField derives its choices from states=; remove choices=.", code="E983"
+                "StateField derives its choices from states=, so remove choices=.", code="E983"
             )
         self.machine = build_machine(
             owner,
@@ -297,7 +297,7 @@ class StateField(models.CharField):
         if kwargs["max_length"] < longest:
             raise KarniImproperlyConfigured(
                 f"StateField: max_length={kwargs['max_length']} is shorter than the state "
-                f"{max(self.machine.states, key=len)!r}; drop max_length= (it is derived).",
+                f"{max(self.machine.states, key=len)!r}. Drop max_length= (it is derived).",
                 code="E983",
             )
         kwargs["default"] = self.machine.default

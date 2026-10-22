@@ -1,10 +1,10 @@
 /**
- * LoginForm — the sign-in form every app needs (contract: auth).
+ * LoginForm is the sign-in form every app needs (contract: auth).
  *
  * Email + password against `useAuth().login`, with the error inline. On
  * success it calls `onSuccess(user)` (navigate there). When the backend's
  * 2FA gate fires, `on2FA` receives the ephemeral token so the app can render
- * its code step (`POST <authBasePath>/2fa/login/`); without a handler the
+ * its code step (`POST <authBasePath>/2fa/login/`). Without a handler the
  * form explains that a code is required. Render it inside `AuthProvider`,
  * e.g. as `AuthGuard`'s `fallback`.
  */
@@ -35,7 +35,7 @@ export interface LoginFormErrorProps extends ErrorSlotProps {
 }
 
 /**
- * The replaceable parts of LoginForm. Pass any subset as `slots`;
+ * The replaceable parts of LoginForm. Pass any subset as `slots`.
  * `defaultLoginFormSlots` holds Karni's own, to wrap them.
  */
 export interface LoginFormSlots {
@@ -44,11 +44,11 @@ export interface LoginFormSlots {
 }
 
 export interface LoginFormProps {
-  /** Called with the signed-in user; navigate from here. */
+  /** Called with the signed-in user. Navigate from here. */
   onSuccess?: (user: KarniUser) => void;
   /** Called when the account needs a second factor (the token completes it). */
   on2FA?: (ephemeralToken: string) => void;
-  /** Heading above the fields; `null` renders none. Default "Sign in". */
+  /** Heading above the fields. `null` renders none. Default "Sign in". */
   title?: React.ReactNode;
   /** Text under the heading (demo logins, a signup link, ...). */
   description?: React.ReactNode;
@@ -74,7 +74,7 @@ const FIELD_GAP = "[&>:not([hidden])~:not([hidden])]:mt-1";
 /** Thrown inside the form when the account needs a code and the app has no `on2FA`. */
 class TwoFactorUnavailable extends Error {
   constructor() {
-    super("This account needs a two-factor code; the app has not enabled that step.");
+    super("This account needs a two-factor code, but the app has not enabled that step.");
     this.name = "TwoFactorUnavailable";
   }
 }
@@ -100,8 +100,8 @@ function firstMessage(data: unknown): string | undefined {
 
 /**
  * A sign-in failure in plain words. A 401 is the credentials (the backend
- * does not say which one is wrong, so neither does this); a 429 says how long
- * to wait; everything else is describeError's ("You're offline", "Something
+ * does not say which one is wrong, so neither does this). A 429 says how long
+ * to wait. Everything else is describeError's ("You're offline", "Something
  * went wrong on our side"), never a status code.
  */
 function describeLoginError(error: unknown): KarniErrorDescription {
@@ -178,9 +178,9 @@ export const defaultLoginFormSlots: LoginFormSlots = { Error: DefaultLoginError 
  * Email and password sign-in form with inline errors and a callback for the two-factor step.
  *
  * Wrong credentials, throttling, a dropped connection and a server error each
- * read differently; the message is announced, both fields point at it
+ * read differently. The message is announced, both fields point at it
  * (`aria-describedby`) and are marked invalid when they are the problem.
- * After a failure the email stays; wrong credentials clear the password and
+ * After a failure the email stays. Wrong credentials clear the password and
  * focus it. Escape hatch: `slots.Error`.
  */
 export function LoginForm({

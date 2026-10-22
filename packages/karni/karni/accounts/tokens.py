@@ -153,5 +153,5 @@ def _require_known_purpose(purpose: str) -> None:
     if purpose not in OneTimeToken.Purpose.values:
         known = ", ".join(OneTimeToken.Purpose.values)
         raise KarniValueError(
-            f"Unknown token purpose {purpose!r}; expected one of: {known}.", code="E204"
+            f"Unknown token purpose {purpose!r}. Expected one of: {known}.", code="E204"
         )

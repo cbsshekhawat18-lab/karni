@@ -113,9 +113,9 @@ FIX_SCOPE: Final = (
     "BaseViewSet's read scope"
 )
 FIX_LOOKUP: Final = (
-    "look the row up through the read scope before any permission check — "
-    "BaseViewSet.get_object() does (out of scope is 404; a 403 is only for a row the client "
-    "can read but not change) — and never raise PermissionDenied for a row the client "
+    "look the row up through the read scope before any permission check, as "
+    "BaseViewSet.get_object() does (out of scope is 404, and a 403 is only for a row the client "
+    "can read but not change), and never raise PermissionDenied for a row the client "
     "cannot see"
 )
 
@@ -166,7 +166,7 @@ def _selected(
     unknown = sorted((set(chosen) | skipped) - set(known))
     if unknown:
         raise KarniAssertionError(
-            f"Unknown check(s) {', '.join(unknown)}; the checks are: {', '.join(known)}.",
+            f"Unknown check(s) {', '.join(unknown)} (the checks are: {', '.join(known)}).",
             code="E603",
         )
     return [name for name in chosen if name not in skipped]
@@ -314,7 +314,7 @@ class HiddenRowProbe:
                 match = resolve(path)
             except Resolver404 as exc:
                 raise KarniAssertionError(
-                    f"assert_row_hidden: {resource!r} resolves to no view; pass the resource's "
+                    f"assert_row_hidden: {resource!r} resolves to no view. Pass the resource's "
                     "list URL (e.g. '/api/events/'), its viewset or its model.",
                     code="E601",
                 ) from exc
@@ -323,7 +323,7 @@ class HiddenRowProbe:
             if viewset is None or not name.endswith("-list"):
                 raise KarniAssertionError(
                     f"assert_row_hidden: {resource!r} is not a viewset's list route "
-                    f"(it resolves to {name or match.func!r}); pass the list URL, e.g. "
+                    f"(it resolves to {name or match.func!r}). Pass the list URL, e.g. "
                     "'/api/events/'.",
                     code="E601",
                 )
@@ -670,7 +670,7 @@ class HiddenRowProbe:
                         f"GET {url}?{param}=<the hidden row> answered {hidden.status_code} but "
                         f"{absent.status_code} for a row that does not exist, which tells the "
                         "row exists: give the relation filter the readable rows as its choices "
-                        "(Karni's filterset_fields do; a hand-written ModelChoiceFilter needs "
+                        "(Karni's filterset_fields do, but a hand-written ModelChoiceFilter needs "
                         "queryset=lambda request: karni.api.access.readable(<qs>, request)).",
                     )
 
@@ -686,7 +686,7 @@ class HiddenRowProbe:
         if term is None:
             term = next((t for f in fields if (t := _search_token(self.row, str(f)))), "")
         if not term:
-            self.note("search", "the hidden row has no searchable word; pass search='<term>'")
+            self.note("search", "the hidden row has no searchable word, so pass search='<term>'")
             return
         param = str(api_settings.SEARCH_PARAM)
         listing = self.collect(self.list_url, {param: term})
@@ -804,8 +804,8 @@ class HiddenRowProbe:
         if not probed:
             self.note(
                 "expand",
-                f"no row the client can read relates to the hidden {self.model.__name__}; "
-                "create one to exercise ?expand= and lists of primary keys",
+                f"no row the client can read relates to the hidden {self.model.__name__}. "
+                "Create one to exercise ?expand= and lists of primary keys",
             )
 
     def _probe_pointing(
@@ -1063,7 +1063,7 @@ class AdminHiddenRowProbe:
             return
         hidden = str(self.row.pk)
         fix = (
-            "the admin must list only the rows the user's grants reach — keep "
+            "the admin must list only the rows the user's grants reach, so keep "
             "KarniAdminMixin.get_queryset (karni.admin.scope) in the chain, or drop "
             "scope_exempt"
         )
@@ -1077,7 +1077,7 @@ class AdminHiddenRowProbe:
         elif self.visible is None and not shown:
             self.unproven(
                 "changelist",
-                f"positive control: GET {url} lists no row at all; pass visible=<a row the "
+                f"positive control: GET {url} lists no row at all, so pass visible=<a row the "
                 "user sees>",
             )
         model_admin = self.site._registry[self.model]
@@ -1112,7 +1112,7 @@ class AdminHiddenRowProbe:
             self.fail(
                 check,
                 f"{method} {url} answered 200 for the hidden row: the admin opened a row "
-                "outside the user's scope — keep KarniAdminMixin.get_queryset in the chain "
+                "outside the user's scope. Keep KarniAdminMixin.get_queryset in the chain "
                 "so get_object() finds nothing.",
             )
         elif status != absent.status_code or where[0] != where[1]:

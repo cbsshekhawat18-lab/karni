@@ -118,8 +118,8 @@ function VariantsDemo(props: ToasterProps): React.ReactElement {
 
 /**
  * Errors are announced at once (assertive), the rest politely. F8 moves
- * focus to the toasts, Tab walks them, Escape dismisses the focused one;
- * hovering or focusing pauses the timers.
+ * focus to the toasts, Tab walks them, Escape dismisses the focused one.
+ * Hovering or focusing pauses the timers.
  */
 export const Variants: Story = {
   render: (args) => <VariantsDemo {...args} />,

@@ -1,9 +1,9 @@
 /**
  * Hooks over the pending-changes API, on @karni/ui's client and query keys.
  *
- * - `usePendingChanges(params)` — the queue (`GET /pending-changes/`), pending by default;
- * - `usePendingCount(options)` — `GET /pending-changes/count/`, optionally polling;
- * - `useDecidePendingChange()` — the approve/reject mutation; it invalidates the
+ * - `usePendingChanges(params)`: the queue (`GET /pending-changes/`), pending by default.
+ * - `usePendingCount(options)`: `GET /pending-changes/count/`, optionally polling.
+ * - `useDecidePendingChange()`: the approve/reject mutation. It invalidates the
  *   resource's queries and the count so queues and badges refresh.
  */
 import { karniKeys, useKarniClient, useResourceList } from "@karni/ui";
@@ -35,7 +35,7 @@ export function usePendingChanges(
 }
 
 export interface UsePendingCountOptions {
-  /** `false` (default) = fetch once; a number = refetch every N milliseconds. */
+  /** `false` (default) = fetch once, a number = refetch every N milliseconds. */
   poll?: false | number;
 }
 

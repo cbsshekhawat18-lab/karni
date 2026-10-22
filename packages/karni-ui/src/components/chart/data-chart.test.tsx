@@ -136,8 +136,9 @@ describe("DataChart accessibility (contract D10)", () => {
     const cells = within(table)
       .getAllByRole("cell")
       .map((cell) => cell.textContent);
-    // Churn has no "Mar" value — the gap renders as a placeholder, not a crash.
-    expect(cells).toEqual(["10", "4", "25", "6", "18", "—"]);
+    // Churn has no "Mar" value. The gap renders as EmptyValue (a dash read as
+    // "empty"), not a crash.
+    expect(cells).toEqual(["10", "4", "25", "6", "18", "–empty"]);
 
     // The table must not live inside the role="img" element.
     expect(table.closest('[role="img"]')).toBeNull();
@@ -281,7 +282,7 @@ describe("DataChart rendering", () => {
     );
     expect(container.querySelectorAll("circle")).toHaveLength(2);
     const table = screen.getByRole("table");
-    expect(within(table).getByText("—")).toBeInTheDocument();
+    expect(within(table).getByText("empty")).toHaveClass("sr-only");
   });
 
   it("names an empty chart by its title for screen readers", () => {

@@ -3,7 +3,7 @@ import * as React from "react";
 /**
  * Minimal inline SVG icons used by the primitives (no icon dependency).
  * All strokes use `currentColor`, so they follow the text color tokens.
- * Internal to @karni/ui — not part of the public barrel.
+ * Internal to @karni/ui, not part of the public barrel.
  */
 
 type IconProps = React.SVGAttributes<SVGSVGElement>;

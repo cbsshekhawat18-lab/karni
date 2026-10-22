@@ -45,8 +45,8 @@ export const Playground: Story = {
 };
 
 /**
- * `clearable` renders a clear item at the top of the list (contract D8);
- * choosing it emits `null` — the `"__karni_empty__"` sentinel never leaks
+ * `clearable` renders a clear item at the top of the list (contract D8).
+ * Choosing it emits `null`, and the `"__karni_empty__"` sentinel never leaks
  * out of the component.
  */
 export const Clearable: Story = {
@@ -75,7 +75,7 @@ export const WithLabel: Story = {
   ),
 };
 
-/** aria-invalid gives the trigger the destructive border; aria-describedby names the message. */
+/** aria-invalid gives the trigger the destructive border. aria-describedby names the message. */
 export const Invalid: Story = {
   render: (args) => (
     <div className="grid w-64 gap-1.5">

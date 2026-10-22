@@ -546,7 +546,7 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
     excluded = getattr(api_meta, "exclude", None)
     if declared is not None and excluded is not None:
         raise KarniImproperlyConfigured(
-            f"{model.__name__}.APIMeta declares both 'fields' and 'exclude'; "
+            f"{model.__name__}.APIMeta declares both 'fields' and 'exclude', but "
             "they are mutually exclusive.",
             code="E122",
         )

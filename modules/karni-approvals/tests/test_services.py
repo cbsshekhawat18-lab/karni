@@ -179,3 +179,20 @@ class TestNotifications:
         with django_capture_on_commit_callbacks(execute=True):
             propose_amount(maker, invoice)
         assert mail.outbox == []
+
+
+def test_changes_load_in_the_models_field_order() -> None:
+    """PostgreSQL's jsonb stores keys shortest first. Every reader gets model order."""
+    from django.contrib.contenttypes.models import ContentType
+
+    pending = PendingChange.objects.create(
+        content_type=ContentType.objects.get_for_model(Invoice),
+        action=PendingChange.Action.UPDATE,
+        changes={"zz": [1, 2], "note": ["", "x"], "amount": ["1.00", "2.00"], "number": ["A", "B"]},
+    )
+    assert list(PendingChange.objects.get(pk=pending.pk).changes) == [
+        "number",
+        "amount",
+        "note",
+        "zz",  # not a field of the model: last
+    ]

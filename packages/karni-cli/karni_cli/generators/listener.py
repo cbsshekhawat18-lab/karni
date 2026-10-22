@@ -87,7 +87,7 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         lazy = f"{label}.{model_name}" if label else (_USER_MODEL if model_name == "User" else "")
         if model is None and not lazy:
             raise CliError(
-                f"--on {on}: no model {model_name} — create it first: karni make model "
+                f"--on {on}: no model {model_name}. Create it first: karni make model "
                 f"{model_name}, or name an installed app's model as app_label.{model_name}.{event}.",
                 code="C105",
             )
@@ -103,7 +103,7 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         lines = [
             decorator,
             f"def {name}({param}: {annotation}) -> None:",
-            docstring(f"Runs after {model_name} rows are {event} — {where}.", "    ", line),
+            docstring(f"Runs after {model_name} rows are {event} ({where}).", "    ", line),
         ]
         imports.append(Import("karni.events", f"on_{event}"))
         imports.append(
@@ -117,8 +117,8 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
         events_path = source.file("events.py")
         if event not in top_level_assignments(ws, events_path):
             raise CliError(
-                f"--on {on}: no event {event} in {ws.rel(events_path)} — "
-                f"karni make event {event} --app {source.label}",
+                f"--on {on}: no event {event} in {ws.rel(events_path)}. "
+                f"Create it: karni make event {event} --app {source.label}",
                 code="C105",
             )
         lines = [f"@receiver({event})", f"def {name}(sender: Any, **kwargs: Any) -> None:"]
@@ -137,7 +137,7 @@ def plan(ws: Workspace, app: App, name: str, *, on: str, queued: bool = False) -
             imports += [Import("django.db", "transaction"), Import(app.module, "tasks")]
         else:
             lines.append(
-                docstring(f"Runs when {event} is sent — inline, in the sender.", "    ", line)
+                docstring(f"Runs when {event} is sent (inline, in the sender).", "    ", line)
             )
     else:
         raise CliError(f"--on {on!r}: expected {_ON_HELP}.", code="C106")

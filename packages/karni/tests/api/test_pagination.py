@@ -174,7 +174,7 @@ def test_unpaginated_needs_a_limit_and_a_reason() -> None:
             pagination = 500  # type: ignore[assignment]
             auto_register = False
 
-    with pytest.raises(ImproperlyConfigured, match="keep one"):
+    with pytest.raises(ImproperlyConfigured, match="Keep one"):
 
         class Both(BaseViewSet):
             model = Event

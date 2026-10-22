@@ -78,7 +78,7 @@ def _describe(pending: PendingChange) -> str:
         )
         lines.append(f"  {name}: {old!r} -> {new!r}")
     maker = getattr(pending.maker, "email", None) or "someone"
-    lines += ["", f"Proposed by {maker}; {pending.required} approval(s) needed."]
+    lines += ["", f"Proposed by {maker}. It needs {pending.required} approval(s)."]
     return "\n".join(lines)
 
 

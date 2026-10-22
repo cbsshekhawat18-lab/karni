@@ -53,7 +53,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
     parser.addini(
         "karni_seed",
-        "Seed for factory/Faker randomness, reseeded per test (default 0; 'off' to disable).",
+        "Seed for factory/Faker randomness, reseeded per test (default 0, 'off' to disable).",
         default="0",
     )
     group = parser.getgroup("karni")
@@ -90,8 +90,8 @@ def _mode(config: pytest.Config) -> str:
     mode = config.getoption("karni_query_budget") or config.getini("karni_query_budget_mode")
     if mode not in _MODES:
         raise pytest.UsageError(
-            f"E118: karni_query_budget_mode = {mode!r}; set it (or --karni-query-budget) to "
-            f"one of {', '.join(_MODES)}. See {docs_url('E118')}"
+            f"E118: karni_query_budget_mode = {mode!r} is not valid. Set it (or "
+            f"--karni-query-budget) to one of {', '.join(_MODES)}. See {docs_url('E118')}"
         )
     return str(mode)
 

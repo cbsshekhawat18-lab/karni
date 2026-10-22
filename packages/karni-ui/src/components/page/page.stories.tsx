@@ -19,7 +19,7 @@ export const Playground: Story = {
   args: {
     children: (
       <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
-        Page content goes here — e.g. a ResourceTable.
+        Page content goes here, for example a ResourceTable.
       </div>
     ),
   },

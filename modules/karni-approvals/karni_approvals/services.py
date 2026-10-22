@@ -259,7 +259,7 @@ def apply(pending: PendingChange, by: Any) -> Model | None:
                 stale.append(name)
         if stale:
             raise ApprovalError(
-                f"the row changed since this was proposed ({', '.join(stale)}); propose it again.",
+                f"the row changed since this was proposed ({', '.join(stale)}). Propose it again.",
                 code="APR006",
             )
         for name, (_old, new) in changes.items():

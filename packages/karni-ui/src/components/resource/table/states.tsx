@@ -2,7 +2,7 @@
  * ResourceTable's state screens, each the default of one slot: the loading
  * skeleton, the two empty screens (nothing yet / nothing matches), the error
  * panels, the permission screen and the offline notice. A project replaces
- * any of them with `slots={{ NoRecords: OurEmpty }}`; each receives the
+ * any of them with `slots={{ NoRecords: OurEmpty }}`, and each receives the
  * props documented here.
  */
 import * as React from "react";
@@ -47,7 +47,7 @@ export interface ResourceTableLoadingProps {
   actions: boolean;
 }
 
-/** Bars of uneven width read as text; the pattern repeats so rows differ. */
+/** Bars of uneven width read as text. The pattern repeats so rows differ. */
 const BAR_WIDTHS = ["w-3/4", "w-1/2", "w-2/3", "w-5/6", "w-1/3"] as const;
 
 function barWidth(...offsets: number[]): string {
@@ -268,7 +268,7 @@ export function TableError(props: ErrorSlotProps): React.ReactElement {
 
 /**
  * The default RefetchError slot: a failed refresh over rows already shown.
- * The rows stay; this one line says the list may be out of date.
+ * The rows stay, and this one line says the list may be out of date.
  */
 export function RefetchError(props: ErrorSlotProps): React.ReactElement {
   return (
@@ -301,9 +301,9 @@ export interface ResourceTableOfflineProps {
 }
 
 /**
- * The default Offline slot. With rows on screen it is one line above them;
- * without, the offline error panel. The table reloads by itself once the
- * connection is back.
+ * The default Offline slot. With rows on screen it is one line above them.
+ * Without rows it is the offline error panel. The table reloads by itself
+ * once the connection is back.
  */
 export function OfflineNotice(props: ResourceTableOfflineProps): React.ReactElement {
   if (!props.hasRows) {
@@ -328,7 +328,7 @@ export function OfflineNotice(props: ResourceTableOfflineProps): React.ReactElem
     >
       <OfflineIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span>
-        You&apos;re offline. These {props.resourceLabel} may be out of date; the list refreshes by
+        You&apos;re offline. These {props.resourceLabel} may be out of date. The list refreshes by
         itself when you&apos;re back online.
       </span>
     </div>

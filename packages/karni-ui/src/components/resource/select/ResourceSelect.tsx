@@ -32,7 +32,7 @@ export interface ResourceSelectProps {
   filter?: Record<string, string | number | boolean>;
   id?: string;
   className?: string;
-  /** Rows per options request; default the API's own page size. More load as the list scrolls. */
+  /** Rows per options request. Default: the API's own page size. More load as the list scrolls. */
   pageSize?: number;
   /** Set false to hide the clear affordance (which emits null). Default true. */
   clearable?: boolean;
@@ -59,20 +59,20 @@ export interface ResourceSelectProps {
   /**
    * The list filter that takes several ids at once, used to label
    * preselected values in one request. Default `"id__in"` when the schema
-   * documents it; otherwise (or with `false`) each id loads from its detail
+   * documents it. Otherwise (or with `false`) each id loads from its detail
    * endpoint.
    */
   idsFilter?: string | false;
-  /** How the related resource is named in messages; default derived from `resource`. */
+  /** How the related resource is named in messages. Default: derived from `resource`. */
   resourceLabel?: ResourceLabel;
 }
 
 /** Lists longer than this render only the rows in view (plus a margin). */
 const VIRTUALIZE_AFTER = 100;
 const OVERSCAN = 6;
-/** h-8 at the default root font size; measured from the first option once rendered. */
+/** h-8 at the default root font size, measured from the first option once rendered. */
 const DEFAULT_ROW_HEIGHT = 32;
-/** max-h-64 at the default root font size; measured once the list is open. */
+/** max-h-64 at the default root font size, measured once the list is open. */
 const DEFAULT_VIEWPORT_HEIGHT = 256;
 const LOADING_ROWS = 5;
 
@@ -97,14 +97,14 @@ function capitalised(text: string): string {
  * Contract D8.
  *
  * A text input drives a debounced `?search=` request (or, when the API cannot
- * search, narrows the loaded rows and says so); options render in a
+ * search, narrows the loaded rows and says so). Options render in a
  * NON-MODAL Radix Popover that never takes focus from the input. Options load
  * a page at a time as the list scrolls or the keyboard reaches its end, never
  * all at once, and long lists render only the rows in view. The input
  * implements the ARIA 1.2 combobox pattern (aria-expanded, aria-controls,
- * aria-activedescendant); arrows, Home/End and PageUp/PageDown move through
+ * aria-activedescendant). Arrows, Home/End and PageUp/PageDown move through
  * every loaded page. Preselected ids are labelled in one request where the
- * API has an id-list filter, else per id; an id that cannot be loaded says
+ * API has an id-list filter, else per id. An id that cannot be loaded says
  * so instead of showing a bare id. The clear affordance emits `null`.
  */
 export const ResourceSelect = React.forwardRef<HTMLInputElement, ResourceSelectProps>(
@@ -531,12 +531,12 @@ export const ResourceSelect = React.forwardRef<HTMLInputElement, ResourceSelectP
           return `Search isn't available for ${names.plural}: ${count.toLocaleString()} of the ${loaded.toLocaleString()} loaded match`;
         }
         if (hasMore) {
-          return `Showing ${loaded.toLocaleString()}${totalText !== undefined ? ` of ${totalText}` : ""} — search isn't available, scroll for more`;
+          return `Showing ${loaded.toLocaleString()}${totalText !== undefined ? ` of ${totalText}` : ""}. Search isn't available, so scroll for more.`;
         }
         return `${loaded.toLocaleString()} ${loaded === 1 ? names.singular : names.plural}`;
       }
       if (hasMore) {
-        return `Showing ${loaded.toLocaleString()}${totalText !== undefined ? ` of ${totalText}` : ""} — type to narrow`;
+        return `Showing ${loaded.toLocaleString()}${totalText !== undefined ? ` of ${totalText}` : ""}. Type to narrow.`;
       }
       if (term !== "") {
         return `${count.toLocaleString()} ${count === 1 ? `${names.singular} matches` : `${names.plural} match`} “${term}”`;

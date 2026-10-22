@@ -84,7 +84,7 @@ export function addToast(options: ToastOptions): ToastHandle {
   };
 }
 
-/** Test helper — clears all toasts and listeners' state (not in the barrel). */
+/** Test helper: clears all toasts and listeners' state (not in the barrel). */
 export function resetToastStore(): void {
   toasts = [];
   counter = 0;

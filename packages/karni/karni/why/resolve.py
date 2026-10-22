@@ -196,7 +196,7 @@ def resolve_user(spec: str) -> Any:
             return matches[0]
     count = manager.count()
     raise WhyError(
-        f"No user matches {spec!r} (tried {', '.join(tried)}; {count} user(s) exist). Pass "
+        f"No user matches {spec!r} among {count} user(s) (tried {', '.join(tried)}). Pass "
         "--as with an email, username or primary key from your data, or --as anonymous for "
         "a request that is not signed in.",
         code="E902",
@@ -303,7 +303,7 @@ def load_record(request_id: str) -> dict[str, Any]:
                 problems.append(f"{name!r} is missing or not a {getattr(kind, '__name__', kind)}")
     if problems:
         raise WhyError(
-            f"The request record {path} cannot be read: {'; '.join(problems)}. Upgrade karni so "
+            f"The request record {path} cannot be read: {', '.join(problems)}. Upgrade karni so "
             "the writer and the reader agree, then reproduce the request.",
             code="E904",
         )

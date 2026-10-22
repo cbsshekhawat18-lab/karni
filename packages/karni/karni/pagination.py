@@ -194,7 +194,7 @@ class Unpaginated:
             or self.max_rows <= 0
         ):
             raise KarniImproperlyConfigured(
-                f"Unpaginated(max_rows={self.max_rows!r}) needs a positive row limit; "
+                f"Unpaginated(max_rows={self.max_rows!r}) needs a positive row limit, because "
                 "unbounded responses are not allowed.",
                 code="E113",
             )
@@ -223,7 +223,7 @@ def check_pagination_class(owner: str, value: object) -> None:
     if not (isinstance(value, type) and issubclass(value, KarniPagination)):
         raise KarniImproperlyConfigured(
             f"{owner}.pagination_class = {value!r} is not a karni.pagination.KarniPagination "
-            "subclass; subclass KarniPageNumberPagination or KarniCursorPagination (they "
+            "subclass. Subclass KarniPageNumberPagination or KarniCursorPagination (they "
             "enforce KARNI_MAX_PAGE_SIZE).",
             code="E112",
         )

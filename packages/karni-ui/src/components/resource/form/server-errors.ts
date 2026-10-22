@@ -14,7 +14,7 @@
  *
  * A message lands on the deepest path the form renders (`address.city` when
  * that is a field, else `address` with the nested part named in the
- * message); everything else is a form-level message that names what it
+ * message). Everything else is a form-level message that names what it
  * is about. Internal to @karni/ui.
  */
 import { humanizeValue } from "./prepare";
@@ -29,7 +29,7 @@ export interface MappedServerErrors {
 export interface MapServerErrorsOptions {
   /** Whether the form renders an input for `path` ("title", "address.city"). */
   isField: (path: string) => boolean;
-  /** How a path is named in a form-level message; default humanizes it. */
+  /** How a path is named in a form-level message. The default humanizes it. */
   labelOf?: (path: string) => string;
 }
 

@@ -4,7 +4,7 @@ import { cn } from "./cn";
  * Hand-rolled cva-style variant utility (no extra dependency).
  *
  * Every class string appears whole in source (contract D7): a variant map
- * value is a complete Tailwind class list, selected — never concatenated —
+ * value is a complete Tailwind class list, selected (never concatenated)
  * at call time and merged through cn().
  */
 

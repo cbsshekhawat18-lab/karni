@@ -1,14 +1,14 @@
 /**
  * Internal helpers for ResourceTable (contract "ResourceTable" + D5).
- * Pure functions, unit-tested directly; not part of the public barrel.
+ * Pure functions, unit-tested directly. Not part of the public barrel.
  */
 import type { DefaultError, DefaultOptions } from "@tanstack/react-query";
 import type { SortingState } from "@tanstack/react-table";
 
 /**
  * Maps TanStack sorting state to the DRF `ordering` query parameter.
- * Column ids equal schema field names verbatim — that IS the ordering
- * contract (D5) — so `[{id: "title", desc: true}]` becomes `-title`.
+ * Column ids equal schema field names verbatim (that IS the ordering
+ * contract, D5), so `[{id: "title", desc: true}]` becomes `-title`.
  */
 export function sortingToOrdering(sorting: SortingState): string | undefined {
   if (sorting.length === 0) return undefined;
@@ -74,7 +74,7 @@ export function resourceWords(resource: string): string {
 
 /**
  * A conservative English singular ("events" → "event", "categories" →
- * "category", "addresses" → "address"); ResourceTable's `itemLabel` prop
+ * "category", "addresses" → "address"). ResourceTable's `itemLabel` prop
  * replaces it where it guesses wrong.
  */
 export function singular(plural: string): string {
@@ -116,7 +116,7 @@ export function errorMessage(error: unknown): string {
 
 /**
  * Display label for an enum member: ALL_CAPS and lower_snake constants are
- * prettified ("DRAFT" → "Draft", "in_progress" → "In progress"); mixed-case
+ * prettified ("DRAFT" → "Draft", "in_progress" → "In progress"). Mixed-case
  * values ("iOS") pass through untouched.
  */
 export function enumLabel(
