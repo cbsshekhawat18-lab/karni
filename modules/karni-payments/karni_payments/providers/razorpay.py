@@ -61,7 +61,7 @@ def _razorpay_sdk() -> Any:
         import razorpay
     except ImportError as exc:
         raise KarniImproperlyConfigured(
-            "The Razorpay provider needs the razorpay SDK — install the extra: "
+            "The Razorpay provider needs the razorpay SDK. Install the extra: "
             'pip install "karni-payments[razorpay]".',
             code="PAY003",
         ) from exc
@@ -84,7 +84,7 @@ class RazorpayProvider(PaymentProvider):
         key_secret = str(conf.get("RAZORPAY_KEY_SECRET"))
         if not key_id or not key_secret:
             raise KarniImproperlyConfigured(
-                "RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not set — the Razorpay "
+                "RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not set, so the Razorpay "
                 "provider cannot make API calls. Set both in the environment (.env in "
                 "development), or use KARNI_PAYMENTS_PROVIDER = 'test' locally.",
                 code="PAY004",
@@ -127,8 +127,8 @@ class RazorpayProvider(PaymentProvider):
         secret = str(conf.get("RAZORPAY_WEBHOOK_SECRET"))
         if not secret:
             raise KarniImproperlyConfigured(
-                "RAZORPAY_WEBHOOK_SECRET is not set — Razorpay webhooks cannot be verified, "
-                "so they are refused. Copy the webhook secret from the Razorpay dashboard.",
+                "RAZORPAY_WEBHOOK_SECRET is not set, so Razorpay webhooks cannot be verified "
+                "and are refused. Copy the webhook secret from the Razorpay dashboard.",
                 code="PAY005",
             )
         event_id = headers.get(EVENT_ID_HEADER, "")

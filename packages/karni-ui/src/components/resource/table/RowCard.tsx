@@ -29,7 +29,7 @@ export interface ResourceTableRowCardProps<T = Record<string, unknown>> {
   selection?: React.ReactNode;
   /** The row's actions (edit, delete, `rowActions`). */
   actions?: React.ReactNode;
-  /** Opens the row (`onRowClick`); the title becomes a button. */
+  /** Opens the row (`onRowClick`). The title becomes a button. */
   onOpen?: () => void;
   selected: boolean;
   /** Why the last bulk action failed for this row. */

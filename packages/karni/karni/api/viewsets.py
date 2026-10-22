@@ -905,7 +905,7 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             recorder.report(),
             limit,
             "Fix the repeated query (the optimiser derives select_related/prefetch_related "
-            "from the serializer; hint opaque fields with select_related/prefetch_related "
+            "from the serializer, so hint opaque fields with select_related/prefetch_related "
             f"on {name}), or declare query_budget = Budget({action}=N, reason=...).",
         )
         if mode == "raise":
@@ -954,14 +954,14 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
         if not isinstance(declared, Unpaginated):
             raise KarniImproperlyConfigured(
                 f"{name}.pagination must be Unpaginated(max_rows=N, reason='...'), got "
-                f"{declared!r}; to change the paginator set pagination_class instead.",
+                f"{declared!r}. To change the paginator, set pagination_class instead.",
                 code="E113",
             )
         own = cls.__dict__.get("pagination_class")
         if own is not None:
             raise KarniImproperlyConfigured(
-                f"{name} declares both pagination = Unpaginated(...) and pagination_class; "
-                "keep one.",
+                f"{name} declares both pagination = Unpaginated(...) and pagination_class. "
+                "Keep one.",
                 code="E114",
             )
         cls.pagination_class = declared.paginator_class()
@@ -979,8 +979,8 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
         unknown = sorted(set(budget.limits) - known)
         if unknown:
             raise KarniImproperlyConfigured(
-                f"{name}.query_budget names unknown action(s) {', '.join(unknown)}; "
-                f"known: {', '.join(sorted(known - {'*'}))} (default= for the rest).",
+                f"{name}.query_budget names unknown action(s) {', '.join(unknown)}. "
+                f"Known: {', '.join(sorted(known - {'*'}))} (default= for the rest).",
                 code="E116",
             )
     cache = cls.__dict__.get("cache")

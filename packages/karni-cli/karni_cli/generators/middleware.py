@@ -74,7 +74,7 @@ def plan(ws: Workspace, app: App, name: str) -> str:
     else:
         if updated is not None:
             ws.write(SETTINGS, updated)
-        ws.note(f"middleware: {dotted} (last in MIDDLEWARE — move it if order matters)")
+        ws.note(f"middleware: {dotted} (last in MIDDLEWARE, so move it if order matters)")
     return dotted
 
 

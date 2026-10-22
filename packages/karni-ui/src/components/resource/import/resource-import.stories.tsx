@@ -7,7 +7,7 @@ import { KarniProvider } from "../../../schema/provider";
 import { demoJob, importBackend } from "../testapp-fixtures";
 import { ResourceImport } from "./ResourceImport";
 
-/** msw serves `/api/events/import/…`; the later steps are reached by playing the upload. */
+/** msw serves `/api/events/import/…`. The later steps are reached by playing the upload. */
 function Providers(props: { children: React.ReactNode }): React.ReactElement {
   const [context] = React.useState(() => ({
     client: createKarniClient({ baseUrl: `${window.location.origin}/api` }),

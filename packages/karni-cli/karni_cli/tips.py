@@ -24,9 +24,11 @@ HISTORY_TIP_ID = "history-provider"
 
 #: The authorship disclosure is part of the tip, not optional.
 HISTORY_TIP = (
-    "tip: no prompt-history store found. `karni context --with-history` can brief\n"
-    "     an agent with what was already asked about a file. Works with Gigai\n"
-    "     Chronicle (MIT, local-only, by Karni's author).\n"
+    "tip: save the prompts behind your code. Gigai Chronicle keeps every prompt\n"
+    "     you give an AI agent in your repository, and Karni reads it back:\n"
+    "     `karni context --with-history <file>` briefs the next agent.\n"
+    "     Install: npm install -g gigai-chronicle && chronicle init\n"
+    "     MIT, local-only, by Karni's author.\n"
     "     Silence this: karni config set suggest_tools false"
 )
 

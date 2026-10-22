@@ -49,8 +49,8 @@ class Command(BaseCommand):
             for failure in failures:
                 self.stderr.write(failure)
             raise KarniCommandError(
-                f"karni check found {len(failures)} problem(s), listed above. Fix each one "
-                "(each names its K or E code; `karni explain <code>` explains it).",
+                f"karni check found {len(failures)} problem(s), listed above. Fix each one. "
+                "Each names its K or E code, and `karni explain <code>` explains it.",
                 code="E702",
             )
         # A stage of `karni check`, which prints the overall verdict once every

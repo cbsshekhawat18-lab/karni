@@ -331,7 +331,7 @@ describe("ResourceSelect paging through 10,000 rows", () => {
     expect(screen.getAllByRole("option")).toHaveLength(50);
     expect(backend.listRequests()).toHaveLength(1);
     const total = (10_000).toLocaleString();
-    expect(liveText()).toContain(`Showing 50 of ${total} — type to narrow`);
+    expect(liveText()).toContain(`Showing 50 of ${total}. Type to narrow.`);
     expect(screen.getAllByRole("option")[0]).toHaveAttribute("aria-setsize", "10000");
 
     const scroller = screen.getByRole("listbox").parentElement as HTMLElement;

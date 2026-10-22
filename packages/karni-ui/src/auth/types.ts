@@ -4,7 +4,7 @@
 
 /**
  * Shape of the `/api/auth/me/` response. The accounts contract (A15)
- * guarantees `roles: string[]` on MeSerializer; every other field the
+ * guarantees `roles: string[]` on MeSerializer. Every other field the
  * backend's user serializer exposes rides along via the index signature.
  */
 export interface KarniUser {
@@ -22,8 +22,8 @@ export type AuthStatus = "loading" | "authenticated" | "anonymous";
 
 /**
  * Discriminated login result (D6). When the backend's 2FA gate fires
- * (accounts A6), `login()` resolves `{ requires2fa, ephemeralToken }` —
- * the 2FA UI is out of scope in v0.1, so consumers exchange the ephemeral
+ * (accounts A6), `login()` resolves `{ requires2fa, ephemeralToken }`.
+ * The 2FA UI is out of scope in v0.1, so consumers exchange the ephemeral
  * token themselves via `POST /api/auth/2fa/login/`.
  */
 export type LoginResult =

@@ -11,7 +11,7 @@
  *
  * Contracts: a registered component receives exactly the props Karni's
  * primitive takes (ButtonProps, InputProps, ...) and the ref. shadcn/ui's
- * components match them as they are; any other design system registers a
+ * components match them as they are. Any other design system registers a
  * small adapter. `select` is a family: Radix parts share a context, so its
  * parts are replaced together or not at all.
  *
@@ -58,7 +58,7 @@ export interface KarniPrimitives {
 /** A role that is one component (not a family of parts). */
 export type KarniPrimitiveRole = Exclude<keyof KarniPrimitives, "select">;
 
-/** The project's replacements; any subset of the roles. */
+/** The project's replacements: any subset of the roles. */
 export type KarniPrimitiveOverrides = Partial<KarniPrimitives>;
 
 const PrimitivesContext = React.createContext<KarniPrimitiveOverrides>({});

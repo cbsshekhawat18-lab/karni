@@ -2,20 +2,20 @@
  * Mutation body encoding (contract D2) + PATCH file-URL omission.
  *
  * D2: after the form's `transformSubmit` has run, a payload containing any
- * top-level `File` (or an array containing one) is encoded as `FormData`;
- * everything else is sent as JSON. FormData rules:
+ * top-level `File` (or an array containing one) is encoded as `FormData`.
+ * Everything else is sent as JSON. FormData rules:
  * - arrays append as repeated keys,
  * - plain objects/arrays-of-objects (json fields) are JSON-stringified,
  * - numbers/booleans are stringified,
- * - `null`/`undefined` entries are OMITTED — multipart cannot express null
- *   (DRF would parse the string "null"); to null a field, send a JSON PATCH
+ * - `null`/`undefined` entries are OMITTED: multipart cannot express null
+ *   (DRF would parse the string "null"). To null a field, send a JSON PATCH
  *   without the file field instead,
  * - Content-Type is never set manually: fetch derives the multipart boundary.
  *
  * PATCH omission (D2): a string value on a file-kind field is the unchanged
- * display URL the backend returned (D1: response-side `format: uri`); sending
+ * display URL the backend returned (D1: response-side `format: uri`). Sending
  * it back would 400 ("not a file"), so it is dropped from PATCH payloads.
- * Field kinds come from the cached parsed schema when present; without it the
+ * Field kinds come from the cached parsed schema when present. Without it the
  * payload passes through untouched (graceful degradation).
  *
  * Internal module: not re-exported from the barrel.
@@ -101,9 +101,9 @@ function isStringOrStringArray(value: unknown): boolean {
 }
 
 /**
- * Drops unchanged file values — strings (or arrays of strings) on file-kind
- * fields are the backend's display URLs, not new uploads — from a PATCH
- * payload (D2).
+ * Drops unchanged file values from a PATCH payload (D2). Strings (or arrays
+ * of strings) on file-kind fields are the backend's display URLs, not new
+ * uploads.
  */
 export function omitUnchangedFileUrls(
   values: Record<string, unknown>,

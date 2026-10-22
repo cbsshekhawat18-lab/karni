@@ -45,7 +45,7 @@ class _PostgresOnly:
 
     def _skipped(self, schema_editor: Any) -> Statement:
         return Statement(
-            "-- karni: %(index)s (%(kind)s) is PostgreSQL-only; not created on %(vendor)s",
+            "-- karni: %(index)s (%(kind)s) is PostgreSQL-only, so it is not created on %(vendor)s",
             index=self.name,
             kind=type(self).__name__,
             vendor=schema_editor.connection.vendor,

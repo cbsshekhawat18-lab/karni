@@ -37,7 +37,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Newest first; an emptied value is the shared dash, a redacted one says so. */
+/** Newest first. An emptied value is the shared dash, and a redacted one says so. */
 export const Entries: Story = {};
 
 /** Slow: after 500ms the placeholders draw the entries' layout. */

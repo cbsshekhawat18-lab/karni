@@ -248,7 +248,7 @@ def plan_write(instance: models.Model, update_fields: Any = None) -> Plan | None
                 raise KarniValueError(
                     f"{type(instance).__name__} {instance.pk}: {capacity.name} was set to "
                     f"{now!r} directly (the row holds {before!r}). A capacity counter changes "
-                    "only through karni.capacity.reserve() / release(); set "
+                    "only through karni.capacity.reserve() / release(). Set "
                     f"{capacity.total or 'the total'} to resize it.",
                     code="E986",
                 )
@@ -337,7 +337,7 @@ def state_moved(
     before = expected[attname]
     return StateConflict(
         f"{type(instance).__name__} {instance.pk}: {attname} is {now!r} in the database, not "
-        f"{before!r} as when this instance was loaded — another transaction changed it, so "
+        f"{before!r} as when this instance was loaded. Another transaction changed it, so "
         "nothing was written. Reload the row (refresh_from_db()) and decide again from "
         f"{now!r}.",
         field=attname,

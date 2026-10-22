@@ -31,7 +31,7 @@ export interface ChangeHistoryEntryProps {
 }
 
 /**
- * The replaceable parts of ChangeHistory. Pass any subset as `slots`;
+ * The replaceable parts of ChangeHistory. Pass any subset as `slots`.
  * `defaultChangeHistorySlots` holds Karni's own, to wrap them.
  */
 export interface ChangeHistorySlots {
@@ -46,7 +46,7 @@ export interface ChangeHistorySlots {
 export interface ChangeHistoryProps {
   resource: string;
   id: string | number;
-  /** Entries to show (the backend paginates; default: the API's page size). */
+  /** Entries to show (the backend paginates). Default: the API's page size. */
   pageSize?: number;
   title?: React.ReactNode;
   /** Shown when the row has no recorded changes. */
@@ -167,9 +167,9 @@ const PLACEHOLDER_ENTRIES = 3;
  * already absent from each diff, redacted ones say so, and an empty value
  * is the shared EmptyValue (a dash, read as "empty").
  *
- * States: entry placeholders while it loads (drawn after 500ms); failures
- * in describeError's words with "Try again" when it can help — a 403 reads
- * "You can't view the history of this <resource>"; offline says so and
+ * States: entry placeholders while it loads (drawn after 500ms), failures
+ * in describeError's words with "Try again" when it can help. A 403 reads
+ * "You can't view the history of this <resource>". Offline says so and
  * reloads when the connection returns. Escape hatch: `slots`.
  */
 export function ChangeHistory({

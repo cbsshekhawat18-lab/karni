@@ -70,8 +70,8 @@ def _targets(
             for other in local_apps(ws):
                 if other.label == label and name not in models_in(ws, other):
                     raise CliError(
-                        f"Field {spec.name}: app {label} has no model {name} — "
-                        f"karni make model {name} --app {label}",
+                        f"Field {spec.name}: app {label} has no model {name}. "
+                        f"Create it: karni make model {name} --app {label}",
                         code="C104",
                     )
             resolved[spec.name] = RelationTarget(pystr(raw), False, raw.lower())
@@ -82,7 +82,7 @@ def _targets(
             if len(owners) != 1:
                 where = "several apps" if owners else "no local app"
                 raise CliError(
-                    f"Field {spec.name}: {where} defines a model {raw!r} — create it first "
+                    f"Field {spec.name}: {where} defines a model {raw!r}. Create it first "
                     f"(karni make model {raw}) or write app.Model, e.g. "
                     f"{spec.name}:{spec.kind}:shop.{raw}.",
                     code="C104",
@@ -220,7 +220,7 @@ def command(
     target = resolve_app(ws, app)
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]
-        ws.note("note: no frontend/ directory — pages skipped.")
+        ws.note("note: no frontend/ directory, so pages are skipped.")
     model = plan(ws, target, name, fields or [])
     expand = [
         spec.name

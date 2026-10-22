@@ -66,21 +66,21 @@ export interface StatSlots {
   Label: React.ComponentType<StatSlotProps>;
   /** The headline value. */
   Value: React.ComponentType<StatSlotProps>;
-  /** The change indicator; the default treats a rise as neutral and a fall as destructive. */
+  /** The change indicator. The default treats a rise as neutral and a fall as destructive. */
   Delta: React.ComponentType<StatDeltaProps>;
-  /** Wraps `icon`; decorative, hidden from assistive tech. */
+  /** Wraps `icon`. Decorative, hidden from assistive tech. */
   Icon: React.ComponentType<StatSlotProps>;
 }
 
 export interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
   /** What the number measures ("Active users"). */
   label: React.ReactNode;
-  /** The headline value — preformatted string or any node. */
+  /** The headline value: a preformatted string or any node. */
   value: React.ReactNode;
   /**
    * Change indicator. A number renders a signed figure with an up, down or
    * flat marker (negative numbers use the destructive token) plus
-   * screen-reader context; any other node renders verbatim in the delta slot.
+   * screen-reader context. Any other node renders verbatim in the delta slot.
    */
   delta?: number | React.ReactNode;
   /** Formats a numeric `delta` (default: signed, locale formatted). */
@@ -89,7 +89,7 @@ export interface StatProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode;
   /** True while the value loads: a placeholder replaces the value and the delta. */
   loading?: boolean;
-  /** Replaces the Label, Value, Delta or Icon; see StatSlots. */
+  /** Replaces the Label, Value, Delta or Icon. See StatSlots. */
   slots?: Partial<StatSlots>;
 }
 
@@ -152,8 +152,8 @@ export const defaultStatSlots: StatSlots = {
  * KPI tile: label, value, optional delta and icon.
  *
  * Escape hatches: `slots` replaces the Label, Value, Delta or Icon (a Delta
- * for metrics where down is good, say); `value`/`delta`/`icon` accept
- * arbitrary nodes, `formatDelta` overrides numeric formatting, `className`
+ * for metrics where down is good, say), `value`/`delta`/`icon` accept
+ * arbitrary nodes, `formatDelta` overrides numeric formatting, and `className`
  * merges via cn().
  */
 export const Stat = React.forwardRef<HTMLDivElement, StatProps>(

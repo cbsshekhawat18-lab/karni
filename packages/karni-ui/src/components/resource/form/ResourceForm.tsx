@@ -64,7 +64,10 @@ export interface FieldOverride {
   props?: Record<string, unknown>;
 }
 
-/** The replaceable parts of ResourceForm (`slots`); each default is in `defaultResourceFormSlots`. */
+/**
+ * The replaceable parts of ResourceForm (`slots`). Each default is in
+ * `defaultResourceFormSlots`.
+ */
 export interface ResourceFormSlots {
   /** While the schema or the edited row loads. */
   Loading: React.ComponentType<ResourceFormLoadingProps>;
@@ -122,7 +125,7 @@ export interface ResourceFormProps {
   autoFocus?: boolean;
   /**
    * Warn before the page unloads with unsaved changes (`beforeunload`).
-   * Default true; false opts out. In-app navigation: see `onDirtyChange`.
+   * Default true. Pass false to opt out. In-app navigation: see `onDirtyChange`.
    */
   guardUnsavedChanges?: boolean;
   /**
@@ -131,7 +134,10 @@ export interface ResourceFormProps {
    * the router's blocker to stop in-app navigation away from a dirty form.
    */
   onDirtyChange?: (dirty: boolean) => void;
-  /** How the resource is named in messages; default derived from `resource` ("events" → "event"). */
+  /**
+   * How the resource is named in messages. The default is derived from
+   * `resource` ("events" → "event").
+   */
   resourceLabel?: ResourceLabel;
 }
 
@@ -837,13 +843,13 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
  *
  * Contract "ResourceForm" + D2/D3/D10.
  *
- * Create mode POSTs every prepared value; edit mode loads the UNEXPANDED
+ * Create mode POSTs every prepared value. Edit mode loads the UNEXPANDED
  * detail record and PATCHes only dirty fields at top-level granularity, with
- * emptied nullable fields sent as null (D3). Fields validate when they lose focus; a
- * failed submit keeps every typed value, puts DRF's messages on their fields
- * (a summary lists them when more than one fails) and moves focus there; any
- * other failure (offline, 403, 409, 5xx) is a banner with "Try again" when it
- * can help. Escape hatches: per-field overrides (`fields`), `extraFields`,
+ * emptied nullable fields sent as null (D3). Fields validate when they lose
+ * focus. A failed submit keeps every typed value, puts DRF's messages on their
+ * fields (a summary lists them when more than one fails) and moves focus there.
+ * Any other failure (offline, 403, 409, 5xx) is a banner with "Try again" when
+ * it can help. Escape hatches: per-field overrides (`fields`), `extraFields`,
  * `transformSubmit`, `actions`, `slots`, `validationMode` / `reValidateMode`
  * and `guardUnsavedChanges` / `onDirtyChange`.
  */

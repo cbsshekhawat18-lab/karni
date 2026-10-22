@@ -106,11 +106,17 @@ EXPECTED: dict[str, tuple[str, tuple[str, ...]]] = {
             "karni queries EventViewSet.list",
         ),
     ),
-    "assert_num_queries": ("query-count", ("ran 9 queries; the test expects 4", "5× events_venue")),
-    "pytest_django_num_queries": ("query-count", ("ran 9 queries; the test expects 4",)),
+    "assert_num_queries": (
+        "query-count",
+        ("ran 9 queries, but the test expects 4", "5× events_venue"),
+    ),
+    "pytest_django_num_queries": ("query-count", ("ran 9 queries, but the test expects 4",)),
     "dev_budget_warning": (
         "E117",
-        ("EventViewSet.list ran 28 queries; budget is 8", "karni queries EventViewSet.list"),
+        (
+            "EventViewSet.list ran 28 queries against a budget of 8",
+            "karni queries EventViewSet.list",
+        ),
     ),
     "dev_query_log": (
         "query-log-duplicates",

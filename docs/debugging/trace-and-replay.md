@@ -35,7 +35,7 @@ Request 0caa83ad-4e00-4135-bb12-dbe23bad6ca1: POST /payments/webhook/test/ -> 20
      +0.076s  request.end       200 in 75.473 ms
      +0.081s  task.started      karni_payments.tasks.process_webhook_event [974694c5] (pid 45087)
      +0.109s  task.enqueued     karni_payments.tasks.process_webhook_event [974694c5] retry 1 eta 2026-10-21T10:34:21.083220+00:00
-     +0.117s  task.retried      karni_payments.tasks.process_webhook_event [974694c5]: Retry in 1s: UnmatchedWebhookEventError('Webhook event test:evt_demo_1 (checkout.session.completed) matches no local Payment — will retry.')
+     +0.117s  task.retried      karni_payments.tasks.process_webhook_event [974694c5]: Retry in 1s: UnmatchedWebhookEventError('Webhook event test:evt_demo_1 (checkout.session.completed) matches no local Payment. It will be retried.')
      +1.115s  task.started      karni_payments.tasks.process_webhook_event [974694c5] retry 1 (pid 45087)
      +1.142s  webhook.matched   provider=test event_id=evt_demo_1 event_type=checkout.session.completed refs=karni_payments.Payment:990fbd5c-…,karni_payments.WebhookEvent:c5a247ba-…
      +1.154s  task.enqueued     events.listeners.send_booking_confirmation [378e08b3]

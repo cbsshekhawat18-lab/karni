@@ -210,8 +210,8 @@ def build_link(purpose: str, token: str) -> str:
         template = links[purpose]
     except KeyError as exc:
         raise KarniImproperlyConfigured(
-            f"No KARNI_ACCOUNTS_LINKS entry for token purpose {purpose!r}; "
-            f"known purposes: {sorted(links)}.",
+            f"No KARNI_ACCOUNTS_LINKS entry for token purpose {purpose!r}. "
+            f"Known purposes: {sorted(links)}.",
             code="E202",
         ) from exc
     return template.format(frontend=frontend.rstrip("/"), token=token)

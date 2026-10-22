@@ -42,7 +42,7 @@ def test_reserve_takes_units_and_refuses_the_last_one_twice() -> None:
         "remaining": 0,
         "requested": 1,
     }
-    assert "is sold out (remaining = 0); 1 was requested" in error.message
+    assert "is sold out (remaining = 0), but 1 was requested" in error.message
     assert _remaining(stock) == 0
 
 

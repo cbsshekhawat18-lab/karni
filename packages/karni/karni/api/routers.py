@@ -121,7 +121,7 @@ class KarniRouter(DefaultRouter):
         model = viewset.model
         if viewset in {registered for _, registered, _ in self.registry}:
             logger.debug(
-                "karni.api autodiscover: %s is already registered explicitly; skipping.",
+                "karni.api autodiscover: %s is already registered explicitly, so it is skipped.",
                 _describe(viewset),
             )
             return
@@ -130,8 +130,8 @@ class KarniRouter(DefaultRouter):
         if holder is not None:
             if prefix in self._auto_prefixes:
                 logger.warning(
-                    "karni.api autodiscover: prefix %r is claimed by both %s and %s; "
-                    "keeping the first. Set route/auto_register on one of them.",
+                    "karni.api autodiscover: prefix %r is claimed by both %s and %s. "
+                    "Karni keeps the first. Set route/auto_register on one of them.",
                     prefix,
                     _describe(self._auto_prefixes[prefix]),
                     _describe(viewset),
@@ -139,7 +139,7 @@ class KarniRouter(DefaultRouter):
             else:
                 logger.debug(
                     "karni.api autodiscover: prefix %r already registered explicitly "
-                    "(%s); skipping %s.",
+                    "(%s), so %s is skipped.",
                     prefix,
                     _describe(holder),
                     _describe(viewset),
@@ -149,8 +149,8 @@ class KarniRouter(DefaultRouter):
         holder = next((vs for _, vs, b in self.registry if b == basename), None)
         if holder is not None:
             logger.warning(
-                "karni.api autodiscover: basename %r is claimed by both %s and %s; "
-                "keeping the first. Register the second explicitly with its own basename.",
+                "karni.api autodiscover: basename %r is claimed by both %s and %s. "
+                "Karni keeps the first. Register the second explicitly with its own basename.",
                 basename,
                 _describe(holder),
                 _describe(viewset),

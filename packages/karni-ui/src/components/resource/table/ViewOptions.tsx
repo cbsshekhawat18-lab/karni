@@ -2,7 +2,7 @@
  * ResourceTable's "View" menu: compact rows on or off, and which columns
  * show. Both are remembered per user (see ./preferences). A Radix dropdown,
  * so it is operable by keyboard (arrows, Space to toggle, Escape to close).
- * Internal to @karni/ui; ResourceTable's `viewOptions={false}` hides it.
+ * Internal to @karni/ui. ResourceTable's `viewOptions={false}` hides it.
  */
 import * as React from "react";
 import { Button } from "../../primitives/button";

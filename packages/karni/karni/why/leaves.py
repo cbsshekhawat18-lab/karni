@@ -114,7 +114,7 @@ def _gate_text(explained: Explained, user: Any) -> str:
         needs = ", ".join(predicate.names)
         if allows:
             return f"holds {', '.join(set(predicate.names) & set(facts.get('held', ())))}"
-        return f"needs one of {needs}; holds {held}"
+        return f"needs one of {needs}, but holds {held}"
     if isinstance(predicate, Can):
         key = predicate.keys[0]
         if not signed_in:
@@ -270,7 +270,7 @@ def _fixes(
         if row is None:
             return [f"rows appear once some row matches {q_text(leaf.rows, you=user)}{where}"]
         has = ", ".join(f"{path}={value}" for path, value in values.items())
-        return [f"the row must match {q_text(leaf.rows, you=user)}{where}; it has {has}"]
+        return [f"the row must match {q_text(leaf.rows, you=user)}{where}, but it has {has}"]
     return []
 
 
@@ -295,7 +295,7 @@ class NearMiss:
 
     @property
     def text(self) -> str:
-        why = f" — {', '.join(self.owners)} owns {self.model} through {self.field}"
+        why = f": {', '.join(self.owners)} owns {self.model} through {self.field}"
         return (
             f"Owned({self.path!r}) would match {self.count} row(s) where "
             f"{self.written} matches none{why if self.owners else ''}"
@@ -413,12 +413,12 @@ def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | N
             owner = owner_field(model)
             if owner:
                 now = row_value(row, owner, you=user)
-                fixes.append(f"make {who} the row's {owner} (now {now}) — the 'own' scope")
+                fixes.append(f"make {who} the row's {owner} (now {now}) for the 'own' scope")
         elif source.scope == "related":
             path = scope_paths(model).get(source.scope_path, source.scope_path)
             fixes.append(
                 f"set {who}.{source.scope_path} to the row's {path} "
-                f"({row_value(row, path, you=user)}) — the 'related:{source.scope_path}' scope"
+                f"({row_value(row, path, you=user)}) for the 'related:{source.scope_path}' scope"
             )
         if source.role:
             role_where = settings_location("KARNI_ROLES", f'"{source.role}"')
@@ -455,7 +455,7 @@ def grant_lines(leaf: Explained, *, user: Any, model: type[Model]) -> list[Grant
             text.append(f"{key}  none: anonymous holds no grant")
         elif not sources:
             others = holders(key)
-            held = f"; roles that hold it: {', '.join(others)}" if others else ""
+            held = f" (roles that hold it: {', '.join(others)})" if others else ""
             text.append(f"{key}  none: no role you hold grants it{held}")
         for source in sources:
             rows = next(

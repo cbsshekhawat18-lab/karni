@@ -97,20 +97,21 @@ class PendingChangeAdmin(KarniModelAdmin):
 
     @admin.display(description=_("changes"))
     def changes_display(self, obj: PendingChange) -> str:
+        empty = self.get_empty_value_display()
         rows = format_html_join(
             "",
             "<tr><td><code>{}</code></td><td>{}</td><td>{}</td></tr>",
             (
                 (
                     name,
-                    change[0] if change[0] is not None else "—",
-                    change[1] if change[1] is not None else "—",
+                    change[0] if change[0] is not None else empty,
+                    change[1] if change[1] is not None else empty,
                 )
                 for name, change in (obj.changes or {}).items()
             ),
         )
         if not rows:
-            return "—"
+            return empty
         return format_html(
             "<table><tr><th>field</th><th>before</th><th>after</th></tr>{}</table>", rows
         )

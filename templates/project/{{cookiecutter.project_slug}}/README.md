@@ -149,6 +149,13 @@ block and middleware to the `# karni:middleware` block, so keep those markers.
 in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
 are stale). `karni mcp` serves the same surface over MCP.
 
+Optional: to keep the prompts behind your code, install
+[Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle)
+(`npm install -g gigai-chronicle`, then `chronicle init` in this folder). It
+records every prompt you give an agent inside this repository, and
+`karni context --with-history <file>` reads it back to brief the next agent.
+It is MIT licensed, local-only, and made by Karni's author.
+
 ## Production
 
 The `prod` Dockerfile target builds a slim, non-root image that runs

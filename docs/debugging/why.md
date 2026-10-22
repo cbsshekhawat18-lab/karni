@@ -43,11 +43,11 @@ access   EventViewSet.access  events/viewsets.py:28
 gate     passed: Where(<lambda>) | Owned('organizer') | HasRole('staff')
            yes  Where(<lambda>): returns a row filter, so the gate passes and the rows decide
            yes  Owned('organizer'): signed in (the row decides)
-           no   HasRole('staff'): needs one of staff; holds organizer
+           no   HasRole('staff'): needs one of staff, but holds organizer
 grants   not consulted: this access names no Granted()/Can(), so KARNI_ROLES grants do not apply here (roles count only through HasRole)
 read     access.read = Where(<lambda>) | Owned('organizer') | HasRole('staff')
-           no   Where(<lambda>): status = 'published'; row has status='draft'
-           no   Owned('organizer'): organizer = you; row has organizer=organizer@example.com
+           no   Where(<lambda>): status = 'published', and the row has status='draft'
+           no   Owned('organizer'): organizer = you, and the row has organizer=organizer@example.com
            no   HasRole('staff'): no row (role not held)
 row      Event ff9ab5c2-9f04-4aed-b552-332702627f73  status='draft'  organizer=organizer@example.com
 where    events/viewsets.py:28  EventViewSet.access
@@ -55,8 +55,8 @@ where    events/viewsets.py:28  EventViewSet.access
          karni/api/access.py:340  Owned('organizer')
          karni/api/access.py:444  HasRole('staff')
          karni/api/viewsets.py:490  BaseViewSet.read_scope (the filter)
-result   404 Not Found — the row exists but access.read filters it out at queryset level (BaseViewSet.get_queryset): the API answers 404, never 403, so it does not confirm the row exists
-fix      the row must match status = 'published' (events/viewsets.py:16); it has status='draft'
+result   404 Not Found: the row exists but access.read filters it out at queryset level (BaseViewSet.get_queryset). The API answers 404, never 403, so it does not confirm the row exists
+fix      the row must match status = 'published' (events/viewsets.py:16), but it has status='draft'
          or: make organizer2@example.com the row's organizer (now organizer@example.com)
 ```
 
@@ -91,14 +91,14 @@ A write refused on a readable row:
 $ karni why events/877409a9-77d2-4e02-bf01-cf99988c24c9 --as attendee@example.com --action update
 ...
 read     access.read = Where(<lambda>) | Owned('organizer') | HasRole('staff')
-           yes  Where(<lambda>): status = 'published'; row has status='published'
-           no   Owned('organizer'): organizer = you; row has organizer=organizer@example.com
+           yes  Where(<lambda>): status = 'published', and the row has status='published'
+           no   Owned('organizer'): organizer = you, and the row has organizer=organizer@example.com
            no   HasRole('staff'): no row (role not held)
 write    access.write = Owned('organizer') | HasRole('staff')
-           no   Owned('organizer'): organizer = you; row has organizer=organizer@example.com
+           no   Owned('organizer'): organizer = you, and the row has organizer=organizer@example.com
            no   HasRole('staff'): no row (role not held)
 ...
-result   403 Forbidden — the row is readable (found through access.read) but access.write refuses it (AccessPermission.has_object_permission)
+result   403 Forbidden: the row is readable (found through access.read) but access.write refuses it (AccessPermission.has_object_permission)
 fix      make attendee@example.com the row's organizer (now organizer@example.com)
          or: give attendee@example.com the role 'staff': assign_role(user, 'staff') or the admin
 ```
@@ -116,9 +116,9 @@ gate     passed: Can('testapp.event:view')
            yes  Can('testapp.event:view'): holds testapp.event:view through role 'organizer' (scope own)
 grants   testapp.event:view  scope own  (role 'organizer', KARNI_ROLES)  → organizer = you
 read     access.read = Can('testapp.event:view')
-           no   Can('testapp.event:view'): organizer = you; row has organizer=bob@example.com
+           no   Can('testapp.event:view'): organizer = you, and the row has organizer=bob@example.com
 ...
-fix      make alice@example.com the row's organizer (now bob@example.com) — the 'own' scope
+fix      make alice@example.com the row's organizer (now bob@example.com) for the 'own' scope
          or: grant role 'organizer' 'testapp.event:view' at scope 'all' in KARNI_ROLES
 ```
 
@@ -143,9 +143,9 @@ steps    rows  removed  step
             0           KarniFilterBackend  [no parameters]
             0           KarniOrderingFilter  [no parameters]
             0           KarniSearchFilter  [no parameters]
-near     Owned('event__organizer') would match 10 row(s) where Owned('event__created_by') matches none — EventViewSet.access owns Event through organizer
+near     Owned('event__organizer') would match 10 row(s) where Owned('event__created_by') matches none: EventViewSet.access owns Event through organizer
 ...
-result   empty: access.read removes all 10 row(s) the viewset's queryset holds — none is readable by organizer@example.com
+result   empty: access.read removes all 10 row(s) the viewset's queryset holds, so none is readable by organizer@example.com
 fix      change Owned('event__created_by') to Owned('event__organizer') in BookingViewSet.access.read (events/viewsets.py:80)
          or: rows appear once organizer@example.com is the attendee of some Booking
 ```
@@ -177,11 +177,11 @@ roles    attendee
 access   VenueViewSet.access  events/viewsets.py:22
            ...
 field    Venue.capacity on venues (VenueViewSet, the generated serializer)
-rows     list: 200 OK; update: gate refuses (403 Forbidden)
-rule     Venue.Karni.field_roles['capacity']: read needs one of organizer, staff; attendee@example.com holds attendee
+rows     list: 200 OK, update: gate refuses (403 Forbidden)
+rule     Venue.Karni.field_roles['capacity']: read needs one of organizer, staff, but attendee@example.com holds attendee
 where    events/viewsets.py:22  VenueViewSet.access
          events/models.py:19  Venue.Karni.field_roles
-result   hidden — capacity is absent from every response, ?expand= and the schema for this user (never null), and is ignored in filters, ordering and search
+result   hidden: capacity is absent from every response, ?expand= and the schema for this user (never null), and is ignored in filters, ordering and search
 fix      give attendee@example.com one of the roles organizer, staff
          or: add a role attendee@example.com holds to field_roles['capacity']['read'] in Venue.Karni (events/models.py:19)
 ```

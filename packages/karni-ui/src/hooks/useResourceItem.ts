@@ -3,7 +3,7 @@
  *
  * `useResourceItem<Event>("events", id, { expand: ["venue"] })` fetches
  * `GET /<resource>/<id>/?expand=venue` and caches it under
- * `karniKeys.detail(resource, id, params)` — params participate in the key,
+ * `karniKeys.detail(resource, id, params)`. Params participate in the key,
  * so an expanded detail view and an unexpanded edit form never clobber each
  * other's cache entry, while `karniKeys.resource(resource)` invalidation
  * still reaches both.

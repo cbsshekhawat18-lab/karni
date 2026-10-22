@@ -105,7 +105,7 @@ class Workspace:
         path = self.path(rel)
         if self.exists(path) and path not in self._files and not self.force:
             raise CliError(
-                f"{self.rel(path)} already exists — pass --force to overwrite it.", code="C101"
+                f"{self.rel(path)} already exists. Pass --force to overwrite it.", code="C101"
             )
         self._record(path, content)
 
@@ -119,7 +119,7 @@ class Workspace:
         if existing and not self.force:
             shown = ", ".join(self.rel(path) for path in existing[:3])
             raise CliError(
-                f"{shown} already exist{'s' if len(existing) == 1 else ''} — pass --force "
+                f"{shown} already exist{'s' if len(existing) == 1 else ''}. Pass --force "
                 "to create only the missing files (existing ones are kept).",
                 code="C101",
             )
@@ -136,7 +136,7 @@ class Workspace:
     def refuse_existing(self, what: str) -> None:
         """Raise unless ``--force``: ``what`` (e.g. "class Event in events/models.py") exists."""
         if not self.force:
-            raise CliError(f"{what} already exists — pass --force to replace it.", code="C101")
+            raise CliError(f"{what} already exists. Pass --force to replace it.", code="C101")
 
     def note(self, text: str) -> None:
         if text not in self.notes:
@@ -270,10 +270,10 @@ def resolve_app(ws: Workspace, name: str | None) -> App:
                 return app
         if not apps:
             raise CliError(
-                f"No local app {name!r} — create it first: karni make app {name}", code="C102"
+                f"No local app {name!r}. Create it first: karni make app {name}", code="C102"
             )
         raise CliError(
-            f"No local app {name!r} (local apps: {listing}) — or: karni make app {name}",
+            f"No local app {name!r} (local apps: {listing}). To create it: karni make app {name}",
             code="C102",
         )
     if len(apps) == 1:
@@ -281,21 +281,19 @@ def resolve_app(ws: Workspace, name: str | None) -> App:
     if not apps:
         raise CliError(
             "This project has no local app yet (none in the `# karni:apps` block of "
-            "config/settings.py) — create one first: karni make app <name>",
+            "config/settings.py). Create one first: karni make app <name>",
             code="C102",
         )
-    raise CliError(f"Several local apps ({listing}) — choose one with --app <label>.", code="C102")
+    raise CliError(f"Several local apps ({listing}). Choose one with --app <label>.", code="C102")
 
 
 def require_settings(ws: Workspace) -> str:
     text = ws.read(SETTINGS)
     if text is None:
-        raise CliError(
-            f"{SETTINGS.as_posix()} not found — run inside a Karni project.", code="C001"
-        )
+        raise CliError(f"{SETTINGS.as_posix()} not found. Run inside a Karni project.", code="C001")
     if MARKER not in text:
         raise CliError(
-            f"No `{MARKER}` block in {SETTINGS.as_posix()} — karni make finds local apps "
+            f"No `{MARKER}` block in {SETTINGS.as_posix()}. karni make finds local apps "
             "there. Add one (see the scaffold's settings.py) and list your apps in it.",
             code="C108",
         )
@@ -306,7 +304,7 @@ def require_frontend(ws: Workspace) -> Path:
     path = ws.path(FRONTEND)
     if not ws.is_dir(path):
         raise CliError(
-            "No frontend/ directory in this project — pages and components live there.", code="C105"
+            "No frontend/ directory in this project. Pages and components live there.", code="C105"
         )
     return path
 

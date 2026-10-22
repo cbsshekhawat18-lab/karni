@@ -22,7 +22,7 @@ export type PaymentStatusValue = (typeof PAYMENT_STATUSES)[number];
 /** One payment as serialized by the karni_payments API. */
 export interface Payment {
   id: string | number;
-  /** DRF DecimalField(12, 2) — serialized as a string, e.g. "49.00". */
+  /** DRF DecimalField(12, 2), serialized as a string, e.g. "49.00". */
   amount: string;
   /** Lowercase ISO 4217 code, e.g. "usd". */
   currency: string;

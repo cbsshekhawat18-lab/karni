@@ -144,8 +144,8 @@ def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
     from karni.exceptions import KarniImproperlyConfigured
 
     raise KarniImproperlyConfigured(
-        f"KARNI_CACHE={choice!r}: use 'redis' (REDIS_URL, the default) or 'locmem'; "
-        "define CACHES yourself for anything else.",
+        f"KARNI_CACHE={choice!r}: use 'redis' (REDIS_URL, the default) or 'locmem'. "
+        "Define CACHES yourself for anything else.",
         code="E507",
     )
 

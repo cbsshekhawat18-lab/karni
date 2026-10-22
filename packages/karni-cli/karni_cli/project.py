@@ -42,8 +42,9 @@ class CliError(Exception):
     """User-facing CLI failure; the message is printed without a traceback.
 
     ``code`` is a registered code (``C101``, or a Karni code such as ``E704``
-    passed through); ``str()`` is ``"<code>: <message> See <docs url>"`` and
-    ``karni explain <code>`` prints the full entry offline.
+    passed through). ``str()`` is ``"<code>: <message> See <docs url>"``, with
+    the link on its own line when the message spans lines or ends in a command
+    rather than a sentence. ``karni explain <code>`` prints the full entry offline.
     """
 
     def __init__(self, message: str, *, code: str | None = None) -> None:
@@ -56,7 +57,8 @@ class CliError(Exception):
             return self.message
         from karni_cli.errorcodes import docs_url
 
-        sep = "\n" if "\n" in self.message else " "
+        ends_a_sentence = self.message.rstrip().endswith((".", "!", "?", ")", '"', "'"))
+        sep = " " if ends_a_sentence and "\n" not in self.message else "\n"
         return f"{self.code}: {self.message}{sep}See {docs_url(self.code)}"
 
 
@@ -72,9 +74,7 @@ def find_project(start: Path | None = None) -> Path | None:
 def require_project(start: Path | None = None) -> Path:
     project = find_project(start)
     if project is None:
-        raise CliError(
-            "No manage.py found here or above — run inside a Karni project.", code="C001"
-        )
+        raise CliError("No manage.py found here or above. Run inside a Karni project.", code="C001")
     return project
 
 
@@ -287,7 +287,7 @@ def run_compose(project: Path, args: list[str]) -> subprocess.CompletedProcess[s
         return run_process(["docker", "compose", *args], cwd=project)
     except FileNotFoundError:
         raise CliError(
-            "docker not found — install Docker with the compose plugin, "
+            "docker not found. Install Docker with the compose plugin, "
             "or run without it: karni serve --local",
             code="C003",
         ) from None

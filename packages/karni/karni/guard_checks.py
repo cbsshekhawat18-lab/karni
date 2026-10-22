@@ -55,12 +55,12 @@ def _overlap_problems(model: type[models.Model], constraint: Any) -> list[str]:
             found = _field(model, name)
             if found is not None and not isinstance(found, _PAIR_KINDS):
                 problems.append(
-                    f"{name!r} is a {type(found).__name__}; a (start, end) pair must be date, "
+                    f"{name!r} is a {type(found).__name__}, but a (start, end) pair must be date, "
                     "date-time or number fields."
                 )
             kinds.append(type(found))
         if len(set(kinds)) > 1 and not problems:
-            problems.append(f"{span!r} mixes field types; start and end must be the same type.")
+            problems.append(f"{span!r} mixes field types, but start and end must be the same type.")
     for name, values in constraint.ignore.items():
         found = _field(model, name)
         if found is None:

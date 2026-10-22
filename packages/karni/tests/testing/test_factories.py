@@ -129,7 +129,7 @@ def test_unsupported_required_fields_fail_when_used() -> None:
             app_label = "perfapp"
 
     odd = auto_factory(Odd, builder=FactoryBuilder())
-    with pytest.raises(ImproperlyConfigured, match=r"Odd.where .*pass it"):
+    with pytest.raises(ImproperlyConfigured, match=r"Odd.where .*Pass it"):
         odd.build()
     assert odd.build(where="here").where == "here"
 

@@ -118,7 +118,7 @@ def test_compose_respects_the_cap(store: Path) -> None:
     lines = block.split("\n")
     assert lines[0] == "HISTORY: a.py (fake)"
     assert lines[-1] == (
-        f"… truncated at ~{HISTORY_TOKEN_CAP} tokens; full brief: fakehist show a.py"
+        f"… truncated at ~{HISTORY_TOKEN_CAP} tokens. Full brief: fakehist show a.py"
     )
     whole = [line.rstrip() for line in brief.split("\n")]
     assert lines[1:-1] == whole[: len(lines) - 2]  # whole lines, in order, nothing cut

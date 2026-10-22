@@ -213,7 +213,7 @@ def _listener_task(func: Callable[[Any], Any], name: str) -> Any:
         instance = _load_instance(model_label, pk, snapshot)
         if instance is None:
             logger.warning(
-                "karni.events: queued listener %s skipped — %s pk=%r no longer exists.",
+                "karni.events: queued listener %s skipped because %s pk=%r no longer exists.",
                 name,
                 model_label,
                 pk,

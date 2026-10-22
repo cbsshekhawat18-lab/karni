@@ -7,23 +7,23 @@
  * - `remove` → `DELETE /<resource>/<id>/`
  *
  * Every successful mutation invalidates `karniKeys.resource(resource)` (all
- * list + detail entries of the resource) plus any `options.invalidateKeys` —
- * never the bare `["karni"]` root (D4), which would nuke the cached schema.
+ * list + detail entries of the resource) plus any `options.invalidateKeys`,
+ * but never the bare `["karni"]` root (D4), which would nuke the cached schema.
  *
  * ## Multipart (D2)
  * Payloads containing a top-level `File` (or an array containing one) are
- * encoded as FormData — on create AND PATCH — with arrays as repeated keys,
+ * encoded as FormData (on create AND PATCH), with arrays as repeated keys,
  * json values JSON-stringified, and no manual Content-Type. Unchanged file
  * values (the URL string the backend returned) are omitted from PATCH
  * payloads so they are never re-submitted as uploads.
  *
- * ## PATCH granularity — contract for the form builder (D3)
- * `update` sends EXACTLY the keys present in `values`; it never diffs or
+ * ## PATCH granularity: contract for the form builder (D3)
+ * `update` sends EXACTLY the keys present in `values`. It never diffs or
  * drops fields itself (beyond the file-URL omission above). ResourceForm
  * must therefore build `values` at TOP-LEVEL FIELD granularity from
  * react-hook-form's `dirtyFields`: when ANY leaf inside a field's subtree is
  * dirty (nested object, array member, multi-relation), include that field's
- * ENTIRE current value — never a partial subtree, because DRF PATCH replaces
+ * ENTIRE current value, never a partial subtree, because DRF PATCH replaces
  * the whole field value. An emptied nullable field must be sent as `null`
  * (not `""`/`undefined`): a key that is absent is simply left unchanged by
  * the backend, and `undefined` does not survive JSON serialization.
@@ -36,7 +36,7 @@ import { encodeBody, fileFieldNames, omitUnchangedFileUrls } from "./multipart";
 import { detailPath, listPath } from "./params";
 import type { ResourceMutationsOptions } from "./types";
 
-/** Result bundle — the three mutations, each a full TanStack mutation object. */
+/** Result bundle: the three mutations, each a full TanStack mutation object. */
 export interface ResourceMutations<T> {
   create: UseMutationResult<T, unknown, Record<string, unknown>>;
   update: UseMutationResult<T, unknown, { id: string | number; values: Record<string, unknown> }>;

@@ -35,7 +35,7 @@ def validate_name(project_name: str) -> str:
     if not SLUG_RE.match(slug):
         raise CliError(
             f'"{project_name}" derives the invalid slug "{slug}" '
-            "(allowed: lowercase letters, digits, underscores; must not start with a digit).",
+            "(allowed: lowercase letters, digits and underscores, not starting with a digit).",
             code="C103",
         )
     return slug
@@ -76,7 +76,7 @@ def resolve_template() -> Path:
             return path
     raise CliError(
         "No project template found (no KARNI_TEMPLATES, no monorepo checkout, "
-        "no packaged copy) — reinstall karni-cli.",
+        "no packaged copy). Reinstall karni-cli.",
         code="C005",
     )
 

@@ -27,7 +27,7 @@ def serve(
     if local:
         if build or detach:
             raise CliError(
-                "--build/--detach apply to docker compose; drop them or drop --local.", code="C004"
+                "--build/--detach apply to docker compose. Drop them or drop --local.", code="C004"
             )
         if project_mod.venv_python(project) is None:
             raise CliError(
@@ -44,7 +44,7 @@ def serve(
     else:
         if host is not None or port is not None:
             raise CliError(
-                "--host/--port need --local; under docker compose the port is set in "
+                "--host/--port need --local. Under docker compose the port is set in "
                 "docker-compose.yml (8000).",
                 code="C004",
             )

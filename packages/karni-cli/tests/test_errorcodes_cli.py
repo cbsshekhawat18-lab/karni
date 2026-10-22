@@ -25,7 +25,7 @@ def test_docs_errors_md_is_fresh() -> None:
     require_modules()  # the page lists every module's codes
     docs = (REPO_ROOT / "docs" / "errors.md").read_text(encoding="utf-8")
     assert docs == render(), (
-        "docs/errors.md is stale — regenerate it: python -m karni_cli.errordoc > docs/errors.md"
+        "docs/errors.md is stale. Regenerate it: python -m karni_cli.errordoc > docs/errors.md"
     )
 
 

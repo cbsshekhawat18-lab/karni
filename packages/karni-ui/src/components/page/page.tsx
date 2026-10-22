@@ -25,7 +25,7 @@ export interface PageSlotContentProps {
 export interface PageSlots {
   /** The row holding the title, description and actions. */
   Header: React.ComponentType<PageHeaderProps>;
-  /** The page heading; the default is the page's <h1>. */
+  /** The page heading. The default is the page's <h1>. */
   Title: React.ComponentType<PageSlotContentProps>;
   /** The line under the title. */
   Description: React.ComponentType<PageSlotContentProps>;
@@ -45,7 +45,7 @@ export interface PageProps extends Omit<React.HTMLAttributes<HTMLElement>, "titl
    * ignored when given). Prefer the `Header` slot, which still receives them.
    */
   header?: React.ReactNode;
-  /** Replaces pieces of the chrome; see PageSlots. */
+  /** Replaces pieces of the chrome. See PageSlots. */
   slots?: Partial<PageSlots>;
   /** Extra classes for the derived header row. */
   headerClassName?: string;
@@ -97,8 +97,8 @@ export const defaultPageSlots: PageSlots = {
  * is a complete screen.
  *
  * Escape hatches: `slots` replaces the Header, Title, Description or
- * Actions; `header` replaces the whole derived header; `className`,
- * `headerClassName` and `contentClassName` merge through cn(); every other
+ * Actions. `header` replaces the whole derived header. `className`,
+ * `headerClassName` and `contentClassName` merge through cn(). Every other
  * prop passes through to the root <section>.
  */
 export const Page = React.forwardRef<HTMLElement, PageProps>(

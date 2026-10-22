@@ -608,7 +608,7 @@ guards a form of your own.
   page-number or cursor), more as the list scrolls, through "Load more", or
   when the keyboard reaches the end. Nothing fetches every row, and long lists
   render only the rows in view. The list says how many there are: "Showing 50
-  of 10,000 — type to narrow".
+  of 10,000. Type to narrow."
 - Typing searches (`?search=`, debounced by `searchDebounceMs`), keeping the
   previous results on screen and saying "Searching…". A related viewset with
   no `search_fields` documents no `search` parameter. Then typing narrows the

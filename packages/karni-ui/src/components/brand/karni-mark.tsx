@@ -7,10 +7,10 @@ export interface KarniMarkProps extends Omit<React.SVGAttributes<SVGSVGElement>,
   size?: number;
   /**
    * Which drawing: the full mark, the small-size variant, or `auto` (the
-   * default) — the small variant at 32px and below, the full mark above.
+   * default): the small variant at 32px and below, the full mark above.
    */
   variant?: "auto" | "full" | "simple";
-  /** Accessible name; pass an empty string to hide a purely decorative mark. */
+  /** Accessible name. Pass an empty string to hide a purely decorative mark. */
   title?: string;
 }
 
@@ -18,7 +18,7 @@ export interface KarniMarkProps extends Omit<React.SVGAttributes<SVGSVGElement>,
  * The Karni mark as inline SVG, so there is no asset to load or bundle.
  *
  * It is the default content of `<Layout>`'s `sidebarHeader` slot so a bare
- * shell is never nameless; a project replaces it by passing its own
+ * shell is never nameless. A project replaces it by passing its own
  * `sidebarHeader` (the scaffold already does). Do not recolour or restyle it:
  * the mark is Karni's, see assets/brand/README.md in the repository.
  */

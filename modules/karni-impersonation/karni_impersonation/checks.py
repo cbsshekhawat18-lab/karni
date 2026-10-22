@@ -23,9 +23,8 @@ def run_checks() -> list[str]:
     middleware = list(getattr(settings, "MIDDLEWARE", []))
     if MIDDLEWARE not in middleware:
         failures.append(
-            f"{WIRING_CODE}: add {MIDDLEWARE!r} to MIDDLEWARE after {AUTH_MIDDLEWARE!r}; "
-            "without it "
-            "impersonated sessions are never applied."
+            f"{WIRING_CODE}: add {MIDDLEWARE!r} to MIDDLEWARE after {AUTH_MIDDLEWARE!r}. "
+            "Without it, impersonated sessions are never applied."
         )
     elif AUTH_MIDDLEWARE in middleware and middleware.index(MIDDLEWARE) < middleware.index(
         AUTH_MIDDLEWARE
@@ -35,8 +34,8 @@ def run_checks() -> list[str]:
         reverse("karni-impersonation-stop")
     except NoReverseMatch:
         failures.append(
-            f"{WIRING_CODE}: include the module's URLs — path('impersonation/', "
-            "include('karni_impersonation.urls')) — so the banner's exit works."
+            f"{WIRING_CODE}: include the module's URLs so the banner's exit works: "
+            "path('impersonation/', include('karni_impersonation.urls'))."
         )
     blocked = conf.get("KARNI_IMPERSONATION_BLOCKED")
     if not isinstance(blocked, list | tuple) or not all(isinstance(p, str) for p in blocked):

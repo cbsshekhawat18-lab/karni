@@ -50,7 +50,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Not signed in: a sign-in prompt; signing in reveals the content in place. */
+/** Not signed in: a sign-in prompt. Signing in reveals the content in place. */
 export const Anonymous: Story = {
   decorators: [
     (Story) => (
@@ -72,7 +72,7 @@ export const Denied: Story = {
   ],
 };
 
-/** `denied` replaces the default for that case only (`anonymous` likewise; `fallback` covers both). */
+/** `denied` replaces only that case's default (as does `anonymous`, and `fallback` covers both). */
 export const CustomDenied: Story = {
   args: {
     denied: (

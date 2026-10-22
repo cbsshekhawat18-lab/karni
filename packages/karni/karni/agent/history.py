@@ -288,7 +288,7 @@ def _truncation_line(
     full_command = getattr(provider, "full_command", None)
     command = _safe(lambda: full_command(root, path)) if callable(full_command) else None
     if isinstance(command, str) and command.strip():
-        return f"… truncated at ~{max_tokens} tokens; full brief: {command.strip()}"
+        return f"… truncated at ~{max_tokens} tokens. Full brief: {command.strip()}"
     return f"… truncated at ~{max_tokens} tokens; {provider.name} holds the full brief"
 
 

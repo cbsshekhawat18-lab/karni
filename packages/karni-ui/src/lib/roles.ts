@@ -8,12 +8,12 @@
  * duplicate via a static scan of these call sites.
  *
  * Conventions:
- * - The `role` argument MUST be a string literal — the build-time scan rejects
+ * - The `role` argument MUST be a string literal. The build-time scan rejects
  *   any non-literal first argument.
  * - Same role + same component name is idempotent (modules re-evaluate under
  *   HMR and across test files).
  * - Replacing on purpose is explicit and must carry a reason:
- *   `{ replace: true, reason: "<why>" }` — an empty reason throws.
+ *   `{ replace: true, reason: "<why>" }`. An empty reason throws.
  * - Under Vite HMR (`import.meta.hot`) an accidental conflict logs a
  *   console.error and replaces instead of throwing, so a rename mid-edit does
  *   not kill the dev server.
@@ -23,7 +23,7 @@
 export interface RegisterComponentRoleOptions {
   /** Replace an existing registration on purpose. Requires `reason`. */
   replace?: boolean;
-  /** Why the replacement is intentional — required with `replace: true`. */
+  /** Why the replacement is intentional. Required with `replace: true`. */
   reason?: string;
 }
 
@@ -49,7 +49,7 @@ function defaultHotDetector(): boolean {
 let detectHot: () => boolean = defaultHotDetector;
 
 /**
- * Test-only override for HMR detection; pass `null` to restore the default.
+ * Test-only override for HMR detection. Pass `null` to restore the default.
  * Not exported from the package barrel.
  * @internal
  */
@@ -78,8 +78,8 @@ export function registerComponentRole(
     const reason = options.reason?.trim() ?? "";
     if (reason === "") {
       throw new Error(
-        `[karni] registerComponentRole: replacing role "${role}" requires a non-empty reason — ` +
-          `pass { replace: true, reason: "<why>" }.`,
+        `[karni] registerComponentRole: replacing role "${role}" requires a non-empty reason. ` +
+          `Pass { replace: true, reason: "<why>" }.`,
       );
     }
     const previous = registry.get(role);

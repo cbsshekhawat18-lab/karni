@@ -71,7 +71,7 @@ export interface ImportConfirmProps {
 }
 
 /**
- * The replaceable parts of ResourceImport. Pass any subset as `slots`;
+ * The replaceable parts of ResourceImport. Pass any subset as `slots`.
  * `defaultResourceImportSlots` holds Karni's own, to wrap them.
  */
 export interface ResourceImportSlots {
@@ -133,7 +133,7 @@ const ERROR_ICONS: Partial<Record<string, React.ComponentType<{ className?: stri
 
 /**
  * The default `Error` slot. When loading what the import accepts fails, the
- * whole step is ErrorState's panel; a failed upload or preview is a compact
+ * whole step is ErrorState's panel. A failed upload or preview is a compact
  * alert under the form it came from, and a refused file or mapping (a 400)
  * says what the backend objected to.
  */
@@ -274,7 +274,7 @@ function DefaultProblems({ problems }: ImportProblemsProps): React.ReactElement 
 }
 
 /**
- * A running preview or commit. The bar is a `progressbar`; the polite
+ * A running preview or commit. The bar is a `progressbar`. The polite
  * announcement changes only at each quarter, so a screen reader is not
  * read every poll (1.5s).
  */
@@ -340,7 +340,7 @@ function DefaultConfirmCommit(props: ImportConfirmProps): React.ReactElement {
       </dl>
       {result.errors > 0 ? (
         <p className="text-sm text-muted-foreground">
-          {plural(result.errors, "row has", "rows have")} errors and will not be imported; fix them
+          {plural(result.errors, "row has", "rows have")} errors and will not be imported. Fix them
           in the file and import it again.
         </p>
       ) : null}
@@ -406,7 +406,7 @@ function MappingTable(props: {
                   value={mapping[header] ?? ""}
                   options={options}
                   clearable
-                  clearLabel="— ignore —"
+                  clearLabel="Ignore this column"
                   onValueChange={(next) => onChange(header, next ?? "")}
                 />
               </td>
@@ -446,7 +446,7 @@ function stepOf(job: ImportJob | undefined, remap: boolean): Step {
  * progress.
  *
  * States: a placeholder in the form's layout while the import description
- * loads (drawn after 500ms); when that fails the form is not shown — a 403
+ * loads (drawn after 500ms). When that fails the form is not shown: a 403
  * reads "You can't import <resource>". A failed upload keeps the chosen file,
  * offers "Try again" when it can help and moves focus to the error. Offline
  * requests wait for the connection and say so. Escape hatch: `slots`.
@@ -696,7 +696,7 @@ export function ResourceImport({
           </div>
         ) : null}
         <p className="text-sm text-muted-foreground">
-          {job.file_name} — {job.rows_total} rows. Map each column to a field; blank cells leave a
+          {job.file_name} has {job.rows_total} rows. Map each column to a field. Blank cells leave a
           field unchanged.
         </p>
         <MappingTable
@@ -734,8 +734,8 @@ export function ResourceImport({
     body = (
       <div className="space-y-3">
         <p role="status" className="text-sm text-muted-foreground">
-          {job.file_name} — {job.rows_total} rows,{" "}
-          {done ? "imported." : "previewed; nothing is saved yet."}
+          {done ? "Imported" : "Previewed"} {job.file_name} ({job.rows_total} rows).
+          {done ? null : " Nothing is saved yet."}
         </p>
         {result !== null ? <Slots.Summary job={job} result={result} /> : null}
         {job.problems.length > 0 ? <Slots.Problems job={job} problems={job.problems} /> : null}

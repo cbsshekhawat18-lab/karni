@@ -1,18 +1,18 @@
 /**
- * <CheckoutButton> — starts a provider checkout for the signed-in user
+ * <CheckoutButton>: starts a provider checkout for the signed-in user
  * (contract "@karni/payments-ui" + G9).
  *
  * Flow: click → `POST /payments/checkout/` via `useKarniClient().request`
- * (resource-relative; the client's baseUrl carries `/api`) → on success
+ * (resource-relative: the client's baseUrl carries `/api`) → on success
  * invalidate every `["karni", "payments"]`-rooted cache entry (so
  * <PaymentStatus> and payment tables refresh after the user returns) → hand
  * `session.url` to `navigate`, which defaults to `window.location.assign`.
  *
- * The amount sent here is NEVER authoritative — the backend re-validates via
+ * The amount sent here is NEVER authoritative. The backend re-validates via
  * KARNI_PAYMENTS_CHECKOUT_VALIDATOR (G2). See the package README.
  *
  * Escape hatches: every @karni/ui Button prop (variant, size, className, ...)
- * passes through; `navigate` is injectable for tests and client-side routers;
+ * passes through. `navigate` is injectable for tests and client-side routers.
  * `onError` receives the thrown error (a KarniApiError for API failures).
  */
 import { Button, karniKeys, useKarniClient, type ButtonProps } from "@karni/ui";
@@ -30,9 +30,12 @@ interface CheckoutRequestBody {
 }
 
 export interface CheckoutButtonProps extends Omit<ButtonProps, "onError" | "onClick"> {
-  /** Amount to charge, e.g. "49.00". Display-level only — the server decides (G2). */
+  /** Amount to charge, e.g. "49.00". Display-level only: the server decides (G2). */
   amount: string | number;
-  /** Lowercase ISO 4217 code; the backend default (KARNI_PAYMENTS_CURRENCY) applies when omitted. */
+  /**
+   * Lowercase ISO 4217 code. The backend default (KARNI_PAYMENTS_CURRENCY) applies
+   * when omitted.
+   */
   currency?: string;
   /** Stored on the Payment's metadata JSONField. */
   metadata?: Record<string, unknown>;
@@ -42,7 +45,7 @@ export interface CheckoutButtonProps extends Omit<ButtonProps, "onError" | "onCl
   cancelUrl: string;
   /** Called with the thrown error (KarniApiError for non-2xx responses). */
   onError?: (error: unknown) => void;
-  /** Redirect strategy; defaults to `window.location.assign`. Inject for tests/routers. */
+  /** Redirect strategy. Defaults to `window.location.assign`. Inject for tests/routers. */
   navigate?: (url: string) => void;
 }
 

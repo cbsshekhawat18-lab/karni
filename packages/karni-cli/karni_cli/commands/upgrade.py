@@ -117,7 +117,7 @@ def _check_tree(project: Path, allow_dirty: bool) -> None:
         shown = ", ".join(dirty[:5]) + (f" and {len(dirty) - 5} more" if len(dirty) > 5 else "")
         why = (
             f"the git working tree has uncommitted changes ({shown}). karni upgrade rewrites "
-            "files in place; on a clean tree `git diff` shows exactly what it changed and "
+            "files in place. On a clean tree `git diff` shows exactly what it changed and "
             "`git checkout -- .` undoes it, without mixing its edits with yours."
         )
         if not allow_dirty:
@@ -195,14 +195,14 @@ def upgrade(
         current, now = baseline, changelog.parse(baseline, "[tool.karni] baseline")
     if then < now:
         raise CliError(
-            f"--to {target} is older than the project's karni {current}; "
+            f"--to {target} is older than the project's karni {current}, and "
             "karni upgrade does not downgrade.",
             code="C202",
         )
     horizon = changelog.horizon(changes)
     if then > horizon:
         typer.echo(
-            f"warning: this karni-cli records changes up to {horizon}; any after that are "
+            f"warning: this karni-cli records changes up to {horizon}. Any after that are "
             "not applied. Upgrade karni-cli first (pipx upgrade karni-cli).",
             err=True,
         )

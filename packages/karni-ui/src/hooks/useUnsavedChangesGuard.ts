@@ -1,5 +1,5 @@
 /**
- * useUnsavedChangesGuard — warn before leaving a form with unsaved changes.
+ * useUnsavedChangesGuard: warn before leaving a form with unsaved changes.
  *
  * Router-agnostic: the hook owns the "is anything unsaved?" state and the
  * browser's own leave warning (`beforeunload`, for reloads, closed tabs and
@@ -32,20 +32,20 @@ export interface UseUnsavedChangesGuardOptions {
   beforeUnload?: boolean;
   /** The question `shouldBlock` asks. Default UNSAVED_CHANGES_MESSAGE. */
   message?: string;
-  /** Asks the user whether to leave; returns true to leave. Default `window.confirm`. */
+  /** Asks the user whether to leave and returns true to leave. Default `window.confirm`. */
   confirm?: (message: string) => boolean;
 }
 
 export interface UnsavedChangesGuard {
   /** Whether something is unsaved (re-renders when it changes). */
   dirty: boolean;
-  /** Reports the form's state; pass it as ResourceForm's `onDirtyChange`. */
+  /** Reports the form's state. Pass it as ResourceForm's `onDirtyChange`. */
   setDirty: (dirty: boolean) => void;
   /** The latest state, read synchronously (for a router blocker's callback). */
   isDirty: () => boolean;
   /**
    * For a router's blocker: true when there are unsaved changes and the user
-   * chose to stay; false (let the navigation happen) otherwise.
+   * chose to stay, false (let the navigation happen) otherwise.
    */
   shouldBlock: () => boolean;
   /** The question asked before leaving. */

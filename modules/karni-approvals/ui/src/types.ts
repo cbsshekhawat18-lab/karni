@@ -1,5 +1,5 @@
 /**
- * Shared types for @karni/approvals-ui — the shapes `/api/pending-changes/`
+ * Shared types for @karni/approvals-ui: the shapes `/api/pending-changes/`
  * serves (karni_approvals.api.PendingChangeSerializer).
  */
 

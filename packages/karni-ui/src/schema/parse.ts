@@ -6,12 +6,12 @@
  * - unwraps single-member allOf, merging its siblings (drf-spectacular uses
  *   `allOf: [$ref] + readOnly/description` for annotated enum fields),
  * - maps oneOf [XEnum, NullEnum | BlankEnum] → kind "enum" (+ nullable from
- *   NullEnum; BlankEnum's "" excluded from enumValues),
+ *   NullEnum, with BlankEnum's "" excluded from enumValues),
  * - handles `nullable: true` (3.0) and `type: [T, "null"]` (future-proofing),
  * - split-components merge algebra (COMPONENT_SPLIT_REQUEST=True, api B14):
- *   fields = union(response props, create-request props); readOnly = flagged
- *   OR response-only; writeOnly = flagged OR request-only; required = the
- *   CREATE REQUEST body's required array ONLY; resources without a create op
+ *   fields = union(response props, create-request props), readOnly = flagged
+ *   OR response-only, writeOnly = flagged OR request-only, and required = the
+ *   CREATE REQUEST body's required array ONLY. Resources without a create op
  *   fall back to response-only, all readOnly,
  * - kind "file" = request-side `format: binary` (the response-side format: uri
  *   is just the display URL),
@@ -119,7 +119,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** "starts_at" → "Starts at"; "is_public" → "Is public". */
+/** "starts_at" → "Starts at", "is_public" → "Is public". */
 export function humanize(name: string): string {
   const spaced = name.replace(/[_-]+/g, " ").trim();
   return spaced.length === 0 ? name : spaced.charAt(0).toUpperCase() + spaced.slice(1);
@@ -135,7 +135,7 @@ function lookupRef(doc: OpenApiDocument, ref: string): SchemaObject | undefined 
 /**
  * Resolves $ref chains and unwraps single-member allOf, merging siblings over
  * the resolved target (so `{allOf: [$ref StatusEnum], readOnly: true}` yields
- * the enum schema plus readOnly). Cycle-guarded; a cycle resolves to {}.
+ * the enum schema plus readOnly). Cycle-guarded: a cycle resolves to {}.
  */
 export function resolveSchema(
   doc: OpenApiDocument,

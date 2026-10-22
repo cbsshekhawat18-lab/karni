@@ -2,7 +2,7 @@
  * Public entry for ResourceTable (owner: resource table builder).
  *
  * The implementation lives in ./table/ (ResourceTable + filter bar +
- * pagination controls + bulk select, contract "ResourceTable" + D5); this
+ * pagination controls + bulk select, contract "ResourceTable" + D5). This
  * module keeps the barrel's import path and exported names stable.
  */
 export { ResourceTable } from "./table/ResourceTable";

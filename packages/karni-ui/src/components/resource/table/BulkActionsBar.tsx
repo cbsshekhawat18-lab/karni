@@ -3,7 +3,7 @@
  * are selected (selection persists across pages) and what "all" covers, a
  * clear affordance, one button per bulk action, and what happened last time
  * (a failure in plain words, or which rows failed). The table runs the
- * actions (confirming destructive ones first); this bar only presents them.
+ * actions (confirming destructive ones first). This bar only presents them.
  * The default of ResourceTable's `BulkActions` slot.
  */
 import * as React from "react";
@@ -30,8 +30,8 @@ export interface BulkAction {
   label: React.ReactNode;
   /**
    * Runs the action on the selected ids. Return a promise to have the table
-   * show progress, report failures and deselect the rows that succeeded;
-   * resolve a `BulkResult` to mark the rows that failed. A plain `void`
+   * show progress, report failures and deselect the rows that succeeded.
+   * Resolve a `BulkResult` to mark the rows that failed. A plain `void`
    * return leaves the selection as it is.
    */
   onClick: (selectedIds: string[]) => BulkActionReturn;
@@ -56,7 +56,7 @@ export interface BulkActionsBarProps {
   selectedIds: readonly string[];
   bulkActions: ReadonlyArray<BulkAction>;
   onClear: () => void;
-  /** Runs (or asks to confirm) the action at `index`; `trigger` gets focus back after a dialog. */
+  /** Runs (or asks to confirm) the action at `index`. `trigger` gets focus back after a dialog. */
   onAction?: (index: number, trigger: HTMLButtonElement | null) => void;
   /** The action running now, by index. */
   runningIndex?: number | null;
@@ -139,7 +139,7 @@ export function BulkActionsBar(props: BulkActionsBarProps): React.ReactElement {
         <p role="alert" className="flex items-center gap-2 text-sm text-foreground">
           <AlertIcon className="h-4 w-4 shrink-0 text-destructive" />
           {outcome.actionLabel} failed for {outcome.failed} of {outcome.total} {resourceLabel}. The
-          rows that failed say why and stay selected; the others are done.
+          rows that failed say why and stay selected. The others are done.
         </p>
       )}
       {outcome?.kind === "failed" && (
