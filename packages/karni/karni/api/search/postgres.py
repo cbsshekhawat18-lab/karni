@@ -23,6 +23,7 @@ name requires ``psycopg`` (or ``psycopg2``), as does actually running
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any
 
@@ -34,11 +35,14 @@ from django.contrib.postgres.search import (
     TrigramSimilarity,
 )
 from django.db import connections
-from django.db.models import Expression, Q, QuerySet
+from django.db.models import Expression, F, Q, QuerySet
 from django.db.models.functions import Greatest
 
 from karni.api.search import SearchProvider
 from karni.exceptions import KarniImportError
+
+#: Words of a query, for a prefix tsquery (tsquery operators never pass through).
+_TERMS = re.compile(r"\w+", re.UNICODE)
 
 # TrigramExtension is a lazy re-export resolved by module __getattr__ below,
 # so pyflakes cannot see its definition here.
@@ -56,6 +60,10 @@ class PostgresSearchProvider(SearchProvider):
     that word-stemming full-text search misses. Nothing executes until the
     queryset is evaluated, so pagination and further filtering compose as
     usual.
+
+    When the fields name a :class:`karni.fields.SearchField`, or are all its
+    sources, :meth:`search_document` matches through that stored, GIN-indexed
+    column instead (prefix words, no trigram leg).
 
     When ``rank_order`` is true (no explicit ``?ordering=`` on the request)
     results are ordered by ``-rank`` then ``-sim``; otherwise the incoming
@@ -100,7 +108,13 @@ class PostgresSearchProvider(SearchProvider):
             return SimpleSearchProvider().search(
                 queryset=queryset, query=query, fields=fields, view=view, rank_order=rank_order
             )
-        vector = SearchVector(*fields)
+        from karni.fields.search import expand_search_fields, search_field_for
+
+        document = search_field_for(queryset.model, fields)
+        if document is not None:
+            return self.search_document(queryset, query, document, rank_order=rank_order)
+        text_fields = expand_search_fields(queryset.model, fields)
+        vector = SearchVector(*text_fields)
         search_query = SearchQuery(query)
         annotations: dict[str, Expression] = {
             "vector": vector,
@@ -108,7 +122,7 @@ class PostgresSearchProvider(SearchProvider):
         }
         condition = Q(vector=search_query)
         if self.use_trigram:
-            similarities = [TrigramSimilarity(field, query) for field in fields]
+            similarities = [TrigramSimilarity(field, query) for field in text_fields]
             annotations["sim"] = (
                 similarities[0] if len(similarities) == 1 else Greatest(*similarities)
             )
@@ -118,6 +132,29 @@ class PostgresSearchProvider(SearchProvider):
             ordering = ("-rank", "-sim") if self.use_trigram else ("-rank",)
             result = result.order_by(*ordering)
         return result
+
+    def search_document(
+        self, queryset: QuerySet[Any], query: str, document: Any, *, rank_order: bool
+    ) -> QuerySet[Any]:
+        """Match a :class:`karni.fields.SearchField` through its GIN index.
+
+        Each word of the query is a prefix (``walnu`` finds ``walnut``), all
+        words must match, and rows rank by ``ts_rank``. The trigram leg is not
+        used: ``similarity() > t`` cannot be answered by an index, and OR-ing
+        it in would turn every search back into a scan of the table.
+
+        Override / escape hatch: override this method (call :meth:`search`'s
+        plain path by searching the source fields instead) to change it.
+        """
+        terms = _TERMS.findall(query)
+        if not terms:
+            return queryset.none()
+        raw = " & ".join(f"{term}:*" for term in terms)
+        search_query = SearchQuery(raw, search_type="raw", config=document.config)
+        result = queryset.annotate(rank=SearchRank(F(document.name), search_query)).filter(
+            **{document.name: search_query}
+        )
+        return result.order_by("-rank") if rank_order else result
 
 
 class GinTrgmIndex(GinIndex):

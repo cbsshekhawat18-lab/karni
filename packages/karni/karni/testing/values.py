@@ -542,10 +542,12 @@ NAME_RULES: tuple[NameRule, ...] = (
 
 def unique_field_names(model: type[models.Model]) -> frozenset[str]:
     """Fields whose value must differ per row: ``unique=True`` and every unique constraint's."""
+    from karni.fields.base import is_unique  # Karni fields keep uniqueness in a constraint
+
     names: set[str] = set()
     meta = model._meta
     for model_field in meta.concrete_fields:
-        if model_field.unique and not model_field.primary_key:
+        if is_unique(model_field) and not model_field.primary_key:
             names.add(model_field.name)
     for together in meta.unique_together:
         names.update(together)
@@ -597,11 +599,26 @@ class ValueInference:
         return None
 
     def generator(self, model: type[models.Model], model_field: Any) -> Generator | None:
-        """The function producing ``model_field``'s value, or ``None`` for an unknown type."""
+        """The function producing ``model_field``'s value, or ``None`` for an unknown type.
+
+        A Karni field that knows its valid values (an ISO code, an E.164 number,
+        a bounded percentage) answers first, before any name rule: a
+        ``CountryField`` named ``country`` needs ``"DE"``, not ``"Germany"``. Its
+        ``karni_sample`` returns ``NotImplemented`` to leave a value to inference.
+        """
         rule = self.rule_for(model_field)
-        if rule is not None:
-            return rule.make
-        return self.type_generator(model_field)
+        inferred = rule.make if rule is not None else self.type_generator(model_field)
+        sample = getattr(model_field, "karni_sample", None)
+        if sample is None:
+            return inferred
+
+        def make(ctx: ValueContext) -> Any:
+            value = sample(ctx)
+            if value is NotImplemented:
+                return inferred(ctx) if inferred is not None else None
+            return value
+
+        return make
 
     def type_generator(self, model_field: Any) -> Generator | None:
         """The type default for ``model_field`` (no name rule matched)."""

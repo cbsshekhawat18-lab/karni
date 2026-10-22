@@ -307,6 +307,27 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C36x typed fields (karni.fields): the make model DSL and karni schema
+    _c(
+        "C360",
+        "A typed-field argument in the model DSL is invalid",
+        "karni make model (money, percent, email, slug, json, array fields)",
+        "Typed fields take arguments that name the database guarantee: a money field's ISO "
+        "4217 currency, a percentage's integer bounds, the field a slug is built from (it must "
+        "be declared in the same command), an array's base type.",
+        "Fix the field the message names: price:money:EUR, rate:percent:0:100, "
+        "slug:slug:title, email:email:unique, meta:json:queried, tags:array:str:40. "
+        "`karni make model --help` lists them.",
+    ),
+    _c(
+        "C361",
+        "The project's karni has no karni schema",
+        "karni schema",
+        "karni schema runs `manage.py karni_schema` in the project's interpreter; a karni "
+        "older than the typed field layer does not have it.",
+        "Upgrade the project's karni (karni upgrade, then reinstall the project's "
+        "dependencies); `karni doctor` shows which karni the project uses.",
+    ),
 )
 
 

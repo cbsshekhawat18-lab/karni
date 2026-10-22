@@ -22,6 +22,7 @@ from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
 from karni_cli.commands.run_tests import test
 from karni_cli.commands.schedule import schedule_app
+from karni_cli.commands.schema import schema
 from karni_cli.commands.seed import seed
 from karni_cli.commands.serve import serve
 from karni_cli.commands.shell import shell
@@ -78,6 +79,7 @@ app.command(context_settings=PASSTHROUGH)(migrate)
 app.command(context_settings=PASSTHROUGH)(test)
 app.command(context_settings=PASSTHROUGH)(shell)
 app.command()(routes)
+app.command()(schema)
 app.command(context_settings=PASSTHROUGH)(worker)
 app.command(context_settings=PASSTHROUGH)(beat)
 app.add_typer(schedule_app, name="schedule")

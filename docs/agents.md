@@ -246,7 +246,7 @@ Add a new domain model: <ModelName> [in <app>] [fields...]
 
 Total new code should be well under 20 lines. If it isn't, stop — you are reimplementing something Karni provides.
 
-Rules that apply: K009, K101, K102, K109, K108, K302, K305, K003
+Rules that apply: K009, K101, K102, K109, K114, K108, K302, K305, K003
 ```
 
 ### `new-page` — Add a frontend page composing @karni/ui (50 lines or fewer)

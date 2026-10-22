@@ -443,6 +443,33 @@ RULES: tuple[Rule, ...] = (
         enforced_by=("audited-bulk-write",),
     ),
     Rule(
+        code="K114",
+        category="backend",
+        severity="must",
+        summary="Money: MoneyField, never float.",
+        rule=(
+            "Declare what a value is with `karni.fields` so the database enforces it: money is "
+            '`MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: '
+            "`karni.E960` fails boot), counts that must never go negative are "
+            "`QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, "
+            "phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). "
+            "Uniqueness on soft-deletable models: `unique=True` on a Karni field, or "
+            "`LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees "
+            "its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial "
+            "or audited models). `karni schema <app>` shows every column, constraint and index "
+            "and why it exists."
+        ),
+        rationale=(
+            "Float money, free-text codes and case-sensitive unique emails pass every test and "
+            "fail in production; a database constraint is the one layer raw SQL, bulk updates "
+            "and other services cannot skip."
+        ),
+        fix=(
+            "karni make model Product price:money:EUR stock:quantity country:country "
+            "email:email:unique (field types: karni make model --help)."
+        ),
+    ),
+    Rule(
         code="K103",
         category="backend",
         severity="error",
@@ -592,7 +619,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "Total new code should be well under 20 lines. If it isn't, stop — you are "
             "reimplementing something Karni provides."
         ),
-        rules=("K009", "K101", "K102", "K109", "K108", "K302", "K305", "K003"),
+        rules=("K009", "K101", "K102", "K109", "K114", "K108", "K302", "K305", "K003"),
     ),
     Procedure(
         name="new-page",

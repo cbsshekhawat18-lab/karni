@@ -223,6 +223,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni test`](docs/REFERENCE.md#karni-test) | Run the test suite — wraps `python -m pytest [ARGS]` |
 | [`karni shell`](docs/REFERENCE.md#karni-shell) | Open a Django shell — wraps `manage.py shell [ARGS]` |
 | [`karni routes`](docs/REFERENCE.md#karni-routes) | List every URL: methods, name, view, model, access — wraps `manage.py karni_routes` |
+| [`karni schema`](docs/REFERENCE.md#karni-schema) | Every column, constraint and index, and the declaration behind each — wraps `manage.py karni_schema` |
 | [`karni worker`](docs/REFERENCE.md#karni-worker) | Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]` |
 | [`karni beat`](docs/REFERENCE.md#karni-beat) | Run Celery beat — wraps `python -m celery -A config beat -l info [ARGS]` |
 | [`karni schedule`](docs/REFERENCE.md#karni-schedule) | Celery beat schedules — wraps `manage.py karni_schedules`: [list](docs/REFERENCE.md#karni-schedule-list), [run](docs/REFERENCE.md#karni-schedule-run) |
@@ -391,7 +392,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 33 conventions, each with a code, in 402 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 34 conventions, each with a code, in 412 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

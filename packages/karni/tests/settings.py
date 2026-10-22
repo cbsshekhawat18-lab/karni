@@ -53,4 +53,6 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.adminapp",
     "tests.scopeapp",
     "tests.perfapp",
+    # Typed field layer (karni.fields): portable fields, no viewsets.
+    "tests.fieldsapp",
 ]

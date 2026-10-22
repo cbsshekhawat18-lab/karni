@@ -28,6 +28,9 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+# Connects karni.fields' class_prepared hook before any project model exists, so
+# `class Karni: append_only` and LiveUniqueConstraint names apply to every model.
+import karni.fields.base  # noqa: E402,F401,I001
 from karni.managers import (
     AuditedQuerySet,
     BaseManager,

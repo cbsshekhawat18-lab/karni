@@ -11,6 +11,30 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Typed fields: the database enforces what a value is (`karni.fields`).**
+  `MoneyField` (NUMERIC(19,4), a declared currency, floats refused with
+  `E962`, a declared rounding rule; `quantize`/`split`/`allocate` never lose
+  a cent), `PercentField` and `QuantityField` (CHECK bounds),
+  `EmailField` (unique on `LOWER(email)`), `SlugField` (generated,
+  collision-free), `PhoneField` (E.164 CHECK), `CountryField`/`CurrencyField`
+  (CHECK against shipped ISO 3166-1 / ISO 4217 lists), `JSONField(queried=True)`
+  and `ArrayField` (GIN), and `SearchField` (a generated tsvector with a GIN
+  index the default search provider matches through). Unique Karni fields and
+  the new `LiveUniqueConstraint` are partial on soft-deletable models, so a
+  deleted row frees its value. Every guarantee is proven with raw SQL on
+  PostgreSQL and, where portable, SQLite. New checks: `E960` (a FloatField
+  named like money fails boot), `W965` (CASCADE on a financial or audited
+  model), `E964`/`W964` (a field or guarantee the configured database lacks),
+  `W967` (a searched, filtered or ordered column without an index), plus
+  `E961`, `E963`, `E968`, `E970`; `class Karni:` gains `append_only` (BRIN),
+  `cascade`, `financial` and `not_money`. `karni schema` (`manage.py
+  karni_schema`, `--json`) lists every column, constraint and index, why it
+  exists and whether the database has it. `karni.accounts` 0005 creates
+  `btree_gist`; `CreateExtension` names the exact SQL (`E966`) when the role
+  may not. `karni make model` gains `money[:EUR]`, `percent`, `quantity`,
+  `email[:unique]`, `slug[:source]`, `phone`, `country`, `currency`,
+  `json[:queried]` and `array:<type>` (`email`, `slug` and `json` now write
+  the Karni fields). Rule K114. See [docs/fields.md](docs/fields.md).
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

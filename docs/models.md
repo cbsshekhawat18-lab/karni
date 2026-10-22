@@ -50,9 +50,11 @@ event.hard_delete()                    # real DELETE, Django cascade applies
   runs Django's normal cascade, including over soft-deleted children.
 - **No manager-level delete.** `Event.objects.delete()` does not exist; start
   from a queryset (`Event.objects.filter(...).delete()`).
-- **Unique fields.** A soft-deleted row still occupies its unique values. A
-  deleted user's email stays reserved until the user is restored or
-  hard-deleted.
+- **Unique fields.** A plain `unique=True` (or `UniqueConstraint`) counts
+  soft-deleted rows, so a deleted row keeps its value reserved until it is
+  restored or hard-deleted. Unique [Karni fields](fields.md) (`SlugField`,
+  `EmailField(unique=True)`, ...) and `LiveUniqueConstraint(fields=[...])`
+  count live rows only, so a deleted row frees its value.
 - **Admin.** Changelists hide deleted rows by default, with a "deleted" filter
   and restore / hard-delete actions.
 - **API.** `DELETE` soft-deletes. `deleted_at` is never exposed by generated

@@ -88,12 +88,80 @@ def test_field_types_render(ws: Workspace) -> None:
         body
     )
     assert "done = models.BooleanField(default=False)" in body
-    assert "meta = models.JSONField(default=dict)" in body
+    assert "meta = JSONField(default=dict)" in body  # karni.fields: GIN with :queried
     assert "ref = models.UUIDField(default=uuid.uuid4)" in body
     assert 'doc = models.FileField(upload_to="events/event/", blank=True)' in body
     assert "class Status(models.TextChoices):" in body
     assert 'IN_REVIEW = "in-review"' in body
     assert "default=Status.DRAFT" in body
+
+
+def test_typed_field_types_render(ws: Workspace) -> None:
+    """The karni.fields types: the column, constraint and index the intent needs."""
+    specs = [
+        parse_field(t)
+        for t in (
+            "name:str:120",
+            "slug:slug:name",
+            "price:money:eur",
+            "cost:money?",
+            "rate:percent",
+            "change:percent:-50:50",
+            "stock:quantity",
+            "email:email:unique",
+            "phone:phone?",
+            "country:country?",
+            "currency:currency",
+            "meta:json:queried",
+            "tags:array:str:30",
+        )
+    ]
+    rendered = render_model_body(
+        specs, model="Product", app_label="shop", resolve={}, line_length=88
+    )
+    body = "\n".join(rendered.lines)
+    for line in (
+        'slug = SlugField(populate_from="name")',
+        'price = MoneyField(currency="EUR")',
+        "cost_currency = CurrencyField(blank=True)",
+        'cost = MoneyField(currency_field="cost_currency", null=True, blank=True)',
+        "rate = PercentField(default=0)",
+        "change = PercentField(min_value=-50, max_value=50, default=0)",
+        "stock = QuantityField(default=0)",
+        "email = EmailField(unique=True)",
+        "phone = PhoneField(blank=True)",
+        "country = CountryField(blank=True)",
+        "currency = CurrencyField()",
+        "meta = JSONField(default=dict, queried=True)",
+        "tags = ArrayField(models.CharField(max_length=30), default=list, blank=True)",
+    ):
+        assert f"    {line}" in body, line
+    names = {imp.name for imp in rendered.imports if imp.module == "karni.fields"}
+    assert names == {
+        "ArrayField", "CountryField", "CurrencyField", "EmailField", "JSONField", "MoneyField",
+        "PercentField", "PhoneField", "QuantityField", "SlugField",
+    }  # fmt: skip
+    assert any("PostgreSQL only" in note for note in rendered.notes)
+    assert _body(ws, "code:slug:40") == "    code = SlugField(max_length=40)"  # a length, as before
+
+
+@pytest.mark.parametrize(
+    ("tokens", "message"),
+    [
+        (["price:money:EURO"], "not an ISO 4217 code"),
+        (["price:money", "price_currency:currency"], "price_currency is declared too"),
+        (["rate:percent:90:10"], "reversed"),
+        (["rate:percent:a"], "must be an integer"),
+        (["email:email:yes"], "takes :unique"),
+        (["slug:slug:title"], "is not a field of this model"),
+        (["meta:json:indexed"], "takes :queried"),
+        (["tags:array:float"], "needs a base type"),
+    ],
+)
+def test_typed_field_arguments_are_checked(ws: Workspace, tokens: list[str], message: str) -> None:
+    with pytest.raises(CliError, match=message) as caught:
+        _body(ws, *tokens)
+    assert caught.value.code == "C360"
 
 
 def test_relations_render(ws: Workspace) -> None:

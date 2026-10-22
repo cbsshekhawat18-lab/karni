@@ -16,7 +16,9 @@ Code ranges
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
-``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog).
+``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
+``E8xx`` import and export · ``E96x``/``E97x`` typed fields and database
+guarantees (``karni.fields``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1136,6 +1138,138 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    # E96x-E97x typed fields and database guarantees (karni.fields: E960-E970, W964-W967)
+    _e(
+        "E960",
+        "A FloatField holds money",
+        "check",
+        "karni.fields.checks.check_money_floats",
+        "A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, "
+        "...) is a FloatField. Binary floats cannot represent most cent values, so sums drift "
+        "(0.1 + 0.2 != 0.3) and totals stop reconciling; no test with round numbers notices.",
+        'Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from '
+        "karni.fields, a PercentField for a rate, then karni make migration. If the field is "
+        'not money, declare `class Karni: not_money = {"field": "<what it is>"}`.',
+    ),
+    _e(
+        "E961",
+        "A MoneyField's currency is not declared",
+        "exception",
+        "karni.fields.MoneyField; karni.fields.checks.check_field_declarations",
+        "An amount without a currency is ambiguous: 10.00 of what? MoneyField needs exactly "
+        "one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model that "
+        "holds each row's currency.",
+        'Write `MoneyField(currency="EUR")`, or `MoneyField(currency_field="currency")` '
+        "with `currency = CurrencyField()` on the model.",
+    ),
+    _e(
+        "E962",
+        "A float reached a MoneyField",
+        "exception",
+        "karni.fields.MoneyField; karni.fields.quantize / allocate / split",
+        "Money is stored and computed as Decimal. A float has already lost the exact value "
+        "before Karni sees it (Decimal(0.1) is 0.1000000000000000055...), so assigning one or "
+        "using one in a lookup is refused rather than silently rounded.",
+        'Pass a Decimal (`Decimal("9.99")`), an int, or a string. Parse user input with '
+        "Decimal(str), never float(str).",
+    ),
+    _e(
+        "E963",
+        "A typed field declaration cannot work",
+        "exception",
+        "karni.fields (PercentField, SlugField, SearchField, CountryField, CurrencyField, "
+        "MoneyField); karni.fields.checks.check_field_declarations",
+        "The arguments contradict each other or name something the model lacks: bounds that "
+        "do not fit max_digits, a populate_from or SearchField source that is not a field, a "
+        "code outside the ISO list, an unknown rounding mode or text search configuration.",
+        "Fix the argument the message names; docs/fields.md lists every field's arguments.",
+    ),
+    _e(
+        "E964",
+        "A field cannot work on the configured database",
+        "check",
+        "karni.fields.checks.check_backends",
+        "The field needs PostgreSQL (an ArrayField: array columns exist nowhere else), but a "
+        "database in DATABASES that migrates this model is another backend. migrate would fail "
+        "with a syntax error; the check says which field instead.",
+        "Point that database at PostgreSQL, or replace the field with the portable one the "
+        "message names (a JSONField holding a list instead of an ArrayField).",
+    ),
+    _e(
+        "W964",
+        "A PostgreSQL guarantee is missing on the configured database",
+        "warning",
+        "karni.fields.checks.check_backends",
+        "The model works on this database but without something PostgreSQL provides: exact "
+        "NUMERIC storage (SQLite keeps NUMERIC as a binary float), a GIN index, the tsvector "
+        "column, the E.164 CHECK, or partial unique indexes.",
+        "Fine for tests and local development on SQLite; run production on PostgreSQL. "
+        "Silence karni.W964 where the difference is deliberate.",
+    ),
+    _e(
+        "W965",
+        "A foreign key on a financial or audited model cascades",
+        "warning",
+        "karni.fields.checks.check_cascades",
+        "on_delete=CASCADE on a model that holds money (a MoneyField, a money-named decimal, a "
+        "payments-like model) or keeps history (Karni.audit) means hard-deleting the referenced "
+        "row silently deletes those rows too: payments, refunds or audit trails vanish.",
+        "Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL "
+        "(null=True), then karni make migration. If the cascade is intended, declare it with "
+        'the reason: `class Karni: cascade = {"<field>": "<why>"}`.',
+    ),
+    _e(
+        "E966",
+        "A PostgreSQL extension could not be created",
+        "exception",
+        "karni.fields.extensions.ensure_extension / CreateExtension (karni.accounts 0005)",
+        "A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may "
+        "not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database; the "
+        "others need a superuser.",
+        "Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a "
+        "superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON "
+        'DATABASE "<db>" TO "<role>";`. Then migrate again.',
+    ),
+    _e(
+        "W967",
+        "A searched, filtered or ordered column has no index",
+        "warning",
+        "karni.fields.checks.check_usage_indexes; karni schema",
+        "A routed viewset declares search_fields, filterset_fields, ordering_fields or an "
+        "ordering on a column no index covers, so every such list request reads the whole "
+        "table. Fast with seed data, slow in production.",
+        "Add the index the message names to Meta.indexes (a SearchField for search), then karni "
+        "make migration; `karni schema <app>` shows what serves each column. Silence "
+        "karni.W967 for a table small enough to scan.",
+    ),
+    _e(
+        "E968",
+        "LiveUniqueConstraint on a model without soft delete",
+        "check",
+        "karni.fields.checks.check_field_declarations",
+        "LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL; a model "
+        "without soft delete has no deleted_at, so the constraint cannot be created.",
+        "Use models.UniqueConstraint, or inherit karni.models.BaseModel (or SoftDeleteModel).",
+    ),
+    _e(
+        "E969",
+        "karni schema was given an unknown app or model",
+        "exception",
+        "manage.py karni_schema (karni schema)",
+        "karni schema reports the models you name, by app label or app.Model.",
+        "Pass labels `karni context` lists (events, events.Event), or none for every model of "
+        "your own apps.",
+    ),
+    _e(
+        "E970",
+        "A field-layer Karni option is malformed",
+        "check",
+        "karni.fields.checks (Karni.not_money, Karni.cascade, Karni.append_only)",
+        "Opt-outs need a reason per field so the next reader knows the choice was deliberate; "
+        "append_only names columns that only grow.",
+        'Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, '
+        "`append_only = True` or a list of existing timestamp columns.",
     ),
 )
 

@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
+from karni.fields import MoneyField, SearchField
 from karni.models import BaseModel
 
 
@@ -35,6 +36,8 @@ class Event(BaseModel):
     organizer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     venue = models.ForeignKey("Venue", on_delete=models.CASCADE)
     cover_image = models.ImageField(upload_to="events/event/", blank=True)
+    # ?search= matches through this column's GIN index (karni.fields.SearchField).
+    search = SearchField(sources=["title", "description"])
 
     def __str__(self) -> str:
         return self.title
@@ -43,8 +46,13 @@ class Event(BaseModel):
 class TicketTier(BaseModel):
     event = models.ForeignKey("Event", on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    # NUMERIC(10,2) in US dollars (karni-payments charges in KARNI_PAYMENTS_CURRENCY, usd),
+    # never negative, Decimal only.
+    price = MoneyField(currency="USD", max_digits=10, decimal_places=2, min_value=0)
     quantity = models.IntegerField()
+
+    class Karni:
+        cascade = {"event": "a tier only exists inside its event; events are soft-deleted"}
 
     def __str__(self) -> str:
         return self.name

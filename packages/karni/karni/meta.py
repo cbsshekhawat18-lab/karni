@@ -154,6 +154,35 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "A callable, or its dotted path, run once an import commits, with the result.",
         'after_import = "shop.imports.reindex"',
     ),
+    # typed field layer (karni.fields)
+    Option(
+        "append_only",
+        "`False`",
+        "The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` "
+        "timestamps (`True`) or on the listed columns.",
+        "append_only = True",
+    ),
+    Option(
+        "cascade",
+        "`{}`",
+        "Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited "
+        "model, each with the reason (silences `karni.W965` for that field).",
+        'cascade = {"order": "a line item cannot outlive its order"}',
+    ),
+    Option(
+        "financial",
+        "inferred",
+        "Whether the model holds money for the CASCADE check; inferred from money fields "
+        "and payments-like model names.",
+        "financial = True",
+    ),
+    Option(
+        "not_money",
+        "`{}`",
+        "FloatFields whose money-like name is not money, each with what it is (silences "
+        "`karni.E960` for that field).",
+        'not_money = {"total_score": "a game score"}',
+    ),
 )
 
 
@@ -262,8 +291,14 @@ def natural_key(model: type[models.Model]) -> str | None:
                 code="E801",
             ) from exc
         return name
+    from karni.fields.base import is_unique  # Karni fields keep uniqueness in a constraint
+
     for field in model._meta.concrete_fields:
-        if field.unique and not field.primary_key and field.get_internal_type() in _KEY_FIELD_TYPES:
+        if (
+            is_unique(field)
+            and not field.primary_key
+            and field.get_internal_type() in _KEY_FIELD_TYPES
+        ):
             return str(field.name)
     return None
 

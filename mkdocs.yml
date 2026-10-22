@@ -62,6 +62,7 @@ nav:
   - Reference:
       - Everything, generated: REFERENCE.md
       - Models: models.md
+      - Typed fields: fields.md
       - API: api.md
       - Accounts: accounts.md
       - Admin: admin.md

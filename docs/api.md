@@ -619,6 +619,12 @@ class CatalogueViewSet(BaseViewSet):
   `search_fields`; works on any database (karni's own test suite uses it on
   sqlite).
 
+With a [`SearchField`](fields.md#jsonfield-searchfield-arrayfield) on the
+model (named in `search_fields`, or covering every listed field), the
+PostgreSQL provider matches through its stored, GIN-indexed tsvector instead:
+every word is a prefix, all words must match, rows rank by `ts_rank`, and no
+trigram leg is added (`similarity()` cannot use an index).
+
 Rank ordering vs `?ordering=`: search runs **after** ordering in the filter
 pipeline; when the client did not pass an explicit `?ordering=`, results are
 rank-ordered by the provider, otherwise the requested ordering wins.

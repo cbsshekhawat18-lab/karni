@@ -45,6 +45,10 @@ SEQUENCE: list[list[str]] = [
     ["make", "model", "Tag", "label:slug", "--app", "shop", "--with", "viewset",
      "--access", "public-read"],
     ["make", "model", "Venue", "name:str:120", "city:str?", "--app", "events"],
+    ["make", "model", "Product", "name:str:120", "slug:slug:name", "price:money:EUR",
+     "cost:money?", "rate:percent:0:100", "stock:quantity", "phone:phone?", "country:country?",
+     "currency:currency?", "email:email:unique", "meta:json:queried", "tags:array:str:30?",
+     "--app", "shop"],
     ["make:model", "Event", "title:str:200", "body:text?", "starts_at:datetime",
      "day:date?", "status:choice:draft|published|in-review", "organizer:fk:User",
      "venue:fk:Venue?", "capacity:int?", "ratio:float?", "price:decimal:8:2?",
@@ -327,6 +331,9 @@ def test_generated_backend_runs_for_real(
          "capacity:int?", "--with", "viewset", "--access", "owned:organizer",
          "--search", "title"],
         ["make", "viewset", "Venue", "--access", "staff"],
+        ["make", "model", "Product", "name:str:120", "slug:slug:name", "price:money:EUR",
+         "cost:money", "rate:percent", "stock:quantity", "phone:phone?", "country:country?",
+         "email:email:unique", "meta:json:queried", "--with", "viewset", "--access", "staff"],
         ["make", "serializer", "Venue", "--reason", "explicit field list"],
         ["make", "test", "Event"],
         ["make", "test", "Venue"],
@@ -354,6 +361,10 @@ def test_generated_backend_runs_for_real(
     assert (project / "events" / "migrations" / "0001_initial.py").is_file()
     ok("migrate")
     ok("manage", "check")
+    # karni schema explains what the typed fields created, read back from the database.
+    described = ok("schema", "events.Product")
+    assert 'LOWER("email")' in described.output and "[ok] constraint" in described.output
+    assert "why: QuantityField: integer, CHECK >= 0" in described.output
     verify = subprocess.run(
         [str(python), "-c", textwrap.dedent(VERIFY)],
         cwd=project,
@@ -376,6 +387,7 @@ def test_generated_backend_runs_for_real(
     assert seeded.returncode == 0, seeded.stdout[-3000:] + seeded.stderr[-3000:]
     report = json.loads(seeded.stdout)
     assert report["rows"]["events.Event"] == 6 and report["rows"]["events.Venue"] == 4
+    assert report["rows"]["events.Product"] == 6  # ISO codes, E.164, bounds: CHECKs accept them
     assert report["demo"] == "demo@example.com" and "staff" in report["roles"]
 
     # The API tests `karni make test` wrote pass: CRUD surface + owner isolation.

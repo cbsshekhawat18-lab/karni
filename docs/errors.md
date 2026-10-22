@@ -1011,6 +1011,126 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Split the upload, narrow the export's filters, or raise the setting for a project that needs more.
 
+<a id="e960"></a>
+
+#### E960 — A FloatField holds money
+
+*system check (error)* · from `karni.fields.checks.check_money_floats`
+
+**Why Karni objects.** A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, ...) is a FloatField. Binary floats cannot represent most cent values, so sums drift (0.1 + 0.2 != 0.3) and totals stop reconciling; no test with round numbers notices.
+
+**Fix.** Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from karni.fields, a PercentField for a rate, then karni make migration. If the field is not money, declare `class Karni: not_money = {"field": "<what it is>"}`.
+
+<a id="e961"></a>
+
+#### E961 — A MoneyField's currency is not declared
+
+*exception* · from `karni.fields.MoneyField; karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** An amount without a currency is ambiguous: 10.00 of what? MoneyField needs exactly one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model that holds each row's currency.
+
+**Fix.** Write `MoneyField(currency="EUR")`, or `MoneyField(currency_field="currency")` with `currency = CurrencyField()` on the model.
+
+<a id="e962"></a>
+
+#### E962 — A float reached a MoneyField
+
+*exception* · from `karni.fields.MoneyField; karni.fields.quantize / allocate / split`
+
+**Why Karni objects.** Money is stored and computed as Decimal. A float has already lost the exact value before Karni sees it (Decimal(0.1) is 0.1000000000000000055...), so assigning one or using one in a lookup is refused rather than silently rounded.
+
+**Fix.** Pass a Decimal (`Decimal("9.99")`), an int, or a string. Parse user input with Decimal(str), never float(str).
+
+<a id="e963"></a>
+
+#### E963 — A typed field declaration cannot work
+
+*exception* · from `karni.fields (PercentField, SlugField, SearchField, CountryField, CurrencyField, MoneyField); karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** The arguments contradict each other or name something the model lacks: bounds that do not fit max_digits, a populate_from or SearchField source that is not a field, a code outside the ISO list, an unknown rounding mode or text search configuration.
+
+**Fix.** Fix the argument the message names; docs/fields.md lists every field's arguments.
+
+<a id="e964"></a>
+
+#### E964 — A field cannot work on the configured database
+
+*system check (error)* · from `karni.fields.checks.check_backends`
+
+**Why Karni objects.** The field needs PostgreSQL (an ArrayField: array columns exist nowhere else), but a database in DATABASES that migrates this model is another backend. migrate would fail with a syntax error; the check says which field instead.
+
+**Fix.** Point that database at PostgreSQL, or replace the field with the portable one the message names (a JSONField holding a list instead of an ArrayField).
+
+<a id="w964"></a>
+
+#### W964 — A PostgreSQL guarantee is missing on the configured database
+
+*system check (warning)* · from `karni.fields.checks.check_backends`
+
+**Why Karni objects.** The model works on this database but without something PostgreSQL provides: exact NUMERIC storage (SQLite keeps NUMERIC as a binary float), a GIN index, the tsvector column, the E.164 CHECK, or partial unique indexes.
+
+**Fix.** Fine for tests and local development on SQLite; run production on PostgreSQL. Silence karni.W964 where the difference is deliberate.
+
+<a id="w965"></a>
+
+#### W965 — A foreign key on a financial or audited model cascades
+
+*system check (warning)* · from `karni.fields.checks.check_cascades`
+
+**Why Karni objects.** on_delete=CASCADE on a model that holds money (a MoneyField, a money-named decimal, a payments-like model) or keeps history (Karni.audit) means hard-deleting the referenced row silently deletes those rows too: payments, refunds or audit trails vanish.
+
+**Fix.** Choose on_delete deliberately: models.PROTECT (refuse while rows exist) or SET_NULL (null=True), then karni make migration. If the cascade is intended, declare it with the reason: `class Karni: cascade = {"<field>": "<why>"}`.
+
+<a id="e966"></a>
+
+#### E966 — A PostgreSQL extension could not be created
+
+*exception* · from `karni.fields.extensions.ensure_extension / CreateExtension (karni.accounts 0005)`
+
+**Why Karni objects.** A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database; the others need a superuser.
+
+**Fix.** Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON DATABASE "<db>" TO "<role>";`. Then migrate again.
+
+<a id="w967"></a>
+
+#### W967 — A searched, filtered or ordered column has no index
+
+*system check (warning)* · from `karni.fields.checks.check_usage_indexes; karni schema`
+
+**Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production.
+
+**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then karni make migration; `karni schema <app>` shows what serves each column. Silence karni.W967 for a table small enough to scan.
+
+<a id="e968"></a>
+
+#### E968 — LiveUniqueConstraint on a model without soft delete
+
+*system check (error)* · from `karni.fields.checks.check_field_declarations`
+
+**Why Karni objects.** LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL; a model without soft delete has no deleted_at, so the constraint cannot be created.
+
+**Fix.** Use models.UniqueConstraint, or inherit karni.models.BaseModel (or SoftDeleteModel).
+
+<a id="e969"></a>
+
+#### E969 — karni schema was given an unknown app or model
+
+*exception* · from `manage.py karni_schema (karni schema)`
+
+**Why Karni objects.** karni schema reports the models you name, by app label or app.Model.
+
+**Fix.** Pass labels `karni context` lists (events, events.Event), or none for every model of your own apps.
+
+<a id="e970"></a>
+
+#### E970 — A field-layer Karni option is malformed
+
+*system check (error)* · from `karni.fields.checks (Karni.not_money, Karni.cascade, Karni.append_only)`
+
+**Why Karni objects.** Opt-outs need a reason per field so the next reader knows the choice was deliberate; append_only names columns that only grow.
+
+**Fix.** Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, `append_only = True` or a list of existing timestamp columns.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>
@@ -1569,6 +1689,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
 
+<a id="c360"></a>
+
+### C360 — A typed-field argument in the model DSL is invalid
+
+*karni command* · from `karni make model (money, percent, email, slug, json, array fields)`
+
+**Why Karni objects.** Typed fields take arguments that name the database guarantee: a money field's ISO 4217 currency, a percentage's integer bounds, the field a slug is built from (it must be declared in the same command), an array's base type.
+
+**Fix.** Fix the field the message names: price:money:EUR, rate:percent:0:100, slug:slug:title, email:email:unique, meta:json:queried, tags:array:str:40. `karni make model --help` lists them.
+
+<a id="c361"></a>
+
+### C361 — The project's karni has no karni schema
+
+*karni command* · from `karni schema`
+
+**Why Karni objects.** karni schema runs `manage.py karni_schema` in the project's interpreter; a karni older than the typed field layer does not have it.
+
+**Fix.** Upgrade the project's karni (karni upgrade, then reinstall the project's dependencies); `karni doctor` shows which karni the project uses.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen; `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -1812,6 +1952,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A silent gap in the history is exactly the bug someone discovers during an audit; the rule names every bulk write on an audited model at build time.
 
 **Fix.** Loop and save(), or add the allow marker with the reason.
+
+<a id="k114"></a>
+
+### K114 — Money: MoneyField, never float.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists.
+
+**Why Karni objects.** Float money, free-text codes and case-sensitive unique emails pass every test and fail in production; a database constraint is the one layer raw SQL, bulk updates and other services cannot skip.
+
+**Fix.** karni make model Product price:money:EUR stock:quantity country:country email:email:unique (field types: karni make model --help).
 
 <a id="k201"></a>
 

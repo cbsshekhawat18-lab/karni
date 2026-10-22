@@ -106,6 +106,13 @@ class Refund(BaseModel):
     class APIMeta:
         read_only = ["payment", "amount", "status", "provider_refund_id", "reason"]
 
+    class Karni:
+        # karni.fields' CASCADE check (W965): deliberate, see the reason.
+        cascade = {
+            "payment": "a refund is part of its payment; payments are soft-deleted, and a "
+            "hard delete of a payment is a deliberate purge of its whole record",
+        }
+
     class AdminMeta:
         list_display = ["payment", "amount", "status", "created_at"]
         read_only = ["provider_refund_id"]

@@ -123,7 +123,9 @@ def _audited_fields(model: type[models.Model]) -> tuple[str, ...] | None:
         return None
     names = [field.name for field in model._meta.concrete_fields]
     if declared is True:
-        return tuple(name for name in names if name not in _ALWAYS_SKIPPED)
+        # Generated columns (a SearchField) are derived data, not changes anyone made.
+        generated = {f.name for f in model._meta.concrete_fields if getattr(f, "generated", False)}
+        return tuple(name for name in names if name not in _ALWAYS_SKIPPED | generated)
     if isinstance(declared, str) or not all(isinstance(name, str) for name in declared):
         raise KarniImproperlyConfigured(
             f"{model.__name__}.Karni.audit must be True or a list of field names.", code="E007"
