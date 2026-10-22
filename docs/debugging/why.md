@@ -130,24 +130,32 @@ part by part, `filter_queryset_for_user` and each filter backend with the
 request's parameters — and names the step that empties the list:
 
 ```text
-$ karni why-empty bookings --as organizer2@example.com
+$ karni why-empty bookings --as organizer@example.com
 ...
 steps    rows  removed  step
            10           table events_booking  [every row, soft-deleted included]
            10           model scope soft_delete  (karni/scopes.py:154)
            10           BookingViewSet base queryset  [Booking._default_manager.all(): no queryset or get_queryset() declared]
-            0      -10  access.read = Owned('attendee') | Owned('event__organizer') | HasRole('staff')  (events/viewsets.py:80)
+            0      -10  access.read = Owned('attendee') | Owned('event__created_by') | HasRole('staff')  (events/viewsets.py:80)
                              0 rows: Owned('attendee'): attendee = you
-                             0 rows: Owned('event__organizer'): event__organizer = you
+                             0 rows: Owned('event__created_by'): event__created_by = you
                              0 rows: HasRole('staff'): no row (role not held)
             0           KarniFilterBackend  [no parameters]
             0           KarniOrderingFilter  [no parameters]
             0           KarniSearchFilter  [no parameters]
+near     Owned('event__organizer') would match 10 row(s) where Owned('event__created_by') matches none — EventViewSet.access owns Event through organizer
 ...
-result   empty: access.read removes all 10 row(s) the viewset's queryset holds — none is readable by organizer2@example.com
-fix      rows appear once organizer2@example.com is the attendee of some Booking
-         or: rows appear once organizer2@example.com is the event__organizer of some Booking
+result   empty: access.read removes all 10 row(s) the viewset's queryset holds — none is readable by organizer@example.com
+fix      change Owned('event__created_by') to Owned('event__organizer') in BookingViewSet.access.read (events/viewsets.py:80)
+         or: rows appear once organizer@example.com is the attendee of some Booking
 ```
+
+`near` lists, for each `Owned(...)` part that matches no row, the other
+foreign keys to the user on the same model that do — first the ones a routed
+viewset (or `Karni.owner_field`) owns that model through. Here the rule walks
+to `created_by`, the audit stamp, while the events belong to their
+`organizer`. The list is in `--json` as `near_misses`, and it is printed even
+when the list is not empty, for a list that is merely missing rows.
 
 With `--param status=draft` the same command names the filter instead:
 `empty: the request's parameters (status=draft) match none of the 5 readable

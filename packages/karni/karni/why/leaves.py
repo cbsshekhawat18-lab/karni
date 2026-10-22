@@ -12,11 +12,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db.models import Model, Q, QuerySet
 
-from karni.api.access import Authenticated, Can, Explained, HasRole, Owned, Public, Where
-from karni.meta import owner_field, scope_paths
+from karni.api.access import (
+    Access,
+    Authenticated,
+    Can,
+    Explained,
+    Granted,
+    HasRole,
+    Owned,
+    Public,
+    Where,
+    owner_fields,
+)
+from karni.meta import karni_option, owner_field, scope_paths
 from karni.rows import apply_rows
 from karni.why.source import (
     Location,
@@ -32,10 +44,12 @@ from karni.why.source import (
 __all__ = [
     "GrantLine",
     "Leaf",
+    "NearMiss",
     "explain_leaves",
     "grant_lines",
     "holders",
     "leaf_location",
+    "near_misses",
     "predicate_text",
 ]
 
@@ -258,6 +272,114 @@ def _fixes(
         has = ", ".join(f"{path}={value}" for path, value in values.items())
         return [f"the row must match {q_text(leaf.rows, you=user)}{where}; it has {has}"]
     return []
+
+
+# near misses
+
+
+@dataclass(frozen=True)
+class NearMiss:
+    """A user field beside an ``Owned`` path's last hop that does match rows for the user.
+
+    ``owners`` names who calls that field the model's owner: the routed
+    viewsets whose ``access`` owns the model through it, and
+    ``Karni.owner_field`` when declared.
+    """
+
+    written: str
+    path: str
+    count: int
+    model: str
+    field: str
+    owners: tuple[str, ...]
+
+    @property
+    def text(self) -> str:
+        why = f" — {', '.join(self.owners)} owns {self.model} through {self.field}"
+        return (
+            f"Owned({self.path!r}) would match {self.count} row(s) where "
+            f"{self.written} matches none{why if self.owners else ''}"
+        )
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "predicate": self.written,
+            "instead": f"Owned({self.path!r})",
+            "rows_count": self.count,
+            "owners": list(self.owners),
+        }
+
+
+def _owners_of(model: type[Model]) -> dict[str, list[str]]:
+    """Field name → who owns ``model`` through it (routed viewsets, ``Karni.owner_field``)."""
+    from karni.why.resolve import resources
+
+    found: dict[str, list[str]] = {}
+    declared = karni_option(model, "owner_field")
+    if declared:
+        found.setdefault(str(declared), []).append(f"{model.__name__}.Karni.owner_field")
+    for resource in resources():
+        viewset = resource.viewset
+        if (
+            getattr(viewset, "model", None) is not model
+            and getattr(getattr(viewset, "queryset", None), "model", None) is not model
+        ):
+            continue
+        access = getattr(viewset, "access", None)
+        if isinstance(access, Granted):  # as BaseViewSet.get_access normalises it
+            access = Access(read=access, write=access)
+        for name in owner_fields(access, model):
+            label = f"{viewset.__name__}.access"
+            if label not in found.setdefault(name, []):
+                found[name].append(label)
+    return found
+
+
+def near_misses(
+    predicate: Any, *, user: Any, model: type[Model], base: QuerySet[Any]
+) -> list[NearMiss]:
+    """Other user fields an ``Owned`` that matches nothing could have meant.
+
+    ``Owned("event__created_by")`` matching no booking while the user is the
+    ``organizer`` of their events is the common slip: the path walks to the
+    audit stamp, not the owner. Each other foreign key to the user model on
+    the model the path ends at is tried against ``base``; those that match
+    rows come back, fields a viewset owns the model through first.
+    """
+    if not isinstance(predicate, Owned) or not getattr(user, "is_authenticated", False):
+        return []
+    prefix, _, last = predicate.path.rpartition("__")
+    target: Any = model
+    try:
+        for part in filter(None, prefix.split("__")):
+            target = target._meta.get_field(part).related_model
+    except FieldDoesNotExist:
+        return []
+    if target is None:
+        return []
+    user_model = get_user_model()
+    owners = _owners_of(target)
+    found: list[NearMiss] = []
+    for field in target._meta.get_fields():
+        if field.name == last or not field.concrete or not field.is_relation:
+            continue
+        if field.related_model is not user_model or field.many_to_many:
+            continue
+        path = f"{prefix}__{field.name}" if prefix else field.name
+        count = base.filter(**{path: user}).distinct().count()
+        if count:
+            found.append(
+                NearMiss(
+                    written=predicate_text(predicate),
+                    path=path,
+                    count=count,
+                    model=target.__name__,
+                    field=field.name,
+                    owners=tuple(owners.get(field.name, ())),
+                )
+            )
+    found.sort(key=lambda miss: (not miss.owners, -miss.count))
+    return found
 
 
 def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | None) -> list[str]:

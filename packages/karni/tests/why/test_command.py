@@ -86,6 +86,27 @@ def test_a_list_empty_because_of_the_roles_grant(world: Any) -> None:
     assert "access.read removes all 5 row(s)" in data["summary"]
 
 
+def test_why_empty_names_the_owner_field_an_owned_path_missed(world: Any) -> None:
+    # The rows are alice's through `organizer`; the rule asks for `created_by`.
+    text = _run("misowned-events", "--empty", "--as", "alice@example.com")
+    assert (
+        "near     Owned('organizer') would match 2 row(s) where Owned('created_by') matches none — "
+    ) in text
+    assert "DeclaredEvents.access" in text and "owns Event through organizer" in text
+    assert (
+        "fix      change Owned('created_by') to Owned('organizer') in "
+        "MisownedEvents.access.read (tests/why/routes.py:"
+    ) in text
+    data = json.loads(_run("misowned-events", "--empty", "--as", "alice@example.com", "--json"))
+    assert data["near_misses"][0]["instead"] == "Owned('organizer')"
+    assert data["near_misses"][0]["rows_count"] == 2
+
+
+def test_why_empty_has_no_near_miss_when_the_rule_is_right(world: Any) -> None:
+    data = json.loads(_run("declared-events", "--empty", "--as", "nobody@example.com", "--json"))
+    assert data["near_misses"] == []
+
+
 @pytest.mark.parametrize(
     ("args", "code", "phrase"),
     [

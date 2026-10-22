@@ -36,7 +36,7 @@ from karni.api.access import (
 )
 from karni.api.viewsets import BaseViewSet
 from karni.rows import apply_rows
-from karni.why.leaves import Leaf, explain_leaves, grant_lines, predicate_text
+from karni.why.leaves import Leaf, explain_leaves, grant_lines, near_misses, predicate_text
 from karni.why.probe import Probe, run_probe
 from karni.why.resolve import (
     Resource,
@@ -1420,8 +1420,16 @@ def explain_list(
                     f"{predicate_text(leaf.predicate)}: {leaf.rows_text}"
                 )
     verdict.add("steps", *lines)
+    misses = [
+        miss
+        for leaf, count in leaf_counts
+        if count == 0
+        for miss in near_misses(leaf.predicate, user=user, model=model, base=base)
+    ]
+    verdict.add("near", *(miss.text for miss in misses))
     _grants(verdict, probe, [read_tree])
     verdict.data["steps"] = steps
+    verdict.data["near_misses"] = [miss.as_dict() for miss in misses]
     verdict.data["read"] = {
         "predicate": predicate_text(read_tree.predicate) if read_tree else None,
         "leaves": [{**leaf.as_dict(), "rows_count": count} for leaf, count in leaf_counts],
@@ -1451,6 +1459,12 @@ def explain_list(
             f"empty: access.read removes all {culprit['removed']} row(s) the viewset's queryset "
             f"holds — none is readable by {display_user(user)}"
         )
+        for miss in misses[:1]:
+            at = f" ({access_at})" if access_at else ""
+            verdict.fix(
+                f"change {miss.written} to Owned({miss.path!r}) in "
+                f"{type(view).__name__}.access.read{at}"
+            )
         for leaf, _count in leaf_counts:
             verdict.fix(*leaf.fixes)
         verdict.fix(_change_access(probe, "read", access_at))

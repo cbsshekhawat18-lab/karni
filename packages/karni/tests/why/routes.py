@@ -77,6 +77,13 @@ class GuardedEvents(BaseViewSet):
     access = Access(read=Authenticated(), write=Authenticated())
 
 
+class MisownedEvents(BaseViewSet):
+    """The slip ``why-empty`` names: the rule walks to the audit stamp, not the owner."""
+
+    model = Event
+    access = Access(read=Owned("created_by"), write=Owned("created_by"))
+
+
 class OpenEvents(BaseViewSet):
     """Unscoped: plain DRF permission classes decide."""
 
@@ -98,6 +105,7 @@ def router() -> KarniRouter:
     found.register("declared-events", DeclaredEvents, basename="declared-events")
     found.register("guarded-events", GuardedEvents, basename="guarded-events")
     found.register("open-events", OpenEvents, basename="open-events")
+    found.register("misowned-events", MisownedEvents, basename="misowned-events")
     found.register("customers", Customers, basename="customers")
     return found
 
