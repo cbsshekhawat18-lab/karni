@@ -28,8 +28,6 @@ Every new web project starts the same way: auth, a user model, the admin, permis
 
 AI coding agents made this faster, but not better. We give the agent the same prompts in every project and wait while it builds the same setup again. It writes everything fresh each time: the same code, slightly different, with the subtle parts wrong in different places. Every line costs tokens and time, and every copy has to be maintained.
 
-One real codebase, [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-media-manager), is 142,000 lines, with a 2,504-line `models.py` and a 1,281-line `views.py`. Much of that is code Karni now ships. The agent should write only the domain. Everything else should come from a package the project installs and upgrades.
-
 ## What is Karni
 
 **The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, login pages, tables and forms. A boilerplate copies it into your project once. An AI agent writes it again in every project. Either way you pay for it twice: once to produce it, and again to maintain every copy, because a fix made upstream never reaches code that was copied or regenerated.
