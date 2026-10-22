@@ -371,7 +371,7 @@ def detect(
         output=output,
         source=source,
         with_primitives=with_primitives,
-        today=dt.date.today().isoformat(),
+        today=dt.datetime.now().astimezone().date().isoformat(),
     )
     if not dry_run:
         _guard(outcome, force)

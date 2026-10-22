@@ -96,7 +96,7 @@ path = "hatch_build.py"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["karni_cli/_templates"]
+extend-exclude = ["karni_cli/_templates", "*.md"]
 
 [tool.ruff.lint]
 # B008: typer's documented pattern puts typer.Option() in argument defaults.
