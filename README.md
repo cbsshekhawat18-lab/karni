@@ -236,9 +236,10 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni context`](docs/REFERENCE.md#karni-context) | Print a compact machine-readable project inventory |
 | [`karni rules`](docs/REFERENCE.md#karni-rules) | Karni's conventions for humans and AI agents (no Django needed): [sync](docs/REFERENCE.md#karni-rules-sync) |
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
-| [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106): why and the fix |
+| [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules and check as MCP tools (needs karni-cli[mcp]) |
+| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp]) |
+| [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries` |
 | [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack — wraps `docker compose up` (or `manage.py runserver` with --local) |
 | [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations — wraps `manage.py migrate [ARGS]` |
 | [`karni test`](docs/REFERENCE.md#karni-test) | Run the test suite — wraps `python -m pytest [ARGS]` |
@@ -251,7 +252,11 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni sync-roles`](docs/REFERENCE.md#karni-sync-roles) | Create or update the roles KARNI_ROLES declares — wraps `manage.py karni_sync_roles [ARGS]` |
 | [`karni createsuperuser`](docs/REFERENCE.md#karni-createsuperuser) | Create an admin user — wraps `manage.py createsuperuser [ARGS]` |
 | [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command — wraps `manage.py ARGS` (raw passthrough) |
+| [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
+| [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [module](docs/REFERENCE.md#karni-make-module) |
+| [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
+| [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
 
 </details>
@@ -381,7 +386,8 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
 - `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
-- `experimental` MCP server exposing `context`, `rules` and `check` as tools
+- `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
+- `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
 Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`.
 <!-- /generated:agents -->
@@ -413,7 +419,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 34 conventions, each with a code, in 414 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 40 conventions, each with a code, in 498 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 

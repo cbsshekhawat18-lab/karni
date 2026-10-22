@@ -193,6 +193,12 @@ related row by its natural key. A hand-written serializer or action that
 renders related rows itself can run the same check with
 `karni.api.related.readable_related(serializer.context, rows)`.
 
+**Why is a row missing?** `karni why events/<id> --as <user>` prints the
+decision for that user — the gate, each part of `read` and `write` against
+the row, the grants and roles behind them, `file:line` and the fix — computed
+by the code above; `karni why-empty events --as <user>` explains an empty
+list step by step. See [debugging](debugging/why.md).
+
 Escape hatches, least to most drastic:
 
 1. change the declaration;
@@ -475,6 +481,16 @@ wins over a derived one at the same level. `optimize = False` keeps only the
 hints; override `optimize_queryset(queryset, serializer_class=None)` for a
 hand-built strategy. Custom actions are not optimised automatically — return
 `self.paginated_response(qs)` (which is) or call `self.optimize_queryset(qs)`.
+
+What the walker cannot see it records on the plan as blind spots
+(`karni.api.optimizer.blind_spots(serializer, model)`: method fields,
+properties named by `source`, `to_representation` overrides, whole-object
+fields). [`karni queries`](debugging/queries.md) reads them to say which
+field repeats a query and which hint fixes it:
+
+```sh
+karni queries /api/events/ --as organizer@example.com
+```
 
 ### Query budgets
 

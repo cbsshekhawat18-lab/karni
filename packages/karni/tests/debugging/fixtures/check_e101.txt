@@ -1,0 +1,7 @@
+SystemCheckError: System check identified some issues:
+
+ERRORS:
+<class 'events.viewsets.VenueViewSet'>: (karni.E101) VenueViewSet declares no `access`, so every request is denied: access is mandatory (ADR 0001 Q2.1). Declare one on the viewset: `access = Granted()` (the roles' grants for this model, row-scoped), e.g. `access = Access(read=Authenticated(), write=Owned('owner'))` for a custom rule, or opt out explicitly with `access = Unscoped(reason=...)`.
+	HINT: Declare `access = Granted()` on the viewset (the roles' grants for its model, row-scoped), or a custom `Access(read=..., write=...)` (e.g. Access(read=Authenticated(), write=Owned('owner'))), or opt out explicitly with `access = Unscoped(reason='...')`. See https://cbsshekhawat18-lab.github.io/karni/errors/#e101
+
+System check identified 1 issue (0 silenced).

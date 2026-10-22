@@ -16,7 +16,9 @@ Code ranges
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 ``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
-``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog).
+``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
+``E8xx`` import and export · ``E9xx``/``W9xx`` debugging (``karni why``, request
+ids, the development capture, ``karni trace``, ``karni replay``, ``karni queries``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1136,6 +1138,197 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    # E9xx debugging: karni why
+    _e(
+        "E901",
+        "karni why: no API resource by that name",
+        "exception",
+        "karni.why.resolve.resolve_resource; karni why",
+        "karni why explains the decisions of a routed BaseViewSet, so it needs the resource as "
+        "the API routes it.",
+        "Name the resource by its route prefix (events), router basename (events-event) or "
+        "model label (events.Event). The message lists the routed resources; `karni routes` "
+        "lists every URL.",
+    ),
+    _e(
+        "E902",
+        "karni why: no such user",
+        "exception",
+        "karni.why.resolve.resolve_user; karni why --as",
+        "A decision is always for one user. --as looks the user up by primary key, login field, "
+        "email or username; a recorded request names its user by primary key.",
+        "Pass --as with an email, username or primary key that exists, or --as anonymous for a "
+        "request that is not signed in.",
+    ),
+    _e(
+        "E903",
+        "karni why: no request record for that id",
+        "exception",
+        "karni.why.resolve.load_record; karni why <status> <request-id>",
+        "The dev server records each request as .karni/requests/<request id>.json, and only "
+        "while DEBUG is on. Without the record there is nothing to replay.",
+        "Reproduce the request with the dev server running (`karni serve`) and use its request "
+        "id, or ask about the row directly: karni why <resource>/<id> --as <user> [--action ...].",
+    ),
+    _e(
+        "E904",
+        "karni why: the request record cannot be read",
+        "exception",
+        "karni.why.resolve.load_record",
+        "The record is not JSON, or its version or fields are not what this karni reads "
+        "(version 1: request_id, method, path, status, user, ...).",
+        "Delete the file and reproduce the request; if it keeps happening, upgrade karni so "
+        "the writer and the reader agree.",
+    ),
+    _e(
+        "E905",
+        "karni why: the resource has no such field",
+        "exception",
+        "karni.why.verdict.explain_field; karni why <resource>.<field>",
+        "A field question names a model field or a field of the resource's serializer.",
+        "Use a field name the message lists (the resource's API fields).",
+    ),
+    _e(
+        "E906",
+        "karni why: the resource routes no such action or method",
+        "exception",
+        "karni.why.resolve.resolve_action; karni why --action/--method",
+        "--action names a routed viewset action (or the plain words view, update, delete, "
+        "create, list); --method must be one that action answers.",
+        "Use an action the message lists, or drop --method.",
+    ),
+    _e(
+        "E907",
+        "karni why: not a Karni BaseViewSet route",
+        "exception",
+        "karni.why.resolve.resolve_resource; karni.why.verdict.explain_record",
+        "karni why explains the decisions of Karni's access layer, which only BaseViewSet "
+        "routes have; another view's permission_classes decide on their own.",
+        "Read that view's permission_classes and get_queryset(), or move the endpoint onto a "
+        "BaseViewSet with an access declaration.",
+    ),
+    _e(
+        "E908",
+        "karni why: the question is incomplete",
+        "exception",
+        "manage.py karni_why",
+        "A question names what (a request id after its status, <resource>/<id>, "
+        "<resource>.<field> or <resource>) and, except for a recorded request, who (--as).",
+        "Follow the form the message shows, e.g. karni why events/42 --as alice@example.com, "
+        "karni why 403 <request-id>, or karni why-empty events --as alice@example.com.",
+    ),
+    # E9xx/W9xx debugging: request ids, development capture, trace, replay
+    _e(
+        "E920",
+        "karni replay needs DEBUG on",
+        "exception",
+        "karni.debug.replay; manage.py karni_replay",
+        "A replay re-sends a captured request, force-authenticated as a captured user, "
+        "against the configured database. That is a development tool; with DEBUG off it "
+        "could act as any user on a production database, so Karni refuses.",
+        "Run it in development, where DEBUG is on (DEBUG=true in the environment or .env). "
+        "To check a fix in production, add a test instead.",
+    ),
+    _e(
+        "E921",
+        "Nothing was captured for this request id",
+        "exception",
+        "karni.debug.trace; manage.py karni_trace, karni_replay",
+        "karni trace and karni replay read what the development capture wrote under "
+        ".karni/ (requests/, trace/) plus change log entries with the id. Capture runs only "
+        "with DEBUG on and KARNI_DEBUG_CAPTURE not False, keeps the newest "
+        "KARNI_DEBUG_CAPTURE_KEEP records and KARNI_DEBUG_TRACE_DAYS of trace; ids are "
+        "1-128 letters, digits, '_' and '-'.",
+        "Turn DEBUG on, repeat the request, and pass the id from its X-Request-ID response "
+        "header (or `last` for the newest capture). Check the id has no typo.",
+    ),
+    _e(
+        "E922",
+        "No failure snapshot with this id",
+        "exception",
+        "karni.debug.brief; karni explain --failure; manage.py karni_failure",
+        "A failure snapshot is written to .karni/failures/ when a request or a Celery task "
+        "raises an unhandled exception with DEBUG on; the newest KARNI_DEBUG_CAPTURE_KEEP "
+        "are kept. A request that answered an error status without raising has none.",
+        "Use the failure id from the request record or `karni trace <request-id>`, a failed "
+        "request's id, or `last`. Reproduce the failure with DEBUG on if nothing was captured.",
+    ),
+    _e(
+        "E923",
+        "A redacted value cannot be replayed",
+        "exception",
+        "karni.debug.replay; karni replay --set",
+        "Capture never stores passwords, tokens or other secrets: they are recorded as "
+        "'[redacted]'. Replaying that literal could, for example, set a password to it, so "
+        "the replay stops until the value is supplied.",
+        "Pass each value the message lists: --set <field>=<value> (a dotted path into the "
+        "body, or query:<name> for a query parameter), or leave them out with "
+        "--drop-redacted.",
+    ),
+    _e(
+        "E924",
+        "The user to replay as cannot be found",
+        "exception",
+        "karni.debug.replay; karni replay --as",
+        "A replay runs as the captured user, or the user --as names (a primary key, an "
+        "email or a username). That user must exist in the database the replay uses.",
+        "Pass --as with an existing user's email, username or primary key, or --anonymous; "
+        "pass only one of the two.",
+    ),
+    _e(
+        "W920",
+        "RequestIdMiddleware runs after django-structlog's RequestMiddleware",
+        "warning",
+        "karni.checks.check_request_id_middleware",
+        "django-structlog logs request_started with the X-Request-ID it finds. Karni's "
+        "RequestIdMiddleware decides that id (a client's value is accepted only in "
+        "development or from a trusted proxy); placed after, the first log lines carry a "
+        "different, possibly client-chosen id than the response, tasks and history.",
+        "Move 'karni.tracing.RequestIdMiddleware' above "
+        "'django_structlog.middlewares.RequestMiddleware' in MIDDLEWARE (Karni's defaults "
+        "put it first).",
+    ),
+    # E94x debugging: karni queries (karni.api.diagnose)
+    _e(
+        "E940",
+        "karni queries cannot find the endpoint",
+        "exception",
+        "karni.api.diagnose.resolve_endpoint (manage.py karni_queries)",
+        "karni queries requests the endpoint in-process, so it must resolve to a URL the "
+        "project serves: a path, a routed resource (events, events/<id>) or a routed viewset "
+        "(EventViewSet.list). A detail action named by its viewset needs a row the user can read.",
+        "Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or "
+        "resource/<id>; the message lists the routed resources or viewsets.",
+    ),
+    _e(
+        "E941",
+        "karni queries cannot find the user (--as)",
+        "exception",
+        "karni.api.diagnose.resolve_user (manage.py karni_queries --as)",
+        "The request runs force-authenticated as one user, named by primary key, email or "
+        "username; the value matched none (or several).",
+        "Pass a user that exists in this database (the message shows a few), seed some with "
+        "karni seed, or drop --as for an anonymous request.",
+    ),
+    _e(
+        "E942",
+        "karni queries cannot build the request",
+        "exception",
+        "karni.api.diagnose.run (manage.py karni_queries --method / --data)",
+        "--method must be an HTTP method the view answers at that URL, and --data a JSON body.",
+        "Use a method the message lists for that URL, and pass --data as JSON "
+        '(--data \'{"title": "Launch"}\').',
+    ),
+    _e(
+        "E943",
+        "The view raised while karni queries requested it",
+        "exception",
+        "manage.py karni_queries",
+        "There is no query report for a request that raised; the message shows the traceback "
+        "and what karni explain recognises in it.",
+        "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
+        "then run karni queries again.",
     ),
 )
 

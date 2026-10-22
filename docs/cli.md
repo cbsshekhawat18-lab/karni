@@ -26,8 +26,11 @@ traceback; `KARNI_DB_CHECK=false` skips the check.
 - **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Frontend**: [ui](#karni-ui)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
+- **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make)
+- **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
 
@@ -232,16 +235,17 @@ karni check [OPTIONS]
 
 ### `karni explain`
 
-Explain an error code (E104, C101, PAY004, K106): why and the fix
+Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
+| `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
 ### `karni types`
 
@@ -260,7 +264,7 @@ karni types [OPTIONS]
 
 ### `karni mcp`
 
-Serve context, rules and check as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -269,6 +273,28 @@ karni mcp [OPTIONS]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `--project` PATH |  | Project root (default: found from the working directory). |
+
+## Debugging
+
+### `karni queries`
+
+Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries`.
+
+```
+karni queries [OPTIONS] ENDPOINT
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ENDPOINT` (required) |  | A path (/api/events/?page=2), a resource (events, events/&lt;id&gt;) or a viewset (EventViewSet, EventViewSet.retrieve). |
+| `--as` TEXT |  | The user: email, username or primary key (default: anonymous). |
+| `--method` TEXT | `GET` | HTTP method. |
+| `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
+| `--json` |  | Machine-readable output. |
+| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--all` |  | List every statement, not only repeats. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ## Runners
 
@@ -483,6 +509,45 @@ karni manage [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | The manage.py command and its arguments, e.g. `showmigrations events`. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+## Debugging
+
+### `karni why`
+
+Explain an access decision: why a row, field or action is refused or missing
+
+```
+karni why [OPTIONS] TARGET [REQUEST_ID]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to explain: &lt;resource&gt;/&lt;id&gt; (a row), &lt;resource&gt;.&lt;field&gt; (a field), &lt;resource&gt; (its list), or a status followed by a request id (403 &lt;request-id&gt;). Resources are named as the API names them: events, events-event or events.Event. |
+| `REQUEST_ID` |  | The request id, after a status. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--action` TEXT |  | For a row: view (default), update, delete, or an @action name; create or list for a resource. |
+| `--method` TEXT |  | The HTTP method, for an @action that answers several. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni why-empty`
+
+Explain an empty list: which step removes the rows, and the fix
+
+```
+karni why-empty [OPTIONS] RESOURCE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `RESOURCE` (required) |  | The resource, named as the API names it. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -887,3 +952,40 @@ karni make module [OPTIONS] NAME
 | `--dir` PATH |  | Parent directory (default: modules/ in the project, else the cwd). |
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
+
+## Debugging
+
+### `karni trace`
+
+Follow a captured request: its tasks, retries, email, webhooks, audit
+
+```
+karni trace [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A request id (the X-Request-ID response header), or `last`. |
+| `--json` |  | Print the story as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni replay`
+
+Re-run a captured request against the current code, as any user
+
+```
+karni replay [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A captured request id, or `last`. |
+| `--as` TEXT |  | Replay as this user: an email, a username or a primary key. |
+| `--anonymous` |  | Replay without a user. |
+| `--set` TEXT (repeatable) |  | Supply a redacted value: FIELD=VALUE (dotted body path, or query:NAME). Repeatable. |
+| `--drop-redacted` |  | Leave redacted values out instead of supplying them. |
+| `--commit` |  | Keep the writes; by default the replay is rolled back. |
+| `--json` |  | Print the result as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |

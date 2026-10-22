@@ -261,7 +261,14 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/.claude/commands/new-model.md", "karni context"),),
     ),
     Capability("agents", "`karni explain <code>`: why an error happens and the fix, offline"),
-    Capability("agents", "MCP server exposing `context`, `rules` and `check` as tools"),
+    Capability(
+        "agents",
+        "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
+        "a user, from the code that decides it",
+    ),
+    Capability(
+        "agents", "MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools"
+    ),
     # testing
     Capability(
         "testing",

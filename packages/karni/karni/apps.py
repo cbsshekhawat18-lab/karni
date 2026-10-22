@@ -22,10 +22,15 @@ class KarniAppConfig(AppConfig):
     imported (:func:`karni.events.autodiscover`), connecting their receivers
     in web, worker and beat processes alike.
 
+    Last, it connects :mod:`karni.tracing` (the request id on Celery tasks,
+    their retries and outgoing email) and the development capture's exception
+    hook (:mod:`karni.debug`, inert unless ``DEBUG`` is on).
+
     Override / escape hatch: set ``KARNI_VALIDATE = False`` in the project's
     settings module to skip validation entirely, ``KARNI_EVENTS_AUTODISCOVER
-    = False`` to import listener modules yourself, or subclass this config
-    and override :meth:`ready`.
+    = False`` to import listener modules yourself, ``KARNI_REQUEST_ID_EMAILS =
+    False`` to leave email alone, or subclass this config and override
+    :meth:`ready`.
     """
 
     name = "karni"
@@ -47,3 +52,11 @@ class KarniAppConfig(AppConfig):
             from karni.events import autodiscover
 
             autodiscover()
+
+        # One request id across tasks, retries and email (karni.tracing), and
+        # the development capture's exception hook (inert with DEBUG off).
+        from karni import tracing
+        from karni.debug import middleware as debug_middleware
+
+        tracing.connect()
+        debug_middleware.connect()

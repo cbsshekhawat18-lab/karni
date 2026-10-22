@@ -38,31 +38,44 @@ Override / escape hatches: ``optimize = False`` on a viewset (hints only),
 override ``BaseViewSet.optimize_queryset()``, or call :func:`optimize`
 yourself (e.g. in a custom action — ``BaseViewSet.paginated_response()``
 already does).
+
+What the walker cannot see it records as a :class:`BlindSpot` on the plan
+(:func:`blind_spots`): a ``SerializerMethodField``, a model property or
+method named by ``source``, a field reading the whole object, a serializer
+with its own ``to_representation``. ``karni queries``
+(:mod:`karni.api.diagnose`) reads them to say why a repeated query was not
+prefetched and which hint fixes it.
 """
 
 from __future__ import annotations
 
+import inspect
 import weakref
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Model, Prefetch, QuerySet
 from django.db.models.constants import LOOKUP_SEP
+from rest_framework.fields import SerializerMethodField
 from rest_framework.relations import ManyRelatedField, RelatedField
-from rest_framework.serializers import BaseSerializer, ListSerializer
+from rest_framework.serializers import BaseSerializer, ListSerializer, Serializer
 
 from karni.exceptions import KarniImproperlyConfigured
 
 __all__ = [
+    "BlindSpot",
     "Plan",
     "TargetScope",
     "api_meta_hints",
+    "blind_spots",
     "model_relation",
     "optimize",
     "plan_cache_clear",
     "plan_for",
+    "planned_lookups",
     "validate_hints",
 ]
 
@@ -79,17 +92,49 @@ def _unscoped(model: type[Model]) -> tuple[QuerySet[Any], bool]:
 # the plan
 
 
+@dataclass(frozen=True)
+class BlindSpot:
+    """A serializer field whose reads the walker cannot derive lookups for.
+
+    ``kind``: ``method`` (a ``SerializerMethodField``), ``property`` /
+    ``callable`` (a model property or method named by ``source``),
+    ``attribute`` (any other non-field attribute: a ``GenericForeignKey``,
+    an annotation), ``object`` (a field given the whole object,
+    ``source="*"``) or ``representation`` (a serializer that overrides
+    ``to_representation``; ``field`` is then ``""``).
+    """
+
+    serializer: type[Any]
+    field: str
+    kind: str
+    #: The model whose rows the serializer renders at this level.
+    model: type[Model]
+    #: The attribute the walker stopped at (``get_venue_city``, ``remaining``).
+    attribute: str = ""
+    #: The field's dotted source (``""`` for a method field).
+    source: str = ""
+
+    @property
+    def label(self) -> str:
+        """``EventSerializer.venue_city`` — how query origins name a field."""
+        return (
+            f"{self.serializer.__name__}.{self.field}" if self.field else self.serializer.__name__
+        )
+
+
 @dataclass
 class Plan:
     """What rendering one serializer reads from ``model``, relation by relation.
 
     ``to_one`` / ``to_many`` map an attribute name to its node. ``models`` is
     every model the representation reads (used for cache invalidation).
+    ``blind`` lists what this level's walk could not see (:class:`BlindSpot`).
     """
 
     model: type[Model]
     to_one: dict[str, ToOne] = field(default_factory=dict)
     to_many: dict[str, ToMany] = field(default_factory=dict)
+    blind: list[BlindSpot] = field(default_factory=list)
 
     @property
     def models(self) -> frozenset[type[Model]]:
@@ -200,10 +245,36 @@ def _pk_only_columns(relation: Any) -> tuple[str, ...]:
     return ()
 
 
+def _attribute_kind(model: type[Model], attr: str) -> str:
+    """``""`` for a column (or a FK's ``*_id``); else what the walker cannot see into."""
+    try:
+        found: Any = model._meta.get_field(attr)
+    except FieldDoesNotExist:
+        found = None
+    if found is not None:
+        return "attribute" if found.is_relation and found.related_model is None else ""
+    if attr in {getattr(f, "attname", "") for f in model._meta.concrete_fields}:
+        return ""
+    descriptor = inspect.getattr_static(model, attr, None)
+    if isinstance(descriptor, property | cached_property):
+        return "property"
+    return "callable" if callable(descriptor) else "attribute"
+
+
+def _blind(
+    plan: Plan, serializer: BaseSerializer[Any], field_obj: Any, kind: str, attr: str
+) -> None:
+    source = "" if kind == "method" else str(getattr(field_obj, "source", "") or "")
+    name = str(getattr(field_obj, "field_name", "") or "") if field_obj is not None else ""
+    plan.blind.append(BlindSpot(type(serializer), name, kind, plan.model, attr, source))
+
+
 def _walk(serializer: BaseSerializer[Any], plan: Plan) -> None:
-    """Fill ``plan`` from the fields ``serializer`` renders."""
+    """Fill ``plan`` from the fields ``serializer`` renders (and note its blind spots)."""
     if isinstance(serializer, ListSerializer):
         serializer = serializer.child
+    if type(serializer).to_representation is not Serializer.to_representation:
+        _blind(plan, serializer, None, "representation", "to_representation")
     for field_obj in serializer.fields.values():
         if getattr(field_obj, "write_only", False):
             continue
@@ -212,16 +283,27 @@ def _walk(serializer: BaseSerializer[Any], plan: Plan) -> None:
         if not attrs:
             if isinstance(nested, BaseSerializer):  # source="*": same object, same level
                 _walk(nested, plan)
+            elif isinstance(field_obj, SerializerMethodField):
+                _blind(plan, serializer, field_obj, "method", str(field_obj.method_name))
+            else:
+                _blind(plan, serializer, field_obj, "object", "*")
             continue
-        _walk_source(plan, attrs, field_obj, nested)
+        _walk_source(plan, attrs, field_obj, nested, serializer)
 
 
-def _walk_source(plan: Plan, attrs: list[str], field_obj: Any, nested: Any) -> None:
+def _walk_source(
+    plan: Plan, attrs: list[str], field_obj: Any, nested: Any, serializer: BaseSerializer[Any]
+) -> None:
     current = plan
     for index, attr in enumerate(attrs):
         relation = model_relation(current.model, attr)
         if relation is None:
-            return  # a column, property or method: nothing (more) to fetch
+            # A column: nothing (more) to fetch. A property or method: opaque (noted at
+            # the level it is read on, e.g. Venue for source="venue.label").
+            kind = _attribute_kind(current.model, attr)
+            if kind:
+                _blind(current, serializer, field_obj, kind, attr)
+            return
         last = index == len(attrs) - 1
         target: type[Model] = relation.related_model
         if _to_one(relation):
@@ -271,6 +353,43 @@ def plan_for(
 def plan_cache_clear() -> None:
     """Forget every cached plan (after mutating a serializer class at runtime)."""
     _PLANS.clear()
+
+
+def _levels_of(plan: Plan, prefix: str = "") -> Iterator[tuple[str, Plan]]:
+    yield prefix, plan
+    for name, one in plan.to_one.items():
+        yield from _levels_of(one.plan, f"{prefix}{name}{LOOKUP_SEP}")
+    for name, many in plan.to_many.items():
+        if many.plan is not None:
+            yield from _levels_of(many.plan, f"{prefix}{name}{LOOKUP_SEP}")
+
+
+def blind_spots(
+    serializer: type[BaseSerializer[Any]] | BaseSerializer[Any],
+    model: type[Model],
+    context: dict[str, Any] | None = None,
+) -> list[tuple[str, BlindSpot]]:
+    """What the walker could not see when planning ``serializer`` over ``model``.
+
+    ``(prefix, spot)`` pairs: ``prefix`` is the lookup path to the level the
+    spot is on (``""`` at the root, ``"tickettier_set__"`` one level down),
+    so a hint for it is ``prefix + relation``.
+    """
+    plan = plan_for(serializer, model, context)
+    return [(prefix, spot) for prefix, level in _levels_of(plan) for spot in level.blind]
+
+
+def planned_lookups(
+    serializer: type[BaseSerializer[Any]] | BaseSerializer[Any],
+    model: type[Model],
+    context: dict[str, Any] | None = None,
+) -> frozenset[str]:
+    """Every relation path the plan fetches (``"venue"``, ``"tickettier_set__tier"``)."""
+    plan = plan_for(serializer, model, context)
+    found: set[str] = set()
+    for prefix, level in _levels_of(plan):
+        found.update(prefix + name for name in (*level.to_one, *level.to_many))
+    return frozenset(found)
 
 
 # hints

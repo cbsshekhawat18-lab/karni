@@ -8,3 +8,7 @@ frontend/dist/
 /data/
 # Machine-local karni state (one-time tips etc.); also self-ignored via its own .gitignore.
 .karni/local/
+# Development capture (DEBUG only): request records, failure snapshots, the trace.
+.karni/requests/
+.karni/failures/
+.karni/trace/

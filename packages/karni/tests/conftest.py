@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pytest
@@ -47,3 +47,14 @@ def make_settings() -> SettingsFactory:
         return namespace
 
     return _make
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _capture_outside_the_package(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Tests that turn DEBUG on capture into a temporary ``.karni/``, never packages/karni/."""
+    from karni.debug import store
+
+    root = tmp_path_factory.mktemp("capture") / ".karni"
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(store, "capture_root", lambda: root)
+        yield

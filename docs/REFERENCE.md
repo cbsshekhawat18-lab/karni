@@ -91,7 +91,8 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
-| MCP server exposing `context`, `rules` and `check` as tools | `experimental` | Karni's own tests |
+| `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
+| MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
 ### Testing
 
@@ -311,16 +312,17 @@ karni check [OPTIONS]
 
 #### `karni explain`
 
-Explain an error code (E104, C101, PAY004, K106): why and the fix
+Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
+| `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
 #### `karni types`
 
@@ -339,7 +341,7 @@ karni types [OPTIONS]
 
 #### `karni mcp`
 
-Serve context, rules and check as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -348,6 +350,28 @@ karni mcp [OPTIONS]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `--project` PATH |  | Project root (default: found from the working directory). |
+
+### Debugging
+
+#### `karni queries`
+
+Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries`.
+
+```
+karni queries [OPTIONS] ENDPOINT
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ENDPOINT` (required) |  | A path (/api/events/?page=2), a resource (events, events/&lt;id&gt;) or a viewset (EventViewSet, EventViewSet.retrieve). |
+| `--as` TEXT |  | The user: email, username or primary key (default: anonymous). |
+| `--method` TEXT | `GET` | HTTP method. |
+| `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
+| `--json` |  | Machine-readable output. |
+| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--all` |  | List every statement, not only repeats. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ### Runners
 
@@ -562,6 +586,45 @@ karni manage [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | The manage.py command and its arguments, e.g. `showmigrations events`. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### Debugging
+
+#### `karni why`
+
+Explain an access decision: why a row, field or action is refused or missing
+
+```
+karni why [OPTIONS] TARGET [REQUEST_ID]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to explain: &lt;resource&gt;/&lt;id&gt; (a row), &lt;resource&gt;.&lt;field&gt; (a field), &lt;resource&gt; (its list), or a status followed by a request id (403 &lt;request-id&gt;). Resources are named as the API names them: events, events-event or events.Event. |
+| `REQUEST_ID` |  | The request id, after a status. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--action` TEXT |  | For a row: view (default), update, delete, or an @action name; create or list for a resource. |
+| `--method` TEXT |  | The HTTP method, for an @action that answers several. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni why-empty`
+
+Explain an empty list: which step removes the rows, and the fix
+
+```
+karni why-empty [OPTIONS] RESOURCE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `RESOURCE` (required) |  | The resource, named as the API names it. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -967,6 +1030,43 @@ karni make module [OPTIONS] NAME
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
 
+### Debugging
+
+#### `karni trace`
+
+Follow a captured request: its tasks, retries, email, webhooks, audit
+
+```
+karni trace [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A request id (the X-Request-ID response header), or `last`. |
+| `--json` |  | Print the story as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni replay`
+
+Re-run a captured request against the current code, as any user
+
+```
+karni replay [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A captured request id, or `last`. |
+| `--as` TEXT |  | Replay as this user: an email, a username or a primary key. |
+| `--anonymous` |  | Replay without a user. |
+| `--set` TEXT (repeatable) |  | Supply a redacted value: FIELD=VALUE (dotted body path, or query:NAME). Repeatable. |
+| `--drop-redacted` |  | Leave redacted values out instead of supplying them. |
+| `--commit` |  | Keep the writes; by default the replay is rolled back. |
+| `--json` |  | Print the result as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -988,12 +1088,12 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
-| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `describe` |
+| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `facts`, `describe` |
 | `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions`; endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")` — a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])` — tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
-| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `describe` |
+| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `explain`, `describe` |
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included; every row. The explicit public form. | methods `allows`, `rows`, `describe` |
@@ -1154,6 +1254,16 @@ class Lead(BaseModel):
 | `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
 | `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |
 | `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
+
+### Request ids and development capture (karni.tracing / karni.debug)
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn on only when the proxy in front overwrites the header on every request; ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
+| `KARNI_REQUEST_ID_EMAILS` | — | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
+| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off; with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
+| `KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
+| `KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
 
 ### Events & schedules (karni.events / karni.schedule)
 
@@ -1455,6 +1565,24 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E901`](errors.md#e901) | exception | karni why: no API resource by that name |
+| [`E902`](errors.md#e902) | exception | karni why: no such user |
+| [`E903`](errors.md#e903) | exception | karni why: no request record for that id |
+| [`E904`](errors.md#e904) | exception | karni why: the request record cannot be read |
+| [`E905`](errors.md#e905) | exception | karni why: the resource has no such field |
+| [`E906`](errors.md#e906) | exception | karni why: the resource routes no such action or method |
+| [`E907`](errors.md#e907) | exception | karni why: not a Karni BaseViewSet route |
+| [`E908`](errors.md#e908) | exception | karni why: the question is incomplete |
+| [`E920`](errors.md#e920) | exception | karni replay needs DEBUG on |
+| [`W920`](errors.md#w920) | warning | RequestIdMiddleware runs after django-structlog's RequestMiddleware |
+| [`E921`](errors.md#e921) | exception | Nothing was captured for this request id |
+| [`E922`](errors.md#e922) | exception | No failure snapshot with this id |
+| [`E923`](errors.md#e923) | exception | A redacted value cannot be replayed |
+| [`E924`](errors.md#e924) | exception | The user to replay as cannot be found |
+| [`E940`](errors.md#e940) | exception | karni queries cannot find the endpoint |
+| [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
+| [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
+| [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
 
 ### Modules
 
@@ -1524,6 +1652,15 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
 | [`C303`](errors.md#c303) | cli | A theme source cannot be read |
 | [`C304`](errors.md#c304) | cli | The frontend has no theme of the --source kind |
+| [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
+| [`C311`](errors.md#c311) | cli | karni why: --as is missing |
+| [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
+| [`C320`](errors.md#c320) | cli | karni explain needs a code or --failure, not both |
+| [`C321`](errors.md#c321) | cli | A --set value is not FIELD=VALUE |
+| [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
+| [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
+| [`C340`](errors.md#c340) | cli | Nothing to explain |
+| [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 
 ### Agent rules (`K`)
 
@@ -1537,6 +1674,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K006`](errors.md#k006) | rule | Procedures: karni rules --procedure NAME. |
 | [`K007`](errors.md#k007) | rule | Commands: karni --help. |
 | [`K009`](errors.md#k009) | rule | Scaffold with karni make. |
+| [`K013`](errors.md#k013) | rule | Traceback: karni explain - first. |
+| [`K014`](errors.md#k014) | rule | N+1: karni queries URL --as USER first. |
+| [`K015`](errors.md#k015) | rule | Row/field/action missing or refused: karni why first. |
+| [`K030`](errors.md#k030) | rule | A failure: karni explain --failure first. |
+| [`K031`](errors.md#k031) | rule | Follow a request: karni trace ID. |
+| [`K032`](errors.md#k032) | rule | Confirm a fix: karni replay ID --as USER. |
 | [`K101`](errors.md#k101) | rule | Models inherit BaseModel or compose its mixins. |
 | [`K102`](errors.md#k102) | rule | Viewsets inherit BaseViewSet. |
 | [`K103`](errors.md#k103) | rule | No ModelAdmin; use AdminMeta. |

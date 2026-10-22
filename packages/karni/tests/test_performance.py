@@ -268,4 +268,8 @@ def test_dev_profile_warns_and_logs_prod_is_off(make_settings: Any) -> None:
     dev, prod = make_settings("dev"), make_settings("prod")
     assert dev["KARNI_QUERY_BUDGET_MODE"] == "warn" and dev["KARNI_QUERY_LOG"] is True
     assert prod["KARNI_QUERY_BUDGET_MODE"] == "off" and prod["KARNI_QUERY_LOG"] is False
-    assert dev["MIDDLEWARE"][0] == "karni.middleware.QueryLogMiddleware"
+    # Outermost but for RequestIdMiddleware (no SQL; it gives the log line its id).
+    assert dev["MIDDLEWARE"][:2] == [
+        "karni.tracing.RequestIdMiddleware",
+        "karni.middleware.QueryLogMiddleware",
+    ]

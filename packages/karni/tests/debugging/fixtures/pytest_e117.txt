@@ -1,0 +1,93 @@
+__________________ EventListingTests.test_list_twelve_events ___________________
+
+self = <events.tests.test_scratch_listing.EventListingTests testMethod=test_list_twelve_events>
+
+    def test_list_twelve_events(self) -> None:
+        for _ in range(12):
+            event = EventFactory()
+            TicketTier.objects.create(event=event, name="GA", price=10, quantity=50)
+        user = get_user_model().objects.create_user(email="viewer@example.com", password="x")
+        client = APIClient()
+        client.force_authenticate(user)
+>       response = client.get("/api/events/")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+events/tests/test_scratch_listing.py:19: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/test.py:295: in get
+    response = super().get(path, data=data, **extra)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/test.py:212: in get
+    return self.generic('GET', path, **r)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/test.py:240: in generic
+    return super().generic(
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/test/client.py:671: in generic
+    return self.request(**r)
+           ^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/test.py:292: in request
+    return super().request(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/test.py:244: in request
+    request = super().request(**kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/test/client.py:1090: in request
+    self.check_exception(response)
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/test/client.py:805: in check_exception
+    raise exc_value
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/core/handlers/exception.py:55: in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/core/handlers/base.py:197: in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/django/views/decorators/csrf.py:65: in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/rest_framework/viewsets.py:124: in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/api/viewsets.py:847: in dispatch
+    self.check_query_budget(recorder, response, mode)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <events.viewsets.EventViewSet object at 0x10a41c170>
+recorder = <karni.performance.QueryRecorder object at 0x10a41dd90>
+response = <Response status_code=200, "text/html; charset=utf-8">
+mode = 'raise'
+
+    def check_query_budget(self, recorder: QueryRecorder, response: Any, mode: str) -> None:
+        """Compare ``recorder`` with :meth:`get_query_budget`; warn or raise per ``mode``."""
+        limit = self.get_query_budget()
+        response["X-Karni-Queries"] = str(recorder.count)
+        if limit is None:
+            return
+        response["X-Karni-Query-Budget"] = str(limit)
+        if recorder.count <= limit:
+            return
+        action = getattr(self, "action", None) or "*"
+        name = type(self).__name__
+        message = budget_failure(
+            f"{name}.{action}",
+            recorder.report(),
+            limit,
+            "Fix the repeated query (the optimiser derives select_related/prefetch_related "
+            "from the serializer; hint opaque fields with select_related/prefetch_related "
+            f"on {name}), or declare query_budget = Budget({action}=N, reason=...).",
+        )
+        if mode == "raise":
+>           raise QueryBudgetExceeded(message)
+E           karni.performance.QueryBudgetExceeded: E117: EventViewSet.list ran 28 queries; budget is 8.
+E           28 queries, 24 duplicated, 1.2 ms in SQL
+E             12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+E                 ← EventSerializer.venue_city (events/serializers.py:25 in get_venue_city)
+E             12× SELECT … FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."tier_id" = %s AND NOT ("events_booking"."…
+E                 ← TicketTierSerializer.remaining (events/models.py:56 in remaining)
+E           Fix the repeated query (the optimiser derives select_related/prefetch_related from the serializer; hint opaque fields with select_related/prefetch_related on EventViewSet), or declare query_budget = Budget(list=N, reason=...).
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e117
+
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/api/viewsets.py:870: QueryBudgetExceeded
+=========================== short test summary info ============================
+FAILED events/tests/test_scratch_listing.py::EventListingTests::test_count_queries
+FAILED events/tests/test_scratch_listing.py::EventListingTests::test_list_twelve_events
+FAILED events/tests/test_scratch_listing.py::test_count_queries_pytest - karn...

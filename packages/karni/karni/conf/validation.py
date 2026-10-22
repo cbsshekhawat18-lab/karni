@@ -108,6 +108,11 @@ class KarniSettingsModel(BaseModel):
     KARNI_AUDIT_ASYNC: bool = False
     KARNI_AUDIT_RETENTION_DAYS: int | None = None
     KARNI_AUDIT_REDACT: list[str] = Field(default_factory=list)
+    KARNI_REQUEST_ID_TRUST_HEADER: bool = False
+    KARNI_REQUEST_ID_EMAILS: bool = True
+    KARNI_DEBUG_CAPTURE: bool = True
+    KARNI_DEBUG_CAPTURE_KEEP: int = Field(default=200, ge=1)
+    KARNI_DEBUG_TRACE_DAYS: int = Field(default=7, ge=1)
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:

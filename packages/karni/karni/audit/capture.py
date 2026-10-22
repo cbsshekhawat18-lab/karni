@@ -26,6 +26,7 @@ from karni.audit import REDACTED
 from karni.exceptions import KarniImproperlyConfigured
 from karni.meta import karni_option
 from karni.middleware import get_current_user
+from karni.tracing import get_request_id
 
 __all__ = [
     "DEFAULT_REDACT",
@@ -37,6 +38,7 @@ __all__ = [
     "diff_values",
     "json_value",
     "record",
+    "redact_patterns",
     "sensitive_fields",
     "within_batch",
 ]
@@ -90,11 +92,17 @@ def change_batch(kind: str, label: str = "", meta: dict[str, Any] | None = None)
     nest: the innermost wins.
     """
     from karni.audit.models import ChangeBatch
+    from karni.debug import trace_event
 
     user = get_current_user()
     batch = ChangeBatch.objects.create(
-        actor_id=getattr(user, "pk", None), kind=kind, label=label[:200], meta=meta or {}
+        actor_id=getattr(user, "pk", None),
+        kind=kind,
+        label=label[:200],
+        meta=meta or {},
+        request_id=get_request_id() or "",
     )
+    trace_event("audit.batch", batch_id=batch.pk, kind=kind, label=batch.label)
     token = _BATCH.set(int(batch.pk))
     try:
         yield batch
@@ -138,7 +146,12 @@ def _audited_fields(model: type[models.Model]) -> tuple[str, ...] | None:
     return tuple(dict.fromkeys(declared))
 
 
-def _redact_patterns() -> tuple[str, ...]:
+def redact_patterns() -> tuple[str, ...]:
+    """The field-name substrings that mean "never record the value" (``KARNI_AUDIT_REDACT``).
+
+    Shared with the development capture (:mod:`karni.debug.redact`), so the
+    change log and ``.karni/`` redact by the same rule.
+    """
     configured = getattr(settings, "KARNI_AUDIT_REDACT", None)
     return tuple(configured) if configured is not None else DEFAULT_REDACT
 
@@ -163,7 +176,7 @@ def _sensitive_fields(model: type[models.Model]) -> frozenset[str]:
         raise KarniImproperlyConfigured(
             f"{model.__name__}.Karni.sensitive must be a list of field names.", code="E007"
         )
-    pattern = re.compile("|".join(re.escape(part) for part in _redact_patterns()), re.I)
+    pattern = re.compile("|".join(re.escape(part) for part in redact_patterns()), re.I)
     names = {field.name for field in model._meta.concrete_fields}
     found = {name for name in names if pattern.search(name)}
     found.update(name for name in declared if name in names)
@@ -262,6 +275,7 @@ def record(instance: models.Model, action: str, diff: dict[str, Any]) -> None:
         "action": action,
         "diff": _redact(model, diff),
         "batch_id": _BATCH.get(),
+        "request_id": get_request_id() or "",
     }
     if getattr(settings, "KARNI_AUDIT_ASYNC", False):
         from karni.audit.tasks import record_change
@@ -285,6 +299,7 @@ def write(payload: dict[str, Any]) -> None:
         action=payload["action"],
         diff=payload["diff"],
         batch_id=payload.get("batch_id"),
+        request_id=payload.get("request_id") or "",
     )
 
 

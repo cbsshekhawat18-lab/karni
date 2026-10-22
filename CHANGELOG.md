@@ -11,6 +11,55 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **`karni why`: an access decision explained by the code that makes it.**
+  `karni why events/<id> --as alice@example.com [--action update]`,
+  `karni why events.<field> --as ...`, `karni why-empty events --as ...` and
+  `karni why 403 <request-id>` (a request the dev server recorded) print the
+  user and roles, the grants that applied and where each comes from, the gate
+  and every part of `read`/`write` against the row, the row's values
+  (redacted like the change history), the result, `file:line` and one
+  concrete fix; `--json` for agents, `why`/`why_empty` on `karni mcp`, and
+  rule `K015`. The verdict comes from running DRF's own gate and lookup in a
+  rolled-back transaction while the access layer records its decisions
+  (`karni.api.access.trace`); `Predicate.explain()` takes a predicate apart
+  with the same folds `|` and `&` use. A test matrix checks the verdict
+  against the API for every user, viewset, action and row of the test app.
+  New: `karni.why`, `manage.py karni_why`, `BaseViewSet.base_queryset()`,
+  `karni.vetoes.first_veto`, `karni.accounts.roles.grant_rows` /
+  `grant_sources`; codes `E901`–`E908`, `C310`–`C312`. See
+  [debugging](docs/debugging/why.md).
+- **Debugging: one request id everywhere, a development capture, and
+  `karni trace` / `karni replay` / `karni explain --failure`.** Every
+  request gets an id (`X-Request-ID` on the response; a client's value is
+  accepted only in development or from a trusted proxy,
+  `KARNI_REQUEST_ID_TRUST_HEADER`) that follows its Celery tasks and their
+  retries (a message header), its email (`X-Karni-Request-ID`), outgoing
+  calls (`karni.tracing.outgoing_headers()`) and the change log
+  (`ChangeLog.request_id`, `ChangeBatch.request_id`; migration
+  `karni_audit.0003`). With `DEBUG` on, Karni writes `.karni/requests/`,
+  `.karni/failures/` and `.karni/trace/` under the project, bounded
+  (`KARNI_DEBUG_CAPTURE_KEEP`, `KARNI_DEBUG_TRACE_DAYS`) and redacted by
+  the change log's rules plus known secret values; with `DEBUG` off nothing
+  runs. `karni trace` follows a request through its async work in order,
+  `karni replay [--as USER]` re-runs it against the current code (rolled
+  back unless `--commit`), `karni explain --failure` turns a crash into a
+  brief; the same three are MCP tools and agent rules K030–K032. New codes
+  E920–E924, W920, C320–C323. karni-payments links a webhook delivery to
+  the checkout it settles. See [debugging](docs/debugging/capture.md).
+- **Debugging: `karni explain -` and `karni queries`.** `karni explain -`
+  reads a pasted traceback, test failure or log line (stdin) and names the
+  Karni failure in it: a registered code, an agent rule, a query-count
+  failure, a CSRF/CORS refusal, an access outcome or a documented
+  framework-adjacent failure (driver, database, migrations, settings, Redis,
+  OpenAPI), with the cause, the first project frame, the fix and the docs
+  link, or says plainly that it does not recognise it. `karni queries
+  <endpoint> --as <user>` runs one endpoint in-process (writes rolled back),
+  records every SQL statement with its stack and groups the repeated ones by
+  the serializer field and relation behind them, with the optimiser's reason
+  and the exact hint (`--json`, `--explain`, `--all`). The optimiser now
+  records its blind spots (`karni.api.optimizer.blind_spots`). MCP tools
+  `explain_text` and `queries`; agent rules K013 and K014; codes E940–E943,
+  C340, C341. See [debugging](docs/debugging/explain.md).
 - One brand across the welcome page, the admin and `@karni/ui`: the same
   colours in light and dark, radius, font stack and dark-mode switch (the
   `dark` class on `<html>`, following the system preference by default). The

@@ -38,6 +38,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.utils.module_loading import import_string
+from karni.debug import trace_event
 from karni.errorcodes import KarniError
 from karni.exceptions import api_error
 from rest_framework.exceptions import ValidationError
@@ -175,7 +176,21 @@ def create_checkout(
         raise
     payment.checkout_session_id = session.id
     payment.save(update_fields=["checkout_session_id", "updated_at"])
+    # Development trace (DEBUG only): the webhook that settles this payment
+    # names the same ref, so `karni trace` links the two requests.
+    trace_event(
+        "payment.checkout",
+        provider=provider.name,
+        amount=str(amount),
+        currency=currency,
+        refs=[_ref(payment)],
+    )
     return payment, session
+
+
+def _ref(row: Payment | Refund | WebhookEvent) -> str:
+    """``karni_payments.Payment:<pk>`` — how trace events name a row."""
+    return f"{row._meta.label}:{row.pk}"
 
 
 def refunded_amount(payment: Payment) -> Decimal:
@@ -286,18 +301,24 @@ def _match_payment(event: WebhookEvent, parsed: ParsedEvent) -> Payment:
     checkout session id — webhooks can arrive before the provider payment id
     has been stored locally.
     """
+    payment = None
     if parsed.provider_payment_id:
         payment = Payment.objects.filter(
             provider=event.provider, provider_payment_id=parsed.provider_payment_id
         ).first()
-        if payment is not None:
-            return payment
-    if parsed.checkout_session_id:
+    if payment is None and parsed.checkout_session_id:
         payment = Payment.objects.filter(
             provider=event.provider, checkout_session_id=parsed.checkout_session_id
         ).first()
-        if payment is not None:
-            return payment
+    if payment is not None:
+        trace_event(
+            "webhook.matched",
+            provider=event.provider,
+            event_id=event.event_id,
+            event_type=event.event_type,
+            refs=[_ref(payment), _ref(event)],
+        )
+        return payment
     raise UnmatchedWebhookEventError(
         f"Webhook event {event.provider}:{event.event_id} ({event.event_type}) "
         "matches no local Payment — will retry."

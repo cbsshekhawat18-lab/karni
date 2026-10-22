@@ -1,0 +1,27 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+_____________________ EventListingTests.test_count_queries _____________________
+
+self = <events.tests.test_scratch_listing.EventListingTests testMethod=test_count_queries>
+
+    def test_count_queries(self) -> None:
+        for _ in range(5):
+            EventFactory()
+        user = get_user_model().objects.create_user(email="viewer2@example.com", password="x")
+        client = APIClient()
+        client.force_authenticate(user)
+>       with self.assertNumQueries(4):
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: 9 != 4 : 9 queries executed, 4 expected
+E       Captured queries were:
+E       1. SELECT "auth_group"."name" AS "name" FROM "auth_group" INNER JOIN "karni_accounts_user_groups" ON ("auth_group"."id" = "karni_accounts_user_groups"."group_id") WHERE "karni_accounts_user_groups"."user_id" = 'a5b95f78a0644edbab9e2a2f112972f8' ORDER BY 1 ASC
+E       2. SELECT COUNT(*) AS "__count" FROM "events_event" WHERE ("events_event"."deleted_at" IS NULL AND ("events_event"."status" = 'published' OR "events_event"."organizer_id" = 'a5b95f78a0644edbab9e2a2f112972f8'))
+E       3. SELECT "events_event"."id", "events_event"."created_at", "events_event"."updated_at", "events_event"."deleted_at", "events_event"."created_by_id", "events_event"."updated_by_id", "events_event"."title", "events_event"."description", "events_event"."starts_at", "events_event"."ends_at", "events_event"."status", "events_event"."organizer_id", "events_event"."venue_id", "events_event"."cover_image" FROM "events_event" WHERE ("events_event"."deleted_at" IS NULL AND ("events_event"."status" = 'published' OR "events_event"."organizer_id" = 'a5b95f78a0644edbab9e2a2f112972f8')) ORDER BY "events_event"."created_at" DESC LIMIT 5
+E       4. SELECT "events_tickettier"."id", "events_tickettier"."created_at", "events_tickettier"."updated_at", "events_tickettier"."deleted_at", "events_tickettier"."created_by_id", "events_tickettier"."updated_by_id", "events_tickettier"."event_id", "events_tickettier"."name", "events_tickettier"."price", "events_tickettier"."quantity", 1 AS "_karni_read_scoped" FROM "events_tickettier" INNER JOIN "events_event" ON ("events_tickettier"."event_id" = "events_event"."id") WHERE ("events_tickettier"."deleted_at" IS NULL AND ("events_event"."status" = 'published' OR "events_event"."organizer_id" = 'a5b95f78a0644edbab9e2a2f112972f8') AND "events_tickettier"."event_id" IN ('7842f58612a24d27983c456ace276f8f', 'd279b97d80ed4e15b81a53924ff0de74', 'fbb6c52d57074571a14214a8fd4fcbf9', 'b86a112fd42a4f6b9afeec8573d45c6f', 'a9da83f9916b49609ad590271b705b10'))
+E       5. SELECT "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."address", "events_venue"."city", "events_venue"."capacity" FROM "events_venue" WHERE "events_venue"."id" = '8f16b8edf09547c29e38a9926aa899c7' LIMIT 21
+E       6. SELECT "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."address", "events_venue"."city", "events_venue"."capacity" FROM "events_venue" WHERE "events_venue"."id" = 'bd2d81c86fff447e873d572a6a2e70b6' LIMIT 21
+E       7. SELECT "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."address", "events_venue"."city", "events_venue"."capacity" FROM "events_venue" WHERE "events_venue"."id" = '5c661b163b8a4400a605c608c0b63afe' LIMIT 21
+E       8. SELECT "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."address", "events_venue"."city", "events_venue"."capacity" FROM "events_venue" WHERE "events_venue"."id" = 'ccd33dfe1ba94250851aaa9bd03752ff' LIMIT 21
+E       9. SELECT "events_venue"."id", "events_venue"."created_at", "events_venue"."updated_at", "events_venue"."deleted_at", "events_venue"."created_by_id", "events_venue"."updated_by_id", "events_venue"."name", "events_venue"."address", "events_venue"."city", "events_venue"."capacity" FROM "events_venue" WHERE "events_venue"."id" = 'a3da7892e6044c3c94ef195d97904be3' LIMIT 21
+
+events/tests/test_scratch_listing.py:28: AssertionError
