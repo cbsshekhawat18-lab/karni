@@ -9,6 +9,12 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
+## Unreleased
+
+- **The case study page is removed**, with the before/after line counts the
+  README quoted from it. The `examples/social-leads` app stays as a practice
+  project and keeps running in CI.
+
 ## 0.4.0 (2026-10-22)
 
 - **PostgreSQL is the default, everywhere.** `pip install karni` now brings
@@ -474,7 +480,7 @@ new projects, and publishing to PyPI. No public API changes.
 See [docs/migrations/0.3.md](docs/migrations/0.3.md) for the two breaking
 changes and how to upgrade.
 
-- Membership scoping and generated tests, from the Social Stats case study:
+- Membership scoping and generated tests, from the social-leads practice project:
   `own` takes an owner path through a many-to-many
   (`owner_field = "workspace__members"`), now documented as the way to scope
   rows to a workspace's members. The test factories accept one row for a

@@ -1,4 +1,4 @@
-# Friction log: rebuilding Social Stats' leads module on Karni
+# Friction log: rebuilding a leads module on Karni
 
 Every place the rebuild needed project code that Karni should arguably have
 provided, in the order it was hit. Entries 1, 2, 3 and 14 carry a **Status**:
@@ -38,7 +38,7 @@ is gone).
 **Did:** one branch per model in `workspace_rows` (`Workspace` → `members`,
 `LeadActivity` → `lead__workspace__members`, the rest → `workspace__members`).
 
-**What went wrong:** adding one more model (`FollowUp`, see the case study)
+**What went wrong:** adding one more model (`FollowUp`)
 made `GET /api/follow-ups/` answer **500** for every member until the scope
 learned its path, and the generated test stayed green (entry 3). Nothing in
 `karni check` noticed.
@@ -134,7 +134,7 @@ and messages only.
 | `POST /api/leads/import_csv/`, one step | `/api/leads/import/`: upload, mandatory preview, commit |
 | `?q=`, `?min_score=`, `?from=`, `?to=` | `?search=`, `?quality_score__gte=`, `?created_at__gte=`, `?created_at__lte=` |
 
-**Did:** kept Karni's names, so a client written for Social Stats must change.
+**Did:** kept Karni's names, so a client written for the original module must change.
 Unknown query parameters are ignored, so an old `?q=` returns the whole list
 instead of failing.
 

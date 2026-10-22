@@ -1,17 +1,15 @@
 # Social Leads
 
-The leads/CRM module of [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-media-manager),
-rebuilt on Karni as a measured case study: same data model, endpoints,
-screens and workspace permission rule, written against Karni's documented
-public surface only. The write-up with the before/after numbers is
-[docs/case-study-social-stats.md](../../docs/case-study-social-stats.md). What
-Karni should have provided and did not is listed in [FRICTION.md](FRICTION.md).
+A leads/CRM module built on Karni as a practice project: a real product's data
+model, endpoints, screens and workspace permission rule, written against
+Karni's documented public surface only. It is used to learn from and to test
+the framework. What Karni should have provided and did not is listed in
+[FRICTION.md](FRICTION.md).
 
 ```sh
 python3.12 -m venv .venv && .venv/bin/pip install -e ../../packages/karni -e ../../packages/karni-cli pytest pytest-django
 cp .env.example .env && printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\n' >> .env
 .venv/bin/karni migrate && .venv/bin/karni seed && .venv/bin/karni test
-PRETTIER=<path to prettier> python scripts/measure.py --normalise --before <social-stats checkout> --pristine <karni new "Social Leads" output>
 ```
 
 What the project wrote: `crm/models.py` (workspace membership is each

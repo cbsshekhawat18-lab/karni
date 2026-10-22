@@ -25,7 +25,7 @@ def by_city() -> Any:
 def test_a_custom_scope_written_for_one_model_fails_on_another(
     settings: Any, by_city: None
 ) -> None:
-    # The trap the Social Stats rebuild hit: a scope that follows `venue` is
+    # The trap the social-leads rebuild hit: a scope that follows `venue` is
     # granted by pattern on a model that has no `venue` (Venue itself).
     settings.KARNI_ROLES = {
         "staff": STAFF,

@@ -64,7 +64,6 @@ nav:
       - Building with an AI agent: guide/with-ai.md
       - Building without one: guide/without-ai.md
       - Adding an entity end to end: adding-an-entity.md
-      - "Case study: rebuilding Social Stats' leads": case-study-social-stats.md
   - FAQ: faq.md
   - Compare:
       - Overview: compare/index.md
