@@ -30,36 +30,50 @@ Karni's position on 2026-10-21: 0 GitHub stars, repository created
 
 ## GitHub topics
 
-Public repository counts from `https://github.com/topics/<topic>` on
-2026-10-21. GitHub allows 20 topics and Karni uses all 20, so adding one means
-dropping one.
+GitHub allows 20 topics and Karni uses all 20, so every addition is a swap.
+Repository counts from the GitHub search API (`topic:<name>`).
+
+**2026-10-22 swap.** Dropped four that cost a slot: `crud` (nobody picks a
+framework by searching it, 21,350), `framework` (20,124 repositories, no
+signal), `rest-api` (covered by `django-rest-framework` and `openapi`) and
+`code-generation` (misleading: Karni's point is that less code is generated).
+Added the stack and the tools people search: `postgresql` (135,133, central
+to the typed fields), `celery` (5,980), `windsurf` (1,705; Karni writes rules
+files for eight tools and tagged three) and `scaffolding` (2,193, what people
+search when they start a project).
+
+**`boilerplate` (16,068) and `starter-template` (4,255) stay, deliberately.**
+They contradict the framework positioning, but people search those words.
+Someone who arrives through either one meets the README's first section on
+the problem, where a boilerplate is what Karni replaces. Being found by the
+wrong word and reframed at once beats not being found. The cost: awesome-django
+reads those topics as a boilerplate, so drop them before proposing Karni
+there.
 
 | Topic | Repositories | On Karni |
 |---|---|---|
 | react | 570,462 | yes |
+| postgresql | 135,133 | yes (added 2026-10-22) |
 | ai-agents | 124,139 | yes |
 | mcp | 104,012 | no |
 | claude-code | 99,385 | yes |
+| rest-api | 90,579 | dropped 2026-10-22 |
 | django | 84,540 | yes |
 | mcp-server | 39,890 | yes |
 | django-rest-framework | 22,500 | yes |
-| crud | 21,653 | yes |
+| crud | 21,350 | dropped 2026-10-22 |
+| framework | 20,124 | dropped 2026-10-22 |
 | cursor | 19,864 | yes |
-| boilerplate | 16,365 | yes |
-| code-generation | 7,255 | yes |
+| boilerplate | 16,068 | yes (kept on purpose) |
+| code-generation | 7,070 | dropped 2026-10-22 |
 | admin-dashboard | 6,973 | no |
 | rbac | 6,455 | yes |
-| starter-kit | 4,687 | no |
-| drf | 1,656 | no |
-| saas-boilerplate | 610 | no |
+| celery | 5,980 | yes (added 2026-10-22) |
+| starter-template | 4,255 | yes (kept on purpose) |
+| scaffolding | 2,193 | yes (added 2026-10-22) |
+| windsurf | 1,705 | yes (added 2026-10-22) |
+| drf | 1,623 | no |
 | django-react | 78 | no |
-
-A new repository is buried in the large topics (sorted by stars) and visible
-in the small ones. Candidates to add: `django-react` (78 repositories),
-`drf` (1,656). Candidates to drop: `starter-template` (it contradicts the
-framework positioning awesome-django needs), and the most generic entries.
-`boilerplate` stays only if the canonical question uses the word; see
-[questions.md](questions.md).
 
 ## PyPI search
 
