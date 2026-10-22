@@ -20,7 +20,9 @@
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user.
+ * user. In the table layout the rows are a WAI-ARIA grid: the whole table
+ * is one Tab stop and the arrow keys move between rows and cells
+ * (`keyboardNavigation="native"` makes every control a Tab stop again).
  *
  * Audit fields (AUDIT_FIELDS — id, created_at, updated_at, created_by,
  * updated_by, carried by every BaseModel resource) are hidden by default so
@@ -99,7 +101,7 @@ import {
   sortingToOrdering,
   statusOf,
 } from "./table-utils";
-import { TableView } from "./TableView";
+import { TableView, type ResourceTableKeyboardNavigation } from "./TableView";
 import { useContainerWidth } from "./use-container-width";
 import { useDebouncedValue } from "./use-debounced-value";
 import { useTableView, type ResourceTableStateStore } from "./url-state";
@@ -107,7 +109,13 @@ import { ViewOptions as ViewOptionsMenu } from "./ViewOptions";
 
 registerComponentRole("data-table", "ResourceTable");
 
-export type { BulkAction, BulkResult, ResourceColumn, ResourceTableDensity };
+export type {
+  BulkAction,
+  BulkResult,
+  ResourceColumn,
+  ResourceTableDensity,
+  ResourceTableKeyboardNavigation,
+};
 
 export const DEFAULT_PAGE_SIZE = 25;
 /** The page sizes offered by default (`pageSizeOptions`). */
@@ -145,7 +153,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   bulkActions?: ReadonlyArray<BulkAction>;
   /**
    * Opens a row. The whole row is clickable, and its first cell is a button,
-   * so the row opens from the keyboard too.
+   * so the row opens from the keyboard too (Enter on any cell of the grid).
    */
   onRowClick?: (row: T) => void;
   /**
@@ -226,6 +234,16 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   viewOptions?: boolean;
   /** Below this container width (px) rows render as cards. Default 640; 0 never. */
   cardBreakpoint?: number;
+  /**
+   * How the keyboard moves through the table layout. Default `"grid"`, the
+   * WAI-ARIA grid pattern: the whole table is one Tab stop, the arrow keys
+   * move between rows and cells (each control of a cell is a stop of its
+   * own), Home and End go to the ends of a row, Ctrl+Home and Ctrl+End to
+   * the first and last cell, Enter on a cell opens the row (`onRowClick`) and
+   * Space on a cell selects it (`bulkActions`). `"native"` is a plain table
+   * where every checkbox, button and link is its own Tab stop, as before.
+   */
+  keyboardNavigation?: ResourceTableKeyboardNavigation;
   className?: string;
 }
 
@@ -360,6 +378,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     onDensityChange,
     viewOptions = true,
     cardBreakpoint = DEFAULT_CARD_BREAKPOINT,
+    keyboardNavigation = "grid",
     className,
   } = props;
 
@@ -998,6 +1017,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             totalCount={count}
             dimmed={dimmed}
             scrollRef={scrollRef}
+            keyboardNavigation={keyboardNavigation}
           />
         )}
         {count !== undefined && count > 0 && (

@@ -3,6 +3,9 @@ import * as React from "react";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
 import { KarniMark } from "../brand/karni-mark";
+import { useRouteFocus, type LayoutRouteFocusOptions } from "./route-focus";
+
+export type { LayoutRouteFocusOptions } from "./route-focus";
 
 registerComponentRole("layout-shell", "Layout");
 
@@ -162,6 +165,17 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   onMobileNavOpenChange?: (open: boolean) => void;
   /** Replaces internal pieces of the shell; see LayoutSlots. */
   slots?: Partial<LayoutSlots>;
+  /**
+   * Focus after a client-side navigation. Default `true`: once the new page
+   * is in, focus moves to its `<h1>` (else `<main>`) and a polite live region
+   * says the page title. Nothing moves on the first load (a redirect before
+   * the user acts included), when only search params change (filters,
+   * pagination, sorting), or when something took focus for the page itself
+   * (an autofocused field, a control inside `<main>`, a dialog). `false`
+   * turns it off. An object keeps it on and sets the route key, the target
+   * or the announcement (see LayoutRouteFocusOptions).
+   */
+  routeFocus?: boolean | LayoutRouteFocusOptions;
   sidebarClassName?: string;
   headerClassName?: string;
   contentClassName?: string;
@@ -298,11 +312,16 @@ export const defaultLayoutSlots: LayoutSlots = {
  * returns to the menu button. A "Skip to content" link is the first stop of
  * the keyboard.
  *
+ * After a client-side navigation, focus moves to the new page's `<h1>` and
+ * a live region says its title (`routeFocus`). Render the Layout once,
+ * around your router's outlet, so it sees the route change.
+ *
  * Escape hatches: `slots` replaces the Header, Sidebar, NavLink,
  * MobileDrawer or SkipLink; `renderNavItem` wraps each derived link;
  * `sidebar` replaces the derived nav wholesale; `sidebarHeader`,
  * `sidebarFooter` and `header` are free slots; `mobileNavOpen` controls
- * the drawer.
+ * the drawer. `routeFocus={false}` turns the focus move off, and an object
+ * sets its route key, target or announcement.
  */
 export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
   (
@@ -318,6 +337,7 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       defaultMobileNavOpen = false,
       onMobileNavOpenChange,
       slots,
+      routeFocus = true,
       sidebarClassName,
       headerClassName,
       contentClassName,
@@ -352,6 +372,11 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       event.preventDefault();
       main.focus();
     }, []);
+    const routeFocusOn = routeFocus !== false;
+    const routeAnnouncement = useRouteFocus(mainRef, {
+      ...(typeof routeFocus === "object" ? routeFocus : {}),
+      enabled: routeFocusOn,
+    });
 
     // The drawer is for narrow screens only: once the menu button is hidden
     // (the window grew past md), a still-open modal drawer would trap focus
@@ -446,6 +471,11 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             {children}
           </main>
         </div>
+        {routeFocusOn && (
+          <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {routeAnnouncement}
+          </div>
+        )}
       </div>
     );
   },

@@ -126,6 +126,7 @@ export type {
   ResourceTableCardField,
   ResourceTableDensity,
   ResourceTableForbiddenProps,
+  ResourceTableKeyboardNavigation,
   ResourceTableLoadingProps,
   ResourceTableNoRecordsProps,
   ResourceTableNoResultsProps,
@@ -320,6 +321,7 @@ export type {
   LayoutNavLinkProps,
   LayoutMobileDrawerProps,
   LayoutSkipLinkProps,
+  LayoutRouteFocusOptions,
 } from "./components/layout/layout";
 
 export { KarniMark } from "./components/brand/karni-mark";

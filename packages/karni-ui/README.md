@@ -528,13 +528,26 @@ function useRouterTableStore(): ResourceTableStateStore {
 }
 ```
 
-**Keyboard and screen readers.** The table is named by a caption (`caption`,
-default the capitalised `resourceLabel`) and its scroll box is focusable.
-Sortable headers are buttons with `aria-sort`. With `onRowClick`, the first
-cell of each row is a button, so a row opens with Enter or Space. Each
-checkbox is named after its row ("Select Spring Gala"). Page changes,
-sorting, the selection count and slow loading are announced in a polite live
-region. Errors are announced as alerts.
+**Keyboard and screen readers.** The table is a WAI-ARIA grid, named by a
+caption (`caption`, default the capitalised `resourceLabel`). The whole table
+is one Tab stop, so a 50-row page costs one Tab press instead of one per
+control. Tab enters at the first row (or at the cell you left) and the next
+Tab leaves the table. Inside, the arrow keys move between rows and cells,
+Home and End go to the ends of a row, and Ctrl+Home and Ctrl+End go to the
+first and last cell of the grid. Each control in a cell is a stop of its own:
+the checkbox, the row's button, links, Edit, Delete and your `rowActions`. A
+control keeps its own keys: a button activates, a menu trigger opens its menu
+with ArrowDown, and Ctrl or Cmd+Enter opens a link in a new tab. On a cell,
+Enter opens the row (`onRowClick`) and Space selects it (`bulkActions`).
+Enter on a row's checkbox opens the row too. Sortable headers are buttons
+with `aria-sort` in the grid's first row. Each checkbox is named after its row
+("Select Spring Gala"), and a selected row has `aria-selected`. The mouse
+works as before. `keyboardNavigation="native"` turns the grid off: a plain
+table where every control is its own Tab stop and the scroll box is
+focusable. Below `cardBreakpoint` the cards are a list, and their controls
+are Tab stops as before. Page changes, sorting, the selection count and slow
+loading are announced in a polite live region. Errors are announced as
+alerts.
 
 ### ResourceForm: states, errors and the keyboard
 
@@ -818,7 +831,22 @@ What each one does for keyboard and screen-reader users:
   close button or a link close it, and focus returns to the menu button. The
   menu button's `aria-controls` names the drawer only while it is open. The
   drawer closes itself if the window grows past `md`. Nav links show a focus
-  ring and mark the current page with `aria-current="page"`.
+  ring and mark the current page with `aria-current="page"`. After a
+  client-side navigation (from the drawer too), focus moves to the new
+  page's `<h1>` (else `<main>`) and a polite live region says the page
+  title. Nothing moves on the first load (a redirect before the user acts
+  included), when only search params change (filters, pagination, sorting),
+  or when the page placed focus itself (an autofocused field, a control
+  inside `<main>`, a dialog). No router is needed: the route is the
+  URL's path, and a hash route like `#/events` counts. Render `Layout` once,
+  around your router's outlet, as `karni new` does. `routeFocus={false}`
+  turns this off, and `routeFocus={{ routeKey, getTarget, getAnnouncement }}`
+  sets the route (for a memory router), the element to focus and the words.
+- **ResourceTable**: the table is a grid with one Tab stop. The arrow keys
+  move inside it, Enter opens a row and Space selects it, so a long page no
+  longer costs a Tab press per control. `keyboardNavigation="native"` gives
+  every control its own Tab stop again. The details are under "Keyboard and
+  screen readers" in the ResourceTable section.
 - **Modal**: named by its title and described by its description. Focus moves
   in, Tab stays inside, Escape closes, and focus returns to what opened it.
 - **Toaster**: an error toast is announced at once (assertive), the others

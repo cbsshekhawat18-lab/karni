@@ -38,7 +38,7 @@ function mount(ui: React.ReactElement): void {
 }
 
 async function headerTexts(): Promise<Array<string | null>> {
-  const table = await screen.findByRole("table", undefined, { timeout: 5000 });
+  const table = await screen.findByRole("grid", undefined, { timeout: 5000 });
   await waitFor(() => expect(within(table).getAllByRole("row").length).toBeGreaterThan(1), {
     timeout: 5000,
   });
@@ -116,7 +116,7 @@ describe("audit fields against the msw fixture (full stack)", () => {
 
     // Default server order is -created_at: "Town Hall" (id 12) leads.
     const user = userEvent.setup();
-    const firstRow = within(screen.getByRole("table")).getAllByRole("row")[1];
+    const firstRow = within(screen.getByRole("grid")).getAllByRole("row")[1];
     expect(firstRow).toHaveTextContent("Town Hall");
     await user.click(within(firstRow).getByRole("button", { name: "Edit" }));
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: 12 }));

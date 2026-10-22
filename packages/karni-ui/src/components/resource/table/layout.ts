@@ -33,6 +33,16 @@ export const DENSITY_CLASSES: Record<
 export const SCROLL_BOX =
   "group/scroll relative w-full max-h-[var(--karni-table-max-height)] overflow-auto rounded-md border border-border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+/**
+ * The scroll box of a grid: a cell or control the keyboard focuses scrolls
+ * into view below the sticky header, not under it.
+ */
+export const GRID_SCROLL_BOX = "scroll-pt-10";
+
+/** A grid cell without a control takes focus itself, and shows it inside its edges. */
+export const GRID_CELL =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+
 export const TABLE = "w-full border-separate border-spacing-0 text-sm";
 
 /** Sticky on vertical scroll, above the frozen body cells. */

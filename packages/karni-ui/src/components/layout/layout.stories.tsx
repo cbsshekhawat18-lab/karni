@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import * as React from "react";
 import { Button } from "../primitives/button";
 import { Page } from "../page/page";
 import { Layout, type LayoutNavLinkProps } from "./layout";
@@ -137,4 +138,58 @@ export const RouterIntegration: Story = {
       </Page>
     ),
   },
+};
+
+const HASH_ROUTES: Readonly<Record<string, string>> = {
+  "#/events": "Events",
+  "#/venues": "Venues",
+  "#/settings": "Settings",
+};
+
+function currentHashRoute(): string {
+  return window.location.hash in HASH_ROUTES ? window.location.hash : "#/events";
+}
+
+/** The page a hash route names, kept in step with Back and Forward. */
+function useHashRoute(): string {
+  const [route, setRoute] = React.useState(currentHashRoute);
+  React.useEffect(() => {
+    const onChange = (): void => setRoute(currentHashRoute());
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return route;
+}
+
+function HashRouterApp(): React.ReactElement {
+  const route = useHashRoute();
+  const title = HASH_ROUTES[route] ?? "Events";
+  return (
+    <Layout
+      sidebarHeader={<span className="px-3 text-lg font-semibold">Acme</span>}
+      navItems={Object.entries(HASH_ROUTES).map(([href, label]) => ({
+        href,
+        label,
+        active: href === route,
+      }))}
+    >
+      <Page
+        title={title}
+        description="Follow a link from the keyboard: focus moves to this heading and a live region says its title."
+      >
+        <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
+          The {title.toLowerCase()} page. The next Tab continues from here, not from the top.
+        </div>
+      </Page>
+    </Layout>
+  );
+}
+
+/**
+ * Focus after a client-side navigation (`routeFocus`, on by default). Plain
+ * hash links stand in for a router: the Layout needs none, it watches the
+ * URL's path and its own <main>.
+ */
+export const FocusAfterNavigation: Story = {
+  render: () => <HashRouterApp />,
 };
