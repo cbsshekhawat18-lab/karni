@@ -133,6 +133,11 @@ accepts the same version twice.
 - **npm:** for each of the four packages, add a trusted publisher: this
   repository, workflow `release.yml`, environment `npm`. The `@karni` scope
   must exist and belong to the maintainers.
+- **npm with a token instead:** an `NPM_TOKEN` repository secret (an npm
+  automation token, or a granular token that may publish the `@karni`
+  packages), when set, is used in place of trusted publishing; provenance
+  still comes from the job's OIDC token. Store it without pasting it
+  anywhere else: `gh secret set NPM_TOKEN` and paste at the prompt.
 - **`KARNI_PUBLISHING`** (Settings → Secrets and variables → Actions →
   Variables): the registries that are set up, `pypi`, `npm`, `pypi,npm`, or
   `true` for both. Unset, every run is a dry run. A registry is switched on

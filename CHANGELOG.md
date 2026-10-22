@@ -11,6 +11,8 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- Releases can publish npm with an `NPM_TOKEN` repository secret instead of
+  trusted publishing, like `PYPI_API_TOKEN` for PyPI ([releasing](docs/releasing.md)).
 - The `karni` command as a container image, `ghcr.io/cbsshekhawat18-lab/karni`
   (linux/amd64 and arm64), built from the PyPI release after every release
   and listed under the repository's Packages. It runs the CLI on machines
