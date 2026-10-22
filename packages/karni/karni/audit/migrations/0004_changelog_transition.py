@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("karni_audit", "0002_batches"),
+        ("karni_audit", "0003_request_id"),
     ]
 
     operations = [
