@@ -90,14 +90,15 @@ Karni stays a versioned dependency that you upgrade. A boilerplate is copied onc
 
 ## Quickstart
 
-You need Python 3.12 or later and Node 20.19 or later (24 LTS recommended).
+You need Python 3.12 or later, Node 20.19 or later (24 LTS recommended) and Docker, which runs PostgreSQL.
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
 pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
-printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+docker compose up -d --wait db
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
 karni make app events
 karni make model Event title:str:200 starts_at:datetime organizer:fk:User -a --access owned:organizer
 karni make migration --app events && karni migrate
@@ -115,6 +116,8 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:8000/` for the welcome page and `/admin/` for the admin. Open `http://localhost:5173/login` for the React app. Sign in as `demo@example.com` with the password `karni-password`. `karni seed` created that user. The [quickstart guide](docs/quickstart.md) explains each step.
+
+PostgreSQL is Karni's default database. To try Karni without Docker, leave out the `docker compose` line and use `DATABASE_URL=sqlite:///data/db.sqlite3`: SQLite works, without the guarantees only PostgreSQL gives (range columns, `EXCLUDE` constraints, trigram search).
 
 Without Python 3.12 on your machine, run the `karni` command from its container image, [`ghcr.io/cbsshekhawat18-lab/karni`](https://github.com/cbsshekhawat18-lab/karni/pkgs/container/karni). For example, `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"` scaffolds the project into the current directory.
 

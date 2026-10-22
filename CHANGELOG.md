@@ -9,8 +9,37 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## Unreleased
+## 0.4.0 (2026-10-22)
 
+- **PostgreSQL is the default, everywhere.** `pip install karni` now brings
+  the PostgreSQL driver (`psycopg[binary]`), and the quickstart runs on
+  PostgreSQL: `docker compose up -d --wait db` starts the project's own
+  PostgreSQL 16, which a new project's `docker-compose.yml` now publishes on
+  localhost only (`KARNI_DB_PORT` changes the port). SQLite is the no-Docker
+  alternative, one `DATABASE_URL` away, without the guarantees only
+  PostgreSQL gives.
+- **Focus follows navigation, and a table is one Tab stop (@karni/ui).**
+  `Layout` moves focus to the new page's heading after a client-side route
+  change and announces the page title. It stays put on the first load, when
+  only search params change, and when the page took focus itself.
+  `routeFocus={false}` turns it off. `ResourceTable` is a WAI-ARIA grid with
+  a roving tabindex: Tab enters and leaves the table, arrow keys move between
+  rows and cells, Enter opens a row and Space toggles its selection. A 50-row
+  page went from 205 Tab stops to 1. The table's role is now `grid`, and
+  `keyboardNavigation="native"` restores the plain table.
+- **OpenAPI enums are named after their model and field.** Two choice fields
+  with the same name but different choices no longer get hash names such as
+  `Status469Enum`. `karni.api.schema.postprocess_schema_enums` names them
+  `<Model><Field>Enum` (`RefundStatusEnum`), with the app label in front when
+  two apps have a model of the same name. `ENUM_NAME_OVERRIDES` still wins,
+  and drf-spectacular's own hook restores its names.
+- **The modules are tested on PostgreSQL.** CI runs karni-payments,
+  karni-approvals and karni-impersonation on PostgreSQL 16 on every Python
+  version, through the same overlay as the core. A pending change in
+  karni-approvals now lists its fields in the model's order on PostgreSQL
+  too (`jsonb` stores keys shortest first).
+- **Scaffold comments in plain sentences.** The comments and the description
+  in a new project's files no longer use em dashes.
 - **Messages in plain sentences.** What the framework, the `karni` command,
   the modules and @karni/ui print or show (errors, system checks, `karni why`,
   `karni queries`, the query log, test helper failures, admin pages, emails,

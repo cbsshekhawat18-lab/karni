@@ -59,11 +59,32 @@ def main(argv: list[str] | None = None) -> int:
     env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
     print(f"quickstart: running {len(blocks())} blocks in {work}", flush=True)
     steps = "set -euxo pipefail\n" + script
+    project = work / "ticket_shop"
+    try:
+        return _run(steps, work, project, env)
+    finally:
+        _stop_database(project)
+        if not args.keep:
+            shutil.rmtree(work, ignore_errors=True)
+
+
+def _stop_database(project: Path) -> None:
+    """Remove the PostgreSQL container the page started (`docker compose up -d --wait db`)."""
+    if (project / "docker-compose.yml").exists() and shutil.which("docker"):
+        subprocess.run(
+            ["docker", "compose", "down", "-v"],
+            cwd=project,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+
+
+def _run(steps: str, work: Path, project: Path, env: dict[str, str]) -> int:
     result = subprocess.run(["bash", "-c", steps], cwd=work, env=env, check=False)
     if result.returncode != 0:
         print(f"quickstart: a documented command failed (exit {result.returncode})")
         return result.returncode
-    project = work / "ticket_shop"
     python = work / ".venv" / "bin" / "python"
     server = subprocess.Popen(
         [str(python), "manage.py", "runserver", "127.0.0.1:8911", "--noreload"],
@@ -86,8 +107,6 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         server.terminate()
         server.wait(timeout=10)
-        if not args.keep:
-            shutil.rmtree(work, ignore_errors=True)
 
 
 if __name__ == "__main__":

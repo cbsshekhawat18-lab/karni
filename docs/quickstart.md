@@ -4,12 +4,13 @@ description: Install Karni, scaffold a project, add a model, migrate, seed demo 
 
 # Quickstart
 
-Ten minutes from an empty directory to a running app with real data, no
-Docker required. Every command on this page is run verbatim by CI
+Ten minutes from an empty directory to a running app with real data, on
+PostgreSQL. Every command on this page is run verbatim by CI
 (`.github/ci/quickstart.py`), so it works on a clean machine or the build
 fails.
 
-You need Python 3.12+ and Node 20.19+ (Node 24 LTS recommended).
+You need Python 3.12+, Node 20.19+ (Node 24 LTS recommended) and Docker, which
+runs the database.
 
 ## 1. Install Karni and create a project
 
@@ -19,17 +20,26 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
-printf 'DATABASE_URL=sqlite:///data/db.sqlite3\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+docker compose up -d --wait db
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
 ```
 
 `karni new` wrote a Django project configured by one call
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
 docker-compose stack with a Makefile, and the guidance files AI coding
-agents read. The four `.env` lines point it at SQLite, an in-process cache
-and a local media folder for this walk-through, so nothing on this page
-needs PostgreSQL or Redis. The defaults expect the compose stack's. pytest
-and pytest-django are the project's dev dependencies (`karni test` runs
-them), and they go into the same venv.
+agents read. `docker compose up -d --wait db` starts the project's
+PostgreSQL 16 from that stack, published on localhost only (set
+`KARNI_DB_PORT` in `.env` when port 5432 is taken). The four `.env` lines point
+the app at it, at an in-process cache instead of Redis, and at a local media
+folder. pytest and pytest-django are the project's dev dependencies
+(`karni test` runs them), and they go into the same venv.
+
+PostgreSQL is Karni's default and the database it is built and tested for:
+range columns, `EXCLUDE` constraints, trigram search and advisory locks exist
+only there. To try Karni without Docker, SQLite works too. Leave out the
+`docker compose` line and use `DATABASE_URL=sqlite:///data/db.sqlite3` in the
+`printf` line. Karni's system checks say which guarantees SQLite cannot
+give.
 
 ## 2. Add a domain
 

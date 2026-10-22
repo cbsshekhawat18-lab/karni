@@ -37,6 +37,10 @@ services:
 
   db:
     image: postgres:16
+    # Published on localhost only, so a host run (karni serve --local) can use it.
+    # Set KARNI_DB_PORT in .env when 5432 is taken.
+    ports:
+      - "127.0.0.1:${KARNI_DB_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: karni
       POSTGRES_PASSWORD: karni

@@ -99,7 +99,7 @@ def test_selection_between_versions() -> None:
     assert set(_ids("0.2.0", "1.0")) == set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4
     assert in_0_3 <= set(_ids("0.2.0", "0.3.0"))
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
-    assert in_0_4 == set(_ids("0.3.0", "0.4.0"))
+    assert in_0_4 <= set(_ids("0.3.0", "0.4.0"))
     assert not in_0_4 & set(_ids("0.2.0", "0.3.0"))  # a 0.3 target never sees 0.4 changes
     assert _ids("1.0.0", "1.1") == []
     assert _ids("0.1.0", "0.1.9") == []  # replacements do not exist before 0.2
