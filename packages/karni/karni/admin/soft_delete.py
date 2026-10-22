@@ -9,7 +9,9 @@ scope. The default changelist view is scoped back to alive rows by
 :class:`SoftDeleteListFilter`.
 
 Django's builtin ``delete_selected`` stays available and is *soft* on these
-models (``queryset.delete()`` is soft on both managers). Note that its
+models: :meth:`SoftDeleteAdminMixin.delete_queryset` soft-deletes row by row,
+and ``restore_selected`` restores row by row, so ``on_deleted`` and
+``on_restored`` listeners run. Note that its
 confirmation page lists cascade children that a soft delete will not touch —
 a documented v0.1 trade-off. ``hard_delete_selected`` is the explicit,
 superuser-only, confirmed path to real deletion.
@@ -29,7 +31,6 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.template.response import TemplateResponse
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
@@ -275,22 +276,51 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
         permissions=["change"],
     )
     def restore_selected(self, request: HttpRequest, queryset: QuerySet) -> None:
-        """Un-delete the selected rows (``deleted_at=None``).
+        """Un-delete the selected rows, one ``restore()`` each.
 
-        Uses ``.update(...)``, so ``auto_now`` does not fire: ``updated_at``
-        is set explicitly when the model has it (a standalone
-        ``SoftDeleteModel`` may not).
+        Row by row so each restore runs the model's own ``restore()`` and its
+        ``on_restored`` listeners (a booking takes its seats back). A row a
+        listener refuses (a sold-out tier) stays deleted and is reported with
+        the reason; the others are restored.
         """
-        changes: dict[str, object] = {"deleted_at": None}
-        if any(f.name == "updated_at" for f in queryset.model._meta.concrete_fields):
-            changes["updated_at"] = timezone.now()
-        restored = queryset.filter(deleted_at__isnull=False).update(**changes)
-        self.message_user(
-            request,
-            _("Restored %(count)d %(items)s.")
-            % {"count": restored, "items": model_ngettext(self.opts, restored)},
-            messages.SUCCESS,
-        )
+        from django.core.exceptions import ValidationError
+
+        from karni.errorcodes import KarniError
+
+        restored = 0
+        refused: list[str] = []
+        for obj in queryset.filter(deleted_at__isnull=False):
+            try:
+                obj.restore()
+            except (KarniError, ValidationError) as exc:
+                message = "; ".join(exc.messages) if isinstance(exc, ValidationError) else exc
+                refused.append(f"{obj}: {message}")
+            else:
+                restored += 1
+        if restored:
+            self.message_user(
+                request,
+                _("Restored %(count)d %(items)s.")
+                % {"count": restored, "items": model_ngettext(self.opts, restored)},
+                messages.SUCCESS,
+            )
+        for line in refused:
+            self.message_user(
+                request, _("Not restored: %(reason)s") % {"reason": line}, messages.ERROR
+            )
+
+    def delete_queryset(self, request: HttpRequest, queryset: QuerySet) -> None:
+        """Django's "delete selected": a soft ``delete()`` per row, in one transaction.
+
+        Row by row so the model's own ``delete()`` and its ``on_deleted``
+        listeners run (a booking gives its seats back); one transaction so a
+        listener that refuses leaves every selected row as it was.
+        """
+        from django.db import transaction
+
+        with transaction.atomic(using=queryset.db):
+            for obj in queryset:
+                obj.delete()
 
     @admin.action(
         description=gettext_lazy("Hard delete selected %(verbose_name_plural)s"),

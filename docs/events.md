@@ -40,18 +40,26 @@ avoids import cycles.
 
 ## What fires when
 
-| Operation | `on_created` | `on_updated` | `on_deleted` |
-|---|---|---|---|
-| `Model.objects.create(...)`, first `save()` | ✓ | | |
-| later `save()` | | ✓ | |
-| `instance.delete()` on a soft-delete model (`BaseModel`, `SoftDeleteModel`) | | | ✓ |
-| `instance.restore()` | | ✓ | |
-| `instance.delete()` on a plain model, `hard_delete()` of a live row, cascades | | | ✓ |
-| `hard_delete()` of a row that was already soft-deleted (a purge) | | | — (fired at the soft delete) |
-| fixture loading (`loaddata`, `raw=True` saves) | — | — | — |
-| `QuerySet.update()`, `bulk_create`, `bulk_update`, soft `QuerySet.delete()` | — | — | — |
+| Operation | `on_created` | `on_updated` | `on_deleted` | `on_restored` |
+|---|---|---|---|---|
+| `Model.objects.create(...)`, first `save()` | ✓ | | | |
+| later `save()` | | ✓ | | |
+| `instance.delete()` on a soft-delete model (`BaseModel`, `SoftDeleteModel`) | | | ✓ | |
+| `instance.restore()` | | ✓ | | ✓ |
+| `instance.delete()` on a plain model, `hard_delete()` of a live row, cascades | | | ✓ | |
+| `hard_delete()` of a row that was already soft-deleted (a purge) | | | no, it fired at the soft delete | |
+| the admin's delete and restore actions | | ✓ (restore) | ✓ | ✓ |
+| fixture loading (`loaddata`, `raw=True` saves) | no | no | no | no |
+| `QuerySet.update()`, `bulk_create`, `bulk_update`, soft `QuerySet.delete()` and `QuerySet.restore()` | no | no | no | no |
 
 The rules behind the table:
+
+- **A restore takes back what a delete gave.** `on_restored` runs inside
+  the restore's transaction. If it raises, the restore is undone and the row
+  stays deleted. EventHub uses this to take a restored booking's seats again,
+  and a sold-out tier refuses the restore with E985. The admin restores and
+  deletes row by row so these listeners run. It reports a refused row and
+  restores the rest.
 
 - **A soft delete is a delete, not an update.** `SoftDeleteModel.delete()`
   saves with `update_fields` that include `deleted_at`. `karni.events.is_soft_delete(instance, update_fields)`

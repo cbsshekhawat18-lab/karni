@@ -388,6 +388,42 @@ def no_overlap_constraints(model: type[models.Model]) -> tuple[NoOverlap, ...]:
     return tuple(c for c in model._meta.constraints if isinstance(c, NoOverlap))
 
 
+def lock_overlap_resources(instance: models.Model, using: str) -> None:
+    """Make writes to one resource take turns: a transaction-scoped advisory lock per resource.
+
+    PostgreSQL checks an ``EXCLUDE`` constraint against rows other
+    transactions are still writing, so several bookings of one room at once
+    can end in a deadlock instead of the overlap error. With this lock the
+    second writer waits for the first to commit, then meets its row and gets
+    ``E984``. The locks are taken in one order, so they cannot deadlock each
+    other, and released when the transaction ends. Other databases have no
+    ``EXCLUDE`` and take no lock.
+    """
+    from django.db import connections
+
+    connection = connections[using]
+    model = type(instance)
+    constraints = no_overlap_constraints(model)
+    if connection.vendor != "postgresql" or not constraints:
+        return
+    keys: set[int] = set()
+    for constraint in constraints:
+        if not constraint.blocks(model, instance):
+            continue
+        values = [
+            getattr(instance, model._meta.get_field(name).attname, None)
+            for name in constraint.resource
+        ]
+        if any(value is None for value in values):
+            continue
+        text = f"{model._meta.db_table}:{constraint.name}:{values!r}"
+        digest = hashlib.blake2b(text.encode(), digest_size=8).digest()
+        keys.add(int.from_bytes(digest, "big", signed=True))
+    with connection.cursor() as cursor:
+        for key in sorted(keys):
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", [key])
+
+
 def overlap_conflict(
     found: Violation,
     model: type[models.Model],

@@ -125,11 +125,19 @@ class SoftDeleteModel(models.Model):
     def is_deleted(self) -> bool:
         return self.deleted_at is not None
 
-    def _save_deleted_at(self, using: str | None) -> None:
+    def _save_deleted_at(self, using: str | None, before: Any) -> None:
         fields = ["deleted_at"]
         if any(f.name == "updated_at" for f in self._meta.concrete_fields):
             fields.append("updated_at")
-        self.save(using=using, update_fields=fields)
+        # One transaction with the on_deleted / on_restored listeners: one that
+        # refuses (a restore that would oversell) undoes the delete or restore,
+        # and the instance keeps the deleted_at it had.
+        try:
+            with transaction.atomic(using=using or self._state.db):
+                self.save(using=using, update_fields=fields)
+        except BaseException:
+            self.deleted_at = before
+            raise
 
     def delete(
         self,
@@ -137,8 +145,8 @@ class SoftDeleteModel(models.Model):
         keep_parents: bool = False,
     ) -> tuple[int, dict[str, int]]:
         """Soft-delete this row. Keeps Django's signature so callers need no special case."""
-        self.deleted_at = timezone.now()
-        self._save_deleted_at(using)
+        before, self.deleted_at = self.deleted_at, timezone.now()
+        self._save_deleted_at(using, before)
         return 1, {self._meta.label: 1}
 
     delete.alters_data = True  # type: ignore[attr-defined]
@@ -154,9 +162,9 @@ class SoftDeleteModel(models.Model):
     hard_delete.alters_data = True  # type: ignore[attr-defined]
 
     def restore(self, using: str | None = None) -> None:
-        """Un-delete this row."""
-        self.deleted_at = None
-        self._save_deleted_at(using)
+        """Un-delete this row (inside a transaction with the ``on_restored`` listeners)."""
+        before, self.deleted_at = self.deleted_at, None
+        self._save_deleted_at(using, before)
 
     restore.alters_data = True  # type: ignore[attr-defined]
 
@@ -252,9 +260,7 @@ class GuardedModel(models.Model):
         using = kwargs.get("using") or router.db_for_write(type(self), instance=self)
         guards.begin(self, plan)
         try:
-            with transaction.atomic(using=using):
-                super().save(*args, **kwargs)
-                guards.after_write(self, plan, using)
+            self._guarded_write(using, plan, args, kwargs)
         except IntegrityError as exc:
             from karni.conflicts import translate
 
@@ -264,6 +270,15 @@ class GuardedModel(models.Model):
             raise error from exc
         finally:
             guards.end(self)
+
+    def _guarded_write(self, using: str, plan: Any, args: Any, kwargs: Any) -> None:
+        """The write and its bookkeeping in one savepoint, after the no-overlap locks."""
+        from karni.constraints import lock_overlap_resources
+
+        with transaction.atomic(using=using):
+            lock_overlap_resources(self, using)
+            super().save(*args, **kwargs)
+            guards.after_write(self, plan, using)
 
     def _do_update(
         self,

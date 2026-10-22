@@ -17,7 +17,7 @@ from typing import Any
 
 from django.dispatch import receiver
 
-from karni.events import on_created, on_deleted, on_updated, queued
+from karni.events import on_created, on_deleted, on_restored, on_updated, queued
 from tests.testapp import events, tasks
 from tests.testapp.models import Entry, Shelf, Stamp
 
@@ -33,6 +33,19 @@ def shelf_created(shelf: Shelf) -> None:
 @on_updated(Shelf)
 def shelf_updated(shelf: Shelf) -> None:
     received.append(("updated", "testapp.Shelf", shelf.pk))
+
+
+#: Set by a test to make the restore listener refuse (and so undo the restore).
+refuse_restore: list[bool] = []
+
+
+@on_restored(Shelf)
+def shelf_restored(shelf: Shelf) -> None:
+    if refuse_restore:
+        from karni.exceptions import KarniValueError
+
+        raise KarniValueError("Shelf restore refused by the test listener.", code="E402")
+    received.append(("restored", "testapp.Shelf", shelf.pk))
 
 
 @on_deleted(Shelf)

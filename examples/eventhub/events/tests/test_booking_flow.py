@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from django.core import mail
+from karni.capacity import CapacityExceeded
 from karni.lifecycle import IllegalTransition
 from karni.testing.factories import create
 from karni_payments.models import Payment
@@ -99,6 +100,28 @@ def test_bookings_never_exceed_the_tier(client_as):
     assert client.delete(f"/api/bookings/{again.json()['id']}/").status_code == 204
     tier.refresh_from_db()
     assert tier.remaining == 3  # a deleted booking frees its seats too
+
+
+def test_a_restored_booking_takes_its_seats_again(client_as):
+    tier = create(TicketTier, quantity=3)
+    client = client_as("attendee")
+    booking = Booking.objects.get(pk=book(client, tier, quantity=2).json()["id"])
+    booking.delete()
+    tier.refresh_from_db()
+    assert tier.remaining == 3  # deleting gave the seats back
+    booking.restore()
+    tier.refresh_from_db()
+    assert tier.remaining == 1  # restoring took them again
+    # Sold out in the meantime: the restore is refused and the booking stays deleted.
+    booking.delete()
+    assert book(client, tier, quantity=3).status_code == 201
+    with pytest.raises(CapacityExceeded):
+        booking.restore()
+    assert booking.is_deleted
+    booking.refresh_from_db()
+    assert booking.is_deleted
+    tier.refresh_from_db()
+    assert tier.remaining == 0
 
 
 def test_a_confirmed_booking_cannot_go_back_to_pending(client_as):

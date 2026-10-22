@@ -11,6 +11,34 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- **Fixed: exporting a nested relation crashed.** A serializer that nests
+  related rows (`many=True`, or `?expand=`) made CSV and XLSX exports fail
+  with `TypeError: unhashable type: 'dict'`. Nested rows now export by the
+  related model's natural key, the same as a plain relation.
+- **Fixed: restoring a deleted row skipped its listeners.** New
+  `karni.events.on_restored`, the counterpart of `on_deleted`. It runs inside
+  the restore's transaction, so a listener that raises undoes the restore.
+  `SoftDeleteModel.delete()` and `restore()` now run in a transaction with
+  their listeners. The admin's delete and restore actions now go row by row,
+  so `on_deleted` and `on_restored` run there too (they used one bulk
+  `UPDATE` and fired nothing). A row a listener refuses is reported and the
+  rest are restored. EventHub uses this to take a restored booking's seats
+  again. A sold-out tier refuses the restore with E985.
+- **Fixed: duplicate OpenAPI operation IDs.** `GET <resource>/import/` and
+  `GET <resource>/import/{job}/` shared one ID, and so did the two
+  effective-permissions routes, so generated clients got `_retrieve_2`
+  names. A route that ends in a path parameter now gets `_by_<param>`, for
+  example `events_import_by_job_retrieve`. Clients generated from the schema
+  rename those two functions. The standard detail IDs do not change.
+- **Fixed: booking one slot at the same moment could fail with a 500.**
+  PostgreSQL sometimes settled several concurrent writes against a
+  `no_overlap` constraint with a deadlock instead of the overlap error.
+  Writes to one resource (one room, say) now take turns through a
+  transaction-scoped advisory lock, so the second writer sees the first
+  one's row and gets the 409 (E984).
+- Query budgets no longer count `SAVEPOINT` statements or those advisory
+  locks. They come from `transaction.atomic()` nesting and locking, not from
+  reading data.
 - **Typed fields: the database enforces what a value is (`karni.fields`).**
   `MoneyField` (NUMERIC(19,4), a declared currency, floats refused with
   `E962`, a declared rounding rule; `quantize`/`split`/`allocate` never lose
