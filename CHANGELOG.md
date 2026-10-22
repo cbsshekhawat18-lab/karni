@@ -11,6 +11,16 @@ reads to apply codemods and list the manual steps — and explained in
 
 ## Unreleased
 
+- The README opens with why Karni exists, then says what problem it solves,
+  how, what you get and what you still write. The canonical description now
+  leads with the same framing (your agent writes only your domain; the rest is
+  a package you upgrade) on the GitHub About, PyPI, npm, the docs homepage,
+  the FAQ and llms.txt. `scripts/check_description.py` also checks the FAQ's
+  first answer and the README's first two sections (order, the story's
+  180-word limit, the four answers in order, no marketing words), and writes
+  the homepage's description quoted.
+- All five Python packages (`karni`, `karni-cli`, `karni-payments`,
+  `karni-approvals`, `karni-impersonation`) are on PyPI (0.3.1). The README's quickstart installs them with a plain `pip install`;
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as

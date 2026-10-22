@@ -1,5 +1,5 @@
 ---
-description: Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite.
+description: "Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
 ---
 
 # Testing

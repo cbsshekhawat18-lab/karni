@@ -1,13 +1,14 @@
 ---
-description: A Django + React framework that stays a versioned dependency: declare models and access, and the API, admin, permissions, tests, seed data and React screens follow.
+description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 ---
 
 # Karni
 
-Karni is a framework, not boilerplate: it stays a versioned dependency you
-upgrade, and it is built so an AI coding agent extends it instead of
-reinventing it. You declare models and access; the API, admin, permissions,
-tests, seed data and the React screens follow from those declarations.
+Karni is an open-source Django + React framework for building with AI coding
+agents. Your agent writes only your domain. The API, admin, permissions and
+React screens come from a package you upgrade, not code it rewrites in each
+project. One rule set covers Claude Code, Cursor and Copilot. The build
+fails when an agent hand-writes what Karni ships.
 
 ```python
 class Event(BaseModel):

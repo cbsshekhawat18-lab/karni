@@ -1,5 +1,5 @@
 ---
-description: For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup.
+description: "For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
 ---
 
 # Releasing Karni

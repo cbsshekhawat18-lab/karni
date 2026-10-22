@@ -1,3 +1,7 @@
+---
+description: "Launch audit tier 2: Karni's core claims (API, admin, permissions, generators) checked in a scratch project."
+---
+
 # Tier 2 audit — core claims, verified in a scratch project
 
 Repo `main` @ `0873e51`, 2026-10-18/19. Report only; no tracked file was changed.

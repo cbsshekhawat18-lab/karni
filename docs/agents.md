@@ -1,5 +1,5 @@
 ---
-description: How Karni's agent guidance works: rules as structured data in one module, the context, rules, check and explain commands, the generated adapters and the MCP server.
+description: "How Karni's agent guidance works: rules as structured data in one module, the context, rules, check and explain commands, the generated adapters and the MCP server."
 ---
 
 # Karni for AI agents

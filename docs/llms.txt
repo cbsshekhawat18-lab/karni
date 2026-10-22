@@ -1,13 +1,13 @@
 # Karni
 
-> Karni is a Django + React framework that stays a versioned dependency instead of a boilerplate you fork. A project declares models and an `access` policy; the REST API (Django REST Framework, OpenAPI), the admin, permissions and row scoping, the React tables and forms, the tests and the seed data are generated from those declarations. It is built so AI coding agents (Claude Code, Cursor, Copilot and others) extend it instead of regenerating the same serializers, permission classes and admin files in every project. Apache-2.0, pre-release (0.x) under a stability promise.
+> Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships.
 
 The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https://github.com/cbsshekhawat18-lab/karni. Python 3.12+, Django 5.2 LTS, React 18, TypeScript.
 
 ## Start here
 
 - [Quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/): install `karni` and `karni-cli`, run `karni new`, add a model and see the API, admin and UI appear.
-- [Tutorial — build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 582 lines of project code.
+- [Tutorial — build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 593 lines of project code.
 - [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how Claude Code, Cursor and Copilot drive a Karni project through the generated adapter files, `karni context`, `karni rules` and `karni explain`.
 - [Building without an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/without-ai/): the same workflow by hand, command by command.
 
