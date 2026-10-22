@@ -33,10 +33,18 @@ PY_PACKAGES := \
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.
+# CORE_ONLY=1: packages/ only, as a clone that never installs modules/ (CI's
+# "Python core only" job). Tests that need a module skip and name it.
+ifeq ($(CORE_ONLY),1)
+PY_PACKAGES := $(filter packages/%,$(PY_PACKAGES))
+endif
+
 UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,2fa
-PY_DEV_TOOLS := pytest pytest-django factory-boy Pillow ruff mypy types-PyYAML pre-commit
+# ruff is pinned to .pre-commit-config.yaml's rev: one version decides the format
+# (0.17 started formatting Python blocks inside Markdown).
+PY_DEV_TOOLS := pytest pytest-django factory-boy Pillow ruff==0.16.9 mypy types-PyYAML pre-commit
 
 pkg_dir = $(firstword $(subst :, ,$(1)))
 pkg_mod = $(lastword $(subst :, ,$(1)))
@@ -55,10 +63,7 @@ install-py:
 	$(PY) -m pip install --upgrade pip
 	$(PY) -m pip install \
 		-e "packages/karni[$(KARNI_EXTRAS)]" \
-		-e packages/karni-cli \
-		-e modules/karni-payments \
-		-e modules/karni-approvals \
-		-e modules/karni-impersonation \
+		$(foreach p,$(filter-out packages/karni:karni,$(PY_PACKAGES)),-e $(call pkg_dir,$(p))) \
 		$(PY_DEV_TOOLS)
 
 install-ui:

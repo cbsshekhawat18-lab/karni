@@ -37,7 +37,10 @@ def serve(
                 code="C002",
             )
         addrport = f"{host or '127.0.0.1'}:{port or 8000}"
-        proc = project_mod.run_manage(project, ["runserver", addrport], docker=False, capture=False)
+        # runserver checks for unapplied migrations on start, so it opens the database.
+        proc = project_mod.run_manage(
+            project, ["runserver", addrport], docker=False, capture=False, database="connect"
+        )
     else:
         if host is not None or port is not None:
             raise CliError(

@@ -21,11 +21,14 @@ may read ([field visibility](api.md#field-visibility)); write-only fields
 never export. Relations are written as the target's
 [natural key](#natural-keys) when it has one (`venue` → `Arena`), else the
 primary key, and to-many relations join their values with `|` — so the file
-imports back.
+imports back. Only a related row the requester may read is named: one outside
+the target's read scope keeps its primary key (what the API shows for it),
+and an unreadable member of a to-many relation is left out.
 
 In the admin, every changelist has **Export selected as CSV / XLSX** actions
 (the selection, or every filtered row with "select all"), through the same
-scope and visibility. In `@karni/ui`, `<ResourceTable>` shows **Export CSV /
+scope and visibility; there, related rows are named as far as the admin's
+row scope (the user's `view` grants) shows them. In `@karni/ui`, `<ResourceTable>` shows **Export CSV /
 XLSX** buttons whenever the resource serves the route (`exportFormats={false}`
 hides them); each downloads the table's current query.
 

@@ -1,0 +1,121 @@
+name: Container image
+
+# ghcr.io/cbsshekhawat18-lab/karni: the karni command from PyPI in an image
+# (docker/karni/Dockerfile). Pushed after every successful release run, or by
+# hand for a version already on PyPI; pull requests that touch it build and
+# smoke-test it without pushing. A release created by a workflow does not
+# trigger other workflows, so this follows the Release workflow instead.
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version on PyPI to package, e.g. 0.3.1"
+        required: true
+  pull_request:
+    paths:
+      - docker/karni/**
+      - .github/workflows/container.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Build, test and push ghcr.io/${{ github.repository_owner }}/karni
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/karni
+      PUSH: ${{ github.event_name != 'pull_request' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        env:
+          DISPATCHED: ${{ inputs.version }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          latest="$(curl -fsS https://pypi.org/pypi/karni-cli/json | jq -r .info.version)"
+          case "$GITHUB_EVENT_NAME" in
+            workflow_dispatch) version="$DISPATCHED" ;;
+            workflow_run) version="${TAG#v}" ;;
+            *) version="$latest" ;;
+          esac
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release version: $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "minor=${version%.*}" >> "$GITHUB_OUTPUT"
+          echo "latest=$([[ "$version" == "$latest" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      # A release run uploads to PyPI; give the index time to serve the files.
+      - name: Wait for karni ${{ steps.version.outputs.version }} on PyPI
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for attempt in $(seq 1 30); do
+            if pip download -q --no-deps -d /tmp/probe "karni==$VERSION" "karni-cli==$VERSION"; then exit 0; fi
+            echo "not on PyPI yet (attempt $attempt)"; sleep 20
+          done
+          echo "karni $VERSION is not on PyPI"; exit 1
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (linux/amd64, for the smoke test)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/karni
+          build-args: KARNI_VERSION=${{ steps.version.outputs.version }}
+          load: true
+          tags: karni:test
+          cache-to: type=gha,mode=max
+          cache-from: type=gha
+
+      - name: Smoke test (--version, then karni new as the runner's uid)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker run --rm karni:test --version | tee /tmp/version.txt
+          grep -q "karni-cli $VERSION" /tmp/version.txt
+          mkdir -p smoke
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD/smoke:/work" karni:test new "Smoke Test"
+          test -f smoke/smoke_test/pyproject.toml
+          test -f smoke/smoke_test/frontend/package.json
+          docker run --rm karni:test explain E104 | grep -q "Fix:"
+
+      - name: Log in to ghcr.io
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push (linux/amd64 + linux/arm64)
+        if: env.PUSH == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/karni
+          build-args: KARNI_VERSION=${{ steps.version.outputs.version }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          cache-from: type=gha
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.minor }}
+            ${{ steps.version.outputs.latest == 'true' && format('{0}:latest', env.IMAGE) || '' }}

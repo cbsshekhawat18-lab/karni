@@ -161,9 +161,21 @@ def ui_dist_stale(source: Path) -> bool:
     return False
 
 
+def ui_install_command(source: Path) -> list[str]:
+    """How ``source`` gets its node_modules without rewriting files git tracks.
+
+    ``npm ci`` installs exactly what package-lock.json pins and never writes it;
+    ``npm install`` may rewrite it, which dirties a Karni checkout. Without a
+    lockfile, ``--no-package-lock`` keeps npm from creating one.
+    """
+    if (source / "package-lock.json").is_file():
+        return ["npm", "ci", "--no-audit"]
+    return ["npm", "install", "--no-audit", "--no-package-lock"]
+
+
 def ui_build_commands(source: Path) -> list[list[str]]:
-    """``npm install`` (only without node_modules) then ``npm run build``."""
-    commands = [] if (source / "node_modules").is_dir() else [["npm", "install", "--no-audit"]]
+    """The install (only without node_modules) then ``npm run build``."""
+    commands = [] if (source / "node_modules").is_dir() else [ui_install_command(source)]
     return [*commands, ["npm", "run", "build"]]
 
 

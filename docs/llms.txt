@@ -19,7 +19,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 - [Accounts](https://cbsshekhawat18-lab.github.io/karni/accounts/): email login, JWT or sessions, one-time tokens, 2FA, social login, roles as data (`KARNI_ROLES`, `user.can()`, `Can("app.model:action")`).
 - [Admin](https://cbsshekhawat18-lab.github.io/karni/admin/): every model gets a derived django-unfold admin.
 - [@karni/ui](https://cbsshekhawat18-lab.github.io/karni/ui/): schema-driven React components — ResourceTable, ResourceForm, ResourceDetail, auth, Layout.
-- [Testing](https://cbsshekhawat18-lab.github.io/karni/testing/): `assert_crud` and `assert_isolated` prove a resource's whole surface and its isolation in two lines; query budgets fail tests on N+1.
+- [Testing](https://cbsshekhawat18-lab.github.io/karni/testing/): `assert_crud` and `assert_isolated` prove a resource's whole surface and its isolation in two lines, `assert_row_hidden` proves one row outside a client's scope stays hidden on every surface; query budgets fail tests on N+1.
 - [Events and listeners](https://cbsshekhawat18-lab.github.io/karni/events/), [Scheduling](https://cbsshekhawat18-lab.github.io/karni/scheduling/), [Seeding](https://cbsshekhawat18-lab.github.io/karni/seeding/).
 - [Enforcement](https://cbsshekhawat18-lab.github.io/karni/enforcement/): `karni check`, the ESLint preset and the architecture tests that keep generic code out of projects.
 - [Karni for AI agents](https://cbsshekhawat18-lab.github.io/karni/agents/): the generated AGENTS.md / CLAUDE.md / Cursor / Copilot adapters, slash commands and the MCP server.

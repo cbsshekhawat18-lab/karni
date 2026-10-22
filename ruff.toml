@@ -9,6 +9,8 @@
 target-version = "py312"
 line-length = 100
 extend-exclude = [
+    # Docs: ruff formats Python blocks inside Markdown and rewrites snippets.
+    "*.md",
     # Cookiecutter sources contain Jinja syntax, not valid Python.
     "templates",
     "packages/karni-cli/karni_cli/_templates",

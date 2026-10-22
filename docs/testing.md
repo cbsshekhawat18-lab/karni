@@ -1,5 +1,5 @@
 ---
-description: "Karni's test tooling: the assert_crud and assert_isolated one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
+description: "Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
 ---
 
 # Testing
@@ -12,6 +12,7 @@ wires it in so that it runs without project code:
 | [`APITestCase`, `client_as`](#clients-per-role) | an authenticated client per role, in one call |
 | [`assert_crud`](#the-full-crud-surface-in-one-call) | the whole CRUD surface of a resource for a role, checked against its `access` declaration and the OpenAPI contract |
 | [`assert_isolated`](#isolation-the-test-people-forget) | one line proving a role cannot see or touch another owner's rows |
+| [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values; `<app>/factories.py` overrides |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
@@ -108,13 +109,17 @@ self.assert_isolated(EventViewSet, "organizer")
 
 Two users with the role each get a row of their own. The first must see
 their own row (the positive control) and must not reach the other's through
-any surface: the list; retrieve, update and delete (404, never a 403 that
-confirms the row exists, and the row stays unchanged); a nested `?expand=`
-from another resource that points at it; a filter, `?search=` or
-`?ordering=` parameter; the admin (the changelist, its search, the change
-form and a POST to it — for the `grant` dimension, since the admin's rows
-follow the roles' grants); an export route, when the resource has one; and
-a create body naming another owner, which is
+any surface: the list; retrieve, update (PATCH and PUT) and delete (404,
+never a 403 that confirms the row exists — a 403 passes only when the verb
+is refused for a row that does not exist too — and the row stays
+unchanged); and then every check of
+[`assert_row_hidden`](#hidden-rows-the-row-scope-check) on the other's row
+(detail actions, filters, `?search=`, `?ordering=`, `?expand=` and lists of
+primary keys from any resource relating to it, on reads and in write
+responses, and every export format), with a row pointing at it created when
+none exists; the admin (the changelist, its search, the change form and a
+POST to it — for the `grant` dimension, since the admin's rows follow the
+roles' grants); and a create body naming another owner, which is
 ignored and stamped with the requester. It runs for every isolation
 dimension that applies: `owner` (any `Owned(...)` read path) and `grant`
 (a `Granted()` or `Can` read where the role's grant for the model's `view`
@@ -125,6 +130,109 @@ dimension applies to fails and says why: `read=Authenticated()`, or a role
 whose grant is `all`, lets every signed-in user see every row, which is
 exactly the bug this catches. Probes that cannot run for a resource (no
 admin registration, no export route) are listed in the report's `notes`.
+
+## Hidden rows: the row-scope check
+
+A denial is only reassuring when it comes from the row scope. A user with no
+grant on a resource gets a 403 for every row alike, which proves nothing
+about the user who *can* list the resource but must not see one row in it:
+another owner's, one outside an `own` or `related:<key>` grant, one a
+`Where(...)` leaves out. For that row, every surface must answer exactly as
+it answers for a row that does not exist. `assert_row_hidden` checks it in
+one line, for any client and any row your test sets up:
+
+<!-- karni:example:hidden (tests/testing/test_docs_example.py runs this block) -->
+```python
+# events/tests/test_event_scope.py
+from django.utils import timezone
+
+from karni.testing import APITestCase, user_with_roles
+
+from events.models import Event
+
+
+class EventScopeTests(APITestCase):
+    def test_another_organizers_event_is_hidden(self):
+        me = self.client_as("organizer")
+        mine = Event.objects.create(title="Mine", starts_at=timezone.now(), organizer=me.user)
+        other = user_with_roles("organizer")
+        theirs = Event.objects.create(title="Theirs", starts_at=timezone.now(), organizer=other)
+        self.assert_row_hidden(me, "/api/events/", theirs, visible=mine)
+```
+
+Every check compares the hidden row with a primary key that does not exist:
+
+| Check | The hidden row must |
+|---|---|
+| `detail` | answer GET, PATCH, PUT and DELETE like the missing key (404, never a 403 that confirms it exists), with the same error, and stay unchanged |
+| `actions` | answer every `@action(detail=True)` (`history` included) like the missing key |
+| `list` | not be listed; `count` must match the rows the pages hold; `visible` (or some row) must be listed — the positive control |
+| `filters` | stay out of every filter given its own values (and `?id=`); another resource's relation filter naming it must answer like the missing key |
+| `search` | stay out of `?search=` with a word of it; with `search="<term>"` (a term only the row matches) the search must find nothing |
+| `ordering` | not change which rows or how many come back for any orderable response field (no row repeated or dropped); a model field the response does not show must not reorder the list |
+| `expand` | not be embedded by any resource relating to it, through `?expand=` or a list of primary keys, on a read or in a `PATCH` response |
+| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it |
+
+The admin counterpart checks that the changelist (and its search) leaves the
+row out, and that the change, history and delete views, read or posted to,
+answer exactly as Django's admin answers for a row that does not exist (a
+redirect to the index, never a 403) and leave the row unchanged:
+
+<!-- karni:example:hidden-admin (tests/testing/test_docs_example.py runs this block) -->
+```python
+# events/tests/test_event_admin_scope.py — KARNI_ROLES grants organizers "events.event:*": "own"
+from django.contrib.auth.models import Permission
+from django.utils import timezone
+
+from karni.testing import APITestCase, user_with_roles
+
+from events.models import Event
+
+
+class EventAdminScopeTests(APITestCase):
+    def test_the_admin_treats_another_organizers_event_as_missing(self):
+        staff = user_with_roles("organizer", is_staff=True)
+        staff.user_permissions.add(*Permission.objects.filter(codename__endswith="_event"))
+        mine = Event.objects.create(title="Mine", starts_at=timezone.now(), organizer=staff)
+        other = user_with_roles("organizer")
+        theirs = Event.objects.create(title="Theirs", starts_at=timezone.now(), organizer=other)
+        self.assert_admin_row_hidden(staff, theirs, visible=mine)
+```
+
+A leak fails with `E606` and one line per request that leaked, with the fix:
+
+```
+E606: assert_row_hidden(/api/events/, Event 0b5…): 2 problem(s) (6 checks passed)
+  - detail: GET /api/events/0b5…/ answered 403 for the hidden row but 404 for a row that
+    does not exist (a 403 confirms the row exists), expected 404: look the row up through
+    the read scope before any permission check — BaseViewSet.get_object() does …
+  - expand: PATCH /api/venues/7c1…/?expand=events answers with the hidden Event 0b5…
+    embedded: related rows in a response must be readable: …
+```
+
+A run that cannot prove anything fails too, with `E616`: a client that cannot
+list the resource (a role-level refusal hides every row alike — that is
+`assert_crud`'s denials), or one that sees no row at all.
+
+- `resource` is the list URL, or anything `assert_crud` takes (the viewset,
+  the model, the route name); `client` is an API client (`client_as(...)`)
+  or a user. In plain pytest, `from karni.testing import assert_row_hidden,
+  assert_admin_row_hidden`; the admin one takes a logged-in
+  `django.test.Client` or the staff user.
+- Each check runs on its own: `checks=["export"]`; `skip=["expand"]` runs the
+  rest. `formats=("csv",)` limits the export formats, `site=` names another
+  admin site.
+- Every check is a `check_<name>` method of `HiddenRowProbe` /
+  `AdminHiddenRowProbe` (`karni.testing.hidden`); pass a subclass as
+  `probe=` to change one, or override `pointing_rows()` to choose (or
+  create) the rows relating to the hidden one. The report lists probes that
+  could not run (no export route, nothing relates to the row) in `notes`.
+
+`assert_isolated` runs these checks on the other principal's row, so a test
+`karni make test` writes already covers them. Reach for `assert_row_hidden`
+when the scope is one `assert_isolated` cannot build two principals for (a
+`Where(...)` on a status, a tenant, a custom scope), or to pin a specific
+fixture.
 
 ## Schema snapshot
 

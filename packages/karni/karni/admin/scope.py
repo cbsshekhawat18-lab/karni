@@ -15,6 +15,7 @@ without the reason).
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from django.db.models import Model, QuerySet
@@ -23,7 +24,13 @@ from django.http import HttpRequest
 from karni.accounts.roles import rows_for
 from karni.rows import RowFilter, apply_rows
 
-__all__ = ["admin_rows", "scope_queryset", "scoped_choices", "within_scope"]
+__all__ = [
+    "admin_rows",
+    "related_rows_scope",
+    "scope_queryset",
+    "scoped_choices",
+    "within_scope",
+]
 
 
 def _exempt(model_admin: Any) -> bool:
@@ -62,6 +69,24 @@ def within_scope(model_admin: Any, request: HttpRequest, obj: Any, action: str) 
     # The base manager: a soft-deleted row shown through the admin's "deleted"
     # filter is still the user's row to restore.
     return apply_rows(type(obj)._base_manager.filter(pk=obj.pk), rows).exists()
+
+
+def related_rows_scope(
+    model_admin: Any, request: HttpRequest
+) -> Callable[[QuerySet[Any]], tuple[QuerySet[Any], bool]]:
+    """The admin's scope for related rows: what an export may name (:mod:`karni.api.related`).
+
+    The rows of any related model the user's ``view`` grants reach — the
+    same rows the relation choices offer — or every row for an exempt admin.
+    """
+
+    def scope(queryset: QuerySet[Any]) -> tuple[QuerySet[Any], bool]:
+        if _exempt(model_admin):
+            return queryset, False
+        rows = admin_rows(request, queryset.model, "view")
+        return apply_rows(queryset, rows), rows is not True
+
+    return scope
 
 
 def scoped_choices(request: HttpRequest, queryset: QuerySet[Any]) -> QuerySet[Any]:
