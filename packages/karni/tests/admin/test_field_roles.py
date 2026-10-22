@@ -19,7 +19,6 @@ from karni.accounts.permissions import assign_role
 from karni.admin.base import build_model_admin
 from tests.testapp.models import Customer
 
-
 pytestmark = pytest.mark.django_db
 
 
