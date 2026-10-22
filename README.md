@@ -68,7 +68,7 @@ What you get with no other code:
 - permissions: everyone reads, organizers and staff write
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
-All of EventHub, with payments, e-mail and four roles, is 593 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
+All of EventHub, with payments, e-mail and four roles, is 608 lines of project code. Rebuilding the leads module of Social Stats on Karni took it from 2,346 lines to 996 ([case study](docs/case-study-social-stats.md)).
 
 ## Why not just use Django or a boilerplate?
 

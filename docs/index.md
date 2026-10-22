@@ -26,7 +26,7 @@ pagination, `?expand=`, an N+1-free query plan, an admin page, a generated
 form and table in the frontend, and a test that proves the whole surface in
 one line (`assert_crud`). The reference application,
 [EventHub](tutorial.md), is an event ticketing platform with payments, a
-Celery email and four roles in **593 lines of project code**, measured.
+Celery email and four roles in **608 lines of project code**, measured.
 
 ## Where to go
 
