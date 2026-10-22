@@ -482,7 +482,11 @@ remembered per user (in `localStorage`, under the signed-in user's id).
 `density` / `onDensityChange` control density from outside. Below
 `cardBreakpoint` (640px of the table's own width, not the viewport's; `0`
 turns cards off) each row is a card: its title, then label and value pairs,
-with its checkbox and actions, and a sort choice above the cards.
+with its checkbox and actions, and a sort choice above the cards. The sort
+choice keeps keyboard focus while the sorted page loads (the list says it is
+busy instead), and when the control that opened a dialog is gone afterwards
+(a deleted row, the bulk toolbar once its action ran) focus lands on the list,
+as it lands on the scroll region in the table layout.
 
 **View state in the URL.** Page, page size, ordering, search and filters are
 query parameters under the table's namespace (`?events.page=2&events.ordering=-starts_at`),
