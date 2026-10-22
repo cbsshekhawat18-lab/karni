@@ -22,7 +22,7 @@ def serve(
     build: bool = typer.Option(False, "--build", help="compose only: rebuild images first."),
     detach: bool = typer.Option(False, "--detach", "-d", help="compose only: run in background."),
 ) -> None:
-    """Start the dev stack — wraps `docker compose up` (or `manage.py runserver` with --local)."""
+    """Start the dev stack. It wraps `docker compose up` (or `manage.py runserver` with --local)."""
     project = require_project()
     if local:
         if build or detach:

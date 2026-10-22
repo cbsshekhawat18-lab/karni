@@ -1,16 +1,24 @@
 # Changelog
 
 Every package in this repository (`karni`, `karni-cli`, `karni-payments`,
-`@karni/ui`, `@karni/payments-ui`) is released at one version, in lockstep;
-see [docs/releasing.md](docs/releasing.md).
+`@karni/ui`, `@karni/payments-ui`) is released at one version, in lockstep.
+See [docs/releasing.md](docs/releasing.md).
 
 Breaking changes and deprecations are recorded in machine-readable form in
-`packages/karni/karni/changelog/<version>.toml` — that is what `karni upgrade`
-reads to apply codemods and list the manual steps — and explained in
-`docs/migrations/<version>.md`. This file is the human summary.
+`packages/karni/karni/changelog/<version>.toml` and explained in
+`docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
+apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Plainer wording across the docs, error codes, CLI help and agent files.**
+  The documentation, the error code explanations and fixes, `karni --help`,
+  the settings reference, the agent rules and procedures, and the header of
+  the generated AGENTS.md and its siblings no longer use semicolons or em
+  dashes, and read as plain sentences. No code, setting or command changed.
+  Error code entries are headed `E104: title`. Run `karni rules sync` to
+  pick up the new adapter wording. EventHub measures 619 lines of project
+  code (the restore listener added 4).
 - **Fixed: exporting a nested relation crashed.** A serializer that nests
   related rows (`many=True`, or `?expand=`) made CSV and XLSX exports fail
   with `TypeError: unhashable type: 'dict'`. Nested rows now export by the
@@ -41,8 +49,8 @@ reads to apply codemods and list the manual steps — and explained in
   reading data.
 - **Typed fields: the database enforces what a value is (`karni.fields`).**
   `MoneyField` (NUMERIC(19,4), a declared currency, floats refused with
-  `E962`, a declared rounding rule; `quantize`/`split`/`allocate` never lose
-  a cent), `PercentField` and `QuantityField` (CHECK bounds),
+  `E962`, a declared rounding rule, and `quantize`/`split`/`allocate` that never
+  lose a cent), `PercentField` and `QuantityField` (CHECK bounds),
   `EmailField` (unique on `LOWER(email)`), `SlugField` (generated,
   collision-free), `PhoneField` (E.164 CHECK), `CountryField`/`CurrencyField`
   (CHECK against shipped ISO 3166-1 / ISO 4217 lists), `JSONField(queried=True)`
@@ -54,11 +62,11 @@ reads to apply codemods and list the manual steps — and explained in
   named like money fails boot), `W965` (CASCADE on a financial or audited
   model), `E964`/`W964` (a field or guarantee the configured database lacks),
   `W967` (a searched, filtered or ordered column without an index), plus
-  `E961`, `E963`, `E968`, `E970`; `class Karni:` gains `append_only` (BRIN),
+  `E961`, `E963`, `E968`, `E970`. `class Karni:` gains `append_only` (BRIN),
   `cascade`, `financial` and `not_money`. `karni schema` (`manage.py
   karni_schema`, `--json`) lists every column, constraint and index, why it
   exists and whether the database has it. `karni.accounts` 0005 creates
-  `btree_gist`; `CreateExtension` names the exact SQL (`E966`) when the role
+  `btree_gist`, and `CreateExtension` names the exact SQL (`E966`) when the role
   may not. `karni make model` gains `money[:EUR]`, `percent`, `quantity`,
   `email[:unique]`, `slug[:source]`, `phone`, `country`, `currency`,
   `json[:queried]` and `array:<type>` (`email`, `slug` and `json` now write
@@ -76,16 +84,16 @@ reads to apply codemods and list the manual steps — and explained in
   carries `x-karni-transitions` and `x-karni-initial`.
   `karni.fields.CapacityField(total=...)` is a counter the database keeps
   between zero and its total, consumed only with `karni.capacity.reserve()` /
-  `release()` (a locked, conditional `UPDATE`; `E985`, a 409, names what is
-  left). `class Karni: no_overlap = NoOverlap("room", "during", ignore=...)`
+  `release()` (a locked, conditional `UPDATE`, with `E985`, a 409, naming what
+  is left). `class Karni: no_overlap = NoOverlap("room", "during", ignore=...)`
   adds a PostgreSQL `EXCLUDE USING gist` constraint (creating `btree_gist`
   when first applied) that ignores soft-deleted and released rows (`E984`, a
-  409 naming the existing row); off PostgreSQL it is not enforced and
+  409 naming the existing row). Off PostgreSQL it is not enforced and
   `karni.W980` says so. New: `karni.fields.DateRangeField` /
   `DateTimeRangeField`, `karni.models.GuardedModel` (part of `BaseModel`),
   `karni make model` types `state`, `daterange`, `datetimerange` and
   `capacity`, agent rules `K115` and `K116`, codes `E980`–`E988`, `W980` and
-  `C370`–`C372`. EventHub's ticket tiers and bookings use them (615 lines of
+  `C370`–`C372`. EventHub's ticket tiers and bookings use them (619 lines of
   project code, measured).
 - **`karni why`: an access decision explained by the code that makes it.**
   `karni why events/<id> --as alice@example.com [--action update]`,
@@ -94,32 +102,32 @@ reads to apply codemods and list the manual steps — and explained in
   user and roles, the grants that applied and where each comes from, the gate
   and every part of `read`/`write` against the row, the row's values
   (redacted like the change history), the result, `file:line` and one
-  concrete fix; `--json` for agents, `why`/`why_empty` on `karni mcp`, and
-  rule `K015`. The verdict comes from running DRF's own gate and lookup in a
+  concrete fix. It adds `--json` for agents, `why`/`why_empty` on `karni mcp`,
+  and rule `K015`. The verdict comes from running DRF's own gate and lookup in a
   rolled-back transaction while the access layer records its decisions
-  (`karni.api.access.trace`); `Predicate.explain()` takes a predicate apart
+  (`karni.api.access.trace`). `Predicate.explain()` takes a predicate apart
   with the same folds `|` and `&` use. A test matrix checks the verdict
   against the API for every user, viewset, action and row of the test app.
   New: `karni.why`, `manage.py karni_why`, `BaseViewSet.base_queryset()`,
   `karni.vetoes.first_veto`, `karni.accounts.roles.grant_rows` /
-  `grant_sources`; codes `E901`–`E908`, `C310`–`C312`. See
+  `grant_sources`, and codes `E901`–`E908`, `C310`–`C312`. See
   [debugging](docs/debugging/why.md).
 - **Debugging: one request id everywhere, a development capture, and
   `karni trace` / `karni replay` / `karni explain --failure`.** Every
-  request gets an id (`X-Request-ID` on the response; a client's value is
+  request gets an id (`X-Request-ID` on the response, where a client's value is
   accepted only in development or from a trusted proxy,
   `KARNI_REQUEST_ID_TRUST_HEADER`) that follows its Celery tasks and their
   retries (a message header), its email (`X-Karni-Request-ID`), outgoing
   calls (`karni.tracing.outgoing_headers()`) and the change log
-  (`ChangeLog.request_id`, `ChangeBatch.request_id`; migration
+  (`ChangeLog.request_id`, `ChangeBatch.request_id`, migration
   `karni_audit.0003`). With `DEBUG` on, Karni writes `.karni/requests/`,
   `.karni/failures/` and `.karni/trace/` under the project, bounded
   (`KARNI_DEBUG_CAPTURE_KEEP`, `KARNI_DEBUG_TRACE_DAYS`) and redacted by
-  the change log's rules plus known secret values; with `DEBUG` off nothing
+  the change log's rules plus known secret values. With `DEBUG` off nothing
   runs. `karni trace` follows a request through its async work in order,
   `karni replay [--as USER]` re-runs it against the current code (rolled
-  back unless `--commit`), `karni explain --failure` turns a crash into a
-  brief; the same three are MCP tools and agent rules K030–K032. New codes
+  back unless `--commit`), and `karni explain --failure` turns a crash into a
+  brief. The same three are MCP tools and agent rules K030–K032. New codes
   E920–E924, W920, C320–C323. karni-payments links a webhook delivery to
   the checkout it settles. See [debugging](docs/debugging/capture.md).
 - **Debugging: `karni explain -` and `karni queries`.** `karni explain -`
@@ -134,15 +142,15 @@ reads to apply codemods and list the manual steps — and explained in
   the serializer field and relation behind them, with the optimiser's reason
   and the exact hint (`--json`, `--explain`, `--all`). The optimiser now
   records its blind spots (`karni.api.optimizer.blind_spots`). MCP tools
-  `explain_text` and `queries`; agent rules K013 and K014; codes E940–E943,
+  `explain_text` and `queries`, agent rules K013 and K014, and codes E940–E943,
   C340, C341. See [debugging](docs/debugging/explain.md).
 - One brand across the welcome page, the admin and `@karni/ui`: the same
   colours in light and dark, radius, font stack and dark-mode switch (the
   `dark` class on `<html>`, following the system preference by default). The
   `karni` package ships `@karni/ui`'s token stylesheet as the static file
   `karni/tokens.css`, a byte-for-byte copy that a test keeps identical. The
-  admin loads it through `UNFOLD["STYLES"]` with `karni/unfold-theme.css`;
-  unfold's primary scale and text colours now read the tokens (`@karni/ui`'s
+  admin loads it through `UNFOLD["STYLES"]` with `karni/unfold-theme.css`.
+  In the admin, unfold's primary scale and text colours now read the tokens (`@karni/ui`'s
   near-black primary in light mode, near-white in dark, replacing the indigo
   scale), its neutral scale holds the tokens' gray values, `BORDER_RADIUS` is
   `var(--karni-radius-md)` and the font is `@karni/ui`'s system stack instead
@@ -157,7 +165,7 @@ reads to apply codemods and list the manual steps — and explained in
   are 44px. The hard-delete confirmation uses unfold's layout and buttons (its
   buttons rendered as plain text). Account emails use the brand's colour values.
 - `@karni/ui` forms: `ResourceForm` validates when a field loses focus (not
-  per keystroke; `validationMode` / `reValidateMode` change it), puts every
+  per keystroke, and `validationMode` / `reValidateMode` change it), puts every
   DRF error shape on its field, shows a focusable summary when more than one
   thing fails, words 401/403/409/429/5xx and offline failures in a banner with
   "Try again", never loses typed input, shows a skeleton shaped like the form,
@@ -178,7 +186,7 @@ reads to apply codemods and list the manual steps — and explained in
   forwards its ref and takes `onBlur`, `aria-*`, `slots`
   (`defaultResourceSelectSlots`), `searchable`, `idsFilter`. Input, Textarea,
   Select, Checkbox, Switch and FileUpload draw `aria-invalid` with the
-  destructive tokens; `Select` and `FileUpload` take `aria-describedby`,
+  destructive tokens. `Select` and `FileUpload` take `aria-describedby`,
   `aria-invalid` and `onBlur`. A slow `PendingButton` keeps its accessible
   name. `useSchema` returns `refetch` and `isFetching`.
 - `@karni/ui` unhappy-state kit: `describeError` words any failure in plain
@@ -199,20 +207,20 @@ reads to apply codemods and list the manual steps — and explained in
   Chakra UI or Mantine theme (literal values read statically), or Karni's
   defaults listed for editing. The report lists every token mapped and every
   value not mapped with the reason (`--json` for agents, `--dry-run` to
-  preview); an edited file is never overwritten without `--force`. New error
+  preview). An edited file is never overwritten without `--force`. New error
   codes C301-C304. `karni new` does not write the file (nothing to detect in
   a fresh project). See [docs/theming.md](docs/theming.md).
 - `@karni/ui` ResourceDetail, ResourceImport, ChangeHistory, LoginForm and
   AuthGuard handle every unhappy state through the kit, each with `slots`
-  (and `defaultXSlots` to wrap). ResourceDetail: a loading placeholder in the
-  record's own layout, header included (no layout shift); "Couldn't find this
-  event" for a 404 (worded so an out-of-scope record is not confirmed to
-  exist) with a `back` action; "You can't view this event" for a 403; retry
-  that refetches the schema when that failed; offline reloads by itself;
-  `title`/`actions` may be functions of the record; Edit and Delete with
-  `onEdit`/`canEdit`, `enableDelete`/`canDelete`/`onDeleted` (delete asks
-  first and reports a refusal in the dialog). A field the role may not read
-  has no row at all; an empty value is the new shared `EmptyValue` (an en
+  (and `defaultXSlots` to wrap). ResourceDetail shows a loading placeholder in
+  the record's own layout, header included (no layout shift). A 404 shows
+  "Couldn't find this event" (worded so an out-of-scope record is not
+  confirmed to exist) with a `back` action, and a 403 shows "You can't view
+  this event". Retry refetches the schema when that failed, and offline
+  reloads by itself. `title`/`actions` may be functions of the record. Edit
+  and Delete come with `onEdit`/`canEdit`, `enableDelete`/`canDelete`/`onDeleted`
+  (delete asks first and reports a refusal in the dialog). A field the role
+  may not read has no row at all. An empty value is the new shared `EmptyValue` (an en
   dash read as "empty"), also used by ResourceTable (which now treats `""`
   as empty) and ChangeHistory. ResourceImport shows no form when the role may
   not import, keeps the file after a failed upload, confirms a commit with
@@ -220,15 +228,14 @@ reads to apply codemods and list the manual steps — and explained in
   captions and header scopes. LoginForm tells wrong credentials from
   throttling, server errors and a dropped connection, wires the message to
   the fields and focuses the email (`autoFocus`). AuthGuard can explain a
-  refusal (`explain`: a sign-in prompt for anonymous visitors,
-  PermissionDenied for a role without access; `anonymous`/`denied` replace
+  refusal (`explain` gives a sign-in prompt for anonymous visitors and
+  PermissionDenied for a role without access, and `anonymous`/`denied` replace
   one case). Deprecated: a guard with no `fallback` and no `explain` still
-  renders nothing, as in 0.3, and warns once in development; 1.0 makes
+  renders nothing, as in 0.3, and warns once in development. Version 1.0 makes
   `explain` the default (`fallback={null}` keeps rendering nothing).
   Behaviour changes: a non-HTTP sign-in failure no longer reads as wrong
-  credentials;
-  ResourceDetail's empty dash is "–" (was "—") and its error panel no longer
-  shows a raw error message.
+  credentials. ResourceDetail's empty dash is "–" (was "—"), and its error
+  panel no longer shows a raw error message.
 - `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
   input: Input, select: {...} }}>` renders every Karni component with the
   project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,
@@ -239,10 +246,10 @@ reads to apply codemods and list the manual steps — and explained in
   resolves from a CSS custom property in `--karni-color-*`, `--karni-space-*`,
   `--karni-radius-*`, `--karni-font-*` or `--karni-shadow-*` (plus stacking,
   opacity, motion and line widths). The preset maps Tailwind's scales onto
-  them, so one stylesheet rethemes every component; colours take any CSS
+  them, so one stylesheet rethemes every component. Colours take any CSS
   colour. Motion drops to 0ms under `prefers-reduced-motion`. New ESLint rule
   `karni/no-style-literals` and a test that compiles every component class
-  keep literals out; `npm run build` runs the lint. Every Storybook story
+  keep literals out, and `npm run build` runs the lint. Every Storybook story
   renders pixel-identical before and after, light and dark. The 0.3 HSL
   triplet names (`--karni-primary`, ...) still work and are deprecated
   ([docs/migrations/0.4.md](docs/migrations/0.4.md)). ResourceDetail's section
@@ -250,10 +257,10 @@ reads to apply codemods and list the manual steps — and explained in
 - `@karni/ui` app shell, keyboard and screen readers: `Layout`, `Page`,
   `Modal`, `Toaster`, `EmptyState`, `Stat`, `DataChart` and `FileUpload` take
   `className` and `slots` (`slots={{ NavLink: RouterLink }}`), with exported
-  slot contracts and `default*Slots`; `ModalTitle` and `ModalDescription` are
+  slot contracts and `default*Slots`. `ModalTitle` and `ModalDescription` are
   exported. Layout's mobile drawer is a modal dialog (focus trapped and
   returned to the menu button, Escape closes, labelled) and the shell starts
-  with a skip link; nav links, SelectTrigger and the toast close buttons show
+  with a skip link. Nav links, SelectTrigger and the toast close buttons show
   a keyboard focus ring. Toasts are announced by urgency (errors assertive)
   and pause while hovered or focused. FileUpload announces refused files,
   takes `error`, `uploading`, `aria-invalid`, `aria-describedby` and
@@ -263,11 +270,11 @@ reads to apply codemods and list the manual steps — and explained in
   (it read "Increased by +0"). `Input`, `Textarea`, `SelectTrigger` and
   `Checkbox` show a destructive border under `aria-invalid`. Contrast: token
   values change so every pair the components use reaches WCAG AA in both
-  themes (light `muted-foreground`, `destructive`, `input`, `chart-2`,
-  `chart-3`; dark `destructive`, `destructive-foreground`, `input`), checked by
+  themes (in light `muted-foreground`, `destructive`, `input`, `chart-2` and
+  `chart-3`, in dark `destructive`, `destructive-foreground` and `input`), checked by
   a new test, and the dark theme's modal and drawer scrim dims the page (it
   lightened it). axe-core runs over every Storybook story in both themes in
-  CI (WCAG 2.x A and AA) and fails the build on any violation; a story turns
+  CI (WCAG 2.x A and AA) and fails the build on any violation. A story turns
   one rule off only with a written reason. Dialogs are never taller than the
   viewport (they scroll inside), and a busy pagination button keeps its name.
 - `@karni/ui` ResourceTable in every state and at real size. Each state is its
@@ -276,20 +283,21 @@ reads to apply codemods and list the manual steps — and explained in
   "No events yet" with the create action (`onCreate`, `createLabel`) apart
   from "No events match" with "Clear filters", errors in plain words with a
   retry, a failed refresh that keeps the rows, "You can't view events" for a
-  403 (4xx are no longer retried, except 408 and 429; anything else retries as
+  403 (4xx are no longer retried, except 408 and 429. Anything else retries as
   the app's QueryClient `retry` default says, so `retry: false` shows the
   error at once), offline, and progress
   after 500ms with controls that do not double-fire. Row actions follow the
   schema's `x-karni-access` rules for the signed-in user (`canCreate`,
-  `canEdit`, `canDelete` override); delete failures are reported (row delete
+  `canEdit`, `canDelete` override). Delete failures are reported (row delete
   now confirms in a dialog instead of `window.confirm`). Bulk actions confirm
   destructive work with the count, may return `{ failed: [{ id, reason }] }`
   to mark failed rows, and show progress. Page, page size, sort, search and
-  filters live in the URL (namespaced, Back works; `syncUrl`, `urlNamespace`,
-  `stateStore` for a router). Page size choice, first/last and jump to page;
-  wide tables scroll in their own box with a sticky header and a frozen first
-  column; compact rows and hidden columns are remembered per user; below
-  `cardBreakpoint` (the table's own width) rows render as cards. Rows open
+  filters live in the URL (namespaced, and Back works), with `syncUrl`,
+  `urlNamespace` and `stateStore` for a router. There is a page size
+  choice, first/last and jump to page. Wide tables scroll in their own box with
+  a sticky header and a frozen first column. Compact rows and hidden columns
+  are remembered per user. Below `cardBreakpoint` (the table's own width), rows
+  render as cards. Rows open
   from the keyboard, checkboxes are named after their row, and page, sort,
   selection and loading changes are announced. The parsed schema now carries
   each operation's `access` rule. Changed wording: the empty screen says "No
@@ -299,37 +307,37 @@ reads to apply codemods and list the manual steps — and explained in
   wrong on our side", "Try again").
 - The README opens with why Karni exists, then says what problem it solves,
   how, what you get and what you still write. The canonical description now
-  leads with the same framing (your agent writes only your domain; the rest is
-  a package you upgrade) on the GitHub About, PyPI, npm, the docs homepage,
+  leads with the same framing (your agent writes only your domain, and the rest
+  is a package you upgrade) on the GitHub About, PyPI, npm, the docs homepage,
   the FAQ and llms.txt. `scripts/check_description.py` also checks the FAQ's
   first answer and the README's first two sections (order, the story's
   180-word limit, the four answers in order, no marketing words), and writes
   the homepage's description quoted.
 - All five Python packages (`karni`, `karni-cli`, `karni-payments`,
-  `karni-approvals`, `karni-impersonation`) are on PyPI (0.3.1). The README's quickstart installs them with a plain `pip install`;
+  `karni-approvals`, `karni-impersonation`) are on PyPI (0.3.1). The README's quickstart installs them with a plain `pip install`.
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as
   missing everywhere (404 on detail and the write verbs, absent from lists,
-  filters, search, ordering, exports and the admin); four paths leaked
+  filters, search, ordering, exports and the admin). Four paths leaked
   *related* rows and are fixed:
-  - a write's response (`PATCH`/`PUT`/`POST …?expand=`), and any response of
+  - A write's response (`PATCH`/`PUT`/`POST …?expand=`), and any response of
     a viewset with `optimize = False` or a `select_related` /
     `prefetch_related` hint, embedded related rows (and listed to-many ids)
     outside the target's read scope. The generated serializers now check
     related rows at render time (`karni.api.related`): no extra query on the
-    optimised path, one per related model and page otherwise;
-  - an export named an unreadable related row by its natural key (a venue's
+    optimised path, one per related model and page otherwise.
+  - An export named an unreadable related row by its natural key (a venue's
     name where the API shows only its id). It now keeps the id, and the
     admin's export names related rows as far as the admin's row scope shows
-    them;
+    them.
   - `?ordering=` on a to-many relation repeated each row once per related
     row, readable or not (and pushed others off the page), and on a forward
     relation sorted by the related model's `Meta.ordering`. Behaviour change
     for API clients: to-many and reverse relations are no longer orderable
     by default, and `?ordering=<relation>` sorts by its key column. An
-    explicit `ordering_fields` is unchanged;
-  - a relation in explicit `filterset_fields` filtered by the key of a row the
+    explicit `ordering_fields` is unchanged.
+  - A relation in explicit `filterset_fields` filtered by the key of a row the
     requester cannot read (200) but refused a missing one (400). Its choices
     are now the readable rows (`KarniFilterSet`), so both answer 400.
 - `karni.testing.assert_row_hidden(client, "/api/events/", row, visible=…)`
@@ -343,7 +351,7 @@ reads to apply codemods and list the manual steps — and explained in
   its own (`checks=["export"]`), `probe=` takes a `HiddenRowProbe` subclass,
   and a run that proves nothing (the client cannot list, or sees no row)
   fails with the new code `E616`. `assert_isolated` now runs the same probe on
-  the other principal's row (and probes PUT; a 403 on a write passes only when
+  the other principal's row (and probes PUT, where a 403 on a write passes only when
   a missing row gets 403 too), so tests `karni make test` writes get it
   without a change.
 - `karni check` exits 1 when only eslint fails (a raw `<table>` in a page, any
@@ -368,8 +376,8 @@ reads to apply codemods and list the manual steps — and explained in
   without Python 3.12: `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work"
   ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"`.
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
-  (0.3.1). The README's quickstart installs them with a plain `pip install`;
-  installing from a checkout is for unreleased changes only.
+  (0.3.1). The README's quickstart installs them with a plain `pip install`.
+  Installing from a checkout is for unreleased changes only.
 - `@karni/ui` and the three module UIs are on npm (0.3.1). The README's
   quickstart installs the frontend with a plain `npm install`, and `karni new`
   no longer says `@karni/ui` is unpublished.
@@ -382,13 +390,13 @@ reads to apply codemods and list the manual steps — and explained in
   Tailwind 3 and 4. The form and sign-in field gaps no longer use `space-y`
   (Tailwind 4 moved its margin onto the inline label, which ignores it).
 - Development tooling: Vite 8, Vitest 5, Storybook 10 (with
-  msw-storybook-addon 3) and Tailwind 4 in `@karni/ui` and the module UIs;
-  CI and releases on Node 24 (Node 20 is out of support; Vitest 5 needs
-  22.12 or later, npm trusted publishing needs npm 11.5); the Pages and
-  artifact actions on their current majors. `npm audit` reports nothing, dev
+  msw-storybook-addon 3) and Tailwind 4 in `@karni/ui` and the module UIs.
+  CI and releases run on Node 24 (Node 20 is out of support, Vitest 5 needs
+  22.12 or later, and npm trusted publishing needs npm 11.5). The Pages and
+  artifact actions are on their current majors. `npm audit` reports nothing, dev
   dependencies included.
 
-## 0.3.1 — 2026-10-20
+## 0.3.1 (2026-10-20)
 
 A patch release: security updates to the development tooling, Vite 6.4 for
 new projects, and publishing to PyPI. No public API changes.
@@ -408,7 +416,7 @@ new projects, and publishing to PyPI. No public API changes.
   hands a jsdom `FormData` to Node's fetch without file names, so the UI test
   setup restores them the way a browser sends them.
 
-## 0.3.0 — 2026-10-20
+## 0.3.0 (2026-10-20)
 
 See [docs/migrations/0.3.md](docs/migrations/0.3.md) for the two breaking
 changes and how to upgrade.
@@ -416,30 +424,30 @@ changes and how to upgrade.
 - Membership scoping and generated tests, from the Social Stats case study:
   `own` takes an owner path through a many-to-many
   (`owner_field = "workspace__members"`), now documented as the way to scope
-  rows to a workspace's members; the test factories accept one row for a
-  many-to-many, so `assert_crud` and `assert_isolated` drive it; a new
+  rows to a workspace's members. The test factories accept one row for a
+  many-to-many, so `assert_crud` and `assert_isolated` drive it. A new
   check, `E214`, resolves every path a role's grants filter on (owner paths,
   scope paths, custom scopes) at boot, so a scope that names a missing path
-  fails `karni check` instead of answering 500; `karni make test` says, in
+  fails `karni check` instead of answering 500. `karni make test` says, in
   its output and the test file, why it leaves `assert_isolated` out.
 - Django 5.2 LTS: karni requires `Django>=5.2.8,<5.3` (5.1 is out of
-  support; pip-audit reported ten unpatched advisories against 5.1.15) and
-  django-unfold 0.110. Python 3.14 is supported and tested — on Django 5.1
+  support, and pip-audit reported ten unpatched advisories against 5.1.15) and
+  django-unfold 0.110. Python 3.14 is supported and tested. On Django 5.1,
   every admin page failed under 3.14. Projects pinned to Django 5.1 upgrade
-  Django with karni; no project code changes were needed in EventHub,
+  Django with karni. No project code changes were needed in EventHub,
   Social Leads or the modules. Dropping Django 5.1 is a minor-release
   change under the [stability promise](docs/stability.md), released as 0.3.0.
 - `karni seed` can run again on a seeded database. Each run is a new process
   that draws the same UUID keys from the same seed, so a second run failed
   with `E612` on the primary key (found by running the README quickstart, then
   adding a model and seeding again). A key an earlier run used is now replaced
-  by one derived from it; an empty database still gets the same rows.
+  by one derived from it. An empty database still gets the same rows.
 - A generated reference: `scripts/gen_reference.py` writes `docs/REFERENCE.md`
   (every command, base class, `class Karni` key, setting, component, hook,
   module, error code, make target and slash command, with each capability's
   status) and the README's generated blocks from the source, and CI fails when
   either is stale. `karni.meta.OPTIONS` (and a module's `KARNI_OPTIONS`) now
-  documents each `class Karni` key; the generator fails on a key that code
+  documents each `class Karni` key, and the generator fails on a key that code
   reads but no list declares. Every `@karni/ui` export has a one-line JSDoc.
 - The README is rewritten: a demo recorded from a real quickstart run
   (`scripts/demo/`), a cheat sheet, the generated command table and per-area
@@ -448,7 +456,7 @@ changes and how to upgrade.
   sign-in page for the React app. Package READMEs link absolutely, so their
   links work on PyPI.
 
-## 0.2.0 — 2026-10-20
+## 0.2.0 (2026-10-20)
 
 See [docs/migrations/0.2.md](docs/migrations/0.2.md) for every breaking
 change and its migration note.
@@ -457,55 +465,55 @@ change and its migration note.
   `@requires()`, `Can("app.model:action")` in `access` declarations
   (ADR 0002).
 - Row-level scoping (ADR 0002, P2): `access = Granted()` is the default
-  `karni make viewset` writes and scopes rows by the roles' grants; the
-  admin shows only the rows the user's grants reach; `scope_exempt` with a
-  reason that `karni check` lists; `assert_isolated` gains the `grant`
+  `karni make viewset` writes and scopes rows by the roles' grants. The
+  admin shows only the rows the user's grants reach. `scope_exempt` takes a
+  reason that `karni check` lists. `assert_isolated` gains the `grant`
   dimension and probes expansion, filters, search, ordering and the admin.
 - Welcome page: `/` on first boot (`karni.welcome.welcome_urls()`, mounted
-  last by the scaffold) shows the project live — models with admin and API
+  last by the scaffold) shows the project live: models with admin and API
   links, modules, seven status checks each with the command that fixes a
-  cross, the `karni context` output and the first agent prompt. `DEBUG`
-  only, gone once the project owns `/`; `karni.E505` guards production.
+  cross, the `karni context` output and the first agent prompt. It is `DEBUG`
+  only and gone once the project owns `/`, and `karni.E505` guards production.
 - Field-level visibility (ADR 0002, P3): `class Karni: field_roles` hides
   fields per role on the API (absent, never `null`), in `?expand=`, in the
-  per-role OpenAPI schema and in the admin; write-protected fields are
-  refused naming the roles that may; `?ordering=`, filters and `?search=`
-  ignore hidden fields; `@karni/ui` refetches the schema on identity
-  change; `assert_crud` checks visibility. `?ordering=` now accepts only
-  serializer-visible fields; `search_fields` may not name a write-only
-  field (`E131`); `E212` validates `field_roles`.
+  per-role OpenAPI schema and in the admin. Write-protected fields are
+  refused naming the roles that may. `?ordering=`, filters and `?search=`
+  ignore hidden fields. `@karni/ui` refetches the schema on identity
+  change. `assert_crud` checks visibility. `?ordering=` now accepts only
+  serializer-visible fields, `search_fields` may not name a write-only
+  field (`E131`), and `E212` validates `field_roles`.
 - Change history (ADR 0002, P4): the `karni.audit` app records, for models
   that opt in with `class Karni: audit = True`, who changed what from what
   to what, captured at the model layer so the API, admin, commands and the
-  shell all leave the same entry; sensitive fields are redacted; surfaced on
-  the admin History tab, `GET /<resource>/<id>/history/` and
-  `<ChangeHistory/>`; retention pruning off by default; `karni check` flags
+  shell all leave the same entry. Sensitive fields are redacted. The history
+  shows on the admin History tab, `GET /<resource>/<id>/history/` and
+  `<ChangeHistory/>`. Retention pruning is off by default. `karni check` flags
   `update()`/`bulk_update()` on audited models (`audited-bulk-write`, `K113`).
 - Permission matrix (ADR 0002, P5): Roles → *Permission matrix* in the
-  admin changes who may do what with no deploy — roles across, models down,
-  a scope selector per action, bulk selectors, a confirmation diff — with
+  admin changes who may do what with no deploy (roles across, models down,
+  a scope selector per action, bulk selectors, a confirmation diff), with
   the guard rails (system roles keep their declared grants, nobody grants
   what they do not hold, nobody removes their own last permission to change
-  permissions) and the matrix's own change history; *Effective permissions*
-  answers "why can this person see this?" per user; the same as an API
-  under `api/auth/permissions/` for custom UIs, fixtures and tests
+  permissions) and the matrix's own change history. *Effective permissions*
+  answers "why can this person see this?" per user. The same is available as
+  an API under `api/auth/permissions/` for custom UIs, fixtures and tests
   (`E213`). `RolePermission.origin` tells the sync which grants the matrix
-  owns; `KARNI_MATRIX_EXCLUDE`.
+  owns. Also new: `KARNI_MATRIX_EXCLUDE`.
 - Import and export (ADR 0002, P6): `GET /<resource>/export/?format=csv|xlsx`
-  on every resource — the list as the request sees it, filters and scope and
-  field visibility included, relations as natural keys — and a four-step
+  on every resource (the list as the request sees it, filters and scope and
+  field visibility included, relations as natural keys) and a four-step
   import (`/<resource>/import/…`): upload, map columns (remembered per model
   per user), the mandatory dry run with exact counts and per-row errors,
-  then one transaction recorded as one audit batch; large files run in
-  Celery with progress; per-model hooks in `class Karni` (`natural_key`,
-  `import_key`, `import_lookup`, `import_transform`, `after_import`); a
-  downloadable template per model. Export actions and an Import page on
-  every Karni admin; `<ResourceImport/>` and export buttons on
-  `<ResourceTable>` in `@karni/ui`. `KARNI_IMPORT_INLINE_ROWS`,
-  `KARNI_IMPORT_MAX_ROWS`, `KARNI_EXPORT_MAX_ROWS`; `E801`–`E803`.
+  then one transaction recorded as one audit batch. Large files run in
+  Celery with progress. Per-model hooks live in `class Karni` (`natural_key`,
+  `import_key`, `import_lookup`, `import_transform`, `after_import`), and
+  there is a downloadable template per model. Every Karni admin gets export
+  actions and an Import page, and `@karni/ui` gets `<ResourceImport/>` and
+  export buttons on `<ResourceTable>`. Settings `KARNI_IMPORT_INLINE_ROWS`,
+  `KARNI_IMPORT_MAX_ROWS` and `KARNI_EXPORT_MAX_ROWS`, codes `E801`–`E803`.
 - Write interception: every `BaseModel` save and delete sends
-  `karni.signals.pre_write`; a receiver that raises `KarniWriteDeferred`
-  stops the write before any SQL — the API answers 202 with its payload,
+  `karni.signals.pre_write`. A receiver that raises `KarniWriteDeferred`
+  stops the write before any SQL: the API answers 202 with its payload, and
   the admin shows its message. The hook behind the new `karni-approvals`
   module (M1): `class Karni: requires_approval = [...]` turns a maker's
   guarded change into a pending change a second person approves or
@@ -515,7 +523,7 @@ change and its migration note.
   `@karni/approvals-ui` (`<ApprovalsQueue/>`, `<ApprovalsBadge/>`).
 - Vetoes: `karni.vetoes.register_veto` refuses an action at the API and
   admin gates after the access declaration admitted it (a maintenance
-  freeze, a read-only tenant); `KarniAdminMixin.vetoed()`. The hook behind
+  freeze, a read-only tenant), plus `KarniAdminMixin.vetoed()`. The hook behind
   the new `karni-impersonation` module (M2): "log in as user" for support
   with an explicit `impersonate` permission never implied by staff status,
   no privilege escalation (a target holding anything the actor lacks is
@@ -524,39 +532,39 @@ change and its migration note.
   `karni.audit` (the row's actor is the target, the batch's actor the
   impersonator), a configurable time limit, a hard block on deleting,
   exporting and payment changes while impersonating, the target notified
-  and a reason required by default, a threat model in the README;
-  `karni.audit.capture.within_batch`; `@karni/impersonation-ui`
-  (`<ImpersonationBanner/>`); `useAuth().adoptTokens` in `@karni/ui`.
+  and a reason required by default, a threat model in the README. Also new:
+  `karni.audit.capture.within_batch`, `@karni/impersonation-ui`
+  (`<ImpersonationBanner/>`) and `useAuth().adoptTokens` in `@karni/ui`.
 - `karni check` and the architecture suite now scan a project's apps
   without `BASE_DIR` (the audit's "enforcement scans zero files" finding).
 - The launch audit's remaining findings: `karni migrate` creates `pg_trgm`
-  (`?search=` no longer 500s on a fresh PostgreSQL); `KARNI_CACHE=locmem`
+  (`?search=` no longer 500s on a fresh PostgreSQL). `KARNI_CACHE=locmem`
   runs a project without Redis and the quickstart uses it, with pytest in
-  its install line; `karni.welcome.media_urls()` serves uploads in
-  development; `karni --version`; `karni doctor` with the venv outside the
-  project; `karni context` (and the MCP `context` tool) from the interpreter
-  running karni-cli; `karni serve`/`karni worker` pass SIGTERM on to the
-  server; `karni test` says when pytest is missing (`C011`); `karni check`
-  runs the frontend's ESLint next to jscpd; the scaling check also measures
-  every list with `?expand=`; a `KARNI_*` dotted path that cannot be imported
-  is `E506` naming the setting (`E507` for `KARNI_CACHE`); generated detail
-  pages expand their relations; a required relation left empty says
-  "Required" and an optional one clears; `[tool.karni] baseline` in a new
-  project's pyproject, so `karni upgrade` never reports changes a fresh
-  scaffold already satisfies; `LOGIN_REDIRECT_URL` defaults to the admin;
-  the seed login says "superuser"; the two schema warnings are gone. The
+  its install line. `karni.welcome.media_urls()` serves uploads in
+  development. Also fixed: `karni --version`, `karni doctor` with the venv
+  outside the project, and `karni context` (and the MCP `context` tool) from
+  the interpreter running karni-cli. `karni serve`/`karni worker` pass SIGTERM
+  on to the server. `karni test` says when pytest is missing (`C011`).
+  `karni check` runs the frontend's ESLint next to jscpd. The scaling check
+  also measures every list with `?expand=`. A `KARNI_*` dotted path that
+  cannot be imported is `E506` naming the setting (`E507` for `KARNI_CACHE`).
+  Generated detail pages expand their relations. A required relation left
+  empty says "Required" and an optional one clears. A new project's pyproject
+  has `[tool.karni] baseline`, so `karni upgrade` never reports changes a fresh
+  scaffold already satisfies. `LOGIN_REDIRECT_URL` defaults to the admin.
+  The seed login says "superuser". The two schema warnings are gone. The
   cosmetics too: choice labels from the schema's choice list instead of raw
   markdown help text (`FieldDef.enumLabels`), one casing for every table
   header, `karni rules` trimmed (402 cl100k tokens, measured), and the
   admin's *All* rows counted once. The EventHub Playwright journeys ran
   (three passed) and every package built, installed into a clean venv and
   dry-run published.
-- Every `BaseViewSet` declares `access`; relation fields and `?expand=`
-  follow the target's read scope; query budgets fail tests.
+- Every `BaseViewSet` declares `access`. Relation fields and `?expand=`
+  follow the target's read scope. Query budgets fail tests.
 - Errors that teach: every error carries a code, `karni explain <code>`,
   the generated error reference.
 - `karni make …` generators and the project runners (`karni serve`,
-  `migrate`, `test`, `seed`, …); `karni upgrade` with codemods.
+  `migrate`, `test`, `seed`, …), and `karni upgrade` with codemods.
 - The documentation site, the EventHub reference application, release
   automation, the brand assets.
 

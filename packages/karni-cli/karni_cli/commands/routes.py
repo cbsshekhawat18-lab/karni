@@ -13,7 +13,10 @@ def routes(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """List every URL: methods, name, view, model, access — wraps `manage.py karni_routes`."""
+    """List every URL with its methods, name, view, model and access.
+
+    It wraps `manage.py karni_routes`.
+    """
     project = require_project()
     args = ["karni_routes", *(["--json"] if as_json else [])]
     proc = project_mod.run_manage(project, args, docker=docker, service=service, capture=False)

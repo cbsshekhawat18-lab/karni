@@ -42,8 +42,8 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     (
         "remaining:capacity:quantity",
         (
-            'CapacityField(total="quantity"): consumed with karni.capacity.reserve(); '
-            "without :total, CapacityField(default=0)"
+            'CapacityField(total="quantity"), consumed with karni.capacity.reserve(). '
+            "Without :total, CapacityField(default=0)"
         ),
     ),
 )

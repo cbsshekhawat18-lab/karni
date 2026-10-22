@@ -6,7 +6,7 @@ description: Why Karni generates serializers from models instead of hand-writing
 
 In a plain DRF project, every model gets a serializer that restates its
 fields, an admin that restates them again, a filter set, a form schema on the
-frontend, and a test fixture — five copies of one fact. They drift. Karni
+frontend, and a test fixture: five copies of one fact. They drift. Karni
 keeps the fact in one place, the model, and generates the rest.
 
 ## What `BaseViewSet(model=X)` generates
@@ -16,19 +16,19 @@ time from the model's fields, with:
 
 - the audit fields (`id`, `created_at`, `updated_at`, `created_by`,
   `updated_by`) read-only, password-named fields never exposed, and
-  user-model flags read-only;
+  user-model flags read-only
 - a deterministic, app-qualified component name in the OpenAPI schema
   (`EventsEvent`, `EventsEventRequest`), so the frontend's generated types
-  never collide;
+  never collide
 - relation fields that accept only primary keys the requester may read,
   through the target model's own `access` (see [permissions at the
-  queryset](queryset-permissions.md));
+  queryset](queryset-permissions.md))
 - `?expand=` variants, nested one level per segment and cached per
-  expand-set;
+  expand-set
 - the model's `clean()` run on every create and update, so a domain
-  invariant lives on the model and arrives as a 400 keyed by field;
+  invariant lives on the model and arrives as a 400 keyed by field
 - plain model defaults published as `default:` in the schema, so a generated
-  form starts from them.
+  form starts from them
 
 The same serializer drives the admin's columns, the filter set, the query
 optimiser (it walks the serializer tree to derive `select_related` and
@@ -78,7 +78,7 @@ boundaries.
   the admin, the filter set, the form and the table.
 - **A schema the frontend can trust.** Component names, enum members,
   defaults, nullability and relation targets come from the same code that
-  serves the data; `assert_schema_snapshot()` fails CI when they change.
+  serves the data, and `assert_schema_snapshot()` fails CI when they change.
 - **Less for an agent to get wrong.** The serializer is not a file an agent
   writes, so it cannot omit a read-only field or expose a password hash.
 

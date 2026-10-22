@@ -358,7 +358,7 @@ _UNSET: Final = object()
 
 @dataclass(frozen=True, init=False)
 class Budget:
-    """``query_budget = Budget(list=25, reason="...")`` — a viewset's own query budgets.
+    """``query_budget = Budget(list=25, reason="...")``: a viewset's own query budgets.
 
     Keyword per action (``list``, ``retrieve``, ``create``, ``update``,
     ``partial_update``, ``destroy`` or a custom ``@action`` name), plus

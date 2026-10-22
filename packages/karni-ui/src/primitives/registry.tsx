@@ -71,7 +71,8 @@ export interface KarniPrimitivesProviderProps {
 
 /**
  * Registers the project's primitives for everything inside it. KarniProvider
- * renders one from its `primitives` prop; nest another to change a subtree.
+ * renders one from its `primitives` prop, and you can nest another to change
+ * a subtree.
  */
 export function KarniPrimitivesProvider({
   value,

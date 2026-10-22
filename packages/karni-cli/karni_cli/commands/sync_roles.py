@@ -15,7 +15,9 @@ def sync_roles(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Create or update the roles KARNI_ROLES declares — wraps `manage.py karni_sync_roles [ARGS]`.
+    """Create or update the roles KARNI_ROLES declares.
+
+    It wraps `manage.py karni_sync_roles [ARGS]`.
 
     Expands each role's grant patterns against every model and action into
     Role, Permission and RolePermission rows: creates what is missing,

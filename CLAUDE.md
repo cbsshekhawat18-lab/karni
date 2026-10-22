@@ -2,7 +2,7 @@
 
 Django + React framework that eliminates repeated boilerplate so AI coding agents write only domain-specific code.
 Core principle: if code would be written more than once across projects, it belongs in a Karni
-base class or component — never regenerated.
+base class or component, never regenerated.
 
 ## Stack
 - Python 3.12+, Django 5.2 LTS, DRF + drf-spectacular, Pydantic v2, django-environ
@@ -12,11 +12,11 @@ base class or component — never regenerated.
 - ruff, mypy, pytest, factory-boy, ESLint, Prettier, Vitest, Playwright
 
 ## Repo layout
-- `packages/karni/` — Python package (core)
-- `packages/karni-ui/` — React component library (npm: @karni/ui)
-- `packages/karni-cli/` — the `karni` command
-- `templates/project/` — cookiecutter scaffold
-- `modules/` — optional installable apps
+- `packages/karni/`: Python package (core)
+- `packages/karni-ui/`: React component library (npm: @karni/ui)
+- `packages/karni-cli/`: the `karni` command
+- `templates/project/`: cookiecutter scaffold
+- `modules/`: optional installable apps
 - `docs/`
 
 ## Rules for all code in this repo

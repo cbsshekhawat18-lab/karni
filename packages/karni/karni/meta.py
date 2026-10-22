@@ -88,7 +88,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "owner_field",
         "`created_by`",
         "The field or path (through foreign keys and many-to-manys) that leads to the user "
-        "who owns a row; the `own` scope filters on it.",
+        "who owns a row. The `own` scope filters on it.",
         'owner_field = "workspace__members"',
     ),
     Option(
@@ -100,13 +100,13 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "actions",
         "`()`",
-        "Permission actions besides view, add, change and delete; roles grant them like any other.",
+        "Permission actions besides view, add, change and delete. Roles grant them like any other.",
         'actions = ["approve", "export"]',
     ),
     Option(
         "field_roles",
         "`{}`",
-        "Which roles see and change a field; the API, the admin and exports hide it from the rest.",
+        "Which roles see and change a field. The API, the admin and exports hide it from the rest.",
         'field_roles = {"salary": {"read": ["hr", "manager"], "write": ["hr"]}}',
     ),
     Option(
@@ -173,8 +173,8 @@ OPTIONS: Final[tuple[Option, ...]] = (
     Option(
         "financial",
         "inferred",
-        "Whether the model holds money for the CASCADE check; inferred from money fields "
-        "and payments-like model names.",
+        "Whether the model holds money for the CASCADE check. It is inferred from money "
+        "fields and payments-like model names.",
         "financial = True",
     ),
     Option(
@@ -190,7 +190,7 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "`None`",
         "Rows that may not overlap in time per resource: a `NoOverlap(...)`, a tuple of the "
         "resource field(s) then the range, or a list of them. PostgreSQL enforces it with an "
-        "`EXCLUDE` constraint the model's migration creates; soft-deleted rows never block.",
+        "`EXCLUDE` constraint the model's migration creates. Soft-deleted rows never block.",
         'no_overlap = NoOverlap("room", "during", ignore={"status": ["cancelled"]})',
     ),
 )

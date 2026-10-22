@@ -17,8 +17,8 @@ from karni_cli.project import CliError, find_project
 
 config_app = typer.Typer(
     help=(
-        "Read and write Karni settings: project .karni/config.toml (committed) or "
-        "--global ~/.config/karni/config.toml; the project wins."
+        "Read and write Karni settings in the project's .karni/config.toml (committed) "
+        "or, with --global, in ~/.config/karni/config.toml. The project's value wins."
     ),
     no_args_is_help=True,
     add_completion=False,

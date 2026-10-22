@@ -79,7 +79,7 @@ def command(
 
     Only needed to steer a model's demo data: Meta.count pins its rows per
     run, and a class attribute overrides a field (a value or a factory-boy
-    declaration); every other field stays inferred from its name and type.
+    declaration). Every other field stays inferred from its name and type.
     """
     ws = project_workspace(force)
     plan(ws, resolve_app(ws, app), model, count=count)

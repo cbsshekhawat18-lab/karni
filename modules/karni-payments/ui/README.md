@@ -3,9 +3,9 @@
 Payments components for Karni backends, composing [`@karni/ui`](https://www.npmjs.com/package/@karni/ui).
 Ships two components for the `karni_payments` Django app (`karni add payments`):
 
-- **`CheckoutButton`** — starts a provider checkout (`POST /api/payments/checkout/`) and
+- **`CheckoutButton`**: starts a provider checkout (`POST /api/payments/checkout/`) and
   redirects the user to the provider's hosted page.
-- **`PaymentStatus`** — live, token-styled status badge + amount for one payment, with
+- **`PaymentStatus`**: a live, token-styled status badge + amount for one payment, with
   optional polling while a webhook-driven status settles.
 
 ## Install
@@ -15,12 +15,12 @@ npm install @karni/payments-ui @karni/ui @tanstack/react-query
 ```
 
 Peer dependencies: `react` / `react-dom` (`^18 || ^19`), `@karni/ui` (`^0.1.0`),
-`@tanstack/react-query` (`^5`). Note that `@karni/ui` is pre-1.0: 0.x minors may break,
+`@tanstack/react-query` (`^5`). `@karni/ui` is pre-1.0 and its 0.x minors may break,
 so keep the two packages' versions moving together.
 
 ## Setup
 
-Both components read the Karni client from context — wrap your app in
+Both components read the Karni client from context, so wrap your app in
 `<KarniProvider>` exactly as described in the
 [`@karni/ui` README](https://www.npmjs.com/package/@karni/ui) ("Provider setup"):
 
@@ -35,7 +35,7 @@ export function App() {
 ```
 
 The components call resource-relative paths (`/payments/checkout/`,
-`/payments/<id>/`); the client's `baseUrl` carries the `/api` prefix.
+`/payments/<id>/`). The client's `baseUrl` carries the `/api` prefix.
 
 ## Never trust client amounts
 
@@ -59,7 +59,7 @@ import { CheckoutButton } from "@karni/payments-ui";
   cancelUrl="https://app.example.com/billing/cancel"
   onError={(error) => toast({ title: "Checkout failed" })}
 >
-  Upgrade — $49
+  Upgrade for $49
 </CheckoutButton>;
 ```
 
@@ -70,7 +70,7 @@ import { CheckoutButton } from "@karni/payments-ui";
 | `metadata?`                | `Record<string, unknown>`  | Stored on `Payment.metadata`.                                                                     |
 | `successUrl` / `cancelUrl` | `string`                   | Validated server-side against allowed origins (G2).                                               |
 | `onError?`                 | `(error: unknown) => void` | Receives a `KarniApiError` for non-2xx responses.                                                 |
-| `navigate?`                | `(url: string) => void`    | Redirect strategy; defaults to `window.location.assign`. Inject for tests or client-side routers. |
+| `navigate?`                | `(url: string) => void`    | Redirect strategy. Defaults to `window.location.assign`. Inject for tests or client-side routers. |
 | ...`ButtonProps`           |                            | Every `@karni/ui` `Button` prop (`variant`, `size`, `className`, `disabled`, ...) passes through. |
 
 On success the button invalidates every `["karni", "payments"]`-rooted query
@@ -85,15 +85,15 @@ import { PaymentStatus } from "@karni/payments-ui";
 <PaymentStatus paymentId={payment.id} poll={3000} />;
 ```
 
-| Prop                                  | Type                                        | Notes                                                                                      |
-| ------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `paymentId`                           | `string \| number`                          | Fetched via `useResourceItem("payments", id)`.                                             |
-| `poll?`                               | `false \| number`                           | `false` (default) fetches once; a number maps to TanStack Query's `refetchInterval` in ms. |
-| `className?`                          | `string`                                    | Merged onto the wrapper.                                                                   |
-| `statusLabels?` / `statusClassNames?` | per-status overrides                        | i18n / theming hatches.                                                                    |
-| `formatAmount?`                       | `(payment) => string`                       | Replaces the default `Intl.NumberFormat` currency rendering.                               |
-| `loadingFallback?` / `errorFallback?` | `ReactNode` (error also accepts a function) | Replace the skeleton / error message.                                                      |
-| `children?`                           | `(payment) => ReactNode`                    | Full render override.                                                                      |
+| Prop                                  | Type                                        | Notes                                                                                          |
+| ------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `paymentId`                           | `string \| number`                          | Fetched via `useResourceItem("payments", id)`.                                                 |
+| `poll?`                               | `false \| number`                           | `false` (default) fetches once, and a number maps to TanStack Query's `refetchInterval` in ms. |
+| `className?`                          | `string`                                    | Merged onto the wrapper.                                                                       |
+| `statusLabels?` / `statusClassNames?` | per-status overrides                        | i18n / theming hatches.                                                                        |
+| `formatAmount?`                       | `(payment) => string`                       | Replaces the default `Intl.NumberFormat` currency rendering.                                   |
+| `loadingFallback?` / `errorFallback?` | `ReactNode` (error also accepts a function) | Replace the skeleton / error message.                                                          |
+| `children?`                           | `(payment) => ReactNode`                    | Full render override.                                                                          |
 
 Styling is design-token-only (`bg-muted`, `bg-primary`, `bg-destructive`,
 `bg-secondary`, ...), so the badge follows any `--karni-*` theme override and dark
@@ -103,14 +103,14 @@ mode automatically.
 
 On import the package feature-detects `registerComponentRole` on `@karni/ui` and
 registers the `"checkout-button"` and `"payment-status"` roles when the registry
-exists; on older `@karni/ui` versions it silently skips (G8). `registerPaymentRoles`
+exists. On older `@karni/ui` versions it silently skips (G8). `registerPaymentRoles`
 and `PAYMENT_COMPONENT_ROLES` are exported for manual registration.
 
 ## Local development (monorepo)
 
 `@karni/ui` is resolved via `file:../../../packages/karni-ui` for local installs.
 Because a fresh checkout has no built `dist/` in `packages/karni-ui`, the tsconfig
-and vitest config alias `@karni/ui` straight to its source — `npm install` followed
+and vitest config alias `@karni/ui` straight to its source, so `npm install` followed
 by `npm test` works without building `@karni/ui` first.
 
 ```bash

@@ -15,7 +15,7 @@ def migrate(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Apply migrations — wraps `manage.py migrate [ARGS]`."""
+    """Apply migrations. It wraps `manage.py migrate [ARGS]`."""
     project = require_project()
     proc = project_mod.run_manage(
         project,

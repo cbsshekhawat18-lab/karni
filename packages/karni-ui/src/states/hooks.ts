@@ -30,7 +30,7 @@ function subscribeOnline(onChange: () => void): () => void {
   };
 }
 
-/** Whether the browser reports a network connection; re-renders when it changes. */
+/** Returns whether the browser reports a network connection and re-renders when it changes. */
 export function useOnlineStatus(): boolean {
   return React.useSyncExternalStore(
     subscribeOnline,

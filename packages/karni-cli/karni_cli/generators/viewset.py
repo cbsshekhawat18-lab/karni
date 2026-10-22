@@ -165,12 +165,12 @@ def command(
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py — CRUD at /api/<models>/.
+    """Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py, with CRUD at `/api/<models>/`.
 
-    Declares `model = <Model>` and the mandatory `access` (ADR 0001):
+    It declares `model = <Model>` and the mandatory `access` (ADR 0001):
     granted (default: whatever KARNI_ROLES grants for the model, row-scoped),
-    authenticated, public-read (anonymous reads), owned:<field> (rows whose
-    <field> is the user), staff (role "staff"), role:<name>.
+    authenticated, public-read (anonymous reads), `owned:<field>` (rows whose
+    `<field>` is the user), staff (role "staff") or `role:<name>`.
     """
     ws = project_workspace(force)
     target = resolve_app(ws, app)

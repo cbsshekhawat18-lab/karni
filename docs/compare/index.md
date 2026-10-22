@@ -23,7 +23,7 @@ checked on 2026-10-21 and link to their sources.
 
 | | Plain Django + DRF | cookiecutter-django | SaaS Pegasus | React boilerplate | Karni |
 |---|---|---|---|---|---|
-| You start with | an empty project | a generated project you own | a generated codebase you own (paid; open-source edition) | a copied repository | a dependency you upgrade |
+| You start with | an empty project | a generated project you own | a generated codebase you own (paid, with an open-source edition) | a copied repository | a dependency you upgrade |
 | Per-model API, admin, permissions | you write them | you write them | generated once, then yours | you write them | derived from the model and `access` rule |
 | An upstream fix reaches your code | for Django and DRF | no official path | regenerate and merge | no | `karni upgrade` |
 | React front end | your own | not offered | HTMX or React | yes | `@karni/ui` |

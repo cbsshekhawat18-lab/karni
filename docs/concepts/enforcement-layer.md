@@ -4,12 +4,12 @@ description: Why every Karni rule fails a build, why every rule has an inline op
 
 # The enforcement layer, and opting out of it
 
-Karni's promise — projects write only domain code — only holds if the generic
-code cannot creep back in. A framework that merely *offers* a base class gets
+Karni promises that projects write only domain code. That only holds if the
+generic code cannot creep back in. A framework that merely *offers* a base class gets
 forked the first time someone is in a hurry. So Karni enforces its
 conventions, every rule fails a build, and every rule has an inline opt-out
 that requires a reason. [Enforcement](../enforcement.md) is the rule-by-rule
-reference; this page is the reasoning.
+reference. This page is the reasoning.
 
 ## Three places, one registry
 
@@ -19,26 +19,26 @@ three enforcers, so a convention is stated once:
 | Where | What runs | When |
 |---|---|---|
 | `karni rules --check <file>` | a fast, single-file, static subset | as an agent or a person writes a file |
-| `karni check` | the architecture checks (AST over project code), jscpd duplication, the `@karni/ui` ESLint preset | before a commit; in CI |
+| `karni check` | the architecture checks (AST over project code), jscpd duplication, the `@karni/ui` ESLint preset | before a commit, and in CI |
 | `pytest --pyargs karni.testing.architecture` | the same checks plus the ones that need a database (`query-scaling`, the N+1 detector) | in CI |
 
-Only *project* code is checked — apps under `BASE_DIR`. Installed packages,
+Only *project* code is checked, meaning apps under `BASE_DIR`. Installed packages,
 including Karni's own modules, pass these rules in their own CI.
 
 ## What the rules protect
 
 - **The base classes** (`model-base`, `viewset-base`, `admin-convention`):
   a model that skips `BaseModel` loses soft delete, audit stamps and the
-  scope pipeline silently; a viewset that skips `BaseViewSet` loses the
+  scope pipeline silently. A viewset that skips `BaseViewSet` loses the
   access gate.
 - **The access declaration** (`viewset-access`, `access-override`): a
-  viewset without `access` denies everything at runtime; overriding the row
+  viewset without `access` denies everything at runtime. Overriding the row
   filter is allowed, but it must say why, where a reviewer sees it.
 - **Bounded responses** (`unpaginated-action`, `query-scaling`): a list that
   grows with the table, or a query count that grows with the rows, is a
   production incident waiting for data.
 - **One implementation** (`redundant-serializer`, `duplicate`, frontend
-  jscpd): a copy of generated or shipped code drifts; the rule names the
+  jscpd): a copy of generated or shipped code drifts. The rule names the
   Karni API to use instead.
 - **Boundaries** (`raw-sql`, `http-client`, `no-direct-http`,
   `no-deep-imports`, `no-raw-elements`, `max-page-lines`): SQL lives under
@@ -47,7 +47,7 @@ including Karni's own modules, pass these rules in their own CI.
 
 A rule is added only when a pattern has three real occurrences, and the
 reference app's [FRICTION.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/FRICTION.md)
-is how the missing abstractions are found — the rule set and the base
+is how the missing abstractions are found. The rule set and the base
 classes grow together.
 
 ## Opting out: allowed, visible, reasoned
@@ -83,7 +83,7 @@ and people but is not machine-checked unless you wire a check for it.
 ## Why fail the build rather than warn
 
 A warning is a rule nobody follows. An agent in particular optimises for the
-build passing; if a convention is a warning, the agent learns to ignore it,
+build passing. If a convention is a warning, the agent learns to ignore it,
 and the human reviewing a pull request cannot tell a deliberate exception
 from an accident. A failure with an explicit, reasoned opt-out gives both
 the agent and the reviewer the same, small decision to make.

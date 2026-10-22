@@ -27,8 +27,9 @@ function CloseIcon(props: IconProps): React.ReactElement {
 }
 
 /**
- * Escape hatch for footer buttons: any element wrapped in <ModalClose asChild>
- * closes the modal on click (re-exported Radix Dialog.Close).
+ * Escape hatch for footer buttons: any element wrapped in
+ * `<ModalClose asChild>` closes the modal on click (re-exported Radix
+ * Dialog.Close).
  */
 export const ModalClose = DialogPrimitive.Close;
 
@@ -155,7 +156,7 @@ export interface ModalProps {
 
 /**
  * Themed Radix Dialog. Works controlled (`open` + `onOpenChange`) or
- * uncontrolled via the `trigger` slot; `footer` is the actions row.
+ * uncontrolled via the `trigger` slot, and `footer` is the actions row.
  *
  * Keyboard and screen readers: the dialog is named by its title and
  * described by its description; focus moves into it on open, Tab stays

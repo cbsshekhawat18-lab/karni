@@ -1,18 +1,18 @@
 # karni
 
-Batteries-included Django glue: one call assembles the settings every
-Django + DRF + Celery project repeats, with production-safe defaults, startup
-validation, and an escape hatch for every single value. On top of the
+Django glue with the batteries included. One call assembles the settings
+every Django + DRF + Celery project repeats, with production-safe defaults,
+startup validation, and an escape hatch for every value. On top of the
 settings core it ships the three batteries every project rewrites:
 
-- **karni.accounts** — email-based swappable user, JWT or session auth
+- **karni.accounts**: an email-based swappable user, JWT or session auth
   endpoints, verified-email / password-reset / email-change flows, roles,
   optional TOTP 2FA and social login ([docs](https://cbsshekhawat18-lab.github.io/karni/accounts/))
-- **karni.api** — `class EventViewSet(BaseViewSet): model = Event` gives
+- **karni.api**: `class EventViewSet(BaseViewSet): model = Event` gives
   CRUD + filtering + search + expansion + OpenAPI, auto-routed
   ([docs](https://cbsshekhawat18-lab.github.io/karni/api/))
-- **karni.admin** — zero-config django-unfold admin: every model registered
-  with derived columns, filters, search and soft-delete handling
+- **karni.admin**: a zero-config django-unfold admin. Every model is
+  registered with derived columns, filters, search and soft-delete handling
   ([docs](https://cbsshekhawat18-lab.github.io/karni/admin/))
 
 ```bash
@@ -31,7 +31,7 @@ from karni.conf import karni_settings
 
 karni_settings(globals())
 
-# Project-specific settings below — anything defined here wins.
+# Project-specific settings below. Anything defined here wins.
 INSTALLED_APPS += [
     # "myapp",
 ]
@@ -47,15 +47,15 @@ reported at once (`KARNI_VALIDATE = False` skips this).
 
 ## Overriding defaults
 
-`karni_settings()` uses **setdefault semantics** — it never overwrites a name
+`karni_settings()` uses **setdefault semantics**: it never overwrites a name
 you already defined. Three layers, strongest first:
 
-1. **Assign after the call** — always wins:
+1. **Assign after the call.** This always wins:
    `REST_FRAMEWORK["PAGE_SIZE"] = 20`
-2. **Define before the call** — never touched. For `INSTALLED_APPS` and
+2. **Define before the call.** Karni never touches it. For `INSTALLED_APPS` and
    `MIDDLEWARE`, Karni appends its missing entries after yours instead of
    replacing the list.
-3. **Keyword overrides** — `karni_settings(globals(), CELERY_TASK_TIME_LIMIT=60)`
+3. **Keyword overrides.** `karni_settings(globals(), CELERY_TASK_TIME_LIMIT=60)`
    replaces the Karni default (whole-value replacement) but still yields to
    names defined in the module.
 
@@ -64,7 +64,7 @@ same image runs in dev and prod with only a `.env` change.
 
 ## Profiles
 
-`DJANGO_ENV=dev` (default) or `DJANGO_ENV=prod` — or force one with
+`DJANGO_ENV=dev` (default) or `DJANGO_ENV=prod`, or force one with
 `karni_settings(globals(), env_name="prod")`.
 
 | | dev | prod |
@@ -83,7 +83,7 @@ same image runs in dev and prod with only a `.env` change.
 | `DJANGO_ENV` | `dev` | settings profile: `dev` or `prod` |
 | `SECRET_KEY` | insecure dev key | **required in prod** (validation fails otherwise) |
 | `DEBUG` | dev `True` / prod `False` | debug mode |
-| `ALLOWED_HOSTS` | dev `*` / prod empty | comma-separated; **required in prod** |
+| `ALLOWED_HOSTS` | dev `*` / prod empty | comma-separated, **required in prod** |
 | `DATABASE_URL` | `postgres://karni:karni@db:5432/karni` | database DSN |
 | `REDIS_URL` | `redis://redis:6379/0` | cache + Celery broker |
 | `CORS_ALLOWED_ORIGINS` | empty | comma-separated origins |
@@ -121,16 +121,16 @@ every schedule (`--json` for agents).
 path("health/", include("karni.health.urls")),
 ```
 
-`/health/` is a no-I/O liveness probe; `/health/ready/` runs the checks in
-`KARNI_HEALTH_CHECKS` (Postgres, Redis, Celery by default — a list of dotted
-paths you can extend or replace) and returns 200 or 503 with per-check detail.
+`/health/` is a no-I/O liveness probe. `/health/ready/` runs the checks in
+`KARNI_HEALTH_CHECKS` (Postgres, Redis and Celery by default, as a list of
+dotted paths you can extend or replace) and returns 200 or 503 with per-check detail.
 
 ## Storage & thumbnails
 
 `KARNI_STORAGE=s3` switches the default storage to
-`karni.storage.S3Storage` (S3-compatible, endpoint-aware); anything else uses
+`karni.storage.S3Storage` (S3-compatible, endpoint-aware). Anything else uses
 local `FileSystemStorage`. `karni.storage.thumbnails.make_thumbnail()`
-produces aspect-preserving thumbnails; swap the implementation via the
+produces aspect-preserving thumbnails. To swap the implementation, set the
 `KARNI_THUMBNAILER` dotted-path setting.
 
 ## Development

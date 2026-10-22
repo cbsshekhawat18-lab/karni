@@ -23,7 +23,7 @@
 import { buildItemQuery, buildListQuery, normalizeParams } from "./params";
 import type { ResourceItemParams, ResourceListParams } from "./types";
 
-/** TanStack Query keys for the schema, a resource, its lists and its items; invalidate `karniKeys.resource(name)` to refresh every view of a resource. */
+/** TanStack Query keys for the schema, a resource, its lists and its items (invalidate `karniKeys.resource(name)` to refresh every view of a resource). */
 export const karniKeys = {
   /** Cache key of the parsed OpenAPI schema document. */
   schema(): readonly unknown[] {

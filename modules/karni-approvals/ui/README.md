@@ -23,10 +23,10 @@ import { ApprovalsBadge, ApprovalsQueue } from "@karni/approvals-ui";
 - `<ApprovalsQueue>` lists `GET /api/pending-changes/` (pending, in the
   user's scope), shows each change's diff, maker, progress and decisions,
   and posts `approve/` or `reject/` with a reason. The backend enforces
-  every rule — the maker cannot decide, the role, the scope — and its
+  every rule (the maker cannot decide, the role, the scope), and its
   refusal (`APR002`, `APR003`, …) is shown on the item.
-- `<ApprovalsBadge>` renders `GET /api/pending-changes/count/`; nothing at
-  zero unless `showZero`; `poll` refetches.
+- `<ApprovalsBadge>` renders `GET /api/pending-changes/count/`. It shows
+  nothing at zero unless `showZero` is set, and `poll` refetches.
 - Hooks: `usePendingChanges`, `usePendingCount`, `useDecidePendingChange`
   (invalidates the resource's queries on success).
 

@@ -47,7 +47,7 @@ Docs:  https://cbsshekhawat18-lab.github.io/karni/errors/#e104
 |---|---|
 | `Class` | the failure class: a registered code and its title, an agent rule, or a class from the catalogue below |
 | `Cause` | the specific cause, read from your text (your class, field, table, host) |
-| `Where` | the innermost project frame (`file:line in function`); for a query report, the line that issued the repeated query |
+| `Where` | the innermost project frame (`file:line in function`). For a query report, the line that issued the repeated query |
 | `Why` | why Karni behaves this way (from the code's registry entry) |
 | `Fix` | the fix |
 | `Next` | the command that answers the rest: `karni queries …` for a query count, `karni why …` for an access outcome |
@@ -172,8 +172,8 @@ row that does not exist. The cause quotes the read rule.
 #### 403 from a Karni viewset
 
 `Access denied: this row is readable but the action requires Owned('organizer')
-| HasRole('staff').` The user can read the row; the write rule refuses the
-action.
+| HasRole('staff').` The user can read the row, but the write rule refuses
+the action.
 
 <a id="access-unauthenticated"></a>
 

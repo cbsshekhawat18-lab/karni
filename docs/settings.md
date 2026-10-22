@@ -10,39 +10,39 @@ description: Every setting karni_settings() provides, with its default, environm
 Django, DRF, Celery, storage and Karni setting, most of them read from the
 environment (`.env` for host runs, the compose file or CI for the rest).
 Anything assigned *after* the call wins, and any name defined *before* it is
-never overwritten. This page lists the `KARNI_*` settings; the Django and
+never overwritten. This page lists the `KARNI_*` settings. The Django and
 DRF settings Karni derives are documented where the feature is.
 
 | Setting | Env | Default | What it does |
 |---|---|---|---|
 | **Accounts & auth** | | | |
 | `KARNI_AUTH_MODE` | `KARNI_AUTH_MODE` | `"jwt"` | `jwt` (SimpleJWT token pairs) or `session` (cookie auth + CSRF bootstrap). See [accounts](accounts.md#auth-modes). |
-| `KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth (`django-otp`; needs `karni[2fa]`). |
-| `KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`; session mode only). |
+| `KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`). |
+| `KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`, session mode only). |
 | `KARNI_SOCIAL_PROVIDERS` | `KARNI_SOCIAL_PROVIDERS` | `[]` | Comma-separated allauth providers to enable, e.g. `google,github`. |
-| `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin: used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS` — the browser's origin must match it. |
-| `KARNI_ACCOUNTS_EMAIL_BACKEND` | — | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
-| `KARNI_ACCOUNTS_AUTO_LOGIN` | — | `False` | Sign a user in right after registration (skips email verification as a gate). |
+| `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
+| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
+| `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
-| `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in; a request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
-| `KARNI_ROLES` | — | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`; `*` wildcards, scopes `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
+| `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
+| `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
-| `KARNI_ACCOUNTS_TOKEN_TTL` | — | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
-| `KARNI_ACCOUNTS_LINKS` | — | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
-| `KARNI_AUTH_THROTTLE_RATES` | — | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object; `null` disables a scope. |
+| `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
+| `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
+| `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
 | **Database & cache** | | | |
 | `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | **Files & storage** | | | |
-| `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service; needs `karni[s3]`). |
+| `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |
-| `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider",` | Dotted path of the `SearchProvider` behind `?search=`; the PostgreSQL provider falls back to portable search on other databases. |
+| `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider",` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
 | `KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
 | `KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
 | **Performance (ADR 0001 Decision 3)** | | | |
 | `KARNI_MAX_PAGE_SIZE` | `KARNI_MAX_PAGE_SIZE` | `100` | Hard cap on `?page_size=` for every Karni paginator. |
 | `KARNI_MAX_PAGE_SIZE_FLOOR` | `KARNI_MAX_PAGE_SIZE_FLOOR` | `25` | The lowest value `KARNI_MAX_PAGE_SIZE` may take (the frontend's page size). |
-| `KARNI_QUERY_BUDGET` | — | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other); merged over the defaults. Per viewset: `query_budget = Budget(...)`. |
-| `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request; what the pytest plugin sets). |
+| `KARNI_QUERY_BUDGET` |  | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other), merged over the defaults. Set it per viewset with `query_budget = Budget(...)`. |
+| `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
 | `KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
 | `KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
 | `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
@@ -50,43 +50,43 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
 | **Admin (karni.admin + django-unfold)** | | | |
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
-| `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`; unset leaves the text header. See [admin](admin.md#theming). |
-| `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash); set it to something unguessable in production. |
+| `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
+| `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"],` | App labels or `app_label.ModelName` entries the admin leaves out. |
-| `KARNI_ADMIN_LIST_DISPLAY_MAX` | — | `6` | Columns a derived admin changelist shows at most. |
-| `KARNI_ADMIN_LIST_FILTER_MAX` | — | `6` | Sidebar filters a derived admin shows at most. |
-| `KARNI_ADMIN_SEARCH_MAX` | — | `5` | Fields a derived admin searches at most. |
-| `KARNI_ADMIN_SITE` | — | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
-| `KARNI_ADMIN_BASE` | — | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
+| `KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |
+| `KARNI_ADMIN_LIST_FILTER_MAX` |  | `6` | Sidebar filters a derived admin shows at most. |
+| `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
+| `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
+| `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
 | `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 | **Karni knobs** | | | |
-| `KARNI_HEALTH_CHECKS` | — | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default). |
-| `KARNI_HEALTH_CELERY_TIMEOUT` | — | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
-| `KARNI_THUMBNAILER` | — | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
-| `KARNI_VALIDATE` | — | `True` | Validate the merged settings at startup (`karni.conf.validation`); `False` skips it. |
+| `KARNI_HEALTH_CHECKS` |  | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default). |
+| `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
+| `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
+| `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
 | **Import and export (karni.transfer)** | | | |
-| `KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request; larger ones run in Celery with progress. |
-| `KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`); split the file. |
-| `KARNI_EXPORT_MAX_ROWS` | `KARNI_EXPORT_MAX_ROWS` | `100_000` | An [export](import-export.md) with more rows than this is refused (`E803`); narrow the filters. |
+| `KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress. |
+| `KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`). Split the file. |
+| `KARNI_EXPORT_MAX_ROWS` | `KARNI_EXPORT_MAX_ROWS` | `100_000` | An [export](import-export.md) with more rows than this is refused (`E803`). Narrow the filters. |
 | **Change history (karni.audit)** | | | |
 | `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
-| `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |
+| `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep. `None` (the default) keeps everything and schedules no pruning. |
 | `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
 | **Request ids and development capture (karni.tracing / karni.debug)** | | | |
-| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn on only when the proxy in front overwrites the header on every request; ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
-| `KARNI_REQUEST_ID_EMAILS` | — | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
-| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off; with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
+| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn it on only when the proxy in front overwrites the header on every request. It is ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
+| `KARNI_REQUEST_ID_EMAILS` |  | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
+| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off, and with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
 | `KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
 | `KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
 | **Events & schedules (karni.events / karni.schedule)** | | | |
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
-| `KARNI_ARCHITECTURE` | — | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
+| `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 
-Settings listed as computed derive from others; the defaults of env-backed
+Settings listed as computed derive from others. The defaults of env-backed
 settings are what an absent variable yields. `KARNI_VALIDATE` checks the merged
 values at startup and reports every bad one at once (error `E504`).
 
 Modules add their own settings through the `karni.settings` entry point and
-document them in their README; karni-payments' are listed above because the
-reference app installs it.
+document them in their README. karni-payments' settings are listed above
+because the reference app installs it.

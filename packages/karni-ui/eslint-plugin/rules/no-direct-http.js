@@ -72,7 +72,7 @@ export default {
       fetch:
         "Direct fetch() outside the api client directory. Use the generated typed hooks " +
         "(useResourceList/useResourceItem/useResourceMutations) or the KarniClient from " +
-        "@karni/ui — raw HTTP lives only under the allowed api/ paths. " +
+        "@karni/ui. Raw HTTP lives only under the allowed api/ paths. " +
         "Opt out only with an explained disable: " +
         "// eslint-disable-next-line karni/no-direct-http -- <reason>",
       axios:

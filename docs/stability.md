@@ -95,7 +95,7 @@ and a codemod or detector is included where possible.
 - **Machine-readable output** (`--json`, `karni context`, `karni rules`,
   `karni routes --json`). Fields are only added, never renamed or removed,
   within a major release.
-- Exit codes: 0 for success; non-zero for failure, with the reason on
+- Exit codes: 0 for success, and non-zero for failure with the reason on
   stderr.
 - The **files `karni make` generates** and their layout, because projects
   and agents rely on where code goes. The generated *content* may improve.
@@ -106,7 +106,7 @@ and a codemod or detector is included where possible.
 
 - Rule codes (`K001`, …) and what each enforces.
 - The adapter files `karni rules sync` writes (AGENTS.md, CLAUDE.md,
-  `.cursor/rules/karni.mdc`, …). Their wording changes between releases; run
+  `.cursor/rules/karni.mdc`, …). Their wording changes between releases, so run
   `karni rules sync` after upgrading.
 
 ## What is internal
@@ -119,7 +119,7 @@ and a codemod or detector is included where possible.
 - The exact SQL Karni emits, query counts (query *budgets* are public), log
   message wording, and admin template markup.
 - The scaffold's templates (`templates/project/`). They generate *your*
-  files; changing them never changes an existing project. Project-level
+  files, and changing them never changes an existing project. Project-level
   migrations, where needed, ship as `karni upgrade` codemods.
 
 ## Supported platforms
@@ -128,7 +128,7 @@ and a codemod or detector is included where possible.
 |---|---|
 | Python | 3.12, 3.13, 3.14 (3.14 from 0.3.0) |
 | Django | 5.2 LTS |
-| Node.js (frontend tooling) | 20.19+ for projects (Vite 8); 22.12+ to develop Karni itself (Vitest 5) |
+| Node.js (frontend tooling) | 20.19+ for projects (Vite 8), 22.12+ to develop Karni itself (Vitest 5) |
 | React | 18, 19 |
 | PostgreSQL | 16+ (production). SQLite works for development and tests. |
 

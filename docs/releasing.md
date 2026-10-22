@@ -70,11 +70,11 @@ The tag runs `.github/workflows/release.yml`:
    `karni --help` and `karni explain E104` must work. Uploaded as the
    `python-dist` artifact.
 5. **build-npm**: `npm ci`, `npm run build` and `npm publish --dry-run` for
-   the four npm packages (the full publish pipeline short of the upload; it
-   needs no credentials), then `npm pack`. Uploaded as `npm-dist`.
+   the four npm packages (the full publish pipeline short of the upload, and
+   it needs no credentials), then `npm pack`. Uploaded as `npm-dist`.
 6. **publish-pypi** (when `KARNI_PUBLISHING` includes `pypi`): trusted
    publishing (OIDC, no stored token), with PEP 740 attestations as
-   provenance; one upload per project, core first, with `skip-existing`.
+   provenance. One upload per project, core first, with `skip-existing`.
 7. **publish-npm** (when `KARNI_PUBLISHING` includes `npm`):
    `npm publish --provenance` through npm trusted publishing (OIDC, no
    stored token). `@karni/ui` publishes first, because the module UIs peer
@@ -135,7 +135,7 @@ accepts the same version twice.
   must exist and belong to the maintainers.
 - **npm with a token instead:** an `NPM_TOKEN` repository secret (an npm
   automation token, or a granular token that may publish the `@karni`
-  packages), when set, is used in place of trusted publishing; provenance
+  packages), when set, is used in place of trusted publishing. Provenance
   still comes from the job's OIDC token. Store it without pasting it
   anywhere else: `gh secret set NPM_TOKEN` and paste at the prompt.
 - **`KARNI_PUBLISHING`** (Settings → Secrets and variables → Actions →
@@ -148,7 +148,7 @@ accepts the same version twice.
   ([Security](security.md) points reporters there).
 - **Repository profile** (Settings → General, or `gh repo edit`): the
   description, the website (`https://cbsshekhawat18-lab.github.io/karni/`)
-  and the 20 topics chosen in [findability research](seo-research.md); and under
+  and the 20 topics chosen in [findability research](seo-research.md). Under
   *Social preview*, upload `assets/brand/social-1280x640.png` (1280×640).
 
   ```sh
@@ -159,5 +159,5 @@ accepts the same version twice.
   ```
 
 - **GitHub Pages:** source *GitHub Actions* (the docs workflow deploys the
-  site); **Dependabot** and **code scanning** alerts on (`.github/dependabot.yml`
+  site). Turn on **Dependabot** and **code scanning** alerts (`.github/dependabot.yml`
   and `security.yml` are in the repository).

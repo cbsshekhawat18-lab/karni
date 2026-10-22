@@ -348,10 +348,12 @@ def command(
     kind: str | None = typer.Option(
         None,
         "--kind",
-        help="With --resource: list (default), detail or form; login needs no resource.",
+        help="With --resource: list (default), detail or form. A login page needs no resource.",
     ),
     path: str | None = typer.Option(
-        None, "--path", help="Route path (resource pages: the base, default /<resource>)."
+        None,
+        "--path",
+        help="Route path. For resource pages it is the base (default `/<resource>`).",
     ),
     title: str | None = typer.Option(None, "--title", help="Page title (default: from the name)."),
     no_route: bool = typer.Option(
@@ -360,12 +362,13 @@ def command(
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add frontend/src/pages/NAME.tsx (<= 50 lines) and register its route.
+    """Add frontend/src/pages/NAME.tsx (at most 50 lines) and register its route.
 
-    --resource R --kind list|detail|form composes ResourceTable /
-    ResourceDetail / ResourceForm for the API resource R; without --resource
-    the page is a bare <Page>. Routes: list <base>, detail <base>/$id, form
-    <base>/new and <base>/$id/edit, base = --path or /<resource>.
+    With --resource R --kind list|detail|form the page composes ResourceTable /
+    ResourceDetail / ResourceForm for the API resource R. Without --resource the
+    page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`,
+    form at `<base>/new` and `<base>/$id/edit`, where the base is --path or
+    `/<resource>`.
     """
     ws = project_workspace(force)
     spec = spec_for(name, resource=resource, kind=kind, path=path, title=title)

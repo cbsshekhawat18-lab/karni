@@ -23,7 +23,7 @@ from karni_cli.generators.pysource import comment, docstring
 from karni_cli.project import CliError
 
 NAME = "service"
-SUMMARY = "Add a service module (<app>/services/<name>.py) — the home of HTTP clients."
+SUMMARY = "Add a service module (<app>/services/<name>.py), the home of HTTP clients."
 
 
 def plan(ws: Workspace, app: App, name: str) -> None:
@@ -62,7 +62,7 @@ def command(
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add APP/services/NAME.py — the one place HTTP clients are allowed (K105)."""
+    """Add APP/services/NAME.py, the one place HTTP clients are allowed (K105)."""
     ws = project_workspace(force)
     plan(ws, resolve_app(ws, app), name)
     ws.commit(dry_run=dry_run)

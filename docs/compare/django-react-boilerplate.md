@@ -1,5 +1,5 @@
 ---
-description: Karni compared with a Django React boilerplate template such as Vinta's or Apptension's — copied once versus upgraded, and who should pick which.
+description: A Django React boilerplate template such as Vinta's or Apptension's is copied once, and Karni is upgraded. This page compares them and says who should pick which.
 ---
 
 # Karni vs a Django React boilerplate template
@@ -21,26 +21,26 @@ starts from working defaults instead of an empty repository.
 
 - **Maturity.** Vinta's boilerplate dates from 2016 with around 2,300 GitHub
   stars and 55 contributors, and Apptension's from 2020 with around 3,000
-  stars; both are backed by companies that offer commercial services. Karni's
+  stars. Both are backed by companies that offer commercial services. Karni's
   first release was in October 2026.
 - **SaaS features.** Apptension's boilerplate includes Stripe subscriptions,
-  multi-tenancy with roles, passkeys and two-factor sign-in; Karni has no
+  multi-tenancy with roles, passkeys and two-factor sign-in. Karni has no
   subscriptions or multi-tenancy.
 - **Ownership.** Every line of a boilerplate is the project's to change, with
-  no framework dependency; a Karni project depends on the `karni` package and
+  no framework dependency. A Karni project depends on the `karni` package and
   follows its conventions.
-- **Recognition.** Vinta's boilerplate is listed in awesome-django; Karni is
+- **Recognition.** Vinta's boilerplate is listed in awesome-django. Karni is
   not yet eligible for such lists.
 
 ## Where Karni is the better choice
 
 - **Updates reach existing projects.** A boilerplate is copied once, and fixes
-  made to the template later do not reach projects created from it; neither
+  made to the template later do not reach projects created from it, and neither
   boilerplate documents a way to pull them in. Karni upgrades like any
   dependency, and `karni upgrade` applies code changes with codemods
   ([stability promise](../stability.md)).
 - **Per-model code.** A boilerplate shows how to write the serializer, view,
-  permissions and screens for a model; Karni derives them from the model and
+  permissions and screens for a model. Karni derives them from the model and
   its `access` rule ([the API](../api.md)).
 - **AI coding agents.** Karni projects ship agent instruction files, an MCP
   server and lint rules that stop an agent from re-creating framework code in

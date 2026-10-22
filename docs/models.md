@@ -20,7 +20,7 @@ class Event(BaseModel):
 |---|---|---|
 | `UUIDModel` | `id` (uuid4 primary key) | No sequential IDs to enumerate, safe in URLs |
 | `TimestampedModel` | `created_at` (indexed), `updated_at` | Maintained by Django (`auto_now_add` / `auto_now`) |
-| `SoftDeleteModel` | `deleted_at` | `delete()` hides the row; `hard_delete()` removes it |
+| `SoftDeleteModel` | `deleted_at` | `delete()` hides the row, and `hard_delete()` removes it |
 | `AuditedModel` | `created_by`, `updated_by` | Stamped from the current user on save |
 
 Compose the mixins directly when a model should not have all four. For
@@ -48,7 +48,7 @@ event.hard_delete()                    # real DELETE, Django cascade applies
 - **No cascade on soft delete.** Soft-deleting a parent leaves its children
   in place, and no `pre_delete`/`post_delete` signals are sent. `hard_delete()`
   runs Django's normal cascade, including over soft-deleted children.
-- **No manager-level delete.** `Event.objects.delete()` does not exist; start
+- **No manager-level delete.** `Event.objects.delete()` does not exist. Start
   from a queryset (`Event.objects.filter(...).delete()`).
 - **Unique fields.** A plain `unique=True` (or `UniqueConstraint`) counts
   soft-deleted rows, so a deleted row keeps its value reserved until it is
@@ -161,7 +161,7 @@ scope a module adds later. To find every caller, run your tests with
 records the request in a `ContextVar`. `AuditedModel.save()` then resolves
 the user lazily, so:
 
-- JWT users authenticated inside DRF views are seen, not just session users.
+- JWT users authenticated inside DRF views are seen, as well as session users.
 - It is correct under ASGI. A context variable is isolated per asyncio task
   and copied into `sync_to_async` threads, which `threading.local` is not.
 
@@ -177,10 +177,10 @@ with current_user(staff_user):
 
 `created_by` is set once on insert. `updated_by` is set on every save that
 has a current user, including `save(update_fields=[...])`. Both foreign keys
-are nullable, use `SET_NULL`, and have no reverse accessor; query them with
+are nullable, use `SET_NULL`, and have no reverse accessor. Query them with
 `Event.objects.created_by(user)` or `.touched_by(user)`. They are never
 auto-expanded by `?expand=`, which would embed user records in every
-response; list them in a viewset's `expandable_fields` to opt in.
+response. List them in a viewset's `expandable_fields` to opt in.
 
 ## Querysets
 
@@ -198,9 +198,9 @@ Then assign `objects = EventManager()` on the model.
 ## Write interception
 
 Every `BaseModel` `save()` and `delete()` first sends `karni.signals.pre_write`
-with `instance`, `action` (`create`, `update`, `delete`) and `update_fields`
-— before any SQL, outside any transaction the save would open, once per
-`delete()` (not again for the `deleted_at` save a soft delete performs). A
+with `instance`, `action` (`create`, `update`, `delete`) and `update_fields`.
+It is sent before any SQL, outside any transaction the save would open, and
+once per `delete()` (not again for the `deleted_at` save a soft delete performs). A
 receiver may stop the write by raising `karni.exceptions.KarniWriteDeferred`
 with a `payload` and a `status` (202 by default): a `BaseViewSet` then
 answers that status with the payload instead of writing, a Karni admin shows
@@ -208,8 +208,8 @@ the message and returns to the changelist (inlines and bulk deletes
 included), and plain code gets the exception. Nothing is written and nothing
 needs rolling back.
 
-That is the hook the `karni-approvals` module is built on — a guarded change
-becomes a pending change a second person decides — and any module can use it
+That is the hook the `karni-approvals` module is built on (a guarded change
+becomes a pending change a second person decides), and any module can use it
 the same way. Bulk SQL (`QuerySet.update()`, `bulk_create()`), raw saves and
-fixture loading never send it; `karni check`'s `audited-bulk-write` rule is
+fixture loading never send it. `karni check`'s `audited-bulk-write` rule is
 the guard for those on audited models.

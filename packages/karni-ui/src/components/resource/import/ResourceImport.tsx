@@ -438,11 +438,12 @@ function stepOf(job: ImportJob | undefined, remap: boolean): Step {
 
 /**
  * Import a CSV or XLSX file into a resource: upload, map columns to fields,
- * preview (the mandatory dry run — N created / updated / skipped with every
- * row's errors), confirm, then commit. Drives `/<resource>/import/…`; the
- * backend validates every row through the same serializer the API uses, keeps rows
- * inside the user's scope and refuses fields the role may not write. Large
- * files run in the background with progress.
+ * preview (the mandatory dry run, which shows N created / updated / skipped
+ * with every row's errors), confirm, then commit. Drives
+ * `/<resource>/import/…`. The backend validates every row through the same
+ * serializer the API uses, keeps rows inside the user's scope and refuses
+ * fields the role may not write. Large files run in the background with
+ * progress.
  *
  * States: a placeholder in the form's layout while the import description
  * loads (drawn after 500ms); when that fails the form is not shown — a 403

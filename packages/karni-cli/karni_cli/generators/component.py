@@ -107,7 +107,7 @@ def command(
     """Add frontend/src/components/NAME.tsx, registered with registerComponentRole.
 
     A role already claimed by @karni/ui (its manifest) or by another project
-    component is refused — compose that component instead, or pass
+    component is refused. Compose that component instead, or pass
     --replace-reason to replace it on purpose.
     """
     ws = project_workspace(force)

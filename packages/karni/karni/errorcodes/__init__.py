@@ -205,9 +205,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Every query of a scoped model runs the registered scopes in order. A scope that "
         "fails to load, has a bad name or order, or a KARNI_SCOPES list that names unknown "
         "or duplicate scopes would silently change which rows every query returns.",
-        "Fix the scope class or the KARNI_SCOPES entry the message names: a Scope subclass "
-        "with an identifier `name` and an int `order`; KARNI_SCOPES a list of registered "
-        "names in pipeline order (or unset to run all of them).",
+        "Fix the scope class or the KARNI_SCOPES entry the message names. A Scope subclass needs "
+        "an identifier `name` and an int `order`. KARNI_SCOPES is a list of registered names in "
+        "pipeline order (or unset to run all of them).",
     ),
     _e(
         "E003",
@@ -234,8 +234,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "without() was called on a queryset",
         "exception",
         "karni.managers.ScopedQuerySet.without",
-        "Scopes are applied when the manager builds the queryset, so a queryset has "
-        "already filtered by every scope; lifting one there cannot bring rows back.",
+        "Scopes are applied when the manager builds the queryset, so a queryset has already "
+        "filtered by every scope. Lifting one there cannot bring rows back.",
         'Start from the manager: Model.objects.without("<scope>", reason="...").filter(...).',
     ),
     _e(
@@ -255,7 +255,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A registered scope is switched off by KARNI_SCOPES",
         "warning",
         "karni.checks.check_scopes",
-        "KARNI_SCOPES lists the scopes that run; a registered scope it leaves out filters "
+        "KARNI_SCOPES lists the scopes that run. A registered scope it leaves out filters "
         "nothing, which is usually an accident after installing a module.",
         "Add the scope's name to KARNI_SCOPES (or unset KARNI_SCOPES to run every scope). "
         "If switching it off is deliberate, add 'karni.W001' to SILENCED_SYSTEM_CHECKS.",
@@ -265,9 +265,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Karni.audit or Karni.sensitive is malformed",
         "exception",
         "karni.audit.capture",
-        "Change history is opted into per model as True or a list of that model's field "
-        "names, and sensitive fields are named the same way; a name the model does not have "
-        "would audit or redact nothing silently.",
+        "A model opts into change history with True or a list of its field names, and names its "
+        "sensitive fields the same way. A name the model does not have would silently audit or "
+        "redact nothing.",
         "Write `class Karni: audit = True` (or a list of field names) and "
         "`sensitive = [...]` with field names of the model.",
     ),
@@ -289,8 +289,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "access is not an Access(...) or Unscoped(...) declaration",
         "exception",
         "karni.api.access.validate_access",
-        "The access declaration compiles into both the request gate and the row filter; "
-        "anything else would leave one of them undefined.",
+        "The access declaration compiles into both the request gate and the row filter. Anything "
+        "else would leave one of them undefined.",
         "Write `access = Access(read=..., write=..., create=...)` with predicates, or "
         "`access = Unscoped(reason='...')`. A bare predicate goes inside Access(read=...).",
     ),
@@ -309,9 +309,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Owned() does not name a path to the user",
         "exception",
         "karni.api.access.Owned; karni.api.access.validate_access",
-        "Owned('path') filters rows to those whose path leads to request.user, and stamps "
-        "the owner on create; a path that does not end at the user model would match "
-        "nothing or the wrong rows.",
+        "Owned('path') filters rows to those whose path leads to request.user, and stamps the "
+        "owner on create. A path that does not end at the user model would match nothing or the "
+        "wrong rows.",
         "Name the owner relation as a string, following relations with __ and ending at "
         "the user model: Owned('organizer') or Owned('event__organizer').",
     ),
@@ -320,7 +320,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "HasRole() names no roles",
         "exception",
         "karni.api.access.HasRole",
-        "Roles are Django group names; a HasRole without names would grant nobody.",
+        "Roles are Django group names. A HasRole without names would grant nobody.",
         "Pass one or more group names: HasRole('staff') or HasRole('organizer', 'staff').",
     ),
     _e(
@@ -328,8 +328,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A Where() function is invalid",
         "exception",
         "karni.api.access.Where",
-        "Where(fn) calls fn(request) for the request gate and as the row filter; it must be "
-        "callable and return a Q (rows) or a bool (everything or nothing).",
+        "Where(fn) calls fn(request) for the request gate and as the row filter. The function "
+        "must be callable and return a Q (rows) or a bool (everything or nothing).",
         "Pass a function of the request returning a Q or a bool, e.g. "
         "Where(lambda request: Q(published=True)).",
     ),
@@ -338,9 +338,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Unscoped() needs a reason",
         "exception",
         "karni.api.access.Unscoped",
-        "Opting a viewset out of access control is sometimes right (a public catalogue), "
-        "but it must be deliberate and reviewable; the reason is published in karni "
-        "context and the schema.",
+        "Opting a viewset out of access control is sometimes right (a public catalogue), but it "
+        "must be deliberate and reviewable. The reason is published in karni context and the "
+        "schema.",
         "Write `access = Unscoped(reason='public catalogue')` with a non-empty reason.",
     ),
     _e(
@@ -377,8 +377,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "pagination_class is not a Karni paginator",
         "exception",
         "karni.pagination.check_pagination_class",
-        "Karni's paginators enforce KARNI_MAX_PAGE_SIZE; another paginator would let a "
-        "client request unbounded pages.",
+        "Karni's paginators enforce KARNI_MAX_PAGE_SIZE. Another paginator would let a client "
+        "request unbounded pages.",
         "Subclass karni.pagination.KarniPageNumberPagination or KarniCursorPagination.",
     ),
     _e(
@@ -405,8 +405,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A query Budget(...) is invalid",
         "exception",
         "karni.performance.Budget; BaseViewSet.query_budget",
-        "A query budget caps SQL statements per request to catch N+1 regressions; raising "
-        "it must be a measured, explained decision.",
+        "A query budget caps SQL statements per request to catch N+1 regressions. Raising it must "
+        "be a measured, explained decision.",
         "Write `query_budget = Budget(list=25, reason='...')`: name at least one action, use "
         "positive integers (None stops checking an action) and give a non-empty reason.",
     ),
@@ -455,8 +455,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Query hints are invalid",
         "exception",
         "karni.api.optimizer.validate_hints",
-        "select_related / prefetch_related / select hints are merged into the optimizer's "
-        "plan; they must be lookups it can apply.",
+        "select_related / prefetch_related / select hints are merged into the optimizer's plan, "
+        "so they must be lookups it can apply.",
         'Give a list of lookup strings (e.g. select_related = ["venue"]) or Prefetch '
         "objects for prefetch_related.",
     ),
@@ -499,8 +499,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "An expandable field is not a relation",
         "exception",
         "karni.api.serializers.expanded_field",
-        "?expand= replaces a foreign key's id with the related object; only relations can "
-        "be expanded.",
+        "?expand= replaces a foreign key's id with the related object, so only relations can be "
+        "expanded.",
         "Name a ForeignKey, OneToOneField or ManyToManyField (or a reverse relation) of the model.",
     ),
     _e(
@@ -518,8 +518,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The ?expand= path is too deep",
         "api",
         "karni.api.expansion",
-        "Each level of expansion multiplies the work per row; the depth is capped by "
-        "KARNI_API_MAX_EXPAND_DEPTH.",
+        "Each level of expansion multiplies the work per row, so KARNI_API_MAX_EXPAND_DEPTH caps "
+        "the depth.",
         "Request fewer levels, or raise KARNI_API_MAX_EXPAND_DEPTH in settings if the "
         "client really needs them.",
     ),
@@ -528,7 +528,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_API_ROUTER cannot be imported",
         "check",
         "karni.checks.check_viewsets",
-        "The router factory builds every API route; without it the API serves nothing.",
+        "The router factory builds every API route. Without it the API serves nothing.",
         "Point KARNI_API_ROUTER at an importable zero-argument factory returning a router "
         "(default 'karni.api.routers.get_default_router').",
     ),
@@ -537,8 +537,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "List or retrieve queries grow with the number of rows (N+1)",
         "test",
         "karni.testing.performance (pytest --pyargs karni.testing.performance)",
-        "The scaling check runs list and retrieve with few and many rows; more rows must "
-        "not mean more queries, or the page slows down as the table grows.",
+        "The scaling check runs list and retrieve with few and many rows. More rows must not mean "
+        "more queries, or the page slows down as the table grows.",
         "Let the optimiser see the relation through the serializer, or add "
         "select_related / prefetch_related hints (or APIMeta.select/prefetch) for a "
         "SerializerMethodField or property. Opt out only with "
@@ -549,7 +549,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "An opt-out marker has no reason",
         "test",
         "karni.testing (# karni: allow(<rule>) markers)",
-        "Opting out of a check must be deliberate and reviewable; the reason is the review.",
+        "Opting out of a check must be deliberate and reviewable. The reason is what gets "
+        "reviewed.",
         "Write the reason after the colon: `# karni: allow(<rule>): <why>`.",
     ),
     _e(
@@ -557,8 +558,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "search_fields names a write-only field",
         "check",
         "karni.checks.check_viewsets",
-        "A field in APIMeta.write_only never appears in a response, but ?search= over it "
-        "answers whether a row contains a value — a membership oracle on a hidden column.",
+        "A field in APIMeta.write_only never appears in a response, but ?search= over it answers "
+        "whether a row contains a value. That makes search a membership oracle on a hidden column.",
         "Remove the field from search_fields, or take it out of APIMeta.write_only if it "
         "may be read.",
     ),
@@ -589,7 +590,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "No KARNI_ACCOUNTS_LINKS entry for a token purpose",
         "exception",
         "karni.accounts.emails",
-        "Emails link to your frontend; Karni needs the URL template for each purpose "
+        "Emails link to your frontend, so Karni needs the URL template for each purpose "
         "(verify_email, reset_password, ...).",
         "Add the purpose to KARNI_ACCOUNTS_LINKS, e.g. "
         "{'reset_password': '{frontend}/reset-password?token={token}'}.",
@@ -616,11 +617,11 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_ROLES is malformed",
         "exception",
         "karni.accounts.roles.declared_roles",
-        "The role declaration is the single source of what each role may do; a malformed "
-        "entry cannot be reconciled into the role tables.",
+        "The role declaration is the single source of what each role may do. A malformed entry "
+        "cannot be reconciled into the role tables.",
         "Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, "
-        "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the "
-        "model or the action (or '*' alone); a scope is 'all', 'own', 'related:<key>' or "
+        "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model "
+        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or "
         "'custom:<name>'.",
     ),
     _e(
@@ -628,10 +629,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A grant in KARNI_ROLES cannot be resolved",
         "exception",
         "karni.accounts.roles.sync_roles",
-        "A pattern that matches no permission, an 'own' scope on a model with no owner "
-        "field, a 'related' scope on a model without that scope path, or a 'custom' scope "
-        "nobody registered would grant nothing silently; Karni refuses instead.",
-        "Fix the key (permissions look like 'events.event:view'; extra actions come from "
+        "A pattern that matches no permission, an 'own' scope on a model with no owner field, a "
+        "'related' scope on a model without that scope path, or a 'custom' scope nobody "
+        "registered would silently grant nothing. Karni refuses it instead.",
+        "Fix the key (permissions look like 'events.event:view', and extra actions come from "
         "`class Karni: actions`), declare `owner_field` / `scope_paths` in the model's "
         "`class Karni`, or register the custom scope with karni.accounts.roles.register_scope.",
     ),
@@ -640,7 +641,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "user.can() was given an action without a model",
         "exception",
         "karni.accounts.roles.user_can",
-        "A permission is a (model, action) pair; a bare action name cannot be looked up.",
+        "A permission is a (model, action) pair, so a bare action name cannot be looked up.",
         "Pass the full key, user.can('shop.order:approve'), or name the model: "
         "user.can('approve', obj=order) or user.can('approve', model=Order).",
     ),
@@ -662,17 +663,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Can() names permissions as 'app_label.model:action', and its row filter is built "
         "against that model, so a viewset's declaration can only use its own model's "
         "permissions.",
-        "Write Can('events.event:approve'); on EventViewSet it must be an events.event "
-        "permission. To gate on another model's permission use HasRole(...).",
+        "Write Can('events.event:approve'). On EventViewSet it must be an events.event "
+        "permission. To gate on another model's permission, use HasRole(...).",
     ),
     _e(
         "E212",
         "Karni.field_roles is malformed, names a missing field or an undeclared role",
         "check",
         "karni.meta.field_roles; karni.checks.check_field_roles",
-        "Field-level visibility is declared once on the model as field -> roles; a typo in "
-        "a field name hides nothing, and a role nobody holds hides the field from everyone, "
-        "so both are refused at boot.",
+        "Field-level visibility is declared once on the model as field -> roles. A typo in a "
+        "field name hides nothing, and a role nobody holds hides the field from everyone, so both "
+        "are refused at boot.",
         "Write field_roles = {'phone': {'read': ['staff', 'support'], 'write': ['staff']}} "
         "(or 'phone': ['staff'] for read and write) with field names of the model and role "
         "slugs declared in KARNI_ROLES.",
@@ -682,9 +683,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "scope_exempt = True without a reason",
         "exception",
         "karni.api.access.validate_access",
-        "A viewset or admin that shows every row its gate admits is the one place row "
-        "scoping is off; without a reason it looks like an oversight, and karni check "
-        "lists every exemption by its reason.",
+        "A viewset or admin that shows every row its gate admits is the one place row scoping is "
+        "off. Without a reason it looks like an oversight, and karni check lists every exemption "
+        "by its reason.",
         "Add scope_exempt_reason = '...' next to scope_exempt = True (e.g. 'public "
         "catalogue'), or remove the exemption and let Granted() / the roles' grants scope "
         "the rows.",
@@ -694,10 +695,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Granted() has no permission for this action or viewset",
         "exception",
         "karni.api.access.Granted",
-        "Granted() resolves to the viewset's model and the current action; an unsafe "
-        "custom @action the model never declared has no permission to check, and a "
-        "viewset without a model has nothing to resolve against. Evaluating it outside a "
-        "viewset is the same error.",
+        "Granted() resolves to the viewset's model and the current action. An unsafe custom "
+        "@action the model never declared has no permission to check, and a viewset without a "
+        "model has nothing to resolve against. Evaluating it outside a viewset is the same error.",
         "Add the action to `class Karni: actions = [...]` on the model and grant "
         "'app.model:<action>' in KARNI_ROLES, give the action its own @action(access=...), "
         "set `model = ...` on the viewset, or evaluate through action_predicate(view, "
@@ -712,10 +712,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "grant is locked, the operator does not hold the permission (or holds it at a "
         "narrower scope than the one granted), the change would remove the operator's own "
         "last permission to change permissions, or the role, permission or scope is unknown.",
-        "Change KARNI_ROLES for a system role's grants; ask someone who holds the permission "
-        "at that scope; keep one of your roles able to change permissions; check the role "
-        "slug, the 'app.model:action' key and the scope value against GET "
-        "permissions/matrix/.",
+        "Change KARNI_ROLES for a system role's grants, ask someone who holds the permission at "
+        "that scope, keep one of your roles able to change permissions, or check the role slug, "
+        "the 'app.model:action' key and the scope value against GET permissions/matrix/.",
     ),
     _e(
         "E214",
@@ -723,10 +722,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "check",
         "karni.checks.check_role_scope_paths",
         "A grant's scope becomes a database filter on every request: `own` follows "
-        "Karni.owner_field, `related:<key>` follows Karni.scope_paths[key], and a "
-        "`custom:<name>` scope builds its own. A path the model does not have would answer "
-        "500 to every user holding the grant — typically after a new model joins a wildcard "
-        "grant written for its siblings.",
+        "Karni.owner_field, `related:<key>` follows Karni.scope_paths[key], and a `custom:<name>` "
+        "scope builds its own. A path the model does not have would answer 500 to every user "
+        "holding the grant. This typically happens after a new model joins a wildcard grant "
+        "written for its siblings.",
         "Give the model the path the scope expects (`class Karni: owner_field = "
         "'workspace__members'`, or the scope path), teach the custom scope the new model, "
         "or narrow the grant's pattern so it does not cover the model.",
@@ -756,8 +755,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.conf.admin_logo.unfold_logo_entries",
         "The admin logo is wired into UNFOLD from this one setting, so it must name static "
         "files unfold can serve.",
-        "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', "
-        "'dark': ..., 'icon': ...} with at least 'light'; leave it unset for a text header.",
+        "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': "
+        "..., 'icon': ...} with at least 'light'. Leave it unset for a text header.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(
@@ -765,8 +764,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A queued listener is not a module-level function",
         "exception",
         "karni.events.queued",
-        "A queued listener runs on a Celery worker, which finds it by its dotted name; "
-        "nested functions and lambdas have none.",
+        "A queued listener runs on a Celery worker, which finds it by its dotted name. Nested "
+        "functions and lambdas have none.",
         "Define the listener at the top level of <app>/listeners.py, or queue an existing "
         "task with queued('app.tasks.task_name').",
     ),
@@ -784,8 +783,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A Celery task cannot be found",
         "exception",
         "karni.celery.resolve_task",
-        "Tasks are found by dotted name; Celery autodiscovers only @shared_task functions "
-        "in installed apps' tasks.py.",
+        "Tasks are found by dotted name, and Celery autodiscovers only @shared_task functions in "
+        "installed apps' tasks.py.",
         "Check the dotted name, and that the function is decorated with @shared_task in "
         "an installed app's tasks.py.",
     ),
@@ -804,7 +803,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A schedule's interval or cron expression is invalid",
         "exception",
         "karni.schedule (every, cron)",
-        "Intervals are whole positive seconds; cron expressions have five fields.",
+        "Intervals are whole positive seconds, and cron expressions have five fields.",
         "Use every('15m') / every(minutes=15) (s, m, h, d units), or cron('0 3 * * *') "
         "('minute hour day-of-month month day-of-week').",
     ),
@@ -831,7 +830,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni_schedules management command; karni schedule run",
         "`karni schedule run` executes the task in-process so failures show immediately.",
-        "Read the task's own error in the message and fix the task; re-run with "
+        "Read the task's own error in the message and fix the task. Then re-run it with "
         "`karni schedule run <name>`.",
     ),
     # E5xx settings and optional dependencies
@@ -859,8 +858,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A module's settings fragment is invalid",
         "exception",
         "karni.conf (karni.settings entry points)",
-        "Installed modules contribute default settings; a fragment may only add new "
-        "top-level names, so installing a module never changes a setting you rely on.",
+        "Installed modules contribute default settings. A fragment may only add new top-level "
+        "names, so installing a module never changes a setting you rely on.",
         "Fix or upgrade the module the message names. Module authors: export a dict of new "
         "names only.",
     ),
@@ -879,9 +878,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The welcome page is reachable with DEBUG off",
         "check",
         "karni.checks.check_welcome_route",
-        "The welcome page (karni.welcome) introspects the project at request time — models, "
-        "modules, status checks, the agent context — for first boot in development; served "
-        "in production it would describe the deployment to anyone who opens the site.",
+        "The welcome page (karni.welcome) introspects the project at request time (models, "
+        "modules, status checks, the agent context) for first boot in development. Served in "
+        "production, it would describe the deployment to anyone who opens the site.",
         "Mount it only through `*karni.welcome.welcome_urls()` at the end of urlpatterns "
         "(it returns no route when DEBUG is False) and remove any hand-written "
         "path('', WelcomeView.as_view()).",
@@ -894,8 +893,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "DRF keeps rate-limit counters in CACHES['default']. With DEBUG off, a locmem or "
         "dummy backend gives every worker its own counters, so the login, registration and "
         "password-reset limits are multiplied by the worker count.",
-        "Point CACHES['default'] at a backend every worker shares (Redis — Karni's default "
-        "— or the database cache), or silence karni.W501 for a single-process deployment.",
+        "Point CACHES['default'] at a backend every worker shares (Redis, which Karni uses by "
+        "default, or the database cache), or silence karni.W501 for a single-process deployment.",
     ),
     _e(
         "E506",
@@ -903,8 +902,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.imports.import_setting (KARNI_SEARCH_PROVIDER, KARNI_API_ROUTER, "
         "KARNI_ADMIN_SITE, KARNI_THUMBNAILER, ...)",
-        "Settings that name a class or function by dotted path are resolved when first used; "
-        "a typo or a package missing from the environment would otherwise surface as a bare "
+        "Settings that name a class or function by dotted path are resolved when first used. A "
+        "typo or a package missing from the environment would otherwise surface as a bare "
         "ModuleNotFoundError far from the setting.",
         "Fix the path the message names ('package.module.Object') or install the package "
         "that provides it.",
@@ -914,10 +913,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_CACHE names an unknown cache backend",
         "exception",
         "karni.conf (KARNI_CACHE)",
-        "The default cache (throttle counters, response cache, locks) is Redis at REDIS_URL; "
+        "The default cache (throttle counters, response cache, locks) is Redis at REDIS_URL. "
         "`locmem` is the in-process alternative for a host run without Redis.",
-        "Set KARNI_CACHE to `redis` (the default) or `locmem`; for anything else define "
-        "CACHES yourself in settings.py.",
+        "Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES "
+        "yourself in settings.py.",
     ),
     # E6xx testing and seeding
     _e(
@@ -935,8 +934,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "test",
         "karni.testing.assert_crud",
         "assert_crud derives every expected outcome (allowed actions, 403/404 denials, "
-        "pagination, filtering, owner stamping, response schema) from the viewset's "
-        "access and the OpenAPI schema; each listed failure is a real difference.",
+        "pagination, filtering, owner stamping, response schema) from the viewset's access and "
+        "the OpenAPI schema. Each listed failure is a real difference.",
         "Fix each failure in the report: usually the access declaration, a custom "
         "get_queryset, or a serializer that does not match the schema. skip=[...] "
         "excludes a check that genuinely does not apply.",
@@ -956,7 +955,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "test",
         "karni.testing.assert_crud",
         "The API raised instead of answering, so the check could not run.",
-        "Read the exception in the message; fix the view, serializer or data it names.",
+        "Read the exception in the message and fix the view, serializer or data it names.",
     ),
     _e(
         "E605",
@@ -985,8 +984,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "There is no OpenAPI schema snapshot yet",
         "test",
         "karni.testing.assert_schema_snapshot",
-        "CI compares the API schema with a committed snapshot so an accidental breaking "
-        "change fails the build; CI never writes snapshots.",
+        "CI compares the API schema with a committed snapshot, so an accidental breaking change "
+        "fails the build. CI never writes snapshots.",
         "Generate it locally with the command in the message and commit the file.",
     ),
     _e(
@@ -994,10 +993,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The OpenAPI schema changed",
         "test",
         "karni.testing.assert_schema_snapshot",
-        "Clients (and the generated frontend types) depend on the schema; this change "
-        "would reach them.",
-        "If the change is intended, accept it with the command in the message and commit "
-        "the snapshot; otherwise revert the change that caused it.",
+        "Clients (and the generated frontend types) depend on the schema, so this change would "
+        "reach them.",
+        "If the change is intended, accept it with the command in the message and commit the "
+        "snapshot. Otherwise, revert the change that caused it.",
     ),
     _e(
         "E609",
@@ -1012,7 +1011,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A factory cannot generate a value for a field",
         "exception",
         "karni.testing.factories",
-        "Values are inferred from field types and names; some custom fields have no safe default.",
+        "Values are inferred from field types and names, and some custom fields have no safe "
+        "default.",
         "Pass the value (create(Model, field=...)) or define an explicit factory in "
         "<app>/factories.py.",
     ),
@@ -1021,7 +1021,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Required relations form a loop",
         "exception",
         "karni.testing.factories; karni.seeding",
-        "Each row needs its required relation to exist first; in a loop, no order works.",
+        "Each row needs its required relation to exist first. In a loop, no order works.",
         "Make one of the foreign keys nullable, pass an existing row for that field, or "
         "seed one model yourself in a Seeder.seed() override.",
     ),
@@ -1065,11 +1065,11 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A hidden-row check has nothing to prove against",
         "test",
         "karni.testing.assert_row_hidden; assert_admin_row_hidden",
-        "A row-scope check only means something when the client can list the resource and "
-        "sees some row (the positive control); a role-level refusal or an empty list hides "
-        "every row alike, so every check would pass vacuously.",
-        "Pass a client (or staff user) that can list the resource and a row it does see as "
-        "visible=; test role-level refusals with assert_crud's denials instead.",
+        "A row-scope check only means something when the client can list the resource and sees "
+        "some row (the positive control). A role-level refusal or an empty list hides every row "
+        "alike, so every check would pass vacuously.",
+        "Pass a client (or staff user) that can list the resource, and a row it does see as "
+        "visible=. Test role-level refusals with assert_crud's denials instead.",
     ),
     # E7xx agent tooling
     _e(
@@ -1077,10 +1077,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.rules.py is invalid",
         "exception",
         "karni.agent.overrides",
-        "karni.rules.py adjusts the agent rules; it is read statically (never executed), so "
-        "only literal values are allowed.",
-        "Fix the line the message names: literal ADD/OVERRIDE/DISABLE/ADAPTERS values; ADD "
-        "codes like P001 with a non-empty 'rule'; OVERRIDE/DISABLE only Karni K codes.",
+        "karni.rules.py adjusts the agent rules. It is read statically (never executed), so only "
+        "literal values are allowed.",
+        "Fix the line the message names. ADD/OVERRIDE/DISABLE/ADAPTERS take literal values. ADD "
+        "uses codes like P001 with a non-empty 'rule'. OVERRIDE/DISABLE name only Karni K codes.",
     ),
     _e(
         "E702",
@@ -1089,7 +1089,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni check; manage.py karni_check",
         "The architecture checks enforce the K rules (generated code is not hand-written, "
         "access is declared, and so on).",
-        "Fix each listed violation (each names its K code; `karni explain K106` explains "
+        "Fix each listed violation (each names its K code, and `karni explain K106` explains "
         "one), or suppress a deliberate exception the way the violation describes.",
     ),
     _e(
@@ -1097,7 +1097,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A source file cannot be parsed",
         "exception",
         "karni.agent.check",
-        "karni check reads your code statically; a syntax error stops it.",
+        "karni check reads your code statically, so a syntax error stops it.",
         "Fix the syntax error at the file and line in the message.",
     ),
     _e(
@@ -1127,10 +1127,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The file format is not supported",
         "api",
         "karni.transfer.formats",
-        "Import and export speak CSV and XLSX; anything else (or an upload whose format "
-        "cannot be told from its name or content type) is refused.",
-        "Upload a .csv or .xlsx file, or pass ?format=csv|xlsx; XLSX needs openpyxl "
-        "(a core dependency).",
+        "Import and export speak CSV and XLSX. Anything else is refused, and so is an upload "
+        "whose format cannot be told from its name or content type.",
+        "Upload a .csv or .xlsx file, or pass ?format=csv|xlsx. XLSX needs openpyxl (a core "
+        "dependency).",
     ),
     _e(
         "E803",
@@ -1150,9 +1150,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.why.resolve.resolve_resource; karni why",
         "karni why explains the decisions of a routed BaseViewSet, so it needs the resource as "
         "the API routes it.",
-        "Name the resource by its route prefix (events), router basename (events-event) or "
-        "model label (events.Event). The message lists the routed resources; `karni routes` "
-        "lists every URL.",
+        "Name the resource by its route prefix (events), router basename (events-event) or model "
+        "label (events.Event). The message lists the routed resources, and `karni routes` lists "
+        "every URL.",
     ),
     _e(
         "E902",
@@ -1160,7 +1160,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.why.resolve.resolve_user; karni why --as",
         "A decision is always for one user. --as looks the user up by primary key, login field, "
-        "email or username; a recorded request names its user by primary key.",
+        "email or username. A recorded request names its user by primary key.",
         "Pass --as with an email, username or primary key that exists, or --as anonymous for a "
         "request that is not signed in.",
     ),
@@ -1181,8 +1181,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.why.resolve.load_record",
         "The record is not JSON, or its version or fields are not what this karni reads "
         "(version 1: request_id, method, path, status, user, ...).",
-        "Delete the file and reproduce the request; if it keeps happening, upgrade karni so "
-        "the writer and the reader agree.",
+        "Delete the file and reproduce the request. If it keeps happening, upgrade karni so the "
+        "writer and the reader agree.",
     ),
     _e(
         "E905",
@@ -1197,8 +1197,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni why: the resource routes no such action or method",
         "exception",
         "karni.why.resolve.resolve_action; karni why --action/--method",
-        "--action names a routed viewset action (or the plain words view, update, delete, "
-        "create, list); --method must be one that action answers.",
+        "--action names a routed viewset action (or the plain words view, update, delete, create, "
+        "list). --method must be one that action answers.",
         "Use an action the message lists, or drop --method.",
     ),
     _e(
@@ -1206,8 +1206,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni why: not a Karni BaseViewSet route",
         "exception",
         "karni.why.resolve.resolve_resource; karni.why.verdict.explain_record",
-        "karni why explains the decisions of Karni's access layer, which only BaseViewSet "
-        "routes have; another view's permission_classes decide on their own.",
+        "karni why explains the decisions of Karni's access layer, which only BaseViewSet routes "
+        "have. Another view's permission_classes decide on their own.",
         "Read that view's permission_classes and get_queryset(), or move the endpoint onto a "
         "BaseViewSet with an access declaration.",
     ),
@@ -1227,9 +1227,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni replay needs DEBUG on",
         "exception",
         "karni.debug.replay; manage.py karni_replay",
-        "A replay re-sends a captured request, force-authenticated as a captured user, "
-        "against the configured database. That is a development tool; with DEBUG off it "
-        "could act as any user on a production database, so Karni refuses.",
+        "A replay re-sends a captured request, force-authenticated as a captured user, against "
+        "the configured database. That is a development tool. With DEBUG off it could act as any "
+        "user on a production database, so Karni refuses.",
         "Run it in development, where DEBUG is on (DEBUG=true in the environment or .env). "
         "To check a fix in production, add a test instead.",
     ),
@@ -1238,11 +1238,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Nothing was captured for this request id",
         "exception",
         "karni.debug.trace; manage.py karni_trace, karni_replay",
-        "karni trace and karni replay read what the development capture wrote under "
-        ".karni/ (requests/, trace/) plus change log entries with the id. Capture runs only "
-        "with DEBUG on and KARNI_DEBUG_CAPTURE not False, keeps the newest "
-        "KARNI_DEBUG_CAPTURE_KEEP records and KARNI_DEBUG_TRACE_DAYS of trace; ids are "
-        "1-128 letters, digits, '_' and '-'.",
+        "karni trace and karni replay read what the development capture wrote under .karni/ "
+        "(requests/, trace/) plus change log entries with the id. Capture runs only with DEBUG on "
+        "and KARNI_DEBUG_CAPTURE not False, keeps the newest KARNI_DEBUG_CAPTURE_KEEP records and "
+        "KARNI_DEBUG_TRACE_DAYS of trace. Ids are 1-128 letters, digits, '_' and '-'.",
         "Turn DEBUG on, repeat the request, and pass the id from its X-Request-ID response "
         "header (or `last` for the newest capture). Check the id has no typo.",
     ),
@@ -1251,9 +1250,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "No failure snapshot with this id",
         "exception",
         "karni.debug.brief; karni explain --failure; manage.py karni_failure",
-        "A failure snapshot is written to .karni/failures/ when a request or a Celery task "
-        "raises an unhandled exception with DEBUG on; the newest KARNI_DEBUG_CAPTURE_KEEP "
-        "are kept. A request that answered an error status without raising has none.",
+        "A failure snapshot is written to .karni/failures/ when a request or a Celery task raises "
+        "an unhandled exception with DEBUG on. The newest KARNI_DEBUG_CAPTURE_KEEP are kept. A "
+        "request that answered an error status without raising has none.",
         "Use the failure id from the request record or `karni trace <request-id>`, a failed "
         "request's id, or `last`. Reproduce the failure with DEBUG on if nothing was captured.",
     ),
@@ -1276,8 +1275,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.debug.replay; karni replay --as",
         "A replay runs as the captured user, or the user --as names (a primary key, an "
         "email or a username). That user must exist in the database the replay uses.",
-        "Pass --as with an existing user's email, username or primary key, or --anonymous; "
-        "pass only one of the two.",
+        "Pass --as with an existing user's email, username or primary key, or pass --anonymous. "
+        "Do not pass both.",
     ),
     _e(
         "W920",
@@ -1285,9 +1284,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "warning",
         "karni.checks.check_request_id_middleware",
         "django-structlog logs request_started with the X-Request-ID it finds. Karni's "
-        "RequestIdMiddleware decides that id (a client's value is accepted only in "
-        "development or from a trusted proxy); placed after, the first log lines carry a "
-        "different, possibly client-chosen id than the response, tasks and history.",
+        "RequestIdMiddleware decides that id (a client's value is accepted only in development or "
+        "from a trusted proxy). When it runs later, the first log lines carry a different, "
+        "possibly client-chosen id than the response, tasks and history.",
         "Move 'karni.tracing.RequestIdMiddleware' above "
         "'django_structlog.middlewares.RequestMiddleware' in MIDDLEWARE (Karni's defaults "
         "put it first).",
@@ -1302,7 +1301,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "project serves: a path, a routed resource (events, events/<id>) or a routed viewset "
         "(EventViewSet.list). A detail action named by its viewset needs a row the user can read.",
         "Pass a path that `karni routes` lists (/api/events/), a resource prefix it shows, or "
-        "resource/<id>; the message lists the routed resources or viewsets.",
+        "resource/<id>. The message lists the routed resources or viewsets.",
     ),
     _e(
         "E941",
@@ -1310,7 +1309,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.api.diagnose.resolve_user (manage.py karni_queries --as)",
         "The request runs force-authenticated as one user, named by primary key, email or "
-        "username; the value matched none (or several).",
+        "username. The value matched none (or several).",
         "Pass a user that exists in this database (the message shows a few), seed some with "
         "karni seed, or drop --as for an anonymous request.",
     ),
@@ -1328,8 +1327,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The view raised while karni queries requested it",
         "exception",
         "manage.py karni_queries",
-        "There is no query report for a request that raised; the message shows the traceback "
-        "and what karni explain recognises in it.",
+        "There is no query report for a request that raised. The message shows the traceback and "
+        "what karni explain recognises in it.",
         "Fix the exception the traceback names (karni explain - explains a pasted traceback), "
         "then run karni queries again.",
     ),
@@ -1339,9 +1338,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A FloatField holds money",
         "check",
         "karni.fields.checks.check_money_floats",
-        "A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, "
-        "...) is a FloatField. Binary floats cannot represent most cent values, so sums drift "
-        "(0.1 + 0.2 != 0.3) and totals stop reconciling; no test with round numbers notices.",
+        "A field named like money (price, amount, total, cost, fee, subtotal, tax, balance, ...) "
+        "is a FloatField. Binary floats cannot represent most cent values, so sums drift (0.1 + "
+        "0.2 != 0.3) and totals stop reconciling. No test with round numbers notices.",
         'Use `MoneyField(currency="EUR")` (or `currency_field="currency"`) from '
         "karni.fields, a PercentField for a rate, then karni make migration. If the field is "
         'not money, declare `class Karni: not_money = {"field": "<what it is>"}`.',
@@ -1351,9 +1350,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A MoneyField's currency is not declared",
         "exception",
         "karni.fields.MoneyField; karni.fields.checks.check_field_declarations",
-        "An amount without a currency is ambiguous: 10.00 of what? MoneyField needs exactly "
-        "one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model that "
-        "holds each row's currency.",
+        "An amount without a currency is ambiguous: 10.00 could be any currency. MoneyField needs "
+        "exactly one declaration: a fixed ISO 4217 code, or the CurrencyField on the same model "
+        "that holds each row's currency.",
         'Write `MoneyField(currency="EUR")`, or `MoneyField(currency_field="currency")` '
         "with `currency = CurrencyField()` on the model.",
     ),
@@ -1377,7 +1376,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The arguments contradict each other or name something the model lacks: bounds that "
         "do not fit max_digits, a populate_from or SearchField source that is not a field, a "
         "code outside the ISO list, an unknown rounding mode or text search configuration.",
-        "Fix the argument the message names; docs/fields.md lists every field's arguments.",
+        "Fix the argument the message names. docs/fields.md lists every field's arguments.",
     ),
     _e(
         "E964",
@@ -1386,7 +1385,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.fields.checks.check_backends",
         "The field needs PostgreSQL (an ArrayField: array columns exist nowhere else), but a "
         "database in DATABASES that migrates this model is another backend. migrate would fail "
-        "with a syntax error; the check says which field instead.",
+        "with a syntax error. The check says which field instead.",
         "Point that database at PostgreSQL, or replace the field with the portable one the "
         "message names (a JSONField holding a list instead of an ArrayField).",
     ),
@@ -1398,7 +1397,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The model works on this database but without something PostgreSQL provides: exact "
         "NUMERIC storage (SQLite keeps NUMERIC as a binary float), a GIN index, the tsvector "
         "column, the E.164 CHECK, or partial unique indexes.",
-        "Fine for tests and local development on SQLite; run production on PostgreSQL. "
+        "This is fine for tests and local development on SQLite. Run production on PostgreSQL. "
         "Silence karni.W964 where the difference is deliberate.",
     ),
     _e(
@@ -1418,8 +1417,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A PostgreSQL extension could not be created",
         "exception",
         "karni.fields.extensions.ensure_extension / CreateExtension (karni.accounts 0005)",
-        "A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may "
-        "not create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database; the "
+        "A migration needs an extension (btree_gist, pg_trgm, ...) and the database role may not "
+        "create it. Trusted extensions (PostgreSQL 13+) need CREATE on the database, and the "
         "others need a superuser.",
         "Run the SQL the message prints: `CREATE EXTENSION IF NOT EXISTS <name>;` as a "
         "superuser in the project's database, or, for a trusted extension, `GRANT CREATE ON "
@@ -1433,8 +1432,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A routed viewset declares search_fields, filterset_fields, ordering_fields or an "
         "ordering on a column no index covers, so every such list request reads the whole "
         "table. Fast with seed data, slow in production.",
-        "Add the index the message names to Meta.indexes (a SearchField for search), then karni "
-        "make migration; `karni schema <app>` shows what serves each column. Silence "
+        "Add the index the message names to Meta.indexes (a SearchField for search), then run "
+        "karni make migration. `karni schema <app>` shows what serves each column. Silence "
         "karni.W967 for a table small enough to scan.",
     ),
     _e(
@@ -1442,8 +1441,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "LiveUniqueConstraint on a model without soft delete",
         "check",
         "karni.fields.checks.check_field_declarations",
-        "LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL; a model "
-        "without soft delete has no deleted_at, so the constraint cannot be created.",
+        "LiveUniqueConstraint limits uniqueness to rows whose deleted_at is NULL. A model without "
+        "soft delete has no deleted_at, so the constraint cannot be created.",
         "Use models.UniqueConstraint, or inherit karni.models.BaseModel (or SoftDeleteModel).",
     ),
     _e(
@@ -1460,7 +1459,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A field-layer Karni option is malformed",
         "check",
         "karni.fields.checks (Karni.not_money, Karni.cascade, Karni.append_only)",
-        "Opt-outs need a reason per field so the next reader knows the choice was deliberate; "
+        "Opt-outs need a reason per field so the next reader knows the choice was deliberate. "
         "append_only names columns that only grow.",
         'Write `not_money = {"field": "<what it is>"}`, `cascade = {"field": "<why>"}`, '
         "`append_only = True` or a list of existing timestamp columns.",
@@ -1485,12 +1484,12 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The row's state changed since it was loaded",
         "exception",
         "karni.models.GuardedModel._do_update (karni.lifecycle.StateConflict)",
-        "A save that writes a StateField updates the row only if it still holds the state it "
-        "was loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed "
-        "it first, so nothing was written; two concurrent transitions from one state can "
-        "never both succeed. The API answers 409.",
-        "Reload the row (refresh_from_db()) and decide again from the state the message "
-        "names; in a UI, show the new state and let the user retry.",
+        "A save that writes a StateField updates the row only if it still holds the state it was "
+        "loaded with (UPDATE ... WHERE status = '<loaded>'). Another transaction changed it "
+        "first, so nothing was written. Two concurrent transitions from one state can never both "
+        "succeed. The API answers 409.",
+        "Reload the row (refresh_from_db()) and decide again from the state the message names. In "
+        "a UI, show the new state and let the user retry.",
     ),
     _e(
         "E982",
@@ -1524,8 +1523,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "karni.constraints.NoOverlap (class Karni: no_overlap)",
         "PostgreSQL's EXCLUDE constraint refused the row because another live row of the same "
         "resource overlaps its range. The check runs in the database, so it holds under "
-        "concurrency and against raw SQL; soft-deleted rows and the states listed in "
-        "ignore= never block. The API answers 409 naming the existing row.",
+        "concurrency and against raw SQL. Soft-deleted rows and the states listed in ignore= "
+        "never block. The API answers 409 naming the existing row.",
         "Pick a free slot, or cancel or delete the row the message names first. Touching "
         "ranges ([10:00, 11:00) and [11:00, 12:00)) do not overlap.",
     ),
@@ -1534,10 +1533,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Not enough capacity left",
         "exception",
         "karni.capacity.reserve; the CapacityField CHECK constraint",
-        "A CapacityField counts what is left of a limited resource and its CHECK keeps it at "
-        "or above zero. reserve() locks the row and refuses when fewer units remain than were "
-        "asked for; lowering the total below what is already reserved is refused the same "
-        "way. The API answers 409 with the resource and the remaining count.",
+        "A CapacityField counts what is left of a limited resource and its CHECK keeps it at or "
+        "above zero. reserve() locks the row and refuses when fewer units remain than were asked "
+        "for. Lowering the total below what is already reserved is refused the same way. The API "
+        "answers 409 with the resource and the remaining count.",
         "Ask for at most the remaining count the message gives, offer another resource or a "
         "waiting list, or release reservations before lowering the total.",
     ),
@@ -1546,13 +1545,13 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A capacity counter is used the wrong way",
         "exception",
         "karni.capacity.reserve / release; CapacityField; karni.checks",
-        "Capacity is consumed only through reserve() and release(), inside "
-        "transaction.atomic() together with the write that uses it, by a positive quantity. "
-        "Assigning the counter directly would let a stale instance overwrite reservations; "
-        "releasing more than was reserved means a double release.",
-        "Call reserve(resource, quantity) / release(...) inside transaction.atomic(); change "
-        "the total field to resize; point CapacityField(total=...) at an integer field of the "
-        "same model.",
+        "Capacity is consumed only through reserve() and release(), inside transaction.atomic() "
+        "together with the write that uses it, by a positive quantity. Assigning the counter "
+        "directly would let a stale instance overwrite reservations, and releasing more than was "
+        "reserved means a double release.",
+        "Call reserve(resource, quantity) / release(...) inside transaction.atomic(). Change the "
+        "total field to resize. Point CapacityField(total=...) at an integer field of the same "
+        "model.",
     ),
     _e(
         "E987",
@@ -1584,8 +1583,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Only PostgreSQL has EXCLUDE constraints. On SQLite (or any other backend) the "
         "NoOverlap constraint creates nothing, so overlapping rows are accepted. The "
         "StateField and CapacityField CHECK constraints do work on SQLite.",
-        "Use PostgreSQL wherever overlaps matter (production, CI); silence karni.W980 only "
-        "for a development database where accepting overlaps is fine.",
+        "Use PostgreSQL wherever overlaps matter (production, CI). Silence karni.W980 only for a "
+        "development database where accepting overlaps is fine.",
     ),
 )
 

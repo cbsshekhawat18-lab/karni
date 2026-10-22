@@ -25,13 +25,13 @@ __all__ = ["run_why", "why", "why_args", "why_empty", "why_empty_args"]
 _STATUS = re.compile(r"^[1-5]\d\d$")
 
 TARGET_HELP = (
-    "What to explain: <resource>/<id> (a row), <resource>.<field> (a field), <resource> "
-    "(its list), or a status followed by a request id (403 <request-id>). Resources are named "
-    "as the API names them: events, events-event or events.Event."
+    "What to explain: `<resource>/<id>` (a row), `<resource>.<field>` (a field), "
+    "`<resource>` (its list), or a status followed by a request id (`403 <request-id>`). "
+    "Resources are named as the API names them: `events`, `events-event` or `events.Event`."
 )
 AS_HELP = "The user: email, username, primary key, or anonymous."
 ACTION_HELP = (
-    "For a row: view (default), update, delete, or an @action name; create or list for a resource."
+    "For a row: view (default), update, delete, or an @action name. For a resource: create or list."
 )
 PARAM_HELP = "A query parameter the request carries, key=value (repeatable)."
 

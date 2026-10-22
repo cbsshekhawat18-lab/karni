@@ -4,8 +4,8 @@ The leads/CRM module of [Social Stats](https://github.com/cbsshekhawat18-lab/soc
 rebuilt on Karni as a measured case study: same data model, endpoints,
 screens and workspace permission rule, written against Karni's documented
 public surface only. The write-up with the before/after numbers is
-[docs/case-study-social-stats.md](../../docs/case-study-social-stats.md); what
-Karni should have provided and did not is [FRICTION.md](FRICTION.md).
+[docs/case-study-social-stats.md](../../docs/case-study-social-stats.md). What
+Karni should have provided and did not is listed in [FRICTION.md](FRICTION.md).
 
 ```sh
 python3.12 -m venv .venv && .venv/bin/pip install -e ../../packages/karni -e ../../packages/karni-cli pytest pytest-django
@@ -25,8 +25,8 @@ scaffold.
 
 A [Karni](https://github.com/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
-`config/settings.py`. Every Karni default can be overridden from that file —
-anything you assign after the call wins.
+`config/settings.py`. Every Karni default can be overridden from that file.
+Anything you assign after the call wins.
 
 ## Quickstart
 
@@ -42,8 +42,8 @@ This boots:
 | `django`   | migrations, then Django dev server              | http://localhost:8000  |
 | `db`       | postgres:16                                     | internal (`db:5432`)   |
 | `redis`    | redis:7 (Celery broker + cache)                 | internal (`redis:6379`)|
-| `worker`   | Celery worker                                   | —                      |
-| `beat`     | Celery beat (django-celery-beat DB scheduler)   | —                      |
+| `worker`   | Celery worker                                   | none                   |
+| `beat`     | Celery beat (django-celery-beat DB scheduler)   | none                   |
 | `frontend` | Vite dev server (React + TS), proxies `/api` and `/health` to django | http://localhost:5173 |
 
 Verify the stack (Postgres, Redis and Celery all checked):
@@ -58,25 +58,25 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 
 ## Frontend
 
-`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni):
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni).
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
-`AuthProvider`, the router and a `Toaster`; `src/main.tsx` imports
+`AuthProvider`, the router and a `Toaster`. `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
 (Tailwind v3 with the `@karni/ui/tailwind-preset`, see `tailwind.config.ts`).
-Every route renders inside `src/layout.tsx` — @karni/ui's `Layout` with one
+Every route renders inside `src/layout.tsx`, which is @karni/ui's `Layout` with one
 nav entry per static route in `src/routes.tsx`, so pages from
 `karni make page` (or `karni make model ... -a`) appear in the sidebar.
 
 ```sh
 cd frontend
 npm install
-npm run dev     # http://localhost:5173 — proxies /api and /health to Django
+npm run dev     # http://localhost:5173, proxies /api and /health to Django
 npm run build   # tsc + vite build into frontend/dist
 npm run lint    # ESLint with the karni/* enforcement rules
 ```
 
-The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`);
-docker compose sets `KARNI_API_PROXY=http://django:8000` for its container.
+The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
+Docker compose sets `KARNI_API_PROXY=http://django:8000` for its container.
 
 ## Using a local Karni checkout
 
@@ -87,10 +87,10 @@ checkout.
 `KARNI_UI_SRC=/path/to/Karni/packages/karni-ui` > the Karni checkout `karni`
 itself runs from > the npm release (`^0.1.0`). A local source is written into
 `frontend/package.json` as `"@karni/ui": "file:/abs/path/to/packages/karni-ui"`,
-and `frontend/.npmrc` (`install-links=true`) installs it as a packed copy —
+and `frontend/.npmrc` (`install-links=true`) installs it as a packed copy,
 exactly like the npm release, so React and TanStack Query exist once. The copy
 ships the checkout's built `dist/` (`karni new` builds it when missing). The
-copy is a snapshot — a plain `npm install` does not notice a rebuilt checkout.
+copy is a snapshot: a plain `npm install` does not notice a rebuilt checkout.
 After changing @karni/ui, rebuild it and refresh the copy:
 
 ```sh
@@ -113,10 +113,11 @@ dependencies into the venv first (`pip install -e . pytest pytest-django`:
 that is what brings `psycopg` for a host PostgreSQL, and pytest for
 `karni test`). Point `.env` at local services
 (`DATABASE_URL=sqlite:///db.sqlite3`, `REDIS_URL=redis://127.0.0.1:6379/0`,
-or `KARNI_CACHE=locmem` to run without Redis at all); settings.py loads it
-automatically (variables you already exported win; set `KARNI_DOTENV=false`
-to skip it). Then `karni serve --local` for Django and `npm run dev` in
-`frontend/`; `karni worker` only when something needs Celery:
+or `KARNI_CACHE=locmem` to run without Redis at all), and settings.py loads
+it automatically. Variables you already exported win, and
+`KARNI_DOTENV=false` skips the file. Then run `karni serve --local` for Django
+and `npm run dev` in `frontend/`. Run `karni worker` only when something needs
+Celery:
 
 ```sh
 karni migrate && karni serve --local    # http://127.0.0.1:8000
@@ -146,9 +147,9 @@ precedence.
 
 ## Day-to-day
 
-Generate code with `karni make` (`karni make --list` shows every generator;
-each runs through the project's `.venv` or the running compose service where
-it needs Django):
+Generate code with `karni make`. `karni make --list` shows every generator,
+and each one runs through the project's `.venv` or the running compose service
+where it needs Django:
 
 ```sh
 karni make app events                       # replaces manage.py startapp; wires INSTALLED_APPS
@@ -160,15 +161,15 @@ karni createsuperuser
 
 Override any Django, DRF, Celery or Karni setting in `config/settings.py`,
 below the `karni_settings()` call. Generators add apps to the `# karni:apps`
-block and middleware to the `# karni:middleware` block — keep those markers.
+block and middleware to the `# karni:middleware` block, so keep those markers.
 
 ## AI coding agents
 
-`karni new` generated thin agent adapters — `AGENTS.md`, `CLAUDE.md`,
+`karni new` generated thin agent adapters: `AGENTS.md`, `CLAUDE.md`,
 `.cursor/rules/karni.mdc`, `.windsurf/rules/karni.md`,
 `.github/copilot-instructions.md`, `.clinerules/karni.md`, `CONVENTIONS.md`,
 `.junie/AGENTS.md` and slash commands. They all say the same thing: run
-`karni context` and `karni rules` first. Do not edit them; put project rules
+`karni context` and `karni rules` first. Do not edit them. Put project rules
 in `karni.rules.py` and run `karni rules sync` (`make check` fails when they
 are stale). `karni mcp` serves the same surface over MCP.
 
@@ -182,7 +183,7 @@ files to `/data/static` at build time:
 docker build --target prod -t social_leads:latest .
 ```
 
-Run it with `DJANGO_ENV=prod`, a real `SECRET_KEY` and `ALLOWED_HOSTS` —
+Run it with `DJANGO_ENV=prod`, a real `SECRET_KEY` and `ALLOWED_HOSTS`.
 Karni validates the configuration at startup and fails loudly on anything
 insecure or missing. Put Caddy in front using the provided `Caddyfile`: it
 provisions TLS for `$DOMAIN` automatically, serves `/static/*` and `/media/*`

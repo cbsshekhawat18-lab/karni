@@ -21,14 +21,14 @@ follow what they return.
 | `karni rules` | Every convention as `CODE summary` (about 430 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
-| `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix; exit 1 if any |
+| `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix. Exit 1 if any |
 | `karni rules --json` | The raw data (rules, procedures, adapter overrides) |
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
 | `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
-| `karni why events/<id> --as <user>` | Why a row, field or action is refused or missing for a user, computed by the code that enforces it ([debugging](debugging/why.md)); `karni why-empty <resource> --as <user>` for an empty list |
+| `karni why events/<id> --as <user>` | Why a row, field or action is refused or missing for a user, computed by the code that enforces it ([debugging](debugging/why.md)). `karni why-empty <resource> --as <user>` covers an empty list |
 | `karni explain - < traceback.txt` | The Karni failure in a pasted traceback, test failure or log line: class, cause, `file:line`, fix, docs ([debugging](debugging/explain.md)) |
-| `karni queries /api/events/ --as USER` | Every query one endpoint runs; repeated ones grouped by the field and relation behind them, with the fix ([debugging](debugging/queries.md)) |
+| `karni queries /api/events/ --as USER` | Every query one endpoint runs. Repeated ones are grouped by the field and relation behind them, with the fix ([debugging](debugging/queries.md)) |
 | `karni explain --failure last` | A captured crash as a brief: request, user, failing frame with locals, SQL, next steps ([debugging](debugging/trace-and-replay.md)) |
 | `karni trace <request-id>` | One request's story in order: its tasks and retries, email, webhooks, change-log entries |
 | `karni replay <request-id> --as USER` | Re-run a captured request against the current code ("was 403, now 200") |
@@ -36,19 +36,21 @@ follow what they return.
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
-enforcement (AST for Python: model-base, viewset-base, viewset-access (direct
-`BaseViewSet` subclasses only), access-override, unpaginated-action,
-admin-convention, raw-sql, http-client, redundant-serializer, opt-out reasons;
-a comment- and string-aware scan for TS/JS: raw elements, the page cap, deep
-imports, direct HTTP, eslint-disable reasons). `karni check` and the `@karni/ui` ESLint preset
-stay authoritative; cross-file rules (duplicates) are not checked per file.
+enforcement. For Python it reads the AST: model-base, viewset-base,
+viewset-access (direct `BaseViewSet` subclasses only), access-override,
+unpaginated-action, admin-convention, raw-sql, http-client,
+redundant-serializer, opt-out reasons. For TS/JS it runs a comment- and
+string-aware scan: raw elements, the page cap, deep imports, direct HTTP,
+eslint-disable reasons. `karni check` and the `@karni/ui` ESLint preset
+stay authoritative, and cross-file rules (duplicates) are not checked per file.
 Path allowances use the documented defaults (`*/sql/*`, `*/services/*`,
 `src/api/`), matched relative to the project root.
 
-None of this imports Django or project code. `karni.agent` is stdlib-only;
-the CLI finds it, in order: in its own environment (`local`), through the
-project's interpreter like `karni context` does (`project`: `.venv`, else the
-running compose service; this answers with the project's karni version), or
+None of this imports Django or project code. `karni.agent` is stdlib-only.
+The CLI finds it, in order: in its own environment (`local`), through the
+project's interpreter like `karni context` does (`project`, using `.venv`, else
+the running compose service, so the answer comes from the project's karni
+version), or
 from the copy bundled into karni-cli (`bundled`, what `karni new` uses when
 only karni-cli is installed). Force one with
 `KARNI_AGENT_SOURCE=local|project|bundled`.
@@ -58,7 +60,7 @@ only karni-cli is installed). Force one with
 Every error Karni prints starts with a stable code and ends with a link:
 `E104: EventViewSet: Owned('organiser') does not lead from Event to the user
 model ... See …/errors/#e104`. The message names the class, field or setting
-to change; `karni explain E104` (offline, no project needed) adds why Karni
+to change. `karni explain E104` (offline, no project needed) adds why Karni
 objects and the general fix. System checks (`karni.E101`, …) run on every
 `manage.py` command, so a missing `access` or a broken schedule fails on boot,
 not on the first request. All codes: [errors.md](errors.md), generated from
@@ -66,7 +68,7 @@ the registries.
 
 ## Rule codes
 
-Stable; a code is never reused for a different rule.
+Codes are stable. A code is never reused for a different rule.
 
 | Range | Category |
 |---|---|
@@ -83,7 +85,7 @@ enforcement id (`model-base`, `viewset-base`, `viewset-access`,
 `redundant-serializer`, `duplicate`, `opt-out-reason`,
 `karni/no-raw-elements`, `karni/max-page-lines`, `karni/no-deep-imports`,
 `karni/no-direct-http`, `jscpd`) and fails the build. `must` is a mandatory
-convention that is not machine-checked; `should` is a strong default.
+convention that is not machine-checked. `should` is a strong default.
 `karni rules --json` lists the mapping.
 
 ## Project rules: `karni.rules.py`
@@ -106,28 +108,28 @@ ADAPTERS = {"disable": ["copilot-prompts"], "paths": {"windsurf": ".devin/rules/
 digits) and `rule`, optionally `summary`, `category` (default `project`),
 `severity` (`error`/`must`/`should`, default `must`), `rationale`, `fix`.
 `OVERRIDE` may change `summary`, `rule`, `rationale`, `fix`, `severity`,
-`category` of a Karni rule; codes and enforcement mappings are fixed.
-`DISABLE` hides rules from `karni rules` and from `--check`; it does not turn
+`category` of a Karni rule. Codes and enforcement mappings are fixed.
+`DISABLE` hides rules from `karni rules` and from `--check`, but it does not turn
 off `karni check` or ESLint (configure those where they live). `ADD += [...]`
 works too. Unknown names, codes or fields are errors that name the line.
 
 ## Adapters
 
-`karni new` generates them; `karni rules sync` refreshes them. The registry
+`karni new` generates them, and `karni rules sync` refreshes them. The registry
 is `packages/karni-cli/karni_cli/agent_adapters.toml`: a renamed file is a
 config change, not a code change, and each entry records the documentation
 it was verified against (2026-10-02).
 
 | Tool | File | Format |
 |---|---|---|
-| AGENTS.md readers (Codex, Jules, Gemini CLI, Zed, Warp, Devin; also Cursor, Copilot, Windsurf, Cline, Junie) | `AGENTS.md` | Markdown, no frontmatter. Canonical; carries module guidance |
+| AGENTS.md readers (Codex, Jules, Gemini CLI, Zed, Warp, Devin, and also Cursor, Copilot, Windsurf, Cline, Junie) | `AGENTS.md` | Markdown, no frontmatter. Canonical, and carries module guidance |
 | Claude Code | `CLAUDE.md` | `@AGENTS.md` import (a CLAUDE.md is read instead of AGENTS.md, so it imports it) |
 | Cursor | `.cursor/rules/karni.mdc` | frontmatter `description`, `globs`, `alwaysApply: true` |
 | Windsurf / Devin Desktop | `.windsurf/rules/karni.md` | frontmatter `trigger: always_on` |
 | GitHub Copilot | `.github/copilot-instructions.md` | Markdown, no frontmatter |
 | Cline | `.clinerules/karni.md` | Markdown in the `.clinerules/` directory |
-| Aider | `CONVENTIONS.md` | Markdown; load with `aider --read CONVENTIONS.md` or `read:` in `.aider.conf.yml` |
-| JetBrains Junie | `.junie/AGENTS.md` | Markdown; carries module guidance |
+| Aider | `CONVENTIONS.md` | Markdown. Load with `aider --read CONVENTIONS.md` or `read:` in `.aider.conf.yml` |
+| JetBrains Junie | `.junie/AGENTS.md` | Markdown, and carries module guidance |
 
 Slash commands for `new-model`, `new-page`, `add-module` and `new-module`
 come from the same procedure data:
@@ -190,7 +192,7 @@ why`](debugging/why.md)). Each returns the same text as the CLI.
 For debugging (the [development capture](debugging/capture.md)):
 `trace(request_id="last", as_json=False)`, `replay(request_id="last",
 as_user="", sets=[], drop_redacted=False, commit=False)` and
-`explain_failure(failure_id="last")` — the text of `karni trace`,
+`explain_failure(failure_id="last")`, which return the text of `karni trace`,
 `karni replay` and `karni explain --failure`.
 
 Debugging tools: `explain_text(text)` (`karni explain -` on a pasted
@@ -225,18 +227,18 @@ Projects scaffolded before this change have hand-written `AGENTS.md`,
 `CLAUDE.md`, `.cursorrules` and `.claude/commands/*.md`. `karni upgrade`
 runs a codemod for them:
 
-1. module blocks move to `.karni/modules/<x>.md`;
-2. every line you added to Karni's text becomes a `karni.rules.py` `ADD`
-   entry, verbatim (one per bullet or paragraph, codes `P001`…);
-3. every line you removed from Karni's text is listed as a `# REVIEW:`
+1. Module blocks move to `.karni/modules/<x>.md`.
+2. Every line you added to Karni's text becomes a `karni.rules.py` `ADD`
+   entry, verbatim (one per bullet or paragraph, codes `P001`…).
+3. Every line you removed from Karni's text is listed as a `# REVIEW:`
    comment in `karni.rules.py` and printed, because only you know whether
-   it meant "disable this rule";
-4. originals are backed up under `.karni/backup/`, then the adapters are
+   it meant "disable this rule".
+4. Originals are backed up under `.karni/backup/`, then the adapters are
    generated.
 
 Files that do not look like Karni's are left untouched and reported.
 `karni upgrade --dry-run` shows the diff. This is one entry in Karni's
-changelog; see [migrating to 0.2](migrations/0.2.md#agent-guidance-files).
+changelog. See [migrating to 0.2](migrations/0.2.md#agent-guidance-files).
 
 ## Plain-language prompts
 
@@ -246,7 +248,7 @@ from the procedure data (a test fails when it is stale).
 
 <!-- karni:procedures:start (generated: `karni rules --prompts-doc`) -->
 
-### `new-model` — Add a domain model the Karni way (model + viewset, nothing else)
+### `new-model`: Add a domain model the Karni way (model + viewset, nothing else)
 
 Prompt for tools without slash commands (replace the placeholder):
 
@@ -258,17 +260,17 @@ What `karni rules --procedure` returns:
 Add a new domain model: <ModelName> [in <app>] [fields...]
 
 1. Run `karni context` to see existing apps, models and viewsets.
-2. `karni make model <Name> <field:type ...> --with viewset --access <who> [--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and its viewset (`-a` also adds list/detail/form pages). Field types: `karni make model --help`. `--access`: authenticated (default), public-read, owned:<fk to user>, staff, role:<name>; edit the generated `access` for anything richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, serializer or router: the auto-router registers it; admin, filters, schema are derived.
+2. `karni make model <Name> <field:type ...> --with viewset --access <who> [--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and its viewset (`-a` also adds list/detail/form pages). Field types: `karni make model --help`. `--access`: authenticated (default), public-read, owned:<fk to user>, staff, role:<name>. Edit the generated `access` for anything richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, serializer or router. The auto-router registers it, and the admin, filters and schema are derived.
 3. Add `class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, read-only or write-only.
 4. `karni make migration && karni migrate && karni types`
-5. Verify: `karni context` lists the model and viewset; GET /api/<plural>/ works for a caller `access` admits and is refused (401/403) or empty for one it does not.
+5. Verify: `karni context` lists the model and viewset, and GET /api/<plural>/ works for a caller `access` admits and is refused (401/403) or empty for one it does not.
 
-Total new code should be well under 20 lines. If it isn't, stop — you are reimplementing something Karni provides.
+Total new code should be well under 20 lines. If it isn't, stop: you are reimplementing something Karni provides.
 
 Rules that apply: K009, K101, K102, K109, K114, K108, K115, K116, K302, K305, K003
 ```
 
-### `new-page` — Add a frontend page composing @karni/ui (50 lines or fewer)
+### `new-page`: Add a frontend page composing @karni/ui (50 lines or fewer)
 
 Prompt for tools without slash commands (replace the placeholder):
 
@@ -281,14 +283,14 @@ Add a page: <page purpose> [resource]
 
 1. Run `karni context` for available components, hooks, resources and pages.
 2. `karni make page <name> --resource <resource> --kind list|detail|form` writes `frontend/src/pages/<name>.tsx` composing @karni/ui and does the rest a person would do by hand: register the route alongside the existing pages (frontend/src/routes.tsx). Without `--resource` it is a bare `<Page>`. Never hand-roll tables, forms or fetching.
-3. Custom behaviour goes through props (`columns`, `fields`, `rowActions`, slots, custom cell/field renderers) — extend, never fork a variant.
+3. Custom behaviour goes through props (`columns`, `fields`, `rowActions`, slots, custom cell/field renderers). Extend, never fork a variant.
 4. Keep the file at 50 lines or fewer. Data access only via @karni/ui hooks (`useResourceList`, `useResourceItem`, `useResourceMutations`) and the typed hooks generated by `karni types`.
 5. `karni rules --check <the page file>` must report no violations.
 
 Rules that apply: K009, K201, K202, K204, K303, K306
 ```
 
-### `add-module` — Install an optional Karni module and wire it into settings
+### `add-module`: Install an optional Karni module and wire it into settings
 
 Prompt for tools without slash commands (replace the placeholder):
 
@@ -299,16 +301,16 @@ What `karni rules --procedure` returns:
 ```text
 Install Karni module: <module> (e.g. payments)
 
-1. Run `karni add <module>` — it adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
-2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`; run `karni add <module>` again if it asked you to.
-3. Run `karni context` — the module must appear under MODULES; `karni rules` now includes its guidance.
-4. Configure only settings the module documents; do not patch its internals.
+1. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
+2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
+3. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
+4. Configure only the settings the module documents. Do not patch its internals.
 5. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 
 Rules that apply: K009, K308
 ```
 
-### `new-module` — Create a new local Django app following Karni conventions
+### `new-module`: Create a new local Django app following Karni conventions
 
 Prompt for tools without slash commands (replace the placeholder):
 
@@ -319,11 +321,11 @@ What `karni rules --procedure` returns:
 ```text
 Create a local app: <app_name>
 
-1. Run `karni context` first — confirm the domain isn't already covered.
-2. `karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, `viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py — Karni derives all of that.
+1. Run `karni context` first to confirm the domain isn't already covered.
+2. `karni make app <app_name>` writes `__init__.py`, `apps.py`, `models.py`, `viewsets.py`, `migrations/`, `tests/` and adds the app to the `# karni:apps` block in config/settings.py. No admin.py, serializers.py, urls.py, forms.py: Karni derives all of that.
 3. Add models with `karni make model <Name> <field:type ...> --app <app_name> --with viewset --access <who>` (procedure new-model).
 4. `karni make migration && karni migrate && karni types`, then `karni context` to verify.
-5. Anything reusable across projects belongs in a Karni module: `karni make module <name>`, not in this project — say so instead of building it.
+5. Anything reusable across projects belongs in a Karni module: `karni make module <name>`, not in this project. Say so instead of building it.
 
 Rules that apply: K009, K305, K307
 ```

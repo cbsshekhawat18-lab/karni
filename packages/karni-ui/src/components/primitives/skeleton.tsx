@@ -11,7 +11,7 @@ const KarniSkeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 );
 KarniSkeleton.displayName = "Skeleton";
 
-/** Loading placeholder block; size it with width/height utility classes.
+/** Loading placeholder block that you size with width/height utility classes.
  *
  * A project replaces it with its own through `primitives={{ skeleton: ... }}` on KarniProvider.
  */

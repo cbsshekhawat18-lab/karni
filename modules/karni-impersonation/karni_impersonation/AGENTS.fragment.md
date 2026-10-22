@@ -5,11 +5,11 @@
   `path("impersonation/", include("karni_impersonation.urls"))` (`karni check`
   fails without both, IMP007).
 - Starting needs the explicit `karni_impersonation.impersonationsession:impersonate`
-  grant — never implied by staff; a target who holds anything the actor lacks
-  is refused (IMP002). Start/stop only through the API
+  grant. Being staff never implies it. A target who holds anything the actor
+  lacks is refused (IMP002). Start/stop only through the API
   (`/api/impersonation-sessions/start/`, `stop/`, `current/`) or the admin page.
 - While impersonating, `KARNI_IMPERSONATION_BLOCKED` wins over everything
-  (deletes, exports, payments, credential paths by default) — never work
-  around it; every write joins the session's audit batch naming both people.
+  (deletes, exports, payments, credential paths by default). Never work
+  around it. Every write joins the session's audit batch naming both people.
 - Settings: KARNI_IMPERSONATION_MAX_MINUTES, _BLOCKED, _REQUIRE_REASON,
-  _NOTIFY_TARGET. The target is emailed; the hourly sweep needs Celery beat.
+  _NOTIFY_TARGET. The target is emailed. The hourly sweep needs Celery beat.

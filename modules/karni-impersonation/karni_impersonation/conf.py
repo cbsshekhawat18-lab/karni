@@ -39,7 +39,7 @@ DEFAULT_BLOCKED: list[str] = [
 ]
 
 DEFAULTS: dict[str, Any] = {
-    # Hard limit on an impersonated session; it ends by itself after this.
+    # Hard limit on an impersonated session, which ends by itself after this.
     "KARNI_IMPERSONATION_MAX_MINUTES": env.int("KARNI_IMPERSONATION_MAX_MINUTES", default=60),
     # Actions, models, permissions and paths blocked while impersonating.
     "KARNI_IMPERSONATION_BLOCKED": env.list("KARNI_IMPERSONATION_BLOCKED", default=DEFAULT_BLOCKED),
@@ -51,7 +51,7 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_IMPERSONATION_NOTIFY_TARGET": env.bool(
         "KARNI_IMPERSONATION_NOTIFY_TARGET", default=True
     ),
-    # Sender address for that email; "" uses DEFAULT_FROM_EMAIL.
+    # Sender address for that email, or "" to use DEFAULT_FROM_EMAIL.
     "KARNI_IMPERSONATION_FROM_EMAIL": env("KARNI_IMPERSONATION_FROM_EMAIL", default=""),
     # Inject the banner into every HTML page served to an impersonated session.
     "KARNI_IMPERSONATION_BANNER": env.bool("KARNI_IMPERSONATION_BANNER", default=True),

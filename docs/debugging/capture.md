@@ -1,5 +1,5 @@
 ---
-description: One request id across requests, Celery tasks, email, webhooks and the change log, and the development-only capture under .karni/ that karni trace, karni replay and karni explain --failure read — with the redaction rules and limits.
+description: One request id across requests, Celery tasks, email, webhooks and the change log, and the development-only capture under .karni/ that karni trace, karni replay and karni explain --failure read, with the redaction rules and limits.
 ---
 
 # Request ids and the development capture
@@ -22,15 +22,15 @@ Karni's `MIDDLEWARE`). The id travels with everything the request causes:
 
 | Where | How it gets there |
 |---|---|
-| Logs | bound into structlog's context; django-structlog's `RequestMiddleware` logs the same id |
-| The response | `X-Request-ID: <id>` header — what you hand to `karni trace` |
+| Logs | bound into structlog's context, and django-structlog's `RequestMiddleware` logs the same id |
+| The response | `X-Request-ID: <id>` header, which is what you hand to `karni trace` |
 | Celery tasks enqueued during the request | a `karni_request_id` message header (`before_task_publish`), restored in the worker (`task_prerun`) |
 | Their retries | a retry is published from inside the running task, so it carries the same id, minutes later too |
 | A task with no id (beat, a shell) | gets a fresh one, so its own email and changes still correlate |
 | Email | `X-Karni-Request-ID` on every `EmailMessage.send()` (`send_mail`, account emails, …) |
 | Outgoing HTTP (a webhook you send) | `karni.tracing.outgoing_headers()` gives `{"X-Request-ID": id}` for your call |
-| Incoming webhooks | a delivery is a new request with its own id; the payments module links it to the checkout it settles (see [linking](#linking-requests)) |
-| Change history | `ChangeLog.request_id` and `ChangeBatch.request_id`; search by it in the admin's *Change log* |
+| Incoming webhooks | a delivery is a new request with its own id, and the payments module links it to the checkout it settles (see [linking](#linking-requests)) |
+| Change history | `ChangeLog.request_id` and `ChangeBatch.request_id`. Search by it in the admin's *Change log* |
 
 ```python
 import requests
@@ -45,14 +45,14 @@ Outside a request, `with karni.tracing.bound_request_id() as rid:` gives a
 management command or a script an id of its own.
 
 **Which id is used.** A client's `X-Request-ID` is accepted only when it
-can be trusted: always in development (`DEBUG` on), and with `DEBUG` off
-only when `KARNI_REQUEST_ID_TRUST_HEADER = True` *and* `NUM_PROXIES` is not
-`0` — the same trust model as `X-Forwarded-For` ([security](../security.md)):
-turn it on only when the proxy in front overwrites the header on every
+can be trusted. That is always in development (`DEBUG` on). With `DEBUG` off
+it is only when `KARNI_REQUEST_ID_TRUST_HEADER = True` *and* `NUM_PROXIES` is
+not `0`. This is the same trust model as `X-Forwarded-For` ([security](../security.md)).
+Turn it on only when the proxy in front overwrites the header on every
 request (in Caddy: `header_up X-Request-ID {http.request.uuid}` inside
 `reverse_proxy`). Otherwise the id is a fresh UUID and the client's value is
 replaced, so nobody can write ids into your production logs. Ids are 1–128
-letters, digits, `_` and `-` (they name files); anything else is replaced
+letters, digits, `_` and `-` (they name files). Anything else is replaced,
 even in development. `karni.W920` warns when `RequestIdMiddleware` comes
 after django-structlog's middleware.
 
@@ -68,7 +68,7 @@ above the settings package):
 ```
 
 The rest of `.karni/` (`config.toml`, `modules/`) is project configuration
-and stays committed; the three capture directories each carry their own
+and stays committed. The three capture directories each carry their own
 `.gitignore`, and the scaffold's `.gitignore` and `.dockerignore` list them.
 
 ### The request record
@@ -87,9 +87,9 @@ A contract other tools read (version 1, exactly these keys):
  "error_code": "permission_denied", "failure_id": null}
 ```
 
-`view` is the dotted path of the view (the viewset for a DRF viewset; `""`
-when no URL matched), `resource` the router basename, `action` the DRF
-action. `body` is the parsed JSON, a form as `{field: value}` (an upload as
+`view` is the dotted path of the view (the viewset for a DRF viewset, or `""`
+when no URL matched). `resource` is the router basename and `action` is the
+DRF action. `body` is the parsed JSON, a form as `{field: value}` (an upload as
 `"<file name.pdf, 1234 bytes>"`), a short note for a body that is not
 captured (another content type, over 64 KiB), or `null`. `error_code` is the
 Karni code the response carries (`E801`), else DRF's error code
@@ -102,22 +102,22 @@ Written on an unhandled exception (`got_request_exception`, and
 `task_failure` for a Celery task that failed for good). It holds what an
 agent would otherwise reconstruct:
 
-- the request (method, path, query, headers, body) or the task (name, id,
-  retries, its arguments by parameter name);
-- the resolved view, viewset, router basename, action and serializer class;
-- the user with their roles and their grants on the resource's model;
-- the SQL the request ran, with timings, and the repeated statements grouped
-  (statement text with placeholders — parameters are never recorded);
-- the exception, its chain, a Karni code when it has one, and the full
-  traceback, outermost first; frames of the project and of Karni (and its
+- The request (method, path, query, headers, body) or the task (name, id,
+  retries, its arguments by parameter name).
+- The resolved view, viewset, router basename, action and serializer class.
+- The user with their roles and their grants on the resource's model.
+- The SQL the request ran, with timings, and the repeated statements grouped
+  (statement text with placeholders, since parameters are never recorded).
+- The exception, its chain, a Karni code when it has one, and the full
+  traceback, outermost first. Frames of the project and of Karni (and its
   modules) carry their local variables, rendered safely (no query runs, a
   queryset is not evaluated, a model instance shows its fields) and
-  truncated; library and standard-library frames do not;
-- `origin`: the frame it failed in — the innermost project frame, else the
-  innermost Karni frame;
-- the relevant settings: `DEBUG`, each database's engine, name, host and
-  port (never a password), the project's own apps, every `KARNI_*` setting;
-  and the Python, Django, DRF and Karni versions.
+  truncated. Library and standard-library frames do not.
+- `origin`: the frame it failed in. That is the innermost project frame, else
+  the innermost Karni frame.
+- The relevant settings: `DEBUG`, each database's engine, name, host and
+  port (never a password), the project's own apps and every `KARNI_*` setting.
+  Also the Python, Django, DRF and Karni versions.
 
 ### The trace
 
@@ -126,18 +126,18 @@ the event's fields, and optionally `refs`. Events Karni writes:
 
 | Event | Fields |
 |---|---|
-| `request.start` / `request.end` | method, path; end: status, duration_ms, view, user, error_code, failure_id |
+| `request.start` / `request.end` | method, path, and on end: status, duration_ms, view, user, error_code, failure_id |
 | `task.enqueued` | task, task_id, retries, eta, queue |
 | `task.started` | task, task_id, retries, eager |
 | `task.retried` | task, task_id, retries, reason |
-| `task.succeeded` / `task.failed` | task, task_id, duration_ms; failed: exception, message, failure_id |
+| `task.succeeded` / `task.failed` | task, task_id, duration_ms, and on failed: exception, message, failure_id |
 | `email.sent` | to, cc and bcc counts, subject, sent |
 | `audit.batch` | batch_id, kind, label |
-| `webhook.received` / `webhook.matched` (karni-payments) | provider, event_id, event_type; refs |
-| `payment.checkout` (karni-payments) | provider, amount, currency; refs |
+| `webhook.received` / `webhook.matched` (karni-payments) | provider, event_id, event_type, plus refs |
+| `payment.checkout` (karni-payments) | provider, amount, currency, plus refs |
 
 Your code adds its own with `karni.debug.trace_event("name", field=value,
-refs=[...])` — a no-op with `DEBUG` off.
+refs=[...])`. It does nothing with `DEBUG` off.
 
 ### Linking requests
 
@@ -153,15 +153,15 @@ Everything under `.karni/` passes the same rules as the
 - **By name.** A key, form field, query parameter, header, setting or local
   variable whose name contains one of `KARNI_AUDIT_REDACT` (`password`,
   `token`, `secret`, `key` by default), or that a model lists in
-  `Karni.sensitive`, is recorded as `"[redacted]"` — nested bodies included.
+  `Karni.sensitive`, is recorded as `"[redacted]"`. Nested bodies are included.
 - **Credential headers.** `Authorization` (the scheme is kept:
   `Bearer [redacted]`), `Proxy-Authorization`, `Cookie` (cookie names kept),
   `Set-Cookie`, `X-CSRFToken`.
 - **By value.** `SECRET_KEY` and its fallbacks, every string setting with a
-  sensitive name, database and broker passwords, and — for the request being
-  captured — every value redacted by name (the password in the body, the
-  bearer token, the cookie values) are known secrets: a string equal to one
-  is replaced, and a longer string containing one has it cut out, wherever it
+  sensitive name, and database and broker passwords are known secrets. So is
+  every value redacted by name in the request being captured (the password in
+  the body, the bearer token, the cookie values). A string equal to one is
+  replaced, and a longer string containing one has it cut out, wherever it
   appears (a local under an innocent name, an exception message, SQL text).
 
 `tests/test_debug.py::test_no_secret_reaches_the_capture_directory` sends
@@ -175,7 +175,7 @@ any file under `.karni/`.
 
 | Setting | Default | What it does |
 |---|---|---|
-| `KARNI_DEBUG_CAPTURE` | `True` | `False` turns the capture off; with `DEBUG` off it never runs |
+| `KARNI_DEBUG_CAPTURE` | `True` | `False` turns the capture off. With `DEBUG` off it never runs |
 | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | request records kept, and failure snapshots kept (the oldest go first) |
 | `KARNI_DEBUG_TRACE_DAYS` | `7` | days of trace files kept |
 | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | accept a proxy's `X-Request-ID` with `DEBUG` off |
@@ -183,11 +183,11 @@ any file under `.karni/`.
 
 **Inert in production.** With `DEBUG` off, `CaptureMiddleware` raises
 `MiddlewareNotUsed` when Django builds the handler, so it is not in the
-chain at all, and `trace_event` returns before touching the disk;
+chain at all, and `trace_event` returns before touching the disk.
 `tests/test_debug.py::test_capture_is_inert_when_debug_is_off` makes
 requests, crashes and traces with `DEBUG` off and asserts `.karni/` was
 never created.
 
 **Escape hatches.** Subclass `karni.debug.middleware.CaptureMiddleware` and
-override `should_capture(request)` or `max_body_bytes`; remove
+override `should_capture(request)` or `max_body_bytes`. Or remove
 `RequestIdMiddleware` or `CaptureMiddleware` from `MIDDLEWARE`.

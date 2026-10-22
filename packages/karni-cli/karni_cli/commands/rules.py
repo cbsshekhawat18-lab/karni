@@ -57,7 +57,7 @@ def check_text(paths: list[Path], project: Path | None) -> tuple[str, int]:
 def rules(
     ctx: typer.Context,
     check: list[Path] | None = typer.Option(
-        None, "--check", help="Statically check FILE (repeatable); exit 1 on violations."
+        None, "--check", help="Statically check FILE (repeatable) and exit 1 on violations."
     ),
     explain: str | None = typer.Option(None, "--explain", help="Show one rule in full."),
     procedure: str | None = typer.Option(None, "--procedure", help="Show a procedure's steps."),
@@ -101,7 +101,7 @@ def rules(
 @rules_app.command("sync")
 def sync_command(
     check: bool = typer.Option(
-        False, "--check", help="Only compare; exit 1 if any adapter is stale (for CI)."
+        False, "--check", help="Only compare, and exit 1 if any adapter is stale (for CI)."
     ),
     force: bool = typer.Option(
         False, "--force", help="Overwrite hand-written files (backed up under .karni/backup/)."

@@ -60,18 +60,18 @@ def command(
         None, help="Migration name (makemigrations --name), e.g. add_event_capacity."
     ),
     empty: bool = typer.Option(
-        False, "--empty", help="An empty migration to fill in (data migrations); needs one app."
+        False, "--empty", help="An empty migration to fill in (data migrations). It needs one app."
     ),
     app: str | None = APP_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Create migrations — wraps `manage.py makemigrations [APP] [--name NAME] [--empty]`.
+    """Create migrations. It wraps `manage.py makemigrations [APP] [--name NAME] [--empty]`.
 
-    Without --app every app with model changes gets a migration; --empty
-    (a data migration) targets one app: --app, else the only local app.
-    --dry-run is makemigrations' own (prints, writes nothing).
+    Without --app every app with model changes gets a migration. With --empty
+    (a data migration) it targets one app: --app, else the only local app.
+    --dry-run is makemigrations' own (it prints and writes nothing).
     """
     project = require_project()
     label = None

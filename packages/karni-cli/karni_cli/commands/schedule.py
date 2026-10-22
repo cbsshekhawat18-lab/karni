@@ -8,7 +8,7 @@ from karni_cli import project as project_mod
 from karni_cli.project import require_project
 
 schedule_app = typer.Typer(
-    help="Celery beat schedules — wraps `manage.py karni_schedules`.",
+    help="List and run the Celery beat schedules. It wraps `manage.py karni_schedules`.",
     no_args_is_help=True,
 )
 
@@ -19,7 +19,10 @@ def list_schedules(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """List every schedule: name, task, timing, source — wraps `manage.py karni_schedules`."""
+    """List every schedule with its name, task, timing and source.
+
+    It wraps `manage.py karni_schedules`.
+    """
     project = require_project()
     args = ["karni_schedules", *(["--json"] if as_json else [])]
     proc = project_mod.run_manage(project, args, docker=docker, service=service, capture=False)
@@ -32,7 +35,10 @@ def run_schedule(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run one schedule's task now, synchronously — wraps `manage.py karni_schedules --run NAME`."""
+    """Run one schedule's task now, synchronously.
+
+    It wraps `manage.py karni_schedules --run NAME`.
+    """
     project = require_project()
     proc = project_mod.run_manage(
         project, ["karni_schedules", "--run", name], docker=docker, service=service, capture=False

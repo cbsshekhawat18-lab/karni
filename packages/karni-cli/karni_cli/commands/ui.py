@@ -346,17 +346,18 @@ def detect(
         False, "--force", help="Overwrite generated files even if they were edited."
     ),
     dry_run: bool = typer.Option(
-        False, "--dry-run", help="Print the report and the files; write nothing."
+        False, "--dry-run", help="Print the report and the files, but write nothing."
     ),
     as_json: bool = typer.Option(False, "--json", help="Print the report as JSON (for agents)."),
 ) -> None:
     """Adopt the frontend's design system: map its theme onto Karni's `--karni-*` tokens.
 
-    Detection order: shadcn/ui (`components.json`: Karni's tokens reference the project's
-    CSS variables with `var()`, and `karni-primitives.tsx` registers its components as
-    Karni's primitives); a Tailwind theme (`@theme` blocks, or the `tailwind.config` that
-    Node evaluates in the project); a Material UI, Chakra UI or Mantine theme (literal
-    values read from the source); else Karni's defaults, listed for editing.
+    It looks for a theme in this order. First shadcn/ui (`components.json`): Karni's
+    tokens reference the project's CSS variables with `var()`, and `karni-primitives.tsx`
+    registers its components as Karni's primitives. Next a Tailwind theme (`@theme`
+    blocks, or the `tailwind.config` that Node evaluates in the project). Then a Material
+    UI, Chakra UI or Mantine theme (literal values read from the source). Without any of
+    these it uses Karni's defaults, listed for editing.
 
     Writes one file the project owns, `karni-theme.css`, imported after
     `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import).

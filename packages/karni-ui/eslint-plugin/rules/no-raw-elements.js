@@ -37,7 +37,7 @@ export default {
     ],
     messages: {
       rawElement:
-        "Raw <{{element}}> is Karni boilerplate — compose {{replacement}} from @karni/ui instead. " +
+        "Raw <{{element}}> is Karni boilerplate. Compose {{replacement}} from @karni/ui instead. " +
         "Opt out only with an explained disable: " +
         "// eslint-disable-next-line karni/no-raw-elements -- <reason>",
     },

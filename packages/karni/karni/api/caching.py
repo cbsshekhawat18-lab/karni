@@ -70,7 +70,7 @@ _ACTIONS: Final = frozenset({"list", "retrieve"})
 
 @dataclass(frozen=True, kw_only=True)
 class Cache:
-    """``cache = Cache(ttl=60, depends_on=[Price])`` — tune caching for one viewset.
+    """``cache = Cache(ttl=60, depends_on=[Price])``: tune caching for one viewset.
 
     :param ttl: seconds; ``None`` = ``KARNI_API_CACHE_TTL``.
     :param depends_on: extra models whose writes invalidate this viewset's
@@ -95,7 +95,7 @@ class Cache:
 
 @dataclass(frozen=True, kw_only=True)
 class Uncached:
-    """``cache = Uncached(reason="...")`` — never cache this viewset's responses."""
+    """``cache = Uncached(reason="...")``: never cache this viewset's responses."""
 
     reason: str
 

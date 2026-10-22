@@ -158,15 +158,15 @@ def command(
         None, "--cron", help='Five-field crontab, e.g. "0 3 * * *" (03:00 daily).'
     ),
     task: str | None = typer.Option(
-        None, "--task", help="Dotted task to run (default: APP.tasks.<name>, created if missing)."
+        None, "--task", help="Dotted task to run (default: `APP.tasks.<name>`, created if missing)."
     ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add every(...)/cron(...) to APP/schedules.py — merged into Celery beat at startup.
+    """Add every(...)/cron(...) to APP/schedules.py, merged into Celery beat at startup.
 
-    Without --task the schedule runs APP.tasks.<name> (dashes become
+    Without --task the schedule runs `APP.tasks.<name>` (dashes become
     underscores), which is created when missing.
     """
     ws = project_workspace(force)

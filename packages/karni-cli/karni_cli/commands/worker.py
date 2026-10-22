@@ -45,7 +45,7 @@ def worker(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
 ) -> None:
-    """Run a Celery worker — wraps `python -m celery -A config worker -l info [ARGS]`.
+    """Run a Celery worker. It wraps `python -m celery -A config worker -l info [ARGS]`.
 
     A host worker on macOS gets `--pool=solo` (the prefork pool cannot run tasks there).
     """

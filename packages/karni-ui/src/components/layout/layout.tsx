@@ -280,7 +280,7 @@ function DefaultSkipLink({ href, onClick, children }: LayoutSkipLinkProps): Reac
   );
 }
 
-/** The default pieces of the shell; spread them to wrap one (`{ ...defaultLayoutSlots }`). */
+/** The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). */
 export const defaultLayoutSlots: LayoutSlots = {
   Header: DefaultHeader,
   Sidebar: DefaultSidebar,

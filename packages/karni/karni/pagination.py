@@ -175,7 +175,7 @@ class UnpaginatedPagination(KarniPagination):
 
 @dataclass(frozen=True, kw_only=True)
 class Unpaginated:
-    """``pagination = Unpaginated(max_rows=N, reason="...")`` — a viewset that returns lists.
+    """``pagination = Unpaginated(max_rows=N, reason="...")``: a viewset that returns lists.
 
     The only way to switch pagination off on a ``BaseViewSet``. Lists come
     back as a plain JSON array of at most ``max_rows`` rows (more are cut,

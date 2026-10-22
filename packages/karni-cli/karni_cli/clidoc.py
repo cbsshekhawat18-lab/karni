@@ -56,27 +56,27 @@ description: Every karni command with its arguments and options, generated from 
 
 # The `karni` command
 
-> Generated from the CLI itself — `python -m karni_cli.clidoc > docs/cli.md`;
+> Generated from the CLI itself by `python -m karni_cli.clidoc > docs/cli.md`.
 > `packages/karni-cli/tests/test_clidoc.py` fails when this file is stale.
-> Change a command's help, then regenerate; never edit this file by hand.
+> Change a command's help, then regenerate. Never edit this file by hand.
 
 `karni <command> --help` prints the same information. Runners execute in the
 project environment: the project's `.venv`, else the running docker compose
-service (`--docker/--no-docker` forces one; `--service` / `KARNI_COMPOSE_SERVICE`
-names it). Put `--` before passthrough arguments that clash with karni's own
-options.
+service. `--docker/--no-docker` forces one, and `--service` / `KARNI_COMPOSE_SERVICE`
+names the service. Put `--` before passthrough arguments that clash with karni's
+own options.
 
 On the host, a command that starts Django first checks that the database
-driver loads, and one that opens the database (`migrate`, `seed`,
-`serve --local`, `test`, ...) that the server answers. A missing driver or an
-unreachable database is a coded error with the fix
+driver loads. A command that opens the database (`migrate`, `seed`,
+`serve --local`, `test`, ...) also checks that the server answers. A missing
+driver or an unreachable database is a coded error with the fix
 ([C012](errors.md#c012), [C013](errors.md#c013)) instead of Django's
-traceback; `KARNI_DB_CHECK=false` skips the check.
+traceback. `KARNI_DB_CHECK=false` skips the check.
 """
 
 GENERATOR_RULES = """Every generator follows the same rules:
 
-- It writes project code only — never framework logic.
+- It writes project code only, never framework logic.
 - It never overwrites: an existing target is an error naming the file and
   `--force` (which replaces it).
 - `--dry-run` prints the files and the diff it would write, and writes nothing.
@@ -86,7 +86,7 @@ GENERATOR_RULES = """Every generator follows the same rules:
   apps are the `# karni:apps` entries of config/settings.py).
 - Existing files change only through marker comments (`# karni:apps`,
   `# karni:middleware`, `// karni:page-imports`, `// karni:routes`) or
-  AST-located appends; an unfamiliar layout is an error that names the manual
+  AST-located appends. An unfamiliar layout is an error that names the manual
   step. Generated Python is ruff-clean (isort sections, ruff format layout).
 - It never imports Django: `karni make migration` (and `make model --migrate`)
   run `manage.py makemigrations` through the project interpreter.

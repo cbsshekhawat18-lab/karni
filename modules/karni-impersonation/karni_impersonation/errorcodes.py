@@ -16,8 +16,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="Impersonation needs the explicit impersonate permission",
         kind="api",
         source=f"{_SOURCE}.services.start",
-        why="Acting as someone else is never implied by staff or admin status; only a role "
-        "granted karni_impersonation.impersonationsession:impersonate may start a session.",
+        why=(
+            "Staff or admin status never implies the right to act as someone else. Only a role "
+            "granted karni_impersonation.impersonationsession:impersonate may start a session."
+        ),
         fix="Grant the permission to the support role in KARNI_ROLES (or the permission matrix).",
     ),
     ErrorCode(
@@ -54,8 +56,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="This request is not part of an impersonated session",
         kind="api",
         source=f"{_SOURCE}.viewsets.ImpersonationSessionViewSet.stop",
-        why="stop/ ends the session the request belongs to; there is none (it ended, expired or "
-        "never started).",
+        why=(
+            "stop/ ends the session the request belongs to, and there is none (it ended, expired "
+            "or never started)."
+        ),
         fix="Nothing to do: you are yourself.",
     ),
     ErrorCode(
@@ -65,17 +69,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         source=f"{_SOURCE}.vetoes, {_SOURCE}.middleware",
         why="KARNI_IMPERSONATION_BLOCKED names what an impersonator may never do (deleting, "
         "exporting, payment changes, credential changes by default), whatever the target may.",
-        fix="Stop impersonating and do it as yourself, or ask the user to; a project narrows the "
-        "list in KARNI_IMPERSONATION_BLOCKED.",
+        fix=(
+            "Stop impersonating and do it as yourself, or ask the user to. A project narrows the "
+            "list in KARNI_IMPERSONATION_BLOCKED."
+        ),
     ),
     ErrorCode(
         code="IMP007",
         title="karni-impersonation is installed but not wired",
         kind="check",
         source=f"{_SOURCE}.checks",
-        why="The middleware resolves the impersonated session, enforces the limit and injects the "
-        "banner; the URL include serves the banner's exit. Without them sessions start but "
-        "nothing acts on them.",
+        why=(
+            "The middleware resolves the impersonated session, enforces the limit and injects the "
+            "banner. The URL include serves the banner's exit. Without them sessions start but "
+            "nothing acts on them."
+        ),
         fix="Add 'karni_impersonation.middleware.ImpersonationMiddleware' after "
         "AuthenticationMiddleware in MIDDLEWARE and "
         "path('impersonation/', include('karni_impersonation.urls')) to config/urls.py.",
@@ -85,8 +93,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         title="KARNI_IMPERSONATION_BLOCKED is malformed",
         kind="check",
         source=f"{_SOURCE}.checks",
-        why="The blocked list is matched on every gate; a non-string entry would silently match "
-        "nothing.",
+        why=(
+            "The blocked list is matched on every gate, so a non-string entry would silently "
+            "match nothing."
+        ),
         fix="Use strings: action names, 'app.model', 'app.model:action' patterns, or '/path/*'.",
     ),
 )

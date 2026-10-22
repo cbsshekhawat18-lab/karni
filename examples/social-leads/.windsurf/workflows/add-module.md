@@ -3,10 +3,10 @@ description: Install an optional Karni module and wire it into settings
 ---
 Install Karni module: the request typed after the command
 
-1. Run `karni add <module>` — it adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
-2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`; run `karni add <module>` again if it asked you to.
-3. Run `karni context` — the module must appear under MODULES; `karni rules` now includes its guidance.
-4. Configure only settings the module documents; do not patch its internals.
+1. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
+2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
+3. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
+4. Configure only the settings the module documents. Do not patch its internals.
 5. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 
 Rules that apply: K009, K308 (`karni rules --explain <code>`).

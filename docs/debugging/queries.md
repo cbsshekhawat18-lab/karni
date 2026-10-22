@@ -23,7 +23,7 @@ karni queries events --all                # every statement, not only the repeat
 
 It runs `manage.py karni_queries` in the project's interpreter, as the other
 runners do: one request through the test client, force-authenticated as the
-user (`--as` takes an email, a username or a primary key; without it the
+user (`--as` takes an email, a username or a primary key, and without it the
 request is anonymous), inside a transaction that is rolled back. The response
 cache and the query budget are off for the request, so every statement is
 counted. Agents use the MCP tool `queries(endpoint, as_user, method, data,
@@ -138,13 +138,13 @@ follows by itself.
   rolled back and `on_commit` callbacks never fire, but other side effects of
   a write view (an HTTP call, a file written) are real.
 - **Force-authenticated.** A real request also runs its session or token
-  lookup and user lookup (1 or 2 queries); the report says so.
+  lookup and user lookup (1 or 2 queries). The report says so.
 - **A refused request** (401, 403, 404) runs the access check's queries, not
   the response's. The note points at `karni why`.
 - **A view that raises** gives E943 with the traceback and what
   [`karni explain -`](explain.md) recognises in it.
 - **The budget** shown is the action's (`query_budget` on the viewset, else
-  `KARNI_QUERY_BUDGET`); see [query budgets](../api.md#query-budgets).
+  `KARNI_QUERY_BUDGET`). See [query budgets](../api.md#query-budgets).
 
 ## JSON
 
@@ -162,7 +162,7 @@ statement with its time and origin).
 | [E940](../errors.md#e940) | the endpoint resolves to no URL (the message lists the routed resources or viewsets) |
 | [E941](../errors.md#e941) | `--as` matches no single user (the message shows a few) |
 | [E942](../errors.md#e942) | `--method` is not one the view answers there, or `--data` is not JSON |
-| [E943](../errors.md#e943) | the view raised; the traceback and its explanation follow |
+| [E943](../errors.md#e943) | the view raised, and the traceback and its explanation follow |
 | [C341](../errors.md#c341) | the project's karni predates `karni_queries` |
 
 The Python API is `karni.api.diagnose.run(endpoint, user=…, method=…,

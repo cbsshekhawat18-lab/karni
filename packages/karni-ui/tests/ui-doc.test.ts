@@ -28,7 +28,7 @@ describe("docs/ui.md", () => {
       roles: { "page-shell": "Page" },
     };
     const page = render(manifest);
-    expect(page).toContain("- `useAuth` — `{ user, status");
+    expect(page).toContain("- `useAuth`: `{ user, status");
     expect(page).toContain("| `page-shell` | `Page` |");
   });
 });
