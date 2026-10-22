@@ -43,8 +43,9 @@ repos:
 
   # --- Python: ruff lint + format ---------------------------------------------
   # Ruff resolves the closest config per file: each package's pyproject
-  # [tool.ruff] inside packages/karni, packages/karni-cli and
-  # modules/karni-payments; the root ruff.toml everywhere else.
+  # [tool.ruff] inside packages/karni, packages/karni-cli and each of
+  # modules/karni-*; the root ruff.toml everywhere else. Keep `rev` equal to
+  # the ruff pin in the Makefile (CI's version).
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9
     hooks:
