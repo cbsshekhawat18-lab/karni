@@ -39,6 +39,24 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     assert 'baseline = "0.3.0"' in (project / "pyproject.toml").read_text()
 
 
+def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeypatch) -> None:
+    """The README's `pip install -e .` installs the dependencies, not a package.
+
+    Without a declared build system and `packages = []`, setuptools' discovery
+    refused the flat layout ("Multiple top-level packages discovered in a
+    flat-layout: ['config', 'frontend']").
+    """
+    import tomllib
+
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    result = runner.invoke(app, ["new", "Shop", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    pyproject = tomllib.loads((tmp_path / "shop" / "pyproject.toml").read_text())
+    assert pyproject["build-system"]["build-backend"] == "setuptools.build_meta"
+    assert pyproject["tool"]["setuptools"]["packages"] == []
+    assert "pip install -e ." in (tmp_path / "shop" / "README.md").read_text()
+
+
 def test_slug_rules() -> None:
     assert derive_slug("My App") == "my_app"
     assert validate_name("acme-board") == "acme_board"
