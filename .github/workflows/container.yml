@@ -59,7 +59,10 @@ jobs:
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a release version: $version"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "minor=${version%.*}" >> "$GITHUB_OUTPUT"
-          echo "latest=$([[ "$version" == "$latest" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          # The newest version gets :latest. Compare instead of testing equality:
+          # right after a release, PyPI's JSON can still name the previous one.
+          newest="$(printf '%s\n%s\n' "$version" "$latest" | sort -V | tail -n 1)"
+          echo "latest=$([[ "$version" == "$newest" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       # A release run uploads to PyPI; give the index time to serve the files.
       - name: Wait for karni ${{ steps.version.outputs.version }} on PyPI
