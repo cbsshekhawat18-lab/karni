@@ -1,5 +1,5 @@
 ---
-description: karni.admin: every model gets a derived django-unfold admin with columns, filters, search and autocompletes, and how to override any part of it.
+description: "karni.admin: every model gets a derived django-unfold admin with columns, filters, search and autocompletes, and how to override any part of it."
 ---
 
 # karni.admin
@@ -216,22 +216,90 @@ Behavioural fine print (by design — see `karni/models.py` docstrings):
 
 ## Theming
 
-Unfold reads the `UNFOLD` setting. Karni's default sets the site title and
-header from `KARNI_ADMIN_TITLE` (env, default `"<PROJECT_NAME> admin"`), a
-neutral indigo primary color scale, `BORDER_RADIUS: "8px"` and leaves
-unfold's automatic light/dark switching on. Two ways to change it:
+The admin, the welcome page and `@karni/ui` are one product: the same
+colours in light and dark, the same radius, spacing, font stack and
+dark-mode switch. They share one source, `@karni/ui`'s token stylesheet
+(`packages/karni-ui/src/styles.css`, published as `@karni/ui/styles.css`).
+The `karni` package ships a byte-for-byte copy of it as the static file
+`karni/tokens.css`, and a test fails, printing the `cp` command, until a
+change to the tokens is copied. Copying a file, rather than generating a
+palette, keeps a single set of values: no build step, and nothing on the
+Django side to keep in step by hand.
+
+Unfold reads the `UNFOLD` setting. Karni's default:
+
+- sets the site title and header from `KARNI_ADMIN_TITLE` (env, default
+  `"<PROJECT_NAME> admin"`);
+- loads `karni/tokens.css` and `karni/unfold-theme.css` through `STYLES`.
+  The second file draws unfold with the tokens: `@karni/ui`'s system font
+  stack instead of the Inter that unfold bundles, `--karni-space-unit` as
+  unfold's spacing step, text on primary buttons in the primary-foreground
+  colour, and on a touch screen (`pointer: coarse`) 44px sidebar rows,
+  inputs, selects and save buttons;
+- points `COLORS["primary"]` and the text colours (`COLORS["font"]`) at the
+  tokens (`var(--karni-color-primary)` and tints of it), so buttons, links,
+  focus rings and the active sidebar entry are `@karni/ui`'s primary in both
+  themes: near-black on light, near-white on dark;
+- sets `COLORS["base"]` to the same Tailwind gray the tokens use. Unfold picks
+  different steps of this scale in light and dark mode, so it holds fixed
+  values rather than `var()`s, written exactly as `tokens.css` writes them;
+  the test pins each step to its token;
+- sets `BORDER_RADIUS` to `var(--karni-radius-md)`, the radius of
+  `@karni/ui`'s buttons and inputs;
+- leaves unfold's light / dark / system switch on (`THEME` unset). By
+  default the admin follows the system preference, like the welcome page.
+  Dark mode is the `dark` class on `<html>` in all three.
+
+To retheme the admin the way you retheme `@karni/ui`, give it the same
+`--karni-*` overrides your frontend's `karni-theme.css` holds, as a static
+file appended after Karni's two:
+
+```css
+/* static/css/admin-theme.css */
+:root,
+.dark {
+  --karni-color-primary: oklch(0.55 0.2 250);
+  --karni-color-primary-foreground: white;
+}
+```
 
 ```python
+from django.templatetags.static import static
+
 karni_settings(globals())
 
-# 1. mutate the merged default
-UNFOLD["COLORS"]["primary"]["600"] = "oklch(0.55 0.2 250)"
+UNFOLD["STYLES"].append(lambda request: static("css/admin-theme.css"))
+```
 
-# 2. or replace it wholesale (assign after the call — your value wins)
+`--karni-color-*` values change the primary scale, the text colours and
+Karni's own admin pages together. The neutral `base` scale is fixed, so set
+`UNFOLD["COLORS"]["base"]` too if you change the greys. Other ways to change
+the theme:
+
+```python
+# a static scale of your own instead of the tokens: all eleven steps, "50" to "950"
+UNFOLD["COLORS"]["primary"] = MY_PRIMARY_SCALE
+
+# unfold's own look: drop Karni's stylesheets and colours
+UNFOLD["STYLES"] = []
+del UNFOLD["COLORS"]
+
+# or replace the whole setting (assign after the call: your value wins)
 UNFOLD = {"SITE_TITLE": "Ops", "SITE_HEADER": "Ops"}
 ```
 
-(Defining `UNFOLD` *before* the call also works — setdefault semantics.)
+A static primary of your own keeps Karni's `unfold-theme.css`, which colours
+text on primary buttons with `--karni-color-primary-foreground`: dark in
+dark mode, because Karni's primary is light there. If your primary stays
+dark in dark mode, set that token to a light colour for `.dark` as well.
+Defining `UNFOLD` *before* the call also works: setdefault semantics.
+
+Karni's own admin pages (import, the permission matrix and its review,
+effective permissions) load `karni/admin-pages.css`, and `karni/tokens.css`
+too when `STYLES` did not, so they keep their look even if you replace
+`STYLES`. Their controls are at least 44px tall, wide tables scroll sideways
+inside the page, and nothing depends on hover. To restyle them, override the
+template `karni_admin/includes/page_styles.html`.
 
 The header and login screen carry no logo by default — the admin is yours,
 not Karni's. `KARNI_ADMIN_LOGO` adds one: `"karni"` uses Karni's own mark

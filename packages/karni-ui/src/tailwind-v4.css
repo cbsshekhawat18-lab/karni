@@ -7,7 +7,7 @@
  * Tailwind 3 projects do not import this file: Tailwind 3 rejects an
  * `@layer base` outside its own stylesheet, and needs nothing here.
  *
- * A bare `border` uses the --karni-border token, as under Tailwind 3, whose
+ * A bare `border` uses the --karni-color-border token, as under Tailwind 3, whose
  * preflight applies the preset's default border color. Tailwind 4 defaults
  * borders to currentColor. In the base layer this rule sits below every
  * utility, so `border-input`, `border-destructive` and the rest still win;
@@ -18,6 +18,14 @@
   :root ::after,
   :root ::backdrop,
   :root ::file-selector-button {
-    border-color: hsl(var(--karni-border));
+    border-color: var(--karni-color-border);
   }
+}
+
+/* Tailwind 4 reads transition timing from its own theme variables rather
+ * than the preset; point them at the motion tokens (which drop to 0ms under
+ * prefers-reduced-motion). */
+@theme {
+  --default-transition-duration: var(--karni-duration);
+  --default-transition-timing-function: var(--karni-ease);
 }

@@ -40,6 +40,10 @@ export interface UseSchemaResult {
   data: ResourceSchema | undefined;
   isLoading: boolean;
   error: unknown;
+  /** Fetches the schema document again: what a "Try again" after a failed load calls. */
+  refetch?: () => void;
+  /** True while the schema document is being fetched (the first load or a retry). */
+  isFetching?: boolean;
 }
 
 /** Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. */
@@ -58,5 +62,11 @@ export function useSchema(resource: string): UseSchemaResult {
     return { data: schema, isLoading: false, error: query.error };
   }
 
-  return { data: undefined, isLoading: query.isPending, error: query.error };
+  return {
+    data: undefined,
+    isLoading: query.isPending,
+    error: query.error,
+    refetch: () => void query.refetch(),
+    isFetching: query.isFetching,
+  };
 }

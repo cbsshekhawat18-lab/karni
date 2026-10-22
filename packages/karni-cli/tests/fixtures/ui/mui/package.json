@@ -1,0 +1,11 @@
+{
+  "name": "mui-app",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.13.0",
+    "@emotion/styled": "^11.13.0",
+    "@karni/ui": "^0.4.0",
+    "@mui/material": "^6.1.0",
+    "react": "^18.3.1"
+  }
+}

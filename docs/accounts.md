@@ -1,5 +1,5 @@
 ---
-description: karni.accounts: email-based users, the auth endpoints, one-time-token email flows, roles as data, two-factor and social login, mounted with one include.
+description: "karni.accounts: email-based users, the auth endpoints, one-time-token email flows, roles as data, two-factor and social login, mounted with one include."
 ---
 
 # karni.accounts

@@ -2,7 +2,7 @@
 // routes.tsx, in registration order — pages from `karni make page` show up
 // here on their own.
 // Detail/edit routes ($id) and "new" forms are reached from their list page.
-import { Layout, type LayoutNavItem } from "@karni/ui";
+import { Layout, ThemeToggle, type LayoutNavItem } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 
 function label(path: string): string {
@@ -27,10 +27,11 @@ export default function AppLayout() {
             // (an <img src="/favicon.svg">, an inline SVG, or a component).
             sidebarHeader={
                 <span className="flex items-center gap-2 px-3 text-lg font-semibold">
-                    <span aria-hidden="true" className="h-6 w-6 rounded-md bg-slate-500" />
+                    <span aria-hidden="true" className="h-6 w-6 rounded-md bg-primary" />
                     {{ cookiecutter.project_name }}
                 </span>
             }
+            sidebarFooter={<ThemeToggle className="mx-3" />}
             // Client-side navigation: intercept the default link's click (it
             // still closes the mobile drawer); `contents` keeps the nav grid.
             renderNavItem={(item, { defaultNode }) => (

@@ -195,6 +195,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
+    Capability(
+        "ui",
+        "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
+        "Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives",
+    ),
     # permissions
     Capability(
         "permissions",
@@ -849,11 +854,21 @@ def ui_section(exports: list[dict[str, Any]]) -> list[str]:
 
 
 def _scope(description: str) -> str:
-    """A module's PyPI description without its "… for the Karni … framework: " preamble."""
-    head, _, rest = description.partition(" framework: ")
-    if not (rest and "Karni" in head):
-        return description
-    return re.sub(r"[a-z]", lambda m: m.group(0).upper(), rest, count=1)
+    """A module's own sentence from its PyPI description.
+
+    The description is "<what the module is> <Karni's canonical description>"
+    (scripts/check_description.py): the canonical part is dropped, and so is a
+    "… for Karni: " preamble.
+    """
+    canonical_file = ROOT / "docs" / "seo" / "description.txt"
+    if canonical_file.is_file():
+        canonical = canonical_file.read_text(encoding="utf-8").strip()
+        description = description.removesuffix(canonical).strip()
+    for preamble in (" for Karni: ", " framework: "):
+        head, sep, rest = description.partition(preamble)
+        if sep and "Karni" in head + preamble:
+            return re.sub(r"[a-z]", lambda m: m.group(0).upper(), rest, count=1)
+    return description
 
 
 def modules() -> list[dict[str, str]]:

@@ -1,19 +1,19 @@
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import * as React from "react";
 import { cn } from "../../lib/cn";
+import { overridable } from "../../primitives/registry";
 import { CheckIcon } from "./icons";
 
 export type CheckboxProps = React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>;
 
-/** Themed checkbox (Radix Checkbox) with a check mark indicator. */
-export const Checkbox = React.forwardRef<
+const KarniCheckbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   CheckboxProps
 >(({ className, ...props }, ref) => (
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive",
       className,
     )}
     {...props}
@@ -23,4 +23,10 @@ export const Checkbox = React.forwardRef<
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ));
-Checkbox.displayName = "Checkbox";
+KarniCheckbox.displayName = "Checkbox";
+
+/** Themed checkbox (Radix Checkbox) with a check mark indicator.
+ *
+ * A project replaces it with its own through `primitives={{ checkbox: ... }}` on KarniProvider.
+ */
+export const Checkbox = overridable<CheckboxProps, HTMLButtonElement>("checkbox", KarniCheckbox);

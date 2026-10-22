@@ -1,3 +1,7 @@
+---
+description: "Launch audit tier 3: an adversarial access audit of Karni's permissions, row scoping and API surface."
+---
+
 # Tier 3 — adversarial access audit
 
 Repo `<REDACTED>`, branch `main`, commit `0873e51`.

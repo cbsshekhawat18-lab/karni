@@ -4,46 +4,38 @@
 {% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
 
 {% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
 <style>
-  .karni-import { max-width: 64rem; }
-  .karni-import table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-  .karni-import th, .karni-import td { border-bottom: 1px solid var(--color-base-200); padding: 0.45rem 0.5rem; text-align: left; vertical-align: top; }
-  html.dark .karni-import th, html.dark .karni-import td { border-color: var(--color-base-800); }
-  .karni-import select, .karni-import input[type=file] { min-height: 44px; font-size: 16px; border: 1px solid var(--color-base-300); border-radius: 6px; padding: 0.3rem 0.5rem; background: transparent; color: inherit; min-width: 12rem; }
-  .karni-button { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 1.25rem; border-radius: 6px; background: var(--color-primary-600); color: #fff; font-weight: 600; border: 0; cursor: pointer; }
-  .karni-button-secondary { background: transparent; color: var(--color-primary-600); border: 1px solid var(--color-base-300); }
-  .karni-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; }
-  .karni-note { color: var(--color-base-500); font-size: 0.85rem; }
-  .karni-stats { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1rem 0; }
+  .karni-stats { display: flex; flex-wrap: wrap; gap: calc(var(--karni-space-unit) * 6); margin: calc(var(--karni-space-unit) * 4) 0; }
   .karni-stats div { min-width: 6rem; }
-  .karni-stats strong { display: block; font-size: 1.5rem; }
-  .karni-progress { height: 10px; background: var(--color-base-200); border-radius: 5px; overflow: hidden; margin: 0.5rem 0; }
-  .karni-progress span { display: block; height: 100%; background: var(--color-primary-600); width: 0; transition: width 0.3s; }
-  .karni-problem td { color: #b91c1c; }
-  html.dark .karni-problem td { color: #fca5a5; }
+  .karni-stats strong { display: block; font-size: var(--karni-font-size-2xl); line-height: var(--karni-font-leading-2xl); font-weight: var(--karni-font-weight-semibold); }
+  .karni-progress { height: calc(var(--karni-space-unit) * 2.5); margin: calc(var(--karni-space-unit) * 2) 0; overflow: hidden; border-radius: var(--karni-radius-full); background: var(--karni-color-muted); }
+  .karni-progress span { display: block; width: 0; height: 100%; background: var(--karni-color-primary); transition: width var(--karni-duration) var(--karni-ease); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="karni-import">
+<div class="karni-page karni-import">
   <p class="karni-note">
     {% blocktranslate trimmed %}
       Upload a CSV or XLSX file, map its columns to fields, preview what would change, then commit.
       Nothing is written before the preview; rows with errors are skipped and listed.
     {% endblocktranslate %}
-    <a href="{{ template_url }}">{% translate "Download the template (XLSX)" %}</a> ·
-    <a href="{{ template_url }}?format=csv">{% translate "CSV" %}</a>
   </p>
+  <div class="karni-toolbar">
+    <a class="karni-button karni-button-secondary" href="{{ template_url }}">{% translate "Download the template (XLSX)" %}</a>
+    <a class="karni-button karni-button-secondary" href="{{ template_url }}?format=csv">{% translate "CSV" %}</a>
+  </div>
 
   {% if not job %}
     <form method="post" enctype="multipart/form-data" class="karni-toolbar">
       {% csrf_token %}
-      <input type="file" name="file" accept=".csv,.xlsx" required>
+      <input class="karni-field" type="file" name="file" accept=".csv,.xlsx" required>
       <button type="submit" class="karni-button">{% translate "Upload" %}</button>
       <a class="karni-button karni-button-secondary" href="{{ changelist_url }}">{% translate "Back" %}</a>
     </form>
-    <h2 class="font-semibold mt-6 mb-2">{% translate "Importable fields" %}</h2>
-    <table>
+    <h2>{% translate "Importable fields" %}</h2>
+    <div class="karni-scroll"><table class="karni-table">
       <thead><tr><th>{% translate "Field" %}</th><th>{% translate "Kind" %}</th><th>{% translate "Required" %}</th><th>{% translate "Allowed values" %}</th></tr></thead>
       <tbody>
         {% for spec in fields %}
@@ -59,7 +51,7 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   {% else %}
     <p><strong>{{ job.original_name }}</strong> — {{ job.rows_total }} {% translate "rows" %}, {% translate "status" %}: {{ job.get_status_display }}</p>
 
@@ -68,15 +60,15 @@
       <form method="post">
         {% csrf_token %}
         <input type="hidden" name="step" value="map">
-        <h2 class="font-semibold mb-2">{% translate "Map columns to fields" %}</h2>
-        <table>
+        <h2>{% translate "Map columns to fields" %}</h2>
+        <div class="karni-scroll"><table class="karni-table">
           <thead><tr><th>{% translate "Column in the file" %}</th><th>{% translate "Field" %}</th></tr></thead>
           <tbody>
             {% for column in columns %}
               <tr>
                 <td>{{ column.header }}</td>
                 <td>
-                  <select name="map:{{ column.index }}">
+                  <select class="karni-field" name="map:{{ column.index }}" aria-label="{{ column.header }}">
                     <option value="" {% if not column.value %}selected{% endif %}>{% translate "— ignore —" %}</option>
                     {% for name, label, required in column.options %}
                       <option value="{{ name }}" {% if column.value == name %}selected{% endif %}>{{ name }}{% if required %} *{% endif %}</option>
@@ -86,7 +78,7 @@
               </tr>
             {% endfor %}
           </tbody>
-        </table>
+        </table></div>
         <div class="karni-toolbar">
           <button type="submit" class="karni-button">{% translate "Preview" %}</button>
           <a class="karni-button karni-button-secondary" href="{{ upload_url }}">{% translate "Upload another file" %}</a>
@@ -122,15 +114,15 @@
         </div>
       {% endwith %}
       {% if state.problems %}
-        <h2 class="font-semibold mb-2">{% translate "Rows with errors" %}</h2>
-        <table>
+        <h2>{% translate "Rows with errors" %}</h2>
+        <div class="karni-scroll"><table class="karni-table">
           <thead><tr><th>{% translate "Row" %}</th><th>{% translate "Field" %}</th><th>{% translate "Problem" %}</th></tr></thead>
           <tbody>
             {% for problem in state.problems %}
               <tr class="karni-problem"><td>{{ problem.row }}</td><td>{{ problem.field|default:"—" }}</td><td>{{ problem.message }}</td></tr>
             {% endfor %}
           </tbody>
-        </table>
+        </table></div>
       {% endif %}
       <form method="post" class="karni-toolbar">
         {% csrf_token %}

@@ -60,6 +60,177 @@ reads to apply codemods and list the manual steps — and explained in
   records its blind spots (`karni.api.optimizer.blind_spots`). MCP tools
   `explain_text` and `queries`; agent rules K013 and K014; codes E940–E943,
   C340, C341. See [debugging](docs/debugging/explain.md).
+- One brand across the welcome page, the admin and `@karni/ui`: the same
+  colours in light and dark, radius, font stack and dark-mode switch (the
+  `dark` class on `<html>`, following the system preference by default). The
+  `karni` package ships `@karni/ui`'s token stylesheet as the static file
+  `karni/tokens.css`, a byte-for-byte copy that a test keeps identical. The
+  admin loads it through `UNFOLD["STYLES"]` with `karni/unfold-theme.css`;
+  unfold's primary scale and text colours now read the tokens (`@karni/ui`'s
+  near-black primary in light mode, near-white in dark, replacing the indigo
+  scale), its neutral scale holds the tokens' gray values, `BORDER_RADIUS` is
+  `var(--karni-radius-md)` and the font is `@karni/ui`'s system stack instead
+  of Inter. Retheme the admin like the frontend, with `--karni-*` overrides in
+  a stylesheet appended to `UNFOLD["STYLES"]` ([admin](docs/admin.md#theming)).
+  The welcome page inlines the tokens instead of its own palette. Karni's
+  admin pages (import, permission matrix, effective permissions) share
+  `karni/admin-pages.css`, with no colour literals and no dark-mode duplicates.
+  On a tablet the matrix shows several roles beside a narrower model column,
+  the template downloads and the effective-permissions link are 44px buttons,
+  and on touch screens unfold's sidebar rows, inputs, selects and save buttons
+  are 44px. The hard-delete confirmation uses unfold's layout and buttons (its
+  buttons rendered as plain text). Account emails use the brand's colour values.
+- `@karni/ui` forms: `ResourceForm` validates when a field loses focus (not
+  per keystroke; `validationMode` / `reValidateMode` change it), puts every
+  DRF error shape on its field, shows a focusable summary when more than one
+  thing fails, words 401/403/409/429/5xx and offline failures in a banner with
+  "Try again", never loses typed input, shows a skeleton shaped like the form,
+  "You can't edit this event" on a 403, disables the fields while saving
+  (`PendingButton`), submits with Enter and Ctrl/Cmd+Enter, autofocuses on
+  create, and wires labels, `aria-invalid`, `aria-describedby` and
+  `aria-required` for every field kind. Unsaved changes: `beforeunload` while
+  dirty (`guardUnsavedChanges`), `onDirtyChange`, and
+  `useUnsavedChangesGuard` for a router's blocker. New `slots`
+  (`defaultResourceFormSlots`), `submitLabel`, `autoFocus`, `resourceLabel`.
+  Fixed: an empty optional email or URL field no longer blocks the submit, and
+  a created form now starts over after saving (it kept the typed values).
+  `ResourceSelect` pages through the API instead of showing one page (scroll,
+  "Load more", keyboard), renders only the rows in view, keeps results while
+  a search loads, says when search is unavailable, tells "no venues yet" from
+  "no match", has loading, error, 403 and offline states, labels preselected
+  ids in one `?id__in=` request where the API has it, never shows a bare id,
+  forwards its ref and takes `onBlur`, `aria-*`, `slots`
+  (`defaultResourceSelectSlots`), `searchable`, `idsFilter`. Input, Textarea,
+  Select, Checkbox, Switch and FileUpload draw `aria-invalid` with the
+  destructive tokens; `Select` and `FileUpload` take `aria-describedby`,
+  `aria-invalid` and `onBlur`. A slow `PendingButton` keeps its accessible
+  name. `useSchema` returns `refetch` and `isFetching`.
+- `@karni/ui` unhappy-state kit: `describeError` words any failure in plain
+  words (never a status code), `ErrorState`, `PermissionDenied`,
+  `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,
+  `useOnlineStatus`. Dark mode for apps: `ThemeProvider`, `ThemeToggle` and
+  `KARNI_THEME_SCRIPT` (follows the system until the user chooses), and
+  `karniTheme()` from the new `@karni/ui/vite` entry, which puts the script
+  first in `index.html`'s `<head>`. A project from `karni new` has all of it
+  wired, with the toggle in the sidebar footer.
+- `karni ui detect`: adopts the frontend's design system as `@karni/ui`'s
+  tokens, in one file the project owns (`karni-theme.css`, imported after
+  `@karni/ui/styles.css`). shadcn/ui: every token references the project's
+  own variable (`var(--primary)`, or `hsl(var(--primary))` for Tailwind 3
+  HSL channels) on `:root, .dark`, and `karni-primitives.tsx` registers the
+  project's shadcn components as Karni's primitives. Otherwise a Tailwind
+  theme (`@theme`, or the `tailwind.config` Node evaluates), a Material UI,
+  Chakra UI or Mantine theme (literal values read statically), or Karni's
+  defaults listed for editing. The report lists every token mapped and every
+  value not mapped with the reason (`--json` for agents, `--dry-run` to
+  preview); an edited file is never overwritten without `--force`. New error
+  codes C301-C304. `karni new` does not write the file (nothing to detect in
+  a fresh project). See [docs/theming.md](docs/theming.md).
+- `@karni/ui` ResourceDetail, ResourceImport, ChangeHistory, LoginForm and
+  AuthGuard handle every unhappy state through the kit, each with `slots`
+  (and `defaultXSlots` to wrap). ResourceDetail: a loading placeholder in the
+  record's own layout, header included (no layout shift); "Couldn't find this
+  event" for a 404 (worded so an out-of-scope record is not confirmed to
+  exist) with a `back` action; "You can't view this event" for a 403; retry
+  that refetches the schema when that failed; offline reloads by itself;
+  `title`/`actions` may be functions of the record; Edit and Delete with
+  `onEdit`/`canEdit`, `enableDelete`/`canDelete`/`onDeleted` (delete asks
+  first and reports a refusal in the dialog). A field the role may not read
+  has no row at all; an empty value is the new shared `EmptyValue` (an en
+  dash read as "empty"), also used by ResourceTable (which now treats `""`
+  as empty) and ChangeHistory. ResourceImport shows no form when the role may
+  not import, keeps the file after a failed upload, confirms a commit with
+  its counts, announces progress by the quarter, and its tables have
+  captions and header scopes. LoginForm tells wrong credentials from
+  throttling, server errors and a dropped connection, wires the message to
+  the fields and focuses the email (`autoFocus`). AuthGuard can explain a
+  refusal (`explain`: a sign-in prompt for anonymous visitors,
+  PermissionDenied for a role without access; `anonymous`/`denied` replace
+  one case). Deprecated: a guard with no `fallback` and no `explain` still
+  renders nothing, as in 0.3, and warns once in development; 1.0 makes
+  `explain` the default (`fallback={null}` keeps rendering nothing).
+  Behaviour changes: a non-HTTP sign-in failure no longer reads as wrong
+  credentials;
+  ResourceDetail's empty dash is "–" (was "—") and its error panel no longer
+  shows a raw error message.
+- `@karni/ui` primitive registry: `<KarniProvider primitives={{ button: Button,
+  input: Input, select: {...} }}>` renders every Karni component with the
+  project's own primitives (roles `button`, `input`, `textarea`, `checkbox`,
+  `switch`, `label`, `skeleton` and the `select` family), keeping Karni's
+  schema-driven behaviour. shadcn/ui's components fit the contract as they
+  are. `KarniPrimitivesProvider` and `useKarniPrimitives` are exported.
+- `@karni/ui` design tokens: every visual value in every component now
+  resolves from a CSS custom property in `--karni-color-*`, `--karni-space-*`,
+  `--karni-radius-*`, `--karni-font-*` or `--karni-shadow-*` (plus stacking,
+  opacity, motion and line widths). The preset maps Tailwind's scales onto
+  them, so one stylesheet rethemes every component; colours take any CSS
+  colour. Motion drops to 0ms under `prefers-reduced-motion`. New ESLint rule
+  `karni/no-style-literals` and a test that compiles every component class
+  keep literals out; `npm run build` runs the lint. Every Storybook story
+  renders pixel-identical before and after, light and dark. The 0.3 HSL
+  triplet names (`--karni-primary`, ...) still work and are deprecated
+  ([docs/migrations/0.4.md](docs/migrations/0.4.md)). ResourceDetail's section
+  background now uses the shared `muted-subtle` shade (50% muted, was 40%).
+- `@karni/ui` app shell, keyboard and screen readers: `Layout`, `Page`,
+  `Modal`, `Toaster`, `EmptyState`, `Stat`, `DataChart` and `FileUpload` take
+  `className` and `slots` (`slots={{ NavLink: RouterLink }}`), with exported
+  slot contracts and `default*Slots`; `ModalTitle` and `ModalDescription` are
+  exported. Layout's mobile drawer is a modal dialog (focus trapped and
+  returned to the menu button, Escape closes, labelled) and the shell starts
+  with a skip link; nav links, SelectTrigger and the toast close buttons show
+  a keyboard focus ring. Toasts are announced by urgency (errors assertive)
+  and pause while hovered or focused. FileUpload announces refused files,
+  takes `error`, `uploading`, `aria-invalid`, `aria-describedby` and
+  `aria-labelledby`. DataChart is focusable (the arrow keys read point by
+  point), gets a generated summary and `loading`, and keeps its axis labels
+  legible on phones. Stat takes `loading`, and a zero delta reads "Unchanged"
+  (it read "Increased by +0"). `Input`, `Textarea`, `SelectTrigger` and
+  `Checkbox` show a destructive border under `aria-invalid`. Contrast: token
+  values change so every pair the components use reaches WCAG AA in both
+  themes (light `muted-foreground`, `destructive`, `input`, `chart-2`,
+  `chart-3`; dark `destructive`, `destructive-foreground`, `input`), checked by
+  a new test, and the dark theme's modal and drawer scrim dims the page (it
+  lightened it). axe-core runs over every Storybook story in both themes in
+  CI (WCAG 2.x A and AA) and fails the build on any violation; a story turns
+  one rule off only with a written reason. Dialogs are never taller than the
+  viewport (they scroll inside), and a busy pagination button keeps its name.
+- `@karni/ui` ResourceTable in every state and at real size. Each state is its
+  own screen and a replaceable slot (`slots`, `defaultResourceTableSlots`):
+  a loading outline of the real layout (nothing moves when data arrives),
+  "No events yet" with the create action (`onCreate`, `createLabel`) apart
+  from "No events match" with "Clear filters", errors in plain words with a
+  retry, a failed refresh that keeps the rows, "You can't view events" for a
+  403 (4xx are no longer retried, except 408 and 429; anything else retries as
+  the app's QueryClient `retry` default says, so `retry: false` shows the
+  error at once), offline, and progress
+  after 500ms with controls that do not double-fire. Row actions follow the
+  schema's `x-karni-access` rules for the signed-in user (`canCreate`,
+  `canEdit`, `canDelete` override); delete failures are reported (row delete
+  now confirms in a dialog instead of `window.confirm`). Bulk actions confirm
+  destructive work with the count, may return `{ failed: [{ id, reason }] }`
+  to mark failed rows, and show progress. Page, page size, sort, search and
+  filters live in the URL (namespaced, Back works; `syncUrl`, `urlNamespace`,
+  `stateStore` for a router). Page size choice, first/last and jump to page;
+  wide tables scroll in their own box with a sticky header and a frozen first
+  column; compact rows and hidden columns are remembered per user; below
+  `cardBreakpoint` (the table's own width) rows render as cards. Rows open
+  from the keyboard, checkboxes are named after their row, and page, sort,
+  selection and loading changes are announced. The parsed schema now carries
+  each operation's `access` rule. Changed wording: the empty screen says "No
+  events yet" (was "Nothing here yet"), the select-all checkbox "Select all
+  events on this page", row checkboxes "Select <row>", filter "All" items
+  "Status: All", and list errors read like every other error ("Something went
+  wrong on our side", "Try again").
+- The README opens with why Karni exists, then says what problem it solves,
+  how, what you get and what you still write. The canonical description now
+  leads with the same framing (your agent writes only your domain; the rest is
+  a package you upgrade) on the GitHub About, PyPI, npm, the docs homepage,
+  the FAQ and llms.txt. `scripts/check_description.py` also checks the FAQ's
+  first answer and the README's first two sections (order, the story's
+  180-word limit, the four answers in order, no marketing words), and writes
+  the homepage's description quoted.
+- All five Python packages (`karni`, `karni-cli`, `karni-payments`,
+  `karni-approvals`, `karni-impersonation`) are on PyPI (0.3.1). The README's quickstart installs them with a plain `pip install`;
 - **Security: a row outside the requester's row scope stays hidden on every
   response.** An audit probed row-scope denials (a user who may list a
   resource but not one row in it). The row itself was already treated as
@@ -113,6 +284,13 @@ reads to apply codemods and list the manual steps — and explained in
   after they fail, so they cost nothing when the project works.
   `KARNI_DB_CHECK=false` skips the check. `karni check` still runs the
   frontend checks when the backend cannot start.
+- Releases can publish npm with an `NPM_TOKEN` repository secret instead of
+  trusted publishing, like `PYPI_API_TOKEN` for PyPI ([releasing](docs/releasing.md)).
+- The `karni` command as a container image, `ghcr.io/cbsshekhawat18-lab/karni`
+  (linux/amd64 and arm64), built from the PyPI release after every release
+  and listed under the repository's Packages. It runs the CLI on machines
+  without Python 3.12: `docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work"
+  ghcr.io/cbsshekhawat18-lab/karni new "Ticket Shop"`.
 - `karni`, `karni-cli`, `karni-payments` and `karni-approvals` are on PyPI
   (0.3.1). The README's quickstart installs them with a plain `pip install`;
   installing from a checkout is for unreleased changes only.

@@ -11,7 +11,10 @@ to Karni's machine-readable changelog (packages/karni/karni/changelog ->
 karni_cli/_changelog), which `karni upgrade` reads: the CLI must know every
 change up to its own release, whatever karni the project has installed.
 Likewise Karni's error code registry (packages/karni/karni/errorcodes ->
-karni_cli/_errorcodes), which `karni explain` and error messages read.
+karni_cli/_errorcodes), which `karni explain` and error messages read, and
+@karni/ui's token stylesheet (packages/karni-ui/src/styles.css ->
+karni_cli/_ui/styles.css), whose defaults `karni ui detect` lists when a
+project has neither @karni/ui installed nor a monorepo checkout.
 """
 
 from __future__ import annotations
@@ -57,6 +60,15 @@ class TemplateBundleHook(BuildHookInterface):
             shutil.copy2(links, bundled_links)
         elif not bundled_links.is_file():
             raise RuntimeError("No karni/links.py to bundle into karni_cli/_errorcodes.")
+
+        styles = pkg_root.parent / "karni-ui" / "src" / "styles.css"
+        bundled_styles = pkg_root / "karni_cli" / "_ui" / "styles.css"
+        if styles.is_file():
+            bundled_styles.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(styles, bundled_styles)
+        elif not bundled_styles.is_file():
+            raise RuntimeError("No @karni/ui styles.css to bundle into karni_cli/_ui.")
+        build_data["artifacts"].append("karni_cli/_ui/")
 
     @staticmethod
     def _bundle_karni(

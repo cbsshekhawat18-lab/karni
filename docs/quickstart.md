@@ -78,9 +78,10 @@ Open `http://127.0.0.1:8000/` first: Karni's welcome page, generated from
 the project as it is right now — your models with their admin and API
 links, seven status checks (database, migrations, superuser, seed data,
 Redis, worker, frontend) each with the command that fixes a cross, the live
-`karni context` output and the first prompt to hand an agent. It is served
-only while `DEBUG` is on and disappears the moment you define your own
-`/` route. The Redis and worker checks stay crosses on this page's `.env`:
+`karni context` output and the first prompt to hand an agent. It wears the
+same brand as the admin and the React app (`@karni/ui`'s design tokens,
+light or dark as your system is set). It is served only while `DEBUG` is on
+and disappears the moment you define your own `/` route. The Redis and worker checks stay crosses on this page's `.env`:
 nothing here needs them. When you want Celery (e-mails, scheduled tasks,
 `/health/ready/` all green), point `REDIS_URL` at a Redis, drop the
 `KARNI_CACHE` line and run `karni worker` in a third shell.
@@ -97,7 +98,7 @@ no factory and no test scaffolding; the two commands in step 2 declared the
 domain and the framework did the rest. From here:
 
 - the [tutorial](tutorial.md) builds the reference app, EventHub, with
-  payments, a Celery email and four roles, in 593 lines of project code;
+  payments, a Celery email and four roles, in 608 lines of project code;
 - [Building with an AI agent](guide/with-ai.md) shows the same workflow
   driven by Claude Code or Cursor;
 - [Building without one](guide/without-ai.md) lists every `karni make`

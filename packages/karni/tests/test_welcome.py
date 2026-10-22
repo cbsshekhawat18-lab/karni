@@ -58,6 +58,21 @@ def test_renders_at_the_root_on_a_fresh_scaffold(first_boot: None, client: Any) 
     assert client.head("/").status_code == 200
 
 
+def test_wears_the_karni_ui_brand(first_boot: None, client: Any) -> None:
+    """The tokens are inlined, the page reads only them, dark mode is the `dark` class."""
+    from karni.admin.theme import tokens_css
+    from karni.welcome.page import CSS, THEME_SCRIPT
+
+    html = client.get("/").content.decode()
+    assert f"<style>{tokens_css()}</style>" in html
+    assert html.index("<script>") < html.index("</head>")  # theme set before first paint
+    assert "prefers-color-scheme: dark" in THEME_SCRIPT and "'dark'" in THEME_SCRIPT
+    assert "@media (prefers-color-scheme" not in CSS  # no second dark palette
+    # Every colour is a token, except the mark's orange as the one highlight.
+    assert re.findall(r"#[0-9a-fA-F]{3,8}\b", CSS) == ["#FB5D08"]
+    assert not re.search(r"\b(?:rgb|hsl|oklch)a?\(", CSS)
+
+
 def test_is_a_404_with_debug_off(settings: Any, client: Any) -> None:
     _use_urlconf(settings, "tests.welcome_urls", debug=False)
     assert client.get("/").status_code == 404  # the route is not even mounted

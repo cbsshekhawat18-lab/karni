@@ -1,11 +1,17 @@
 site_name: Karni
-site_description: "A Django + React framework that stays a dependency: declare models and access, and the API, admin, permissions, tests and seed data follow. Built so an AI coding agent extends it instead of reinventing it."
+site_description: "Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships."
 site_url: https://cbsshekhawat18-lab.github.io/karni/
 repo_url: https://github.com/cbsshekhawat18-lab/karni
 repo_name: cbsshekhawat18-lab/karni
 edit_uri: edit/main/docs/
 docs_dir: docs
 strict: true
+# docs/seo/ holds the findability notes (questions, off-site plan, drafts):
+# kept in the repository, not published as documentation.
+exclude_docs: |
+  seo/
+hooks:
+  - scripts/docs_seo.py
 
 theme:
   name: material
@@ -59,6 +65,13 @@ nav:
       - Building without one: guide/without-ai.md
       - Adding an entity end to end: adding-an-entity.md
       - "Case study: rebuilding Social Stats' leads": case-study-social-stats.md
+  - FAQ: faq.md
+  - Compare:
+      - Overview: compare/index.md
+      - Karni vs cookiecutter-django: compare/cookiecutter-django.md
+      - Karni vs SaaS Pegasus: compare/saas-pegasus.md
+      - Karni vs plain Django + DRF: compare/django-drf.md
+      - Karni vs a Django React boilerplate: compare/django-react-boilerplate.md
   - Reference:
       - Everything, generated: REFERENCE.md
       - Models: models.md
@@ -73,6 +86,7 @@ nav:
       - Seeding: seeding.md
       - Settings: settings.md
       - "@karni/ui": ui.md
+      - Theming (karni ui detect): theming.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md
@@ -94,6 +108,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.4 (unreleased): migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md
       - Migrating to 0.2: migrations/0.2.md
       - Migrating to 1.0: migrations/1.0.md

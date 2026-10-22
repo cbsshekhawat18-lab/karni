@@ -42,7 +42,7 @@ describe("AuthGuard", () => {
     expect(screen.queryByText("denied")).not.toBeInTheDocument();
   });
 
-  it("renders the fallback for anonymous users (and nothing by default)", () => {
+  it("renders the fallback for anonymous users (and nothing for fallback={null})", () => {
     renderGuard(
       contextValue({ status: "anonymous" }),
       <AuthGuard fallback={<p>please log in</p>}>
@@ -52,9 +52,11 @@ describe("AuthGuard", () => {
     expect(screen.getByText("please log in")).toBeInTheDocument();
     expect(screen.queryByText("secret")).not.toBeInTheDocument();
 
+    // Behaviour change: without a fallback the guard now says why (see the
+    // defaults below); `fallback={null}` is how to render nothing.
     const { container } = renderGuard(
       contextValue({ status: "anonymous" }),
-      <AuthGuard>
+      <AuthGuard fallback={null}>
         <p>secret</p>
       </AuthGuard>,
     );

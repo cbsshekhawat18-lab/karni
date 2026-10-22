@@ -1,11 +1,37 @@
 /**
  * @karni/ui design tokens.
  *
- * Every color used by @karni/ui components resolves to one of these
- * custom properties (HSL triplets, consumed as `hsl(var(--karni-*) / <alpha>)`
- * by the Tailwind preset). Override any token in your own stylesheet to
- * retheme the whole library; add the `dark` class to <html> (or any ancestor)
- * to switch to the dark palette.
+ * Every visual value a component uses resolves from a custom property in one
+ * of these families:
+ *
+ *   --karni-color-*   colours (any CSS colour: hsl(), oklch(), hex, var())
+ *   --karni-space-*   the spacing scale: --karni-space-unit (0.25rem), and any
+ *                     step --karni-space-<n> (4 = 1rem) to override that step
+ *   --karni-radius-*  corner radii (sm, md, lg, xl, full)
+ *   --karni-font-*    families, sizes, line heights, weights, letter spacing
+ *   --karni-shadow-*  elevation (sm, DEFAULT, md, lg)
+ *   --karni-z-*, --karni-opacity-*, --karni-duration, --karni-ease,
+ *   --karni-border-width*, --karni-ring-*   stacking, opacity, motion, lines
+ *
+ * The Tailwind preset maps its classes to these properties, so `bg-primary`
+ * or `p-4` in a component (or in your own code) reads them. Override any of
+ * them in your own stylesheet to retheme every component; `karni ui detect`
+ * writes karni-theme.css for you from the project's shadcn/ui, Tailwind,
+ * Material UI, Chakra UI or Mantine theme.
+ * Add the `dark` class to <html> (or any ancestor) for the dark palette.
+ *
+ * Both palettes meet WCAG 2.2 AA for every pair the components use (4.5:1
+ * text, 3:1 field boundaries, focus rings, icons and chart series);
+ * tests/contrast.test.ts computes the ratios from the values below. Check
+ * your own overrides against the same pairs.
+ *
+ * The 0.3 HSL-triplet names (--karni-primary, --karni-border, ...) still
+ * work as inputs: each --karni-color-* defaults to its triplet. They are
+ * deprecated in 0.4 and removed in 1.0; set --karni-color-* instead.
+ *
+ * The Django side (the admin, the welcome page) uses this same file: the
+ * karni package ships a byte-for-byte copy as the static file
+ * karni/tokens.css, and a karni test fails until a change here is copied.
  */
 :root {
   color-scheme: light;
@@ -26,24 +52,24 @@
   --karni-secondary-foreground: 220.9 39.3% 11%;
 
   --karni-muted: 220 14.3% 95.9%;
-  --karni-muted-foreground: 220 8.9% 46.1%;
+  --karni-muted-foreground: 220 8.9% 43%;
 
   --karni-accent: 220 14.3% 95.9%;
   --karni-accent-foreground: 220.9 39.3% 11%;
 
-  --karni-destructive: 0 84.2% 60.2%;
+  --karni-destructive: 0 72% 46%;
   --karni-destructive-foreground: 210 20% 98%;
 
   --karni-border: 220 13% 91%;
-  --karni-input: 220 13% 91%;
+  --karni-input: 220 9% 56%;
   --karni-ring: 224 71.4% 4.1%;
 
   --karni-radius: 0.5rem;
 
   /* DataChart series colors (chart-1 .. chart-5). */
   --karni-chart-1: 220 70% 50%;
-  --karni-chart-2: 160 60% 45%;
-  --karni-chart-3: 30 80% 55%;
+  --karni-chart-2: 160 60% 36%;
+  --karni-chart-3: 30 80% 42%;
   --karni-chart-4: 280 65% 60%;
   --karni-chart-5: 340 75% 55%;
 }
@@ -72,11 +98,11 @@
   --karni-accent: 215 27.9% 16.9%;
   --karni-accent-foreground: 210 20% 98%;
 
-  --karni-destructive: 0 62.8% 30.6%;
-  --karni-destructive-foreground: 210 20% 98%;
+  --karni-destructive: 0 84% 67%;
+  --karni-destructive-foreground: 224 71.4% 4.1%;
 
   --karni-border: 215 27.9% 16.9%;
-  --karni-input: 215 27.9% 16.9%;
+  --karni-input: 215 14% 42%;
   --karni-ring: 216 12.2% 83.9%;
 
   --karni-chart-1: 217 91% 60%;
@@ -84,4 +110,139 @@
   --karni-chart-3: 30 80% 55%;
   --karni-chart-4: 280 65% 60%;
   --karni-chart-5: 340 75% 55%;
+}
+
+/* The colour layer components read. Declared on .dark as well so a dark
+   subtree recomputes them from its own values. */
+:root,
+.dark {
+  --karni-color-background: hsl(var(--karni-background));
+  --karni-color-foreground: hsl(var(--karni-foreground));
+  --karni-color-card: hsl(var(--karni-card));
+  --karni-color-card-foreground: hsl(var(--karni-card-foreground));
+  --karni-color-popover: hsl(var(--karni-popover));
+  --karni-color-popover-foreground: hsl(var(--karni-popover-foreground));
+  --karni-color-primary: hsl(var(--karni-primary));
+  --karni-color-primary-foreground: hsl(var(--karni-primary-foreground));
+  --karni-color-primary-hover: color-mix(in srgb, var(--karni-color-primary) 90%, transparent);
+  --karni-color-secondary: hsl(var(--karni-secondary));
+  --karni-color-secondary-foreground: hsl(var(--karni-secondary-foreground));
+  --karni-color-secondary-hover: color-mix(in srgb, var(--karni-color-secondary) 80%, transparent);
+  --karni-color-muted: hsl(var(--karni-muted));
+  --karni-color-muted-foreground: hsl(var(--karni-muted-foreground));
+  --karni-color-muted-subtle: color-mix(in srgb, var(--karni-color-muted) 50%, transparent);
+  --karni-color-accent: hsl(var(--karni-accent));
+  --karni-color-accent-foreground: hsl(var(--karni-accent-foreground));
+  --karni-color-destructive: hsl(var(--karni-destructive));
+  --karni-color-destructive-foreground: hsl(var(--karni-destructive-foreground));
+  --karni-color-destructive-hover: color-mix(
+    in srgb,
+    var(--karni-color-destructive) 90%,
+    transparent
+  );
+  --karni-color-destructive-subtle: color-mix(
+    in srgb,
+    var(--karni-color-destructive) 10%,
+    transparent
+  );
+  --karni-color-destructive-border: color-mix(
+    in srgb,
+    var(--karni-color-destructive) 50%,
+    transparent
+  );
+  --karni-color-border: hsl(var(--karni-border));
+  --karni-color-input: hsl(var(--karni-input));
+  --karni-color-ring: hsl(var(--karni-ring));
+  --karni-color-overlay: color-mix(in srgb, var(--karni-color-foreground) 40%, transparent);
+  --karni-color-chart-1: hsl(var(--karni-chart-1));
+  --karni-color-chart-2: hsl(var(--karni-chart-2));
+  --karni-color-chart-3: hsl(var(--karni-chart-3));
+  --karni-color-chart-4: hsl(var(--karni-chart-4));
+  --karni-color-chart-5: hsl(var(--karni-chart-5));
+}
+
+/* The scrim behind a modal or the mobile drawer dims the page in both
+   themes: the dark theme's foreground is light, so its scrim is the
+   background colour instead. */
+.dark {
+  --karni-color-overlay: color-mix(in srgb, var(--karni-color-background) 80%, transparent);
+}
+
+/* Size, type, elevation, stacking and motion. The preset falls back to the
+   same values when a property is unset. */
+:root {
+  --karni-space-unit: 0.25rem;
+
+  --karni-radius-sm: calc(var(--karni-radius) - 4px);
+  --karni-radius-md: calc(var(--karni-radius) - 2px);
+  --karni-radius-lg: var(--karni-radius);
+  --karni-radius-xl: calc(var(--karni-radius) + 4px);
+  --karni-radius-full: 9999px;
+
+  --karni-font-sans:
+    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+  --karni-font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+  --karni-font-size-xs: 0.75rem;
+  --karni-font-size-sm: 0.875rem;
+  --karni-font-size-base: 1rem;
+  --karni-font-size-lg: 1.125rem;
+  --karni-font-size-xl: 1.25rem;
+  --karni-font-size-2xl: 1.5rem;
+  --karni-font-leading-xs: 1rem;
+  --karni-font-leading-sm: 1.25rem;
+  --karni-font-leading-base: 1.5rem;
+  --karni-font-leading-lg: 1.75rem;
+  --karni-font-leading-xl: 1.75rem;
+  --karni-font-leading-2xl: 2rem;
+  --karni-font-leading-none: 1;
+  --karni-font-weight-normal: 400;
+  --karni-font-weight-medium: 500;
+  --karni-font-weight-semibold: 600;
+  --karni-font-weight-bold: 700;
+  --karni-font-tracking-tight: -0.025em;
+  --karni-font-tracking-wide: 0.025em;
+  --karni-font-underline-offset: 4px;
+
+  /* Tailwind 4's scale (its shadow-sm is Tailwind 3's bare shadow). */
+  --karni-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --karni-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --karni-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --karni-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --karni-border-width: 1px;
+  --karni-border-width-2: 2px;
+  --karni-ring-width: 2px;
+  --karni-ring-width-1: 1px;
+  --karni-ring-offset-width: 2px;
+
+  /* ResourceTable scrolls inside a box this tall (its header sticks); `none`
+     lets the page scroll instead. */
+  --karni-table-max-height: 70vh;
+
+  --karni-z-raised: 10;
+  --karni-z-drawer: 40;
+  --karni-z-popover: 50;
+  --karni-z-modal: 50;
+  --karni-z-toast: 100;
+
+  --karni-opacity-50: 0.5;
+  --karni-opacity-60: 0.6;
+  --karni-opacity-70: 0.7;
+  --karni-opacity-90: 0.9;
+
+  --karni-duration: 150ms;
+  --karni-duration-pulse: 2s;
+  --karni-duration-spin: 1s;
+  --karni-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --karni-duration: 0ms;
+    --karni-duration-pulse: 0s;
+    --karni-duration-spin: 0s;
+  }
 }

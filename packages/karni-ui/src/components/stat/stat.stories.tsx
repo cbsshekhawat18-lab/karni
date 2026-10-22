@@ -67,3 +67,18 @@ export const KpiRow: Story = {
     </div>
   ),
 };
+
+export const Loading: Story = {
+  args: { loading: true, icon: <UsersIcon />, className: "max-w-64" },
+};
+
+/** Up, down and flat: an arrow (or dash) and spoken context, not colour alone. */
+export const Trends: Story = {
+  render: () => (
+    <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
+      <Stat label="Signups" value="1,284" delta={132} />
+      <Stat label="Bookings" value="312" delta={-18} />
+      <Stat label="Venues" value="24" delta={0} />
+    </div>
+  ),
+};

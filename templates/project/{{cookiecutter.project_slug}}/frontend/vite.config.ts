@@ -1,3 +1,4 @@
+import { karniTheme } from "@karni/ui/vite";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -12,7 +13,8 @@ const proxy = {
 };
 
 export default defineConfig({
-    plugins: [react(), tailwindcss()],
+    // karniTheme() applies the user's light/dark choice before the first paint.
+    plugins: [react(), tailwindcss(), karniTheme()],
     server: { host: true, port: 5173, proxy },
     // `vite preview` serves the production build the same way (e2e suites, smoke checks).
     preview: { host: true, port: 4173, proxy },

@@ -23,6 +23,7 @@ from karni_cli.generators.fields import FIELD_DOCS
 #: Section → top-level commands, in reading order. Anything else lands in "Other".
 SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("Project", ("new", "add", "upgrade", "doctor", "config")),
+    ("Frontend", ("ui",)),
     ("Agents and checks", ("context", "rules", "check", "explain", "types", "mcp")),
     ("Debugging", ("queries",)),
     (

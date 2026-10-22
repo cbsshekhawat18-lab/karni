@@ -14,4 +14,8 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="{{ brand }}social-1280x640.png" />
   <link rel="apple-touch-icon" href="{{ brand }}apple-touch-icon-180.png" />
+  {#- schema.org JSON-LD from scripts/docs_seo.py: SoftwareApplication on the homepage, FAQPage on faq pages. -#}
+  {% for block in (page.meta.karni_jsonld if page and page.meta and page.meta.karni_jsonld else []) %}
+  <script type="application/ld+json">{{ block }}</script>
+  {% endfor %}
 {% endblock %}

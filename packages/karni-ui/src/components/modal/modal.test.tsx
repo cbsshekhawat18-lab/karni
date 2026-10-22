@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Modal, ModalClose } from "./modal";
+import { Modal, ModalClose, ModalTitle, defaultModalSlots } from "./modal";
 
 describe("Modal", () => {
   it("opens from the trigger slot and labels the dialog with the title", async () => {
@@ -85,5 +85,77 @@ describe("Modal", () => {
     await user.keyboard("{Escape}");
     expect(onEscapeKeyDown).toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("moves focus in, traps Tab, and returns focus to the trigger on Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <Modal
+        title="Edit event"
+        trigger={<button type="button">Edit</button>}
+        footer={<button type="button">Save</button>}
+      >
+        <input aria-label="Name" />
+      </Modal>,
+    );
+    const trigger = screen.getByRole("button", { name: "Edit" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const dialog = screen.getByRole("dialog", { name: "Edit event" });
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    for (let i = 0; i < 4; i += 1) {
+      await user.tab();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("slots replace the header, footer and close button", async () => {
+    const user = userEvent.setup();
+    render(
+      <Modal
+        title="Custom"
+        description="Described"
+        defaultOpen
+        footer={<span>actions</span>}
+        slots={{
+          Header: ({ title }) => (
+            <header data-testid="header">
+              <ModalTitle>{title}!</ModalTitle>
+            </header>
+          ),
+          Footer: ({ children }) => <footer data-testid="footer">{children}</footer>,
+          CloseButton: ({ label }) => (
+            <ModalClose asChild>
+              <button type="button">{label} it</button>
+            </ModalClose>
+          ),
+        }}
+      />,
+    );
+    expect(screen.getByRole("dialog", { name: "Custom!" })).toBeInTheDocument();
+    expect(screen.getByTestId("footer")).toHaveTextContent("actions");
+    await user.click(screen.getByRole("button", { name: "Close it" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("exports its default slots for wrapping", () => {
+    render(
+      <Modal
+        title="Wrapped"
+        open
+        slots={{
+          Header: (props) => (
+            <div data-testid="wrap">
+              <defaultModalSlots.Header {...props} />
+            </div>
+          ),
+        }}
+      />,
+    );
+    expect(screen.getByTestId("wrap")).toHaveTextContent("Wrapped");
+    expect(screen.getByRole("dialog", { name: "Wrapped" })).toBeInTheDocument();
   });
 });

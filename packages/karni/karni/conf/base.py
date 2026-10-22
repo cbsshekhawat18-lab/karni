@@ -150,6 +150,13 @@ def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
     )
 
 
+def _primary_tint(percent: int) -> str:
+    """CSS for ``percent`` of @karni/ui's primary over its background (an unfold scale step)."""
+    return (
+        f"color-mix(in srgb, var(--karni-color-primary) {percent}%, var(--karni-color-background))"
+    )
+
+
 BASE: dict[str, Any] = {
     # --- Core -------------------------------------------------------------
     "SECRET_KEY": env("SECRET_KEY", default=INSECURE_SECRET_KEY),
@@ -411,22 +418,59 @@ BASE: dict[str, Any] = {
         "SITE_TITLE": _ADMIN_TITLE,
         "SITE_HEADER": _ADMIN_TITLE,
         "SITE_URL": "/",
-        "BORDER_RADIUS": "8px",
-        # Neutral indigo-based brand scale (Tailwind indigo); unfold's auto
-        # light/dark switcher stays enabled because THEME is left unset.
+        # The admin wears @karni/ui's brand (see karni.admin.theme): the token
+        # stylesheet and the unfold bridge load first, and the colours below
+        # read the tokens, so they follow the light/dark theme and a project's
+        # token overrides. Unfold's light/dark/system switch stays enabled
+        # because THEME is left unset.
+        "BORDER_RADIUS": "var(--karni-radius-md)",
+        "STYLES": [
+            "karni.admin.theme.tokens_stylesheet",
+            "karni.admin.theme.unfold_theme_stylesheet",
+        ],
         "COLORS": {
+            # Unfold steps through this neutral scale itself (base-200 borders
+            # in light, base-800 in dark), so it holds fixed values: the
+            # Tailwind gray the tokens are drawn from, with each step the
+            # tokens use written exactly as tokens.css writes it (a test pins
+            # them): 900 is the dark background, 800 the dark border.
+            "base": {
+                "50": "hsl(210 20% 98%)",
+                "100": "hsl(220 14.3% 95.9%)",
+                "200": "hsl(220 13% 91%)",
+                "300": "hsl(216 12.2% 83.9%)",
+                "400": "hsl(217.9 10.6% 64.9%)",
+                "500": "hsl(220 8.9% 43%)",
+                "600": "hsl(215 13.8% 34.1%)",
+                "700": "hsl(216.9 19.1% 26.7%)",
+                "800": "hsl(215 27.9% 16.9%)",
+                "900": "hsl(224 71.4% 4.1%)",
+                "950": "hsl(224 71.4% 4.1%)",
+            },
+            # @karni/ui's primary in both themes: unfold fills buttons with
+            # 600 and colours dark-mode links with 500, so 500-800 are the
+            # primary itself; lighter steps are tints toward the background,
+            # 900 (the bulk-action button on the primary bar) a step off it.
             "primary": {
-                "50": "oklch(0.962 0.018 272.314)",
-                "100": "oklch(0.93 0.034 272.788)",
-                "200": "oklch(0.87 0.065 274.039)",
-                "300": "oklch(0.785 0.115 274.713)",
-                "400": "oklch(0.673 0.182 276.935)",
-                "500": "oklch(0.585 0.233 277.117)",
-                "600": "oklch(0.511 0.262 276.966)",
-                "700": "oklch(0.457 0.24 277.023)",
-                "800": "oklch(0.398 0.195 277.366)",
-                "900": "oklch(0.359 0.144 278.697)",
-                "950": "oklch(0.257 0.09 281.288)",
+                "50": _primary_tint(4),
+                "100": _primary_tint(8),
+                "200": _primary_tint(16),
+                "300": _primary_tint(32),
+                "400": _primary_tint(64),
+                "500": "var(--karni-color-primary)",
+                "600": "var(--karni-color-primary)",
+                "700": "var(--karni-color-primary)",
+                "800": "var(--karni-color-primary)",
+                "900": _primary_tint(80),
+                "950": _primary_tint(80),
+            },
+            "font": {
+                "subtle-light": "var(--karni-color-muted-foreground)",
+                "subtle-dark": "var(--karni-color-muted-foreground)",
+                "default-light": "var(--color-base-600)",
+                "default-dark": "var(--color-base-300)",
+                "important-light": "var(--karni-color-foreground)",
+                "important-dark": "var(--karni-color-foreground)",
             },
         },
     },

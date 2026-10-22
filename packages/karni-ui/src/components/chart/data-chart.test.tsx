@@ -1,6 +1,8 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { DataChart, type DataChartSeries } from "./data-chart";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type * as React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { DataChart, defaultDataChartSlots, type DataChartSeries } from "./data-chart";
 
 const signups = [
   { label: "Jan", value: 10 },
@@ -50,7 +52,67 @@ describe("DataChart accessibility (contract D10)", () => {
 
     const desc = q<SVGDescElement>(svg, "desc");
     expect(desc).toHaveTextContent("Monthly signups, January through March.");
-    expect(svg.getAttribute("aria-describedby")).toBe(desc.id);
+    // The description first, then the generated summary.
+    expect(svg.getAttribute("aria-describedby")?.split(" ")[0]).toBe(desc.id);
+    expect(svg).toHaveAccessibleDescription(
+      "Monthly signups, January through March. Line chart, Jan to Mar. Lowest 10 (Jan), highest 25 (Feb). Use the arrow keys to read each value.",
+    );
+  });
+
+  it("summarises each series for screen readers; summary overrides or drops it", () => {
+    const { container, rerender } = render(
+      <DataChart kind="bar" series={multiSeries} title="Signups vs churn" showTooltip={false} />,
+    );
+    const svg = q<SVGSVGElement>(container, "svg");
+    expect(svg).toHaveAccessibleDescription(
+      "Bar chart, Jan to Mar. Signups: lowest 10 (Jan), highest 25 (Feb). Churn: lowest 4 (Jan), highest 6 (Feb).",
+    );
+    rerender(<DataChart kind="bar" series={multiSeries} title="T" summary="Churn is flat." />);
+    expect(q<SVGSVGElement>(container, "svg")).toHaveAccessibleDescription("Churn is flat.");
+    rerender(<DataChart kind="bar" series={multiSeries} title="T" summary="" />);
+    expect(q<SVGSVGElement>(container, "svg")).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("reads point by point from the keyboard, announcing each one", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<DataChart kind="line" series={multiSeries} title="Compare" />);
+    const svg = q<SVGSVGElement>(container, "svg");
+    await user.tab();
+    expect(svg).toHaveFocus();
+    expect(svg.parentElement).toHaveClass("has-[svg:focus-visible]:ring-2");
+    expect(container.querySelector("[data-karni-chart-tooltip]")).toBeNull();
+
+    await user.keyboard("{ArrowRight}");
+    expect(q(container, "[data-karni-chart-tooltip]")).toHaveTextContent("Jan");
+    expect(screen.getByRole("status")).toHaveTextContent("Jan: Signups 10, Churn 4");
+
+    await user.keyboard("{ArrowRight}{ArrowRight}");
+    expect(screen.getByRole("status")).toHaveTextContent("Mar: Signups 18");
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("status")).toHaveTextContent("Mar: Signups 18");
+    await user.keyboard("{Home}");
+    expect(screen.getByRole("status")).toHaveTextContent("Jan:");
+    await user.keyboard("{End}{ArrowLeft}");
+    expect(screen.getByRole("status")).toHaveTextContent("Feb: Signups 25, Churn 6");
+
+    await user.keyboard("{Escape}");
+    expect(container.querySelector("[data-karni-chart-tooltip]")).toBeNull();
+    await user.keyboard("{ArrowLeft}");
+    await user.tab();
+    expect(container.querySelector("[data-karni-chart-tooltip]")).toBeNull();
+  });
+
+  it("hovering does not talk: the live region is for the keyboard", () => {
+    const { container } = render(<DataChart kind="line" data={signups} title="Signups" />);
+    fireEvent.mouseEnter(q(container, '[data-karni-chart-hit="1"]'));
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+  });
+
+  it("is not focusable without a tooltip (the table has the values)", () => {
+    const { container } = render(
+      <DataChart kind="line" data={signups} title="Signups" showTooltip={false} />,
+    );
+    expect(q<SVGSVGElement>(container, "svg")).not.toHaveAttribute("tabindex");
   });
 
   it("exposes the data through a visually-hidden table as the accessible surface", () => {
@@ -220,5 +282,88 @@ describe("DataChart rendering", () => {
     expect(container.querySelectorAll("circle")).toHaveLength(2);
     const table = screen.getByRole("table");
     expect(within(table).getByText("—")).toBeInTheDocument();
+  });
+
+  it("names an empty chart by its title for screen readers", () => {
+    render(<DataChart kind="line" data={[]} title="Signups" emptyLabel="Nothing yet" />);
+    expect(screen.getByText("Signups:")).toHaveClass("sr-only");
+  });
+
+  it("shows a busy placeholder while loading", () => {
+    const { container } = render(
+      <DataChart kind="line" data={signups} title="Signups" loading className="mt-4" />,
+    );
+    const root = container.firstElementChild;
+    expect(root).toHaveAttribute("aria-busy", "true");
+    expect(root).toHaveClass("mt-4");
+    expect(container.querySelector("svg")).toBeNull();
+    expect(screen.getByText("Loading Signups")).toHaveClass("sr-only");
+  });
+});
+
+describe("DataChart on a narrow screen", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps tick labels legible when drawn smaller than its viewBox", () => {
+    let report: (width: number) => void = () => undefined;
+    class MeasuringObserver {
+      constructor(callback: ResizeObserverCallback) {
+        report = (width) =>
+          callback(
+            [{ contentRect: { width } } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal("ResizeObserver", MeasuringObserver);
+    const { container } = render(<DataChart kind="line" data={signups} title="Signups" />);
+    const tick = q<SVGTextElement>(container, "text");
+    expect(tick.getAttribute("font-size")).toBe("10");
+
+    // 640 units drawn in 320px: 11px labels need 22 units.
+    act(() => report(320));
+    expect(Number(q<SVGTextElement>(container, "text").getAttribute("font-size"))).toBeCloseTo(22);
+
+    // Wider than the viewBox: labels stay at their drawn size.
+    act(() => report(1280));
+    expect(q<SVGTextElement>(container, "text").getAttribute("font-size")).toBe("10");
+  });
+});
+
+describe("DataChart slots", () => {
+  it("replace the tooltip, legend, empty and loading pieces", () => {
+    const slots = {
+      Tooltip: ({ label }: { label: string }) => <b>slot {label}</b>,
+      Legend: ({ series }: { series: ReadonlyArray<{ name: string }> }) => (
+        <ul data-testid="legend">
+          {series.map((entry) => (
+            <li key={entry.name}>{entry.name}</li>
+          ))}
+        </ul>
+      ),
+      Empty: ({ label }: { label: React.ReactNode }) => <p data-testid="empty">{label}!</p>,
+      Loading: (props: { title: string; width: number; height: number }) => (
+        <div data-testid="loading">
+          <defaultDataChartSlots.Loading {...props} />
+        </div>
+      ),
+    };
+    const { container, rerender } = render(
+      <DataChart kind="line" series={multiSeries} title="Compare" slots={slots} />,
+    );
+    fireEvent.mouseEnter(q(container, '[data-karni-chart-hit="1"]'));
+    expect(screen.getByText("slot Feb")).toBeInTheDocument();
+    expect(screen.getByTestId("legend")).toHaveTextContent("SignupsChurn");
+
+    rerender(<DataChart kind="line" data={[]} title="Compare" emptyLabel="None" slots={slots} />);
+    expect(screen.getByTestId("empty")).toHaveTextContent("None!");
+
+    rerender(<DataChart kind="line" data={signups} title="Compare" loading slots={slots} />);
+    expect(screen.getByTestId("loading")).toHaveTextContent("Loading Compare");
   });
 });
