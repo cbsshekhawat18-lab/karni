@@ -35,6 +35,7 @@ route prefixes are looked up.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -94,6 +95,26 @@ class KarniAutoSchema(AutoSchema):
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
         return operation
+
+    #: The detail routes drf-spectacular already names apart from the list.
+    _DETAIL_ACTIONS = frozenset({"retrieve", "update", "partial_update", "destroy"})
+
+    def get_operation_id(self) -> str:
+        """Stock ID, plus ``_by_<param>`` for any other route that ends in a path parameter.
+
+        drf-spectacular drops path parameters from the ID, so ``GET import/``
+        and ``GET import/{job}/`` (or ``permissions/effective/`` and
+        ``.../{user_id}/``) both became ``..._retrieve`` and a client got a
+        ``_2`` suffix. The standard detail routes keep their IDs.
+        """
+        operation_id: str = super().get_operation_id()
+        if self._karni_action() in self._DETAIL_ACTIONS:
+            return operation_id
+        params = re.findall(r"\{(\w+)\}", self.path)
+        if not params or not self.path.rstrip("/").endswith("}"):
+            return operation_id
+        base, _, verb = operation_id.rpartition("_")
+        return f"{base}_by_{params[-1]}_{verb}" if base else operation_id
 
     def get_response_serializers(self) -> Any:
         """History answers with change-log entries; export and import with files and job states."""
