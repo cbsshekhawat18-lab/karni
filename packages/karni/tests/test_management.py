@@ -9,6 +9,7 @@ from __future__ import annotations
 from io import StringIO
 
 import pytest
+from django.apps import apps
 from django.core.management import call_command
 
 import karni
@@ -92,7 +93,11 @@ def test_models_section_covers_testapp_and_skips_framework() -> None:
 
 
 @pytest.mark.django_db
-def test_field_cap_and_declaration_order() -> None:
+def test_field_cap_and_declaration_order(settings) -> None:
+    # Only testapp's models: the other test apps sort before it and would push
+    # Event past MODEL_CAP.
+    others = {cfg.label for cfg in apps.get_app_configs() if cfg.label != "testapp"}
+    settings.KARNI_CONTEXT_SKIP_APPS = others
     models_line = _sections(build_context())["MODELS"]
     event_fields = models_line.split("Event(")[1].split(")")[0].split(",")
     assert 0 < len(event_fields) <= 4
