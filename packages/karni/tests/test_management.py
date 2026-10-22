@@ -144,7 +144,7 @@ def test_skip_apps_setting_override(settings) -> None:
 def test_karni_check_ok() -> None:
     out = StringIO()
     call_command("karni_check", stdout=out)
-    assert "karni check: ok" in out.getvalue()
+    assert "backend checks: ok" in out.getvalue()
 
 
 def test_karni_check_hook_failures(monkeypatch) -> None:
