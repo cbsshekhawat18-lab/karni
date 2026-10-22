@@ -5,8 +5,9 @@ it is for. Every surface that describes Karni carries it verbatim:
 
 - exactly: the README's opening, the docs homepage (its meta description,
   which is also the Open Graph description, and its first paragraph),
-  llms.txt, mkdocs.yml's site_description, the `karni` package on PyPI, and
-  the GitHub repository's About (with --github);
+  the FAQ's answer to "What is Karni?", llms.txt, mkdocs.yml's
+  site_description, the `karni` package on PyPI, and the GitHub repository's
+  About (with --github);
 - after a one-sentence prefix naming the package: every other Python and npm
   package (karni-cli, @karni/ui, the modules), so each still says what it is
   first.
@@ -14,6 +15,11 @@ it is for. Every surface that describes Karni carries it verbatim:
     python scripts/check_description.py            # fail on any drift
     python scripts/check_description.py --github   # also the GitHub About
     python scripts/check_description.py --write    # copy the canonical text everywhere
+
+It also keeps the README's first sections in the shape that framing needs:
+"Why Karni exists" (the story, under 180 words) directly before "What is
+Karni", which answers the problem, how Karni solves it, what you get and
+what you still write, in that order; and no marketing words anywhere above.
 
 CI runs it with --github. The About cannot be written from here: --write
 prints the `gh repo edit` command for it.
@@ -52,8 +58,8 @@ PREFIXES = {
         "before they are written, with a queue, an API and an audit trail."
     ),
     "modules/karni-impersonation/pyproject.toml": (
-        "Safe 'log in as user' for Karni support staff, with an explicit permission, no "
-        "privilege escalation, a banner, a time limit and both identities in the audit trail."
+        "Safe 'log in as user' for Karni support staff: an explicit permission, no "
+        "privilege escalation, a banner, a time limit, both identities in the audit trail."
     ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
@@ -70,9 +76,12 @@ PREFIXES = {
 }
 
 README_OPENING = re.compile(r'(</picture>\n</p>\n\n<p align="center">\n)(.*?)(\n</p>)', re.S)
-INDEX_FRONT = re.compile(r"(\A---\n(?:.*\n)*?description: )(.*)(\n(?:.*\n)*?---\n)")
+# Quoted: an unquoted YAML value containing ": " is not a string, and MkDocs
+# drops the whole front matter without a word.
+INDEX_FRONT = re.compile(r'(\A---\n(?:.*\n)*?description: ")(.*)("\n(?:.*\n)*?---\n)')
 INDEX_FIRST = re.compile(r"(^# Karni\n\n)((?:.+\n)+?)(\n)", re.M)
 LLMS_SUMMARY = re.compile(r"(^> )(.*)$", re.M)
+FAQ_WHAT = re.compile(r"(^## What is Karni\?\n\n)(.+)(\n)", re.M)
 MKDOCS_SITE = re.compile(r'(^site_description: ")(.*)(")$', re.M)
 TOML_DESCRIPTION = re.compile(r'(^description = ")(.*)(")$', re.M)
 JSON_DESCRIPTION = re.compile(r'(^  "description": ")(.*)(",)$', re.M)
@@ -95,6 +104,7 @@ SURFACES = [
     Surface("docs homepage description (meta + Open Graph)", "docs/index.md", INDEX_FRONT),
     Surface("docs homepage first paragraph", "docs/index.md", INDEX_FIRST),
     Surface("llms.txt summary", "docs/llms.txt", LLMS_SUMMARY),
+    Surface("FAQ: What is Karni? (also the FAQPage JSON-LD)", "docs/faq.md", FAQ_WHAT),
     Surface("mkdocs.yml site_description", "mkdocs.yml", MKDOCS_SITE),
     Surface("PyPI: karni", "packages/karni/pyproject.toml", TOML_DESCRIPTION),
     *(
@@ -171,6 +181,53 @@ def _wrap(text: str, width: int = 76) -> str:
     return "\n".join(lines)
 
 
+#: The story's limit: it is a story, not an essay.
+STORY_WORDS = 180
+#: The questions "What is Karni" answers, in this order.
+WHAT_IS_KARNI = ("The problem.", "How Karni solves it.", "What you get.", "What you still write.")
+#: Words that make a claim instead of showing one.
+MARKETING = ("revolutionary", "game-changing", "game changer", "supercharge")
+
+
+def _section(readme: str, title: str) -> str | None:
+    match = re.search(rf"^## {re.escape(title)}\n(.*?)(?=^## )", readme, re.S | re.M)
+    return match.group(1) if match else None
+
+
+def readme_problems(readme: str, text: str) -> list[str]:
+    """What is wrong with the README's story and "What is Karni" (empty when nothing)."""
+    problems: list[str] = []
+    titles = re.findall(r"^## (.+)$", readme, re.M)
+    if titles[:2] != ["Why Karni exists", "What is Karni"]:
+        problems.append(
+            'README.md: the first sections must be "Why Karni exists" then "What is Karni"; '
+            f"they are {titles[:2]}"
+        )
+    story = _section(readme, "Why Karni exists")
+    if story is not None:
+        plain = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", story)
+        words = len(plain.split())
+        if words > STORY_WORDS:
+            problems.append(
+                f"README.md: Why Karni exists is {words} words; keep it under {STORY_WORDS}"
+            )
+    what = _section(readme, "What is Karni")
+    if what is not None:
+        found = re.findall(r"^\*\*(.+?)\*\*", what, re.M)
+        if found != list(WHAT_IS_KARNI):
+            problems.append(
+                f"README.md: What is Karni must answer {list(WHAT_IS_KARNI)} in order; "
+                f"it has {found}"
+            )
+    head = readme.split("## Show, don't tell")[0].lower() + " " + text.lower()
+    problems += [
+        f'README.md / description: "{word}" is a claim, not a fact'
+        for word in MARKETING
+        if word in head
+    ]
+    return problems
+
+
 def github_about(fetch: Callable[[str], bytes] | None = None) -> str:
     url = f"https://api.github.com/repos/{REPO}"
     raw = fetch(url) if fetch else urllib.request.urlopen(url, timeout=20).read()  # noqa: S310
@@ -188,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         print("updated: " + (", ".join(changed) if changed else "nothing (already identical)"))
         print(f'GitHub About: gh repo edit {REPO} --description "{text}"')
     problems = [p for s in SURFACES if (p := check_surface(s, text)) is not None]
+    problems += readme_problems((ROOT / "README.md").read_text(encoding="utf-8"), text)
     if args.github:
         about = github_about()
         if about != text:

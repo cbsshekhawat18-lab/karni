@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-Karni is an open-source Django + React framework for building with AI coding agents. One rule set writes the rules files for Claude Code, Cursor, Copilot and five more tools, and the build fails when an agent hand-writes what Karni provides. The API, admin, permissions and React screens come from a package you upgrade, not a boilerplate you copy.
+Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships.
 </p>
 
 <p align="center">
@@ -21,11 +21,23 @@ Karni is an open-source Django + React framework for building with AI coding age
   <img alt="A terminal runs karni new, karni make model, migrate, seed and serve; then the browser shows the welcome page, the admin listing the seeded events, and the React app's events table and detail view." src="https://raw.githubusercontent.com/cbsshekhawat18-lab/karni/main/docs/assets/karni-demo.gif" width="880">
 </p>
 
+## Why Karni exists
+
+I build client projects. Every one of them started the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only then did I get to the part the client was paying for.
+
+AI coding agents made this faster and worse. Faster, because an agent types all of it in minutes. Worse, because it writes it fresh in every project: the same code, slightly different each time, with the subtle parts wrong in different places. And I pay tokens for every line of it.
+
+My own [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-media-manager) codebase is 142,000 lines, with a 2,504-line `models.py` and a 1,281-line `views.py`. Much of that is code Karni now ships. That is the before picture, and it is mine. So the agent should write my domain, and everything else should come from a package I upgrade.
+
 ## What is Karni
 
-Most Django React boilerplates and starter templates are copied into your project once. After that, the serializers, permission classes, admin files and login pages are yours to maintain, and an upstream fix never reaches them. AI coding agents make the copying faster and the duplication worse: every new project gets a fresh copy of the same code.
+**The problem.** Every Django + React project needs the same code before it does anything of its own: serializers, permission classes, admin files, login pages, tables and forms. A boilerplate copies it into your project once; an AI agent writes it again in every project. Either way you pay for it twice: once to produce it, and again to maintain every copy, because a fix made upstream never reaches code that was copied or regenerated.
 
-Karni keeps that code in three versioned packages: `karni` (Python), `@karni/ui` (React) and the `karni` command. You declare a model and who may access it; Karni gives you the REST API, admin, permissions, React screens, tests and seed data. It is for teams that start a new full-stack Django + React product, with or without an AI agent.
+**How Karni solves it.** That code lives in three versioned packages you install and upgrade: `karni` (Python), `@karni/ui` (React) and the `karni` command. `karni upgrade` applies the changes each release needs, so a fix reaches every project that depends on Karni.
+
+**What you get.** You declare a model and who may access it. Karni gives you the REST API, the admin, permissions and role-based access control, the React screens, the tests and the seed data.
+
+**What you still write.** Your domain, and only that: your models, the rules for who may do what, and the logic and pages specific to your product. Karni's rules files tell the agent the same, and the build fails when it hand-writes what Karni provides.
 
 ## Show, don't tell
 
@@ -343,7 +355,7 @@ A module is a separate package for anything with its own service or a real memor
 
 <!-- generated:modules -->
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
-- `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff, with an explicit permission, no privilege escalation, a banner, a time limit and both identities in the audit trail
+- `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->

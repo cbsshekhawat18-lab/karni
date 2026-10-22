@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-impersonation"
 version = "0.3.1"
-description = "Safe 'log in as user' for Karni support staff, with an explicit permission, no privilege escalation, a banner, a time limit and both identities in the audit trail. Karni is an open-source Django + React framework for building with AI coding agents. One rule set writes the rules files for Claude Code, Cursor, Copilot and five more tools, and the build fails when an agent hand-writes what Karni provides. The API, admin, permissions and React screens come from a package you upgrade, not a boilerplate you copy."
+description = "Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
