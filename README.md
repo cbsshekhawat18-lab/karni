@@ -24,11 +24,9 @@ Karni is an open-source Django + React framework for building with AI coding age
 
 ## Why Karni exists
 
-I build client projects. Every one of them started the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only then did I get to the part the client was paying for.
+Every new web project starts the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only after all of that does the work on the product itself begin.
 
-AI coding agents made this faster and worse. Faster, because an agent types all of it in minutes. Worse, because it writes it fresh in every project: the same code, slightly different each time, with the subtle parts wrong in different places. And I pay tokens for every line of it.
-
-My own [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-media-manager) codebase is 142,000 lines, with a 2,504-line `models.py` and a 1,281-line `views.py`. Much of that is code Karni now ships. That is the before picture, and it is mine. So the agent should write my domain, and everything else should come from a package I upgrade.
+AI coding agents made this faster, but not better. We give the agent the same prompts in every project and wait while it builds the same setup again. It writes everything fresh each time: the same code, slightly different, with the subtle parts wrong in different places. Every line costs tokens and time, and every copy has to be maintained.
 
 ## What is Karni
 

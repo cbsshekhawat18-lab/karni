@@ -760,6 +760,33 @@ Generate a TypeScript client straight off `/api/schema/`, e.g.:
 npx openapi-typescript http://localhost:8000/api/schema/ -o src/api/schema.d.ts
 ```
 
+### Enum names
+
+Each choice field becomes a shared enum named after the field, such as
+`StatusEnum`. When two models have a field of the same name with different
+choices, Karni names each enum after the model and the field, so
+`Booking.status` and `Event.status` become `BookingStatusEnum` and
+`EventStatusEnum`. drf-spectacular alone would name them
+`EventsBookingStatusEnum` or `Status469Enum`, and that hash changes whenever
+the choices do, which renames your generated TypeScript types. A field name
+used for only one set of choices keeps its plain name. One set of choices
+shared by several models stays one enum named after all of them, such as
+`InvoiceOrderStatusEnum`. Two models with the same name in different apps get
+the app label in front, such as `EventsBookingStatusEnum`.
+
+The hook `karni.api.schema.postprocess_schema_enums` does this, and it is the
+first entry of `SPECTACULAR_SETTINGS["POSTPROCESSING_HOOKS"]`. Your own
+`ENUM_NAME_OVERRIDES` always win. Set them after `karni_settings(globals())`:
+
+```python
+SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] = {
+    "BookingStateEnum": "events.models.Booking.Status",
+}
+```
+
+To keep drf-spectacular's own names, put
+`"drf_spectacular.hooks.postprocess_schema_enums"` in that list in its place.
+
 Ordering and pagination parameters come from the stock DRF classes
 (`OrderingFilter`, and `KarniPageNumberPagination` with `?page` and `?page_size`
 capped at `KARNI_MAX_PAGE_SIZE`, default 100). An `Unpaginated` viewset's list
