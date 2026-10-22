@@ -320,7 +320,6 @@ def test_no_store_spawns_no_provider_process(runner, project, monkeypatch) -> No
 
 FAKE_CHRONICLE = """#!{python}
 import json, os, sys
-from .test_rules import TOKEN_BUDGET
 sys.stderr.write("note: workspace moved (discarded)\\n")
 print(json.dumps({{
     "apiVersion": 1, "command": "context", "file": sys.argv[2], "empty": False,
