@@ -79,7 +79,7 @@ What you get with no other code:
 - permissions: everyone reads, organizers and staff write
 - a one-call test of the whole API (`assert_crud`) and realistic seed data
 
-All of EventHub, with payments, e-mail and four roles, is 619 lines of project code.
+All of EventHub, with payments, e-mail and four roles, is 619 lines of project code. Karni grew out of the 34 projects we built before it.
 
 > ⭐ **If Karni is useful to you, please star the repo.** It helps other
 > people building Django + React apps with AI coding agents find the project.
