@@ -7,26 +7,22 @@
  *
  * The choice is kept per browser (localStorage) and applied as the `dark`
  * class on <html>, which is what @karni/ui's tokens switch on. Put
- * KARNI_THEME_SCRIPT in index.html's <head> so the first paint already has
- * the right theme (no light flash before React starts).
+ * KARNI_THEME_SCRIPT in index.html's <head> (in a Vite app, `karniTheme()`
+ * from `@karni/ui/vite` does) so the first paint already has the right
+ * theme (no light flash before React starts).
  */
 import * as React from "react";
 import { registerComponentRole } from "../lib/roles";
 import { Button } from "../components/primitives/button";
 import { MonitorIcon, MoonIcon, SunIcon } from "../components/primitives/icons";
+import { THEME_STORAGE_KEY } from "./script";
 
 registerComponentRole("theme-toggle", "ThemeToggle");
 
 export type ThemePreference = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
-export const THEME_STORAGE_KEY = "karni-theme";
-
-/**
- * Inline script for index.html's <head>: applies the stored (or system) theme
- * before the first paint. Uses the default storage key.
- */
-export const KARNI_THEME_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_STORAGE_KEY}");var d=t==="dark"||((t===null||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){}})();`;
+export { KARNI_THEME_SCRIPT, THEME_STORAGE_KEY } from "./script";
 
 interface ThemeContextValue {
   /** What the user chose ("system" follows the operating system). */

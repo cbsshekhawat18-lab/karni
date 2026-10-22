@@ -54,6 +54,11 @@
       "import": "./dist/tailwind-preset.js",
       "require": "./dist/tailwind-preset.cjs"
     },
+    "./vite": {
+      "types": "./dist/vite-plugin.d.ts",
+      "import": "./dist/vite-plugin.js",
+      "require": "./dist/vite-plugin.cjs"
+    },
     "./manifest.json": "./dist/manifest.json",
     "./eslint-plugin": "./eslint-plugin/index.js",
     "./package.json": "./package.json"

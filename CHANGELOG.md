@@ -60,7 +60,10 @@ reads to apply codemods and list the manual steps — and explained in
   words (never a status code), `ErrorState`, `PermissionDenied`,
   `PendingButton` (progress after 500ms, keeps its width), `useDelayedFlag`,
   `useOnlineStatus`. Dark mode for apps: `ThemeProvider`, `ThemeToggle` and
-  `KARNI_THEME_SCRIPT` (follows the system until the user chooses).
+  `KARNI_THEME_SCRIPT` (follows the system until the user chooses), and
+  `karniTheme()` from the new `@karni/ui/vite` entry, which puts the script
+  first in `index.html`'s `<head>`. A project from `karni new` has all of it
+  wired, with the toggle in the sidebar footer.
 - `karni ui detect`: adopts the frontend's design system as `@karni/ui`'s
   tokens, in one file the project owns (`karni-theme.css`, imported after
   `@karni/ui/styles.css`). shadcn/ui: every token references the project's
@@ -138,14 +141,19 @@ reads to apply codemods and list the manual steps — and explained in
   themes (light `muted-foreground`, `destructive`, `input`, `chart-2`,
   `chart-3`; dark `destructive`, `destructive-foreground`, `input`), checked by
   a new test, and the dark theme's modal and drawer scrim dims the page (it
-  lightened it). axe-core runs over the stories of these components.
+  lightened it). axe-core runs over every Storybook story in both themes in
+  CI (WCAG 2.x A and AA) and fails the build on any violation; a story turns
+  one rule off only with a written reason. Dialogs are never taller than the
+  viewport (they scroll inside), and a busy pagination button keeps its name.
 - `@karni/ui` ResourceTable in every state and at real size. Each state is its
   own screen and a replaceable slot (`slots`, `defaultResourceTableSlots`):
   a loading outline of the real layout (nothing moves when data arrives),
   "No events yet" with the create action (`onCreate`, `createLabel`) apart
   from "No events match" with "Clear filters", errors in plain words with a
   retry, a failed refresh that keeps the rows, "You can't view events" for a
-  403 (4xx are no longer retried, except 408 and 429), offline, and progress
+  403 (4xx are no longer retried, except 408 and 429; anything else retries as
+  the app's QueryClient `retry` default says, so `retry: false` shows the
+  error at once), offline, and progress
   after 500ms with controls that do not double-fire. Row actions follow the
   schema's `x-karni-access` rules for the signed-in user (`canCreate`,
   `canEdit`, `canDelete` override); delete failures are reported (row delete

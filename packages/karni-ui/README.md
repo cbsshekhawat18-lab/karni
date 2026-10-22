@@ -220,15 +220,25 @@ derive from unless you set them too.
 
 Dark mode is the `dark` class on `<html>`. `ThemeProvider` manages it: it
 follows the system until the user chooses, keeps the choice per browser, and
-`ThemeToggle` is a button that cycles Light, Dark and System. Put
-`KARNI_THEME_SCRIPT` in an inline `<script>` in `index.html`'s `<head>` so the
-first paint already has the right theme:
+`ThemeToggle` is a button that cycles Light, Dark and System. The first paint
+needs the theme before React starts: in a Vite app, `karniTheme()` puts
+`KARNI_THEME_SCRIPT` first in `index.html`'s `<head>` (a project from
+`karni new` has all three wired already):
+
+```ts
+// vite.config.ts
+import { karniTheme } from "@karni/ui/vite";
+export default defineConfig({ plugins: [react(), karniTheme()] });
+```
 
 ```tsx
 <ThemeProvider>
   <App /> {/* <ThemeToggle /> in the header */}
 </ThemeProvider>
 ```
+
+Without Vite, put `KARNI_THEME_SCRIPT` in an inline `<script>` in `<head>`
+yourself.
 
 The Django side of a Karni project reads the same tokens: the admin and the
 welcome page load a copy of this stylesheet, so the same overrides, added to

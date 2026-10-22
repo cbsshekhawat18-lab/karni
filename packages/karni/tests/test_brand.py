@@ -85,7 +85,7 @@ def test_welcome_page_reads_the_karni_ui_theme_choice() -> None:
     """Same dark-mode rule as @karni/ui's KARNI_THEME_SCRIPT: the stored choice, else the system."""
     from karni.welcome.page import THEME_SCRIPT
 
-    theme_source = REPO / "packages" / "karni-ui" / "src" / "theme" / "theme.tsx"
+    theme_source = REPO / "packages" / "karni-ui" / "src" / "theme" / "script.ts"
     if not theme_source.exists():
         pytest.skip("not a monorepo checkout: @karni/ui's source is not next to karni")
     key = re.search(r'THEME_STORAGE_KEY = "([^"]+)"', theme_source.read_text())
