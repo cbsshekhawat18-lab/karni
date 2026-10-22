@@ -116,7 +116,7 @@ packages = ["karni"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["karni/accounts/migrations"]
+extend-exclude = ["karni/accounts/migrations", "*.md"]
 
 [tool.ruff.lint]
 select = [

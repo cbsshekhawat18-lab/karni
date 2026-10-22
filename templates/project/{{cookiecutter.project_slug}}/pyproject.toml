@@ -10,6 +10,15 @@ dependencies = [
     "psycopg[binary]",
 ]
 
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# An application, not a library: `pip install -e .` installs the dependencies
+# above and no package (Django imports config/ and the apps from this folder).
+packages = []
+
 [dependency-groups]
 # factory-boy and Faker come with karni (karni.testing factories, `karni seed`).
 dev = [
