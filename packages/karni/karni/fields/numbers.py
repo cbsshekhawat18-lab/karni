@@ -69,7 +69,7 @@ class PercentField(KarniField, models.DecimalField):
         if kwargs["max_digits"] < needed:
             raise KarniImproperlyConfigured(
                 f"PercentField(max_digits={kwargs['max_digits']}) cannot hold {widest} with "
-                f"{places} decimal places; use max_digits={needed} or leave it out.",
+                f"{places} decimal places. Use max_digits={needed} or leave it out.",
                 code="E963",
             )
         super().__init__(*args, **kwargs)

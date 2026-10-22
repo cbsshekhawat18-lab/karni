@@ -1,9 +1,9 @@
 /**
- * <ImpersonationBanner> — the persistent bar naming both identities, with
+ * <ImpersonationBanner>: the persistent bar naming both identities, with
  * a one-click exit, for a SPA. Renders nothing outside an impersonated
  * session. Mount it once near the root (inside <AuthProvider>).
  *
- * Reads `GET /impersonation-sessions/current/`; Stop posts `…/stop/` and
+ * Reads `GET /impersonation-sessions/current/`. Stop posts `…/stop/` and
  * adopts the impersonator's tokens (JWT) or re-syncs `/me/` (session mode).
  */
 import { Button, cn } from "@karni/ui";
@@ -11,7 +11,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useImpersonation, useStopImpersonation } from "./hooks";
 
 export interface ImpersonationBannerProps {
-  /** Refetch interval in ms so the minutes left stay honest; default 60 000. */
+  /** Refetch interval in ms so the minutes left stay honest. Default 60 000. */
   poll?: false | number;
   /** Called after a successful stop (e.g. navigate home). */
   onStopped?: () => void;
@@ -62,8 +62,8 @@ export function ImpersonationBanner({
       )}
     >
       <span>
-        You are acting as <strong>{session.target.email ?? session.target.id}</strong> — signed in
-        as {session.actor.email ?? session.actor.id}.{" "}
+        You are acting as <strong>{session.target.email ?? session.target.id}</strong>, signed in as{" "}
+        {session.actor.email ?? session.actor.id}.{" "}
         <span className="opacity-80">
           {left} {left === 1 ? "minute" : "minutes"} left
         </span>

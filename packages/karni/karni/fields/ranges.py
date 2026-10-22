@@ -35,7 +35,7 @@ try:
 except ImportError as exc:  # psycopg (or psycopg2) is not installed
     raise KarniImportError(
         "karni.fields.DateRangeField / DateTimeRangeField are PostgreSQL range columns and "
-        "need psycopg: pip install 'psycopg[binary]' (SQLite cannot store range values; use "
+        "need psycopg: pip install 'psycopg[binary]' (SQLite cannot store range values, so use "
         "two plain fields, e.g. no_overlap = ('room', ('starts_at', 'ends_at'))).",
         code="E501",
     ) from exc

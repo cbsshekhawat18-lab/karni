@@ -314,7 +314,7 @@ class RefreshView(TokenRefreshView):
                 request.method or "POST",
                 detail=(
                     "Token refresh is disabled in session auth mode "
-                    '(KARNI_AUTH_MODE="session"); the session cookie is the '
+                    '(KARNI_AUTH_MODE="session"). The session cookie is the '
                     "credential and needs no refresh."
                 ),
             )

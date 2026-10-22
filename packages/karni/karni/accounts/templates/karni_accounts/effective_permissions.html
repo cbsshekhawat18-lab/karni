@@ -23,11 +23,11 @@
   <p>
     <strong>{{ report.username }}</strong>
     {% if report.superuser %}
-      — {% translate "superuser: every permission on every row, whatever the roles say." %}
+      {% translate "is a superuser: every permission on every row, whatever the roles say." %}
     {% elif report.roles %}
-      — {% translate "roles:" %} {{ report.roles|join:", " }}
+      {% translate "holds these roles:" %} {{ report.roles|join:", " }}
     {% else %}
-      — {% translate "holds no role, so no grant applies." %}
+      {% translate "holds no role, so no grant applies." %}
     {% endif %}
   </p>
   <div class="karni-scroll"><table class="karni-table">
@@ -44,7 +44,7 @@
         {% for entry in group.entries %}
           <tr>
             <td>{{ entry.action }}</td>
-            <td>{% if entry.scope %}{{ entry.scope }}{% else %}<span class="karni-muted">—</span>{% endif %}</td>
+            <td>{% if entry.scope %}{{ entry.scope }}{% else %}<span class="karni-muted">-</span>{% endif %}</td>
             <td>
               {% for source in entry.sources %}
                 <div>

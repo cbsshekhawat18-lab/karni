@@ -109,7 +109,7 @@ class Refund(BaseModel):
     class Karni:
         # karni.fields' CASCADE check (W965): deliberate, see the reason.
         cascade = {
-            "payment": "a refund is part of its payment; payments are soft-deleted, and a "
+            "payment": "a refund is part of its payment. Payments are soft-deleted, and a "
             "hard delete of a payment is a deliberate purge of its whole record",
         }
 

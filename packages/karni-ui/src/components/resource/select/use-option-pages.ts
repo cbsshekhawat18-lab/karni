@@ -3,12 +3,12 @@
  *
  * Options come a page at a time from the related resource's list endpoint,
  * following the API's own `next` link (page-number and cursor pagination
- * alike; only its query string is used, so a proxy-rewritten host never
- * matters). Nothing ever fetches every row.
+ * alike). Only its query string is used, so a proxy-rewritten host never
+ * matters. Nothing ever fetches every row.
  *
  * Preselected ids resolve in ONE list request when the list documents an
- * id-list filter (`?id__in=1,2,3`, django-filter's `in` lookup; a project
- * adds it with `filterset_fields = {"id": ["exact", "in"]}`), otherwise
+ * id-list filter (`?id__in=1,2,3`, django-filter's `in` lookup, which a project
+ * adds with `filterset_fields = {"id": ["exact", "in"]}`), otherwise
  * through each id's detail endpoint, in parallel.
  *
  * Internal to @karni/ui.
@@ -62,7 +62,7 @@ function asPage(body: unknown): OptionPage {
 
 export interface OptionPagesInput {
   resource: string;
-  /** The (debounced) search term; "" for none. */
+  /** The (debounced) search term, "" for none. */
   search: string;
   filter?: Record<string, string | number | boolean>;
   pageSize?: number;
@@ -71,7 +71,7 @@ export interface OptionPagesInput {
 
 export type OptionPagesResult = UseInfiniteQueryResult<InfiniteData<OptionPage, PageQuery | null>>;
 
-/** Pages of options, each fetched on demand; the previous term's rows stay while a new search loads. */
+/** Option pages, each fetched on demand. The previous term's rows stay while a new search loads. */
 export function useOptionPages({
   resource,
   search,

@@ -117,7 +117,7 @@ def plan(
                         and any(isinstance(t, ast.Name) and t.id == "model" for t in stmt.targets)
                     ):
                         raise CliError(
-                            f"{rel} already routes {model.name} through {node.name} — edit "
+                            f"{rel} already routes {model.name} through {node.name}. Edit "
                             "that class (or delete it first).",
                             code="C107",
                         )
@@ -141,8 +141,8 @@ def plan(
     ws.write(path, replace_or_append(ws, rel, text, class_name, block))
     if access is None:
         ws.note(
-            f"access: {shown} — the default: what KARNI_ROLES grants for {model.name}, "
-            f"row-scoped; choose with --access {ACCESS_CHOICES}"
+            f"access: {shown} (the default: what KARNI_ROLES grants for {model.name}, "
+            f"row-scoped). Choose with --access {ACCESS_CHOICES}"
         )
     else:
         ws.note(f"access: {shown}")

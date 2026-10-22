@@ -139,7 +139,7 @@ class ScheduleRegistry:
         if existing is not None and existing != entry:
             raise ScheduleError(
                 f"Schedule name {entry.name!r} is declared twice ({existing.source} and "
-                f"{entry.source}). Names must be unique — they become django-celery-beat "
+                f"{entry.source}). Names must be unique because they become django-celery-beat "
                 "PeriodicTask names. Pass a distinct name=... to one of them.",
                 code="E406",
             )
@@ -270,7 +270,7 @@ def _interval_seconds(
         if not _INTERVAL_FULL_RE.match(interval):
             raise ScheduleError(
                 f"{call}: can't read the interval {interval!r}. Use a number followed by "
-                "s, m, h or d — every('30s'), every('15m'), every('1h30m'), every('1d') — "
+                "s, m, h or d (every('30s'), every('15m'), every('1h30m'), every('1d')), "
                 "or keywords: every(minutes=15).",
                 code="E405",
             )
@@ -401,7 +401,7 @@ def cron(
         except (ValueError, TypeError) as exc:
             raise ScheduleError(
                 f"{call}: invalid {label} field {value!r} ({exc}). Fields are "
-                "'minute hour day-of-month month day-of-week'; e.g. '*/15', '0-30/10', "
+                "'minute hour day-of-month month day-of-week', e.g. '*/15', '0-30/10', "
                 "'mon-fri'.",
                 code="E405",
             ) from None

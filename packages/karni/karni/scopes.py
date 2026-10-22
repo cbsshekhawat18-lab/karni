@@ -356,14 +356,14 @@ class ScopeRegistry:
         ):
             raise KarniImproperlyConfigured(
                 f"{SETTING} must be a list of scope names in pipeline order "
-                f"(registered: {registered}), or unset for all of them; got {configured!r}.",
+                f"(registered: {registered}), or unset for all of them. Got {configured!r}.",
                 code="E002",
             )
         unknown = [name for name in configured if name not in scopes]
         if unknown:
             raise KarniImproperlyConfigured(
-                f"{SETTING} names unknown scope(s) {', '.join(unknown)}; registered: "
-                f"{registered}. Remove them, or install the module that provides them.",
+                f"{SETTING} names unknown scope(s) {', '.join(unknown)} (registered: "
+                f"{registered}). Remove them, or install the module that provides them.",
                 code="E002",
             )
         if len(set(configured)) != len(configured):

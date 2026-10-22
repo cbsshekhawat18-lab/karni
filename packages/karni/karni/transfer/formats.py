@@ -48,7 +48,7 @@ def detect_format(name: str | None, content_type: str | None = None, fmt: str | 
     if fmt:
         if fmt not in FORMATS:
             raise KarniValueError(
-                f"Unsupported format {fmt!r}; use one of {', '.join(FORMATS)}.", code="E802"
+                f"Unsupported format {fmt!r}. Use one of {', '.join(FORMATS)}.", code="E802"
             )
         return fmt
     lowered = (name or "").lower()

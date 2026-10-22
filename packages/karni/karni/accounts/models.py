@@ -288,7 +288,7 @@ class RolePermission(BaseModel):
 
         audit = True
         cascade: ClassVar[dict[str, str]] = {
-            "role": "a grant is part of its role; deleting the role revokes it",
+            "role": "a grant is part of its role, so deleting the role revokes it",
             "permission": "a grant of a permission that no longer exists grants nothing",
         }
 

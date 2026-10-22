@@ -81,7 +81,7 @@ def _exact(value: Any, what: str) -> Decimal:
                 f"{what} got {value!r}, which is not a number.", code="E962"
             ) from exc
     raise KarniTypeError(
-        f"{what} got {value!r} ({type(value).__name__}); pass a Decimal, an int or a string.",
+        f"{what} got {value!r} ({type(value).__name__}). Pass a Decimal, an int or a string.",
         code="E962",
     )
 

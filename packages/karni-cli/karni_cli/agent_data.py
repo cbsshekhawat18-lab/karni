@@ -247,7 +247,7 @@ def _relative(path: Path, project: Path) -> str:
         return str(path.resolve().relative_to(project.resolve()))
     except ValueError:
         raise CliError(
-            f"{path} is outside the project; the project interpreter can only check "
+            f"{path} is outside the project. The project interpreter can only check "
             "files inside it.",
             code="C010",
         ) from None

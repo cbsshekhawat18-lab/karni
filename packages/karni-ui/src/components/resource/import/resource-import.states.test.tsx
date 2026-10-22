@@ -213,7 +213,9 @@ describe("ResourceImport preview and commit", () => {
     const rows = within(problems).getAllByRole("rowheader");
     expect(rows.map((cell) => cell.textContent)).toEqual(["14", "87"]);
     expect(rows[0]).toHaveAttribute("scope", "row");
-    expect(screen.getByText(/previewed; nothing is saved yet/)).toHaveAttribute("role", "status");
+    expect(
+      screen.getByText(/Previewed events\.csv \(120 rows\)\. Nothing is saved yet\./),
+    ).toHaveAttribute("role", "status");
   });
 
   it("asks before committing, with the counts, and returns focus when cancelled", async () => {
@@ -246,11 +248,11 @@ describe("ResourceImport preview and commit", () => {
     await user.click(commit);
     dialog = screen.getByRole("dialog", { name: "Commit this import?" });
     await user.click(within(dialog).getByRole("button", { name: "Commit import" }));
-    expect(await screen.findByText(/120 rows, imported\./)).toBeInTheDocument();
+    expect(await screen.findByText(/Imported events\.csv \(120 rows\)\./)).toBeInTheDocument();
     expect(commits).toBe(1);
     expect(onDone).toHaveBeenCalledTimes(1);
     await waitFor(() =>
-      expect(screen.getByText(/imported\./).closest("[data-step]")).toHaveFocus(),
+      expect(screen.getByText(/Imported events\.csv/).closest("[data-step]")).toHaveFocus(),
     );
   });
 

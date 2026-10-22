@@ -4,7 +4,7 @@
  *
  * The table reads and writes its own query keys through a
  * `ResourceTableStateStore`. The default store uses `window.history` and
- * listens to `popstate`, so it needs no router; a project on a router plugs
+ * listens to `popstate`, so it needs no router. A project on a router plugs
  * its search params in with its own store (see the README). Keys are
  * namespaced (`events.page=2`), and the reserved names are DRF's own
  * (`page`, `page_size`, `ordering`, `search`), so a filter field can never
@@ -29,11 +29,11 @@ export interface ResourceTableStateStore {
   read(): Readonly<Record<string, string>>;
   /**
    * Merge `changes` into the URL (`null` removes a key). `push` adds a
-   * history entry (page, sort, filter changes); otherwise the current entry
+   * history entry (page, sort, filter changes). Otherwise the current entry
    * is replaced (a search refined while typing, a page clamped).
    */
   write(changes: Readonly<Record<string, string | null>>, options: { push: boolean }): void;
-  /** Call `onChange` when the values change outside the table; returns an unsubscribe. */
+  /** Call `onChange` when the values change outside the table. Returns an unsubscribe. */
   subscribe(onChange: () => void): () => void;
 }
 
@@ -80,7 +80,7 @@ const defaultStore = createHistoryStateStore();
 export interface TableView {
   page: number;
   pageSize: number;
-  /** DRF ordering ("-starts_at,title"); "" is "no ordering". */
+  /** DRF ordering ("-starts_at,title"), where "" is "no ordering". */
   ordering: string;
   search: string;
   filters: Readonly<Record<string, FilterValue>>;
@@ -89,7 +89,7 @@ export interface TableView {
 export interface TableViewDefaults {
   pageSize: number;
   ordering: string;
-  /** Page sizes a URL may ask for; anything else falls back to the default. */
+  /** Page sizes a URL may ask for. Anything else falls back to the default. */
   pageSizes: readonly number[];
 }
 
@@ -189,7 +189,7 @@ export type SetTableView = (patch: Partial<TableView>, options: { push: boolean 
 export interface UseTableViewOptions {
   /** False keeps the view in component state only (the URL is untouched). */
   syncUrl: boolean;
-  /** Where the URL state lives; default: `window.history`. */
+  /** Where the URL state lives. Default: `window.history`. */
   store?: ResourceTableStateStore;
   namespace: string;
   defaults: TableViewDefaults;

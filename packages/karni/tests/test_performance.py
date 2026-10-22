@@ -157,7 +157,7 @@ def test_over_budget_request_raises_with_the_report() -> None:
     with pytest.raises(QueryBudgetExceeded) as excinfo:
         _list(LeakyNovelViewSet)
     message = str(excinfo.value)
-    assert "LeakyNovelViewSet.list ran 11 queries; budget is 8." in message
+    assert "LeakyNovelViewSet.list ran 11 queries against a budget of 8." in message
     assert "9× SELECT" in message
     assert "LeakyNovelSerializer.chapter_titles" in message
     assert "query_budget = Budget(list=N, reason=...)" in message
@@ -195,7 +195,9 @@ def test_warn_mode_logs_instead_of_raising(caplog: pytest.LogCaptureFixture) -> 
         response = _list(LeakyNovelViewSet)
     assert response.status_code == 200
     assert response["X-Karni-Queries"] == "11"
-    assert any("ran 11 queries; budget is 8" in record.getMessage() for record in caplog.records)
+    assert any(
+        "ran 11 queries against a budget of 8" in record.getMessage() for record in caplog.records
+    )
 
 
 def test_off_mode_does_not_count() -> None:
@@ -223,7 +225,7 @@ def test_query_budget_fixture_passes_within_the_limit(query_budget: Any) -> None
 def test_query_budget_fixture_fails_over_the_limit(query_budget: Any) -> None:
     Publisher.objects.create(name="a")
     Publisher.objects.create(name="b")
-    with pytest.raises(QueryBudgetExceeded, match=r"report ran 3 queries; budget is 1"):
+    with pytest.raises(QueryBudgetExceeded, match=r"report ran 3 queries against a budget of 1"):
         with query_budget(1, label="report"):
             for publisher in Publisher.objects.all():
                 list(publisher.writers.all())
@@ -261,7 +263,7 @@ def test_query_log_prints_count_duplicates_and_time(caplog: pytest.LogCaptureFix
     (record,) = caplog.records
     assert record.levelno == logging.WARNING  # duplicates present
     message = record.getMessage()
-    assert message.startswith("GET /publishers/?page=1 200 — 3 queries, 2 duplicated")
+    assert message.startswith("GET /publishers/?page=1 200: 3 queries, 2 duplicated")
     assert "ms in SQL" in message and "ms total" in message
     assert "2× SELECT … FROM" in message
 

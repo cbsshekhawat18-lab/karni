@@ -378,7 +378,7 @@ class NoOverlap(ExclusionConstraint):  # type: ignore[misc]
         existing = self.conflicting(model, instance, using)
         if existing is not None:
             raise ValidationError(
-                f"E984: This overlaps {self.describe(model, existing)}; pick a free slot.",
+                f"E984: This overlaps {self.describe(model, existing)}. Pick a free slot.",
                 code=self.violation_error_code or "E984",
             )
 
@@ -463,7 +463,7 @@ def _declared(model: type[models.Model], declared: Any) -> list[NoOverlap]:
         else:
             raise KarniImproperlyConfigured(
                 f"{model.__name__}.Karni.no_overlap must be NoOverlap(...), a tuple of field "
-                f"names ending with the range (('room', 'during')), or a list of them; got "
+                f"names ending with the range (('room', 'during')), or a list of them. Got "
                 f"{item!r}.",
                 code="E987",
             )

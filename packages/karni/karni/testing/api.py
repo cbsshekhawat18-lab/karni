@@ -201,7 +201,7 @@ def resolve_resource(resource: Any) -> Resource:
         viewset = viewset_for_model(resource, router)
         if viewset is None:
             raise KarniAssertionError(
-                f"No routed viewset serves {resource.__name__} — route one "
+                f"No routed viewset serves {resource.__name__}. Route one "
                 f"(karni make viewset {resource.__name__}) or pass the viewset class.",
                 code="E601",
             )
@@ -221,7 +221,7 @@ def resolve_resource(resource: Any) -> Resource:
             return Resource(viewset, model, prefix, basename)
     raise KarniAssertionError(
         f"{getattr(viewset, '__name__', viewset)!r} is not routed on the API router "
-        "(KARNI_API_ROUTER) — assert_crud tests a resource through its URLs. Check "
+        "(KARNI_API_ROUTER), but assert_crud tests a resource through its URLs. Check "
         "auto_register, or register it on the router your factory builds.",
         code="E601",
     )
@@ -598,7 +598,7 @@ class _Crud:
         detail = ""
         try:
             body = response.json()
-            detail = f" — {body.get('detail', body)!s:.160}" if isinstance(body, dict) else ""
+            detail = f": {body.get('detail', body)!s:.160}" if isinstance(body, dict) else ""
         except Exception:  # noqa: BLE001 - a non-JSON body
             detail = ""
         self.fail(
@@ -680,7 +680,7 @@ class _Crud:
             who = f"role {self.role!r}" if self.role else "an authenticated user"
             self.fail(
                 f"access: {who} is refused every action of {self.resource.name} "
-                f"(access={viewset.access!r}) — is the role name right? Pin the refusals "
+                f"(access={viewset.access!r}). Check the role name, and pin the refusals "
                 "with expect={...} if they are intended."
             )
             return False
@@ -867,7 +867,7 @@ class _Crud:
         page = _ids(body)
         if len(page) != 2:
             self.fail(
-                f"pagination: GET {url}?{param}=2 returned {len(page)} rows, expected 2 — the "
+                f"pagination: GET {url}?{param}=2 returned {len(page)} rows, expected 2: the "
                 f"paginator ignores {param} ({paginator.__name__ if paginator else None})"
             )
             return
@@ -904,7 +904,7 @@ class _Crud:
             if str(second.pk) in ids:
                 self.fail(
                     f"filtering: GET {url}?{param}={value} also returned a row whose "
-                    f"{shown} differs — the filter is ignored (filter_backends / filterset?)"
+                    f"{shown} differs, so the filter is ignored (check filter_backends / filterset)"
                 )
             self.documented.setdefault("filter", param)
         search_fields = tuple(getattr(self.resource.viewset, "search_fields", ()) or ())
@@ -964,7 +964,7 @@ class _Crud:
             )
             if response.status_code != 400 or name not in response.json():
                 self.fail(
-                    f"visibility: PATCH {name} as {who} answered {response.status_code}; "
+                    f"visibility: PATCH {name} as {who} answered {response.status_code}, but "
                     f"field_roles lets only {', '.join(protected_roles(model, name))} change "
                     "it, so the request must be refused naming the field"
                 )

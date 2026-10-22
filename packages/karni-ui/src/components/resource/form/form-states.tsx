@@ -55,12 +55,12 @@ export interface ResourceFormForbiddenProps {
 
 /** One entry of the error summary. */
 export interface ResourceFormFieldError {
-  /** The field's name; absent for a message that belongs to no field. */
+  /** The field's name. Absent for a message that belongs to no field. */
   name?: string;
   /** The field's label, as the form shows it. */
   label?: string;
   message: string;
-  /** Moves focus to the field's input; absent for a message that belongs to no field. */
+  /** Moves focus to the field's input. Absent for a message that belongs to no field. */
   focus?: () => void;
   /** `#<the input's id>`, for a link to the field. */
   href?: string;

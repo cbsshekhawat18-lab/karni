@@ -91,6 +91,12 @@ tokens, so an agent starts work without reading the tree. With a history
 provider installed (`karni doctor` lists them), `karni context --with-history
 <file>` adds what changed recently around a file and why.
 
+To keep that history, record your prompts. The built-in provider reads
+[Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle), which saves every prompt you give an agent inside
+your repository: `npm install -g gigai-chronicle`, then `chronicle init`. It is
+optional, MIT licensed, local-only, and made by Karni's author. See
+[history providers](../concepts/history-providers.md) for how Karni uses it.
+
 Through MCP, the same surface is three tools: `karni mcp` serves `context`,
 `rules` and `check` to any MCP client.
 

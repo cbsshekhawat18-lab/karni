@@ -265,7 +265,7 @@ const archiveSome = async (
 ): Promise<{ failed: Array<{ id: string; reason: string }> }> => {
   await new Promise((resolve) => setTimeout(resolve, 300));
   return {
-    failed: ids.slice(0, 2).map((id) => ({ id, reason: "Has bookings; cancel them first." })),
+    failed: ids.slice(0, 2).map((id) => ({ id, reason: "Has bookings. Cancel them first." })),
   };
 };
 
@@ -373,7 +373,7 @@ export const CustomColumns: Story = {
 };
 
 /**
- * Audit columns (AUDIT_FIELDS) are hidden by default; `showAuditFields`
+ * Audit columns (AUDIT_FIELDS) are hidden by default. `showAuditFields`
  * appends them after the domain columns. To show just one, name it in
  * `columns`, e.g. `columns={[{ field: "created_at" }]}`.
  */

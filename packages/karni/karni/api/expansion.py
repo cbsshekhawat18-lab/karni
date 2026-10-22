@@ -164,7 +164,7 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
         if len(segments) > max_depth:
             raise api_error(
                 "E127",
-                f"Expand path {path!r} is {len(segments)} levels deep; the maximum is "
+                f"Expand path {path!r} is {len(segments)} levels deep, but the maximum is "
                 f"{max_depth}. Request fewer levels, or raise KARNI_API_MAX_EXPAND_DEPTH.",
                 field="expand",
             )
@@ -186,7 +186,7 @@ def validate_expand(viewset: Any, raw: str | Iterable[str] | None) -> frozenset[
                 raise api_error(
                     "E126",
                     f"Expand key {segment!r} in {path!r} does not map to a relation on "
-                    f"{current_model.__name__}; fix {type(viewset).__name__}."
+                    f"{current_model.__name__}. Fix {type(viewset).__name__}."
                     "expandable_fields so each key names a relation.",
                     field="expand",
                 )
@@ -322,7 +322,7 @@ def _viewset_model(viewset: Any) -> type[Model]:
         model = getattr(getattr(viewset, "queryset", None), "model", None)
     if model is None:
         raise KarniImproperlyConfigured(
-            f"{type(viewset).__name__} exposes neither 'model' nor 'queryset'; "
+            f"{type(viewset).__name__} exposes neither 'model' nor 'queryset', so "
             "expansion cannot be validated.",
             code="E110",
         )

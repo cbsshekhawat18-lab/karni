@@ -120,7 +120,7 @@ class PythonCodemod(Codemod):
             try:
                 modules[rel] = cst.parse_module(raw)
             except cst.ParserSyntaxError as exc:
-                note = f"not parsed ({exc.message}); check it by hand"
+                note = f"not parsed ({exc.message}). Check it by hand"
                 outcome.sites.append(Site(rel, exc.raw_line, note))
         analysis = self.analyse(modules)
         for rel, module in modules.items():
@@ -537,7 +537,7 @@ class _ReplaceAttribute(Recorder):
             self.site(
                 original_node,
                 f"left as is: the project defines its own {spec.attr} "
-                f"({first.path}:{first.line}); if this is Karni's, use .{spec.replacement}",
+                f"({first.path}:{first.line}). If this is Karni's, use .{spec.replacement}",
             )
             return updated_node
         parent = self.get_metadata(ParentNodeProvider, original_node, None)
@@ -548,8 +548,8 @@ class _ReplaceAttribute(Recorder):
         ):
             self.site(
                 original_node,
-                f"left as is: .{parent.attr.value}() needs the manager {spec.attr} returned; "
-                "rewrite it by hand",
+                f"left as is: .{parent.attr.value}() needs the manager {spec.attr} returned. "
+                "Rewrite it by hand",
             )
             return updated_node
         self.count += 1
@@ -604,7 +604,7 @@ class _ReplaceMethodCall(Recorder):
             self.site(
                 original_node,
                 f"left as is: the project defines its own {spec.method}() "
-                f"({first.path}:{first.line}); if this is Karni's, use .{spec.replacement}",
+                f"({first.path}:{first.line}). If this is Karni's, use .{spec.replacement}",
             )
             return updated_node
         self.count += 1

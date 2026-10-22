@@ -520,7 +520,7 @@ profile (a log line with the grouped duplicate report), `off` in production
 rendered it:
 
 ```
-EventViewSet.list ran 14 queries; budget is 8.
+EventViewSet.list ran 14 queries against a budget of 8.
 14 queries, 12 duplicated, 3.1 ms in SQL
   12× SELECT … FROM "app_tag" INNER JOIN "app_event_tags" ON … WHERE … = %s
       ← EventSerializer.tag_names (app/serializers.py:41 in get_tag_names)
@@ -759,6 +759,33 @@ Generate a TypeScript client straight off `/api/schema/`, e.g.:
 ```bash
 npx openapi-typescript http://localhost:8000/api/schema/ -o src/api/schema.d.ts
 ```
+
+### Enum names
+
+Each choice field becomes a shared enum named after the field, such as
+`StatusEnum`. When two models have a field of the same name with different
+choices, Karni names each enum after the model and the field, so
+`Booking.status` and `Event.status` become `BookingStatusEnum` and
+`EventStatusEnum`. drf-spectacular alone would name them
+`EventsBookingStatusEnum` or `Status469Enum`, and that hash changes whenever
+the choices do, which renames your generated TypeScript types. A field name
+used for only one set of choices keeps its plain name. One set of choices
+shared by several models stays one enum named after all of them, such as
+`InvoiceOrderStatusEnum`. Two models with the same name in different apps get
+the app label in front, such as `EventsBookingStatusEnum`.
+
+The hook `karni.api.schema.postprocess_schema_enums` does this, and it is the
+first entry of `SPECTACULAR_SETTINGS["POSTPROCESSING_HOOKS"]`. Your own
+`ENUM_NAME_OVERRIDES` always win. Set them after `karni_settings(globals())`:
+
+```python
+SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"] = {
+    "BookingStateEnum": "events.models.Booking.Status",
+}
+```
+
+To keep drf-spectacular's own names, put
+`"drf_spectacular.hooks.postprocess_schema_enums"` in that list in its place.
 
 Ordering and pagination parameters come from the stock DRF classes
 (`OrderingFilter`, and `KarniPageNumberPagination` with `?page` and `?page_size`

@@ -4,8 +4,8 @@
  * The role registry (`registerComponentRole`) ships with a later @karni/ui
  * phase. Per G8 the registration is feature-detected: when the installed
  * @karni/ui exports `registerComponentRole`, both roles are registered at
- * import time; when it does not (older/current @karni/ui), registration is
- * skipped silently. `registerPaymentRoles` is exported as the escape hatch —
+ * import time. When it does not (older/current @karni/ui), registration is
+ * skipped silently. `registerPaymentRoles` is exported as the escape hatch:
  * call it with your own registry object to register the roles elsewhere.
  */
 import * as karniUi from "@karni/ui";

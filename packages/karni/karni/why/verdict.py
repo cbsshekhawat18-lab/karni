@@ -175,7 +175,7 @@ def _who(verdict: Verdict, user: Any) -> list[str]:
     extra = f", {', '.join(flags)}" if flags else ""
     verdict.add("user", f"{display_user(user)}  (pk {user.pk}{extra})")
     note = (
-        "; superuser: holds every grant at scope all and sees every field"
+        " (superuser: holds every grant at scope all and sees every field)"
         if getattr(user, "is_superuser", False)
         else ""
     )
@@ -270,11 +270,11 @@ def _request_line(verdict: Verdict, probe: Probe) -> None:
     governs = {
         "read": "access.read",
         "write": "access.write"
-        + ("; the row is looked up through access.read" if probe.action.detail else ""),
+        + (", with the row looked up through access.read" if probe.action.detail else ""),
         "create": "access.create",
         "create|write": "access.create or access.write",
         "action": "its @action(access=...)"
-        + ("; the row is looked up through access.read" if probe.action.detail else ""),
+        + (", with the row looked up through access.read" if probe.action.detail else ""),
     }.get(slot, slot)
     query = "&".join(f"{k}={v}" for k, values in probe.query.items() for v in values)
     path = probe.path + (f"?{query}" if query else "")
@@ -333,7 +333,7 @@ def _leaf_rows(leaves: Iterable[Leaf], *, show_row: bool) -> list[str]:
         if show_row:
             mark = {True: "yes", False: "no", None: "-"}[leaf.matches_row]
             values = ", ".join(f"{k}={v}" for k, v in leaf.row_values.items())
-            row = f"; row has {values}" if values else ""
+            row = f", and the row has {values}" if values else ""
             lines.append(f"  {mark:<3}  {predicate_text(leaf.predicate)}: {leaf.rows_text}{row}")
         else:
             lines.append(f"  {predicate_text(leaf.predicate)}: {leaf.rows_text}")
@@ -630,10 +630,12 @@ def _build(verdict: Verdict, probe: Probe) -> Verdict:
     if probe.uncaught is not None:
         verdict.outcome = "error"
         verdict.summary = (
-            f"500 — {type(view).__name__}.{probe.action.name} raised "
+            f"500: {type(view).__name__}.{probe.action.name} raised "
             f"{type(probe.uncaught).__name__}: {probe.uncaught}"
         )
-        verdict.fix("fix the error the message names; `karni explain <code>` explains a Karni code")
+        verdict.fix(
+            "fix the error the message names (`karni explain <code>` explains a Karni code)"
+        )
         _grants(verdict, probe, [])
         _where_lines(verdict, (_access_label(probe), access_at))
         return verdict
@@ -644,14 +646,14 @@ def _build(verdict: Verdict, probe: Probe) -> Verdict:
     if veto is not None:
         verdict.outcome = "veto"
         verdict.summary = (
-            f"{_status(probe.status)} — the access declaration admits the request, but the veto "
+            f"{_status(probe.status)}: the access declaration admits the request, but the veto "
             f"{veto.data['name']!r} refuses it (AccessPermission consults karni.vetoes after the "
             "predicate)"
         )
         fn_at = (verdict.data.get("veto") or {}).get("where")
         verdict.fix(
-            "end the condition the veto checks (for karni_impersonation: stop impersonating — "
-            "the action is blocked for the whole session)",
+            "end the condition the veto checks (for karni_impersonation: stop impersonating, "
+            "because the action is blocked for the whole session)",
             f"unregister_veto({veto.data['name']!r}) or narrow the veto"
             + (f" ({fn_at['file']}:{fn_at['line']})" if fn_at else ""),
         )
@@ -715,7 +717,7 @@ def _build(verdict: Verdict, probe: Probe) -> Verdict:
     if object_event is not None and not object_event.data.get("allowed"):
         verdict.outcome = "write-refused"
         verdict.summary = (
-            f"{_status(probe.status)} — the row is readable (found through access.read) but "
+            f"{_status(probe.status)}: the row is readable (found through access.read) but "
             f"access.{slot} refuses it (AccessPermission.has_object_permission)"
         )
         for leaf in write_leaves:
@@ -753,7 +755,7 @@ def _gate_refused(
     if event.data.get("declaration") is None:
         verdict.outcome = "no-access"
         verdict.summary = (
-            f"{_status(probe.status)} — {type(view).__name__} declares no access, so every request "
+            f"{_status(probe.status)}: {type(view).__name__} declares no access, so every request "
             "is refused (E101)"
         )
         verdict.fix(
@@ -768,14 +770,12 @@ def _gate_refused(
     where = "AccessPermission.has_permission, before any query"
     if not signed_in:
         verdict.summary = (
-            f"{_status(probe.status)} — not signed in, and {shown} admits only signed-in users "
+            f"{_status(probe.status)}: not signed in, and {shown} admits only signed-in users "
             f"({where})"
         )
     else:
         target = f"access.{slot}" if slot != "action" else "the @action's access"
-        verdict.summary = (
-            f"{_status(probe.status)} — {target} = {shown} refuses this user ({where})"
-        )
+        verdict.summary = f"{_status(probe.status)}: {target} = {shown} refuses this user ({where})"
     for leaf in leaves:
         if not leaf.explained.allows:
             verdict.fix(*leaf.fixes)
@@ -813,7 +813,7 @@ def _extra_permission(
         names = ", ".join(type(p).__name__ for p in refusing)
         before = "" if unscoped else "the access gate passed, then "
         verdict.summary = (
-            f"{_status(probe.status)} — {before}permission_classes refused: "
+            f"{_status(probe.status)}: {before}permission_classes refused: "
             f"{names} ({_detail_text(probe.detail)})"
         )
         entries = [(type(p).__name__, class_location(type(p))) for p in refusing]
@@ -830,7 +830,7 @@ def _extra_permission(
             )
         _where_lines(verdict, (_access_label(probe), access_at), *entries)
     else:
-        verdict.summary = f"{_status(probe.status)} — {_detail_text(probe.detail)}"
+        verdict.summary = f"{_status(probe.status)}: {_detail_text(probe.detail)}"
         _where_lines(verdict, (_access_label(probe), access_at))
     return verdict
 
@@ -839,7 +839,7 @@ def _object_extra(verdict: Verdict, probe: Probe, access_at: Location | None) ->
     view = probe.view
     verdict.outcome = "object-permission"
     verdict.summary = (
-        f"{_status(probe.status)} — access admits the row, then an object permission refused it "
+        f"{_status(probe.status)}: access admits the row, then an object permission refused it "
         f"({_detail_text(probe.detail)})"
     )
     names = ", ".join(cls.__name__ for cls in getattr(view, "object_permission_classes", ()) or ())
@@ -869,19 +869,19 @@ def _not_found(
     name = type(view).__name__
     if state is None:
         verdict.outcome = "not-found"
-        verdict.summary = f"404 — {_detail_text(probe.detail)}"
+        verdict.summary = f"404: {_detail_text(probe.detail)}"
         return verdict
     if state.state in ("invalid", "missing"):
         verdict.outcome = state.state
         verdict.add("row", state.detail + " (the table has no such row, deleted or not)")
         verdict.data["row"] = {"pk": str(probe.pk), "exists": False}
-        verdict.summary = f"404 Not Found — {state.detail}: there is nothing to see"
+        verdict.summary = f"404 Not Found: {state.detail}, so there is nothing to see"
         verdict.fix(f"use an id the API lists: karni why-empty {probe.resource.prefix} --as <user>")
         return verdict
     row = state.row
     if row is None:  # only "invalid" and "missing" carry no row, handled above
         verdict.outcome = "not-found"
-        verdict.summary = f"404 — {_detail_text(probe.detail)}"
+        verdict.summary = f"404: {_detail_text(probe.detail)}"
         return verdict
     if state.state == "scoped-out":
         verdict.outcome = "model-scope"
@@ -890,8 +890,8 @@ def _not_found(
         )
         verdict.data["row"] = {"pk": str(row.pk), "exists": True, "scope": state.detail}
         verdict.summary = (
-            f"404 Not Found — the {state.detail.split(' ')[0]} model scope hides the row from "
-            "every query; no access rule can reach it"
+            f"404 Not Found: the {state.detail.split(' ')[0]} model scope hides the row from "
+            "every query, and no access rule can reach it"
         )
         if state.detail.startswith("soft_delete"):
             verdict.fix(
@@ -910,7 +910,7 @@ def _not_found(
         verdict.data["row"] = {"pk": str(row.pk), "exists": True}
         at = _base_location(view)
         verdict.summary = (
-            f"404 Not Found — {name}'s own queryset/get_queryset() leaves the row out, before "
+            f"404 Not Found: {name}'s own queryset/get_queryset() leaves the row out, before "
             "access applies"
         )
         verdict.fix(f"widen {name}'s queryset/get_queryset(){f' ({at})' if at else ''}")
@@ -922,8 +922,8 @@ def _not_found(
     if not in_scope:
         verdict.outcome = "filtered"
         verdict.summary = (
-            "404 Not Found — the row exists but access.read filters it out at queryset level "
-            "(BaseViewSet.get_queryset): the API answers 404, never 403, so it does not confirm "
+            "404 Not Found: the row exists but access.read filters it out at queryset level "
+            "(BaseViewSet.get_queryset). The API answers 404, never 403, so it does not confirm "
             "the row exists"
         )
         for leaf in read_leaves:
@@ -944,7 +944,7 @@ def _not_found(
             at = callable_location(type(view).filter_queryset_for_user)
             verdict.outcome = "filter-hook"
             verdict.summary = (
-                f"404 Not Found — access.read admits the row, then "
+                f"404 Not Found: access.read admits the row, then "
                 f"{name}.filter_queryset_for_user() removes it"
             )
             verdict.fix(f"change {name}.filter_queryset_for_user(){f' ({at})' if at else ''}")
@@ -954,7 +954,7 @@ def _not_found(
     if not view.filter_queryset(scoped).filter(pk=row.pk).exists():
         verdict.outcome = "filters"
         verdict.summary = (
-            "404 Not Found — the row is readable, but this request's filter parameters "
+            "404 Not Found: the row is readable, but this request's filter parameters "
             f"({_query_text(probe.query)}) exclude it (the detail lookup applies "
             "filter_queryset too)"
         )
@@ -963,7 +963,7 @@ def _not_found(
         return verdict
     verdict.outcome = "not-found"
     verdict.summary = (
-        f"404 Not Found — the row is readable; the action's own code answered 404: "
+        f"404 Not Found: the row is readable, but the action's own code answered 404: "
         f"{_detail_text(probe.detail)}"
     )
     handler = getattr(type(view), probe.action.name, None)
@@ -989,11 +989,11 @@ def _allowed(
         if probe.in_list:
             verdict.outcome = "listed"
             admitted = f", admitted by {via}" if via else ""
-            verdict.summary = f"200 — the row is in the list ({probe.count} row(s)){admitted}"
+            verdict.summary = f"200: the row is in the list ({probe.count} row(s)){admitted}"
         else:
             verdict.outcome = "not-listed"
             verdict.summary = (
-                f"200 — the list answers ({probe.count} row(s)) but this row is not in it"
+                f"200: the list answers ({probe.count} row(s)) but this row is not in it"
             )
         _where_lines(verdict, (f"{name}.access", access_at), *_leaf_where(read_leaves, only=True))
         return verdict
@@ -1007,8 +1007,8 @@ def _allowed(
     reason = f" through {via}" if via else ""
     tail = ""
     if probe.action.method not in ("GET", "HEAD"):
-        tail = "; the handler still validates the body (a 400 there is not an access decision)"
-    verdict.summary = f"{_status(probe.status)} — {what}{reason}{tail}"
+        tail = ". The handler still validates the body (a 400 there is not an access decision)"
+    verdict.summary = f"{_status(probe.status)}: {what}{reason}{tail}"
     _where_lines(
         verdict, (f"{name}.access", access_at), *_leaf_where(write_leaves or read_leaves, only=True)
     )
@@ -1076,7 +1076,7 @@ def explain_field(resource: Resource | str, name: str, user: Any) -> Verdict:
     )
     gate_lines = [
         f"list: {_status(listing.status)}"
-        + ("" if listing.allowed else " — the user cannot read this resource at all"),
+        + ("" if listing.allowed else " (the user cannot read this resource at all)"),
     ]
     update = resolve_action(found, "partial_update") if _routes(found, "partial_update") else None
     if update is not None:
@@ -1085,7 +1085,7 @@ def explain_field(resource: Resource | str, name: str, user: Any) -> Verdict:
             "update: gate "
             + ("passes" if writing.allowed else f"refuses ({_status(writing.status)})")
         )
-    verdict.add("rows", "; ".join(gate_lines))
+    verdict.add("rows", ", ".join(gate_lines))
 
     rules = field_roles(model)
     rule = rules.get(name)
@@ -1127,22 +1127,23 @@ def explain_field(resource: Resource | str, name: str, user: Any) -> Verdict:
                 "not a forward field: generated serializers expose concrete fields and forward "
                 "many-to-manys (expand reverse relations through expandable_fields)"
             )
-        verdict.summary = f"absent for everyone — {reason}"
+        verdict.summary = f"absent for everyone: {reason}"
     elif name not in mine and rule is None:
         # Only field_roles removes a field per user; anything else is a hand-written get_fields().
         verdict.outcome = "hidden"
         reason = f"{serializer_class.__name__}.get_fields() leaves it out for this user"
-        verdict.summary = f"hidden — {reason}"
+        verdict.summary = f"hidden: {reason}"
         where.append((serializer_class.__name__, class_location(serializer_class)))
     elif name not in mine and rule is not None:
         verdict.outcome = "hidden"
         reason = (
             f"{model.__name__}.Karni.field_roles[{name!r}]: read needs one of "
-            f"{', '.join(rule.read)}; {display_user(user)} holds {', '.join(roles) or 'no role'}"
+            f"{', '.join(rule.read)}, but {display_user(user)} holds "
+            f"{', '.join(roles) or 'no role'}"
         )
         where.append((f"{model.__name__}.Karni.field_roles", karni_at))
         verdict.summary = (
-            f"hidden — {name} is absent from every response, ?expand= and the schema for this "
+            f"hidden: {name} is absent from every response, ?expand= and the schema for this "
             "user (never null), and is ignored in filters, ordering and search"
         )
         verdict.fix(
@@ -1161,13 +1162,13 @@ def explain_field(resource: Resource | str, name: str, user: Any) -> Verdict:
         else:
             reason = f"{model.__name__}.APIMeta.write_only lists it"
             where.append((f"{model.__name__}.APIMeta.write_only", meta_at("write_only")))
-        verdict.summary = f"write-only — accepted on writes, never in responses ({reason})"
+        verdict.summary = f"write-only: accepted on writes, never in responses ({reason})"
     elif mine[name].read_only:
         verdict.outcome = "read-only"
         if not everyone[name].read_only and rule is not None:
             reason = (
                 f"{model.__name__}.Karni.field_roles[{name!r}]: write needs one of "
-                f"{', '.join(rule.write)}; {display_user(user)} holds "
+                f"{', '.join(rule.write)}, but {display_user(user)} holds "
                 f"{', '.join(roles) or 'no role'}"
             )
             where.append((f"{model.__name__}.Karni.field_roles", karni_at))
@@ -1184,11 +1185,11 @@ def explain_field(resource: Resource | str, name: str, user: Any) -> Verdict:
             reason, at, fix = _read_only_reason(view, model, name, explicit, serializer_class)
             where.append(at)
             verdict.fix(fix)
-        verdict.summary = f"read-only — shown, never written through the API ({reason})"
+        verdict.summary = f"read-only: shown, never written through the API ({reason})"
     else:
         verdict.outcome = "visible"
         verdict.summary = (
-            f"visible and writable — {name} is read and written like any field for this user"
+            f"visible and writable: {name} is read and written like any field for this user"
         )
         if rule is not None:
             reason = (
@@ -1302,7 +1303,7 @@ def explain_list(
         if probe.status == 400:
             verdict.outcome = "bad-request"
             verdict.summary = (
-                f"400 Bad Request — the access layer admits the list, but the query parameters are "
+                f"400 Bad Request: the access layer admits the list, but the query parameters are "
                 f"invalid: {_detail_text(probe.detail)}"
             )
             verdict.fix("pass a value the filter accepts, or drop the parameter")
@@ -1312,7 +1313,7 @@ def explain_list(
         elif veto is not None:
             verdict.outcome = "veto"
             verdict.summary = (
-                f"{_status(probe.status)} — the veto {veto.data['name']!r} refuses the list"
+                f"{_status(probe.status)}: the veto {veto.data['name']!r} refuses the list"
             )
         else:
             _extra_permission(verdict, probe, access_at, gate_tree)
@@ -1400,7 +1401,7 @@ def explain_list(
     if steps[-1]["rows"] != final:
         verdict.notes.append(
             f"the steps end at {steps[-1]['rows']} row(s) but the API's list has {final}: an "
-            "override changes rows in a way this breakdown cannot split; the API's count is the "
+            "override changes rows in a way this breakdown cannot split. The API's count is the "
             "answer"
         )
 
@@ -1457,7 +1458,7 @@ def explain_list(
     elif culprit["step"] == read_label:
         verdict.summary = (
             f"empty: access.read removes all {culprit['removed']} row(s) the viewset's queryset "
-            f"holds — none is readable by {display_user(user)}"
+            f"holds, so none is readable by {display_user(user)}"
         )
         for miss in misses[:1]:
             at = f" ({access_at})" if access_at else ""
@@ -1571,18 +1572,18 @@ def explain_record(request_id: str, *, asked: int | None = None) -> Verdict:
         + (f" (error_code {code})" if code else "")
     ]
     if asked is not None and asked != recorded:
-        header.append(f"you asked about a {asked}; the recorded request got {recorded}")
+        header.append(f"you asked about a {asked}, but the recorded request got {recorded}")
     same = probe.status == recorded
     header.append(
         f"replayed now with the same user, method, path and query: {_status(probe.status)}"
-        + (" (the same answer)" if same else f" — differs from the recorded {recorded}")
+        + (" (the same answer)" if same else f" (differs from the recorded {recorded})")
     )
     verdict.sections.insert(0, Section("record", header))
     if not same:
         cause = "roles, grants or the row changed since"
         if code and str(code).upper().startswith("IMP"):
             cause = (
-                f"the recorded refusal ({code}) came from an impersonated session; a replay has no "
+                f"the recorded refusal ({code}) came from an impersonated session. A replay has no "
                 "impersonation, so the veto that refused it does not fire now"
             )
         elif recorded in (401, 403) and probe.allowed:

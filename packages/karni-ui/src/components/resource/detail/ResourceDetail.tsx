@@ -35,9 +35,9 @@ export interface ResourceDetailFieldOverride {
 
 /** What the `Loading` slot receives. */
 export interface ResourceDetailLoadingProps {
-  /** The domain fields the record will show, in order; undefined while the schema loads. */
+  /** The domain fields the record will show, in order. Undefined while the schema loads. */
   fields: readonly FieldDef[] | undefined;
-  /** The audit fields of the "Record" group; undefined while the schema loads. */
+  /** The audit fields of the "Record" group. Undefined while the schema loads. */
   auditFields: readonly FieldDef[] | undefined;
   /** True once loading has taken longer than SLOW_AFTER_MS (500ms): show the placeholder now. */
   slow: boolean;
@@ -85,7 +85,7 @@ export interface ResourceDetailDeleteDialogProps {
 }
 
 /**
- * The replaceable parts of ResourceDetail. Pass any subset as `slots`;
+ * The replaceable parts of ResourceDetail. Pass any subset as `slots`.
  * `defaultResourceDetailSlots` holds Karni's own, to wrap them.
  */
 export interface ResourceDetailSlots {
@@ -107,10 +107,10 @@ export interface ResourceDetailProps {
   resource: string;
   id: string | number;
   fields?: Record<string, ResourceDetailFieldOverride>;
-  /** Appended below the field list (e.g. a child <ResourceTable>); rendered while the record loads too. */
+  /** Appended below the field list (e.g. a child <ResourceTable>), even while the record loads. */
   sections?: ReadonlyArray<React.ReactNode>;
   expand?: readonly string[];
-  /** The heading. A function receives the loaded record; a placeholder stands in until then. */
+  /** The heading. A function receives the loaded record. A placeholder stands in until then. */
   title?: React.ReactNode | ((item: Item) => React.ReactNode);
   /** Shown in the header next to Edit and Delete. A function receives the loaded record. */
   actions?: React.ReactNode | ((item: Item) => React.ReactNode);
@@ -188,7 +188,7 @@ function isEmpty(value: unknown): boolean {
   );
 }
 
-/** Default value renderer per field kind; overridable per field via `fields`. */
+/** Default value renderer per field kind, overridable per field via `fields`. */
 function DefaultValue(props: {
   field: FieldDef;
   value: unknown;
@@ -479,22 +479,22 @@ function shownFields(
  * Schema-driven read view of one row: every readable field, labelled and formatted.
  *
  * Contract "ResourceDetail": a definition list of every non-writeOnly field
- * the payload carries — domain fields first (schema order), then the audit
+ * the payload carries, with domain fields first (schema order), then the audit
  * fields (AUDIT_FIELDS: id, created_at, updated_at, created_by, updated_by)
  * in a visually muted "Record" group. A field the role may not read
  * (`Karni.field_roles`) is absent from the per-role schema and the payload,
- * so it has no row at all; a visible field with no value shows EmptyValue
+ * so it has no row at all. A visible field with no value shows EmptyValue
  * (a dash, read as "empty"). Relations render through displayLabel when the
  * object is expanded (the field is in `expand`), else as the raw id in <code>.
  *
  * States: a placeholder in the record's own layout while it loads (drawn
- * after 500ms, the header in place from the start); "Couldn't find this
- * <resource>" for a 404, which Karni also answers for a record outside the
- * user's scope; describeError's words for everything else, with "Try again"
- * when it can help (it refetches the schema too when that failed); offline
+ * after 500ms, the header in place from the start). A 404 shows "Couldn't
+ * find this <resource>", and Karni also answers 404 for a record outside the
+ * user's scope. Everything else shows describeError's words, with "Try again"
+ * when it can help (it refetches the schema too when that failed). Offline
  * says so and reloads when the connection returns.
  *
- * Escape hatches: per-field `fields` overrides (label/hidden/render — audit
+ * Escape hatches: per-field `fields` overrides (label/hidden/render, audit
  * fields included), appended `sections`, the title/actions header, the
  * `canEdit`/`canDelete` predicates, and `slots` for every state.
  */

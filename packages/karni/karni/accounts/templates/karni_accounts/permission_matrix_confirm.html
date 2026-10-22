@@ -19,7 +19,7 @@
         <tr class="karni-problem">
           <td>{{ refusal.role }}</td>
           <td><code>{{ refusal.permission }}</code></td>
-          <td>{{ refusal.requested|default:"—" }}</td>
+          <td>{{ refusal.requested|default:"-" }}</td>
           <td>{{ refusal.reason }}</td>
         </tr>
       {% endfor %}
@@ -36,8 +36,8 @@
         <tr>
           <td>{{ change.role }}</td>
           <td><code>{{ change.permission }}</code></td>
-          <td>{{ change.before|default:"—" }}{% if change.before_origin %} <span class="karni-note">({{ change.before_origin }})</span>{% endif %}</td>
-          <td>{{ change.after|default:"—" }}{% if change.after_origin %} <span class="karni-note">({{ change.after_origin }})</span>{% endif %}</td>
+          <td>{{ change.before|default:"-" }}{% if change.before_origin %} <span class="karni-note">({{ change.before_origin }})</span>{% endif %}</td>
+          <td>{{ change.after|default:"-" }}{% if change.after_origin %} <span class="karni-note">({{ change.after_origin }})</span>{% endif %}</td>
         </tr>
       {% endfor %}
     </tbody>

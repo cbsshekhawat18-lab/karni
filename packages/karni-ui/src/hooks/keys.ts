@@ -2,10 +2,10 @@
  * Query-key factory for every cache entry @karni/ui creates (contract D4).
  *
  * Key shapes:
- * - `["karni", "$schema"]` — the parsed OpenAPI schema (staleTime Infinity).
- * - `["karni", resource]` — the invalidation root for one resource.
- * - `["karni", resource, "list", normalizedParams]` — one list page.
- * - `["karni", resource, "detail", String(id)]` — one item; when the item was
+ * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
+ * - `["karni", resource]`: the invalidation root for one resource.
+ * - `["karni", resource, "list", normalizedParams]`: one list page.
+ * - `["karni", resource, "detail", String(id)]`: one item. When the item was
  *   fetched with params (e.g. `expand`), the normalized params are appended as
  *   a fifth element so differently-shaped payloads never share a cache entry.
  *   Prefix invalidation via `karniKeys.resource(...)` still reaches them.
@@ -16,7 +16,7 @@
  *
  * NEVER invalidate the bare `["karni"]` root: it would also blow away the
  * schema entry (`["karni", "$schema"]`), refetching and re-parsing the whole
- * OpenAPI document. Invalidate `karniKeys.resource(resource)` instead — the
+ * OpenAPI document. Invalidate `karniKeys.resource(resource)` instead. The
  * `"$"` prefix guarantees the schema key can never collide with a real
  * resource name (DRF router prefixes cannot contain `$`).
  */
@@ -31,7 +31,7 @@ export const karniKeys = {
   },
 
   /**
-   * The invalidation root for one resource — every list and detail key of
+   * The invalidation root for one resource. Every list and detail key of
    * `resource` lives under this prefix.
    */
   resource(resource: string): readonly unknown[] {
@@ -41,7 +41,7 @@ export const karniKeys = {
   /**
    * Key for one list page. Params are normalized (D4): undefined/null
    * dropped, keys sorted recursively, values stringified as they hit the
-   * query string — `{search: "x", page: 2}` and `{page: 2, search: "x"}`
+   * query string, so `{search: "x", page: 2}` and `{page: 2, search: "x"}`
    * share one entry.
    */
   list(resource: string, params?: ResourceListParams): readonly unknown[] {
@@ -51,7 +51,7 @@ export const karniKeys = {
   /**
    * Key for one item. The id is always stringified, so `detail("events", 5)`
    * and `detail("events", "5")` share one entry. Params (expand) append a
-   * normalized fifth element — see the module docs.
+   * normalized fifth element (see the module docs).
    */
   detail(resource: string, id: string | number, params?: ResourceItemParams): readonly unknown[] {
     const query = buildItemQuery(params);

@@ -76,7 +76,7 @@
                     <select class="karni-field" name="{{ cell.name }}" data-role="{{ cell.role }}" data-model="{{ group.model.label }}"
                             aria-label="{{ cell.role }} {{ row.permission }}"
                             {% if cell.locked or not can_edit %}disabled{% endif %}>
-                      <option value="" {% if not cell.value %}selected{% endif %}>—</option>
+                      <option value="" {% if not cell.value %}selected{% endif %}>---------</option>
                       {% for value, label, selected in cell.options %}
                         <option value="{{ value }}" {% if selected %}selected{% endif %}>{{ label }}</option>
                       {% endfor %}
@@ -119,10 +119,10 @@
         {% for entry in recent %}
           <tr>
             <td>{{ entry.timestamp|date:"DATETIME_FORMAT" }}</td>
-            <td>{% if entry.actor %}{{ entry.actor.get_username }}{% else %}—{% endif %}</td>
+            <td>{% if entry.actor %}{{ entry.actor.get_username }}{% else %}-{% endif %}</td>
             <td>{{ entry.role }}</td>
             <td><code>{{ entry.permission }}</code></td>
-            <td>{{ entry.before|default:"—" }} → {{ entry.after|default:"—" }}</td>
+            <td>{{ entry.before|default:"-" }} → {{ entry.after|default:"-" }}</td>
           </tr>
         {% endfor %}
       </tbody>

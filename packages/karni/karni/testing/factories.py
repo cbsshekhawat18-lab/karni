@@ -135,7 +135,7 @@ def _model(model: ModelRef) -> type[models.Model]:
         )
     if model._meta.abstract:
         raise KarniImproperlyConfigured(
-            f"{model.__name__} is abstract; factories need a concrete model.", code="E609"
+            f"{model.__name__} is abstract, but factories need a concrete model.", code="E609"
         )
     return model
 
@@ -251,7 +251,7 @@ def _missing_value(model: type[models.Model], field: models.Field[Any, Any]) -> 
     def fail() -> Any:
         raise KarniImproperlyConfigured(
             f"karni.testing.factories cannot generate {model.__name__}.{field.name} "
-            f"({type(field).__name__}); pass it (create({model.__name__}, {field.name}=...)) or "
+            f"({type(field).__name__}). Pass it (create({model.__name__}, {field.name}=...)) or "
             "define an explicit factory in <app>/factories.py.",
             code="E610",
         )

@@ -290,7 +290,7 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                         _finding(
                             "viewset-access",
                             node.lineno,
-                            f"{node.name} declares no `access` — every request is denied",
+                            f"{node.name} declares no `access`, so every request is denied",
                         ),
                         _class_lines(node),
                     )
@@ -301,7 +301,7 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                         _finding(
                             "redundant-serializer",
                             node.lineno,
-                            f"{node.name} is a Meta-only ModelSerializer — "
+                            f"{node.name} is a Meta-only ModelSerializer, and "
                             "BaseViewSet(model=X) already generates it",
                         ),
                         _class_lines(node),
@@ -329,7 +329,7 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
                 _finding(
                     "access-override",
                     lineno,
-                    "filter_queryset_for_user overridden — express row rules in `access`",
+                    "filter_queryset_for_user overridden: express row rules in `access`",
                 ),
                 candidates,
             )
@@ -562,7 +562,7 @@ def _ts(path: str, text: str) -> list[Finding]:
                 report(
                     "karni/no-raw-elements",
                     number,
-                    f"raw <{element}> — compose {_REPLACEMENTS[element]} from @karni/ui",
+                    f"raw <{element}>: compose {_REPLACEMENTS[element]} from @karni/ui",
                 )
     if "pages" in parts[:-1]:
         physical = text.split("\n")
@@ -587,7 +587,7 @@ def _ts(path: str, text: str) -> list[Finding]:
             if _FETCH.search(bare):
                 report("karni/no-direct-http", number, "direct fetch() outside src/api/")
             if _AXIOS.search(code):
-                report("karni/no-direct-http", number, "axios import — Karni ships the HTTP layer")
+                report("karni/no-direct-http", number, "axios import: Karni ships the HTTP layer")
             for m in _NEW_TRANSPORT.finditer(bare):
                 report("karni/no-direct-http", number, f"new {m.group(1)}() outside src/api/")
     return findings
@@ -620,7 +620,7 @@ def check_source(path: str | Path, text: str) -> list[Finding]:
         except SyntaxError as exc:
             raise SourceParseError(
                 f"{path}:{exc.lineno}: cannot parse: {exc.msg}. karni check reads code "
-                "statically; fix the syntax error and run it again."
+                "statically. Fix the syntax error and run it again."
             ) from None
         findings = _python_optouts(text.splitlines(), found)
     elif suffix in TS_SUFFIXES:

@@ -206,7 +206,7 @@ A leak fails with `E606` and one line per request that leaked, with the fix:
 E606: assert_row_hidden(/api/events/, Event 0b5…): 2 problem(s) (6 checks passed)
   - detail: GET /api/events/0b5…/ answered 403 for the hidden row but 404 for a row that
     does not exist (a 403 confirms the row exists), expected 404: look the row up through
-    the read scope before any permission check — BaseViewSet.get_object() does …
+    the read scope before any permission check, as BaseViewSet.get_object() does …
   - expand: PATCH /api/venues/7c1…/?expand=events answers with the hidden Event 0b5…
     embedded: related rows in a response must be readable: …
 ```
@@ -373,7 +373,7 @@ budget (list/retrieve 8, create/update 12, destroy 10, other 15, described in
 [api](api.md#query-budgets)) fails with the grouped report:
 
 ```
-karni.performance.QueryBudgetExceeded: EventViewSet.list ran 14 queries; budget is 8.
+karni.performance.QueryBudgetExceeded: EventViewSet.list ran 14 queries against a budget of 8.
 14 queries, 12 duplicated, 3.1 ms in SQL
   12× SELECT … FROM "app_tag" INNER JOIN … WHERE … = %s
       ← EventSerializer.tag_names (app/serializers.py:41 in get_tag_names)
@@ -441,7 +441,7 @@ pytest --pyargs karni.testing.performance    # the scaling check alone
 A failure reads:
 
 ```
-EventViewSet.list: 3 queries with 2 rows, 13 with 12 — the query count grows with the data (N+1).
+EventViewSet.list: 3 queries with 2 rows, 13 with 12: the query count grows with the data (N+1).
 13 queries, 10 duplicated, 1.2 ms in SQL
   10× SELECT … FROM "app_tag" … WHERE "app_event_tags"."event_id" = %s
       ← EventSerializer.tag_names

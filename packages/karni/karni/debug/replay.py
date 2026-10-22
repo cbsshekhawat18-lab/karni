@@ -254,7 +254,7 @@ def _request_kwargs(
     media = content_type.split(";")[0].strip().lower()
     kwargs: dict[str, Any] = {"QUERY_STRING": urlencode(query, doseq=True)}
     if isinstance(body, str) and body.startswith("<"):
-        notes.append(f"the body was not captured ({body}); replayed without it")
+        notes.append(f"the body was not captured ({body}), so the replay sends no body")
         body = None
     if body is not None:
         if media.startswith("multipart/"):
@@ -264,7 +264,7 @@ def _request_kwargs(
                 if not (isinstance(value, str) and value.startswith("<file "))
             }
             if len(fields) != len(body if isinstance(body, dict) else {}):
-                notes.append("uploaded files are not captured; replayed without them")
+                notes.append("uploaded files are not captured, so the replay sends the fields only")
             kwargs["data"] = encode_multipart(BOUNDARY, fields)
             kwargs["content_type"] = MULTIPART_CONTENT
         elif media == "application/x-www-form-urlencoded":

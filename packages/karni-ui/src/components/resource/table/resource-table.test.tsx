@@ -888,7 +888,7 @@ describe("loading / error / empty states", () => {
     );
     renderTable(<ResourceTable resource="events" />);
     expect(screen.getByRole("status")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("grid")).not.toBeInTheDocument();
   });
 
   it("shows a skeleton while the schema loads", () => {

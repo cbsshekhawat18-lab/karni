@@ -33,7 +33,7 @@ def _frontend_duplication(project: Path) -> int:
     jscpd = frontend / "node_modules" / ".bin" / "jscpd"
     if not jscpd.exists():
         typer.echo(
-            "karni check: jscpd not installed — run `npm install` in frontend/ "
+            "karni check: jscpd not installed. Run `npm install` in frontend/ "
             "(or pass --no-frontend to skip frontend duplication checks).",
             err=True,
         )
@@ -67,7 +67,7 @@ def _frontend_lint(project: Path) -> int:
     eslint = frontend / "node_modules" / ".bin" / "eslint"
     if not eslint.exists():
         typer.echo(
-            "karni check: eslint not installed — run `npm install` in frontend/ "
+            "karni check: eslint not installed. Run `npm install` in frontend/ "
             "(or pass --no-frontend to skip the frontend checks).",
             err=True,
         )

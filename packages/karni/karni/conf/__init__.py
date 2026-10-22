@@ -368,7 +368,7 @@ def karni_settings(
     profile: str = env_name or env("DJANGO_ENV", default="dev")
     if profile not in _PROFILES:
         raise KarniImproperlyConfigured(
-            f"Unknown Karni settings profile {profile!r}; expected one of "
+            f"Unknown Karni settings profile {profile!r}. Expected one of "
             f"{sorted(_PROFILES)}. Set the DJANGO_ENV environment variable or "
             "pass env_name= to karni_settings().",
             code="E502",

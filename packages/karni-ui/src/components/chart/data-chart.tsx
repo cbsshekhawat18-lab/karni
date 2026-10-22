@@ -3,6 +3,7 @@ import * as React from "react";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
 import { Skeleton } from "../primitives/skeleton";
+import { EmptyValue } from "../resource/empty-value";
 
 registerComponentRole("chart", "DataChart");
 
@@ -11,15 +12,15 @@ registerComponentRole("chart", "DataChart");
  *
  * Accessibility model (contract D10): the SVG is a labelled image
  * (role="img" + aria-label + <title>/<desc>) described by a generated
- * summary (the range of each series); the REAL accessible data surface is a
+ * summary (the range of each series). The REAL accessible data surface is a
  * visually-hidden <table> rendered next to it. The tooltip is rendered
- * OUTSIDE the role="img" element and hidden from assistive tech; the SVG is
+ * OUTSIDE the role="img" element and hidden from assistive tech. The SVG is
  * focusable, the arrow keys move the tooltip from point to point, and each
  * point is announced through a polite live region.
  *
  * Colors come exclusively from the --karni-chart-1..5 tokens, via the
  * Tailwind preset's chart color scale (stroke-chart-N / fill-chart-N /
- * bg-chart-N classes — whole class names, per contract D7).
+ * bg-chart-N classes, whole class names per contract D7).
  */
 
 export type DataChartKind = "line" | "bar";
@@ -71,7 +72,7 @@ export interface DataChartLoadingProps {
 export interface DataChartSlots {
   /** The tooltip's content (the positioned box around it stays the chart's). */
   Tooltip: React.ComponentType<DataChartTooltipProps>;
-  /** The series legend; decorative, the hidden table carries the names. */
+  /** The series legend, decorative (the hidden table carries the names). */
   Legend: React.ComponentType<DataChartLegendProps>;
   /** Shown instead of the chart when there is nothing to plot. */
   Empty: React.ComponentType<DataChartEmptyProps>;
@@ -83,7 +84,7 @@ export interface DataChartProps {
   kind: DataChartKind;
   /** Single-series shorthand (ignored when `series` is given). */
   data?: readonly DataChartPoint[];
-  /** Multi-series data; series cycle through --karni-chart-1..5. */
+  /** Multi-series data. Series cycle through --karni-chart-1..5. */
   series?: readonly DataChartSeries[];
   /** Chart title: SVG <title>, aria-label and the hidden table's caption. */
   title: string;
@@ -100,7 +101,7 @@ export interface DataChartProps {
   xTickFormatter?: (label: string) => string;
   /** Fully custom tooltip content. Prefer the `Tooltip` slot. */
   renderTooltip?: (context: DataChartTooltipContext) => React.ReactNode;
-  /** viewBox width (default 640) — rendered size is responsive. */
+  /** viewBox width (default 640). The rendered size is responsive. */
   width?: number;
   /** viewBox height (default 240). */
   height?: number;
@@ -116,7 +117,7 @@ export interface DataChartProps {
   emptyLabel?: string;
   /** True while the data loads: a placeholder of the chart's size replaces it. */
   loading?: boolean;
-  /** Replaces the Tooltip, Legend, Empty or Loading; see DataChartSlots. */
+  /** Replaces the Tooltip, Legend, Empty or Loading. See DataChartSlots. */
   slots?: Partial<DataChartSlots>;
   className?: string;
 }
@@ -186,7 +187,7 @@ function niceTicks(min: number, max: number, count: number): number[] {
 interface NormalizedChart {
   categories: readonly string[];
   seriesNames: readonly string[];
-  /** matrix[seriesIndex][categoryIndex] — null when missing/non-finite. */
+  /** matrix[seriesIndex][categoryIndex], null when missing/non-finite. */
   matrix: ReadonlyArray<ReadonlyArray<number | null>>;
 }
 
@@ -337,11 +338,11 @@ function useRenderedWidth(ref: React.RefObject<Element | null>, active: boolean)
  *
  * Keyboard and screen readers: the chart is an image named by `title`,
  * described by `description` and a generated summary, with every value in a
- * visually-hidden table. Tab focuses it; the arrow keys (Home, End) move the
- * tooltip from category to category and announce each one; Escape hides it.
+ * visually-hidden table. Tab focuses it. The arrow keys (Home, End) move the
+ * tooltip from category to category and announce each one. Escape hides it.
  *
- * Escape hatches: `slots` replaces the Tooltip, Legend, Empty or Loading
- * pieces; `valueFormatter`/`xTickFormatter`, `summary`, `renderTooltip`,
+ * Escape hatches: `slots` (replaces the Tooltip, Legend, Empty or Loading
+ * pieces), `valueFormatter`/`xTickFormatter`, `summary`, `renderTooltip`,
  * `width`/`height`/`yTickCount`, legend and tooltip toggles, `className`
  * (merged via cn()). Colors are only themeable through the
  * --karni-chart-1..5 CSS variables.
@@ -713,7 +714,9 @@ export function DataChart({
                   {matrix.map((row, seriesIndex) => {
                     const value = row[categoryIndex] ?? null;
                     return (
-                      <td key={seriesIndex}>{value === null ? "—" : valueFormatter(value)}</td>
+                      <td key={seriesIndex}>
+                        {value === null ? <EmptyValue /> : valueFormatter(value)}
+                      </td>
                     );
                   })}
                 </tr>

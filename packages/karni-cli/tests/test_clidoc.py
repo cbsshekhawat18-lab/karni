@@ -10,7 +10,7 @@ from .conftest import REPO_ROOT
 def test_docs_cli_md_is_fresh() -> None:
     docs = (REPO_ROOT / "docs" / "cli.md").read_text(encoding="utf-8")
     assert docs == render(), (
-        "docs/cli.md is stale — regenerate it: python -m karni_cli.clidoc > docs/cli.md"
+        "docs/cli.md is stale. Regenerate it: python -m karni_cli.clidoc > docs/cli.md"
     )
 
 

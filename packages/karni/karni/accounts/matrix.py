@@ -380,7 +380,7 @@ class MatrixRefused(KarniValueError):
 
     def __init__(self, plan: Plan) -> None:
         self.plan = plan
-        reasons = "; ".join(f"{r.role} {r.permission}: {r.reason}" for r in plan.refusals)
+        reasons = " ".join(f"{r.role} {r.permission}: {r.reason}" for r in plan.refusals)
         super().__init__(
             f"The permission matrix refused {len(plan.refusals)} change(s): {reasons}",
             code="E213",
@@ -451,7 +451,7 @@ def plan_changes(operator: Any, requested: Requested, *, matrix: Matrix | None =
                     role,
                     permission,
                     value,
-                    f"scope {value!r} is not available for {label}; choose from "
+                    f"scope {value!r} is not available for {label}. Choose from "
                     f"{', '.join(available)}.",
                 )
             )
@@ -465,7 +465,7 @@ def plan_changes(operator: Any, requested: Requested, *, matrix: Matrix | None =
                     role,
                     permission,
                     value,
-                    f"{role} is a system role; {permission} = {cell.declared} is declared in "
+                    f"{role} is a system role, so {permission} = {cell.declared} is declared in "
                     "KARNI_ROLES and cannot be changed here. Change the declaration.",
                 )
             )
@@ -489,7 +489,7 @@ def plan_changes(operator: Any, requested: Requested, *, matrix: Matrix | None =
                         role,
                         permission,
                         value,
-                        f"you hold {permission} only as {', '.join(mine)}; you cannot grant "
+                        f"you hold {permission} only as {', '.join(mine)}, so you cannot grant "
                         f"{after}.",
                     )
                 )

@@ -104,14 +104,14 @@ def explain(
     if _RULE.match(wanted):
         rule = agent_data.load(find_project()).rule(wanted)
         if rule is None:
-            raise CliError(f"No rule {wanted!r} — `karni rules` lists the codes.", code="C204")
+            raise CliError(f"No rule {wanted!r}. `karni rules` lists the codes.", code="C204")
         typer.echo(json.dumps(rule, indent=2) if as_json else render_explain(rule))
         return
     entry = lookup(wanted)
     if entry is None:
         raise CliError(
             f"Unknown code {code!r}. Codes look like E104, W101, C101, PAY004 or K106 and "
-            "start every Karni error message; a module's codes are found inside a project "
+            "start every Karni error message. A module's codes are found inside a project "
             "that installs it. docs/errors.md lists every code. To explain a traceback or a "
             "log line, pipe it in: karni explain - < traceback.txt",
             code="C204",

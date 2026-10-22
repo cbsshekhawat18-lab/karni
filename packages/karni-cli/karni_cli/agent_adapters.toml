@@ -23,7 +23,7 @@ max_lines = 100
 
 [[adapter]]
 id = "agents-md"
-tool = "AGENTS.md (canonical: Codex, Jules, Gemini CLI, Zed, Warp, Devin; also read by Cursor, Copilot, Windsurf, Cline, Junie)"
+tool = "AGENTS.md (canonical for Codex, Jules, Gemini CLI, Zed, Warp and Devin, also read by Cursor, Copilot, Windsurf, Cline and Junie)"
 path = "AGENTS.md"
 template = "instructions"
 modules = true
@@ -55,7 +55,7 @@ frontmatter = { description = "Karni project conventions: run karni context and 
 
 [[adapter]]
 id = "windsurf"
-tool = "Windsurf (Cascade; now documented as Devin Desktop)"
+tool = "Windsurf (Cascade, now documented as Devin Desktop)"
 path = ".windsurf/rules/karni.md"
 template = "instructions"
 frontmatter = { trigger = "always_on" }

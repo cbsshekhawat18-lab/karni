@@ -136,7 +136,7 @@ function val(value: unknown): CoercionResult {
 
 const OMIT: CoercionResult = { kind: "omit" };
 
-/** D3: an emptied nullable field is sent as null; a non-nullable one is omitted. */
+/** D3: an emptied nullable field is sent as null, and a non-nullable one is omitted. */
 function emptied(field: FieldDef): CoercionResult {
   return field.nullable ? val(null) : OMIT;
 }
@@ -215,7 +215,7 @@ export interface PrepareSubmitInput {
   /** Resolver output from handleSubmit. */
   raw: FormValues;
   mode: "create" | "update";
-  /** react-hook-form dirtyFields; only consulted in "update" mode (D3). */
+  /** react-hook-form dirtyFields, only consulted in "update" mode (D3). */
   dirtyFields?: Record<string, unknown>;
 }
 
@@ -226,8 +226,8 @@ export interface PreparedSubmit {
 }
 
 /**
- * The D3 submit pipeline. Create mode sends every defined value; update mode
- * sends only fields whose dirtyFields subtree is truthy — always the WHOLE
+ * The D3 submit pipeline. Create mode sends every defined value. Update mode
+ * sends only fields whose dirtyFields subtree is truthy, and always the WHOLE
  * field value. Keys without a schema field (extraFields) pass through as-is.
  */
 export function prepareSubmit({

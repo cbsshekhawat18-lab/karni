@@ -383,7 +383,8 @@ class Budget:
             limits["*"] = default
         if not limits:
             raise KarniImproperlyConfigured(
-                "Budget() names no action; write e.g. Budget(list=25, reason='...').", code="E115"
+                "Budget() names no action. Name one, e.g. Budget(list=25, reason='...').",
+                code="E115",
             )
         for action, value in limits.items():
             if value is not None and (
@@ -419,7 +420,7 @@ def budget_mode() -> str:
     mode = getattr(settings, "KARNI_QUERY_BUDGET_MODE", "off") or "off"
     if mode not in BUDGET_MODES:
         raise KarniImproperlyConfigured(
-            f"KARNI_QUERY_BUDGET_MODE = {mode!r}; expected one of {', '.join(BUDGET_MODES)}.",
+            f"KARNI_QUERY_BUDGET_MODE = {mode!r} is not one of {', '.join(BUDGET_MODES)}.",
             code="E118",
         )
     return str(mode)
@@ -438,4 +439,6 @@ def resolve_budget(declared: Budget | None, action: str | None) -> int | None:
 
 def budget_failure(label: str, report: QueryReport, limit: int, fix: str) -> str:
     """The message of a budget overrun: what, how many, the duplicates, the fix."""
-    return f"{label} ran {report.count} queries; budget is {limit}.\n{report.render()}\n{fix}"
+    return (
+        f"{label} ran {report.count} queries against a budget of {limit}.\n{report.render()}\n{fix}"
+    )

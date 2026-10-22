@@ -103,7 +103,7 @@ class ImpersonationSessionAdmin(KarniModelAdmin):
     actions_list: Any = ["impersonate_user"]
     karni_transfer = False
     scope_exempt: ClassVar[bool] = True
-    scope_exempt_reason: ClassVar[str] = "the session log is evidence; whoever may open it sees all"
+    scope_exempt_reason: ClassVar[str] = "the session log is evidence: whoever may open it sees all"
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False

@@ -3,8 +3,8 @@
  *
  * - `downloadResourceExport(client, resource, params, format)` fetches
  *   `GET /<resource>/export/` with the list's own query (filters, search,
- *   ordering) and hands the file to the browser — what ResourceTable's export
- *   buttons call.
+ *   ordering) and hands the file to the browser. ResourceTable's export
+ *   buttons call it.
  * - `useImportDescribe(resource)` reads `GET /<resource>/import/`: the
  *   importable fields and the user's remembered mapping.
  * - `useImportJob(resource, jobId)` reads one job's state and polls while the
@@ -67,7 +67,7 @@ export interface ImportDescription {
   fields: ImportColumn[];
   /** The mapping the user last confirmed for this resource (header → field). */
   mapping: Record<string, string>;
-  /** Files with more rows than this run in Celery; poll the job. */
+  /** Files with more rows than this run in Celery. Poll the job. */
   inline_rows: number;
   max_rows: number;
   key: string | null;
@@ -228,7 +228,7 @@ export function useImportJob(
 
 export interface UploadImportInput {
   file: File;
-  /** An explicit mapping; otherwise the backend suggests or remembers one. */
+  /** An explicit mapping. Otherwise the backend suggests or remembers one. */
   mapping?: Record<string, string>;
 }
 

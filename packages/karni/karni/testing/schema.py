@@ -196,13 +196,11 @@ def assert_schema_snapshot(
         if _truthy(os.environ.get("CI")):
             raise KarniAssertionError(
                 f"No OpenAPI snapshot at {target}. Generate it locally ({accept}) and commit "
-                "it — CI never writes snapshots." + (f"\n{hint}" if hint else ""),
+                "it. CI never writes snapshots." + (f"\n{hint}" if hint else ""),
                 code="E607",
             )
         _write(target, generated)
-        warnings.warn(
-            f"Wrote the OpenAPI snapshot {target} — commit it.", UserWarning, stacklevel=2
-        )
+        warnings.warn(f"Wrote the OpenAPI snapshot {target}: commit it.", UserWarning, stacklevel=2)
         return
     committed = json.loads(target.read_text(encoding="utf-8"))
     if generated == committed:

@@ -70,7 +70,7 @@ def _interpreter(project: Path, service: str) -> str:
     if project_mod.compose_service_running(project, service):
         return f'docker compose service "{service}" (running)'
     return (
-        "none — create .venv (python -m venv .venv && .venv/bin/pip install -e .), activate a "
+        "none. Create .venv (python -m venv .venv && .venv/bin/pip install -e .), activate a "
         "virtualenv with the project's dependencies, or start the stack (docker compose up -d)"
     )
 
@@ -78,7 +78,7 @@ def _interpreter(project: Path, service: str) -> str:
 def _node() -> str:
     node = tool_version("node")
     if node is None:
-        return "not found — needed for the frontend and `karni types`"
+        return "not found (needed for the frontend and `karni types`)"
     npm = tool_version("npm")
     return f"{node} (npm {npm})" if npm else f"{node} (npm not found)"
 
@@ -86,7 +86,7 @@ def _node() -> str:
 def _manifest(project: Path) -> str:
     found = find_manifest(project, None)
     if found is None:
-        return "@karni/ui manifest absent — `npm install` in frontend/ (COMPONENTS/HOOKS hidden)"
+        return "@karni/ui manifest absent (COMPONENTS/HOOKS hidden). Run `npm install` in frontend/"
     return f"@karni/ui manifest: {_display(found, project)}"
 
 
@@ -96,7 +96,7 @@ def _adapters(project: Path) -> str:
     except CliError as exc:
         return f"cannot check: {exc}"
     if result.stale:
-        return f"stale ({len(result.stale)} files) — run `karni rules sync`"
+        return f"stale ({len(result.stale)} files). Run `karni rules sync`"
     return f"up to date ({len(result.unchanged)} files)"
 
 
@@ -106,7 +106,7 @@ def _history(project: Path) -> list[str]:
         return ["unavailable (karni.agent.history not found)"]
     detected = history_mod.detected_names(project)
     lines = (
-        [f"{name}: store detected — `karni context --with-history FILE`" for name in detected]
+        [f"{name}: store detected (use `karni context --with-history FILE`)" for name in detected]
         if detected
         else [f"no store detected (installed: {', '.join(found.names) or 'none'})"]
     )

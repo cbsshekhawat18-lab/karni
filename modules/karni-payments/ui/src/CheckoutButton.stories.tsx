@@ -4,7 +4,7 @@ import { CheckoutButton } from "./CheckoutButton";
 
 /**
  * Stories run against a stubbed KarniClient (the client's injectable `fetch`),
- * so no backend or MSW worker is needed; `navigate` is injected so the story
+ * so no backend or MSW worker is needed. `navigate` is injected so the story
  * canvas never actually leaves the page.
  */
 function jsonResponse(body: unknown, status = 200): Response {

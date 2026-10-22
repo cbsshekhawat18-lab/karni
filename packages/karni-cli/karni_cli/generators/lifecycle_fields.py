@@ -77,7 +77,7 @@ def _states(name: str, raw: str) -> tuple[list[str], dict[str, list[str]], bool]
         for source, target in pairwise(chain):
             if source == target:
                 raise CliError(
-                    f"Field {name}: {source}>{target} moves a state to itself; drop it.",
+                    f"Field {name}: {source}>{target} moves a state to itself. Drop it.",
                     code="C370",
                 )
             targets = transitions.setdefault(source, [])
@@ -143,7 +143,7 @@ def render(
     if spec.kind == "state":
         if spec.optional:
             raise CliError(
-                f"Field {spec.name}: a state column always holds a state; drop the '?' (the "
+                f"Field {spec.name}: a state column always holds a state, so drop the '?' (the "
                 "first state is the default).",
                 code="C370",
             )
@@ -158,7 +158,7 @@ def render(
         out.imports.append(Import("karni.fields", "StateField"))
         if not declared:
             out.notes.append(
-                f"note: {model}.{spec.name} moves {' -> '.join(states)} in order; edit its "
+                f"note: {model}.{spec.name} moves {' -> '.join(states)} in order. Edit its "
                 "transitions={...} (or declare them: "
                 f"'{spec.name}:state:{states[0]}>{states[-1]}|...'). Terminal: "
                 f"{states[-1]}."
@@ -190,7 +190,7 @@ def render(
         )
     if spec.optional:
         raise CliError(
-            f"Field {spec.name}: a capacity counter is never empty; drop the '?'.", code="C372"
+            f"Field {spec.name}: a capacity counter is never empty, so drop the '?'.", code="C372"
         )
     if total is not None and total not in field_names:
         raise CliError(

@@ -40,7 +40,7 @@ def plan(ws: Workspace, app: App, name: str) -> str:
     text = ensure_imports(ws, rel, ws.read(path) or "", [Import("django.dispatch", "Signal")])
     ws.write(path, replace_or_append(ws, rel, text, name, block))
     ws.note(
-        f"event: {app.module}.events.{name} — listen with: karni make listener <name> --on {name}"
+        f"event: {app.module}.events.{name} (listen with: karni make listener <name> --on {name})"
     )
     return name
 

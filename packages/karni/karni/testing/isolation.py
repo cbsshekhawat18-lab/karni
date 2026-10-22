@@ -249,8 +249,8 @@ class GrantIsolation(Isolation):
         return (
             f"{case.resource.name}: {who} holds no 'own' or 'related:<key>' grant for "
             f"{case.resource.model._meta.label_lower}:view, so grants do not partition its "
-            "rows (an 'all' grant sees everything; grant 'own' or 'related:<key>' in "
-            "KARNI_ROLES and run karni sync-roles)"
+            "rows. An 'all' grant sees everything. Grant 'own' or 'related:<key>' in "
+            "KARNI_ROLES and run karni sync-roles"
         )
 
     def _user_field(self, key: str) -> Any | None:
@@ -392,7 +392,7 @@ def _check(dimension: Isolation, case: IsolationCase, report: IsolationReport) -
         if str(my_row.pk) not in ids:
             fail(
                 f"positive control: {mine.label} cannot see their own row {my_row.pk} in the "
-                "list — isolation would pass vacuously"
+                "list, so isolation would pass vacuously"
             )
         if str(their_row.pk) in ids:
             fail(f"GET {resource.list_url()} as {mine.label} lists another {dimension.name}'s row")
@@ -476,7 +476,7 @@ def _check_create(
         if created is not None and getattr(created, f"{name}_id", None) == theirs.user.pk:
             fail(
                 f"POST {resource.list_url()} with {name}={theirs.user.pk} created a row owned "
-                f"by {theirs.label} — the body chose the owner"
+                f"by {theirs.label}: the body chose the owner"
             )
 
 
@@ -499,8 +499,8 @@ def _check_admin(
     model = case.resource.model
     if not dimension.admin_applies(case):
         note(
-            "admin: rows in the admin follow the roles' grants, not this dimension; "
-            "the grant dimension (a Granted() read with an own/related grant) tests them"
+            "admin: rows in the admin follow the roles' grants, not this dimension. "
+            "The grant dimension (a Granted() read with an own/related grant) tests them"
         )
         return
     site = admin_site()
@@ -508,7 +508,10 @@ def _check_admin(
         note("admin: the model is not registered in the admin")
         return
     if not dimension.persistent(case):
-        note("admin: the scope lives on the user instance only (no user field); skipped")
+        note(
+            "admin: the scope lives on the user instance only (no user field), so the check "
+            "is skipped"
+        )
         return
     opts = model._meta
     user = mine.user
@@ -595,9 +598,9 @@ def assert_isolated(
     report = IsolationReport(case.resource.name)
     applicable = [dimensions[name] for name in names if dimensions[name].applies(case)]
     if not applicable:
-        reasons = "; ".join(dimensions[name].reason(case) for name in names)
+        reasons = ". ".join(dimensions[name].reason(case) for name in names)
         raise KarniAssertionError(
-            f"assert_isolated({case.resource.name}): nothing isolates rows — {reasons}.",
+            f"assert_isolated({case.resource.name}): nothing isolates rows. {reasons}.",
             code="E605",
         )
     with _unthrottled(case.resource.viewset):

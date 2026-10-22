@@ -1,6 +1,15 @@
 {
   "components": {
     "schemas": {
+      "BookingStatusEnum": {
+        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `cancelled` - Cancelled",
+        "enum": [
+          "pending",
+          "confirmed",
+          "cancelled"
+        ],
+        "type": "string"
+      },
       "CheckoutInputRequest": {
         "description": "Input of ``POST /api/payments/checkout/``.\n\nThe amount is transport, not authority: the server-side\n``KARNI_PAYMENTS_CHECKOUT_VALIDATOR`` decides whether it is acceptable\n(amendment G2 \u2014 never trust client amounts).",
         "properties": {
@@ -93,6 +102,15 @@
         ],
         "type": "object"
       },
+      "EventStatusEnum": {
+        "description": "* `draft` - Draft\n* `published` - Published\n* `cancelled` - Cancelled",
+        "enum": [
+          "draft",
+          "published",
+          "cancelled"
+        ],
+        "type": "string"
+      },
       "EventsBooking": {
         "description": "Auto-generated serializer for events.Booking. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -147,7 +165,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/EventsBookingStatusEnum"
+                "$ref": "#/components/schemas/BookingStatusEnum"
               }
             ],
             "readOnly": true,
@@ -231,15 +249,6 @@
         ],
         "type": "object"
       },
-      "EventsBookingStatusEnum": {
-        "description": "* `pending` - Pending\n* `confirmed` - Confirmed\n* `cancelled` - Cancelled",
-        "enum": [
-          "pending",
-          "confirmed",
-          "cancelled"
-        ],
-        "type": "string"
-      },
       "EventsEvent": {
         "description": "Auto-generated serializer for events.Event. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -283,7 +292,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/EventsEventStatusEnum"
+                "$ref": "#/components/schemas/EventStatusEnum"
               }
             ],
             "default": "draft"
@@ -349,7 +358,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/EventsEventStatusEnum"
+                "$ref": "#/components/schemas/EventStatusEnum"
               }
             ],
             "default": "draft"
@@ -376,15 +385,6 @@
           "venue"
         ],
         "type": "object"
-      },
-      "EventsEventStatusEnum": {
-        "description": "* `draft` - Draft\n* `published` - Published\n* `cancelled` - Cancelled",
-        "enum": [
-          "draft",
-          "published",
-          "cancelled"
-        ],
-        "type": "string"
       },
       "EventsTicketTier": {
         "description": "Auto-generated serializer for events.TicketTier. See karni.api.serializers.build_serializer.",
@@ -821,7 +821,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/KarniPaymentsPaymentStatusEnum"
+                "$ref": "#/components/schemas/PaymentStatusEnum"
               }
             ],
             "readOnly": true
@@ -880,19 +880,6 @@
         ],
         "type": "object"
       },
-      "KarniPaymentsPaymentStatusEnum": {
-        "description": "* `pending` - Pending\n* `processing` - Processing\n* `succeeded` - Succeeded\n* `failed` - Failed\n* `canceled` - Canceled\n* `refunded` - Refunded\n* `partially_refunded` - Partially Refunded",
-        "enum": [
-          "pending",
-          "processing",
-          "succeeded",
-          "failed",
-          "canceled",
-          "refunded",
-          "partially_refunded"
-        ],
-        "type": "string"
-      },
       "KarniPaymentsRefund": {
         "description": "Auto-generated serializer for karni_payments.Refund. See karni.api.serializers.build_serializer.",
         "properties": {
@@ -938,7 +925,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/Status469Enum"
+                "$ref": "#/components/schemas/RefundStatusEnum"
               }
             ],
             "readOnly": true
@@ -1457,7 +1444,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/EventsEventStatusEnum"
+                "$ref": "#/components/schemas/EventStatusEnum"
               }
             ],
             "default": "draft"
@@ -1559,6 +1546,19 @@
         },
         "type": "object"
       },
+      "PaymentStatusEnum": {
+        "description": "* `pending` - Pending\n* `processing` - Processing\n* `succeeded` - Succeeded\n* `failed` - Failed\n* `canceled` - Canceled\n* `refunded` - Refunded\n* `partially_refunded` - Partially Refunded",
+        "enum": [
+          "pending",
+          "processing",
+          "succeeded",
+          "failed",
+          "canceled",
+          "refunded",
+          "partially_refunded"
+        ],
+        "type": "string"
+      },
       "Refund": {
         "description": "Read-only representation of a refund (the refund action's response).",
         "properties": {
@@ -1594,7 +1594,7 @@
           "status": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/Status469Enum"
+                "$ref": "#/components/schemas/RefundStatusEnum"
               }
             ],
             "readOnly": true
@@ -1632,6 +1632,15 @@
           }
         },
         "type": "object"
+      },
+      "RefundStatusEnum": {
+        "description": "* `pending` - Pending\n* `succeeded` - Succeeded\n* `failed` - Failed",
+        "enum": [
+          "pending",
+          "succeeded",
+          "failed"
+        ],
+        "type": "string"
       },
       "Register": {
         "description": "Input for ``register/``: email, password and the optional name fields.\n\nUniqueness is checked here \u2014 a duplicate email is a 400, the documented\nand accepted enumeration surface of registration (amendment A9). The\npassword runs through ``AUTH_PASSWORD_VALIDATORS`` against a transient\nuser instance so similarity validators see the posted attributes.",
@@ -1685,15 +1694,6 @@
           "password"
         ],
         "type": "object"
-      },
-      "Status469Enum": {
-        "description": "* `pending` - Pending\n* `succeeded` - Succeeded\n* `failed` - Failed",
-        "enum": [
-          "pending",
-          "succeeded",
-          "failed"
-        ],
-        "type": "string"
       },
       "TokenRefresh": {
         "properties": {
@@ -4893,7 +4893,7 @@
     },
     "/api/payments/checkout/": {
       "post": {
-        "description": "Create a pending payment and a provider checkout session; redirect the customer to `url`. Amounts are validated server-side by KARNI_PAYMENTS_CHECKOUT_VALIDATOR.",
+        "description": "Create a pending payment and a provider checkout session, then redirect the customer to `url`. Amounts are validated server-side by KARNI_PAYMENTS_CHECKOUT_VALIDATOR.",
         "operationId": "payments_checkout_create",
         "requestBody": {
           "content": {

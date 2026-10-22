@@ -6,6 +6,6 @@ A request was made to change your account email address to
 {{ link }}
 
 This link expires soon and can be used only once. If you did not request
-this change, you can safely ignore this email — your address will not
+this change, you can safely ignore this email. Your address will not
 change.
 {% endautoescape %}

@@ -1,5 +1,5 @@
 /**
- * ResourceTable — the schema-driven data table (contract "ResourceTable" + D5).
+ * ResourceTable: the schema-driven data table (contract "ResourceTable" + D5).
  *
  * `<Page title="Events"><ResourceTable resource="events" /></Page>` is a
  * complete screen: columns derive from the parsed OpenAPI schema, sorting maps
@@ -16,25 +16,28 @@
  * and progress once work runs for 500ms.
  *
  * Page, page size, ordering, search and filters live in the URL (namespaced,
- * Back works; `syncUrl={false}` opts out, `stateStore` plugs in a router).
+ * Back works). `syncUrl={false}` opts out and `stateStore` plugs in a router.
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user.
+ * user. In the table layout the rows are a WAI-ARIA grid: the whole table
+ * is one Tab stop and the arrow keys move between rows and cells
+ * (`keyboardNavigation="native"` makes every control a Tab stop again).
  *
- * Audit fields (AUDIT_FIELDS — id, created_at, updated_at, created_by,
+ * Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
  * updated_by, carried by every BaseModel resource) are hidden by default so
- * domain fields lead; rows stay keyed by `id` regardless (getRowId, row
+ * domain fields lead. Rows stay keyed by `id` regardless (getRowId, row
  * actions, onRowClick, bulk selection). Show one with a `columns` entry
  * (`{ field: "created_at" }`), or all of them with `showAuditFields`.
  *
  * Escape hatches: `columns` (per-field overrides), `extraColumns` (ColumnDef
  * passthrough), `columnsOverride` (applied last over the derived + merged
- * domain columns; the selection and actions columns are structural and follow
- * `bulkActions` / `rowActions` / `onEdit` / `enableDelete`), `rowActions`,
- * `bulkActions`, `filters`, `slots` (every state screen and part), `toolbar` /
- * `empty` / `footer`, `canCreate` / `canEdit` / `canDelete` (over the
- * schema's access rules), `stateStore`, `getRowLabel`, and `className`.
+ * domain columns, but the selection and actions columns are structural and
+ * follow `bulkActions` / `rowActions` / `onEdit` / `enableDelete`),
+ * `rowActions`, `bulkActions`, `filters`, `slots` (every state screen and
+ * part), `toolbar` / `empty` / `footer`, `canCreate` / `canEdit` /
+ * `canDelete` (over the schema's access rules), `stateStore`, `getRowLabel`,
+ * and `className`.
  */
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import {
@@ -99,7 +102,7 @@ import {
   sortingToOrdering,
   statusOf,
 } from "./table-utils";
-import { TableView } from "./TableView";
+import { TableView, type ResourceTableKeyboardNavigation } from "./TableView";
 import { useContainerWidth } from "./use-container-width";
 import { useDebouncedValue } from "./use-debounced-value";
 import { useTableView, type ResourceTableStateStore } from "./url-state";
@@ -107,7 +110,13 @@ import { ViewOptions as ViewOptionsMenu } from "./ViewOptions";
 
 registerComponentRole("data-table", "ResourceTable");
 
-export type { BulkAction, BulkResult, ResourceColumn, ResourceTableDensity };
+export type {
+  BulkAction,
+  BulkResult,
+  ResourceColumn,
+  ResourceTableDensity,
+  ResourceTableKeyboardNavigation,
+};
 
 export const DEFAULT_PAGE_SIZE = 25;
 /** The page sizes offered by default (`pageSizeOptions`). */
@@ -124,7 +133,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   resource: string;
   /**
    * Per-field overrides. Naming a default-hidden field (an audit field such
-   * as `created_at`, or a json/file field) shows it; `hidden: true` hides one.
+   * as `created_at`, or a json/file field) shows it. `hidden: true` hides one.
    */
   columns?: ReadonlyArray<ResourceColumn<T>>;
   /**
@@ -145,38 +154,39 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   bulkActions?: ReadonlyArray<BulkAction>;
   /**
    * Opens a row. The whole row is clickable, and its first cell is a button,
-   * so the row opens from the keyboard too.
+   * so the row opens from the keyboard too (Enter on any cell of the grid).
    */
   onRowClick?: (row: T) => void;
   /**
    * `expand` query values. Default: single-relation field names ∩ the list
-   * operation's expand enum — never guessed beyond the schema (D5).
+   * operation's expand enum, never guessed beyond the schema (D5).
    */
   expand?: readonly string[];
   /** The ordering when the URL names none. */
   initialSorting?: SortingState;
   /** Sent as `page_size`. Default 25. */
   pageSize?: number;
-  /** The page sizes a user can choose. Default `[10, 25, 50, 100]`; `pageSize` is always offered. */
+  /** The page sizes a user can choose. Default `[10, 25, 50, 100]`. `pageSize` is always offered. */
   pageSizeOptions?: readonly number[];
   /**
-   * Field names to build the filter bar from; `false` disables it. Default:
+   * Field names to build the filter bar from. `false` disables it. Default:
    * (enum/boolean/relation fields) ∩ declared list query params, domain
    * fields first, audit fields only with `showAuditFields`, cap 4 (D5).
    * Only enum, boolean and relation fields get controls.
    */
   filters?: readonly string[] | false;
   /**
-   * Fixed filters sent with every request and hidden from the filter bar —
+   * Fixed filters sent with every request and hidden from the filter bar,
    * e.g. `{ event: eventId }` for "the bookings of this event". A user filter
    * on the same field never overrides them. Never written to the URL.
    */
   params?: Readonly<Record<string, KarniQueryValue>>;
   /**
    * Export buttons (one per format) when the resource serves
-   * `GET /<resource>/export/` — every Karni BaseViewSet does. The file carries
-   * the table's current filters, search and ordering; the backend applies the
-   * row scope and field visibility. Default `["csv", "xlsx"]`; `false` hides them.
+   * `GET /<resource>/export/`, as every Karni BaseViewSet does. The file
+   * carries the table's current filters, search and ordering. The backend
+   * applies the row scope and field visibility. Default `["csv", "xlsx"]`.
+   * `false` hides them.
    */
   exportFormats?: readonly ExportFormat[] | false;
   /** Extra toolbar content, rendered to the right of the search/filter row. */
@@ -190,7 +200,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   footer?: React.ReactNode;
   /** Overrides displayLabel() for relation cells, row names (checkboxes, cards, the delete question). */
   getRowLabel?: (row: Record<string, unknown>) => string;
-  /** Replace any state screen or part; see ResourceTableSlots. */
+  /** Replace any state screen or part (see ResourceTableSlots). */
   slots?: Partial<ResourceTableSlots>;
   /** The resource in sentences, plural ("events"). Default: from the resource name. */
   resourceLabel?: string;
@@ -213,9 +223,9 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   canDelete?: boolean | ((row: T) => boolean);
   /** Keep page, page size, sort, search and filters in the URL. Default true. */
   syncUrl?: boolean;
-  /** Prefix of this table's URL keys (`events.page=2`). Default: the resource name; `""` for none. */
+  /** Prefix of this table's URL keys (`events.page=2`). Default: the resource name, `""` for none. */
   urlNamespace?: string;
-  /** Where URL state lives; default `window.history`. Plug a router in here. */
+  /** Where URL state lives. Default `window.history`. Plug a router in here. */
   stateStore?: ResourceTableStateStore;
   /** Row density, controlled. Uncontrolled, the user's choice is remembered per user. */
   density?: ResourceTableDensity;
@@ -224,8 +234,18 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   onDensityChange?: (density: ResourceTableDensity) => void;
   /** The "View" menu (density, column visibility). Default true. */
   viewOptions?: boolean;
-  /** Below this container width (px) rows render as cards. Default 640; 0 never. */
+  /** Below this container width (px) rows render as cards. Default 640, and 0 means never. */
   cardBreakpoint?: number;
+  /**
+   * How the keyboard moves through the table layout. Default `"grid"`, the
+   * WAI-ARIA grid pattern: the whole table is one Tab stop, the arrow keys
+   * move between rows and cells (each control of a cell is a stop of its
+   * own), Home and End go to the ends of a row, Ctrl+Home and Ctrl+End to
+   * the first and last cell, Enter on a cell opens the row (`onRowClick`) and
+   * Space on a cell selects it (`bulkActions`). `"native"` is a plain table
+   * where every checkbox, button and link is its own Tab stop, as before.
+   */
+  keyboardNavigation?: ResourceTableKeyboardNavigation;
   className?: string;
 }
 
@@ -261,7 +281,7 @@ function filterWords(field: FieldDef, value: FilterValue): string {
   return String(value);
 }
 
-/** The delete question for one row; its mutation lives here so tables without deletes never create it. */
+/** The delete question for one row. Its mutation lives here so tables without deletes never create it. */
 function RowDeleteDialog<T>(props: {
   resource: string;
   target: DeleteTarget<T> | null;
@@ -360,6 +380,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     onDensityChange,
     viewOptions = true,
     cardBreakpoint = DEFAULT_CARD_BREAKPOINT,
+    keyboardNavigation = "grid",
     className,
   } = props;
 
@@ -998,6 +1019,7 @@ export function ResourceTable<T = Record<string, unknown>>(
             totalCount={count}
             dimmed={dimmed}
             scrollRef={scrollRef}
+            keyboardNavigation={keyboardNavigation}
           />
         )}
         {count !== undefined && count > 0 && (

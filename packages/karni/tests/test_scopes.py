@@ -584,7 +584,7 @@ DEPRECATED_NAMES = {"all_objects", "all_with_deleted", "deleted_only", "SoftDele
 class TestDeprecationHelper:
     def test_message_format_is_stable(self) -> None:
         assert deprecation_message("a()", "b()", removed_in="1.0", doc_anchor="x.md#y") == (
-            "a() is deprecated; use b() instead. It will be removed in Karni 1.0. "
+            "a() is deprecated. Use b() instead. It will be removed in Karni 1.0. "
             f"See {DOCS_BASE_URL}x/#y"
         )
         assert docs_url("/models.md#z") == DOCS_BASE_URL + "models/#z"
@@ -638,7 +638,7 @@ class TestSoftDeleteAliases:
 
     def test_all_objects(self, rows: SimpleNamespace) -> None:
         expected = (
-            'Book.all_objects is deprecated; use Book.objects.without("soft_delete", '
+            'Book.all_objects is deprecated. Use Book.objects.without("soft_delete", '
             f"reason=...) instead. It will be removed in Karni 1.0. See {ALIAS_DOCS}"
         )
         with pytest.warns(KarniDeprecationWarning) as record:
@@ -661,7 +661,7 @@ class TestSoftDeleteAliases:
             assert Book.objects.deleted_only().count() == 2
 
     def test_the_old_mixin_name(self) -> None:
-        with pytest.warns(KarniDeprecationWarning, match="use karni.managers.ScopedManagerMixin"):
+        with pytest.warns(KarniDeprecationWarning, match="Use karni.managers.ScopedManagerMixin"):
             from karni.managers import SoftDeleteManagerMixin
         assert SoftDeleteManagerMixin is ScopedManagerMixin
 

@@ -57,8 +57,8 @@ def types(
     if ts.returncode != 0:
         typer.echo(ts.stderr, err=True)
         raise CliError(
-            "openapi-typescript failed — is Node available? "
-            "Add openapi-typescript to frontend devDependencies to pin it.",
+            "openapi-typescript failed. Check that Node is available, and add "
+            "openapi-typescript to frontend devDependencies to pin it.",
             code="C006",
         )
 
@@ -68,5 +68,5 @@ def types(
     pkg = project / "frontend" / "package.json"
     if pkg.is_file() and '"@karni/ui"' not in pkg.read_text():
         typer.echo(
-            "Hint: frontend/package.json lacks @karni/ui — `npm i @karni/ui` to use hooks.ts"
+            "Hint: frontend/package.json lacks @karni/ui. Run `npm i @karni/ui` to use hooks.ts"
         )

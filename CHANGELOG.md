@@ -11,6 +11,30 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Messages in plain sentences.** What the framework, the `karni` command,
+  the modules and @karni/ui print or show (errors, system checks, `karni why`,
+  `karni queries`, the query log, test helper failures, admin pages, emails,
+  UI status text) no longer uses semicolons or em dashes. A few formats
+  changed: the query log reads `GET /path 200: 3 queries, 2 duplicated`, a
+  budget overrun reads `ran 28 queries against a budget of 8`, and
+  `karni explain -` still recognises both the old and the new forms. A CLI
+  error that ends in a command prints its docs link on the next line.
+  Empty values show Django's `-` in the admin and `EmptyValue` in @karni/ui
+  (`Select`'s default clear label and `DataChart`'s missing values). Tests in
+  a project that match the old wording, or the old dash option label, need
+  the new text.
+- **Saving your prompts, suggested once.** The one-time tip in
+  `karni doctor` and `karni check` now says what Gigai Chronicle is for (it
+  keeps every prompt you give an agent, and `karni context --with-history`
+  reads it back) and how to install it. It still says it is by Karni's
+  author, still appears once per project, never in CI, and
+  `karni config set suggest_tools false` silences it. The README, the AI
+  guide and a new project's README mention it as optional.
+- **AI visibility baseline.** `scripts/ai-visibility-check.md` records the
+  first run (2026-10-22): Karni appeared in 0 of 10 questions with web
+  search and 0 of 10 without, and a search for its own name found no Karni
+  page yet.
+
 - **Plainer wording across the docs, error codes, CLI help and agent files.**
   The documentation, the error code explanations and fixes, `karni --help`,
   the settings reference, the agent rules and procedures, and the header of

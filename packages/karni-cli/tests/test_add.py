@@ -81,7 +81,7 @@ def test_add_without_installed_module_prints_run_again_hint(
     monkeypatch.chdir(generated_project)
     result = runner.invoke(app, ["add", "payments"])
     assert result.exit_code == 0, result.output
-    assert "run `karni add payments` again after installing" in result.output
+    assert "Run `karni add payments` again after installing" in result.output
     assert "karni:module:payments" not in (generated_project / "AGENTS.md").read_text()
     assert not (generated_project / ".karni" / "modules").exists()
 
@@ -164,7 +164,7 @@ def test_failing_subprocess_falls_back_to_the_hint(
     monkeypatch.chdir(generated_project)
     result = runner.invoke(app, ["add", "payments"])
     assert result.exit_code == 0, result.output
-    assert "run `karni add payments` again after installing" in result.output
+    assert "Run `karni add payments` again after installing" in result.output
 
 
 def test_commented_entry_is_not_a_match(tmp_path: Path) -> None:

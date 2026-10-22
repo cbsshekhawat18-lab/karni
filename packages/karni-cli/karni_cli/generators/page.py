@@ -288,7 +288,7 @@ def plan(
     ws.create(spec.file, source)
     if spec.resource and spec.resource not in _routed_resources(ws):
         ws.note(
-            f"note: no viewset in this project routes /api/{spec.resource}/ yet — "
+            f"note: no viewset in this project routes /api/{spec.resource}/ yet. Run "
             "karni make viewset <Model> (or point --resource at a module's resource)."
         )
     if register:
@@ -317,7 +317,7 @@ def _register(ws: Workspace, spec: PageSpec, existing: set[str]) -> None:
             owner = next((ln for ln in lines if f'"{path}"' in ln), "")
             if f"component: {spec.component}" not in owner:
                 raise CliError(
-                    f"Route {path} is already registered in {ROUTES.as_posix()} — choose "
+                    f"Route {path} is already registered in {ROUTES.as_posix()}. Choose "
                     "another --path (or remove the existing route).",
                     code="C107",
                 )

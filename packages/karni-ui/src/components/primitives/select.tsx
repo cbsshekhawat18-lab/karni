@@ -2,6 +2,7 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import * as React from "react";
 import { cn } from "../../lib/cn";
 import { overridableSelectPart } from "../../primitives/registry";
+import { EmptyValue } from "../resource/empty-value";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "./icons";
 
 /**
@@ -199,7 +200,8 @@ export interface SelectProps {
   placeholder?: React.ReactNode;
   /**
    * Renders a clear item at the top of the list (contract D8): pass it for
-   * nullable fields (label "—" by default) and filter contexts (e.g. "All").
+   * nullable fields (labelled with `EmptyValue` by default, a dash read as
+   * "empty") and filter contexts (e.g. "All").
    * Choosing it emits `null`.
    */
   clearable?: boolean;
@@ -244,7 +246,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     options,
     placeholder,
     clearable = false,
-    clearLabel = "—",
+    clearLabel = <EmptyValue />,
     disabled,
     name,
     id,
@@ -267,7 +269,7 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>((props, r
     );
     if (filtered.length !== options.length) {
       console.warn(
-        `[karni-ui] <Select> option values "" and "${KARNI_SELECT_EMPTY}" are reserved; those options were dropped. Use the \`clearable\` prop for an empty choice.`,
+        `[karni-ui] <Select> option values "" and "${KARNI_SELECT_EMPTY}" are reserved, so those options were dropped. Use the \`clearable\` prop for an empty choice.`,
       );
     }
     return filtered;

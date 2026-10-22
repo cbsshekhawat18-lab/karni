@@ -83,13 +83,13 @@ def add_entry(text: str, entry: str, *, setting: str, marker: str, filename: str
     found = _locate(lines, setting, marker)
     if found is None:
         raise CliError(
-            f"No `{marker}` marker in {filename} — add {entry!r} to {setting} manually.",
+            f"No `{marker}` marker in {filename}. Add {entry!r} to {setting} manually.",
             code="C108",
         )
     open_idx, marker_idx = found
     if open_idx < 0:
         raise CliError(
-            f"Unrecognized `{marker}` block shape in {filename} — add {entry!r} to {setting} "
+            f"Unrecognized `{marker}` block shape in {filename}. Add {entry!r} to {setting} "
             "manually.",
             code="C108",
         )

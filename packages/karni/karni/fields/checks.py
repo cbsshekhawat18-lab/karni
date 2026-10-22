@@ -173,9 +173,9 @@ def check_money_floats(app_configs: Any = None, **kwargs: Any) -> list[checks.Ch
                     "holds money. A binary float cannot store most cent values exactly "
                     "(0.1 + 0.2 != 0.3), so totals drift and reconciliations fail.",
                     hint=(
-                        f'Replace it with `{field.name} = MoneyField(currency="EUR")` (from '
-                        'karni.fields import MoneyField; or currency_field="currency" for a '
-                        "currency per row), then run karni make migration. A rate is "
+                        f'Replace it with `{field.name} = MoneyField(currency="EUR")`, or '
+                        'currency_field="currency" for a currency per row (from karni.fields '
+                        "import MoneyField), then run karni make migration. A rate is "
                         "PercentField. If it really is not money, declare "
                         f'`class Karni: not_money = {{"{field.name}": "<what it is>"}}`.'
                     ),
@@ -376,7 +376,7 @@ def check_backends(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
                         check_warning(
                             "W964",
                             f"{label} on {where} runs without {text}.",
-                            hint="Fine for tests and local development; use PostgreSQL in "
+                            hint="Fine for tests and local development. Use PostgreSQL in "
                             "production (silence karni.W964 where that is deliberate).",
                             obj=model,
                         )

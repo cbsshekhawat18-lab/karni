@@ -18,11 +18,11 @@
                     {% for entry in karni_change_logs %}
                         <tr class="block border mb-3 rounded-default shadow-xs lg:table-row lg:border-none lg:mb-0 lg:shadow-none dark:border-base-800">
                             <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{{ entry.timestamp|date:"DATETIME_FORMAT" }}</td>
-                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{% if entry.actor %}{{ entry.actor.get_username }}{% else %}—{% endif %}</td>
+                            <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{% if entry.actor %}{{ entry.actor.get_username }}{% else %}-{% endif %}</td>
                             <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">{{ entry.get_action_display }}</td>
                             <td class="align-top border-t border-base-200 px-3 py-2 text-left lg:py-3 dark:border-base-800">
                                 {% for name, change in entry.visible.items %}
-                                    <div><code>{{ name }}</code>: <span class="text-base-500">{{ change.0|default:"—" }}</span> → <span>{{ change.1|default:"—" }}</span></div>
+                                    <div><code>{{ name }}</code>: <span class="text-base-500">{{ change.0|default:"-" }}</span> → <span>{{ change.1|default:"-" }}</span></div>
                                 {% empty %}
                                     <span class="text-base-500">{% translate "no visible field changed" %}</span>
                                 {% endfor %}

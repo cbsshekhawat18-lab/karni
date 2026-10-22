@@ -267,7 +267,7 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
             f"{declared.__name__} duplicates the serializer Karni generates from "
             f"{model.__name__}: it declares no fields or methods of its own.",
             hint=(
-                f"Delete it and the serializer_class line on {viewset.__name__}; tune the "
+                f"Delete it and the serializer_class line on {viewset.__name__}. Tune the "
                 f"generated serializer with APIMeta on {model.__name__}. Keep "
                 "serializer_class only for custom fields or validation."
             ),

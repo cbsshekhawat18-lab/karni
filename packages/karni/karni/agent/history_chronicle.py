@@ -221,7 +221,8 @@ def brief_from_pack(prompts: object, knowledge: object) -> str:
         for i, prompt in enumerate(shaped, start=1):
             text = prompt.get("text")
             quoted = '"' + " ".join(text.split()) + '"' if isinstance(text, str) else "(no text)"
-            lines.append(f"{i}. {_when(prompt.get('ts'))} {prompt.get('churn', '')} — {quoted}")
+            label = f"{_when(prompt.get('ts'))} {prompt.get('churn', '')}".strip()
+            lines.append(f"{i}. {label}: {quoted}" if label else f"{i}. {quoted}")
     return "\n".join(_SPACES.sub(" ", line) for line in lines)
 
 

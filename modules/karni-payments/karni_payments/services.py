@@ -321,7 +321,7 @@ def _match_payment(event: WebhookEvent, parsed: ParsedEvent) -> Payment:
         return payment
     raise UnmatchedWebhookEventError(
         f"Webhook event {event.provider}:{event.event_id} ({event.event_type}) "
-        "matches no local Payment — will retry."
+        "matches no local Payment. It will be retried."
     )
 
 

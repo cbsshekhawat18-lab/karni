@@ -30,9 +30,9 @@ export interface FileUploadFileRowProps {
   file: File | string;
   /** The file name (a URL's last path segment). */
   name: string;
-  /** A pending file's size ("12 KB"); undefined for a URL. */
+  /** A pending file's size ("12 KB"), undefined for a URL. */
   size?: string;
-  /** Removes the file; undefined when it cannot be removed (clearable=false, disabled, uploading). */
+  /** Removes the file. Undefined when it cannot be removed (clearable=false, disabled, uploading). */
   onRemove?: () => void;
 }
 
@@ -47,7 +47,7 @@ export interface FileUploadSlots {
 export interface FileUploadProps {
   /**
    * Current value. A `string` is an existing uploaded file (the display URL a
-   * karni backend returns); a `File` is a pending upload. Arrays are for
+   * karni backend returns), and a `File` is a pending upload. Arrays are for
    * `multiple` mode and may mix both.
    */
   value?: File | string | ReadonlyArray<File | string> | null;
@@ -75,7 +75,7 @@ export interface FileUploadProps {
     reason: FileUploadRejectReason,
     limits: { accept?: string; maxSize?: number },
   ) => React.ReactNode;
-  /** An error to show under the dropzone (announced); marks the field invalid. */
+  /** An error to show under the dropzone (announced). It marks the field invalid. */
   error?: React.ReactNode;
   /** True while the file uploads: the dropzone shows progress and takes no new files. */
   uploading?: boolean;
@@ -87,14 +87,14 @@ export interface FileUploadProps {
   children?: React.ReactNode;
   /** Set false to hide the per-file remove affordance. Default true. */
   clearable?: boolean;
-  /** Replaces the Dropzone or FileRow; see FileUploadSlots. */
+  /** Replaces the Dropzone or FileRow (see FileUploadSlots). */
   slots?: Partial<FileUploadSlots>;
   "aria-label"?: string;
   /** Ids of elements that label the dropzone (or point a <label htmlFor> at `id`). */
   "aria-labelledby"?: string;
   /** Ids of elements that describe the dropzone (help text, a form's error message). */
   "aria-describedby"?: string;
-  /** Marks the dropzone invalid (a destructive border); `error` sets it too. */
+  /** Marks the dropzone invalid (a destructive border). `error` sets it too. */
   "aria-invalid"?: React.AriaAttributes["aria-invalid"];
   /** Called when focus leaves the dropzone (react-hook-form's onBlur). */
   onBlur?: React.FocusEventHandler<HTMLButtonElement>;
@@ -274,13 +274,13 @@ export const defaultFileUploadSlots: FileUploadSlots = {
  * Contract "FileUpload".
  *
  * Shows an existing uploaded value (URL string) as a link, pending `File`
- * values with name and size, and emits `File` objects — the hooks layer turns
+ * values with name and size, and emits `File` objects. The hooks layer turns
  * them into multipart bodies per amendment D2.
  *
  * Keyboard and screen readers: the dropzone is a button (Enter or Space opens
  * the picker), labelled by its text, `aria-label`, `aria-labelledby` or a
  * <label htmlFor={id}>. A refused file and the `error` prop are announced and
- * linked through aria-describedby; `aria-invalid` (or `error`) marks it
+ * linked through aria-describedby. `aria-invalid` (or `error`) marks it
  * invalid. Removing a file returns focus to the dropzone.
  *
  * Escape hatches: `slots` replaces the Dropzone or FileRow, `children`

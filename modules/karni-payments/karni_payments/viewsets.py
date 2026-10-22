@@ -85,8 +85,8 @@ class PaymentViewSet(_ReadOnlyModelMixin, BaseViewSet):
         request=CheckoutInputSerializer,
         responses={201: CheckoutOutputSerializer},
         description=(
-            "Create a pending payment and a provider checkout session; "
-            "redirect the customer to `url`. Amounts are validated "
+            "Create a pending payment and a provider checkout session, "
+            "then redirect the customer to `url`. Amounts are validated "
             "server-side by KARNI_PAYMENTS_CHECKOUT_VALIDATOR."
         ),
     )

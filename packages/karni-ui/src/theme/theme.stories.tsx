@@ -20,7 +20,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Playground: Story = {};
 
-/** Each starting choice; the button's name says the current one and the next. */
+/** Each starting choice. The button's name says the current one and the next. */
 export const Light: Story = {
   decorators: [
     (Story) => (

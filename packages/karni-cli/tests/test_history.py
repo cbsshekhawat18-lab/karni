@@ -162,7 +162,7 @@ def test_the_cap_holds_and_names_the_full_command(runner, project, fake_provider
     assert _tokens(block) <= context_cmd.HISTORY_TOKEN_CAP
     shown = block.split("\n")
     assert (
-        shown[-1] == "… truncated at ~300 tokens; full brief: fakehist show apps/events/models.py"
+        shown[-1] == "… truncated at ~300 tokens. Full brief: fakehist show apps/events/models.py"
     )
     assert shown[1:-1] == lines[: len(shown) - 2]  # cut at line boundaries
     assert _tokens(out) <= _tokens(BACKEND + "\n") + context_cmd.HISTORY_TOKEN_CAP + 1

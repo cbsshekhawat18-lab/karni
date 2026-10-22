@@ -1,7 +1,7 @@
 /**
  * The words a resource's messages use: "events" → "event" ("Couldn't find
  * this event"), "loose-slots" → "loose slots" ("You can't import loose
- * slots"). English rules only; every component that words a message takes
+ * slots"). English rules only. Every component that words a message takes
  * a `resourceLabel` prop to name the resource in the project's own words.
  *
  * Internal to @karni/ui.

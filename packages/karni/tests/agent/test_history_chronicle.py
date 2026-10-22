@@ -213,7 +213,7 @@ def test_brief_puts_decisions_first_so_the_cap_keeps_them(
     assert "reverted: it destroyed payment history" in block
     assert "make events soft-deletable" not in block  # the prompt list went first
     assert lines[-1] == (
-        "… truncated at ~120 tokens; full brief: chronicle context apps/events/models.py"
+        "… truncated at ~120 tokens. Full brief: chronicle context apps/events/models.py"
     )
 
 
@@ -261,7 +261,7 @@ def test_payload_without_markdown_uses_prompts_and_knowledge(
         "## Decisions & TODOs\n"
         "- [decision] let's use soft delete for events\n"
         "## What shaped this file\n"
-        '1. 2026-09-30 +12 −3 — "make events soft-deletable instead of hard delete"'
+        '1. 2026-09-30 +12 −3: "make events soft-deletable instead of hard delete"'
     )
 
 

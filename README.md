@@ -24,11 +24,9 @@ Karni is an open-source Django + React framework for building with AI coding age
 
 ## Why Karni exists
 
-I build client projects. Every one of them started the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only then did I get to the part the client was paying for.
+Every new web project starts the same way: auth, a user model, the admin, permissions, CRUD endpoints, tables, forms, Docker, Celery. Only after all of that does the work on the product itself begin.
 
-AI coding agents made this faster and worse. Faster, because an agent types all of it in minutes. Worse, because it writes it fresh in every project: the same code, slightly different each time, with the subtle parts wrong in different places. And I pay tokens for every line of it.
-
-My own [Social Stats](https://github.com/cbsshekhawat18-lab/social-stats-social-media-manager) codebase is 142,000 lines, with a 2,504-line `models.py` and a 1,281-line `views.py`. Much of that is code Karni now ships. That is the before picture, and it is mine. So the agent should write my domain, and everything else should come from a package I upgrade.
+AI coding agents made this faster, but not better. We give the agent the same prompts in every project and wait while it builds the same setup again. It writes everything fresh each time: the same code, slightly different, with the subtle parts wrong in different places. Every line costs tokens and time, and every copy has to be maintained.
 
 ## What is Karni
 
@@ -423,6 +421,7 @@ An agent in a Karni project extends the framework instead of rewriting it:
 - **`karni rules`** prints the 43 conventions, each with a code, in 537 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
+- **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.
 
 When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it:
 

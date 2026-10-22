@@ -56,7 +56,7 @@ export const Open: Story = {
     a11y: {
       disableRules: {
         "aria-hidden-focus":
-          "Radix hides the page with aria-hidden while the open menu traps focus, so the trigger behind it cannot be reached; axe counts it anyway.",
+          "Radix hides the page with aria-hidden while the open menu traps focus, so the trigger behind it cannot be reached. axe counts it anyway.",
       },
     },
   },

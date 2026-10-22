@@ -289,7 +289,7 @@ def test_dry_run_prints_a_diff_and_writes_nothing(runner, project: Path) -> None
     assert "-    return Book.all_objects.filter(title__isnull=False)\n" in result.output
     assert "+class BookManager(ScopedManagerMixin, BaseManager):\n" in result.output
     assert "Would apply automatically:" in result.output
-    assert "Dry run: 2 file(s) would change; nothing was written." in result.output
+    assert "Dry run: 2 file(s) would change. Nothing was written." in result.output
     assert _snapshot(project) == before
 
 
