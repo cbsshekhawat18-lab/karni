@@ -104,6 +104,18 @@ class _Resolver:
         return self.cache.get(str(pk), pk)
 
 
+def _key(value: Any) -> Any:
+    """A relation's key as the serializer rendered it.
+
+    A nested row (``?expand=``, a nested serializer) is a dict and comes back to
+    its ``id``, so it exports by natural key like a plain relation; a nested row
+    without an ``id`` cannot be named and exports blank. A key stays a key.
+    """
+    if isinstance(value, dict):
+        return value.get("id")
+    return value
+
+
 def export_rows(
     queryset: QuerySet[Any],
     serializer_class: type[serializers.BaseSerializer[Any]],
@@ -131,22 +143,20 @@ def export_rows(
             for item in rendered:
                 value = item.get(name)
                 if isinstance(value, list):
-                    pks.update(v for v in value if v is not None)
-                elif value is not None and not isinstance(value, dict):
-                    pks.add(value)
+                    pks.update(k for v in value if (k := _key(v)) is not None)
+                elif (key := _key(value)) is not None:
+                    pks.add(key)
             resolver.load(pks)
         for item in rendered:
             row: list[Any] = []
             for spec in columns:
                 value = item.get(spec.name)
                 named = resolvers.get(spec.name)
-                if named is not None and not isinstance(value, dict):
+                if named is not None:
                     if isinstance(value, list):
-                        value = [named.value(v) for v in value]
+                        value = [named.value(_key(v)) for v in value]
                     else:
-                        value = named.value(value)
-                elif isinstance(value, dict) and "id" in value:
-                    value = value["id"]  # an expanded relation: back to its key
+                        value = named.value(_key(value))
                 row.append(value)
             yield row
         buffer.clear()

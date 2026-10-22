@@ -106,3 +106,41 @@ def test_an_unknown_format_or_too_many_rows_is_refused(make_user: Any, settings:
 def test_export_needs_the_read_gate(make_user: Any) -> None:
     nobody = make_user("nobody@example.com")
     assert _export(nobody).status_code == 403
+
+
+def test_a_nested_relation_exports_like_a_plain_one(make_user: Any, venues: Any) -> None:
+    """A serializer that nests related rows (many=True or one) exports their natural keys.
+
+    The rows come back as dicts, which the export used to collect into a set:
+    ``TypeError: unhashable type: 'dict'``.
+    """
+    from rest_framework import serializers
+
+    from karni.transfer.exports import export_rows
+
+    staff = make_user("staff@example.com", "staff")
+    event = _event("Tagged", venues["arena"], staff)
+    event.tags.set([Tag.objects.create(name="music"), Tag.objects.create(name="outdoor")])
+
+    class TagOut(serializers.ModelSerializer[Tag]):
+        class Meta:
+            model = Tag
+            fields = ("id", "name")
+
+    class VenueOut(serializers.ModelSerializer[Any]):
+        class Meta:
+            model = type(venues["arena"])
+            fields = ("id", "name")
+
+    class EventOut(serializers.ModelSerializer[Event]):
+        tags = TagOut(many=True, read_only=True)
+        venue = VenueOut(read_only=True)
+
+        class Meta:
+            model = Event
+            fields = ("id", "title", "venue", "tags")
+
+    request = api_request("get", "/events/export/", staff, {})
+    header, row = export_rows(Event.objects.filter(pk=event.pk), EventOut, {"request": request})
+    assert sorted(row[header.index("tags")]) == ["music", "outdoor"]
+    assert row[header.index("venue")] == "Arena"
