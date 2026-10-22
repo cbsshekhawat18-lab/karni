@@ -1,5 +1,5 @@
 ---
-description: The maintainer-only launch steps in order: accounts and names, repository settings, trusted publishing and the first release, with the fallback when a name is taken.
+description: "The maintainer-only launch steps in order: accounts and names, repository settings, trusted publishing and the first release, with the fallback when a name is taken."
 ---
 
 # Launch registrations

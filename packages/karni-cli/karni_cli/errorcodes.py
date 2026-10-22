@@ -24,7 +24,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Final, NamedTuple
 
-__all__ = ["CODES", "CliCode", "core_module", "docs_url", "lookup"]
+__all__ = ["CODES", "CliCode", "core_module", "docs_url", "failures_module", "lookup"]
 
 _MODULE_NAME = "karni_cli._bundled_karni_errorcodes"
 _FALLBACK_BASE = "https://cbsshekhawat18-lab.github.io/karni/"
@@ -93,9 +93,10 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C006",
         "An optional tool is not installed",
-        "karni mcp, karni types",
+        "karni mcp, karni types, karni ui detect",
         "Some commands need extra tools: the MCP SDK for karni mcp, Node and "
-        "openapi-typescript for karni types.",
+        "openapi-typescript for karni types, Node for karni ui detect to evaluate a "
+        "tailwind.config.",
         "Install what the message names, e.g. pip install 'karni-cli[mcp]', or add "
         "openapi-typescript to frontend devDependencies (Node 20+).",
     ),
@@ -110,9 +111,10 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C008",
         "A file cannot be written",
-        "karni config",
+        "karni config, karni ui detect",
         "The file or its directory is not writable.",
-        "Check the path's permissions, or set the value per project instead of --global.",
+        "Check the path's permissions; for karni config set the value per project instead of "
+        "--global, for karni ui detect choose another place with --output.",
     ),
     _c(
         "C009",
@@ -210,7 +212,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C106",
         "An option value is invalid",
-        "karni make, karni types",
+        "karni make, karni types, karni ui detect",
         "The option accepts specific values (the message lists them).",
         "Use one of the values shown, e.g. --access owned:organizer or --every 15m.",
     ),
@@ -307,6 +309,129 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni add manages the [project].dependencies table of the project's pyproject.toml.",
         "Add the table (or the dependency) by hand, then re-run.",
     ),
+    # C3xx karni ui
+    _c(
+        "C301",
+        "No frontend found",
+        "karni ui detect",
+        "karni ui detect reads a frontend: its package.json, stylesheets and theme files. It "
+        "looks in the current directory, in ./frontend, and in the Karni project's frontend/.",
+        "Run it in the frontend directory (the one with package.json), or pass --frontend <dir>.",
+    ),
+    _c(
+        "C302",
+        "A generated file was edited, so karni ui detect does not overwrite it",
+        "karni ui detect (karni-theme.css, karni-primitives.tsx)",
+        "The files karni ui detect writes belong to the project. Each carries a digest of what "
+        "was generated; a file whose content no longer matches it (or that has none) was "
+        "edited by hand, and a re-run must not lose those edits silently.",
+        "Compare with `karni ui detect --dry-run` and copy what you need; or overwrite with "
+        "--force; or write the new file elsewhere with --output.",
+    ),
+    _c(
+        "C303",
+        "A theme source cannot be read",
+        "karni ui detect (components.json, the stylesheet it names, tailwind.config)",
+        "karni ui detect maps the project's theme from its files: shadcn/ui's components.json "
+        "and the stylesheet it names, or a tailwind.config that Node evaluates in the project "
+        "(with the project's own packages). The message names the file and what failed.",
+        "Fix the file the message names (or run npm install so a config's imports load), or "
+        "pass --source to read another theme source.",
+    ),
+    _c(
+        "C304",
+        "The frontend has no theme of the --source kind",
+        "karni ui detect --source",
+        "--source makes karni ui detect read one source (shadcn, tailwind, mui, chakra, "
+        "mantine) instead of detecting; that source is not in this frontend.",
+        "Run karni ui detect without --source to detect what the frontend has, or name a "
+        "source it uses.",
+    ),
+    # C31x debugging: karni why / karni why-empty
+    _c(
+        "C310",
+        "karni why: the target is malformed",
+        "karni why, karni why-empty",
+        "A question names one thing: <resource>/<id> (a row), <resource>.<field> (a field), "
+        "<resource> (its list), or a status followed by the request id of a recorded request.",
+        "Use one of those forms, e.g. karni why events/42 --as alice@example.com or "
+        "karni why 403 <request-id>.",
+    ),
+    _c(
+        "C311",
+        "karni why: --as is missing",
+        "karni why, karni why-empty",
+        "An access decision is always for one user; only a recorded request carries its own.",
+        "Pass --as with an email, username or primary key, or --as anonymous.",
+    ),
+    _c(
+        "C312",
+        "karni why: the project's karni is too old",
+        "karni why, karni why-empty",
+        "The question runs as manage.py karni_why in the project, which ships with karni; a "
+        "project on an older karni does not have it.",
+        "Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask "
+        "again.",
+    ),
+    # C32x debugging: trace, replay, explain --failure
+    _c(
+        "C320",
+        "karni explain needs a code or --failure, not both",
+        "karni explain",
+        "karni explain explains one thing: an error code (E104, C101, PAY004, K106) or a "
+        "captured failure (--failure <id>).",
+        "Run `karni explain E104`, or `karni explain --failure <id>` (a failure id, a failed "
+        "request's id, or `last`).",
+    ),
+    _c(
+        "C321",
+        "A --set value is not FIELD=VALUE",
+        "karni replay --set",
+        "--set supplies a value the capture redacted, by its place in the request.",
+        "Write the body path, '=', then the value: --set password=s3cret, --set "
+        "card.token=tok_1, or --set query:token=abc for a query parameter. The value is "
+        "parsed as JSON when it can be (numbers, true/false), else used as text.",
+    ),
+    _c(
+        "C322",
+        "The project's karni has no debugging commands",
+        "karni trace, karni replay, karni explain --failure",
+        "These commands run manage.py karni_trace, karni_replay and karni_failure in the "
+        "project's interpreter; a karni older than the CLI does not have them.",
+        "Upgrade karni in the project: `karni upgrade`, or bump karni in pyproject.toml and "
+        "reinstall (`uv pip install -r pyproject.toml`, or rebuild the image).",
+    ),
+    _c(
+        "C323",
+        "A debugging command failed in the project",
+        "karni trace, karni replay, karni explain --failure",
+        "The command ran in the project's interpreter and failed without a coded Karni "
+        "error, usually because Django could not start (settings, imports, the database).",
+        "Run the command it names with `karni manage ...` to see the full output, fix what "
+        "it reports, then retry.",
+    ),
+    # C34x debugging: karni explain -, karni queries
+    _c(
+        "C340",
+        "Nothing to explain",
+        "karni explain",
+        "karni explain answers for a code (karni explain E104) or for pasted text: a traceback, "
+        "a test failure or a log line read from stdin. It got neither: no code, and stdin was "
+        "a terminal or empty.",
+        "Pass a code (karni explain E104), or pipe the text in: karni explain - < "
+        "traceback.txt, or pbpaste | karni explain -. Agents: the explain_text MCP tool takes "
+        "the text as an argument.",
+    ),
+    _c(
+        "C341",
+        "The project's karni has no karni_queries command",
+        "karni queries",
+        "karni queries runs manage.py karni_queries in the project's interpreter; that command "
+        "ships with karni from the release that added karni queries, and the project has an "
+        "older karni installed.",
+        "Upgrade karni in the project (pip install -U karni, or bump it in pyproject.toml and "
+        "reinstall), then run karni queries again. karni doctor shows both versions.",
+    ),
     # C36x typed fields (karni.fields): the make model DSL and karni schema
     _c(
         "C360",
@@ -388,6 +513,32 @@ def core_module() -> ModuleType | None:
         spec.loader.exec_module(loaded)
     except Exception:
         del sys.modules[_MODULE_NAME]
+        raise
+    return loaded
+
+
+def failures_module() -> ModuleType | None:
+    """``karni.errorcodes.failures`` (the ``karni explain -`` catalogue), loaded by path.
+
+    It sits beside the registry (and inside its bundled copy), imports only
+    the stdlib and its parent package, so it loads under the same private
+    name as :func:`core_module` without Django or a project.
+    """
+    name = f"{_MODULE_NAME}.failures"
+    if name in sys.modules:
+        return sys.modules[name]
+    directory = core_source_dir()
+    if directory is None or core_module() is None or not (directory / "failures.py").is_file():
+        return None
+    spec = importlib.util.spec_from_file_location(name, directory / "failures.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - importlib contract
+        return None
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[name] = loaded
+    try:
+        spec.loader.exec_module(loaded)
+    except Exception:
+        del sys.modules[name]
         raise
     return loaded
 

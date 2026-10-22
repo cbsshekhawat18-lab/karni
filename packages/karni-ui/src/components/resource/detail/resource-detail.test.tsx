@@ -1,9 +1,12 @@
-import type { UseQueryResult } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { QueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { render as renderUi, screen, within } from "@testing-library/react";
+import * as React from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 import type { ResourceItemParams } from "../../../hooks/types";
+import { createKarniClient } from "../../../schema/client";
+import { KarniProvider } from "../../../schema/provider";
 import { useResourceItem } from "../../../hooks/useResourceItem";
 import type { FieldDef, ResourceSchema } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
@@ -29,6 +32,17 @@ const mockUseResourceItem = useResourceItem as unknown as Mock<
   ) => UseQueryResult<Row>
 >;
 const mockDisplayLabel = displayLabel as unknown as Mock<(obj: Row) => string>;
+
+/** The data hooks are mocked; the provider serves the delete mutation and the schema retry. */
+function render(ui: React.ReactElement) {
+  const client = createKarniClient({ baseUrl: "http://karni.test/api" });
+  const queryClient = new QueryClient();
+  return renderUi(
+    <KarniProvider client={client} queryClient={queryClient}>
+      {ui}
+    </KarniProvider>,
+  );
+}
 
 /** Detail view data: venue expanded (in expand), tags left as raw pks. */
 const detailRecord: Row = {
@@ -131,8 +145,9 @@ describe("ResourceDetail", () => {
     expect(
       screen.getByText(new Date(String(eventRecord["starts_at"])).toLocaleString()),
     ).toBeInTheDocument();
-    // null → em dash
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    // null → the shared empty value: a dash, read as "empty"
+    expect(screen.getAllByText("–").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("empty").length).toBeGreaterThan(0);
     // expanded relation → displayLabel
     expect(screen.getByText("Berlin Arena")).toBeInTheDocument();
     // unexpanded many relation → raw ids in <code>
@@ -217,7 +232,12 @@ describe("ResourceDetail", () => {
 
   it("forwards the expand param to useResourceItem", () => {
     render(<ResourceDetail resource="events" id={1} expand={["venue"]} />);
-    expect(mockUseResourceItem).toHaveBeenCalledWith("events", 1, { expand: ["venue"] });
+    expect(mockUseResourceItem).toHaveBeenCalledWith(
+      "events",
+      1,
+      { expand: ["venue"] },
+      expect.objectContaining({ enabled: true }),
+    );
   });
 
   it("applies field overrides: hidden, label and render", () => {
@@ -274,8 +294,9 @@ describe("ResourceDetail", () => {
     );
     render(<ResourceDetail resource="events" id={1} />);
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Boom");
-    await user.click(screen.getByRole("button", { name: "Retry" }));
+    // Plain words from describeError (an unexpected error), never the raw message.
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't view this event");
+    await user.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

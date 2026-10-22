@@ -57,11 +57,22 @@ def test_context_tool_outside_a_project(tmp_path: Path, monkeypatch) -> None:
     assert mcp_server.context_tool().startswith("error:")
 
 
-def test_server_registers_the_three_tools(generated_project: Path) -> None:
+def test_server_registers_the_tools(generated_project: Path) -> None:
     pytest.importorskip("mcp")
     server = mcp_server.build_server(generated_project)
     tools = asyncio.run(server.list_tools())
-    assert sorted(tool.name for tool in tools) == ["check", "context", "rules"]
+    assert sorted(tool.name for tool in tools) == [
+        "check",
+        "context",
+        "explain_failure",
+        "explain_text",
+        "queries",
+        "replay",
+        "rules",
+        "trace",
+        "why",
+        "why_empty",
+    ]
     schemas = {
         # mcp 2.x: input_schema; mcp 1.x: inputSchema
         tool.name: getattr(tool, "input_schema", None) or tool.inputSchema
@@ -69,5 +80,13 @@ def test_server_registers_the_three_tools(generated_project: Path) -> None:
     }
     assert "path" in schemas["check"]["properties"]
     assert set(schemas["rules"]["properties"]) == {"code", "procedure"}
+    assert set(schemas["explain_text"]["properties"]) == {"text"}
+    assert set(schemas["queries"]["properties"]) == {
+        "endpoint",
+        "as_user",
+        "method",
+        "data",
+        "explain",
+    }
     # The --project root is what the tools use, wherever the server was started.
     assert mcp_server._project() == generated_project

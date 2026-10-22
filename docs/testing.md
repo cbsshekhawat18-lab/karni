@@ -1,5 +1,5 @@
 ---
-description: Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite.
+description: "Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
 ---
 
 # Testing
@@ -381,6 +381,10 @@ Fix the repeated query (…), or declare query_budget = Budget(list=N, reason=..
 
 The fix is in the code (a hint, a serializer change); raising the budget is
 a declaration on the viewset: `query_budget = Budget(list=20, reason="...")`.
+To find the fix, run [`karni queries EventViewSet.list --as <user>`](debugging/queries.md)
+(or pipe the failure into [`karni explain -`](debugging/explain.md), which
+prints that command): it names the field and relation behind each repeated
+statement and the hint that removes it.
 
 | To change it | Do |
 |---|---|

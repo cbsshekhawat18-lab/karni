@@ -1,0 +1,6 @@
+[2m2026-10-21T07:56:30.658415Z[0m [[32m[1minfo     [0m] [1mrequest_started               [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/bookings/'[0m [36mrequest_id[0m=[35mce3fe858-b8e7-409c-95e7-053d9ec03d46[0m [36muser_agent[0m=[35mpython-requests/2.34.2[0m [36muser_id[0m=[35m32e70629-8fad-41a6-86cb-0fb39a1de644[0m
+[2m2026-10-21T07:56:30.659569Z[0m [[33m[1mwarning  [0m] [1mrequest_finished              [0m [[0m[1m[34mdjango_structlog.middlewares.request[0m][0m [36mcode[0m=[35m403[0m [36mip[0m=[35m127.0.0.1[0m [36mrequest[0m=[35m'POST /api/bookings/'[0m [36mrequest_id[0m=[35mce3fe858-b8e7-409c-95e7-053d9ec03d46[0m [36muser_id[0m=[35mNone[0m
+[2m2026-10-21T07:56:30.659946Z[0m [[32m[1minfo     [0m] [1mPOST /api/bookings/ 403 — 2 queries, 0 duplicated, 0.2 ms in SQL, 5.5 ms total[0m [[0m[1m[34mkarni.queries[0m][0m
+[2m2026-10-21T07:56:30.660068Z[0m [[33m[1mwarning  [0m] [1mForbidden: /api/bookings/     [0m [[0m[1m[34mdjango.request[0m][0m
+"POST /api/bookings/ HTTP/1.1" 403 108
+{"detail":"CSRF Failed: Origin checking failed - http://localhost:3000 does not match any trusted origins."}

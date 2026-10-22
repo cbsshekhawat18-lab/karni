@@ -2,8 +2,9 @@
 // routes.tsx, in registration order — pages from `karni make page` show up
 // here on their own.
 // Detail/edit routes ($id) and "new" forms are reached from their list page.
-import { Layout, type LayoutNavItem } from "@karni/ui";
+import { Button, Layout, ThemeToggle, useAuth, type LayoutNavItem } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 function label(path: string): string {
     const name = path.split("/").filter(Boolean).at(-1) ?? "home";
@@ -12,7 +13,12 @@ function label(path: string): string {
 
 export default function AppLayout() {
     const router = useRouter();
+    const { status, logout } = useAuth();
     const pathname = useRouterState({ select: (state) => state.location.pathname });
+    // The drawer closes on every route change, so an action in its footer
+    // (Sign out) does not leave it open, focus trapped, over the next page.
+    const [navOpen, setNavOpen] = useState(false);
+    useEffect(() => setNavOpen(false), [pathname]);
     const navItems: LayoutNavItem[] = Object.keys(router.routesByPath)
         .filter((path) => !path.includes("$") && !path.endsWith("/new"))
         .map((href) => ({
@@ -23,7 +29,24 @@ export default function AppLayout() {
     return (
         <Layout
             navItems={navItems}
+            mobileNavOpen={navOpen}
+            onMobileNavOpenChange={setNavOpen}
             sidebarHeader={<span className="px-3 text-lg font-semibold">EventHub</span>}
+            header={<ThemeToggle className="ml-auto" />}
+            sidebarFooter={
+                status === "authenticated" ? (
+                    <Button
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => {
+                            setNavOpen(false); // before the login page mounts and autofocuses
+                            void logout().then(() => router.history.push("/login"));
+                        }}
+                    >
+                        Sign out
+                    </Button>
+                ) : null
+            }
             // Client-side navigation: intercept the default link's click (it
             // still closes the mobile drawer); `contents` keeps the nav grid.
             renderNavItem={(item, { defaultNode }) => (

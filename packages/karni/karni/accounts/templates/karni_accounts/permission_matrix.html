@@ -4,45 +4,37 @@
 {% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
 
 {% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
 <style>
-  .karni-matrix-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
-  .karni-matrix { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 0.875rem; }
-  .karni-matrix th, .karni-matrix td { border-bottom: 1px solid var(--color-base-200); padding: 0.4rem 0.5rem; text-align: left; vertical-align: middle; white-space: nowrap; }
-  .karni-matrix thead th { position: sticky; top: 0; z-index: 3; background: var(--color-base-50); }
-  .karni-matrix .karni-sticky { position: sticky; left: 0; z-index: 2; background: var(--color-base-50); }
-  .karni-matrix thead th.karni-sticky { z-index: 4; }
-  .karni-matrix .karni-group td { background: var(--color-base-100); font-weight: 600; }
-  .karni-matrix select { min-height: 44px; min-width: 9rem; font-size: 16px; border: 1px solid var(--color-base-300); border-radius: 6px; padding: 0.3rem 0.5rem; background: var(--color-base-50); color: inherit; }
-  .karni-matrix select:disabled { opacity: 0.6; }
-  .karni-matrix .karni-bulk { min-width: 7rem; font-weight: 400; }
-  .karni-cell-origin { display: block; font-size: 0.7rem; color: var(--color-base-500); }
-  .karni-matrix-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin: 1rem 0; }
-  .karni-button { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 1.25rem; border-radius: 6px; background: var(--color-primary-600); color: #fff; font-weight: 600; border: 0; cursor: pointer; }
-  .karni-button:hover { background: var(--color-primary-700); }
-  .karni-link { color: var(--color-primary-600); text-decoration: underline; }
-  .karni-note { color: var(--color-base-500); font-size: 0.85rem; }
-  .karni-matrix-recent td, .karni-matrix-recent th { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-base-200); text-align: left; }
-  html.dark .karni-matrix thead th, html.dark .karni-matrix .karni-sticky, html.dark .karni-matrix select { background: var(--color-base-900); }
-  html.dark .karni-matrix .karni-group td { background: var(--color-base-800); }
-  html.dark .karni-matrix th, html.dark .karni-matrix td, html.dark .karni-matrix-recent td, html.dark .karni-matrix-recent th { border-color: var(--color-base-800); }
-  html.dark .karni-matrix select { border-color: var(--color-base-700); }
+  .karni-matrix { width: auto; min-width: 100%; }
+  .karni-matrix th, .karni-matrix td { white-space: nowrap; }
+  .karni-matrix thead th { vertical-align: bottom; }
+  /* The model / action column stays put while the roles scroll sideways; it
+     wraps and stays narrow so a tablet shows several roles beside it. */
+  .karni-matrix .karni-sticky { position: sticky; left: 0; z-index: var(--karni-z-raised); min-width: 7rem; max-width: min(16rem, 34vw); white-space: normal; background: var(--karni-color-background); box-shadow: inset calc(var(--karni-border-width) * -1) 0 var(--karni-color-border); }
+  .karni-matrix .karni-group .karni-sticky { background: var(--karni-color-muted); }
+  .karni-matrix select.karni-field { min-width: 8rem; }
+  .karni-matrix .karni-bulk { display: block; width: 100%; max-width: 12rem; min-width: 0; margin-top: calc(var(--karni-space-unit) * 1.5); font-weight: var(--karni-font-weight-normal); }
+  .karni-cell-origin { display: block; margin-top: var(--karni-space-unit); color: var(--karni-color-muted-foreground); font-size: var(--karni-font-size-xs); line-height: var(--karni-font-leading-xs); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="karni-matrix-page">
+<div class="karni-page karni-matrix-page">
   <p class="karni-note">
     {% blocktranslate trimmed %}
       One cell per role and action: the rows that role may reach. A locked cell is declared in KARNI_ROLES
       for a system role and changes only there. Nothing is saved until you review the diff.
     {% endblocktranslate %}
-    <a class="karni-link" href="{{ matrix_url }}effective/">{% translate "Effective permissions for a user" %}</a>
   </p>
+  <div class="karni-toolbar">
+    <a class="karni-button karni-button-secondary" href="{{ matrix_url }}effective/">{% translate "Effective permissions for a user" %}</a>
+  </div>
 
   <form method="post" id="karni-matrix-form">
     {% csrf_token %}
-    <div class="karni-matrix-scroll">
-      <table class="karni-matrix" id="karni-matrix">
+    <div class="karni-scroll">
+      <table class="karni-table karni-matrix" id="karni-matrix">
         <thead>
           <tr>
             <th class="karni-sticky">{% translate "Model / action" %}</th>
@@ -50,7 +42,7 @@
               <th scope="col">
                 <div>{{ role.name }} <span class="karni-note">({{ role.slug }}{% if role.is_system %}, {% translate "system" %}{% endif %})</span></div>
                 {% if can_edit %}
-                <select class="karni-bulk" aria-label="{% blocktranslate with role=role.slug %}Set every cell of {{ role }}{% endblocktranslate %}" data-bulk-role="{{ role.slug }}">
+                <select class="karni-field karni-bulk" aria-label="{% blocktranslate with role=role.slug %}Set every cell of {{ role }}{% endblocktranslate %}" data-bulk-role="{{ role.slug }}">
                   <option value="">{% translate "Set column…" %}</option>
                   <option value="all">{% translate "All rows" %}</option>
                   <option value="own">{% translate "Own rows" %}</option>
@@ -67,7 +59,7 @@
               <td class="karni-sticky">
                 {{ group.model.name|capfirst }} <span class="karni-note">{{ group.model.label }}</span>
                 {% if can_edit %}
-                <select class="karni-bulk" aria-label="{% blocktranslate with model=group.model.label %}Set every cell of {{ model }}{% endblocktranslate %}" data-bulk-model="{{ group.model.label }}">
+                <select class="karni-field karni-bulk" aria-label="{% blocktranslate with model=group.model.label %}Set every cell of {{ model }}{% endblocktranslate %}" data-bulk-model="{{ group.model.label }}">
                   <option value="">{% translate "Set row…" %}</option>
                   {% for value, label in group.model.scopes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
                   <option value="__none__">{% translate "No access" %}</option>
@@ -81,7 +73,7 @@
                 <th scope="row" class="karni-sticky">{{ row.action }}</th>
                 {% for cell in row.cells %}
                   <td>
-                    <select name="{{ cell.name }}" data-role="{{ cell.role }}" data-model="{{ group.model.label }}"
+                    <select class="karni-field" name="{{ cell.name }}" data-role="{{ cell.role }}" data-model="{{ group.model.label }}"
                             aria-label="{{ cell.role }} {{ row.permission }}"
                             {% if cell.locked or not can_edit %}disabled{% endif %}>
                       <option value="" {% if not cell.value %}selected{% endif %}>—</option>
@@ -110,7 +102,7 @@
       </table>
     </div>
     {% if can_edit %}
-      <div class="karni-matrix-toolbar">
+      <div class="karni-toolbar">
         <button type="submit" class="karni-button">{% translate "Review changes" %}</button>
         <span class="karni-note">{% translate "You will see the diff before anything is saved." %}</span>
       </div>
@@ -119,9 +111,9 @@
     {% endif %}
   </form>
 
-  <h2 class="font-semibold mt-6 mb-2">{% translate "Recent changes" %}</h2>
+  <h2>{% translate "Recent changes" %}</h2>
   {% if recent %}
-    <table class="karni-matrix-recent w-full">
+    <div class="karni-scroll"><table class="karni-table">
       <thead><tr><th>{% translate "When" %}</th><th>{% translate "Who" %}</th><th>{% translate "Role" %}</th><th>{% translate "Permission" %}</th><th>{% translate "Change" %}</th></tr></thead>
       <tbody>
         {% for entry in recent %}
@@ -134,7 +126,7 @@
           </tr>
         {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   {% else %}
     <p class="karni-note">{% translate "No grant has been changed yet." %}</p>
   {% endif %}

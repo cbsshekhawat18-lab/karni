@@ -216,6 +216,63 @@ RULES: tuple[Rule, ...] = (
         ),
         fix="Delete the hand-written scaffold and run the matching `karni make` command.",
     ),
+    # --- debugging: karni why (access decisions) ------------------------------
+    Rule(
+        code="K015",
+        category="workflow",
+        severity="must",
+        summary="Row/field/action missing or refused: karni why first.",
+        rule=(
+            "When a row, field or action is unexpectedly missing or refused (a 403, a 404, an "
+            "empty list, a field absent from a response), run `karni why <resource>/<id> --as "
+            "<user> [--action ...]`, `karni why <resource>.<field> --as <user>`, `karni why-empty "
+            "<resource> --as <user>` or `karni why 403 <request-id>` (MCP: `why`, `why_empty`) "
+            "before reading viewsets, KARNI_ROLES or the access layer, and act on its verdict."
+        ),
+        rationale=(
+            "Access bugs raise no error: the row is just absent. karni why computes the decision "
+            "with the code that enforces it and prints the user's roles, the grants and where "
+            "each comes from, the predicate that decided, the row's values, file:line and the "
+            "fix — one call instead of reconstructing the rules from source."
+        ),
+        fix="Run the matching `karni why` command and apply the fix it prints.",
+    ),
+    # --- end debugging ----------------------------------------------------------
+    # workflow: debugging (karni explain -, karni queries)
+    Rule(
+        code="K013",
+        category="workflow",
+        severity="must",
+        summary="Traceback: karni explain - first.",
+        rule=(
+            "Paste a traceback, a test failure or a log line into `karni explain -` (stdin; MCP "
+            "tool `explain_text`) before reading it by hand. It names the Karni failure class, "
+            "the cause, where (the first project frame, file:line), the fix and the docs link, "
+            "and says plainly when it does not recognise the failure."
+        ),
+        rationale=(
+            "Rebuilding context from a traceback is the expensive part of debugging; the "
+            "catalogue already knows Karni's failure classes (codes, query budgets, access "
+            "outcomes, database, migrations, settings, CSRF/CORS) and their fixes."
+        ),
+    ),
+    Rule(
+        code="K014",
+        category="workflow",
+        severity="must",
+        summary="N+1: karni queries URL --as USER first.",
+        rule=(
+            "Before hunting an N+1 in serializers, run `karni queries <endpoint> --as <user>` "
+            "(MCP tool `queries`). It runs the endpoint in-process, groups the repeated queries "
+            "by the serializer field and relation that caused them, says why the optimiser did "
+            "not fetch them and prints the hint that fixes it."
+        ),
+        rationale=(
+            "The optimiser derives select_related/prefetch_related itself and records what it "
+            "cannot see (method fields, properties, to_representation), so the cause and the "
+            "fix come from the same knowledge instead of guesswork."
+        ),
+    ),
     # architecture
     Rule(
         code="K301",
@@ -633,6 +690,69 @@ RULES: tuple[Rule, ...] = (
         rationale="Duplicates are where boilerplate creeps back in.",
         fix="Extract one component or hook, or compose the existing @karni/ui one.",
         enforced_by=("jscpd",),
+    ),
+    # workflow: debugging with the development capture (karni trace / replay /
+    # explain --failure; docs/debugging/trace-and-replay.md)
+    Rule(
+        code="K030",
+        category="workflow",
+        severity="should",
+        summary="A failure: karni explain --failure first.",
+        rule=(
+            "When a request or task fails in development, run `karni explain --failure <id>` "
+            "(or `--failure last`) before reading a traceback by hand: it names the failing "
+            "frame with its locals, the user and their roles, the SQL and the next steps."
+        ),
+        rationale=(
+            "The snapshot was taken when it failed, with secrets redacted; reconstructing the "
+            "same context from a traceback and the code costs far more."
+        ),
+    ),
+    Rule(
+        code="K031",
+        category="workflow",
+        severity="should",
+        summary="Follow a request: karni trace ID.",
+        rule=(
+            "To see what a request set in motion (Celery tasks and their retries, email, "
+            "webhooks, change-log entries) run `karni trace <request-id>` (its X-Request-ID "
+            "response header, or `last`) instead of correlating log timestamps."
+        ),
+        rationale=(
+            "The request's tasks, retries, email and audit entries all carry its id, so the "
+            "trace is exact; timestamps from several processes are not."
+        ),
+    ),
+    Rule(
+        code="K032",
+        category="workflow",
+        severity="should",
+        summary="Confirm a fix: karni replay ID --as USER.",
+        rule=(
+            "After changing access, roles or fixing a bug a request hit, confirm it with "
+            "`karni replay <request-id> [--as <email|username|pk>]`: it re-runs the captured "
+            'request against the current code and prints what changed ("was 403, now '
+            '200"); writes are rolled back unless `--commit`.'
+        ),
+        rationale=(
+            "Replaying the real request as the real user tests the case that failed, not "
+            "the one you think failed."
+        ),
+    ),
+    Rule(
+        code="K206",
+        category="frontend",
+        severity="error",
+        summary="Style with token classes; no literal values.",
+        rule=(
+            "Style with the @karni/ui preset's classes (`bg-primary`, `p-4`, `rounded-md`, "
+            "`z-popover`), which read `--karni-*` tokens; no arbitrary literals (`w-[13px]`, "
+            "`bg-[#fff]`), palette colours (`bg-slate-500`) or literal inline styles. A failing "
+            "build where the project enables `karni/no-style-literals`."
+        ),
+        rationale="One stylesheet (or `karni ui detect`) then rethemes every screen.",
+        fix="Use a preset class, or add the token to the project's karni-theme.css.",
+        enforced_by=("karni/no-style-literals",),
     ),
 )
 

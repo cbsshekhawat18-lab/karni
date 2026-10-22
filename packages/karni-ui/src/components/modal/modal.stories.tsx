@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import * as React from "react";
 import { Button } from "../primitives/button";
+import { Input } from "../primitives/input";
+import { Label } from "../primitives/label";
 import { Modal, ModalClose } from "./modal";
 
 const meta = {
@@ -31,6 +33,48 @@ export const WithFooterActions: Story = {
   args: {
     title: "Delete event",
     description: "This cannot be undone.",
+    trigger: <Button variant="destructive">Delete</Button>,
+    footer: (
+      <>
+        <ModalClose asChild>
+          <Button variant="outline">Cancel</Button>
+        </ModalClose>
+        <Button variant="destructive">Delete event</Button>
+      </>
+    ),
+  },
+};
+
+/**
+ * Open on load: named by its title, described by its description; focus
+ * starts on the first field, Tab stays inside, Escape closes.
+ */
+export const Open: Story = {
+  args: {
+    defaultOpen: true,
+    trigger: <Button>Open modal</Button>,
+    children: (
+      <div className="grid gap-1.5">
+        <Label htmlFor="story-modal-title">Title</Label>
+        <Input id="story-modal-title" defaultValue="Launch party" />
+      </div>
+    ),
+    footer: (
+      <>
+        <ModalClose asChild>
+          <Button variant="outline">Cancel</Button>
+        </ModalClose>
+        <Button>Save changes</Button>
+      </>
+    ),
+  },
+};
+
+export const OpenDestructive: Story = {
+  args: {
+    defaultOpen: true,
+    title: "Delete event",
+    description: "This cannot be undone. Bookings for the event are cancelled.",
     trigger: <Button variant="destructive">Delete</Button>,
     footer: (
       <>

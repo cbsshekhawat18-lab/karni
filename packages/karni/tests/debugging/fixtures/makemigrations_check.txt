@@ -1,0 +1,3 @@
+Migrations for 'events':
+  events/migrations/0003_event_subtitle.py
+    + Add field subtitle to event

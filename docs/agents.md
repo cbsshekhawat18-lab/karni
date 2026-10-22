@@ -1,5 +1,5 @@
 ---
-description: How Karni's agent guidance works: rules as structured data in one module, the context, rules, check and explain commands, the generated adapters and the MCP server.
+description: "How Karni's agent guidance works: rules as structured data in one module, the context, rules, check and explain commands, the generated adapters and the MCP server."
 ---
 
 # Karni for AI agents
@@ -26,7 +26,13 @@ follow what they return.
 | `karni rules sync` | Regenerate every adapter and slash-command file |
 | `karni rules sync --check` | Exit 1 when any generated file is stale (CI gate) |
 | `karni explain E104` | Any code (error `E`/`W`, command `C`, module `PAY`, rule `K`): why Karni objects and the exact fix |
-| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check` |
+| `karni why events/<id> --as <user>` | Why a row, field or action is refused or missing for a user, computed by the code that enforces it ([debugging](debugging/why.md)); `karni why-empty <resource> --as <user>` for an empty list |
+| `karni explain - < traceback.txt` | The Karni failure in a pasted traceback, test failure or log line: class, cause, `file:line`, fix, docs ([debugging](debugging/explain.md)) |
+| `karni queries /api/events/ --as USER` | Every query one endpoint runs; repeated ones grouped by the field and relation behind them, with the fix ([debugging](debugging/queries.md)) |
+| `karni explain --failure last` | A captured crash as a brief: request, user, failing frame with locals, SQL, next steps ([debugging](debugging/trace-and-replay.md)) |
+| `karni trace <request-id>` | One request's story in order: its tasks and retries, email, webhooks, change-log entries |
+| `karni replay <request-id> --as USER` | Re-run a captured request against the current code ("was 403, now 200") |
+| `karni mcp` | The same surface as MCP tools: `context`, `rules`, `check`, and for debugging `why`, `why_empty`, `explain_text`, `queries`, `trace`, `replay`, `explain_failure` |
 
 `karni context` and `karni rules` together are enough to start work without
 reading files. `karni rules --check` is a fast single-file subset of the real
@@ -176,8 +182,21 @@ pip install 'karni-cli[mcp]'
 karni mcp                 # stdio; --project PATH when not started inside the project
 ```
 
-Tools: `context()`, `rules(code="", procedure="")`, `check(path)`. Each
-returns the same text as the CLI.
+Tools: `context()`, `rules(code="", procedure="")`, `check(path)`,
+`why(target, user="", action="", method="", params="", as_json=False)` and
+`why_empty(resource, user, params="", as_json=False)` ([`karni
+why`](debugging/why.md)). Each returns the same text as the CLI.
+
+For debugging (the [development capture](debugging/capture.md)):
+`trace(request_id="last", as_json=False)`, `replay(request_id="last",
+as_user="", sets=[], drop_redacted=False, commit=False)` and
+`explain_failure(failure_id="last")` — the text of `karni trace`,
+`karni replay` and `karni explain --failure`.
+
+Debugging tools: `explain_text(text)` (`karni explain -` on a pasted
+traceback or log line) and `queries(endpoint, as_user="", method="GET",
+data="", explain=False)` (`karni queries`). Rules K013 and K014 tell an agent
+to call them before reading a traceback or hunting an N+1 by hand.
 
 Claude Code:
 

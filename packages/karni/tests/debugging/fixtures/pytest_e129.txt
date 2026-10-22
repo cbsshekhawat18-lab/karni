@@ -1,0 +1,36 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+___ test_list_and_retrieve_queries_do_not_grow_with_rows[EventViewSet.list] ____
+
+db = None
+karni_scaling_case = ScalingCase(viewset=<class 'events.viewsets.EventViewSet'>, action='list', optout_error='', expand=())
+
+    def test_list_and_retrieve_queries_do_not_grow_with_rows(
+        db: None, karni_scaling_case: ScalingCase
+    ) -> None:
+        """Every routed project viewset's ``list``/``retrieve`` is N-independent."""
+        import pytest
+    
+        if karni_scaling_case.optout_error:
+            raise KarniAssertionError(karni_scaling_case.optout_error, code="E130")
+        result = check_scaling(karni_scaling_case)
+        if result.skipped:
+            pytest.skip(result.skipped)
+        if result.grows:
+>           raise KarniAssertionError(result.message(), code="E129")
+E           karni.exceptions.KarniAssertionError: E129: EventViewSet.list: 10 queries with 2 rows, 40 with 12 — the query count grows with the data (N+1).
+E           40 queries, 36 duplicated, 1.6 ms in SQL
+E             24× SELECT … FROM "events_booking" WHERE ("events_booking"."deleted_at" IS NULL AND "events_booking"."tier_id" = %s AND NOT ("events_booking"."…
+E                 ← TicketTierSerializer.remaining (events/models.py:56 in remaining)
+E             12× SELECT … FROM "events_venue" WHERE "events_venue"."id" = %s LIMIT 21
+E                 ← EventSerializer.venue_city (events/serializers.py:25 in get_venue_city)
+E           The optimiser derives select_related/prefetch_related from the serializer; a SerializerMethodField or property needs select_related/prefetch_related hints on EventViewSet (or APIMeta.select/prefetch). Opt out only with # karni: allow(query-scaling): <reason> above the class.
+E           See https://cbsshekhawat18-lab.github.io/karni/errors/#e129
+
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/testing/performance.py:414: KarniAssertionError
+/home/dev/eventhub/.venv/lib/python3.12/site-packages/karni/testing/performance.py:414: KarniAssertionError
+=========================== short test summary info ============================
+FAILED ::test_list_and_retrieve_queries_do_not_grow_with_rows[EventViewSet.list]
+FAILED ::test_list_and_retrieve_queries_do_not_grow_with_rows[EventViewSet.retrieve]
+FAILED ::test_list_and_retrieve_queries_do_not_grow_with_rows[EventViewSet.list?expand=organizer,venue]
+3 failed, 8 deselected in 6.67s

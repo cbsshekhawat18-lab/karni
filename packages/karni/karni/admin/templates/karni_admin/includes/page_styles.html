@@ -1,0 +1,8 @@
+{% load static %}{% comment %}
+The stylesheets of Karni's own admin pages, included from their extrastyle
+block: @karni/ui's tokens, unless UNFOLD["STYLES"] already loaded them (a
+second copy would come after a project's own token overrides and undo them),
+then the controls and tables those pages share.
+{% endcomment %}{% static 'karni/tokens.css' as karni_tokens %}
+{% if karni_tokens not in styles %}<link rel="stylesheet" href="{{ karni_tokens }}">{% endif %}
+<link rel="stylesheet" href="{% static 'karni/admin-pages.css' %}">

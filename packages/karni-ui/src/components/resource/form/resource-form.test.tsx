@@ -26,7 +26,19 @@ vi.mock("../../../schema/useSchema", () => ({ useSchema: vi.fn() }));
 vi.mock("../../../schema/zod", () => ({ zodFor: vi.fn() }));
 vi.mock("../../../hooks/useResourceItem", () => ({ useResourceItem: vi.fn() }));
 vi.mock("../../../hooks/useResourceMutations", () => ({ useResourceMutations: vi.fn() }));
-vi.mock("../select/ResourceSelect", () => ({ ResourceSelect: vi.fn() }));
+// ResourceSelect forwards its ref (form focus wiring), so the double does too.
+vi.mock("../select/ResourceSelect", async () => {
+  const ReactModule = await import("react");
+  const render = vi.fn();
+  const ResourceSelect = Object.assign(
+    ReactModule.forwardRef<HTMLInputElement, ResourceSelectProps>((props, ref) => {
+      void ref;
+      return render(props);
+    }),
+    { mock: render },
+  );
+  return { ResourceSelect };
+});
 
 const mockUseSchema = useSchema as unknown as Mock<(resource: string) => UseSchemaResult>;
 const mockZodFor = zodFor as unknown as Mock<
@@ -43,7 +55,7 @@ const mockUseResourceItem = useResourceItem as unknown as Mock<
 const mockUseResourceMutations = useResourceMutations as unknown as Mock<
   (resource: string) => ResourceMutations<Record<string, unknown>>
 >;
-const mockResourceSelect = ResourceSelect as unknown as Mock<
+const mockResourceSelect = (ResourceSelect as unknown as { mock: Mock }).mock as Mock<
   (props: ResourceSelectProps) => React.ReactElement
 >;
 
@@ -140,13 +152,21 @@ describe("ResourceForm rendering", () => {
     expect(screen.getByRole("status", { name: "Loading form" })).toBeInTheDocument();
     unmount();
 
+    // Errors are worded through describeError: plain words and a retry,
+    // never the raw exception text.
+    const refetch = vi.fn();
     mockUseSchema.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: new Error("Schema unavailable"),
+      refetch,
+      isFetching: false,
     });
     render(<ResourceForm resource="events" />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Schema unavailable");
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load this form");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Schema unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
 

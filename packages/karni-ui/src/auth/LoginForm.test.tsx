@@ -5,6 +5,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { KarniApiError } from "../schema/client";
 import { LoginForm } from "./LoginForm";
 import { AuthContext, type AuthContextValue } from "./provider";
 import type { KarniUser, LoginResult } from "./types";
@@ -48,7 +49,12 @@ describe("LoginForm", () => {
   });
 
   it("shows a failed login inline and keeps the form usable", async () => {
-    const login = vi.fn(() => Promise.reject(new Error("401")));
+    // Wrong credentials are the backend's 401 (any other failure is worded for what it is).
+    const login = vi.fn(() =>
+      Promise.reject(
+        new KarniApiError(401, { detail: "No active account found with the given credentials" }),
+      ),
+    );
     render(
       <AuthContext.Provider value={contextValue(login)}>
         <LoginForm />
@@ -82,5 +88,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByLabelText("Password"), "secret-pass");
     await user.click(screen.getByRole("button", { name: "Go" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("two-factor");
+    // The credentials were right: the fields are not marked invalid.
+    expect(screen.getByLabelText("Email")).not.toHaveAttribute("aria-invalid");
   });
 });

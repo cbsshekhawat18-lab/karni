@@ -36,7 +36,15 @@ from typing import Any
 
 from django.db.models import Model
 
-__all__ = ["Veto", "VetoContext", "check_vetoes", "register_veto", "unregister_veto", "vetoes"]
+__all__ = [
+    "Veto",
+    "VetoContext",
+    "check_vetoes",
+    "first_veto",
+    "register_veto",
+    "unregister_veto",
+    "vetoes",
+]
 
 
 @dataclass(frozen=True)
@@ -81,10 +89,20 @@ def vetoes() -> dict[str, Veto]:
     return dict(_VETOES)
 
 
-def check_vetoes(context: VetoContext) -> str | None:
-    """The first reason a registered veto gives, or ``None``."""
-    for fn in _VETOES.values():
+def first_veto(context: VetoContext) -> tuple[str, str] | None:
+    """``(name, reason)`` of the first registered veto that refuses, or ``None``.
+
+    The name is what :func:`register_veto` stored, so ``karni why`` can say
+    which veto refused and where it is defined.
+    """
+    for name, fn in _VETOES.items():
         reason = fn(context)
         if reason:
-            return str(reason)
+            return name, str(reason)
     return None
+
+
+def check_vetoes(context: VetoContext) -> str | None:
+    """The first reason a registered veto gives, or ``None``."""
+    found = first_veto(context)
+    return found[1] if found is not None else None

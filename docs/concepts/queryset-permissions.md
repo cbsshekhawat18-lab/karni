@@ -1,5 +1,5 @@
 ---
-description: Why Karni enforces permissions at the queryset rather than the view: one row filter that list, detail, relation fields and expansion all share.
+description: "Why Karni enforces permissions at the queryset rather than the view: one row filter that list, detail, relation fields and expansion all share."
 ---
 
 # Permissions at the queryset

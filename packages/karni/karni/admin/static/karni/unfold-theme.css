@@ -1,0 +1,87 @@
+/*
+ * Karni's admin theme: django-unfold drawn with @karni/ui's design tokens.
+ *
+ * Loaded through UNFOLD["STYLES"] right after karni/tokens.css, the copy of
+ * @karni/ui's styles.css. Karni's UNFOLD["COLORS"] already points unfold's
+ * primary scale and text colours at the tokens; this file covers what COLORS
+ * cannot reach. Unfold's own CSS sits in cascade layers, so these unlayered
+ * rules win without !important. No colour is written here: every value is a
+ * --karni-* token.
+ *
+ * Escape hatch: remove "karni.admin.theme.unfold_theme_stylesheet" from
+ * UNFOLD["STYLES"] for unfold's own look, or append a stylesheet that sets
+ * --karni-* tokens to retheme the admin the way you retheme @karni/ui.
+ */
+
+/* Type: @karni/ui's font stacks instead of the Inter that unfold bundles.
+   Spacing: unfold's Tailwind steps are multiples of @karni/ui's unit (both
+   0.25rem by default), so a denser --karni-space-unit reaches the admin. */
+:root {
+  --font-sans: var(--karni-font-sans);
+  --font-mono: var(--karni-font-mono);
+  --spacing: var(--karni-space-unit);
+}
+
+/*
+ * Text on a filled primary surface. Unfold paints it white; @karni/ui paints
+ * it primary-foreground, which is dark wherever the primary is light (the
+ * dark theme). Unfold's text-white and bg-white/20 read --color-white, so
+ * redefining it on those surfaces recolours their content and nothing else.
+ */
+.bg-primary-600,
+.bg-primary-900,
+.dark .dark\:bg-primary-500,
+input.checked\:bg-primary-600:checked,
+.active [class*="group-[.active]:bg-primary-"],
+#changelist-actions {
+  --color-white: var(--karni-color-primary-foreground);
+}
+
+/* The bulk-action bar inherits its text colour instead of setting one. */
+#changelist-actions {
+  color: var(--karni-color-primary-foreground);
+}
+
+/*
+ * Touch. The sidebar's open and close controls are 18px icons; padding with
+ * a matching negative margin grows the tap area to 44px without moving them.
+ */
+[x-on\:click="sidebarToggle()"] {
+  box-sizing: content-box;
+  padding: calc(var(--karni-space-unit) * 3.25);
+  margin: calc(var(--karni-space-unit) * -3.25);
+}
+
+/* On a touch screen (pointer: coarse; a tablet), unfold's 38px rows and
+   controls grow to 44px: sidebar entries, the square add / more buttons,
+   text inputs, selects, the save row, the login button and the delete
+   confirmation's buttons. Desktop sizes are unchanged. */
+@media (pointer: coarse) {
+  .h-\[38px\] {
+    height: calc(var(--karni-space-unit) * 11);
+  }
+
+  .w-\[38px\] {
+    width: calc(var(--karni-space-unit) * 11);
+  }
+
+  #content-main
+    input:is(
+      [type="text"],
+      [type="email"],
+      [type="password"],
+      [type="number"],
+      [type="search"],
+      [type="url"],
+      [type="tel"],
+      [type="date"],
+      [type="time"]
+    ),
+  #content-main select,
+  #login-form input:is([type="text"], [type="email"], [type="password"]),
+  #login-form button[type="submit"],
+  #submit-row :is(a, button),
+  .delete-confirmation form :is(a, button) {
+    min-height: calc(var(--karni-space-unit) * 11);
+  }
+}

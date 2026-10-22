@@ -56,10 +56,13 @@ from karni.meta import model_actions, owner_field, permission_key, scope_paths
 
 __all__ = [
     "Grant",
+    "GrantSource",
     "SCOPES",
     "SyncReport",
     "custom_scopes",
     "declared_roles",
+    "grant_rows",
+    "grant_sources",
     "grants_for",
     "permission_keys",
     "register_scope",
@@ -468,7 +471,14 @@ def _resolve_key(action: str, model: type[models.Model] | None, obj: Any) -> str
     return permission_key(target, action)
 
 
-def _grant_q(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
+def grant_rows(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
+    """The rows one grant reaches for ``user`` on ``model``: ``True``, ``False`` or a ``Q``.
+
+    ``all`` → every row; ``own`` → ``Karni.owner_field`` is the user;
+    ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>`` (no
+    value on the user: no row); ``custom:<name>`` → the registered callable.
+    :func:`rows_for` unions these, and ``karni why`` shows each one.
+    """
     if grant.scope == "all":
         return True
     if grant.scope == "own":
@@ -499,13 +509,67 @@ def rows_for(user: Any, model: type[models.Model], action: str) -> Q | bool:
     grants = grants_for(user).get(permission_key(model, action), [])
     rows: Q | bool = False
     for grant in grants:
-        part = _grant_q(user, model, grant)
+        part = grant_rows(user, model, grant)
         if part is True:
             return True
         if part is False:
             continue
         rows = part if rows is False else rows | part
     return rows
+
+
+@dataclass(frozen=True)
+class GrantSource:
+    """Where one of a user's grants comes from (``karni why``, the effective-permissions view).
+
+    ``role`` is the role slug (``""`` for a superuser's implicit grant),
+    ``origin`` is ``"declared"`` (``KARNI_ROLES``), ``"matrix"`` (the
+    permission matrix) or ``"superuser"``; ``scope`` ``"none"`` is a declared
+    grant the matrix revoked, which grants nothing.
+    """
+
+    permission: str
+    role: str
+    role_name: str
+    scope: str
+    scope_path: str
+    origin: str
+
+    @property
+    def scope_label(self) -> str:
+        return f"{self.scope}:{self.scope_path}" if self.scope_path else self.scope
+
+
+def grant_sources(user: Any, key: str) -> list[GrantSource]:
+    """Every role row behind ``user``'s grants for permission ``key``, revoked ones included.
+
+    Reads the same ``RolePermission`` rows :func:`grants_for` resolves (a
+    superuser holds every permission at scope ``all``), so the answer names
+    each role, scope and origin that :func:`user_can` and :func:`rows_for`
+    act on.
+    """
+    if user is None or not getattr(user, "is_authenticated", False):
+        return []
+    if getattr(user, "is_superuser", False):
+        return [GrantSource(key, "", "superuser", "all", "", "superuser")]
+    from karni.accounts.models import RolePermission
+
+    label, _, action = key.rpartition(":")
+    app_label, _, model_name = label.partition(".")
+    rows = (
+        RolePermission.objects.filter(
+            role__group__in=user.groups.all(),
+            permission__content_type__app_label=app_label,
+            permission__content_type__model=model_name,
+            permission__action=action,
+        )
+        .select_related("role")
+        .order_by("role__slug")
+    )
+    return [
+        GrantSource(key, row.role.slug, row.role.name, row.scope, row.scope_path, str(row.origin))
+        for row in rows
+    ]
 
 
 def user_can(

@@ -1,5 +1,5 @@
 ---
-description: The same Karni project built from the terminal without an agent: the karni commands that replace boilerplate and the domain code you write yourself.
+description: "The same Karni project built from the terminal without an agent: the karni commands that replace boilerplate and the domain code you write yourself."
 ---
 
 # Building without an AI agent

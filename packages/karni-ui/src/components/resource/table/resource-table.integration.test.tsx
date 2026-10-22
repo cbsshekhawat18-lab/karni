@@ -52,8 +52,12 @@ function mountTargetUsage(): void {
   );
 }
 
-describe.skipIf(!implReady)("ResourceTable target usage (full stack)", () => {
+// Each step may wait up to 5s (the waitFor timeouts below); under a full,
+// parallel run the whole flow can outlast vitest's default 5s per test.
+describe.skipIf(!implReady)("ResourceTable target usage (full stack)", { timeout: 20_000 }, () => {
   beforeEach(() => {
+    // The table keeps its view in the URL: each test starts from a clean one.
+    window.history.replaceState(null, "", "/");
     server.use(...demoHandlers());
   });
 

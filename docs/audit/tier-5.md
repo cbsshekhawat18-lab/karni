@@ -1,3 +1,7 @@
+---
+description: "Launch audit tier 5: Karni's numbers measured on one machine (time to a running app, query counts, code per model)."
+---
+
 # Tier 5 — Measurement audit
 
 - Repo: `<REDACTED>`, branch `main`, commit `0873e51` (2026-10-18 22:34 +0530)

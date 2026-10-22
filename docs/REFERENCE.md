@@ -65,6 +65,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
+| `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 
 ### Permissions
 
@@ -90,7 +91,8 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
-| MCP server exposing `context`, `rules` and `check` as tools | `experimental` | Karni's own tests |
+| `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
+| MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
 ### Testing
 
@@ -209,6 +211,44 @@ Every setting with its effective value and source.
 karni config list
 ```
 
+### Frontend
+
+#### `karni ui`
+
+Fit Karni's components to the project's design system.
+
+```
+karni ui COMMAND [ARGS]...
+```
+
+##### `karni ui detect`
+
+Adopt the frontend's design system: map its theme onto Karni's `--karni-*` tokens.
+
+Detection order: shadcn/ui (`components.json`: Karni's tokens reference the project's CSS variables with `var()`, and `karni-primitives.tsx` registers its components as Karni's primitives); a Tailwind theme (`@theme` blocks, or the `tailwind.config` that Node evaluates in the project); a Material UI, Chakra UI or Mantine theme (literal values read from the source); else Karni's defaults, listed for editing.
+
+Writes one file the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import). The report lists every token mapped (from, to, value) and every value not mapped, with the reason. A generated file edited since is never overwritten without `--force`.
+
+Example:
+
+```sh
+karni ui detect --dry-run
+```
+
+```
+karni ui detect [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--output`, `-o` PATH |  | Where to write karni-theme.css (default: next to the main stylesheet). |
+| `--frontend` PATH |  | The frontend directory (default: the current directory if it has package.json, else ./frontend, else the Karni project's frontend/). |
+| `--source` CHOICE |  | Read this source instead of detecting the first one present: shadcn, tailwind, mui, chakra, mantine or defaults. |
+| `--primitives/--no-primitives` | on | For shadcn/ui, also write karni-primitives.tsx (the project's components as Karni's primitives). |
+| `--force` |  | Overwrite generated files even if they were edited. |
+| `--dry-run` |  | Print the report and the files; write nothing. |
+| `--json` |  | Print the report as JSON (for agents). |
+
 ### Agents and checks
 
 #### `karni context`
@@ -272,16 +312,17 @@ karni check [OPTIONS]
 
 #### `karni explain`
 
-Explain an error code (E104, C101, PAY004, K106): why and the fix
+Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
 
 ```
-karni explain [OPTIONS] CODE
+karni explain [OPTIONS] [CODE]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` (required) |  | An error code such as E104, W101, C101, PAY004 or K106. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106; - reads a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
+| `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
 #### `karni types`
 
@@ -300,7 +341,7 @@ karni types [OPTIONS]
 
 #### `karni mcp`
 
-Serve context, rules and check as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -309,6 +350,28 @@ karni mcp [OPTIONS]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `--project` PATH |  | Project root (default: found from the working directory). |
+
+### Debugging
+
+#### `karni queries`
+
+Run one endpoint in-process as a user: query count and time, repeated queries grouped by cause (field, relation, why the optimiser did not fetch it) and the fix — wraps `manage.py karni_queries`.
+
+```
+karni queries [OPTIONS] ENDPOINT
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ENDPOINT` (required) |  | A path (/api/events/?page=2), a resource (events, events/&lt;id&gt;) or a viewset (EventViewSet, EventViewSet.retrieve). |
+| `--as` TEXT |  | The user: email, username or primary key (default: anonymous). |
+| `--method` TEXT | `GET` | HTTP method. |
+| `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
+| `--json` |  | Machine-readable output. |
+| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--all` |  | List every statement, not only repeats. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ### Runners
 
@@ -548,6 +611,45 @@ karni manage [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | The manage.py command and its arguments, e.g. `showmigrations events`. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### Debugging
+
+#### `karni why`
+
+Explain an access decision: why a row, field or action is refused or missing
+
+```
+karni why [OPTIONS] TARGET [REQUEST_ID]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to explain: &lt;resource&gt;/&lt;id&gt; (a row), &lt;resource&gt;.&lt;field&gt; (a field), &lt;resource&gt; (its list), or a status followed by a request id (403 &lt;request-id&gt;). Resources are named as the API names them: events, events-event or events.Event. |
+| `REQUEST_ID` |  | The request id, after a status. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--action` TEXT |  | For a row: view (default), update, delete, or an @action name; create or list for a resource. |
+| `--method` TEXT |  | The HTTP method, for an @action that answers several. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni why-empty`
+
+Explain an empty list: which step removes the rows, and the fix
+
+```
+karni why-empty [OPTIONS] RESOURCE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `RESOURCE` (required) |  | The resource, named as the API names it. |
+| `--as` TEXT |  | The user: email, username, primary key, or anonymous. |
+| `--param` TEXT (repeatable) |  | A query parameter the request carries, key=value (repeatable). |
+| `--json` |  | Print the verdict as JSON (for agents). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -965,6 +1067,43 @@ karni make module [OPTIONS] NAME
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
 | `--dry-run` |  | Print the files and diff it would write; write nothing. |
 
+### Debugging
+
+#### `karni trace`
+
+Follow a captured request: its tasks, retries, email, webhooks, audit
+
+```
+karni trace [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A request id (the X-Request-ID response header), or `last`. |
+| `--json` |  | Print the story as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni replay`
+
+Re-run a captured request against the current code, as any user
+
+```
+karni replay [OPTIONS] REQUEST_ID
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `REQUEST_ID` (required) |  | A captured request id, or `last`. |
+| `--as` TEXT |  | Replay as this user: an email, a username or a primary key. |
+| `--anonymous` |  | Replay without a user. |
+| `--set` TEXT (repeatable) |  | Supply a redacted value: FIELD=VALUE (dotted body path, or query:NAME). Repeatable. |
+| `--drop-redacted` |  | Leave redacted values out instead of supplying them. |
+| `--commit` |  | Keep the writes; by default the replay is rolled back. |
+| `--json` |  | Print the result as JSON. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -987,12 +1126,12 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
-| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `describe` |
+| `Authenticated` | class | Any authenticated user; every row. | methods `allows`, `rows`, `facts`, `describe` |
 | `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions`; endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")` — a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])` — tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
-| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `describe` |
+| `Granted` | class | Whatever the roles say: `Can` for the viewset's own model and current action. | methods `bind`, `allows`, `rows`, `explain`, `describe` |
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included; every row. The explicit public form. | methods `allows`, `rows`, `describe` |
@@ -1159,6 +1298,16 @@ class Lead(BaseModel):
 | `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep; `None` (the default) keeps everything and schedules no pruning. |
 | `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
 
+### Request ids and development capture (karni.tracing / karni.debug)
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn on only when the proxy in front overwrites the header on every request; ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
+| `KARNI_REQUEST_ID_EMAILS` | — | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
+| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off; with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
+| `KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
+| `KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
+
 ### Events & schedules (karni.events / karni.schedule)
 
 | Setting | Env | Default | What it controls |
@@ -1214,6 +1363,12 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Component | Required props | What it renders | Source |
 |---|---|---|---|
+| `ErrorState` | `error: unknown` | What failed and what to do, in plain words (see describeError). | [ErrorState.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/ErrorState.tsx) |
+| `PermissionDenied` | — | Says, in plain words, which action the user's role does not allow — for screens that know before asking the server (a role check) as well as after a 403. | [ErrorState.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/ErrorState.tsx) |
+| `PendingButton` | — | A button for work that takes time. | [PendingButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/PendingButton.tsx) |
+| `ThemeProvider` | — | Applies the user's theme choice and keeps it; render it once around the app. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
+| `ThemeToggle` | — | One button that cycles Light → Dark → System. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
+| `KarniPrimitivesProvider` | `value: Partial<KarniPrimitives>` | Registers the project's primitives for everything inside it. | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `Button` | — | Themed button. | [button.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/button.tsx) |
 | `Input` | — | Themed text input; every native `<input>` prop passes through. | [input.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/input.tsx) |
 | `Textarea` | — | Themed multi-line text input; every native `<textarea>` prop passes through. | [textarea.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/textarea.tsx) |
@@ -1248,16 +1403,19 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `ResourceDetail` | `resource: string`, `id: string \| number` | Schema-driven read view of one row: every readable field, labelled and formatted. | [ResourceDetail.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/detail/ResourceDetail.tsx) |
 | `ResourceSelect` | `resource: string`, `value: string \| number \| readonly (string \| number)[] \| null`, `onChange: (value: string \| number \| (string \| number)[] \| null) => void` | Searchable picker for a related row, querying the related resource as you type. | [ResourceSelect.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/select/ResourceSelect.tsx) |
 | `ChangeHistory` | `resource: string`, `id: string \| number` | The field-level change history of one row: when, by whom, what changed from what to what. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
-| `ResourceImport` | `resource: string` | Import a CSV or XLSX file into a resource: upload, map columns to fields, preview (the mandatory dry run — N created / updated / skipped with every row's errors), then commit. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
+| `ResourceImport` | `resource: string` | Import a CSV or XLSX file into a resource: upload, map columns to fields, preview (the mandatory dry run — N created / updated / skipped with every row's errors), confirm, then commit. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
+| `EmptyValue` | — | A field that has no value (null, "", an empty list), the same in every Karni component: ResourceTable's cells, ResourceDetail's rows and ChangeHistory's before/after values. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `KarniProvider` | `client: KarniClient` | Provides the Karni client and a TanStack QueryClient to everything inside it; render it once at the app root. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `AuthProvider` | — | Holds the signed-in user and attaches credentials (JWT or session) to every request; render it inside `KarniProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
-| `AuthGuard` | — | Renders its children only for a signed-in user, optionally with one of the given roles; otherwise its `fallback`. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
+| `AuthGuard` | — | Renders its children only for a signed-in user, optionally with one of the given roles; otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` | — | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an &lt;h1&gt; title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `Layout` | — | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` | — | The Karni mark, inline SVG — no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
 | `Modal` | `title: React.ReactNode` | Themed Radix Dialog. | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
 | `ModalClose` | — | Escape hatch for footer buttons: any element wrapped in &lt;ModalClose asChild&gt; closes the modal on click (re-exported Radix Dialog.Close). | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
+| `ModalTitle` | — | The modal's title: names the dialog (aria-labelledby). | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
+| `ModalDescription` | — | The modal's description: describes the dialog (aria-describedby). | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
 | `Toaster` | — | Renders the toasts pushed through useToast(). | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
 | `EmptyState` | `title: React.ReactNode` | Centered placeholder for empty collections: icon, title, description and an action slot. | [empty-state.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/empty-state/empty-state.tsx) |
 | `FileUpload` | — | Drag-and-drop or click-to-browse file picker that shows the current file and the pending ones. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
@@ -1268,6 +1426,11 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 
 | Hook | Parameters | What it does | Source |
 |---|---|---|---|
+| `useDelayedFlag` | `active: boolean`, `delayMs?: number` | True once `active` has stayed true for `delayMs` (default 500ms), false as soon as it turns false. | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `useOnlineStatus` | — | Whether the browser reports a network connection; re-renders when it changes. | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `useTheme` | — | The theme choice and a setter; throws a descriptive error outside ThemeProvider. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
+| `useKarniPrimitives` | — | The registered primitives in scope (the roles the project replaced). | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
+| `useUnsavedChangesGuard` | `options?: UseUnsavedChangesGuardOptions` | Tracks unsaved changes, warns on reload or close, and gives a router blocker what it needs. | [useUnsavedChangesGuard.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useUnsavedChangesGuard.ts) |
 | `useChangeHistory` | `resource: string`, `id: string \| number`, `params?: ChangeHistoryParams \| undefined`, `options?: Omit<UseQueryOptions<ChangeHistoryPage, Error, ChangeHistoryPage, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `useImportDescribe` | `resource: string`, `options?: Omit<UseQueryOptions<ImportDescription, Error, ImportDescription, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches what a resource's import accepts: its columns, required fields and allowed values. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `useImportJob` | `resource: string`, `jobId: string \| undefined`, `options?: UseImportJobOptions \| undefined` | Fetches one import job and polls it while it runs. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
@@ -1289,23 +1452,47 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `registerComponentRole` | function | Claims a UI role (such as `data-table`) for a component, so a second component with the same role fails the build. | [roles.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/roles.ts) |
 | `getRoleRegistry` | function | Snapshot of the current registry ({ role: component }) for tooling. | [roles.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/roles.ts) |
 | `variants` | function | Builds a typed class-name function from variant definitions, the way every themed component declares its looks. | [variants.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/lib/variants.ts) |
+| `describeError` | function | Classifies `error` and words it for the person using the app. | [describe-error.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/describe-error.ts) |
+| `errorSummary` | function | `describeError(...).title`, capitalised, for one-line contexts (toasts, inline text). | [describe-error.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/describe-error.ts) |
+| `SLOW_AFTER_MS` | constant | How long a request may run before Karni shows progress (ms). | [hooks.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/states/hooks.ts) |
+| `KARNI_THEME_SCRIPT` | constant | Inline script for index.html's &lt;head&gt;: applies the stored (or system) theme before the first paint. | [script.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/script.ts) |
+| `THEME_STORAGE_KEY` | constant | The localStorage key ThemeProvider keeps the user's choice under. | [script.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/script.ts) |
 | `buttonVariants` | function | Exported for composition (escape hatch): render any element as a button lookalike with `className={buttonVariants({ variant: "outline" })}`. | [button.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/button.tsx) |
 | `KARNI_SELECT_EMPTY` | constant | The value that stands for "nothing selected" inside Radix Select, which reserves the empty string. | [select.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/primitives/select.tsx) |
+| `createHistoryStateStore` | function | The default store: the browser's URL through `window.history` (`pushState` / `replaceState`, `popstate` for Back and Forward). | [url-state.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/table/url-state.ts) |
+| `defaultResourceTableSlots` | constant |  | [slots.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/table/slots.ts) |
+| `defaultResourceFormSlots` | constant | ResourceForm's own slot components, for wrapping rather than rewriting. | [ResourceForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/form/ResourceForm.tsx) |
+| `UNSAVED_CHANGES_MESSAGE` | constant | What the leave warning says. | [useUnsavedChangesGuard.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useUnsavedChangesGuard.ts) |
+| `defaultResourceDetailSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceDetail.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/detail/ResourceDetail.tsx) |
+| `defaultResourceSelectSlots` | constant | ResourceSelect's own slot components, for wrapping rather than rewriting. | [select-states.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/select/select-states.tsx) |
+| `defaultChangeHistorySlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
 | `changeHistoryKey` | function | The query key of one row's change history. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
+| `defaultResourceImportSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
 | `downloadResourceExport` | function | Fetches `GET /<resource>/export/?format=…` with the list's query and saves it through a temporary object URL. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `downloadImportTemplate` | function | Fetches `GET /<resource>/import/template/?format=…` and saves it (the headers, an example, allowed values). | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `importDescribeKey` | function | The query key of a resource's import description. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `importJobKey` | function | The query key of one import job. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `isImportInFlight` | function | True while an import job is previewing or committing (the states worth polling). | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `displayLabel` | function | Returns the first non-empty string among the `name` → `title` → `label` → `email` → `str` keys, falling back to `String(id)` and finally "". | [displayLabel.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/displayLabel.ts) |
+| `EMPTY_VALUE_LABEL` | constant | What a screen reader says for a field that has no value. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `AUDIT_FIELDS` | constant | The audit field names (`created_at`, `created_by`, …) that tables hide and detail views group last. | [audit-fields.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/audit-fields.ts) |
 | `karniKeys` | constant | TanStack Query keys for the schema, a resource, its lists and its items; invalidate `karniKeys.resource(name)` to refresh every view of a resource. | [keys.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/keys.ts) |
 | `createKarniClient` | function | Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `KarniApiError` | class | Thrown for non-2xx responses; `data` carries the parsed DRF error body. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `zodFor` | function | Builds a Zod validator for a resource's create or update payload from its schema. | [zod.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/zod.ts) |
+| `defaultAuthGuardSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
+| `defaultLoginFormSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `createLocalStorageTokenStorage` | function | Keeps the refresh token in localStorage; the default storage. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
 | `createMemoryTokenStorage` | function | In-memory adapter: most secure (nothing persisted anywhere), but a page reload logs the user out. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
+| `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
+| `defaultLayoutSlots` | constant | The default pieces of the shell; spread them to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
+| `defaultModalSlots` | constant | The default pieces of the dialog, for wrapping one. | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
 | `toastVariants` | function | Per-variant toast styling — colors resolve through --karni-* tokens only (success leans on primary, error on destructive, info on muted). | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
+| `defaultToasterSlots` | constant | The default pieces of a toast, for wrapping one. | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
+| `defaultEmptyStateSlots` | constant | The default pieces of the placeholder, for wrapping one. | [empty-state.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/empty-state/empty-state.tsx) |
+| `defaultFileUploadSlots` | constant | The default pieces of the picker, for wrapping one. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
+| `defaultStatSlots` | constant | The default pieces of the tile, for wrapping one. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
+| `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 
 ## Modules
 
@@ -1313,8 +1500,8 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 
 | Module | Status | Install | UI package | Scope |
 |---|---|---|---|---|
-| [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API, notifications and a full audit trail. |
-| [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | 'Log in as user' for support, done safely — an explicit permission, no privilege escalation, a banner, a session record, both identities in the audit trail, blocked actions and a time limit. |
+| [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
+| [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | `karni-tenancy` | planned | — | — | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
@@ -1421,6 +1608,24 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E901`](errors.md#e901) | exception | karni why: no API resource by that name |
+| [`E902`](errors.md#e902) | exception | karni why: no such user |
+| [`E903`](errors.md#e903) | exception | karni why: no request record for that id |
+| [`E904`](errors.md#e904) | exception | karni why: the request record cannot be read |
+| [`E905`](errors.md#e905) | exception | karni why: the resource has no such field |
+| [`E906`](errors.md#e906) | exception | karni why: the resource routes no such action or method |
+| [`E907`](errors.md#e907) | exception | karni why: not a Karni BaseViewSet route |
+| [`E908`](errors.md#e908) | exception | karni why: the question is incomplete |
+| [`E920`](errors.md#e920) | exception | karni replay needs DEBUG on |
+| [`W920`](errors.md#w920) | warning | RequestIdMiddleware runs after django-structlog's RequestMiddleware |
+| [`E921`](errors.md#e921) | exception | Nothing was captured for this request id |
+| [`E922`](errors.md#e922) | exception | No failure snapshot with this id |
+| [`E923`](errors.md#e923) | exception | A redacted value cannot be replayed |
+| [`E924`](errors.md#e924) | exception | The user to replay as cannot be found |
+| [`E940`](errors.md#e940) | exception | karni queries cannot find the endpoint |
+| [`E941`](errors.md#e941) | exception | karni queries cannot find the user (--as) |
+| [`E942`](errors.md#e942) | exception | karni queries cannot build the request |
+| [`E943`](errors.md#e943) | exception | The view raised while karni queries requested it |
 | [`E960`](errors.md#e960) | check | A FloatField holds money |
 | [`E961`](errors.md#e961) | exception | A MoneyField's currency is not declared |
 | [`E962`](errors.md#e962) | exception | A float reached a MoneyField |
@@ -1508,6 +1713,19 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C301`](errors.md#c301) | cli | No frontend found |
+| [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
+| [`C303`](errors.md#c303) | cli | A theme source cannot be read |
+| [`C304`](errors.md#c304) | cli | The frontend has no theme of the --source kind |
+| [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
+| [`C311`](errors.md#c311) | cli | karni why: --as is missing |
+| [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
+| [`C320`](errors.md#c320) | cli | karni explain needs a code or --failure, not both |
+| [`C321`](errors.md#c321) | cli | A --set value is not FIELD=VALUE |
+| [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
+| [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
+| [`C340`](errors.md#c340) | cli | Nothing to explain |
+| [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 | [`C360`](errors.md#c360) | cli | A typed-field argument in the model DSL is invalid |
 | [`C361`](errors.md#c361) | cli | The project's karni has no karni schema |
 | [`C370`](errors.md#c370) | cli | A state field spec is invalid |
@@ -1526,6 +1744,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K006`](errors.md#k006) | rule | Procedures: karni rules --procedure NAME. |
 | [`K007`](errors.md#k007) | rule | Commands: karni --help. |
 | [`K009`](errors.md#k009) | rule | Scaffold with karni make. |
+| [`K013`](errors.md#k013) | rule | Traceback: karni explain - first. |
+| [`K014`](errors.md#k014) | rule | N+1: karni queries URL --as USER first. |
+| [`K015`](errors.md#k015) | rule | Row/field/action missing or refused: karni why first. |
+| [`K030`](errors.md#k030) | rule | A failure: karni explain --failure first. |
+| [`K031`](errors.md#k031) | rule | Follow a request: karni trace ID. |
+| [`K032`](errors.md#k032) | rule | Confirm a fix: karni replay ID --as USER. |
 | [`K101`](errors.md#k101) | rule | Models inherit BaseModel or compose its mixins. |
 | [`K102`](errors.md#k102) | rule | Viewsets inherit BaseViewSet. |
 | [`K103`](errors.md#k103) | rule | No ModelAdmin; use AdminMeta. |
@@ -1546,6 +1770,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K203`](errors.md#k203) | rule | Import only the @karni/ui barrel. |
 | [`K204`](errors.md#k204) | rule | Data only via Karni hooks; no fetch/axios. |
 | [`K205`](errors.md#k205) | rule | No duplicated frontend code. |
+| [`K206`](errors.md#k206) | rule | Style with token classes; no literal values. |
 | [`K301`](errors.md#k301) | rule | Domain code only; extend Karni. |
 | [`K302`](errors.md#k302) | rule | Never write auth/users, admin, serializers, routers, settings, infra, tables, forms. |
 | [`K303`](errors.md#k303) | rule | Extend via props/methods; never fork. |
@@ -1563,6 +1788,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`karni/max-page-lines`](errors.md#karni-max-page-lines) | lint | A page file is longer than its cap (50 lines by default) |
 | [`karni/no-deep-imports`](errors.md#karni-no-deep-imports) | lint | An import reaches into @karni/ui internals |
 | [`karni/no-direct-http`](errors.md#karni-no-direct-http) | lint | fetch / axios / XMLHttpRequest / WebSocket outside the api client |
+| [`karni/no-style-literals`](errors.md#karni-no-style-literals) | lint | A class or inline style holds a literal value instead of a design token |
 
 ## Make targets
 

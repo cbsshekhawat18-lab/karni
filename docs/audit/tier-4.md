@@ -1,3 +1,7 @@
+---
+description: "Launch audit tier 4: the quiet promises (upgrades, deprecations, error messages, generated code) checked in practice."
+---
+
 # Tier 4 audit — the quiet promises
 
 *Repo `<REDACTED>`, branch `main`, commit `0873e51`. Audited 2026-10-19 against a scratch project made with `karni new audit4` (local PostgreSQL 17 `karni_audit_t4`, Redis db 8, no Docker, the repo's `.venv`). Report only: no tracked file was changed; everything below is observed output, kept under `docs/audit/evidence/tier-4/`. Verdicts: PASS / PARTIAL / FAIL / UNVERIFIED.*

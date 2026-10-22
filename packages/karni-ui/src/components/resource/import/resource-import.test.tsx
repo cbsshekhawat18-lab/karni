@@ -1,5 +1,11 @@
-import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  QueryClient,
+  QueryClientProvider,
+  type UseMutationResult,
+  type UseQueryResult,
+} from "@tanstack/react-query";
+import { fireEvent, render as renderUi, screen, within } from "@testing-library/react";
+import * as React from "react";
 import { describe, expect, it, vi, type Mock } from "vitest";
 import {
   useImportActions,
@@ -26,6 +32,11 @@ vi.mock("../../../hooks/useResourceImport", async () => {
 vi.mock("../../../schema/provider", () => ({
   useKarniClient: () => ({ baseUrl: "", schemaUrl: "/api/schema/" }),
 }));
+
+/** The data hooks are mocked; the query client only serves the retry policy. */
+function render(ui: React.ReactElement) {
+  return renderUi(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+}
 
 const mockDescribe = useImportDescribe as unknown as Mock;
 const mockJob = useImportJob as unknown as Mock;
@@ -92,11 +103,13 @@ function query<T>(partial: Partial<UseQueryResult<T>>): UseQueryResult<T> {
 }
 
 function mutation<TData, TVars>(): UseMutationResult<TData, unknown, TVars> & { mutate: Mock } {
-  return { mutate: vi.fn(), isPending: false, error: null } as unknown as UseMutationResult<
-    TData,
-    unknown,
-    TVars
-  > & { mutate: Mock };
+  return {
+    mutate: vi.fn(),
+    reset: vi.fn(),
+    isPending: false,
+    isPaused: false,
+    error: null,
+  } as unknown as UseMutationResult<TData, unknown, TVars> & { mutate: Mock };
 }
 
 function actions(): ImportActions & {
@@ -156,8 +169,15 @@ describe("ResourceImport", () => {
     const problems = screen.getByRole("table", { name: "Rows with errors" });
     expect(within(problems).getByText("no venue with name 'Nowhere'")).toBeInTheDocument();
     expect(within(problems).getByText("3")).toBeInTheDocument();
+    // Commit asks first, with the counts the commit will apply.
     fireEvent.click(screen.getByRole("button", { name: "Commit" }));
-    expect(api.commit.mutate).toHaveBeenCalledWith("job-1");
+    expect(api.commit.mutate).not.toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "Commit this import?" });
+    expect(within(dialog).getByTestId("import-confirm-counts")).toHaveTextContent(
+      "Created1Updated0Unchanged0Failed1",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Commit import" }));
+    expect(api.commit.mutate).toHaveBeenCalledWith("job-1", expect.anything());
   });
 
   it("shows progress while the backend works and calls onDone at the end", () => {
@@ -167,7 +187,10 @@ describe("ResourceImport", () => {
     );
     mockActions.mockReturnValue(actions());
     const { unmount } = render(<ResourceImport resource="events" />);
-    expect(screen.getByRole("status")).toHaveTextContent("Committing… 250 / 1000 rows");
+    expect(screen.getByText("Committing… 250 / 1,000 rows")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "250 of 1000 rows");
+    // Announced by the quarter, not on every poll.
+    expect(screen.getByRole("status")).toHaveTextContent("Committing 1,000 rows: 25% done.");
     unmount();
     const onDone = vi.fn();
     mockJob.mockReturnValue(

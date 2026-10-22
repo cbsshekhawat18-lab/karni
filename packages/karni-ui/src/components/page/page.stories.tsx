@@ -51,3 +51,21 @@ export const CustomHeader: Story = {
     children: <p className="text-sm text-muted-foreground">Content below the custom header.</p>,
   },
 };
+
+/** The Title slot: a page inside a dialog or a tab panel takes an <h2>. */
+export const TitleSlot: Story = {
+  args: {
+    title: "Attendees",
+    description: "A section of the event page.",
+    slots: {
+      Title: ({ children }) => (
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">{children}</h2>
+      ),
+    },
+    children: (
+      <div className="rounded-lg border border-border p-6 text-sm text-muted-foreground">
+        The Header, Title, Description and Actions slots replace their pieces.
+      </div>
+    ),
+  },
+};

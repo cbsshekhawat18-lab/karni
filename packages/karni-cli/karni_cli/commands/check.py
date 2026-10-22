@@ -99,6 +99,7 @@ def check(
     if backend or dup or lint:
         sys.stderr.write("karni check: FAILED\n")
     else:
+        typer.echo("karni check: ok")
         # Only after a clean run (failures deserve the attention), never in CI,
         # and on stderr so stdout stays exactly the checks' output.
         tip = tips.history_tip(project, quiet=quiet)

@@ -17,6 +17,11 @@ subprocess — the CLI itself never imports Django.
 - `karni types` — dump the OpenAPI schema (`manage.py spectacular`), generate
   `types.ts` (openapi-typescript, project-pinned binary preferred, else
   `npx openapi-typescript@^7`) and typed hooks (`hooks.ts`) over @karni/ui.
+- `karni ui detect` — map the frontend's design system (shadcn/ui, a Tailwind
+  theme, Material UI, Chakra UI or Mantine) onto @karni/ui's `--karni-*`
+  tokens in `karni-theme.css`, plus `karni-primitives.tsx` for shadcn/ui;
+  `--dry-run` previews, `--json` reports for agents, edited files are kept
+  unless `--force`.
 - `karni context` — compact machine-readable inventory (< 200 tokens for a
   typical project): APPS (from the `# karni:apps` block) and PAGES (from
   `frontend/src/pages/`) read statically, MODELS/VIEWSETS from `manage.py karni_context`,

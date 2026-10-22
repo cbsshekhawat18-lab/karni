@@ -1,7 +1,7 @@
 {
   "name": "@karni/payments-ui",
   "version": "0.3.1",
-  "description": "Payments components for Karni backends (the Django + React framework): CheckoutButton and PaymentStatus composing @karni/ui, for Stripe and Razorpay hosted checkout.",
+  "description": "React components for the Karni payments module: CheckoutButton and PaymentStatus. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain: the API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot; the build fails when an agent hand-writes what Karni ships.",
   "keywords": [
     "react",
     "django",

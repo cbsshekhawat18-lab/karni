@@ -17,9 +17,10 @@ from .conftest import REPO_ROOT
 FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 #: ~4 characters per token is the usual English/code approximation; the
 #: tiktoken check below is stricter when the package is available.
-# Measured 439 cl100k tokens with 36 rules (K114 typed fields; K115, K116 lifecycle and
-# capacity) — the README quotes the figure.
-TOKEN_BUDGET = 450
+# Measured 535 cl100k tokens with 43 rules (K013-K015, K030-K032 debugging; K114 typed
+# fields; K115, K116 lifecycle and capacity; K206 token classes) — the README quotes the
+# figure.
+TOKEN_BUDGET = 545
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:

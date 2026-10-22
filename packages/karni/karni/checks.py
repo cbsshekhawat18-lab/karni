@@ -364,6 +364,37 @@ def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.
     return []
 
 
+_REQUEST_ID_MIDDLEWARE = "karni.tracing.RequestIdMiddleware"
+_STRUCTLOG_MIDDLEWARE = "django_structlog.middlewares.RequestMiddleware"
+
+
+@checks.register()
+def check_request_id_middleware(
+    app_configs: Any = None, **kwargs: Any
+) -> list[checks.CheckMessage]:
+    """karni.W920: ``RequestIdMiddleware`` must come before django-structlog's middleware.
+
+    Removing it altogether is the documented opt-out and is not flagged.
+    """
+    from django.conf import settings
+
+    middleware = [str(entry) for entry in getattr(settings, "MIDDLEWARE", None) or []]
+    if _REQUEST_ID_MIDDLEWARE not in middleware or _STRUCTLOG_MIDDLEWARE not in middleware:
+        return []
+    if middleware.index(_REQUEST_ID_MIDDLEWARE) < middleware.index(_STRUCTLOG_MIDDLEWARE):
+        return []
+    return [
+        check_warning(
+            "W920",
+            f"{_REQUEST_ID_MIDDLEWARE} comes after {_STRUCTLOG_MIDDLEWARE} in MIDDLEWARE: "
+            "the request's first log lines carry a different (possibly client-chosen) id "
+            "than its response, tasks and change history.",
+            hint=f"Move {_REQUEST_ID_MIDDLEWARE} above {_STRUCTLOG_MIDDLEWARE}.",
+            obj="MIDDLEWARE",
+        )
+    ]
+
+
 @checks.register()
 def check_schedules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E404 / E405 / E406: every ``<app>/schedules.py`` declaration, at boot.

@@ -117,13 +117,16 @@ describe("package self-registrations", () => {
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
+      "error-state": "ErrorState",
       "file-upload": "FileUpload",
       "layout-shell": "Layout",
       "login-form": "LoginForm",
       modal: "Modal",
       "page-shell": "Page",
+      "permission-denied": "PermissionDenied",
       "resource-form": "ResourceForm",
       stat: "Stat",
+      "theme-toggle": "ThemeToggle",
       toast: "Toaster",
     });
   });

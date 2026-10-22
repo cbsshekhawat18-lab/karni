@@ -55,7 +55,12 @@ __all__ = [
     "RecordedQuery",
     "budget_mode",
     "budget_limits",
+    "field_label",
+    "is_project_frame",
     "record_queries",
+    "rendering_field",
+    "short_path",
+    "short_sql",
 ]
 
 logger = logging.getLogger("karni.performance")
@@ -159,11 +164,14 @@ def _framework_roots() -> tuple[str, ...]:
 
     import karni
 
+    stdlib = sysconfig.get_paths()["stdlib"]
     roots = {
         str(Path(django.__file__).parent),
         str(Path(rest_framework.__file__).parent),
         str(Path(karni.__file__).parent),
-        sysconfig.get_paths()["stdlib"],
+        stdlib,
+        # Homebrew and pyenv put a symlink on the stdlib path; frames name the real file.
+        str(Path(stdlib).resolve()),
     }
     roots.update(path for path in sys.path if "site-packages" in path or "dist-packages" in path)
     return tuple(sorted(roots))
@@ -172,7 +180,8 @@ def _framework_roots() -> tuple[str, ...]:
 _ROOTS: tuple[str, ...] | None = None
 
 
-def _is_project_frame(frame: FrameType) -> bool:
+def is_project_frame(frame: FrameType) -> bool:
+    """True for a frame of project code (not Django, DRF, Karni, the stdlib or site-packages)."""
     global _ROOTS
     if _ROOTS is None:
         _ROOTS = _framework_roots()
@@ -180,7 +189,8 @@ def _is_project_frame(frame: FrameType) -> bool:
     return not filename.startswith("<") and not filename.startswith(_ROOTS)
 
 
-def _short_path(filename: str) -> str:
+def short_path(filename: str) -> str:
+    """``filename`` relative to ``BASE_DIR`` (else the working directory) when inside it."""
     base = getattr(settings, "BASE_DIR", None) or Path.cwd()
     try:
         return str(Path(filename).resolve().relative_to(Path(base).resolve()))
@@ -188,20 +198,33 @@ def _short_path(filename: str) -> str:
         return filename
 
 
-def _field_label(frame: FrameType) -> str:
-    """``Parent.field`` when ``frame`` is a DRF field rendering a value, else ``""``."""
+def rendering_field(frame: FrameType) -> Any | None:
+    """The DRF field ``frame`` is rendering a value for (a named field of a serializer), else None.
+
+    Matches ``to_representation`` / ``get_attribute`` frames of a bound
+    field; top-level and list-child serializers have no name and are skipped.
+    """
     if frame.f_code.co_name not in {"to_representation", "get_attribute"}:
-        return ""
+        return None
     from rest_framework.fields import Field
 
     field = frame.f_locals.get("self")
     if not isinstance(field, Field):
-        return ""
-    name = getattr(field, "field_name", None)
-    parent = getattr(field, "parent", None)
-    if not name or parent is None:
-        return ""  # a top-level or list-child serializer: keep walking outward
-    return f"{type(parent).__name__}.{name}"
+        return None
+    if not getattr(field, "field_name", None) or getattr(field, "parent", None) is None:
+        return None
+    return field
+
+
+def field_label(field: Any) -> str:
+    """``Parent.field`` for a bound DRF field (``EventSerializer.tags``)."""
+    return f"{type(field.parent).__name__}.{field.field_name}"
+
+
+def _field_label(frame: FrameType) -> str:
+    """``Parent.field`` when ``frame`` is a DRF field rendering a value, else ``""``."""
+    field = rendering_field(frame)
+    return field_label(field) if field is not None else ""
 
 
 def query_origin() -> str:
@@ -218,9 +241,9 @@ def query_origin() -> str:
         label = _field_label(frame)
         if label:
             return f"{label} ({inner_project})" if inner_project else label
-        if not inner_project and _is_project_frame(frame):
+        if not inner_project and is_project_frame(frame):
             code = frame.f_code
-            inner_project = f"{_short_path(code.co_filename)}:{frame.f_lineno} in {code.co_name}"
+            inner_project = f"{short_path(code.co_filename)}:{frame.f_lineno} in {code.co_name}"
         frame = frame.f_back
     return inner_project
 
@@ -228,7 +251,7 @@ def query_origin() -> str:
 # reporting
 
 
-def _short_sql(sql: str, width: int = 140) -> str:
+def short_sql(sql: str, width: int = 140) -> str:
     text = " ".join(sql.split())
     text = _SELECT_LIST.sub(lambda m: "SELECT … FROM ", text, count=1)
     return text if len(text) <= width else text[: width - 1] + "…"
@@ -296,7 +319,7 @@ class QueryReport:
         lines = [self.summary()]
         duplicates = self.duplicates()
         for group in duplicates[:limit]:
-            lines.append(f"  {group.count}× {_short_sql(group.sql)}")
+            lines.append(f"  {group.count}× {short_sql(group.sql)}")
             if group.origin:
                 lines.append(f"      ← {group.origin}")
         if len(duplicates) > limit:

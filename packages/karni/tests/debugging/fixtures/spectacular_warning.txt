@@ -1,0 +1,15 @@
+/home/dev/eventhub/events/serializers.py:16: Warning [EventViewSet > EventSerializer]: unable to resolve type hint for function "get_organizer_email". Consider using a type hint or @extend_schema_field. Defaulting to string.
+Warning: enum naming encountered a non-optimally resolvable collision for fields named "status". The same name has been used for multiple choice sets in multiple components. The collision was resolved with "Status469Enum". add an entry to ENUM_NAME_OVERRIDES to fix the naming.
+Warning: operationId "auth_permissions_effective_retrieve" has collisions [('/api/auth/permissions/effective/', 'get'), ('/api/auth/permissions/effective/{user_id}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "bookings_import_retrieve" has collisions [('/api/bookings/import/', 'get'), ('/api/bookings/import/{job}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "events_import_retrieve" has collisions [('/api/events/import/', 'get'), ('/api/events/import/{job}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "payments_import_retrieve" has collisions [('/api/payments/import/', 'get'), ('/api/payments/import/{job}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "refunds_import_retrieve" has collisions [('/api/refunds/import/', 'get'), ('/api/refunds/import/{job}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "ticket_tiers_import_retrieve" has collisions [('/api/ticket-tiers/import/', 'get'), ('/api/ticket-tiers/import/{job}/', 'get')]. resolving with numeral suffixes.
+Warning: operationId "venues_import_retrieve" has collisions [('/api/venues/import/', 'get'), ('/api/venues/import/{job}/', 'get')]. resolving with numeral suffixes.
+
+Schema generation summary:
+Warnings: 11 (9 unique)
+Errors:   0 (0 unique)
+
+SchemaGenerationError: Failing as requested due to warnings
