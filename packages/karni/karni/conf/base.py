@@ -236,6 +236,8 @@ BASE: dict[str, Any] = {
     "TIME_ZONE": "UTC",
     "USE_TZ": True,
     "LANGUAGE_CODE": "en-us",
+    # Empty, so a project extends it: SILENCED_SYSTEM_CHECKS += ["karni.W967"].
+    "SILENCED_SYSTEM_CHECKS": [],
     "AUTH_PASSWORD_VALIDATORS": [
         {
             "NAME": ("django.contrib.auth.password_validation.UserAttributeSimilarityValidator"),

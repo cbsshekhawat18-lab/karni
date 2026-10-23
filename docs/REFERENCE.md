@@ -389,7 +389,7 @@ karni serve [OPTIONS]
 | --- | --- | --- |
 | `--local` |  | Run manage.py runserver through the project .venv instead. |
 | `--host` TEXT |  | --local only. Default 127.0.0.1. |
-| `--port` INTEGER |  | --local only. Default 8000. |
+| `--port` INTEGER |  | --local only. Default 8000. Another port prints the KARNI_API_PROXY line that points the frontend's dev server at it. |
 | `--build` |  | compose only: rebuild images first. |
 | `--detach`, `-d` |  | compose only: run in background. |
 
@@ -1137,7 +1137,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
@@ -1145,6 +1145,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included, on every row. The explicit public form. | methods `allows`, `rows`, `describe` |
+| `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str) -> None` |
 | `Uncached` | class | `cache = Uncached(reason="...")`: never cache this viewset's responses. | `Uncached(*, reason: str) -> None` |
 | `Unpaginated` | class | `pagination = Unpaginated(max_rows=N, reason="...")`: a viewset that returns lists. | `Unpaginated(*, max_rows: int, reason: str) -> None` |
 | `Unscoped` | class | `access = Unscoped(reason="...")`: turn Karni's access layer off for one viewset. | `Unscoped(*, reason: str) -> None` |
@@ -1562,6 +1563,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E129`](errors.md#e129) | test | List or retrieve queries grow with the number of rows (N+1) |
 | [`E130`](errors.md#e130) | test | An opt-out marker has no reason |
 | [`E131`](errors.md#e131) | check | search_fields names a write-only field |
+| [`E132`](errors.md#e132) | exception | Throttle(...) is invalid |
 | [`E201`](errors.md#e201) | exception | KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend |
 | [`E202`](errors.md#e202) | exception | No KARNI_ACCOUNTS_LINKS entry for a token purpose |
 | [`E203`](errors.md#e203) | exception | create_user() or create_superuser() was called with invalid arguments |

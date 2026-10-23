@@ -312,7 +312,7 @@ karni serve [OPTIONS]
 | --- | --- | --- |
 | `--local` |  | Run manage.py runserver through the project .venv instead. |
 | `--host` TEXT |  | --local only. Default 127.0.0.1. |
-| `--port` INTEGER |  | --local only. Default 8000. |
+| `--port` INTEGER |  | --local only. Default 8000. Another port prints the KARNI_API_PROXY line that points the frontend's dev server at it. |
 | `--build` |  | compose only: rebuild images first. |
 | `--detach`, `-d` |  | compose only: run in background. |
 

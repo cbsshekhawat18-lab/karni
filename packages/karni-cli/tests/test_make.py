@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -227,6 +228,45 @@ def test_model_force_replaces_only_that_class(project: Path) -> None:
     models = (project / "events" / "models.py").read_text()
     assert models.count("class Event(BaseModel):") == 1
     assert "class Venue(BaseModel):" in models and "venue = " not in models
+
+
+@pytest.mark.parametrize(
+    ("has_pillow", "expected"),
+    [(True, None), (False, "has no Pillow"), (None, "so the project needs Pillow")],
+)
+def test_image_field_notes_pillow_only_when_the_project_lacks_it(
+    project: Path, monkeypatch: pytest.MonkeyPatch, has_pillow: bool | None, expected: str | None
+) -> None:
+    asked: list[tuple[Path, str]] = []
+
+    def probe(root: Path, module: str) -> bool | None:
+        asked.append((root, module))
+        return has_pillow
+
+    monkeypatch.setattr(project_mod, "project_has_module", probe)
+    ok("make", "app", "events")
+    result = ok("make", "model", "Event", "title:str", "photo:image?", "logo:image?")
+    assert asked == [(project.resolve(), "PIL")]  # the project's interpreter, asked once
+    if expected is None:
+        assert "Pillow" not in result.output
+    else:
+        assert expected in result.output
+        assert "Event.photo, Event.logo are ImageFields" in result.output
+        assert "karni[images]" in result.output
+    ok("make", "model", "Venue", "name:str")
+    assert len(asked) == 1  # no image field, no probe
+
+
+def test_project_has_module_asks_the_project_interpreter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    python = tmp_path / ".venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.symlink_to(sys.executable)
+    assert project_mod.project_has_module(tmp_path, "json") is True
+    assert project_mod.project_has_module(tmp_path, "karni_no_such_module") is False
+    monkeypatch.setattr(project_mod, "venv_python", lambda root: None)
+    assert project_mod.project_has_module(tmp_path, "json") is None
 
 
 def test_serializer_needs_a_reason_and_wires_the_viewset(project: Path) -> None:

@@ -154,8 +154,10 @@ _PROSE_GLOBS = (
     "templates/**/*.md",
     "examples/*/README.md",
 )
+# ``github.com/<owner>/karni`` and the ownerless ``github.com/karni`` (a
+# placeholder that is not Karni's repository) both count.
 _KARNI_URL = re.compile(
-    r"https://(?:[\w.-]+\.github\.io/karni/?|github\.com/[\w.-]+/karni(?:[/#.)]|$))"
+    r"https://(?:[\w.-]+\.github\.io/karni/?|github\.com/(?:[\w.-]+/)?karni(?:[/#.)]|$))"
 )
 
 

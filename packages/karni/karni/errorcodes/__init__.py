@@ -563,6 +563,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove the field from search_fields, or take it out of APIMeta.write_only if it "
         "may be read.",
     ),
+    # E1xx API: throttling
+    _e(
+        "E132",
+        "Throttle(...) is invalid",
+        "exception",
+        "karni.api.throttling.Throttle; BaseViewSet.throttle",
+        "A viewset's throttle declaration names actions of that viewset and gives each a DRF "
+        "rate, '<number>/<period>' with the period s, sec, second, m, min, minute, h, hour, d "
+        "or day.",
+        "Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has "
+        "(the standard ones, or a custom @action by its method name).",
+    ),
     _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",
@@ -1433,8 +1445,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "ordering on a column no index covers, so every such list request reads the whole "
         "table. Fast with seed data, slow in production.",
         "Add the index the message names to Meta.indexes (a SearchField for search), then run "
-        "karni make migration. `karni schema <app>` shows what serves each column. Silence "
-        "karni.W967 for a table small enough to scan.",
+        "karni make migration. `karni schema <app>` shows what serves each column. For a table "
+        'small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].',
     ),
     _e(
         "E968",

@@ -39,7 +39,7 @@ from karni.conf.prod import PROD
 from karni.conf.sentry import maybe_init_sentry
 from karni.exceptions import KarniImproperlyConfigured
 
-__all__ = ["karni_settings"]
+__all__ = ["env", "karni_settings"]
 
 _PROFILES: dict[str, dict[str, Any]] = {"dev": DEV, "prod": PROD}
 
@@ -352,6 +352,14 @@ def karni_settings(
       touches neither ``LOGGING`` nor the structlog configuration.
     * Sentry: :func:`karni.conf.sentry.maybe_init_sentry` runs at the end and
       is a no-op unless the ``SENTRY_DSN`` env var is set.
+    * ``env``: the django-environ reader Karni reads its defaults with is
+      left in the namespace (Django ignores lower-case names), so a setting
+      added after the call reads the environment the same way:
+      ``FEATURE_X = env.bool("FEATURE_X", default=False)``. It is also
+      importable: ``from karni.conf import env``.
+    * ``SILENCED_SYSTEM_CHECKS``: starts as an empty list, so a project
+      extends it (``SILENCED_SYSTEM_CHECKS += ["karni.W967"]``) instead of
+      hitting a NameError.
 
     :param namespace: the target namespace, normally ``globals()`` of the
         project's settings module (any mutable mapping works).
@@ -414,6 +422,8 @@ def karni_settings(
 
     for key, value in merged.items():
         namespace.setdefault(key, value)
+    # The reader behind every env-backed default, for settings added after the call.
+    namespace.setdefault("env", env)
 
     if rest_framework_is_karni:
         rates = namespace["REST_FRAMEWORK"].setdefault("DEFAULT_THROTTLE_RATES", {})

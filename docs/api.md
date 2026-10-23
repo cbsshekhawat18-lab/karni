@@ -152,6 +152,36 @@ Owner fields: a direct FK to the user model named by `Owned` in `write` or
 `create` is stamped from `request.user` on create (`perform_create`) and is
 read-only in the generated serializer. The body never chooses the owner.
 
+**Rate limits for one action.** A form open to anonymous visitors needs a
+tighter limit than the project-wide `anon` throttle. Declare it per action:
+
+```python
+from karni.api import Access, BaseViewSet, HasRole, Public, Throttle
+
+class ContactViewSet(BaseViewSet):
+    model = Contact
+    access = Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())
+    throttle = Throttle(create="10/hour")
+```
+
+The rate uses DRF's format (`"<number>/<period>"`, the period `s`, `min`,
+`hour` or `day`). Each caller is counted on its own: the user id when signed
+in, else the client IP (honouring `NUM_PROXIES`). Over the rate, the action
+answers 429 with `Retry-After`. Actions the declaration does not name keep
+only the project-wide `anon` and `user` throttles. A custom `@action` is
+named by its method name, and an unknown name fails at class definition
+(`E132`).
+
+Settings win over the declaration. The scope is `"<route>.<action>"`
+(`contacts.create`), so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["contacts.create"]`
+replaces the rate, and `None` there switches the limit off. The rate in force
+is published on the operation as `x-karni-throttle`. The declaration rides in
+`throttle_classes`, so anything that turns DRF throttling off (`assert_crud`,
+`karni why`) turns it off too. For another caller identity, subclass
+`karni.api.throttling.ActionRateThrottle` and set `action_throttle_class` on
+the viewset. `throttle_classes` and `get_throttles()` still work as in plain
+DRF.
+
 **Posture and DRF permissions.** `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`
 (Karni default: `IsAuthenticated`) is **not** consulted for a viewset with an
 `Access` declaration. The declaration is the gate, so a permissive project
@@ -749,6 +779,8 @@ nullable, required from blank/default) and adds:
   `{"role": [...]}`, `{"owned": "<path>"}`, `{"where": "<fn>"}`,
   `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
   `{"deny": ...}`. These are display hints only, and the server enforces.
+  `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
+  viewset's `throttle` declaration limits, with the rate in force.
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload
