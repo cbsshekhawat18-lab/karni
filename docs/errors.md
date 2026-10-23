@@ -711,9 +711,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 #### E501: An optional dependency is not installed
 
-*exception* · from `karni.conf.sentry, karni.storage, karni.accounts.twofa, karni.api.search.postgres`
+*exception* · from `karni.conf.sentry, karni.storage, karni.accounts.twofa, karni.api.search.postgres, karni.testing.assert_crud`
 
-**Why Karni objects.** Optional features (Sentry, S3 storage, thumbnails, 2FA, PostgreSQL search) need extra packages that a minimal install leaves out.
+**Why Karni objects.** Optional features (Sentry, S3 storage, thumbnails, 2FA, PostgreSQL search, image uploads in assert_crud) need extra packages that a minimal install leaves out.
 
 **Fix.** Install the extra the message names, e.g. pip install 'karni[sentry]', 'karni[s3]', 'karni[images]', 'karni[2fa]' or 'psycopg[binary]'.
 
