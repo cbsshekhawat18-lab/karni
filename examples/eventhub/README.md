@@ -61,6 +61,10 @@ karni make model Booking event:fk:Event tier:fk:TicketTier attendee:fk:User quan
     "status:choice:pending|confirmed|cancelled" 'payment:fk:karni_payments.Payment?' -a --access owned:attendee
 ```
 
+`--access public-read` wrote `Access(read=Public(), write=HasRole("staff"))`
+for venues: anyone reads them and only staff change them. EventHub's
+`VenueViewSet` then added the `organizer` role to `write`.
+
 Every model is a `karni.models.BaseModel`: UUID keys, timestamps, soft delete
 and audit stamps come for free, and `DELETE` on the API hides rows instead
 of removing them. The hand-written parts are `Booking.total`, two status

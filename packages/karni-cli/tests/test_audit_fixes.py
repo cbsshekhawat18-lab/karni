@@ -138,11 +138,11 @@ def test_upgrade_honours_the_baseline(
     assert result.exit_code == 0, result.output
     # From 0.2.0 only the deprecations that break in 1.0 remain; the 0.2.0
     # behaviour changes a fresh scaffold already follows are not reported.
-    assert "karni 0.2.0 -> 0.4.0:" in result.output
+    assert "karni 0.2.0 -> 0.4.1:" in result.output
     assert "mandatory-access" not in result.output and "23 change(s)" not in result.output
     # --from still wins over the baseline.
     result = runner.invoke(app, ["upgrade", "--from", "0.1.0", "--dry-run"])
-    assert "karni 0.1.0 -> 0.4.0: 34 change(s)" in result.output
+    assert "karni 0.1.0 -> 0.4.1: 35 change(s)" in result.output
 
 
 def test_baseline_reads_pyproject(tmp_path: Path) -> None:

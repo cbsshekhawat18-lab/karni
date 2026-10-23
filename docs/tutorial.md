@@ -108,8 +108,11 @@ serializer.
 
 ## 2. Who sees what: `access`
 
-The generator wrote one `access` per viewset from the `--access` flag, but the
-domain needs more precise ones. This is the whole permission system:
+The generator wrote one `access` per viewset from the `--access` flag.
+`--access public-read` wrote `Access(read=Public(), write=HasRole("staff"))`
+for venues: anyone reads them and only staff change them. EventHub's
+`VenueViewSet` adds the `organizer` role to `write`. The other resources need
+more precise declarations. This is the whole permission system:
 
 <!-- karni:snippet examples/eventhub/events/viewsets.py -->
 ```python

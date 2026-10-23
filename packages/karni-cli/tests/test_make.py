@@ -195,7 +195,8 @@ def test_model_chain_and_access_default_is_announced(project: Path) -> None:
     [
         ("granted", "Granted()"),
         ("authenticated", "Access(read=Authenticated(), write=Authenticated())"),
-        ("public-read", "Access(read=Public(), write=Authenticated())"),
+        ("public-read", 'Access(read=Public(), write=HasRole("staff"))'),
+        ("public-read:editor", 'Access(read=Public(), write=HasRole("editor"))'),
         ("owned:owner", 'Access(read=Owned("owner"), write=Owned("owner"))'),
         ("staff", 'Access(read=HasRole("staff"), write=HasRole("staff"))'),
         ("role:editor", 'Access(read=HasRole("editor"), write=HasRole("editor"))'),
@@ -214,8 +215,62 @@ def test_viewset_validation(project: Path) -> None:
     ok("make", "model", "Event", "title:str")
     fails("make", "viewset", "Event", "--access", "owned:title", match="not a relation")
     fails("make", "viewset", "Event", "--access", "everyone", match="choose one of")
+    for bad in ("public-read:", "public-read:bad role", "public-read:-x"):
+        message = fails("make", "viewset", "Event", "--access", bad, match="public-read:<role>")
+        assert message.startswith("C106: ") and "e.g. public-read:editor" in message
     fails("make", "viewset", "Event", "--search", "nope", match="has no field 'nope'")
     fails("make", "model", "Other", "--access", "staff", match="--with viewset")
+
+
+def test_public_read_lets_only_a_role_write_and_says_so(project: Path) -> None:
+    """0.4.0 wrote write=Authenticated(): with open registration anyone could write."""
+    ok("make", "app", "events")
+    result = ok(
+        "make", "model", "Venue", "name:str", "--with", "viewset,test", "--access", "public-read"
+    )
+    assert 'access: Access(read=Public(), write=HasRole("staff"))' in result.output
+    assert "who: anyone reads, only role 'staff' writes" in result.output
+    viewsets = (project / "events" / "viewsets.py").read_text()
+    assert "from karni.api import Access, BaseViewSet, HasRole, Public" in viewsets
+    assert "Authenticated" not in viewsets
+    test = (project / "events" / "tests" / "test_venue.py").read_text()
+    assert '        self.assert_crud(VenueViewSet, "staff")\n' in test
+    assert "test: VenueViewSet as role 'staff'" in result.output
+
+    result = ok("make", "viewset", "Venue", "--access", "public-read:editor", "--force")
+    assert "who: anyone reads, only role 'editor' writes" in result.output
+    ok("make", "test", "Venue", "--force")
+    test = (project / "events" / "tests" / "test_venue.py").read_text()
+    assert '        self.assert_crud(VenueViewSet, "editor")\n' in test
+
+
+def test_authenticated_access_warns_that_anyone_signed_in_writes(project: Path) -> None:
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str")
+    result = ok("make", "viewset", "Venue", "--access", "authenticated")
+    assert "warning: every signed-in user may change and delete every row" in result.output
+    assert "karni.W102" in result.output
+
+
+def test_the_generated_test_acts_as_the_role_that_writes(project: Path) -> None:
+    """A role named only in read= would make the test confirm refusals, not writes."""
+    ok("make", "app", "events")
+    ok("make", "model", "Venue", "name:str", "owner:fk:User")
+    (project / "events" / "viewsets.py").write_text(
+        "from karni.api import Access, BaseViewSet, HasRole, Owned\n"
+        "from events.models import Venue\n\n\n"
+        "class VenueViewSet(BaseViewSet):\n"
+        "    model = Venue\n"
+        "    access = Access(\n"
+        '        read=HasRole("viewer") | HasRole("clerk") | HasRole("editor"),\n'
+        '        write=Owned("owner") | HasRole("editor"),\n'
+        '        create=HasRole("clerk"),\n'
+        "    )\n"
+    )
+    result = ok("make", "test", "Venue")
+    test = (project / "events" / "tests" / "test_venue.py").read_text()
+    assert '        self.assert_crud(VenueViewSet, "editor")\n' in test
+    assert "test: VenueViewSet as role 'editor' + owner isolation" in result.output
 
 
 def test_model_force_replaces_only_that_class(project: Path) -> None:

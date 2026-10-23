@@ -2,12 +2,12 @@
 
 The target developer experience::
 
-    from karni.api import Access, Authenticated, BaseViewSet, Public
+    from karni.api import Access, BaseViewSet, HasRole, Public
     from myapp.models import Event
 
     class EventViewSet(BaseViewSet):
         model = Event
-        access = Access(read=Public(), write=Authenticated())
+        access = Access(read=Public(), write=HasRole("staff"))
         search_fields = ["title"]
 
 gives working CRUD, filtering, pagination, ordering, search, access control,

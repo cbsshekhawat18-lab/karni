@@ -159,6 +159,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write `access = Access(read=..., write=..., create=...)` with predicates, or `access = Unscoped(reason='...')`. A bare predicate goes inside Access(read=...).
 
+<a id="w102"></a>
+
+#### W102: Any self-registered user may change and delete every row of a resource
+
+*system check (warning)* · from `karni.checks.check_open_writes`
+
+**Why Karni objects.** The viewset's `write` predicate is Authenticated() or Public(), not narrowed with & by HasRole, Granted, Owned or Can, while KARNI_ACCOUNTS_REGISTRATION is True. Anyone who opens an account through register/ can then update and delete every row the viewset routes. A test that acts as any signed-in user passes and confirms it. Karni 0.4.0's `--access public-read` preset generated this declaration.
+
+**Fix.** Tighten write: HasRole("staff") (what `--access public-read` now writes), Granted() (the roles' grants) or Owned("<field>"). create=Authenticated() with an Owned() write is the user-generated-content pattern and is not flagged. If nobody may self-register, set KARNI_ACCOUNTS_REGISTRATION = False. If every signed-in user is trusted, add 'karni.W102' to SILENCED_SYSTEM_CHECKS.
+
 <a id="e103"></a>
 
 #### E103: A predicate was expected but something else was given

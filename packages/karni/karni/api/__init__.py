@@ -2,11 +2,11 @@
 
 The one import most projects need::
 
-    from karni.api import Access, Authenticated, BaseViewSet, Public
+    from karni.api import Access, BaseViewSet, HasRole, Public
 
     class EventViewSet(BaseViewSet):
         model = Event
-        access = Access(read=Public(), write=Authenticated())
+        access = Access(read=Public(), write=HasRole("staff"))
         search_fields = ["title"]
 
 That declaration alone yields CRUD, filtering, pagination, ordering, search,

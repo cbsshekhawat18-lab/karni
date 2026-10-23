@@ -66,7 +66,9 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["all-objects"].codemod == "v1_0.all_objects_to_without"
     assert by_id["agent-guidance-files"].codemod == "v0_2.agent_guidance"
     assert by_id["mandatory-access"].mechanical is False
-    assert changelog.newest_release(by_id.values()) == "0.4.0"
+    assert changelog.newest_release(by_id.values()) == "0.4.1"
+    assert by_id["public-read-writes-need-a-role"].release == "0.4.1"
+    assert by_id["public-read-writes-need-a-role"].mechanical is False
     assert by_id["operation-ids-by-param"].release == "0.4.0"
     assert by_id["agent-files-reworded"].kind == "project-files"
     assert by_id["django-5-2"].release == "0.3.0" and not by_id["django-5-2"].mechanical
@@ -88,6 +90,7 @@ def test_selection_between_versions() -> None:
     every = [change.id for change in changelog.load() if change.release == "0.2.0"]
     in_0_3 = {"django-5-2", "role-scope-paths-checked"}
     in_0_4 = {change.id for change in changelog.load() if change.release == "0.4.0"}
+    in_0_4_1 = {"public-read-writes-need-a-role"}
     from_0_1 = _ids("0.1.0", "0.2.0")
     assert sorted(from_0_1) == sorted(every)
     # What breaks in 0.2 runs first, then what breaks in 1.0.
@@ -96,11 +99,14 @@ def test_selection_between_versions() -> None:
     # From the deprecating release itself: the deprecations, not the 0.2 breaks again.
     assert deprecations <= set(_ids("0.2.0", "0.2.0"))
     assert "mandatory-access" not in _ids("0.2.0", "1.0")
-    assert set(_ids("0.2.0", "1.0")) == set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4
+    assert set(_ids("0.2.0", "1.0")) == (set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1)
     assert in_0_3 <= set(_ids("0.2.0", "0.3.0"))
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
     assert in_0_4 <= set(_ids("0.3.0", "0.4.0"))
     assert not in_0_4 & set(_ids("0.2.0", "0.3.0"))  # a 0.3 target never sees 0.4 changes
+    assert in_0_4_1 <= set(_ids("0.4.0", "0.4.1"))
+    assert not in_0_4 & set(_ids("0.4.0", "0.4.1"))  # 0.4.0's own changes are behind it
+    assert not in_0_4_1 & set(_ids("0.3.0", "0.4.0"))
     assert _ids("1.0.0", "1.1") == []
     assert _ids("0.1.0", "0.1.9") == []  # replacements do not exist before 0.2
     assert set(_ids("0.2.0.dev3", "0.2.0")) == set(every)  # pre-releases count as before
@@ -202,7 +208,7 @@ def test_list_needs_no_project(runner, tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["upgrade", "--list"])
     assert result.exit_code == 0, result.output
-    assert "default --to: 0.4.0" in result.output
+    assert "default --to: 0.4.1" in result.output
     assert "all-objects  [api-change, codemod v1_0.all_objects_to_without, removed in 1.0]" in (
         result.output
     )
@@ -213,7 +219,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.0: 34 change(s), 5 mechanical, 29 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 35 change(s), 5 mechanical, 30 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (
@@ -243,7 +249,9 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "related-lookups: no uses found" in out
     assert "agent-guidance-files: nothing to change" in out
     assert "django-5-2: Django" in manual
-    assert "Next: review `git diff`, pin karni to 0.4.0" in out
+    assert "Next: review `git diff`, pin karni to 0.4.1" in out
+    assert "public-read-writes-need-a-role: karni make --access public-read" in manual
+    assert "migrations/0.4.1/#public-read-viewsets-review-who-may-write" in manual
 
     changed = set(_git(git_project, "status", "--porcelain").split())
     assert {"library/views.py", "library/models.py"} <= changed

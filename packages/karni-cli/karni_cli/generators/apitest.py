@@ -6,7 +6,9 @@ promised denials, pagination, filtering and the OpenAPI contract, in one
 call) and — when the viewset's ``access`` reads through ``Owned(...)``, or
 through ``Granted()`` with a role whose grant is ``own`` / ``related`` —
 ``assert_isolated`` (another scope's rows are out of reach). The role is
-``--role``, else the first ``HasRole("...")`` the viewset declares, else for
+``--role``, else the first ``HasRole("...")`` the viewset's ``write``
+predicate names (then ``create``, then any other), so the test exercises
+real creates, updates and deletes instead of confirming refusals, else for
 ``Granted()`` the first role in ``KARNI_ROLES`` (the shipped ``user`` when
 the project declares none) whose grants reach the model, else any signed-in
 user. The model needs a viewset first (``karni make viewset``).
@@ -34,9 +36,9 @@ from karni_cli.generators.introspect import (
     granted_reads,
     owned_paths,
     require_model,
-    role_names,
     viewset_for,
     viewset_module,
+    writing_roles,
 )
 from karni_cli.generators.naming import require_pascal, snake
 from karni_cli.generators.pysource import Import, docstring, ensure_imports, pystr
@@ -149,7 +151,7 @@ def plan(ws: Workspace, app: App, model_name: str, *, role: str | None = None) -
             code="C105",
         )
     path, cls = found
-    roles = role_names(cls)
+    roles = writing_roles(cls)
     chosen = role if role is not None else (roles[0] if roles else None)
     owned = bool(owned_paths(cls))
     granted = not owned and granted_reads(cls)
@@ -187,9 +189,10 @@ def command(
     role: str | None = typer.Option(
         None,
         "--role",
-        help="The role the test acts as. By default it is the first HasRole the viewset "
-        "declares. For Granted() it is the first KARNI_ROLES role whose grant reaches the model "
-        "(own/related first). Otherwise the test uses any signed-in user.",
+        help="The role the test acts as. By default it is the first HasRole the viewset's "
+        "write predicate names (then create, then read), so the test really writes. For "
+        "Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related "
+        "first). Otherwise the test uses any signed-in user.",
     ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
