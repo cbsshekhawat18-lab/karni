@@ -11,6 +11,21 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **`assert_crud` sends a real image for a required `ImageField`.** The
+  create and update bodies carried `<field>.txt` for every file field, and
+  DRF's `ImageField` answered 400 ("Upload a valid image"), so every model
+  with a required image failed the create and update checks. A required
+  image now gets a 1x1 PNG made with Pillow (`E501` names `pip install
+  'karni[images]'` when it is missing), a plain `FileField` keeps the text
+  upload, every request gets a fresh upload (one passed in `payload=` is
+  rewound), and the stored file must not be empty after the create and the
+  update. `assert_isolated` posts such a body as multipart too, where it
+  raised `UnicodeDecodeError` on the PNG. Two related messages changed. When the declaration refuses every
+  write to the role, the report lists `no write exercised` in `skipped` and
+  `assert_crud` warns, since such a run proves refusals only (pin them with
+  `expect=` when they are the point). When the rows the run created are
+  missing from the list, the message names the read rule and `karni
+  why-empty`, instead of blaming the paginator.
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.
