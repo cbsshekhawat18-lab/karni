@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import typer
 
+from karni_cli import project as project_mod
 from karni_cli.generators import apitest as test_gen
 from karni_cli.generators import factory as factory_gen
 from karni_cli.generators import migration as migration_gen
@@ -35,6 +36,7 @@ from karni_cli.generators.fields import (
     RelationTarget,
     is_user_target,
     parse_fields,
+    pillow_note,
     relation_name,
     render_model_body,
 )
@@ -119,6 +121,10 @@ def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
     ws.write(path, replace_or_append(ws, rel, text, model, "\n".join(lines)))
     for note in body.notes:
         ws.note(note)
+    if body.images:
+        has_pillow = project_mod.project_has_module(ws.root, "PIL")
+        if has_pillow is not True:
+            ws.note(pillow_note(body.images, missing=has_pillow is False))
     return model
 
 

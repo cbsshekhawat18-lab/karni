@@ -1,6 +1,6 @@
 # {{ cookiecutter.project_name }}
 
-A [Karni](https://github.com/karni) project: batteries-included Django + DRF +
+A [Karni](https://github.com/cbsshekhawat18-lab/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.
 Anything you assign after the call wins.
@@ -35,7 +35,7 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 
 ## Frontend
 
-`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni).
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/cbsshekhawat18-lab/karni/tree/main/packages/karni-ui).
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
 `AuthProvider`, the router and a `Toaster`. `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
@@ -54,6 +54,8 @@ npm run lint    # ESLint with the karni/* enforcement rules
 
 The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
 For its container, docker compose sets `KARNI_API_PROXY=http://django:8000`.
+`karni serve --local --port 8020` prints the line that starts the dev server
+against that port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev`.
 
 ## Using a local Karni checkout
 

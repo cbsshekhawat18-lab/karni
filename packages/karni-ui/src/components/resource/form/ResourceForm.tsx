@@ -157,6 +157,21 @@ const EDITABLE_KINDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Whether an edit form's file field already holds a stored file. Saving
+ * without choosing a new one keeps it (the PATCH omits the field), so the
+ * field is not required there even when creating needs a file.
+ */
+function keepsStoredFile(
+  field: FieldDef,
+  mode: "create" | "update",
+  item: Record<string, unknown> | undefined,
+): boolean {
+  if (mode !== "update" || field.kind !== "file") return false;
+  const stored = item?.[field.name];
+  return typeof stored === "string" && stored !== "";
+}
+
+/**
  * The fields the form submits: writable, of a kind it can render (or with a
  * custom component). Fields the role cannot see are absent from its schema
  * and fields it cannot write are read-only there, so neither is ever here.
@@ -801,7 +816,12 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
           {formFields.map((field) => {
             const override = fieldOverrides?.[field.name];
             if (override?.hidden === true) return null;
-            const shown = visibleFields.find((candidate) => candidate.name === field.name) ?? field;
+            const visible =
+              visibleFields.find((candidate) => candidate.name === field.name) ?? field;
+            // An edit form keeps a stored file unless a new one is chosen: not required there.
+            const shown = keepsStoredFile(visible, mode, item)
+              ? { ...visible, required: false }
+              : visible;
             return (
               <FormFieldRow
                 key={field.name}

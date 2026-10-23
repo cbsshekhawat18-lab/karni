@@ -154,6 +154,47 @@ def _typescript() -> tuple[str, Path] | None:
     return None
 
 
+_NAV_SCRIPT = r"""
+const ts = require(process.argv[1]);
+const source = require("fs").readFileSync(process.argv[2], "utf8");
+const match = source.match(/function inNav[\s\S]*?\n}\n/);
+if (match === null) throw new Error("no inNav() in " + process.argv[2]);
+const js = ts.transpileModule(match[0], { compilerOptions: { target: ts.ScriptTarget.ES2020 } });
+const inNav = new Function(js.outputText + "; return inNav;")();
+const paths = ["/", "/events", "/events/$id", "/events/$id/edit", "/events/new", "/login"];
+console.log(JSON.stringify({
+    signedIn: paths.filter((path) => inNav(path, false)),
+    signedOut: paths.filter((path) => inNav(path, true)),
+}));
+"""
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        "templates/project/{{cookiecutter.project_slug}}/frontend/src/layout.tsx",
+        "examples/eventhub/frontend/src/layout.tsx",
+        "examples/social-leads/frontend/src/layout.tsx",
+    ],
+)
+def test_the_sign_in_page_leaves_the_nav_once_signed_in(layout: str) -> None:
+    toolchain = _typescript()
+    if toolchain is None:
+        pytest.skip("node and the typescript package are needed to run the layout's inNav()")
+    node, typescript = toolchain
+    proc = subprocess.run(
+        [node, "-e", _NAV_SCRIPT, str(typescript), str(REPO_ROOT / layout)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout) == {
+        "signedIn": ["/", "/events"],
+        "signedOut": ["/", "/events", "/login"],
+    }
+
+
 def _balanced(text: str) -> bool:
     """Structural fallback: brackets balance outside string literals."""
     pairs = {")": "(", "]": "[", "}": "{"}

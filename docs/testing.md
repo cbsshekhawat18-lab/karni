@@ -24,6 +24,21 @@ CI runs two invocations: the project's own suite (`pytest`) and Karni's rules
 and a test database. `karni make test <Model>` writes a starting test file
 like the one below.
 
+## The fixtures you will use
+
+Most project tests need only these four:
+
+- [`client_as(role)`](#clients-per-role): an API client signed in as a user
+  with that role. `client_as(None)` is anonymous. It is a method on
+  `APITestCase` and a pytest fixture.
+- [`create(Model, **fields)`](#automatic-factories-karnitestingfactories):
+  one saved row with every required field filled, from
+  `karni.testing.factories`.
+- [`assert_crud(ViewSet, role)`](#the-full-crud-surface-in-one-call): the
+  whole CRUD surface for that role, checked against the viewset's `access`.
+- [`assert_isolated(ViewSet, role)`](#isolation-the-test-people-forget):
+  proof that the role cannot see or change another owner's rows.
+
 ## A resource's full test, in 15 lines
 
 <!-- karni:example:crud (tests/testing/test_docs_example.py runs this block) -->
