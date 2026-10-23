@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from karni_cli import scaffold
+from karni_cli import scaffold, toolchain
 from karni_cli.main import app
 from karni_cli.project import CliError
 from karni_cli.scaffold import (
@@ -178,6 +178,27 @@ def test_new_falls_back_to_the_registry(runner, tmp_path: Path, monkeypatch) -> 
     assert package["dependencies"]["@karni/ui"] == "^0.4.0"
     assert all(isinstance(volume, str) for volume in _frontend_volumes(project))
     assert "KARNI_UI_SRC=" in result.output
+
+
+def test_new_frontend_requires_npm_11(runner, tmp_path: Path, monkeypatch) -> None:
+    """npm 10 crashes on a fresh install of this frontend, so the scaffold asks for npm 11.
+
+    npm checks engines only after the dependency walk that crashes, so engine-strict
+    stops npm 10 only once a package-lock.json exists. The next steps name the fix
+    for the fresh install.
+    """
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    monkeypatch.setattr(scaffold, "resolve_ui_source", lambda: None)
+    result = runner.invoke(app, ["new", "Engines", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    frontend = tmp_path / "engines" / "frontend"
+    package = json.loads((frontend / "package.json").read_text())
+    assert package["engines"] == {"node": ">=20.19", "npm": f">={toolchain.NPM_FLOOR}"}
+    settings = [
+        line for line in (frontend / ".npmrc").read_text().splitlines() if not line.startswith("#")
+    ]
+    assert "install-links=true" in settings and "engine-strict=true" in settings
+    assert "npx npm@11 install" in result.output
 
 
 def test_new_builds_a_missing_ui_dist(runner, tmp_path: Path, monkeypatch) -> None:

@@ -14,6 +14,20 @@ apply codemods and list the manual steps. This file is the human summary.
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.
+- **A new project's frontend requires npm 11, and Karni says so.** npm 10,
+  which Node 20 and 22 bundle, crashed in `npm install` of a fresh scaffold
+  with `Cannot read properties of null (reading 'edgesOut')` while it
+  resolved Vite 8's optional peers. The newest npm 10 (10.9.9) has the same
+  bug, and npm 11 fixed it. The scaffold's `frontend/package.json` now
+  declares `"engines": {"node": ">=20.19", "npm": ">=11"}` and its
+  `frontend/.npmrc` sets `engine-strict=true`. npm runs that check only after
+  the step that crashes, so it stops npm 10 with `EBADENGINE` once a
+  `package-lock.json` exists, not on the first install. For the first
+  install, the quickstart now has a step that works on any supported Node:
+  `npx --yes npm@11 install`. `karni doctor` flags an npm below 11 and a Node
+  outside Vite 8's range, with the fix. When ESLint or jscpd is missing,
+  `karni check` names the npm requirement and what to run on npm 10. CI runs
+  the quickstart on Node 20 with its bundled npm as well as on Node 24.
 
 ## 0.4.0 (2026-10-22)
 

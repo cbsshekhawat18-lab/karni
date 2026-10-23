@@ -58,9 +58,21 @@ def test_no_frontend_flag_skips_duplication(runner, tmp_path, monkeypatch) -> No
     assert called == []
 
 
-def test_missing_jscpd_fails_with_instructions(tmp_path: Path) -> None:
+def test_missing_jscpd_fails_with_instructions(tmp_path: Path, capsys) -> None:
     (tmp_path / "frontend" / "src").mkdir(parents=True)
     assert check_mod._frontend_duplication(tmp_path) == 1
+    err = capsys.readouterr().err
+    # "run npm install" alone loops a user whose npm 10 crashes in that install
+    assert "jscpd not installed" in err and "npm 11 or later" in err
+    assert "npx npm@11 install" in err and "--no-frontend" in err
+
+
+def test_missing_eslint_names_the_npm_floor(tmp_path: Path, capsys) -> None:
+    (tmp_path / "frontend").mkdir()
+    assert check_mod._frontend_lint(tmp_path) == 1
+    err = capsys.readouterr().err
+    assert "eslint not installed" in err and "npm 11 or later" in err
+    assert "npx npm@11 install" in err and "--no-frontend" in err
 
 
 def test_no_frontend_dir_is_clean(tmp_path: Path) -> None:
