@@ -47,18 +47,30 @@ and actual status and the predicate that decided it. Every failure is
 reported, not only the first. Throttling is off for the resource while it
 runs; query budgets stay on (the ``karni`` pytest plugin makes them raise).
 
+A required ``FileField`` gets a small text upload and a required
+``ImageField`` a 1x1 PNG made with Pillow (:func:`image_upload`), sent as
+multipart with a fresh file per request. The stored file must not be empty.
+
+When the declaration refuses every write to the requester, the run checks
+the refusals only, lists ``no write exercised`` in the report's ``skipped``
+and warns (``UserWarning``), so a suite that never writes is visible.
+
 Override / escape hatches: ``values={...}`` (factory overrides for every row
-and the create payload), ``payload={...}`` (raw request fields),
-``expect={"destroy": 403}`` (pin a status), ``skip=("filtering",)``,
-``user=`` (an explicit requester). :func:`assert_crud` is a plain function
-for pytest-style tests; the ``client_as`` fixture of the ``karni`` plugin
-mirrors :meth:`APITestCase.client_as`.
+and the create payload), ``payload={...}`` (raw request fields, uploads
+included), ``expect={"destroy": 403}`` (pin a status, which also silences
+the no-write warning), ``skip=("filtering",)``, ``user=`` (an explicit
+requester). :func:`assert_crud` is a plain function for pytest-style tests.
+The ``client_as`` fixture of the ``karni`` plugin mirrors
+:meth:`APITestCase.client_as`.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import functools
+import io
 import uuid
+import warnings
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -84,6 +96,8 @@ __all__ = [
     "Resource",
     "assert_crud",
     "client_as",
+    "file_upload",
+    "image_upload",
     "owner_values",
     "readable_row",
     "resolve_resource",
@@ -411,6 +425,49 @@ def _related_model(model: type[models.Model], name: str, field: Any) -> Any:
         return None
 
 
+@functools.cache
+def png_bytes() -> bytes:
+    """A 1x1 RGB PNG, made in memory with Pillow (``E501`` without it)."""
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise KarniAssertionError(
+            "assert_crud needs Pillow to send a valid image for an ImageField. "
+            "Install it with: pip install 'karni[images]'",
+            code="E501",
+        ) from exc
+    buffer = io.BytesIO()
+    Image.new("RGB", (1, 1), "white").save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+def image_upload(name: str) -> Any:
+    """A fresh upload ``<name>.png`` that DRF's ``ImageField`` accepts."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return SimpleUploadedFile(f"{name}.png", png_bytes(), content_type="image/png")
+
+
+def file_upload(name: str) -> Any:
+    """A fresh upload ``<name>.txt`` for a plain ``FileField``."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    return SimpleUploadedFile(f"{name}.txt", b"karni", content_type="text/plain")
+
+
+def _is_upload(value: Any) -> bool:
+    return callable(getattr(value, "read", None))
+
+
+def _rewound(data: Any) -> Any:
+    """``data`` with every upload in it at position 0, so a body can be sent again."""
+    if isinstance(data, Mapping):
+        for value in data.values():
+            if _is_upload(value) and callable(getattr(value, "seek", None)):
+                value.seek(0)
+    return data
+
+
 @dataclass
 class Payload:
     """A create/update request body plus what was put in it."""
@@ -419,6 +476,13 @@ class Payload:
     multipart: bool = False
     #: Scalar fields whose stored value must equal what was sent.
     scalars: list[str] = field(default_factory=list)
+    #: File and image fields sent as uploads, whose stored file must not be empty.
+    files: list[str] = field(default_factory=list)
+
+    @property
+    def format(self) -> str:
+        """The test client format that carries this body."""
+        return "multipart" if self.multipart else "json"
 
 
 def build_payload(
@@ -432,10 +496,12 @@ def build_payload(
 
     Scalars come from an unsaved factory row (so names and types decide the
     values, uniques stay unique); a required relation gets a new row the
-    user can read; optional relations and to-many fields are left out.
+    user can read. Optional relations and to-many fields are left out. A
+    required image gets :func:`image_upload`, any other required file
+    :func:`file_upload`, and the body is multipart as soon as it holds an
+    upload (one from ``payload=`` too). Every call makes new uploads, so no
+    file object is shared between requests.
     """
-    from django.core.files.uploadedfile import SimpleUploadedFile
-
     from karni.testing.factories import build
 
     view = _view(resource, "create", user)
@@ -456,9 +522,10 @@ def build_payload(
             body.data[name] = [pk] if isinstance(serializer_field, ManyRelatedField) else pk
             continue
         if isinstance(serializer_field, serializers.FileField):
+            # ImageField subclasses FileField, so the image check comes first.
             if serializer_field.required:
-                body.data[name] = SimpleUploadedFile(f"{name}.txt", b"karni")
-                body.multipart = True
+                image = isinstance(serializer_field, serializers.ImageField)
+                body.data[name] = image_upload(name) if image else file_upload(name)
             continue
         source = serializer_field.source or name
         if source == "*" or "." in source:
@@ -472,6 +539,13 @@ def build_payload(
             continue
         body.scalars.append(name)
     body.data.update(payload or {})
+    body.multipart = any(_is_upload(value) for value in body.data.values())
+    file_fields = {
+        name
+        for name, serializer_field in serializer.fields.items()
+        if isinstance(serializer_field, serializers.FileField) and not serializer_field.read_only
+    }
+    body.files = [name for name in body.data if name in file_fields and _is_upload(body.data[name])]
     return body
 
 
@@ -487,6 +561,8 @@ class CrudReport:
     passed: list[str] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
+    #: What the run could not exercise, also in ``skipped``. :func:`assert_crud` warns with each.
+    warnings: list[str] = field(default_factory=list)
 
     def render(self) -> str:
         who = f"role {self.role!r}" if self.role else "an authenticated user"
@@ -573,7 +649,7 @@ class _Crud:
     ) -> Any:
         client = self.client(user)
         try:
-            return getattr(client, method.lower())(url, data, **kw)
+            return getattr(client, method.lower())(url, _rewound(data), **kw)
         except Exception as exc:
             raise _RequestError(
                 f"{check}: {method} {url} raised {type(exc).__name__}: {exc}"
@@ -584,6 +660,21 @@ class _Crud:
 
     def row(self, user: Any | None = None, **values: Any) -> Any:
         return readable_row(self.resource.model, user or self.user, **{**self.values, **values})
+
+    def who(self) -> str:
+        from karni.accounts.permissions import user_roles
+
+        if self.role:
+            return f"role {self.role!r}"
+        roles = user_roles(self.user)
+        return f"the requester (roles {', '.join(roles)})" if roles else "any signed-in user"
+
+    def why_empty_hint(self) -> str:
+        """The command that explains why the requester's rows are missing from the list."""
+        user = f"<a user with role {self.role!r}>" if self.role else "<a signed-in user>"
+        return (
+            f"Run karni why-empty {self.resource.prefix} --as {user} to see which step drops them."
+        )
 
     def expected(self, action: str, user: Any, row: Any = None) -> Expectation:
         found = expectation(self.resource, action, user, row)
@@ -657,6 +748,21 @@ class _Crud:
                 self.fail(
                     f"{action}: sent {name}={sent.data[name]!r} but stored {rendered[name]!r}"
                 )
+        for name in sent.files:
+            stored = getattr(row, name, None)
+            if not stored or not getattr(stored, "name", ""):
+                self.fail(f"{action}: sent {name} as an upload but the stored row has no file")
+                continue
+            try:
+                size = stored.size
+            except OSError as exc:
+                self.fail(f"{action}: the stored file {stored.name} cannot be read ({exc})")
+                continue
+            if size == 0:
+                self.fail(
+                    f"{action}: sent {name} as an upload but the stored file {stored.name} is "
+                    "empty (the upload was read before it was sent)"
+                )
 
     # checks
 
@@ -686,11 +792,35 @@ class _Crud:
             return False
         return True
 
+    def note_unexercised_writes(self, row: Any) -> None:
+        """List (and later warn) when the requester may not create, update or delete.
+
+        The run then proves refusals only, which hid a broken create body in a
+        real project. A refusal pinned with ``expect=`` is intended, so it
+        stays quiet.
+        """
+        writes = ("create", "partial_update", "destroy")
+        if any(
+            self.expected(action, self.user, None if action == "create" else row).allowed
+            for action in writes
+        ):
+            return
+        if any(action in self.expect for action in ("update", *writes)):
+            return
+        message = (
+            f"no write exercised: the declaration refuses writes to {self.who()} "
+            f"(access={self.resource.viewset.access!r}). Pass a role that may write, or pin "
+            "the refusals with expect= when they are the point of the test."
+        )
+        self.report.skipped.append(message)
+        self.report.warnings.append(f"assert_crud({self.resource.name}) {message}")
+
     def run(self) -> CrudReport:
         with _unthrottled(self.resource.viewset):
             row = self.row()
             if not self.preflight(row):
                 return self.report
+            self.note_unexercised_writes(row)
             for name, check in (
                 ("list", lambda: self.check_list(row)),
                 ("retrieve", lambda: self.check_retrieve(row)),
@@ -726,7 +856,7 @@ class _Crud:
         if str(row.pk) not in _ids(response.json()):
             self.fail(
                 f"list: GET {url} does not include the requester's row {row.pk} "
-                f"(read={self.resource.viewset.access!r})"
+                f"(read={self.resource.viewset.access!r}). {self.why_empty_hint()}"
             )
 
     def check_retrieve(self, row: Any) -> None:
@@ -746,8 +876,7 @@ class _Crud:
         url = self.resource.list_url()
         manager = self.resource.model._default_manager
         before = manager.count()
-        fmt = "multipart" if sent.multipart else "json"
-        response = self.call("create", self.user, "POST", url, sent.data, format=fmt)
+        response = self.call("create", self.user, "POST", url, sent.data, format=sent.format)
         if not self.status("create", response, expected, f"POST {url}"):
             return
         if not expected.allowed:
@@ -795,10 +924,11 @@ class _Crud:
         if change:
             self.matches(Payload(patch, scalars=[change]), response, self.stored(row), "update")
         expected_put = self.expected("update", self.user, row)
-        fmt = "multipart" if fresh.multipart else "json"
-        response = self.call("update", self.user, "PUT", url, fresh.data, format=fmt)
+        response = self.call("update", self.user, "PUT", url, fresh.data, format=fresh.format)
         if self.status("update", response, expected_put, f"PUT {url}") and expected_put.allowed:
             self.contract("PUT", url, response)
+            uploads = Payload(fresh.data, files=fresh.files)  # the scalars were checked by PATCH
+            self.matches(uploads, response, self.stored(row), "update")
 
     def check_delete(self) -> None:
         victim = self.row()
@@ -831,11 +961,14 @@ class _Crud:
                     continue
                 method = METHODS[action]
                 url = self.resource.detail_url(row.pk) if target else self.resource.list_url()
-                data = None
+                data, fmt = None, "json"
                 if action == "create":
-                    data = build_payload(self.resource, self.user, values=self.values).data
+                    body = build_payload(
+                        self.resource, self.user, values=self.values, payload=self.payload
+                    )
+                    data, fmt = body.data, body.format
                 before = manager.count()
-                response = self.call("denials", user, method, url, data, format="json")
+                response = self.call("denials", user, method, url, data, format=fmt)
                 self.status("denials", response, expected, f"{method} {url} as {who}")
                 if method != "GET" and manager.count() != before:
                     self.fail(f"denials: {method} {url} as {who} changed the row count")
@@ -856,8 +989,7 @@ class _Crud:
             if not isinstance(response.json(), list):
                 self.fail(f"pagination: {url} declares Unpaginated but returned a page envelope")
             return
-        for _ in range(3):
-            self.row()
+        created = [self.row() for _ in range(3)]
         param = getattr(paginator, "page_size_query_param", None) or "page_size"
         first = self.call("pagination", self.user, "GET", url, {param: 2})
         body = first.json()
@@ -865,6 +997,26 @@ class _Crud:
             self.fail(f"pagination: GET {url}?{param}=2 returned no page envelope (results)")
             return
         page = _ids(body)
+        if len(page) < 2 and not {str(row.pk) for row in created} & set(page):
+            # A short page without the new rows: they are out of this user's sight.
+            view = _view(self.resource, "list", self.user)
+            access = self.resource.viewset.access
+            if any(_visible(view, row) for row in created):
+                reason = (
+                    f"access={access!r} lets this user read them, so the viewset's queryset "
+                    "(get_queryset, read_scope) or its paginator leaves them out"
+                )
+            else:
+                reason = (
+                    f"the read rule hides them from this user (access={access!r}), the "
+                    "paginator is not at fault"
+                )
+            self.fail(
+                f"pagination: GET {url}?{param}=2 returned {len(page)} rows, but none of the "
+                f"3 rows assert_crud just created for the requester is listed: {reason}. "
+                f"{self.why_empty_hint()}"
+            )
+            return
         if len(page) != 2:
             self.fail(
                 f"pagination: GET {url}?{param}=2 returned {len(page)} rows, expected 2: the "
@@ -1092,6 +1244,8 @@ def assert_crud(
         ``create``, ``update``, ``partial_update``, ``destroy``).
     :param skip: checks to leave out (:data:`CHECKS`).
     :raises AssertionError: listing every failed check.
+    :warns UserWarning: when the declaration refuses every write to the requester, so
+        no create, update or delete was exercised (``report.skipped`` lists it too).
     """
     run = _Crud(
         resolve_resource(resource),
@@ -1105,6 +1259,8 @@ def assert_crud(
     report = run.run()
     if report.failures:
         raise KarniAssertionError(report.render(), code="E602")
+    for message in report.warnings:
+        warnings.warn(message, UserWarning, stacklevel=2)
     return report
 
 

@@ -838,9 +838,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "E501",
         "An optional dependency is not installed",
         "exception",
-        "karni.conf.sentry, karni.storage, karni.accounts.twofa, karni.api.search.postgres",
-        "Optional features (Sentry, S3 storage, thumbnails, 2FA, PostgreSQL search) need "
-        "extra packages that a minimal install leaves out.",
+        "karni.conf.sentry, karni.storage, karni.accounts.twofa, karni.api.search.postgres, "
+        "karni.testing.assert_crud",
+        "Optional features (Sentry, S3 storage, thumbnails, 2FA, PostgreSQL search, image "
+        "uploads in assert_crud) need extra packages that a minimal install leaves out.",
         "Install the extra the message names, e.g. pip install 'karni[sentry]', "
         "'karni[s3]', 'karni[images]', 'karni[2fa]' or 'psycopg[binary]'.",
     ),
