@@ -104,6 +104,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | OpenAPI snapshot test (`assert_schema_snapshot`) | `stable` | [test_api_schema.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/tests/test_api_schema.py) |
 | Clients per role (`client_as`) | `stable` | [test_booking_flow.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/tests/test_booking_flow.py) |
 | `query_budget` and `user_with_roles` helpers | `experimental` | Karni's own tests |
+| `assert_pages`: a public site's pages, their title, description, alt text and links, in one call | `experimental` | Karni's own tests |
 | Architecture rules that fail the build (`karni check`, the ESLint preset) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ## Commands
@@ -1091,7 +1092,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and a page test, then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1108,7 +1109,7 @@ karni make site [OPTIONS] NAME
 
 Add a page NAME to the site app APP: a view, its template and its URL.
 
-Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html extending the site's base.html, and `path(..., views.NAME, name="NAME")` at the `# karni:urls` marker of APP/urls.py. The app must come from `karni make site`.
+Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html extending the site's base.html, and `path(..., views.NAME, name="NAME")` at the `# karni:urls` marker of APP/urls.py. The URL also goes into PAGES at the `# karni:pages` marker of APP/tests/test_pages.py, so assert_pages checks the page (a path with a capture needs a real URL there, which the command asks for). The app must come from `karni make site`.
 
 ```
 karni make view [OPTIONS] NAME
@@ -1229,10 +1230,11 @@ The public names of the four packages a project builds on, from their `__all__`.
 
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
-| `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call CRUD/isolation/hiding checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden` |
+| `APITestCase` | class | DRF's `APITestCase` with clients per role and the one-call checks. | methods `user_as`, `client_as`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_admin_row_hidden`, `assert_pages` |
 | `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = ()) -> CrudReport` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
+| `assert_pages` | function | Assert that every page in `urls` passes the page checks (see the module docstring). | `assert_pages(client: Any, urls: Iterable[str], *, follow: bool = False, check_links: bool = True, require_title: bool = True, require_description: bool = True, require_alt: bool = True, not_found_url: str \| None = '/karni-assert-pages-404/', ignore: Iterable[str \| re.Pattern[str]] = (), hosts: Iterable[str] = (), parser: type[PageParser] \| None = None) -> PagesReport` |
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
@@ -1679,6 +1681,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E615`](errors.md#e615) | exception | karni seed refuses to run with DEBUG = False |
 | [`E616`](errors.md#e616) | test | A hidden-row check has nothing to prove against |
 | [`E617`](errors.md#e617) | exception | karni seed refuses to add demo rows to a table that already has rows |
+| [`E618`](errors.md#e618) | test | A public page fails the page checks |
+| [`E619`](errors.md#e619) | exception | assert_pages was given no URLs |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |

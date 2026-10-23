@@ -395,7 +395,9 @@ RULES: tuple[Rule, ...] = (
             "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
             "rows stay hidden) and filter drafts themselves. A public form posts to a "
             "`BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends "
-            "the CSRF token, never to a hand-written form view. The React rules (K201, K202, "
+            "the CSRF token, never to a hand-written form view. The site's page test, "
+            "`<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a "
+            "page whose path has a capture a real URL there. The React rules (K201, K202, "
             "K206) apply to app screens only."
         ),
         rationale=(

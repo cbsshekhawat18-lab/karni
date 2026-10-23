@@ -28,6 +28,9 @@ package stays free of test-only imports:
   API surface / in the admin;
 * ``assert_schema_snapshot`` (:mod:`karni.testing.schema`) — the OpenAPI
   contract snapshot;
+* ``assert_pages`` (:mod:`karni.testing.pages`): a public site's pages
+  answer, carry a title, a description and alt text, and link only to URLs
+  that exist.
 * ``query_budget`` (:mod:`karni.testing.performance`);
 * :mod:`karni.testing.factories` and :mod:`karni.testing.values` —
   generated factories and the value engine ``karni seed`` shares.
@@ -42,6 +45,7 @@ if TYPE_CHECKING:
     from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
     from karni.testing.hidden import assert_admin_row_hidden, assert_row_hidden
     from karni.testing.isolation import assert_isolated
+    from karni.testing.pages import assert_pages
     from karni.testing.performance import query_budget
     from karni.testing.schema import assert_schema_snapshot
 
@@ -50,6 +54,7 @@ __all__ = [
     "assert_admin_row_hidden",
     "assert_crud",
     "assert_isolated",
+    "assert_pages",
     "assert_row_hidden",
     "assert_schema_snapshot",
     "client_as",
@@ -62,6 +67,7 @@ _LAZY = {
     "assert_admin_row_hidden": "karni.testing.hidden",
     "assert_crud": "karni.testing.api",
     "assert_isolated": "karni.testing.isolation",
+    "assert_pages": "karni.testing.pages",
     "assert_row_hidden": "karni.testing.hidden",
     "assert_schema_snapshot": "karni.testing.schema",
     "client_as": "karni.testing.api",

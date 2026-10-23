@@ -970,6 +970,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass --reset to wipe the project's tables first, --force to add demo rows on top, --model to narrow the run to empty tables, or load real content with karni load.
 
+<a id="e618"></a>
+
+#### E618: A public page fails the page checks
+
+*test failure* · from `karni.testing.assert_pages`
+
+**Why Karni objects.** assert_pages requests each page of a site and checks what visitors and search engines get: a 200, a title, a meta description, alt text on every image, same-site links that answer, and a 404 for a URL the site does not have. Each listed line is a page and a problem a visitor or a crawler would meet.
+
+**Fix.** Fix what each line names: usually the page's {% block title %} or {% block description %}, an img element without an alt attribute (alt="" for a decorative image), a link or {% static %} path to a URL that does not exist, or a catch-all route that should raise Http404. Turn a check off with require_title=False, require_description=False, require_alt=False, check_links=False or not_found_url=None, or leave links out with ignore=[...].
+
+<a id="e619"></a>
+
+#### E619: assert_pages was given no URLs
+
+*exception* · from `karni.testing.assert_pages`
+
+**Why Karni objects.** With no page to request, every check would pass without checking anything.
+
+**Fix.** Pass the site's pages, for example assert_pages(client, ["/", "/about/"]).
+
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
 <a id="e701"></a>
@@ -2730,7 +2750,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. `karni make view <name> --app <app>` adds a page. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The React rules (K201, K202, K206) apply to app screens only.
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. `karni make view <name> --app <app>` adds a page. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
 
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 

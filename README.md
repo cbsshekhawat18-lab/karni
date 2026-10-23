@@ -410,9 +410,10 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `stable` OpenAPI snapshot test (`assert_schema_snapshot`)
 - `stable` Clients per role (`client_as`)
 - `experimental` `query_budget` and `user_with_roles` helpers
+- `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).

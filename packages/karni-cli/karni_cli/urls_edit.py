@@ -30,9 +30,9 @@ _NAME = re.compile(r"""name\s*=\s*["']([^"']+)["']""")
 _INCLUDE = re.compile(r"""include\(\s*["']([^"']+)["']""")
 
 
-def marker_line(lines: list[str]) -> int | None:
-    """The index of the marker line, or ``None``."""
-    return next((i for i, line in enumerate(lines) if line.strip() == URLS_MARKER), None)
+def marker_line(lines: list[str], marker: str = URLS_MARKER) -> int | None:
+    """The index of the ``marker`` line (``# karni:urls`` by default), or ``None``."""
+    return next((i for i, line in enumerate(lines) if line.strip() == marker), None)
 
 
 def has_marker(text: str) -> bool:

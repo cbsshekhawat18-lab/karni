@@ -1013,7 +1013,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and a page test, then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1030,7 +1030,7 @@ karni make site [OPTIONS] NAME
 
 Add a page NAME to the site app APP: a view, its template and its URL.
 
-Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html extending the site's base.html, and `path(..., views.NAME, name="NAME")` at the `# karni:urls` marker of APP/urls.py. The app must come from `karni make site`.
+Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html extending the site's base.html, and `path(..., views.NAME, name="NAME")` at the `# karni:urls` marker of APP/urls.py. The URL also goes into PAGES at the `# karni:pages` marker of APP/tests/test_pages.py, so assert_pages checks the page (a path with a capture needs a real URL there, which the command asks for). The app must come from `karni make site`.
 
 ```
 karni make view [OPTIONS] NAME

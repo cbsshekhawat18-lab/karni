@@ -1265,7 +1265,10 @@ def assert_crud(
 
 
 class APITestCase(drf_test.APITestCase):
-    """DRF's ``APITestCase`` with clients per role and the one-call CRUD/isolation/hiding checks."""
+    """DRF's ``APITestCase`` with clients per role and the one-call checks.
+
+    The checks: CRUD, isolation, hidden rows (API and admin) and public pages.
+    """
 
     client_class = KarniAPIClient
 
@@ -1314,3 +1317,9 @@ class APITestCase(drf_test.APITestCase):
         from karni.testing.hidden import assert_admin_row_hidden
 
         return assert_admin_row_hidden(client, row, **options)
+
+    def assert_pages(self, urls: Iterable[str], client: Any = None, **options: Any) -> Any:
+        """:func:`karni.testing.pages.assert_pages` (``client`` defaults to ``self.client``)."""
+        from karni.testing.pages import assert_pages
+
+        return assert_pages(self.client if client is None else client, urls, **options)

@@ -7,6 +7,12 @@ The site is a plain app: function views in ``views.py``, ``urls.py`` with
 own ``# karni:urls`` marker, so the home page replaces Karni's welcome
 page. ``karni make view`` adds pages (rule K309, docs/public-site.md).
 
+``tests/test_pages.py`` passes a ``PAGES`` list to
+``karni.testing.assert_pages``. ``karni make view`` adds each new URL above
+its ``# karni:pages`` marker. A list, not routes read from ``urls.py``: a
+site's urls.py also routes robots.txt, a sitemap, redirects and pages whose
+path has a capture, and only the project knows a real URL for those.
+
 A new app gets the ``karni make app`` skeleton as well. An existing local
 app gets only the site files, and nothing it already has is truncated:
 ``views.py`` and ``urls.py`` are extended in place.
@@ -31,18 +37,21 @@ from karni_cli.generators.naming import humanize, require_snake
 from karni_cli.generators.pysource import (
     Import,
     call,
+    comment,
     docstring,
     ensure_imports,
     pystr,
     replace_or_append,
 )
 from karni_cli.project import CliError
-from karni_cli.urls_edit import URLS_MARKER, add_route, routes
+from karni_cli.urls_edit import URLS_MARKER, add_route, marker_line, routes
 
 NAME = "site"
 SUMMARY = 'Create a public site app (Django views, urls, templates, static) mounted at "/".'
 
 CONFIG_URLS = Path("config") / "urls.py"
+#: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
+PAGES_MARKER = "# karni:pages"
 _APP_NAME = re.compile(r"""^app_name\s*=\s*["']([^"']+)["']""", re.MULTILINE)
 #: What every page view needs.
 VIEW_IMPORTS = [
@@ -61,6 +70,10 @@ def base_template(app: App) -> Path:
 
 def page_template(app: App, name: str) -> Path:
     return app.file("templates", app.label, f"{name}.html")
+
+
+def pages_test(app: App) -> Path:
+    return app.file("tests", "test_pages.py")
 
 
 # rendering
@@ -120,6 +133,7 @@ def base_source(app: App) -> str:
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"  {{# The site's name: here and in the header link below. #}}\n"
         f"  <title>{{% block title %}}{title}{{% endblock %}}</title>\n"
+        "  {# One sentence per page for search results. The page test fails an empty one. #}\n"
         '  <meta name="description" content="{% block description %}{% endblock %}">\n'
         "  {# The page's address without its query string, so ?utm_ links do not count twice. #}\n"
         '  <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">\n'
@@ -187,14 +201,34 @@ def css_source(app: App) -> str:
     )
 
 
-def tests_source() -> str:
+def tests_source(app: App, line_length: int) -> str:
+    """The site's page test: ``assert_pages`` over a ``PAGES`` list with a marker."""
     return (
-        '"""The public website renders."""\n\n'
-        "import pytest\n\n\n"
+        docstring(
+            f"The {app.label} pages: each answers 200 with a title, a description and alt text "
+            "on every image, its links reach pages that exist, and an unknown URL is a 404.",
+            "",
+            line_length,
+        )
+        + "\n\n"
+        "import pytest\n"
+        "from django.test import Client\n"
+        "from karni.testing import assert_pages\n\n"
+        + comment(
+            "Every page of the site. `karni make view` adds each new URL above the marker. "
+            "A path with a capture, such as /services/<slug:slug>/, needs a real URL here, "
+            "and the test must create the content that page shows first.",
+            "",
+            line_length,
+        )
+        + "\n"
+        "PAGES = [\n"
+        '    "/",\n'
+        f"    {PAGES_MARKER}\n"
+        "]\n\n\n"
         "@pytest.mark.django_db\n"
-        "def test_home_renders(client):\n"
-        '    response = client.get("/")\n'
-        "    assert response.status_code == 200\n"
+        "def test_every_page_passes_the_page_checks(client: Client) -> None:\n"
+        "    assert_pages(client, PAGES)\n"
     )
 
 
@@ -267,6 +301,36 @@ def register_route(ws: Workspace, app: App, route: str, name: str) -> None:
         ws.write(path, updated)
 
 
+def add_page_to_test(ws: Workspace, app: App, url: str) -> None:
+    """Insert ``"<url>",`` above the ``# karni:pages`` marker of the site's page test.
+
+    The view is written either way: a missing test file or marker, or a URL
+    with a capture, ends in a note that names the manual step.
+    """
+    path = pages_test(app)
+    rel = ws.rel(path)
+    entry = f"{pystr(url)},"
+    if "<" in url:
+        ws.note(
+            f"page test: {url} has a capture, so it is not in {rel}. Add a real URL to PAGES "
+            "there, and create the content that page shows in the test."
+        )
+        return
+    manual = f"Add {pystr(url)} to the URLs that {rel} passes to assert_pages yourself."
+    text = ws.read(path)
+    lines = text.splitlines() if text is not None else []
+    index = marker_line(lines, PAGES_MARKER)
+    if text is None or index is None:
+        missing = "not found" if text is None else f"has no `{PAGES_MARKER}` marker"
+        ws.note(f"page test: {rel} {missing}. {manual}")
+        return
+    if any(line.strip() == entry for line in lines):
+        return
+    marker = lines[index]
+    lines.insert(index, marker[: len(marker) - len(marker.lstrip())] + entry)
+    ws.write(path, "\n".join(lines) + "\n")
+
+
 def wire_config_urls(ws: Workspace, app: App) -> None:
     """Include the site at ``""`` in config/urls.py, before ``*welcome_urls()``."""
     rel = CONFIG_URLS.as_posix()
@@ -301,7 +365,7 @@ def plan(ws: Workspace, name: str, *, register: bool = True) -> App:
             page_template(app, "home"): home_source(app),
             app.file("templates", "404.html"): not_found_source(app),
             app.file("static", app.label, "site.css"): css_source(app),
-            app.file("tests", "test_pages.py"): tests_source(),
+            pages_test(app): tests_source(app, ws.line_length),
         }
     )
     if not ws.exists(app.file("tests", "__init__.py")):
@@ -342,11 +406,13 @@ def command(
 
     Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a
     `# karni:urls` marker), NAME/templates/NAME/base.html and home.html,
-    NAME/templates/404.html, NAME/static/NAME/site.css and a page test, then
-    inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of
-    config/urls.py, so the home page replaces the welcome page. A new app
-    also gets the `karni make app` skeleton and the `# karni:apps` entry. An
-    existing app keeps every file it has. Add pages with `karni make view`.
+    NAME/templates/404.html, NAME/static/NAME/site.css and
+    NAME/tests/test_pages.py (assert_pages on every page in its PAGES list),
+    then inserts `path("", include("NAME.urls"))` at the `# karni:urls`
+    marker of config/urls.py, so the home page replaces the welcome page. A
+    new app also gets the `karni make app` skeleton and the `# karni:apps`
+    entry. An existing app keeps every file it has. Add pages with `karni
+    make view`.
     """
     ws = project_workspace(force)
     plan(ws, name, register=not no_route)

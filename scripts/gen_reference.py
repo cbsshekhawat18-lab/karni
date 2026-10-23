@@ -299,6 +299,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("testing", "`query_budget` and `user_with_roles` helpers"),
     Capability(
         "testing",
+        "`assert_pages`: a public site's pages, their title, description, alt text and links, "
+        "in one call",
+    ),
+    Capability(
+        "testing",
         "Architecture rules that fail the build (`karni check`, the ESLint preset)",
         ((f"{EH}/Makefile", "karni check"),),
     ),

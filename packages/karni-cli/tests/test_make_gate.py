@@ -23,6 +23,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -466,15 +467,47 @@ def test_a_site_app_replaces_the_welcome_page(
     assert run(ROOT_PAGE) == "SITE"
     assert run(SITE_PAGES) == "site pages OK"
     ok("manage", "check")
-    # The page test `karni make site` wrote passes.
-    tests = subprocess.run(
-        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
-        cwd=project,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+
+    def page_test() -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
+            cwd=project,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+    # The page test `karni make site` wrote passes: assert_pages on "/" and "/about/"
+    # (`karni make view` added it), their links and stylesheet, and an unknown URL's 404.
+    pages = (project / "website" / "tests" / "test_pages.py").read_text()
+    assert 'PAGES = [\n    "/",\n    "/about/",\n    # karni:pages\n]' in pages
+    tests = page_test()
     assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
+
+    # It fails, naming the page and the problem, when a page loses its title, its
+    # description or an image's alt text, or links to a page that does not exist.
+    site = project / "website"
+    (site / "static" / "website" / "team.svg").write_text("<svg></svg>\n")
+    about = site / "templates" / "website" / "about.html"
+    about.write_text(
+        about.read_text()
+        .replace("{% block title %}About{% endblock %}", "{% block title %}{% endblock %}")
+        .replace("<h1>About</h1>\n", '<h1>About</h1>\n  <img src="/static/website/team.svg">\n')
+    )
+    home = site / "templates" / "website" / "home.html"
+    text = re.sub(r"\{% block description %\}.*?\{% endblock %\}\n", "", home.read_text())
+    home.write_text(text.replace("<h1>Website</h1>\n", '<h1>Website</h1>\n  <a href="/x/">X</a>\n'))
+    tests = page_test()
+    output = tests.stdout + tests.stderr
+    assert tests.returncode == 1, output[-3000:]
+    for line in (
+        "E618: assert_pages: 4 problem(s) (2 page(s) and 5 link(s) checked)",
+        '  - /: a <meta name="description"> with an empty content attribute. ',
+        "  - /about/: an empty <title>. ",
+        "  - /about/: 1 <img> without an alt attribute: /static/website/team.svg (line ",
+        "  - /: links to /x/ (line ",
+    ):
+        assert line in output, output[-3000:]
 
 
 @pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")

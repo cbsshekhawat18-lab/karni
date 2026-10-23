@@ -1,5 +1,5 @@
 ---
-description: "Karni's test tooling: the assert_crud, assert_isolated and assert_row_hidden one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
+description: "Karni's test tooling: the assert_crud, assert_isolated, assert_row_hidden and assert_pages one-liners, the pytest plugin, query budgets, the scaling check and the architecture rules suite."
 ---
 
 # Testing
@@ -13,6 +13,7 @@ wires it in so that it runs without project code:
 | [`assert_crud`](#the-full-crud-surface-in-one-call) | the whole CRUD surface of a resource for a role, checked against its `access` declaration and the OpenAPI contract |
 | [`assert_isolated`](#isolation-the-test-people-forget) | one line proving a role cannot see or touch another owner's rows |
 | [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
+| [`assert_pages`](#public-pages-assert_pages) | every page of a public site answers, has a title, a description and alt text, and links only to URLs that exist |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values. `<app>/factories.py` overrides it |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
@@ -26,7 +27,8 @@ like the one below.
 
 ## The fixtures you will use
 
-Most project tests need only these four:
+Most project tests need only these four, and a project with a public site
+one more:
 
 - [`client_as(role)`](#clients-per-role): an API client signed in as a user
   with that role. `client_as(None)` is anonymous. It is a method on
@@ -38,6 +40,9 @@ Most project tests need only these four:
   whole CRUD surface for that role, checked against the viewset's `access`.
 - [`assert_isolated(ViewSet, role)`](#isolation-the-test-people-forget):
   proof that the role cannot see or change another owner's rows.
+- [`assert_pages(client, urls)`](#public-pages-assert_pages): each page of
+  the public site answers 200 with a title, a description and alt text, and
+  its links reach URLs that exist.
 
 ## A resource's full test, in 15 lines
 
@@ -284,6 +289,125 @@ list the resource (a role-level refusal hides every row alike, and
 when the scope is one `assert_isolated` cannot build two principals for (a
 `Where(...)` on a status, a tenant, a custom scope), or to pin a specific
 fixture.
+
+## Public pages: assert_pages
+
+A [public site](public-site.md) is HTML for visitors and search engines. Its
+test requests each page the way they do and checks what they get:
+
+```python
+# website/tests/test_pages.py
+import pytest
+from django.test import Client
+from karni.testing import assert_pages
+
+PAGES = [
+    "/",
+    "/about/",
+    "/services/design/",
+    # karni:pages
+]
+
+
+@pytest.mark.django_db
+def test_every_page_passes_the_page_checks(client: Client) -> None:
+    assert_pages(client, PAGES)
+```
+
+`karni make site` writes this test with `"/"` in `PAGES`, and `karni make
+view` adds each new page's URL above the marker. A path with a capture, such
+as `/services/<slug:slug>/`, needs a real URL, so the command leaves it to
+you. Create the rows such a page shows in the test first, for example with
+`create(Service, slug="design")` from
+[`karni.testing.factories`](#automatic-factories-karnitestingfactories).
+
+For each URL in the list, `assert_pages` checks:
+
+| Check | The page must |
+|---|---|
+| status | answer 200. A redirect fails with its status and `Location`. `follow=True` checks the page it ends on instead |
+| title | have a non-empty `<title>`. A `<title>` inside an inline `<svg>` names the drawing, so it does not count |
+| description | have a `<meta name="description">` with a non-empty `content` |
+| alt | give every `<img>` an `alt` attribute. `alt=""` marks a decorative image and passes |
+| links | link only to same-site URLs that answer 200, or that redirect to a URL that answers 200 |
+
+Once per call it also requests `/karni-assert-pages-404/`, a URL no site
+has, and expects a 404. A catch-all route that answers every URL fails here,
+because search engines would index its answers as real pages.
+
+**Which links are checked.** Relative paths and absolute URLs on the test
+host (`http://testserver/...`) are the site's own. They come from `href`,
+`src`, `srcset` and `poster` attributes, so stylesheets, scripts and images
+count as links. `mailto:`, `tel:`, `javascript:` and `data:` URLs, fragments
+such as `#team` and other hosts are not requested, and neither is a redirect
+to another host. Each distinct URL is requested once per call, and a page in
+the list that answered 200 is not requested again when another page links to
+it. A linked page gets the status check only. Put it in the list to give it
+every check.
+
+**Static and media files.** Django's test client serves no static files:
+Karni's settings add no static route, and tests run with `DEBUG` off. So a
+link under `STATIC_URL` that answers 404 is looked up with the staticfiles
+finders, the lookup `runserver` and `collectstatic` use. A mistyped `{%
+static %}` path fails and a file that exists passes. A link under
+`MEDIA_URL` that answers 404 is looked up in the default storage when that is
+the file system. Without `django.contrib.staticfiles` installed, static links
+are listed in the report's `skipped` instead.
+
+Every problem is reported in one `E618` error, one line per page and
+problem:
+
+```
+E618: assert_pages: 4 problem(s) (2 page(s) and 5 link(s) checked)
+  - /: a <meta name="description"> with an empty content attribute. Search results show
+    it under the title. Give the page one sentence, in {% block description %} for a page
+    that extends the site's base.html.
+  - /about/: an empty <title>. Browser tabs and search results show the title. Give the
+    page one, in {% block title %} for a page that extends the site's base.html.
+  - /about/: 1 <img> without an alt attribute: /static/website/team.svg (line 25). Screen
+    readers read the alt text and search engines index it. Describe each image in
+    alt="...", or write alt="" when it is decorative.
+  - /: links to /contact/ (line 25), which answered 404.
+```
+
+A request that raises stops the run, because the error may have left the
+test's database transaction unusable. The failure names the request and the
+exception, and the exception is chained, so its traceback shows too.
+
+`assert_pages` returns a `PagesReport`: `pages` (the URLs checked as pages),
+`links` (every distinct same-site link it requested or already knew),
+`skipped` (checks turned off and links not requested, each with the reason)
+and `failures`. An empty URL list is an error (`E619`), since it would pass
+without checking anything.
+
+Escape hatches:
+
+- `follow=True` follows a page's redirects and checks the page it ends on.
+- `require_title=False`, `require_description=False`, `require_alt=False`
+  and `check_links=False` turn one check off. `not_found_url=None` skips the
+  404 check, and `not_found_url="/other/"` names another URL.
+- `ignore=[r"^/admin/", r"\.pdf$"]` takes regular expressions, searched in a
+  link's path and query string. A matching link is not requested.
+- `hosts=["www.example.com"]` names more hosts whose absolute links count as
+  the site's own, for a template that writes the production domain.
+- `parser=` takes a `PageParser` subclass (`karni.testing.pages`). Its
+  `link_attributes` map a tag to the attributes that hold a URL, so a
+  lazy-loading `data-src` can count as a link:
+
+  ```python
+  from karni.testing.pages import PageParser
+
+
+  class LazyImages(PageParser):
+      link_attributes = {**PageParser.link_attributes, "img": ("src", "srcset", "data-src")}
+
+
+  assert_pages(client, PAGES, parser=LazyImages)
+  ```
+
+- In an `APITestCase`, `self.assert_pages(PAGES)` uses `self.client`.
+  `client=` passes another one, for example a signed-in client for pages
+  behind a login.
 
 ## Schema snapshot
 

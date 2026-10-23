@@ -1,5 +1,5 @@
 ---
-description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, content read through the default manager, SEO basics, and public forms that post to a BaseViewSet."
+description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, content read through the default manager, SEO basics, a page test with assert_pages, and public forms that post to a BaseViewSet."
 ---
 
 # Public server-rendered pages
@@ -47,7 +47,7 @@ website/
   templates/website/home.html
   templates/404.html          shown for unknown URLs while DEBUG is off
   static/website/site.css     the site's stylesheet
-  tests/test_pages.py         the home page renders
+  tests/test_pages.py         assert_pages on every URL in its PAGES list
 ```
 
 It also inserts `path("", include("website.urls"))` at the `# karni:urls`
@@ -56,10 +56,11 @@ skeleton and its `# karni:apps` entry. An existing local app gets only the
 missing site files, and its `views.py` and `urls.py` are extended in place.
 
 `karni make view <name>` adds a function view, a template that extends
-`base.html`, and the URL at the marker in the site's `urls.py`. Its path
-defaults to `/<name>/`. A capture such as `<slug:slug>` becomes a view
-parameter and a template variable. Both commands take `--dry-run`, and
-`--no-route` when you want to wire the URL yourself.
+`base.html`, the URL at the marker in the site's `urls.py`, and the same URL
+in the page test (see [The page test](#the-page-test)). Its path defaults to
+`/<name>/`. A capture such as `<slug:slug>` becomes a view parameter and a
+template variable. Both commands take `--dry-run`, and `--no-route` when you
+want to wire the URL yourself.
 
 Put the client's files under `static/website/` unchanged and link them from
 `base.html` with `{% static %}`. Split the header and footer into
@@ -67,6 +68,55 @@ Put the client's files under `static/website/` unchanged and link them from
 command that loads the client's content are project code: put them in
 `website/templatetags/` and in a management command (`karni make command`).
 Karni ships no helpers for them.
+
+## The page test
+
+`karni make site` writes `tests/test_pages.py`, which passes a list of the
+site's URLs to [`assert_pages`](testing.md#public-pages-assert_pages):
+
+```python
+"""The website pages: each answers 200 with a title, a description and alt text on every
+image, its links reach pages that exist, and an unknown URL is a 404.
+"""
+
+import pytest
+from django.test import Client
+from karni.testing import assert_pages
+
+# Every page of the site. `karni make view` adds each new URL above the marker. A path
+# with a capture, such as /services/<slug:slug>/, needs a real URL here, and the test
+# must create the content that page shows first.
+PAGES = [
+    "/",
+    "/about/",
+    # karni:pages
+]
+
+
+@pytest.mark.django_db
+def test_every_page_passes_the_page_checks(client: Client) -> None:
+    assert_pages(client, PAGES)
+```
+
+For each page it checks a 200, a non-empty `<title>` and `<meta
+name="description">`, an `alt` attribute on every `<img>` (`alt=""` for a
+decorative one), and that every same-site link, stylesheet and image
+answers. It also checks that a URL the site does not have answers 404. The
+generated `base.html`, `home.html` and the pages `karni make view` writes
+pass it as they are. It fails, naming the page and the problem, when a page
+loses its title, its description or an image's alt text, or links to a page
+that does not exist.
+
+`karni make view` adds each new URL above the `# karni:pages` marker. It
+leaves out a path with a capture, such as `/services/<slug:slug>/`, and says
+so, because only you know a URL that has content behind it. Add one by hand,
+and create that content in the test first.
+
+The test lists URLs instead of reading them from `urls.py`. A site's
+`urls.py` also routes `robots.txt`, a sitemap, redirects and pages behind a
+capture, none of which are HTML pages a test could request as they are. A
+list stays explicit, and `karni make view` keeps it current. Run it with
+`karni test`.
 
 ## Read content through the default manager
 
@@ -130,7 +180,9 @@ change. `collectstatic` copies `static/website/` into `STATIC_ROOT`.
 
 - **Title and description.** Every page fills `{% block title %}` and
   `{% block description %}`. The generated `base.html` puts them in
-  `<title>` and `<meta name="description">`.
+  `<title>` and `<meta name="description">`. The title falls back to the
+  site's name, and the description to nothing, so the page test fails a
+  page that forgets its description.
 - **Canonical link.** `base.html` writes
   `<link rel="canonical">` from the request's scheme, host and path, without
   the query string. Set `ALLOWED_HOSTS` to the real domain in production.
@@ -205,4 +257,4 @@ each invalid field.
 
 `karni routes` lists the site's views with their names (`website:home`), and
 `karni context` prints them on its `SITE:` line. `karni check` covers the
-site app like any other app.
+site app like any other app, and `karni test` runs its page test.

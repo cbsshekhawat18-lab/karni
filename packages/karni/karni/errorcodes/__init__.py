@@ -1112,6 +1112,30 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Pass --reset to wipe the project's tables first, --force to add demo rows on top, "
         "--model to narrow the run to empty tables, or load real content with karni load.",
     ),
+    _e(
+        "E618",
+        "A public page fails the page checks",
+        "test",
+        "karni.testing.assert_pages",
+        "assert_pages requests each page of a site and checks what visitors and search engines "
+        "get: a 200, a title, a meta description, alt text on every image, same-site links that "
+        "answer, and a 404 for a URL the site does not have. Each listed line is a page and a "
+        "problem a visitor or a crawler would meet.",
+        "Fix what each line names: usually the page's {% block title %} or {% block "
+        'description %}, an img element without an alt attribute (alt="" for a decorative '
+        "image), a link or {% static %} path to a URL that does not exist, or a catch-all "
+        "route that should raise Http404. Turn a check off with require_title=False, "
+        "require_description=False, require_alt=False, check_links=False or "
+        "not_found_url=None, or leave links out with ignore=[...].",
+    ),
+    _e(
+        "E619",
+        "assert_pages was given no URLs",
+        "exception",
+        "karni.testing.assert_pages",
+        "With no page to request, every check would pass without checking anything.",
+        'Pass the site\'s pages, for example assert_pages(client, ["/", "/about/"]).',
+    ),
     # E7xx agent tooling
     _e(
         "E701",

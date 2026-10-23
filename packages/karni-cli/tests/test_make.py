@@ -585,6 +585,14 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     assert config.index(INCLUDE) < marker < config.index("    *welcome_urls(),")
     base = (site / "templates" / "website" / "base.html").read_text()
     assert '<link rel="canonical"' in base and "{% static 'website/site.css' %}" in base
+    assert "<title>{% block title %}Website{% endblock %}</title>" in base
+    assert '<meta name="description" content="{% block description %}{% endblock %}">' in base
+    assert "<img" not in base
+    # The page test runs assert_pages over a list that `karni make view` extends.
+    test = (site / "tests" / "test_pages.py").read_text()
+    assert "from karni.testing import assert_pages\n" in test
+    assert 'PAGES = [\n    "/",\n    # karni:pages\n]\n' in test
+    assert "    assert_pages(client, PAGES)\n" in test
     assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()
     assert "modified config/urls.py" in result.output
     assert "site: / -> website.views.home (website:home)" in result.output
@@ -660,6 +668,9 @@ def test_view_adds_the_view_its_template_and_the_url(project: Path) -> None:
     urls = (site / "urls.py").read_text()
     assert '    path("about/", views.about, name="about"),\n    # karni:urls\n' in urls
     assert "view: /about/ -> website.views.about (website:about)" in result.output
+    pages = site / "tests" / "test_pages.py"
+    assert 'PAGES = [\n    "/",\n    "/about/",\n    # karni:pages\n]\n' in pages.read_text()
+    assert "modified website/tests/test_pages.py" in result.output
 
     ok("make", "view", "service", "--path", "/services/<slug:slug>/")
     ok("make:view", "invoice", "--app", "website", "--path", "/invoices/<int:number>")
@@ -671,6 +682,13 @@ def test_view_adds_the_view_its_template_and_the_url(project: Path) -> None:
     urls = (site / "urls.py").read_text()
     assert 'path("services/<slug:slug>/", views.service, name="service"),' in urls
     assert 'path("invoices/<int:number>/", views.invoice, name="invoice"),' in urls
+    # A path with a capture needs a real URL, which only the project knows.
+    assert 'PAGES = [\n    "/",\n    "/about/",\n    # karni:pages\n]\n' in pages.read_text()
+    service = ok("make", "view", "service", "--path", "/services/<slug:slug>/", "--force")
+    assert "page test: /services/<slug:slug>/ has a capture, so it is not in " in service.output
+    # --force rewrites the view and leaves one entry per URL in the test.
+    ok("make", "view", "about", "--force")
+    assert pages.read_text().count('"/about/",') == 1
     # The include in config/urls.py is not touched again.
     assert (project / "config" / "urls.py").read_text().count(INCLUDE) == 1
 
@@ -697,6 +715,24 @@ def test_view_without_the_site_urls_marker(project: Path) -> None:
     fails("make", "view", "about", match="No `# karni:urls` marker in website/urls.py")
     result = ok("make", "view", "about", "--no-route")
     assert "add path('about/', views.about, name='about')" in result.output
+    assert "and its URL to PAGES in website/tests/test_pages.py" in result.output
+
+
+def test_view_without_the_page_test_marker_or_file_names_the_manual_step(project: Path) -> None:
+    ok("make", "site", "website")
+    pages = project / "website" / "tests" / "test_pages.py"
+    pages.write_text(pages.read_text().replace("    # karni:pages\n", ""))
+    before = pages.read_text()
+    result = ok("make", "view", "about")
+    assert pages.read_text() == before
+    assert (
+        'page test: website/tests/test_pages.py has no `# karni:pages` marker. Add "/about/" '
+        "to the URLs that website/tests/test_pages.py passes to assert_pages yourself."
+    ) in result.output
+    pages.unlink()
+    result = ok("make", "view", "team")
+    assert 'page test: website/tests/test_pages.py not found. Add "/team/"' in result.output
+    assert not pages.exists()
 
 
 # module

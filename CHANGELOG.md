@@ -19,6 +19,22 @@ apply codemods and list the manual steps. This file is the human summary.
   and K306 now say they are about app screens. `karni context` lists the
   site's routes on a `SITE:` line. [docs/public-site.md](docs/public-site.md)
   covers reading content, SEO basics and public forms.
+- **`assert_pages` tests a public site's pages.** `assert_pages(client,
+  urls)` in `karni.testing` (and `self.assert_pages(urls)` on
+  `APITestCase`) requests each page and checks a 200, a non-empty `<title>`
+  and `<meta name="description">`, an `alt` attribute on every `<img>`
+  (`alt=""` passes), that every same-site link, stylesheet and image answers,
+  and that a URL the site does not have answers 404. Every problem is
+  reported in one `E618` error, one line per page and problem, and each URL
+  is requested once per call. Other hosts are not requested. The test client
+  serves no static files, so a `{% static %}` URL is looked up with the
+  staticfiles finders. `karni make site` writes `<app>/tests/test_pages.py`,
+  which calls it on a `PAGES` list, and `karni make view` adds each new URL
+  at its `# karni:pages` marker. The generated `base.html` passes it.
+  Escape hatches: `follow=`, `check_links=`, `require_title=`,
+  `require_description=`, `require_alt=`, `not_found_url=`, `ignore=`,
+  `hosts=`, and a `PageParser` subclass as `parser=`. See
+  [docs/testing.md](docs/testing.md#public-pages-assert_pages).
 - **`config/urls.py` has a `# karni:urls` marker** where `karni make site`
   inserts its include. `karni upgrade` adds it to existing projects
   ([docs/migrations/0.4.1.md](docs/migrations/0.4.1.md)).

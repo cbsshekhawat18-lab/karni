@@ -1,10 +1,13 @@
 """``karni make view <name> --app <site app> [--path /about/]``: a page of the public site.
 
 Adds a function view to ``<app>/views.py``, a template under
-``<app>/templates/<app>/`` that extends the site's ``base.html``, and the
-URL at the ``# karni:urls`` marker of ``<app>/urls.py``. A path capture such
-as ``/services/<slug:slug>/`` becomes a view parameter and a template
-variable. The app must be a site app (``karni make site``).
+``<app>/templates/<app>/`` that extends the site's ``base.html``, the URL at
+the ``# karni:urls`` marker of ``<app>/urls.py``, and the URL at the
+``# karni:pages`` marker of ``<app>/tests/test_pages.py``, so the page test
+checks the new page. A path capture such as ``/services/<slug:slug>/``
+becomes a view parameter and a template variable. Such a page is left out
+of the test with a note, because only the project knows a real URL for it.
+The app must be a site app (``karni make site``).
 """
 
 from __future__ import annotations
@@ -87,10 +90,12 @@ def plan(
     )
     if register:
         site_gen.register_route(ws, app, route, name)
+        site_gen.add_page_to_test(ws, app, f"/{route}")
     else:
         ws.note(
             f"route not registered (--no-route): add path({route!r}, views.{name}, "
-            f"name={name!r}) to urlpatterns in {ws.rel(app.file('urls.py'))} yourself."
+            f"name={name!r}) to urlpatterns in {ws.rel(app.file('urls.py'))} yourself, and "
+            f"its URL to PAGES in {ws.rel(site_gen.pages_test(app))}."
         )
     ws.note(f"view: /{route} -> {app.module}.views.{name} ({app.label}:{name})")
     return f"/{route}"
@@ -115,8 +120,11 @@ def command(
 
     Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html
     extending the site's base.html, and `path(..., views.NAME, name="NAME")`
-    at the `# karni:urls` marker of APP/urls.py. The app must come from
-    `karni make site`.
+    at the `# karni:urls` marker of APP/urls.py. The URL also goes into
+    PAGES at the `# karni:pages` marker of APP/tests/test_pages.py, so
+    assert_pages checks the page (a path with a capture needs a real URL
+    there, which the command asks for). The app must come from `karni make
+    site`.
     """
     ws = project_workspace(force)
     plan(ws, resolve_app(ws, app), name, path=path, register=not no_route)
