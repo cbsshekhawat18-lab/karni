@@ -947,6 +947,127 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES "
         "yourself in settings.py.",
     ),
+    # W51x deploy checks (manage.py check --deploy, karni check --deploy)
+    _e(
+        "W510",
+        "DEBUG is on in a deployment",
+        "warning",
+        "karni.security.checks.check_debug (deploy)",
+        "With DEBUG on, an error page shows the settings, the source code around the error "
+        "and the request to whoever triggers it. Django also keeps every query in memory, "
+        "and the content security policy only reports instead of blocking.",
+        "Run production with DJANGO_ENV=prod, which turns DEBUG off, or set DEBUG=False in "
+        "the environment.",
+    ),
+    _e(
+        "W511",
+        "SECRET_KEY is weak or a development key",
+        "warning",
+        "karni.security.checks.check_secret_key (deploy)",
+        "SECRET_KEY signs sessions, password-reset and verification tokens and every signed "
+        "value. The scaffold's `karni-insecure-dev-key` is public, and a short or plain key "
+        "can be guessed. Either way anyone could forge them.",
+        "Set SECRET_KEY in the production environment to a random value of at least 50 "
+        'characters, for example the output of `python -c "from django.core.management.utils '
+        'import get_random_secret_key; print(get_random_secret_key())"`. Never commit it.',
+    ),
+    _e(
+        "W512",
+        "ALLOWED_HOSTS is empty or allows every host",
+        "warning",
+        "karni.security.checks.check_allowed_hosts (deploy)",
+        "Django builds absolute links, including password-reset and verification links, from "
+        "the request's Host header. With '*' an attacker picks the host those links point at. "
+        "An empty list answers no host at all once DEBUG is off.",
+        "Set ALLOWED_HOSTS in the environment to the site's host names, comma-separated, e.g. "
+        "ALLOWED_HOSTS=example.com,www.example.com.",
+    ),
+    _e(
+        "W513",
+        "CSRF_TRUSTED_ORIGINS is missing, a wildcard or plain http",
+        "warning",
+        "karni.security.checks.check_csrf_trusted_origins (deploy)",
+        "Django accepts a form or a session-mode API call only from a trusted origin. Behind "
+        "a proxy, and for a frontend on another host, that origin must be listed. A wildcard "
+        "or an http:// origin trusts more than the site, and session mode adds "
+        "KARNI_FRONTEND_URL, whose default is http://localhost:5173.",
+        "Set CSRF_TRUSTED_ORIGINS in the environment to the site's https origins, "
+        "comma-separated, e.g. CSRF_TRUSTED_ORIGINS=https://example.com. In session mode also "
+        "set KARNI_FRONTEND_URL to the frontend's https URL.",
+    ),
+    _e(
+        "W514",
+        "HSTS is off",
+        "warning",
+        "karni.security.checks.check_hsts (deploy)",
+        "Without Strict-Transport-Security a browser may still try plain http, for example "
+        "from a typed address or an old link, and a network attacker can read or change that "
+        "traffic before the redirect to https.",
+        "Run production with DJANGO_ENV=prod, which sets SECURE_HSTS_SECONDS to one year with "
+        "subdomains and preload. To try a new domain first, set SECURE_HSTS_SECONDS=3600 in the "
+        "environment and raise it once https works.",
+    ),
+    _e(
+        "W515",
+        "The session or CSRF cookie is not marked secure",
+        "warning",
+        "karni.security.checks.check_secure_cookies (deploy)",
+        "A cookie without the Secure flag is also sent over plain http, where anyone on the "
+        "network can read it and take over the session.",
+        "Run production with DJANGO_ENV=prod, which sets SESSION_COOKIE_SECURE and "
+        "CSRF_COOKIE_SECURE to True. If you define them in settings.py, set both to True.",
+    ),
+    _e(
+        "W516",
+        "The admin is at /admin/",
+        "warning",
+        "karni.security.checks.check_admin_path (deploy)",
+        "Scanners try /admin/ on every site, so a login form there receives password guesses "
+        "all day. Another path keeps it off their lists. It is not a substitute for strong "
+        "passwords, it only removes the noise.",
+        "Set KARNI_ADMIN_PATH in the environment to a path nobody guesses, with a trailing "
+        "slash, e.g. KARNI_ADMIN_PATH=staff-7f3a9c/. The scaffold's urls.py mounts the admin "
+        "at that setting.",
+    ),
+    _e(
+        "W517",
+        "CORS allows every origin",
+        "warning",
+        "karni.security.checks.check_cors (deploy)",
+        "CORS decides which other sites may call the API from a visitor's browser. Allowing "
+        "every origin lets any site read what the visitor can read, and with "
+        "CORS_ALLOW_CREDENTIALS (on in session mode) it does so with the visitor's cookies. "
+        "The development profile allows every origin, so a deployment that runs with "
+        "DJANGO_ENV=dev does too.",
+        "Run production with DJANGO_ENV=prod and list the frontend's origins in "
+        "CORS_ALLOWED_ORIGINS, e.g. CORS_ALLOWED_ORIGINS=https://app.example.com. Remove "
+        "CORS_ALLOW_ALL_ORIGINS and any regex that matches every origin.",
+    ),
+    _e(
+        "W518",
+        "No enforced Content-Security-Policy",
+        "warning",
+        "karni.security.checks.check_csp_present (deploy)",
+        "The Content-Security-Policy tells the browser which scripts may run, so an injected "
+        "script does not. Karni's SecurityHeadersMiddleware sends it, but not when it is "
+        "missing from MIDDLEWARE or KARNI_CSP is None, and it only reports while DEBUG or "
+        "KARNI_CSP_REPORT_ONLY is on.",
+        "Keep karni.security.SecurityHeadersMiddleware in MIDDLEWARE (karni_settings() adds it), "
+        "leave KARNI_CSP a dict, and run with DEBUG off and KARNI_CSP_REPORT_ONLY unset. If a "
+        "proxy sends the policy instead, add 'karni.W518' to SILENCED_SYSTEM_CHECKS.",
+    ),
+    _e(
+        "W519",
+        "The Content-Security-Policy lets any script run",
+        "warning",
+        "karni.security.checks.check_csp_scripts (deploy)",
+        "A script-src with *, http:, https:, data:, 'unsafe-eval' or 'unsafe-inline' (without a "
+        "nonce or hash) lets an injected script run, which defeats the policy. The admin and "
+        "the API docs pages get the extra sources they need on their own pages only.",
+        "Remove those sources from KARNI_CSP['script-src']. Allow a script host by its origin, "
+        "e.g. https://js.example.com, and an inline script by its hash with "
+        "karni.security.script_hash() on the one view that needs it (@csp_extend).",
+    ),
     # E6xx testing and seeding
     _e(
         "E601",

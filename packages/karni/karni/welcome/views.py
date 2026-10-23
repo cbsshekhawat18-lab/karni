@@ -6,8 +6,9 @@ from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
 from django.views import View
 
+from karni.security.headers import script_hash
 from karni.welcome.inventory import collect
-from karni.welcome.page import render_page
+from karni.welcome.page import SCRIPT, THEME_SCRIPT, render_page
 from karni.welcome.status import run_checks
 
 __all__ = ["WelcomeView"]
@@ -26,4 +27,8 @@ class WelcomeView(View):
         )
         response["Cache-Control"] = "no-store"
         response["X-Robots-Tag"] = "noindex"
+        # The page's two inline scripts, allowed by their hashes and nothing else.
+        response.karni_csp_extend = {  # type: ignore[attr-defined]
+            "script-src": [script_hash(THEME_SCRIPT), script_hash(SCRIPT)]
+        }
         return response

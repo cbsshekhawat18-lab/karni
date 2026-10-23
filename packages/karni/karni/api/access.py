@@ -85,6 +85,7 @@ __all__ = [
     "Unscoped",
     "Where",
     "action_predicate",
+    "admits_anyone",
     "admits_every_user",
     "apply_rows",
     "describe_access",
@@ -971,14 +972,20 @@ def action_predicate(view: Any, access: Access, method: str | None = None) -> Pr
     An action the view names in ``write_or_create_actions`` (an import: it
     creates some rows and changes others) is governed by ``create`` **or**
     ``write`` — whoever may do either may start it; which rows each may
-    touch is the action's own business, per row.
+    touch is the action's own business, per row. When either lets anonymous
+    callers in (a public form's ``create=Public()``), the action also needs
+    a signed-in user: a public form takes one row per request, never a file
+    of rows.
     """
     override = action_override(view)
     if override is not None:
         return override.bind(view)
     action = getattr(view, "action", None)
     if _write_or_create(view, action):
-        return AnyOf((access.create.bind(view, "create"), access.write.bind(view, "update")))
+        either = AnyOf((access.create.bind(view, "create"), access.write.bind(view, "update")))
+        if admits_anyone(access.create) or admits_anyone(access.write):
+            return AllOf((Authenticated(), either))
+        return either
     if method is None:
         method = getattr(getattr(view, "request", None), "method", None)
     return access.slot(action_slot(action, method)).bind(view)
@@ -1174,6 +1181,27 @@ def admits_every_user(predicate: Predicate) -> bool:
         return any(admits_every_user(part) for part in predicate.parts) and not any(
             _narrows(part) for part in predicate.parts
         )
+    return False
+
+
+def admits_anyone(predicate: Predicate) -> bool:
+    """Whether ``predicate``'s request gate lets an anonymous caller through, whoever it is.
+
+    True for :class:`Public`, for an ``|`` with such a part (``Owned(...,
+    bypass=Public())`` is one) and for an ``&`` made only of such parts.
+    :class:`Where` is not: its function decides per request, so it may well
+    turn anonymous callers away. The default rate limit for public creates
+    (``KARNI_PUBLIC_CREATE_RATE``) and the public-create honeypot use this
+    on a viewset's ``create`` predicate.
+    """
+    if isinstance(predicate, Public):
+        return True
+    if isinstance(predicate, Owned):
+        return predicate.bypass is not None and admits_anyone(predicate.bypass)
+    if isinstance(predicate, AnyOf):
+        return any(admits_anyone(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return all(admits_anyone(part) for part in predicate.parts)
     return False
 
 

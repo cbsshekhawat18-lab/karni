@@ -49,6 +49,45 @@ apply codemods and list the manual steps. This file is the human summary.
   declares `read=Public(), write=Authenticated()`. `karni upgrade` lists the
   step, and [the 0.4.1 migration note](docs/migrations/0.4.1.md) has the
   details.
+- **Public forms are protected by default.** A viewset whose `create` anyone
+  may call (`create=Public()`) is limited to `KARNI_PUBLIC_CREATE_RATE` (10
+  an hour per caller, by client IP for anonymous callers) with no
+  `throttle` declaration. `Throttle(create=...)` replaces the rate and
+  `Throttle(create=None)` or `KARNI_PUBLIC_CREATE_RATE = None` turns it off.
+  A request that fills the honeypot field `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD`
+  (default `homepage`) is answered 202 and saves nothing. The field is named
+  in the schema as `x-karni-honeypot`, never as a body field, and
+  `@karni/ui`'s `ResourceForm` renders it hidden. The import endpoints of such
+  a viewset now need a signed-in user, and an anonymous caller can no longer
+  read an import job. `karni make model ... --access public-create` writes a
+  public form's declaration, and the `new-model` agent procedure names it.
+  The pytest plugin starts each test with empty
+  rate-limit counters. This changes a default: see
+  [the 0.4.1 migration note](docs/migrations/0.4.1.md#public-creates-are-rate-limited).
+- **Security headers on every response.** `karni.security.SecurityHeadersMiddleware`
+  sends a Content-Security-Policy (report-only while `DEBUG` is on) and a
+  Permissions-Policy. The default policy allows what Karni serves: the admin
+  (with `'unsafe-eval'` for its Alpine.js, on admin pages only), the API docs
+  pages from their CDN, the welcome page's two scripts by hash and the
+  `@karni/ui` app's theme script by hash. `KARNI_CSP` adds sources (Google
+  Fonts, analytics) or removes a directive, `None` turns the header off,
+  `KARNI_CSP_REPORT_ONLY` overrides the `DEBUG` choice, and `@csp_extend` and
+  `@csp_exempt` adjust one view. `KARNI_PERMISSIONS_POLICY` allows a browser
+  feature back. A new project's Swagger page uses drf-spectacular's split
+  view, which needs no inline script. See
+  [security headers](docs/security.md#security-headers).
+- **`karni check --deploy`.** It runs Django's `check --deploy` plus ten
+  Karni deploy checks, `karni.W510` to `karni.W519`: `DEBUG`, a strong
+  `SECRET_KEY`, `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` without wildcards,
+  HSTS, secure cookies, the admin off `/admin/`, CORS not open to every
+  origin, and an enforced Content-Security-Policy whose `script-src` allows
+  no injected script. Each finding prints with its code and fix, a warning
+  fails the run, and a Django warning that a Karni check covers is printed
+  once. `manage.py check --deploy` runs the same checks. `karni_check` now
+  prints the findings of a failing Django check, which it used to swallow.
+  `CSRF_TRUSTED_ORIGINS` is read from the environment, and the scaffold's
+  `.env.example` lists the production values to set. See
+  [deploy checks](docs/security.md#deploy-checks).
 - **`karni make test` acts as the role that may write.** For a viewset whose
   writes need a role, the generated test uses the role the `write` predicate
   names (then `create`, then `read`), so it exercises real creates, updates
@@ -122,7 +161,7 @@ apply codemods and list the manual steps. This file is the human summary.
   scope `"<route>.<action>"`, so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`
   replaces the rate or switches it off with `None`. The OpenAPI schema
   publishes the rate as `x-karni-throttle`, and a bad declaration is `E132`.
-  See [rate limits](docs/api.md#access-control).
+  See [rate limits](docs/api.md#rate-limits).
 - **`env` and `SILENCED_SYSTEM_CHECKS` after `karni_settings()`.** The call
   leaves `env`, the django-environ reader Karni uses, in the settings module,
   so a setting added below it reads `.env` without `import os`. It is also

@@ -42,6 +42,7 @@ class KarniAppConfig(AppConfig):
         from django.conf import settings
 
         from karni import checks  # noqa: F401 - registers Karni's system checks
+        from karni.security import checks as deploy_checks  # noqa: F401 - the deploy checks
 
         if getattr(settings, "KARNI_VALIDATE", True):
             from karni.conf.validation import validate_settings

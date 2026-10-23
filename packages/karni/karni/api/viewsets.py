@@ -66,6 +66,7 @@ import weakref
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, ClassVar, Final
 
+import structlog
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Model, Prefetch, QuerySet
@@ -100,6 +101,7 @@ from karni.api.access import (
 from karni.api.caching import Cache, ResponseCache, Uncached, response_cache
 from karni.api.expansion import collect_expand_param, validate_expand
 from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSearchFilter
+from karni.api.honeypot import honeypot_field, honeypot_filled
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.related import mark_read_scoped
 from karni.api.serializers import build_serializer
@@ -120,6 +122,8 @@ from karni.performance import (
 __all__ = ["BaseViewSet"]
 
 logger = logging.getLogger("karni.performance")
+#: Structured events of the API layer (``karni.api.honeypot``).
+api_logger = structlog.get_logger("karni.api")
 
 #: Actions whose queryset the optimiser shapes from the serializer.
 OPTIMIZED_ACTIONS: Final = frozenset({"list", "retrieve"})
@@ -254,7 +258,8 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     cache: ClassVar[Cache | Uncached | None] = None
     #: ``Throttle(create="10/hour")`` limits each caller of the named actions, on
     #: top of the project-wide ``anon``/``user`` throttles (:mod:`karni.api.throttling`).
-    #: It is added to ``throttle_classes`` at class definition. ``None`` adds no limit.
+    #: ``None`` declares nothing: a public ``create`` still gets ``KARNI_PUBLIC_CREATE_RATE``,
+    #: and ``Throttle(create=None)`` turns that default off.
     throttle: ClassVar[Throttle | None] = None
     #: The throttle class a ``throttle`` declaration adds to ``throttle_classes``.
     #: Override / escape hatch: a subclass of ``ActionRateThrottle`` with another
@@ -294,11 +299,17 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
         _validate_performance(cls)
-        if isinstance(cls.throttle, Throttle) and cls.action_throttle_class not in list(
+        declares = isinstance(cls.throttle, Throttle)
+        # Every viewset carries the action throttle, so a public create gets
+        # its default limit (KARNI_PUBLIC_CREATE_RATE) without a declaration.
+        # A class that sets its own throttle_classes and declares nothing owns
+        # its throttling, as in plain DRF.
+        own_classes = "throttle_classes" in cls.__dict__
+        if (declares or not own_classes) and cls.action_throttle_class not in list(
             cls.throttle_classes
         ):
-            # The declaration rides in throttle_classes, so everything that
-            # switches DRF throttling off (tests, probes, a project) covers it.
+            # The limit rides in throttle_classes, so everything that switches
+            # DRF throttling off (tests, probes, a project) covers it.
             cls.throttle_classes = [*cls.throttle_classes, cls.action_throttle_class]
         if "object_permission_classes" in cls.__dict__ and cls.object_permission_classes:
             # Still honoured (checked after the access object check) until removal.
@@ -690,10 +701,16 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             .first()
         )
         user = getattr(request, "user", None)
-        if found is None or (
-            not getattr(user, "is_superuser", False)
-            and found.created_by_id != getattr(user, "pk", None)
+        if (
+            found is None
+            or not getattr(user, "is_authenticated", False)
+            or (
+                not getattr(user, "is_superuser", False)
+                and found.created_by_id != getattr(user, "pk", None)
+            )
         ):
+            # An anonymous caller owns no job: two of them would share every
+            # job saved without a creator.
             raise NotFound("No such import job (or it is not yours).")
         return found
 
@@ -765,7 +782,23 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         response: Response = super().handle_exception(api_exception(exc) or exc)
         return response
 
+    def get_honeypot_field(self) -> str | None:
+        """The hidden form field that marks a script on this viewset's public create, or ``None``.
+
+        :func:`karni.api.honeypot.honeypot_field`: ``KARNI_PUBLIC_CREATE_HONEYPOT_FIELD``
+        when ``create`` lets anonymous callers in and the model has no field of
+        that name. Override / escape hatch: return ``None`` to turn it off for
+        this viewset, or another name.
+        """
+        return honeypot_field(self)
+
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        honeypot = self.get_honeypot_field()
+        if honeypot and honeypot_filled(request, honeypot):
+            # A person never sees the field, so whoever filled it is a script.
+            # Pretend to accept, as registration does, and save nothing.
+            api_logger.info("karni.api.honeypot", viewset=type(self).__name__, field=honeypot)
+            return Response({"detail": "Received."}, status=202)
         try:
             response: Response = super().create(request, *args, **kwargs)
         except KarniWriteDeferred as exc:

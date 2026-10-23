@@ -7,8 +7,11 @@ scope it. ``--access`` picks one of the other common shapes; whichever
 applies is printed so it is never silent. ``public-read`` lets anyone read
 and only the ``staff`` role write (``public-read:<role>`` names another
 role): a self-registered account must never be enough to change a public
-resource. Anything richer (``Owned(...) | HasRole(...)``, ``Where(...)``) is
-an edit of the generated declaration.
+resource. ``public-create`` is a public form (a contact form, an enquiry):
+anyone may create, only ``staff`` (or ``public-create:<role>``) reads,
+changes and deletes. Karni rate-limits such a create and gives it a
+honeypot field by itself. Anything richer (``Owned(...) | HasRole(...)``,
+``Where(...)``) is an edit of the generated declaration.
 """
 
 from __future__ import annotations
@@ -45,8 +48,12 @@ NAME = "viewset"
 SUMMARY = "Add a BaseViewSet for a model, with its access declaration (--access)."
 
 DEFAULT_ACCESS = "granted"
-ACCESS_CHOICES = "granted|authenticated|public-read[:<role>]|owned:<field>|staff|role:<name>"
-#: The role ``public-read`` lets write: the system role in the default KARNI_ROLES.
+ACCESS_CHOICES = (
+    "granted|authenticated|public-read[:<role>]|public-create[:<role>]|owned:<field>|staff|"
+    "role:<name>"
+)
+#: The role ``public-read`` lets write (and ``public-create`` lets read and
+#: write): the system role in the default KARNI_ROLES.
 PUBLIC_READ_WRITER = "staff"
 _ROLE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 _PATH = re.compile(r"^[a-z_][a-z0-9_]*(__[a-z_][a-z0-9_]*)*$")
@@ -62,16 +69,19 @@ def access_declaration(spec: str, model: ModelInfo | None) -> tuple[list[str], l
         return ["Granted()"], ["Granted"]
     if kind == "authenticated" and not arg:
         return ["read=Authenticated()", "write=Authenticated()"], ["Authenticated"]
-    if kind == "public-read":
+    if kind in ("public-read", "public-create"):
         writer = arg if colon else PUBLIC_READ_WRITER
         if not _ROLE.match(writer):
             raise CliError(
-                f"--access public-read:<role> needs the role (group) that may write, e.g. "
-                f"public-read:editor, got {spec!r}. Plain public-read lets role "
-                f"{PUBLIC_READ_WRITER!r} write.",
+                f"--access {kind}:<role> needs the role (group) that may "
+                f"{'write' if kind == 'public-read' else 'read and write'}, e.g. "
+                f"{kind}:editor, got {spec!r}. Plain {kind} uses role {PUBLIC_READ_WRITER!r}.",
                 code="C106",
             )
-        return ["read=Public()", f"write=HasRole({pystr(writer)})"], ["HasRole", "Public"]
+        role = f"HasRole({pystr(writer)})"
+        if kind == "public-create":
+            return [f"read={role}", f"write={role}", "create=Public()"], ["HasRole", "Public"]
+        return ["read=Public()", f"write={role}"], ["HasRole", "Public"]
     if kind == "staff" and not arg:
         return ['read=HasRole("staff")', 'write=HasRole("staff")'], ["HasRole"]
     if kind == "role":
@@ -111,6 +121,18 @@ def access_notes(spec: str) -> list[str]:
                 f"who: anyone reads, only role {writer!r} writes "
                 "(--access public-read:<role> names another role)"
             )
+        ]
+    if kind == "public-create":
+        role = arg or PUBLIC_READ_WRITER
+        return [
+            (
+                f"who: anyone creates, only role {role!r} reads, changes and deletes "
+                "(--access public-create:<role> names another role)"
+            ),
+            (
+                "abuse: Karni limits each caller's creates (KARNI_PUBLIC_CREATE_RATE, "
+                "default 10/hour) and drops a create that fills the hidden honeypot field"
+            ),
         ]
     if kind == "authenticated":
         return [
@@ -195,7 +217,8 @@ def command(
         "--access",
         help=(
             f"Who reads/writes: {ACCESS_CHOICES}. Default: granted (the roles' grants). "
-            f"public-read: anyone reads, only role {PUBLIC_READ_WRITER!r} (or :<role>) writes."
+            f"public-read: anyone reads, only role {PUBLIC_READ_WRITER!r} (or :<role>) writes. "
+            "public-create: anyone creates (a public form), only that role reads and writes."
         ),
     ),
     search: list[str] | None = typer.Option(
@@ -210,8 +233,10 @@ def command(
     It declares `model = <Model>` and the mandatory `access` (ADR 0001):
     granted (default: whatever KARNI_ROLES grants for the model, row-scoped),
     authenticated, public-read (anyone reads, only role "staff" writes, or the
-    role `public-read:<role>` names), `owned:<field>` (rows whose
-    `<field>` is the user), staff (role "staff") or `role:<name>`.
+    role `public-read:<role>` names), public-create (a public form: anyone
+    creates, only role "staff" or `public-create:<role>` reads and writes),
+    `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or
+    `role:<name>`.
     """
     ws = project_workspace(force)
     target = resolve_app(ws, app)

@@ -44,6 +44,8 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider",` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
 | `KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
 | `KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
+| `KARNI_PUBLIC_CREATE_RATE` | `KARNI_PUBLIC_CREATE_RATE` | `"10/hour"` | The limit on each caller (the user, else the client IP) of a `create` anyone may call (`create=Public()`), unless the viewset declares `throttle = Throttle(create=...)`. `None` or `""` turns this default off. See [rate limits](api.md#rate-limits). |
+| `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `"homepage"` | Name of the hidden form field on a public `create`. A request that fills it is answered 202 and nothing is saved. Off for a model that has a field of that name. `""` turns it off. See [rate limits](api.md#rate-limits). |
 | **Performance (ADR 0001 Decision 3)** | | | |
 | `KARNI_MAX_PAGE_SIZE` | `KARNI_MAX_PAGE_SIZE` | `100` | Hard cap on `?page_size=` for every Karni paginator. |
 | `KARNI_MAX_PAGE_SIZE_FLOOR` | `KARNI_MAX_PAGE_SIZE_FLOOR` | `25` | The lowest value `KARNI_MAX_PAGE_SIZE` may take (the frontend's page size). |
@@ -65,6 +67,10 @@ DRF settings Karni derives are documented where the feature is.
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
 | `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| **Security headers (karni.security)** | | | |
+| `KARNI_CSP` | `KARNI_CSP` | `{}` | Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers). |
+| `KARNI_CSP_REPORT_ONLY` | `KARNI_CSP_REPORT_ONLY` | `None` | `True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`. |
+| `KARNI_PERMISSIONS_POLICY` | `KARNI_PERMISSIONS_POLICY` | `{}` | Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header. |
 | **Karni knobs** | | | |
 | `KARNI_HEALTH_CHECKS` |  | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default). |
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |

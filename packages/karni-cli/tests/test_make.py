@@ -200,6 +200,14 @@ def test_model_chain_and_access_default_is_announced(project: Path) -> None:
         ("authenticated", "Access(read=Authenticated(), write=Authenticated())"),
         ("public-read", 'Access(read=Public(), write=HasRole("staff"))'),
         ("public-read:editor", 'Access(read=Public(), write=HasRole("editor"))'),
+        (
+            "public-create",
+            'Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())',
+        ),
+        (
+            "public-create:editor",
+            'Access(read=HasRole("editor"), write=HasRole("editor"), create=Public())',
+        ),
         ("owned:owner", 'Access(read=Owned("owner"), write=Owned("owner"))'),
         ("staff", 'Access(read=HasRole("staff"), write=HasRole("staff"))'),
         ("role:editor", 'Access(read=HasRole("editor"), write=HasRole("editor"))'),
@@ -221,8 +229,39 @@ def test_viewset_validation(project: Path) -> None:
     for bad in ("public-read:", "public-read:bad role", "public-read:-x"):
         message = fails("make", "viewset", "Event", "--access", bad, match="public-read:<role>")
         assert message.startswith("C106: ") and "e.g. public-read:editor" in message
+    message = fails(
+        "make", "viewset", "Event", "--access", "public-create:", match="public-create:<role>"
+    )
+    assert "read and write" in message and "e.g. public-create:editor" in message
     fails("make", "viewset", "Event", "--search", "nope", match="has no field 'nope'")
     fails("make", "model", "Other", "--access", "staff", match="--with viewset")
+
+
+def test_public_create_is_a_public_form_and_says_how_it_is_protected(project: Path) -> None:
+    """A contact form: anyone sends one, only staff read them, and Karni limits the sending."""
+    ok("make", "app", "enquiries")
+    result = ok(
+        "make",
+        "model",
+        "Enquiry",
+        "name:str",
+        "message:text",
+        "--with",
+        "viewset,test",
+        "--access",
+        "public-create",
+    )
+    assert (
+        'access: Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())'
+        in result.output
+    )
+    assert "who: anyone creates, only role 'staff' reads, changes and deletes" in result.output
+    assert "KARNI_PUBLIC_CREATE_RATE" in result.output
+    viewsets = (project / "enquiries" / "viewsets.py").read_text()
+    assert "from karni.api import Access, BaseViewSet, HasRole, Public" in viewsets
+    assert "throttle" not in viewsets  # the default limit needs no declaration
+    test = (project / "enquiries" / "tests" / "test_enquiry.py").read_text()
+    assert '        self.assert_crud(EnquiryViewSet, "staff")\n' in test
 
 
 def test_public_read_lets_only_a_role_write_and_says_so(project: Path) -> None:

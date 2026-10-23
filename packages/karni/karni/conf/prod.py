@@ -34,7 +34,9 @@ PROD: dict[str, Any] = {
     # its X-Forwarded-Proto header and redirect any plain-HTTP request.
     "SECURE_PROXY_SSL_HEADER": ("HTTP_X_FORWARDED_PROTO", "https"),
     "SECURE_SSL_REDIRECT": True,
-    "SECURE_HSTS_SECONDS": 31536000,
+    # One year. SECURE_HSTS_SECONDS in the environment lowers it while a new
+    # domain is tried out (karni check --deploy reports 0).
+    "SECURE_HSTS_SECONDS": env.int("SECURE_HSTS_SECONDS", default=31536000),
     "SECURE_HSTS_INCLUDE_SUBDOMAINS": True,
     "SECURE_HSTS_PRELOAD": True,
     "SECURE_CONTENT_TYPE_NOSNIFF": True,

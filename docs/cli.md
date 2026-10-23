@@ -232,6 +232,7 @@ karni check [OPTIONS]
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` | on |  |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
+| `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 
 ### `karni explain`
 
@@ -737,7 +738,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `FIELDS...` |  | Fields as name:type[:arg][?]. Types: str[:len] text int float decimal[:max:places] bool date datetime url file image uuid choice:a\|b fk:Model m2m:Model o2o:Model. Typed fields (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] slug[:source] phone country currency json[:queried] array:str. A trailing ? makes the field optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
-| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
+| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
@@ -748,7 +749,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 
 Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py, with CRUD at `/api/<models>/`.
 
-It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anyone reads, only role "staff" writes, or the role `public-read:<role>` names), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
+It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anyone reads, only role "staff" writes, or the role `public-read:<role>` names), public-create (a public form: anyone creates, only role "staff" or `public-create:<role>` reads and writes), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
 
 ```
 karni make viewset [OPTIONS] MODEL
@@ -757,7 +758,7 @@ karni make viewset [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). |
-| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
+| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | search_fields, comma-separated or repeated (e.g. title,venue). |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |

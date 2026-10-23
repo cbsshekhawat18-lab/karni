@@ -3,7 +3,9 @@
 Routes: Django admin, the OpenAPI schema and Swagger UI (drf-spectacular),
 Karni's auth endpoints (/api/auth/), the auto-routed API (/api/), Karni's
 health endpoints (/health/ liveness, /health/ready/ readiness) and, last,
-the welcome page at "/" while DEBUG is on. Add project routes to
+the welcome page at "/" while DEBUG is on. Swagger UI is the split view: its
+start-up script is a file, so the content security policy allows no inline
+script on that page either. Add project routes to
 ``urlpatterns`` below. To replace a single Karni endpoint, declare your
 ``path(...)`` for it BEFORE the include, because the first match wins. Your own
 ``path("", ...)`` replaces the welcome page the same way. ``karni make site``
@@ -13,7 +15,7 @@ inserts its include at the ``# karni:urls`` marker, so keep that line.
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
 from karni.welcome import media_urls, welcome_urls
 
 urlpatterns = [
@@ -22,7 +24,7 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
+        SpectacularSwaggerSplitView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
     path("api/auth/", include("karni.accounts.urls")),

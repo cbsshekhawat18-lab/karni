@@ -5,6 +5,12 @@ loads to a zero-arg callable returning ``list[str]`` failure messages (empty
 means pass). An exception from loading or calling a hook is recorded as one
 failure and never aborts the remaining hooks. Exit code is 1 when Django's
 checks fail or any hook reports failures.
+
+``--deploy`` adds the deploy checks (Django's and Karni's ``karni.W510`` to
+``karni.W519``, :mod:`karni.security.checks`) and fails on warnings too, so a
+deployment with ``DEBUG`` on or the scaffold's ``SECRET_KEY`` does not pass.
+A Django deploy warning that a Karni check covers is hidden then, so each
+problem is printed once, with the Karni code and fix.
 """
 
 from __future__ import annotations
@@ -12,10 +18,25 @@ from __future__ import annotations
 from importlib.metadata import entry_points
 from typing import Any
 
+from django.conf import settings
 from django.core.management import call_command
-from django.core.management.base import BaseCommand, SystemCheckError
+from django.core.management.base import BaseCommand, CommandParser, SystemCheckError
+from django.test.utils import override_settings
 
 from karni.exceptions import KarniCommandError
+
+
+def superseded_django_checks() -> list[str]:
+    """Django's deploy warnings to hide: those a Karni check covers, while it is not silenced."""
+    from karni.security.checks import SUPERSEDES
+
+    silenced = set(getattr(settings, "SILENCED_SYSTEM_CHECKS", None) or [])
+    return [
+        django_id
+        for karni_id, django_ids in SUPERSEDES.items()
+        if karni_id not in silenced
+        for django_id in django_ids
+    ]
 
 
 class Command(BaseCommand):
@@ -23,12 +44,37 @@ class Command(BaseCommand):
     # We invoke `check` ourselves so hooks always run, even when checks fail.
     requires_system_checks: list[Any] = []
 
+    def add_arguments(self, parser: CommandParser) -> None:
+        parser.add_argument(
+            "--deploy",
+            action="store_true",
+            help="Also run the deploy checks, and fail on warnings too. Run it with the "
+            "production environment (DJANGO_ENV=prod, DEBUG=False, the real SECRET_KEY).",
+        )
+
     def handle(self, *args: Any, **options: Any) -> None:
+        deploy = bool(options.get("deploy"))
         failures: list[str] = []
+        # Django's check writes warnings to these streams and raises the
+        # failing findings without printing them, so they are printed below.
+        streams = {"stdout": self.stdout._out, "stderr": self.stderr._out}
         try:
-            call_command("check")
-        except SystemCheckError:
-            failures.append("django: system checks failed (see output above)")
+            if deploy:
+                silenced = [
+                    *(getattr(settings, "SILENCED_SYSTEM_CHECKS", None) or []),
+                    *superseded_django_checks(),
+                ]
+                with override_settings(SILENCED_SYSTEM_CHECKS=silenced):
+                    call_command("check", deploy=True, fail_level="WARNING", **streams)
+            else:
+                call_command("check", **streams)
+        except SystemCheckError as exc:
+            self.stderr.write(str(exc))
+            failures.append(
+                "django: deploy checks failed (see output above)"
+                if deploy
+                else "django: system checks failed (see output above)"
+            )
 
         for ep in sorted(entry_points(group="karni.checks"), key=lambda e: e.name):
             try:
@@ -50,9 +96,9 @@ class Command(BaseCommand):
                 self.stderr.write(failure)
             raise KarniCommandError(
                 f"karni check found {len(failures)} problem(s), listed above. Fix each one. "
-                "Each names its K or E code, and `karni explain <code>` explains it.",
+                "Each names its code (K, E or W), and `karni explain <code>` explains it.",
                 code="E702",
             )
         # A stage of `karni check`, which prints the overall verdict once every
         # stage (this one, ESLint, duplication) has run.
-        self.stdout.write("backend checks: ok")
+        self.stdout.write("backend checks: ok" + (" (deploy checks included)" if deploy else ""))

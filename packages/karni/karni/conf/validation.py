@@ -100,6 +100,11 @@ class KarniSettingsModel(BaseModel):
     KARNI_ADMIN_LOGO: Any = None
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"
+    KARNI_PUBLIC_CREATE_RATE: str | None = "10/hour"
+    KARNI_PUBLIC_CREATE_HONEYPOT_FIELD: str = "homepage"
+    KARNI_CSP: Any = Field(default_factory=dict)
+    KARNI_CSP_REPORT_ONLY: bool | None = None
+    KARNI_PERMISSIONS_POLICY: Any = Field(default_factory=dict)
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6
     KARNI_ADMIN_SEARCH_MAX: int = 5
@@ -139,6 +144,7 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
         errors.extend(self._check_karni_knobs())
+        errors.extend(self._check_security_headers())
         return errors
 
     def _check_secret_key(self) -> list[str]:
@@ -378,6 +384,44 @@ class KarniSettingsModel(BaseModel):
             )
         if "." not in self.KARNI_API_ROUTER:
             errors.append(f"KARNI_API_ROUTER {self.KARNI_API_ROUTER!r} is not a dotted import path")
+        rate = self.KARNI_PUBLIC_CREATE_RATE
+        if rate and not THROTTLE_RATE_RE.match(rate):
+            errors.append(
+                f"KARNI_PUBLIC_CREATE_RATE = {rate!r} is not a valid throttle rate (expected "
+                "'<number>/<period>', e.g. '10/hour', or None to turn the default limit off)"
+            )
+        return errors
+
+    def _check_security_headers(self) -> list[str]:
+        """``KARNI_CSP`` and ``KARNI_PERMISSIONS_POLICY``: a dict of name -> sources, or None."""
+        errors: list[str] = []
+        for setting, example in (
+            ("KARNI_CSP", '{"font-src": ["https://fonts.gstatic.com"]}'),
+            ("KARNI_PERMISSIONS_POLICY", '{"geolocation": ["self"]}'),
+        ):
+            value = getattr(self, setting)
+            if value is None:
+                continue
+            if not isinstance(value, Mapping):
+                errors.append(
+                    f"{setting} = {value!r} must be a dict of name -> list of sources, e.g. "
+                    f"{example}, or None to send no header"
+                )
+                continue
+            for name, sources in value.items():
+                if not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z-]*", name):
+                    errors.append(f"{setting} key {name!r} is not a directive name, e.g. {example}")
+                elif sources is not None and not (
+                    isinstance(sources, str)
+                    or (
+                        isinstance(sources, list | tuple)
+                        and all(isinstance(item, str) for item in sources)
+                    )
+                ):
+                    errors.append(
+                        f"{setting}[{name!r}] = {sources!r} must be a list of strings, or None "
+                        "to remove the entry"
+                    )
         return errors
 
     def _check_admin(self) -> list[str]:

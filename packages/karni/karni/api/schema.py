@@ -18,8 +18,12 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   (``|`` / ``&``), ``unscoped`` (the reason) and ``deny`` (no declaration).
   Display hints for clients only — the server enforces.
 * ``x-karni-throttle: "10/hour"`` on an operation whose action the viewset's
-  ``throttle`` declaration limits (:mod:`karni.api.throttling`): the rate in
+  ``throttle`` declaration limits, or on a public ``create``
+  (``KARNI_PUBLIC_CREATE_RATE``, :mod:`karni.api.throttling`): the rate in
   force, settings included.
+* ``x-karni-honeypot: "homepage"`` on a public ``create`` with a honeypot
+  field (:mod:`karni.api.honeypot`). The field is not in the request body,
+  so it is never required. ``@karni/ui``'s form renders it hidden.
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -92,7 +96,7 @@ class KarniAutoSchema(AutoSchema):
         method: str,
         registry: Any,
     ) -> dict[str, Any] | None:
-        """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle`` extensions."""
+        """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle``/``-honeypot``."""
         if self._karni_action() == "history" and not self._karni_audited():
             return None  # no history is kept for this resource: no operation to document
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
@@ -109,6 +113,10 @@ class KarniAutoSchema(AutoSchema):
             rate = throttle_rate(view, self._karni_action())
             if rate is not None:
                 operation["x-karni-throttle"] = rate
+            if self._karni_action() == "create":
+                honeypot = view.get_honeypot_field()
+                if honeypot:
+                    operation["x-karni-honeypot"] = honeypot
         return operation
 
     #: The detail routes drf-spectacular already names apart from the list.
