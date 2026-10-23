@@ -74,7 +74,6 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["public-read-writes-need-a-role"].mechanical is False
     assert by_id["seed-refuses-occupied-tables"].release == "0.4.1"
     assert by_id["operation-ids-by-param"].release == "0.4.0"
-    assert by_id["seed-refuses-occupied-tables"].release == "0.5.0"
     assert by_id["agent-files-reworded"].kind == "project-files"
     assert by_id["django-5-2"].release == "0.3.0" and not by_id["django-5-2"].mechanical
     assert by_id["role-scope-paths-checked"].release == "0.3.0"
