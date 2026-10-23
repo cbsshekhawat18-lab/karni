@@ -9,8 +9,10 @@ PostgreSQL. Every command on this page is run verbatim by CI
 (`.github/ci/quickstart.py`), so it works on a clean machine or the build
 fails.
 
-You need Python 3.12+, Node 20.19+ (Node 24 LTS recommended) and Docker, which
-runs the database.
+You need Python 3.12+, Node 20.19+ with npm 11+ (Node 24 LTS recommended, as
+it bundles npm 11) and Docker, which runs the database. Node 20 and 22 bundle
+npm 10, which cannot install the frontend. Step 4 shows the one command that
+works on any of them.
 
 ## 1. Install Karni and create a project
 
@@ -61,7 +63,7 @@ decide who reads and writes what, admin pages, the list, detail and form
 screens, and one test file per resource. The last command adds a sign-in page at `/login`: a new
 project has none until you ask for one.
 
-## 3. Seed, test, run
+## 3. Seed and test
 
 <!-- karni:quickstart -->
 ```sh
@@ -77,11 +79,35 @@ cannot reach another's events. `karni check` ran the architecture rules.
 `--no-frontend` is needed only until the next step installs the frontend's
 dependencies, and plain `karni check` is what CI runs.
 
-Now serve it:
+## 4. Install the frontend
+
+<!-- karni:quickstart -->
+```sh
+cd frontend && npx --yes npm@11 install && cd ..
+karni check
+```
+
+The frontend needs npm 11 or later. `npx --yes npm@11 install` runs npm 11 for
+this one install, whichever npm is on your PATH, and `--yes` lets npx download
+it without asking first. On npm 11 or later, which Node 24 bundles, plain `npm
+install` does the same. Node 20 and 22 bundle npm 10, and npm 10 crashes in
+this install with `Cannot read properties of null (reading 'edgesOut')` while
+it resolves Vite 8's optional peers. To upgrade npm for good, run `npm install
+-g npm@11`. `karni doctor` shows your Node and npm and flags either one when
+it is too old.
+
+The project's `frontend/package.json` declares the requirement in `engines`
+and `frontend/.npmrc` sets `engine-strict`. Once `package-lock.json` exists,
+an older npm stops there with `EBADENGINE` instead of installing.
+
+Plain `karni check` now runs the frontend checks too: ESLint with
+`@karni/ui`'s rules, and jscpd for duplicated code.
+
+## 5. Run it
 
 ```sh
 karni serve --local                  # Django on http://127.0.0.1:8000
-cd frontend && npm install && npm run dev   # the app on http://localhost:5173
+cd frontend && npm run dev           # the app on http://localhost:5173
 ```
 
 Open `http://127.0.0.1:8000/` first. It is Karni's welcome page, generated

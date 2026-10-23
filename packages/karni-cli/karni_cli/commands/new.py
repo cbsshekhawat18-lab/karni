@@ -19,7 +19,7 @@ from pathlib import Path
 
 import typer
 
-from karni_cli import agent_data, scaffold
+from karni_cli import agent_data, scaffold, toolchain
 from karni_cli.adapters import sync
 from karni_cli.brand import print_mark
 from karni_cli.scaffold import resolve_template, validate_name
@@ -110,5 +110,9 @@ def new(
     typer.echo("  docker compose up -d")
     typer.echo(
         "  (cd frontend && npm install)  # editor, lint, type-check and `karni check` on the host"
+    )
+    typer.echo(
+        f"  # npm install needs npm {toolchain.NPM_FLOOR} or later. "
+        "On npm 10 (Node 20 and 22), run `npx npm@11 install` there instead"
     )
     typer.echo("  karni check")

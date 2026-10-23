@@ -192,10 +192,23 @@ jobs:
   # docs/quickstart.md, run verbatim on a clean machine: every `sh` block on
   # the page, in a fresh venv and an empty directory, with this checkout's
   # packages in place of PyPI's (the one documented substitution).
+  # On Node 24 (the LTS the docs recommend) and on Node 20 with its bundled
+  # npm 10, the oldest setup the docs support. npm 10 crashes in a plain
+  # `npm install` of the scaffold's frontend, so the page's own install step
+  # must carry it.
   # ---------------------------------------------------------------------------
   quickstart:
-    name: Quickstart (docs/quickstart.md, verbatim)
+    # The Node 24 job keeps the name branch protection requires.
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: 24
+            name: Quickstart (docs/quickstart.md, verbatim)
+          - node: 20
+            name: Quickstart on Node 20 (docs/quickstart.md, verbatim)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7
@@ -203,7 +216,9 @@ jobs:
           python-version: "3.12"
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
+      - name: Node and npm (Node 20 keeps its bundled npm 10)
+        run: node --version && npm --version
       # Before the build below: the test fetches this commit into a fresh
       # checkout, lets `karni new` build that checkout's @karni/ui, and fails
       # if any tracked file changed (package-lock.json did, with npm install).

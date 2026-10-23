@@ -46,7 +46,7 @@ nav entry per static route in `src/routes.tsx`. That is how pages from
 
 ```sh
 cd frontend
-npm install
+npm install     # needs npm 11 or later. On npm 10 (Node 20 and 22): npx npm@11 install
 npm run dev     # http://localhost:5173, proxies /api and /health to Django
 npm run build   # tsc + vite build into frontend/dist
 npm run lint    # ESLint with the karni/* enforcement rules
