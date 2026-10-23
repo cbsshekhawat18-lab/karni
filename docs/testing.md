@@ -101,6 +101,41 @@ A failure names what broke: the action, the expected and actual status, and
 the field or check involved. `resource` can be the viewset class, the model,
 or the route name.
 
+### Files and images in the create body
+
+A required `FileField` gets a small text upload named `<field>.txt`. A
+required `ImageField` gets a 1x1 PNG made in memory with Pillow, named
+`<field>.png` with the content type `image/png`, so DRF's image validation
+accepts it. The body goes as multipart, and every request that carries it
+(the create, the PUT and the denial checks) gets a fresh upload. The stored
+file must not be empty, after the create and after the update. Optional file
+fields are left out of the body. Without Pillow an image upload fails with
+`E501`, which names `pip install 'karni[images]'`.
+
+To send a file of your own, put it in `payload=`. It is rewound before each
+request, so one object serves all of them:
+
+```python
+self.assert_crud(PhotoViewSet, "staff", payload={"image": my_upload})
+```
+
+### A role that may not write
+
+When the declaration refuses create, update and delete to the role, the run
+checks those refusals and passes, but it has made no successful write. The
+report lists `no write exercised` in `skipped`, and `assert_crud` emits a
+`UserWarning` naming the role and the declaration. Call it once more with a
+role that may write, as the example above does with `"organizer"`. When the
+refusals are the point of the test, pin them with `expect={"create": 403,
+...}` and the warning stays quiet.
+
+### Rows the role cannot see
+
+When the rows `assert_crud` creates for the role are missing from the list,
+because a read rule such as `Where(...)` scopes them out, the list and
+pagination checks say so and point at `karni why-empty <resource> --as
+<user>`, which names the step that drops them. The paginator is not blamed.
+
 ## Isolation: the test people forget
 
 ```python

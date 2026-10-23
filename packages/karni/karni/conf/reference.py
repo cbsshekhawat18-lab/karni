@@ -30,6 +30,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_FRONTEND_URL": "The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it.",
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "Dotted path of the `AccountsEmailBackend` that sends verification and reset emails.",
     "KARNI_ACCOUNTS_AUTO_LOGIN": "Sign a user in right after registration (skips email verification as a gate).",
+    "KARNI_ACCOUNTS_REGISTRATION": "Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration).",
     "KARNI_ACCOUNTS_DEFAULT_ROLES": "Roles (Django groups) every self-registered user starts with, e.g. `attendee`.",
     "KARNI_ACCOUNTS_HONEYPOT_FIELD": 'Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default).',
     "KARNI_ROLES": 'The project\'s roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data).',

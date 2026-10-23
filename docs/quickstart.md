@@ -58,7 +58,11 @@ From two models declared on the command line, Karni produced the models on
 `karni.models.BaseModel` and two REST resources with filtering, search,
 pagination and `?expand=`. It also produced the `access` declarations that
 decide who reads and writes what, admin pages, the list, detail and form
-screens, and one test file per resource. The last command adds a sign-in page at `/login`: a new
+screens, and one test file per resource. `--access public-read` printed
+`access: Access(read=Public(), write=HasRole("staff"))`: anyone may read
+venues, and only the `staff` role may change them (`public-read:<role>` names
+another role). `--access owned:organizer` lets each organizer change only
+their own events. The last command adds a sign-in page at `/login`: a new
 project has none until you ask for one.
 
 ## 3. Seed, test, run
@@ -72,8 +76,9 @@ karni check --no-frontend
 
 `karni seed` filled every table with realistic, connected rows and printed a
 demo login. `karni test` ran the generated tests: `assert_crud` proves the
-whole API surface of each resource and `assert_isolated` proves one organizer
-cannot reach another's events. `karni check` ran the architecture rules.
+whole API surface of each resource (the venue test acts as `staff`, the role
+that may write) and `assert_isolated` proves one organizer cannot reach
+another's events. `karni check` ran the architecture rules.
 `--no-frontend` is needed only until the next step installs the frontend's
 dependencies, and plain `karni check` is what CI runs.
 

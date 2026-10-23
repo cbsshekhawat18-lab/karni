@@ -2,18 +2,30 @@
 
 from __future__ import annotations
 
+import sys
+import warnings
 from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 
 from karni.accounts.permissions import user_roles
 from karni.testing import APITestCase, assert_crud, client_as, user_with_roles
-from karni.testing.api import CHECKS, KarniAPIClient, expectation, resolve_resource
+from karni.testing.api import (
+    CHECKS,
+    KarniAPIClient,
+    build_payload,
+    expectation,
+    image_upload,
+    png_bytes,
+    resolve_resource,
+)
 from tests.testapp.models import Event, Venue
 from tests.testing import crud_urls
+from tests.uploadsapp.models import Attachment, Photo
 
 CRUD_ROUTES = override_settings(
     ROOT_URLCONF="tests.testing.crud_urls",
@@ -81,8 +93,10 @@ def test_the_full_crud_surface_of_an_owned_resource() -> None:
 
 def test_a_read_only_role_gets_exactly_the_promised_denials() -> None:
     # Venues: everyone signed in reads, staff write. A viewer may list and
-    # retrieve; create/update/delete must be 403 — and that is a pass.
-    report = assert_crud(crud_urls.VenueViewSet, "viewer")
+    # retrieve, and create/update/delete must be 403. That is a pass, with a
+    # warning that no write was exercised.
+    with pytest.warns(UserWarning, match="no write exercised"):
+        report = assert_crud(crud_urls.VenueViewSet, "viewer")
     assert not report.failures and "create" in report.passed and "delete" in report.passed
     assert not assert_crud(crud_urls.VenueViewSet, "staff").failures
 
@@ -187,7 +201,12 @@ def test_a_viewset_without_access_fails_naming_the_fix() -> None:
 
 def test_a_role_refused_everything_is_reported() -> None:
     _fails(crud_urls.StaffVenueViewSet, "stafff", "role 'stafff' is refused every action")
-    assert_crud(crud_urls.StaffVenueViewSet, "viewer", expect={"list": 403, "create": 403})
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # pinned refusals are intended: no warning
+        report = assert_crud(
+            crud_urls.StaffVenueViewSet, "viewer", expect={"list": 403, "create": 403}
+        )
+    assert not report.warnings
     assert not assert_crud(crud_urls.StaffVenueViewSet, "staff").failures
 
 
@@ -242,3 +261,130 @@ def test_generated_values_are_reseeded_per_test() -> None:
 
     reseed_random("0:tests/testing/test_crud.py::test_generated_values_are_reseeded_per_test")
     assert build(Event).title == first
+
+
+# uploads: a required ImageField needs a real image, a FileField any file
+
+
+@pytest.mark.parametrize(
+    ("viewset", "model", "name"),
+    [
+        (crud_urls.PhotoViewSet, Photo, "image"),
+        (crud_urls.AttachmentViewSet, Attachment, "file"),
+    ],
+)
+def test_required_uploads_pass_with_no_payload_and_store_files(
+    viewset: type[Any], model: type[Any], name: str
+) -> None:
+    report = assert_crud(viewset, "staff", payload={"title": "sent by the test"})
+    assert not report.failures
+    assert {"create", "update", "delete", "denials", "pagination"} <= set(report.passed)
+    # The POST created one row and the PUT renamed another: both hold the upload.
+    rows = list(model.objects.filter(title="sent by the test"))
+    assert len(rows) == 2
+    for row in rows:
+        stored = getattr(row, name)
+        assert stored.name and stored.size > 0, (row, stored.name)
+    if name == "image":
+        assert all(getattr(row, name).size == len(png_bytes()) for row in rows)
+
+
+def test_the_create_body_sends_a_png_for_an_image_and_text_for_a_file() -> None:
+    staff = user_with_roles("staff")
+    photo = build_payload(resolve_resource(crud_urls.PhotoViewSet), staff)
+    assert photo.multipart and photo.files == ["image"] and photo.format == "multipart"
+    assert photo.data["image"].name == "image.png"
+    assert photo.data["image"].content_type == "image/png"
+    assert photo.data["image"].read() == png_bytes()
+    attachment = build_payload(resolve_resource(crud_urls.AttachmentViewSet), staff)
+    assert attachment.files == ["file"] and attachment.data["file"].name == "file.txt"
+    # Every build makes new uploads: nothing is shared between requests.
+    again = build_payload(resolve_resource(crud_urls.PhotoViewSet), staff)
+    assert again.data["image"] is not photo.data["image"]
+
+
+def test_one_upload_passed_as_payload_serves_every_request() -> None:
+    shared = SimpleUploadedFile("mine.png", png_bytes(), content_type="image/png")
+    report = assert_crud(
+        crud_urls.PhotoViewSet, "staff", payload={"image": shared, "title": "shared"}
+    )
+    assert not report.failures
+    rows = list(Photo.objects.filter(title="shared"))
+    assert len(rows) == 2 and all(row.image.size == len(png_bytes()) for row in rows)
+
+
+def test_isolation_posts_a_body_with_an_image_as_multipart() -> None:
+    from karni.testing import assert_isolated
+
+    assert_crud(crud_urls.OwnedPhotoViewSet)
+    assert assert_isolated(crud_urls.OwnedPhotoViewSet).dimensions == ["owner"]
+
+
+def test_an_image_upload_without_pillow_names_the_extra(monkeypatch: pytest.MonkeyPatch) -> None:
+    png_bytes.cache_clear()
+    monkeypatch.setitem(sys.modules, "PIL", None)
+    try:
+        with pytest.raises(AssertionError, match=r"pip install 'karni\[images\]'") as caught:
+            image_upload("image")
+        assert "E501" in str(caught.value)
+    finally:
+        png_bytes.cache_clear()
+
+
+# writes that are never exercised are visible
+
+
+def test_a_role_that_may_not_write_is_warned_about_and_listed() -> None:
+    with pytest.warns(UserWarning, match="refuses writes to role 'viewer'") as caught:
+        report = assert_crud(crud_urls.PhotoViewSet, "viewer")
+    assert not report.failures
+    entry = next(e for e in report.skipped if e.startswith("no write exercised"))
+    assert "Pass a role that may write" in entry and "HasRole('staff')" in entry
+    assert report.warnings == [f"assert_crud(PhotoViewSet) {entry}"]
+    assert str(caught[0].message).startswith("assert_crud(PhotoViewSet) no write exercised")
+    with pytest.warns(UserWarning, match="refuses writes to any signed-in user"):
+        assert_crud(crud_urls.AttachmentViewSet)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # a writing role exercises the writes: no warning
+        assert not assert_crud(crud_urls.PhotoViewSet, "staff").warnings
+
+
+# rows the read rule hides are named, not blamed on the paginator
+
+
+def test_rows_hidden_by_the_read_rule_are_reported_with_the_fix() -> None:
+    message = _fails(
+        crud_urls.PublishedEventViewSet,
+        "organizer",
+        "list: GET /api/published-events/ does not include the requester's row",
+        "pagination: GET /api/published-events/?page_size=2 returned 0 rows, but none of the "
+        "3 rows assert_crud just created for the requester is listed",
+        "the read rule hides them from this user (access=Access(read=Where(published)",
+        "Run karni why-empty published-events --as <a user with role 'organizer'> to see "
+        "which step drops them.",
+    )
+    assert "the paginator ignores" not in message
+
+
+def test_rows_the_declaration_allows_but_the_queryset_drops_are_named() -> None:
+    message = _fails(
+        crud_urls.EmptyEventViewSet,
+        "organizer",
+        "pagination: GET /api/empty-events/?page_size=2 returned 0 rows, but none of the 3 rows",
+        "lets this user read them, so the viewset's queryset (get_queryset, read_scope) or its "
+        "paginator leaves them out",
+        "karni why-empty empty-events --as <a user with role 'organizer'>",
+    )
+    assert "the paginator ignores" not in message and "paginator is not at fault" not in message
+
+
+def test_an_explicit_user_with_roles_is_named_by_its_roles() -> None:
+    viewer = user_with_roles("viewer")
+    with pytest.warns(UserWarning, match=r"refuses writes to the requester \(roles viewer\)"):
+        assert_crud(crud_urls.PhotoViewSet, user=viewer)
+
+
+def test_a_payload_value_that_replaces_an_upload_is_not_checked_as_a_file() -> None:
+    staff = user_with_roles("staff")
+    body = build_payload(resolve_resource(crud_urls.PhotoViewSet), staff, payload={"image": ""})
+    assert body.files == [] and not body.multipart

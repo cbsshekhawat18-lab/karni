@@ -11,6 +11,9 @@ in both ``jwt`` and ``session`` mode and the views branch on
 ``settings.KARNI_AUTH_MODE`` per request (``refresh/`` answers 405 in session
 mode). Only the optional feature blocks are conditional at import time:
 
+* ``register/`` exists while ``KARNI_ACCOUNTS_REGISTRATION`` is ``True`` (the
+  default). ``False`` leaves it out, so it answers 404 and is absent from the
+  OpenAPI schema. Use it when staff create every account.
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;
@@ -27,6 +30,8 @@ Override / escape hatch: declare your own
 ``path("api/auth/<endpoint>/", YourView.as_view())`` *before* the include —
 first match wins (amendment A11) — or cherry-pick single views from
 :mod:`karni.accounts.api.views` into a hand-rolled URLconf.
+:func:`build_urlpatterns` assembles the list for the current settings, so a
+URLconf (or a test) can build it under other settings than the import saw.
 """
 
 from __future__ import annotations
@@ -39,9 +44,9 @@ from django.urls import URLPattern, URLResolver, include, path
 from karni.accounts.api import matrix as matrix_views
 from karni.accounts.api import views
 
-__all__ = ["urlpatterns"]
+__all__ = ["build_urlpatterns", "urlpatterns"]
 
-urlpatterns: list[URLPattern | URLResolver] = [
+_PERMISSION_PATTERNS: list[URLPattern | URLResolver] = [
     path(
         "permissions/matrix/",
         matrix_views.PermissionMatrixView.as_view(),
@@ -57,7 +62,9 @@ urlpatterns: list[URLPattern | URLResolver] = [
         matrix_views.EffectivePermissionsView.as_view(),
         name="karni-accounts-effective-permissions-user",
     ),
-    path("register/", views.RegisterView.as_view(), name="karni-accounts-register"),
+]
+
+_AUTH_PATTERNS: list[URLPattern | URLResolver] = [
     path("login/", views.LoginView.as_view(), name="karni-accounts-login"),
     path("logout/", views.LogoutView.as_view(), name="karni-accounts-logout"),
     path("refresh/", views.RefreshView.as_view(), name="karni-accounts-refresh"),
@@ -114,10 +121,26 @@ def _social_urlpatterns() -> list[URLPattern | URLResolver]:
     return patterns
 
 
-if getattr(settings, "KARNI_2FA", False):
-    # karni.accounts.twofa exposes its own ``urlpatterns`` (setup/, confirm/,
-    # disable/, login/); the dotted-path include keeps the import conditional.
-    urlpatterns.append(path("2fa/", include("karni.accounts.twofa")))
+def build_urlpatterns() -> list[URLPattern | URLResolver]:
+    """The auth URL patterns for the current settings (what ``urlpatterns`` holds).
 
-if getattr(settings, "KARNI_SOCIAL_AUTH", False):
-    urlpatterns.append(path("social/", include(_social_urlpatterns())))
+    ``register/`` is present while ``KARNI_ACCOUNTS_REGISTRATION`` is true,
+    ``2fa/`` while ``KARNI_2FA`` is, and ``social/`` while
+    ``KARNI_SOCIAL_AUTH`` is.
+    """
+    patterns: list[URLPattern | URLResolver] = list(_PERMISSION_PATTERNS)
+    if getattr(settings, "KARNI_ACCOUNTS_REGISTRATION", True):
+        patterns.append(
+            path("register/", views.RegisterView.as_view(), name="karni-accounts-register")
+        )
+    patterns += _AUTH_PATTERNS
+    if getattr(settings, "KARNI_2FA", False):
+        # karni.accounts.twofa exposes its own ``urlpatterns`` (setup/, confirm/,
+        # disable/, login/). The dotted-path include keeps the import conditional.
+        patterns.append(path("2fa/", include("karni.accounts.twofa")))
+    if getattr(settings, "KARNI_SOCIAL_AUTH", False):
+        patterns.append(path("social/", include(_social_urlpatterns())))
+    return patterns
+
+
+urlpatterns: list[URLPattern | URLResolver] = build_urlpatterns()

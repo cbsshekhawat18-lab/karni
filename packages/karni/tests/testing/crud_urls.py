@@ -10,17 +10,18 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib import admin
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.urls import include, path
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers
 from rest_framework.filters import OrderingFilter
 from rest_framework.permissions import BasePermission
 
-from karni.api import Access, Authenticated, BaseViewSet, Granted, HasRole, Owned, Public
+from karni.api import Access, Authenticated, BaseViewSet, Granted, HasRole, Owned, Public, Where
 from karni.api.routers import KarniRouter
 from karni.pagination import KarniPageNumberPagination
 from tests.testapp.models import Customer, Event, Venue
+from tests.uploadsapp.models import Attachment, Photo
 
 
 class CustomerViewSet(BaseViewSet):
@@ -80,6 +81,38 @@ class StaffVenueViewSet(BaseViewSet):
 class PublicVenueViewSet(BaseViewSet):
     model = Venue
     access = Access(read=Public(), write=Authenticated())
+
+
+class PhotoViewSet(BaseViewSet):
+    """A required ImageField: the create body needs a real image."""
+
+    model = Photo
+    access = Access(read=Public(), write=HasRole("staff"))
+
+
+class OwnedPhotoViewSet(BaseViewSet):
+    """A required ImageField on rows scoped to their owner (assert_isolated posts a body)."""
+
+    model = Photo
+    access = Access(read=Owned("owner"), write=Owned("owner"), create=Authenticated())
+
+
+class AttachmentViewSet(BaseViewSet):
+    """A required FileField: any upload will do."""
+
+    model = Attachment
+    access = Access(read=Public(), write=HasRole("staff"))
+
+
+def published(request: Any) -> Q:
+    return Q(status=Event.Status.PUBLISHED)
+
+
+class PublishedEventViewSet(BaseViewSet):
+    """Reads only published events, and the factory makes drafts: every new row is hidden."""
+
+    model = Event
+    access = Access(read=Where(published), write=Authenticated())
 
 
 # misbehaving viewsets
@@ -161,6 +194,13 @@ class LeakyEventViewSet(EventViewSet):
         return queryset, False
 
 
+class EmptyEventViewSet(EventViewSet):
+    """Its read scope drops every row, although the declaration lets owners read theirs."""
+
+    def read_scope(self, queryset: QuerySet[Any]) -> tuple[QuerySet[Any], bool]:
+        return queryset.none(), False
+
+
 ROUTES = {
     "events": EventViewSet,
     "granted-events": GrantedEventViewSet,
@@ -169,6 +209,12 @@ ROUTES = {
     "venues": VenueViewSet,
     "public-venues": PublicVenueViewSet,
     "staff-venues": StaffVenueViewSet,
+    # Rows come from the model's first routed viewset (readable_row), so the
+    # owner-scoped one goes first and its rows get an owner.
+    "owned-photos": OwnedPhotoViewSet,
+    "photos": PhotoViewSet,
+    "attachments": AttachmentViewSet,
+    "published-events": PublishedEventViewSet,
     "no-gate-events": NoGateEventViewSet,
     "broken-pagination-events": BrokenPaginationEventViewSet,
     "broken-filtering-events": BrokenFilteringEventViewSet,
@@ -177,6 +223,7 @@ ROUTES = {
     "owner-from-body-events": OwnerFromBodyEventViewSet,
     "undeclared-events": UndeclaredEventViewSet,
     "leaky-events": LeakyEventViewSet,
+    "empty-events": EmptyEventViewSet,
 }
 
 router = KarniRouter()

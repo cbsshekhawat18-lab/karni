@@ -3,6 +3,18 @@
 version = "0.4.1"
 
 [[change]]
+id = "public-read-writes-need-a-role"
+kind = "behaviour"
+symbol = "karni make --access public-read"
+summary = """\
+`--access public-read` now writes `Access(read=Public(), write=HasRole("staff"))`. \
+In 0.4.0 it wrote `write=Authenticated()`, which with open registration lets anyone \
+who signs up change and delete every row. Review each viewset that declares \
+`read=Public(), write=Authenticated()`. `karni check` reports each one as karni.W102."""
+mechanical = false
+migration = "migrations/0.4.1.md#public-read-viewsets-review-who-may-write"
+
+[[change]]
 id = "urls-marker"
 kind = "project-files"
 symbol = "config/urls.py"

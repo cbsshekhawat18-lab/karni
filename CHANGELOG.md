@@ -22,6 +22,43 @@ apply codemods and list the manual steps. This file is the human summary.
 - **`config/urls.py` has a `# karni:urls` marker** where `karni make site`
   inserts its include. `karni upgrade` adds it to existing projects
   ([docs/migrations/0.4.1.md](docs/migrations/0.4.1.md)).
+- **Security: `--access public-read` no longer lets every signed-in user
+  write.** In 0.4.0 the preset wrote `Access(read=Public(),
+  write=Authenticated())`. A new project also has open self-registration, so
+  anyone who signed up could create, change and delete every row of the
+  resource, and the generated test, acting as any signed-in user, passed. It
+  was found in a real project built on 0.4.0. The preset now writes
+  `write=HasRole("staff")`, and `--access public-read:<role>` names another
+  role. This changes a security-relevant default: review every viewset that
+  declares `read=Public(), write=Authenticated()`. `karni upgrade` lists the
+  step, and [the 0.4.1 migration note](docs/migrations/0.4.1.md) has the
+  details.
+- **`karni make test` acts as the role that may write.** For a viewset whose
+  writes need a role, the generated test uses the role the `write` predicate
+  names (then `create`, then `read`), so it exercises real creates, updates
+  and deletes instead of confirming the refusals.
+- **New warning `karni.W102`.** While registration is open, `karni check`
+  warns for every routed viewset whose `write` is `Authenticated()` or
+  `Public()` without a narrowing `HasRole`, `Granted`, `Owned` or `Can`.
+  `create=Authenticated()` with an owned `write` is not reported.
+- **`KARNI_ACCOUNTS_REGISTRATION` turns self-registration off.** It defaults
+  to `True`, so existing projects do not change. `False` leaves `register/`
+  out of the URLs (404) and out of the OpenAPI schema.
+- **`assert_crud` sends a real image for a required `ImageField`.** The
+  create and update bodies carried `<field>.txt` for every file field, and
+  DRF's `ImageField` answered 400 ("Upload a valid image"), so every model
+  with a required image failed the create and update checks. A required
+  image now gets a 1x1 PNG made with Pillow (`E501` names `pip install
+  'karni[images]'` when it is missing), a plain `FileField` keeps the text
+  upload, every request gets a fresh upload (one passed in `payload=` is
+  rewound), and the stored file must not be empty after the create and the
+  update. `assert_isolated` posts such a body as multipart too, where it
+  raised `UnicodeDecodeError` on the PNG. Two related messages changed. When the declaration refuses every
+  write to the role, the report lists `no write exercised` in `skipped` and
+  `assert_crud` warns, since such a run proves refusals only (pin them with
+  `expect=` when they are the point). When the rows the run created are
+  missing from the list, the message names the read rule and `karni
+  why-empty`, instead of blaming the paginator.
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.

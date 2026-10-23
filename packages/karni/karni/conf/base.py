@@ -255,6 +255,9 @@ BASE: dict[str, Any] = {
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
+    # Whether anyone may open an account through register/. False leaves the
+    # route out (404) and out of the OpenAPI schema: staff create accounts.
+    "KARNI_ACCOUNTS_REGISTRATION": env.bool("KARNI_ACCOUNTS_REGISTRATION", default=True),
     # Roles (Django groups) every self-registered user starts with, e.g. ["attendee"].
     "KARNI_ACCOUNTS_DEFAULT_ROLES": env.list("KARNI_ACCOUNTS_DEFAULT_ROLES", default=[]),
     # A form field no person fills in; a registration that fills it is a bot

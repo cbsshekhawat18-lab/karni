@@ -74,6 +74,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_2FA: bool = False
     KARNI_FRONTEND_URL: str = "http://localhost:5173"
     KARNI_ACCOUNTS_TOKEN_TTL: dict[str, Any] = Field(default_factory=dict)
+    KARNI_ACCOUNTS_REGISTRATION: bool = True
     KARNI_ACCOUNTS_DEFAULT_ROLES: list[str] = Field(default_factory=list)
     KARNI_ROLES: dict[str, dict[str, Any]] = Field(default_factory=dict)
     KARNI_ROLES_AUTOSYNC: bool = True

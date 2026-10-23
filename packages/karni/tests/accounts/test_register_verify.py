@@ -10,14 +10,18 @@ duplicate-registration 400.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from types import ModuleType
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.urls import URLPattern, include, path
 from pytest_django import DjangoCaptureOnCommitCallbacks, Settings
 from rest_framework.test import APIClient
 
 from karni.accounts.emails import InMemoryEmailBackend
+from karni.accounts.urls import build_urlpatterns
+from karni.testing.schema import generate_schema
 
 pytestmark = pytest.mark.django_db
 
@@ -195,3 +199,41 @@ def test_resend_issues_fresh_link_and_invalidates_old(
     assert api_client.post(VERIFY_URL, {"token": new_token}, format="json").status_code == 200
     user.refresh_from_db()
     assert user.email_verified is True
+
+
+# KARNI_ACCOUNTS_REGISTRATION
+
+
+def _urlconf_for_current_settings() -> ModuleType:
+    """A URLconf built now: karni.accounts.urls builds its list once, at import."""
+    module = ModuleType("registration_urls")
+    module.__dict__["urlpatterns"] = [
+        path("api/auth/", include(build_urlpatterns())),
+        path("api/", include("karni.api.urls")),
+    ]
+    return module
+
+
+def _route_names() -> set[str]:
+    return {p.name for p in build_urlpatterns() if isinstance(p, URLPattern) and p.name}
+
+
+def test_registration_is_open_by_default(api_client: APIClient, settings: Settings) -> None:
+    assert settings.KARNI_ACCOUNTS_REGISTRATION is True
+    assert "karni-accounts-register" in _route_names()
+    assert "/api/auth/register/" in generate_schema()["paths"]
+
+
+def test_closed_registration_is_a_404_and_absent_from_the_schema(
+    api_client: APIClient, settings: Settings
+) -> None:
+    settings.KARNI_ACCOUNTS_REGISTRATION = False
+    assert "karni-accounts-register" not in _route_names()
+    assert "karni-accounts-login" in _route_names()
+    settings.ROOT_URLCONF = _urlconf_for_current_settings()
+    response = api_client.post(REGISTER_URL, {"email": EMAIL, "password": PASSWORD}, format="json")
+    assert response.status_code == 404
+    assert not get_user_model().objects.filter(email=EMAIL).exists()
+    paths = generate_schema()["paths"]
+    assert "/api/auth/register/" not in paths
+    assert "/api/auth/login/" in paths

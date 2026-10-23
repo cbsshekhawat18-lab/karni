@@ -14,12 +14,12 @@ A model becomes a full API resource with four lines:
 
 ```python
 # myapp/viewsets.py  (or myapp/api/viewsets.py)
-from karni.api import Access, Authenticated, BaseViewSet, Public
+from karni.api import Access, BaseViewSet, HasRole, Public
 from myapp.models import Event
 
 class EventViewSet(BaseViewSet):
     model = Event
-    access = Access(read=Public(), write=Authenticated())
+    access = Access(read=Public(), write=HasRole("staff"))
     search_fields = ["title"]
 ```
 
@@ -467,7 +467,7 @@ lookups and never replace them:
 ```python
 class NovelViewSet(BaseViewSet):
     model = Novel
-    access = Access(read=Public(), write=Authenticated())
+    access = Access(read=Public(), write=HasRole("staff"))
     serializer_class = NovelSerializer   # has chapter_count = SerializerMethodField()
     prefetch_related = ["chapters"]      # what get_chapter_count reads
     select_related = []                  # same, for to-one reads

@@ -468,7 +468,7 @@ def _check_create(
         return
     body = build_payload(resource, mine.user, values=case.values)
     body.data.update({name: _json_value(theirs.user.pk) for name in owners})
-    response = client_as(user=mine.user).post(resource.list_url(), body.data, format="json")
+    response = client_as(user=mine.user).post(resource.list_url(), body.data, format=body.format)
     if response.status_code != 201:
         return  # refusing the body is fine too
     created = resource.model._default_manager.filter(pk=response.json().get("id")).first()

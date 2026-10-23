@@ -193,7 +193,12 @@ def command(
         False, "--all", "-a", help="Also generate the viewset, the pages and the API test."
     ),
     access: str | None = typer.Option(
-        None, "--access", help=f"With viewset: {viewset_gen.ACCESS_CHOICES}."
+        None,
+        "--access",
+        help=(
+            f"With viewset: {viewset_gen.ACCESS_CHOICES}. public-read: anyone reads, only "
+            f"role {viewset_gen.PUBLIC_READ_WRITER!r} (or :<role>) writes."
+        ),
     ),
     search: list[str] | None = typer.Option(
         None, "--search", help="With viewset: search_fields (comma-separated)."

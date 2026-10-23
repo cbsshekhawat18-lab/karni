@@ -170,6 +170,59 @@ def check_viewsets(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckM
     return messages
 
 
+@checks.register(checks.Tags.urls)
+def check_open_writes(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W102: a routed viewset any self-registered user may write to, every row.
+
+    Reported while ``KARNI_ACCOUNTS_REGISTRATION`` is true for every routed
+    :class:`~karni.api.viewsets.BaseViewSet` whose ``write`` predicate
+    :func:`~karni.api.access.admits_every_user`: ``Authenticated()`` or
+    ``Public()``, not narrowed with ``&`` by ``HasRole``, ``Granted``,
+    ``Owned`` or ``Can``. ``create`` is not inspected: ``create=Authenticated()``
+    with an ``Owned()`` write is the user-generated-content pattern. A viewset
+    that does not resolve (E101, E128) is reported by :func:`check_viewsets`.
+    Only the declared ``access`` attribute is read: a ``get_access()`` override
+    computes its declaration per request, so it is not inspected. Silence it
+    with ``'karni.W102'`` in ``SILENCED_SYSTEM_CHECKS`` when every signed-in
+    user is trusted.
+    """
+    from django.conf import settings
+    from django.utils.module_loading import import_string
+
+    from karni.api.access import Access, admits_every_user
+    from karni.api.routers import DEFAULT_ROUTER_FACTORY, resolve_router
+    from karni.api.viewsets import BaseViewSet
+
+    if not getattr(settings, "KARNI_ACCOUNTS_REGISTRATION", True):
+        return []
+    try:
+        import_string(getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY))
+    except ImportError:
+        return []
+    messages: list[checks.CheckMessage] = []
+    seen: set[type[Any]] = set()
+    for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
+        if viewset in seen or not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
+            continue
+        seen.add(viewset)
+        declaration = getattr(viewset, "access", None)
+        if not isinstance(declaration, Access) or not admits_every_user(declaration.write):
+            continue
+        model = viewset.model or getattr(viewset.queryset, "model", None)
+        rows = model.__name__ if model is not None else "row"
+        messages.append(
+            check_warning(
+                "W102",
+                f"{viewset.__name__} lets any self-registered user change and delete every "
+                f"{rows} (write={declaration.write!r} while KARNI_ACCOUNTS_REGISTRATION is "
+                "True).",
+                hint=_fix("W102"),
+                obj=viewset,
+            )
+        )
+    return messages
+
+
 def _write_only_search(viewset: type[Any], model: type[Any]) -> list[checks.CheckMessage]:
     """E131 when ``search_fields`` names a field the API never reads back."""
     write_only = frozenset(getattr(getattr(model, "APIMeta", None), "write_only", None) or ())
