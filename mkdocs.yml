@@ -88,6 +88,7 @@ nav:
       - Settings: settings.md
       - "@karni/ui": ui.md
       - Theming (karni ui detect): theming.md
+      - Public server-rendered pages: public-site.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md
@@ -109,6 +110,7 @@ nav:
   - Karni for AI agents: agents.md
   - Upgrading:
       - Stability promise: stability.md
+      - Migrating to 0.4.1: migrations/0.4.1.md
       - Migrating to 0.4: migrations/0.4.md
       - Migrating to 0.3: migrations/0.3.md
       - Migrating to 0.2: migrations/0.2.md

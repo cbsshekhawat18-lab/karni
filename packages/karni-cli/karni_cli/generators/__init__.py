@@ -30,7 +30,9 @@ from karni_cli.generators import (
     seeder,
     serializer,
     service,
+    site,
     task,
+    view,
     viewset,
 )
 
@@ -62,6 +64,8 @@ GENERATORS: tuple[Generator, ...] = tuple(
         middleware,
         page,
         component,
+        site,
+        view,
         module,
     )
 )

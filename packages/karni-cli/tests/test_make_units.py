@@ -284,3 +284,41 @@ def test_call_and_tuple_layout() -> None:
     assert tuple_literal("fields = ", ['"a"'], "", 88) == 'fields = ("a",)'
     long = tuple_literal("fields = ", [f'"{c * 20}"' for c in "abc"], "", 40)
     assert long.splitlines()[1] == f'    "{"a" * 20}",'
+
+
+# urls_edit: the `# karni:urls` marker
+
+
+def test_urls_routes_are_read_per_call() -> None:
+    from karni_cli.urls_edit import routes
+
+    text = (
+        "urlpatterns = [\n"
+        '    path("api/", include("karni.api.urls")),\n'
+        '    # path("old/", views.old, name="old"),\n'
+        '    path("a/", views.a, name="a"), path("b/", include("b.urls")),\n'
+        "]\n"
+    )
+    assert routes(text) == [
+        ("api/", None, "karni.api.urls"),
+        ("a/", "a", None),
+        ("b/", None, "b.urls"),
+    ]
+
+
+def test_urls_add_route_goes_before_the_marker_once() -> None:
+    from karni_cli.urls_edit import add_route
+
+    text = "urlpatterns = [\n    # karni:urls\n    *welcome_urls(),\n]\n"
+    entry = 'path("", include("site.urls")),'
+    updated = add_route(text, entry, filename="config/urls.py", manual="Add it.")
+    assert updated == (
+        "urlpatterns = [\n"
+        '    path("", include("site.urls")),\n'
+        "    # karni:urls\n"
+        "    *welcome_urls(),\n"
+        "]\n"
+    )
+    assert add_route(updated, entry, filename="config/urls.py", manual="Add it.") is None
+    with pytest.raises(CliError, match=r"No `# karni:urls` marker in config/urls.py.*Add it\."):
+        add_route("urlpatterns = []\n", entry, filename="config/urls.py", manual="Add it.")

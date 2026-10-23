@@ -36,7 +36,11 @@ def test_new_generates_project(runner, tmp_path: Path, monkeypatch) -> None:
     # next steps must print the SLUG, not the input name
     assert "cd my_app" in result.output
     # the release the scaffold is written for: `karni upgrade` starts there
-    assert 'baseline = "0.4.0"' in (project / "pyproject.toml").read_text()
+    assert 'baseline = "0.4.1"' in (project / "pyproject.toml").read_text()
+    # generators insert project routes at this marker (karni make site)
+    assert (
+        "    # karni:urls\n    # Only while DEBUG" in (project / "config" / "urls.py").read_text()
+    )
 
 
 def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeypatch) -> None:

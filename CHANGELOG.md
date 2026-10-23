@@ -11,6 +11,17 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Public server-rendered pages have a home.** `karni make site <app>`
+  creates a site app (function views, `urls.py` with `app_name`, templates,
+  static files, a 404 page) and includes it at `""` in `config/urls.py`, so
+  its home page replaces the welcome page. `karni make view <name> --app
+  <app>` adds a page. New rule K309 says where a public site goes, and K302
+  and K306 now say they are about app screens. `karni context` lists the
+  site's routes on a `SITE:` line. [docs/public-site.md](docs/public-site.md)
+  covers reading content, SEO basics and public forms.
+- **`config/urls.py` has a `# karni:urls` marker** where `karni make site`
+  inserts its include. `karni upgrade` adds it to existing projects
+  ([docs/migrations/0.4.1.md](docs/migrations/0.4.1.md)).
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.

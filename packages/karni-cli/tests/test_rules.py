@@ -17,10 +17,10 @@ from .conftest import REPO_ROOT
 FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 #: ~4 characters per token is the usual English/code approximation; the
 #: tiktoken check below is stricter when the package is available.
-# Measured 537 cl100k tokens with 43 rules (K013-K015 and K030-K032 debugging, K114 typed
-# fields, K115 and K116 lifecycle and capacity, K206 token classes). The README quotes the
-# figure.
-TOKEN_BUDGET = 545
+# Measured 561 cl100k tokens with 44 rules (K013-K015 and K030-K032 debugging, K114 typed
+# fields, K115 and K116 lifecycle and capacity, K206 token classes, K309 public site). The
+# README quotes the figure.
+TOKEN_BUDGET = 570
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:
@@ -67,6 +67,18 @@ def test_explain_procedure_and_json(runner, tmp_path, monkeypatch) -> None:
 
     assert runner.invoke(app, ["rules", "--explain", "K999"]).exit_code != 0
     assert runner.invoke(app, ["rules", "--procedure", "nope"]).exit_code != 0
+
+
+def test_explain_the_public_site_rule(runner, tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    explain = runner.invoke(app, ["rules", "--explain", "K309"])
+    assert explain.exit_code == 0, explain.output
+    out = explain.output
+    assert out.startswith("K309 [architecture, must] A public, server-rendered website")
+    assert "Why: " in out and "Fix: Run `karni make site <app>`" in out
+    listing = _rules_output(runner, monkeypatch, tmp_path)
+    assert "K309 Public site: a site app with Django views and templates." in listing
+    assert "K306 App pages: frontend/src/pages/. Public site pages: K309." in listing
 
 
 def test_check_exit_codes(runner, monkeypatch) -> None:

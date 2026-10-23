@@ -11,6 +11,7 @@ from karni_cli.commands.context import (
     find_manifest,
     manifest_lines,
     pages_line,
+    site_line,
 )
 from karni_cli.main import app
 
@@ -132,3 +133,56 @@ def test_context_failure_exits_nonzero(runner, tmp_path: Path, monkeypatch) -> N
         lambda *a, **k: subprocess.CompletedProcess([], 3, stdout="", stderr="boom\n"),
     )
     assert runner.invoke(app, ["context"]).exit_code == 1
+
+
+def test_site_routes_are_read_statically(generated_project: Path) -> None:
+    assert site_line(generated_project) is None  # karni.* includes are not the project's
+    config = generated_project / "config" / "urls.py"
+    config.write_text(
+        config.read_text().replace(
+            "    # karni:urls\n",
+            '    path("hooks/", include("billing.urls")),\n'
+            '    path("", include("website.urls")),\n'
+            "    # karni:urls\n",
+        )
+    )
+    (generated_project / "website").mkdir()
+    (generated_project / "website" / "urls.py").write_text(
+        "urlpatterns = [\n"
+        '    path("", views.home, name="home"),\n'
+        '    path("services/<slug:slug>/", views.service, name="service"),\n'
+        "]\n"
+    )
+    (generated_project / "billing").mkdir()
+    (generated_project / "billing" / "urls.py").write_text(
+        'urlpatterns = [path("stripe/", views.stripe)]\n'
+    )
+    assert site_line(generated_project) == (
+        "SITE: billing(/hooks/stripe/) website(/ /services/<slug:slug>/)"
+    )
+
+
+def test_context_lists_the_site_after_the_pages(
+    runner, generated_project: Path, monkeypatch
+) -> None:
+    config = generated_project / "config" / "urls.py"
+    config.write_text(
+        config.read_text().replace(
+            "    # karni:urls\n", '    path("", include("website.urls")),\n    # karni:urls\n'
+        )
+    )
+    (generated_project / "website").mkdir()
+    (generated_project / "website" / "urls.py").write_text(
+        'urlpatterns = [path("", views.home, name="home")]\n'
+    )
+    monkeypatch.chdir(generated_project)
+    monkeypatch.setattr(
+        project_mod,
+        "run_manage",
+        lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
+    )
+    result = runner.invoke(app, ["context"])
+    assert result.exit_code == 0, result.output
+    lines = result.output.strip().split("\n")
+    assert [line.split(":")[0] for line in lines][-4:] == ["PAGES", "SITE", "MODULES", "BASES"]
+    assert "SITE: website(/)" in lines

@@ -37,6 +37,8 @@ GENERATORS = {
     "middleware",
     "page",
     "component",
+    "site",
+    "view",
     "module",
 }
 
@@ -451,6 +453,155 @@ def test_component_roles(project: Path) -> None:
     ok("make", "component", "MyTable", "--role", "data-table", "--replace-reason", "virtualised")
     source = (project / "frontend" / "src" / "components" / "MyTable.tsx").read_text()
     assert '{ replace: true, reason: "virtualised" }' in source
+
+
+# public site
+
+
+INCLUDE = '    path("", include("website.urls")),\n'
+
+
+def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> None:
+    result = ok("make", "site", "website")
+    site = project / "website"
+    for rel in (
+        "apps.py",
+        "models.py",
+        "viewsets.py",
+        "views.py",
+        "urls.py",
+        "templates/website/base.html",
+        "templates/website/home.html",
+        "templates/404.html",
+        "static/website/site.css",
+        "tests/test_pages.py",
+    ):
+        assert (site / rel).is_file(), rel
+    assert '    "website",\n]  # karni:apps' in (project / "config" / "settings.py").read_text()
+    views = (site / "views.py").read_text()
+    assert "def home(request: HttpRequest) -> HttpResponse:" in views
+    assert 'return render(request, "website/home.html")' in views
+    urls = (site / "urls.py").read_text()
+    assert 'app_name = "website"' in urls
+    assert '    path("", views.home, name="home"),\n    # karni:urls\n]' in urls
+    config = (project / "config" / "urls.py").read_text()
+    # Before the welcome route, so "/" is the site's.
+    marker = config.index("    # karni:urls\n")
+    assert config.index(INCLUDE) < marker < config.index("    *welcome_urls(),")
+    base = (site / "templates" / "website" / "base.html").read_text()
+    assert '<link rel="canonical"' in base and "{% static 'website/site.css' %}" in base
+    assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()
+    assert "modified config/urls.py" in result.output
+    assert "site: / -> website.views.home (website:home)" in result.output
+    assert "next: karni make view <name> --app website" in result.output
+    assert "karni make model" not in result.output
+
+
+def test_site_is_idempotent_and_never_truncates(project: Path) -> None:
+    ok("make", "site", "website")
+    views = project / "website" / "views.py"
+    views.write_text(views.read_text() + "\n\n# project code\n")
+    before = snapshot(project)
+    fails("make", "site", "website", match="Pass --force to create only the missing files")
+    assert snapshot(project) == before
+    (project / "website" / "templates" / "404.html").unlink()
+    ok("make", "site", "website", "--force")
+    assert (project / "website" / "templates" / "404.html").is_file()
+    assert "# project code" in views.read_text()
+    assert views.read_text().count("def home(") == 1
+    assert (project / "config" / "urls.py").read_text().count(INCLUDE) == 1
+    urls = (project / "website" / "urls.py").read_text()
+    assert urls.count('path("", views.home, name="home")') == 1
+
+
+def test_site_on_an_existing_app_adds_only_the_site_files(project: Path) -> None:
+    ok("make", "app", "content")
+    models = project / "content" / "models.py"
+    before = models.read_text()
+    result = ok("make", "site", "content")
+    assert models.read_text() == before
+    assert "created  content/apps.py" not in result.output
+    assert (project / "content" / "templates" / "content" / "base.html").is_file()
+    config = (project / "config" / "urls.py").read_text()
+    assert 'path("", include("content.urls")),' in config
+
+
+def test_site_dry_run_writes_nothing(project: Path) -> None:
+    before = snapshot(project)
+    result = ok("make", "site", "website", "--dry-run")
+    assert snapshot(project) == before
+    assert "would modify config/urls.py" in result.output
+    assert '+    path("", include("website.urls")),' in result.output
+    assert "would create website/templates/website/base.html" in result.output
+    assert "(dry run: nothing written)" in result.output
+
+
+def test_site_without_the_urls_marker_names_the_manual_step(project: Path) -> None:
+    config = project / "config" / "urls.py"
+    config.write_text(config.read_text().replace("    # karni:urls\n", ""))
+    before = snapshot(project)
+    message = fails("make", "site", "website", match="No `# karni:urls` marker in config/urls.py")
+    assert 'path("", include("website.urls")),' in message
+    assert "before `*welcome_urls()`" in message and "karni upgrade" in message
+    assert snapshot(project) == before  # a failed step writes nothing
+    result = ok("make", "site", "website", "--no-route")
+    assert "route not registered (--no-route)" in result.output
+    assert "website.urls" not in config.read_text()
+
+
+def test_site_refuses_a_second_root_include(project: Path) -> None:
+    ok("make", "site", "website")
+    fails("make", "site", "landing", match="already includes 'website.urls'")
+
+
+def test_view_adds_the_view_its_template_and_the_url(project: Path) -> None:
+    ok("make", "site", "website")
+    result = ok("make", "view", "about")
+    site = project / "website"
+    assert "def about(request: HttpRequest) -> HttpResponse:" in (site / "views.py").read_text()
+    template = (site / "templates" / "website" / "about.html").read_text()
+    assert template.startswith('{% extends "website/base.html" %}')
+    assert "{% block title %}About{% endblock %}" in template
+    urls = (site / "urls.py").read_text()
+    assert '    path("about/", views.about, name="about"),\n    # karni:urls\n' in urls
+    assert "view: /about/ -> website.views.about (website:about)" in result.output
+
+    ok("make", "view", "service", "--path", "/services/<slug:slug>/")
+    ok("make:view", "invoice", "--app", "website", "--path", "/invoices/<int:number>")
+    views = (site / "views.py").read_text()
+    assert "def service(request: HttpRequest, slug: str) -> HttpResponse:" in views
+    assert 'return render(request, "website/service.html", {"slug": slug})' in views
+    assert "def invoice(request: HttpRequest, number: int) -> HttpResponse:" in views
+    assert "{{ slug }}" in (site / "templates" / "website" / "service.html").read_text()
+    urls = (site / "urls.py").read_text()
+    assert 'path("services/<slug:slug>/", views.service, name="service"),' in urls
+    assert 'path("invoices/<int:number>/", views.invoice, name="invoice"),' in urls
+    # The include in config/urls.py is not touched again.
+    assert (project / "config" / "urls.py").read_text().count(INCLUDE) == 1
+
+
+def test_view_validation(project: Path) -> None:
+    ok("make", "app", "events")
+    fails("make", "view", "about", "--app", "events", match="karni make site events")
+    ok("make", "site", "website")
+    ok("make", "view", "about", "--app", "website")
+    fails("make", "view", "about", "--app", "website", match="--force")
+    fails("make", "view", "team", "--app", "website", "--path", "/about/", match="already routes")
+    fails("make", "view", "x", "--app", "website", "--path", "about", match="must look like")
+    fails("make", "view", "render", "--app", "website", match="taken in views.py")
+    fails("make", "view", "About", "--app", "website", match="snake_case")
+    before = snapshot(project)
+    ok("make", "view", "team", "--app", "website", "--dry-run")
+    assert snapshot(project) == before
+
+
+def test_view_without_the_site_urls_marker(project: Path) -> None:
+    ok("make", "site", "website")
+    urls = project / "website" / "urls.py"
+    urls.write_text(urls.read_text().replace("    # karni:urls\n", ""))
+    fails("make", "view", "about", match="No `# karni:urls` marker in website/urls.py")
+    result = ok("make", "view", "about", "--no-route")
+    assert "add path('about/', views.about, name='about')" in result.output
 
 
 # module

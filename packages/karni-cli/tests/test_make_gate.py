@@ -88,6 +88,9 @@ SEQUENCE: list[list[str]] = [
     ["make", "page", "tag-form", "--resource", "tags", "--kind", "form", "--title", "Tag"],
     ["make", "component", "StatusBadge"],
     ["make:component", "PriceTag", "--role", "price-tag"],
+    ["make", "site", "website"],
+    ["make:view", "about", "--app", "website"],
+    ["make", "view", "service", "--app", "website", "--path", "/services/<slug:slug>/"],
     ["make", "module", "live-chat"],
 ]  # fmt: skip
 
@@ -178,6 +181,7 @@ def test_every_generator_runs_and_its_output_is_clean(project: Path) -> None:
     assert used == GENERATORS - {"migration"}
     changed = _generate(project)
     assert "config/settings.py" in changed and "frontend/src/routes.tsx" in changed
+    assert "config/urls.py" in changed and "website/templates/website/service.html" in changed
 
     # 1. karni rules --check: every enforced rule, on every generated file.
     checked = [project / rel for rel in changed if Path(rel).suffix in {".py", ".ts", ".tsx"}]
@@ -342,6 +346,94 @@ KARNI_SEARCH_PROVIDER = "karni.api.search.simple.SimpleSearchProvider"
 
 def _karni_importable() -> bool:
     return all(importlib.util.find_spec(m) is not None for m in ("karni", "django"))
+
+
+def _project_interpreter(project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A .venv whose python is this test's interpreter, on SQLite with the test overlay."""
+    python = project / ".venv" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+    python.chmod(0o755)
+    (project / "config" / "test_overlay.py").write_text(OVERLAY)
+    monkeypatch.setenv("DJANGO_SETTINGS_MODULE", "config.test_overlay")
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'db.sqlite3'}")
+    monkeypatch.setenv("MEDIA_ROOT", str(tmp_path / "media"))
+    monkeypatch.setenv("STATIC_ROOT", str(tmp_path / "static"))
+    monkeypatch.setenv("DEBUG", "True")
+    return python
+
+
+ROOT_PAGE = """
+import django
+
+django.setup()
+
+from django.conf import settings
+from django.test import Client
+from django.test.utils import setup_test_environment
+
+setup_test_environment()
+assert settings.DEBUG, "the welcome page is mounted only while DEBUG is on"
+body = Client().get("/").content.decode()
+print("WELCOME" if "Karni is running" in body else "SITE" if "<h1>Website</h1>" in body else body)
+"""
+
+SITE_PAGES = """
+import django
+
+django.setup()
+
+from django.test import Client
+from django.test.utils import override_settings, setup_test_environment
+from django.urls import reverse
+
+setup_test_environment()
+assert reverse("website:about") == "/about/"
+assert Client().get("/about/").status_code == 200
+assert "slug: design" in Client().get("/services/design/").content.decode()
+with override_settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
+    missing = Client().get("/no-such-page/")
+    assert missing.status_code == 404 and b"Page not found" in missing.content
+print("site pages OK")
+"""
+
+
+@pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")
+def test_a_site_app_replaces_the_welcome_page(
+    project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The scaffold answers "/" with the welcome page until `karni make site` claims it."""
+    python = _project_interpreter(project, tmp_path, monkeypatch)
+    ok("migrate")
+
+    def run(script: str) -> str:
+        proc = subprocess.run(
+            [str(python), "-c", textwrap.dedent(script)],
+            cwd=project,
+            text=True,
+            capture_output=True,
+            check=False,
+            env={**os.environ, "PYTHONPATH": str(project)},
+        )
+        assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-3000:]
+        return proc.stdout.strip().splitlines()[-1]
+
+    assert run(ROOT_PAGE) == "WELCOME"
+    ok("make", "site", "website")
+    ok("make", "view", "about")
+    ok("make", "view", "service", "--path", "/services/<slug:slug>/")
+    assert run(ROOT_PAGE) == "SITE"
+    assert run(SITE_PAGES) == "site pages OK"
+    ok("manage", "check")
+    # The page test `karni make site` wrote passes.
+    tests = subprocess.run(
+        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
 
 
 @pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")

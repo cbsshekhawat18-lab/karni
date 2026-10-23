@@ -32,8 +32,8 @@ _TAKEN = frozenset(
 )
 
 
-def plan(ws: Workspace, name: str) -> str:
-    """Plan the app ``name``; returns its label."""
+def plan(ws: Workspace, name: str, *, next_step: bool = True) -> str:
+    """Plan the app ``name`` and return its label. ``next_step`` prints the model hint."""
     require_snake(name, "App name")
     if name in _TAKEN or name in sys.stdlib_module_names:
         raise CliError(
@@ -79,7 +79,8 @@ def plan(ws: Workspace, name: str) -> str:
     )
     if updated is not None:
         ws.write(SETTINGS, updated)
-    ws.note(f"next: karni make model <Name> [field:type ...] --app {name}")
+    if next_step:
+        ws.note(f"next: karni make model <Name> [field:type ...] --app {name}")
     return name
 
 

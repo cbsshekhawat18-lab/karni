@@ -15,6 +15,7 @@ While you work:
 
 - Run `karni rules --check <file>` on every file you write and fix each violation it prints.
 - Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module.
+- App screens go in `frontend/src/pages/` (`karni make page`). A public, server-rendered website goes in a site app (`karni make site`, rule K309).
 - Run `karni check` before committing. Every enforced rule fails the build.
 
 If the `karni` command is unavailable, say so and stop. Do not guess the conventions.
