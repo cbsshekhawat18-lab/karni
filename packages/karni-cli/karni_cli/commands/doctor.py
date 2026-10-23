@@ -1,7 +1,8 @@
 """``karni doctor`` — a human-readable report on the environment karni sees.
 
 One line per fact: the project, how project commands would run (``.venv`` or
-a running compose service), Node/npm, the ``@karni/ui`` manifest behind
+a running compose service), Node/npm (flagged below the floors in
+:mod:`karni_cli.toolchain`), the ``@karni/ui`` manifest behind
 ``karni context``'s COMPONENTS/HOOKS, whether the agent adapters are fresh,
 and which history providers are installed / detect a store. It reports and
 never changes anything; the exit status is 0 unless the CLI itself fails.
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import typer
 
-from karni_cli import agent_data, tips
+from karni_cli import agent_data, tips, toolchain
 from karni_cli import history as history_mod
 from karni_cli import project as project_mod
 from karni_cli.adapters import sync
@@ -75,18 +76,31 @@ def _interpreter(project: Path, service: str) -> str:
     )
 
 
-def _node() -> str:
+def _node() -> list[str]:
+    """The Node and npm on PATH, then one line with the fix when either is below the floor."""
     node = tool_version("node")
     if node is None:
-        return "not found (needed for the frontend and `karni types`)"
+        return ["not found (needed for the frontend and `karni types`)"]
     npm = tool_version("npm")
-    return f"{node} (npm {npm})" if npm else f"{node} (npm not found)"
+    lines = [f"{node} (npm {npm})" if npm else f"{node} (npm not found)"]
+    problem = toolchain.shortfall(node, npm)
+    if problem is not None:
+        lines.append(f"too old: {problem}")
+    return lines
+
+
+def _echo_lines(label: str, lines: list[str]) -> None:
+    for i, text in enumerate(lines):
+        typer.echo(_line(label if i == 0 else "", text))
 
 
 def _manifest(project: Path) -> str:
     found = find_manifest(project, None)
     if found is None:
-        return "@karni/ui manifest absent (COMPONENTS/HOOKS hidden). Run `npm install` in frontend/"
+        return (
+            "@karni/ui manifest absent (COMPONENTS/HOOKS hidden). "
+            f"Run `npm install` in frontend/ with npm {toolchain.NPM_FLOOR} or later"
+        )
     return f"@karni/ui manifest: {_display(found, project)}"
 
 
@@ -121,15 +135,14 @@ def doctor(
     project = find_project()
     if project is None:
         typer.echo(_line("project", "not found (no manage.py here or above)"))
-        typer.echo(_line("node", _node()))
+        _echo_lines("node", _node())
         return
     typer.echo(_line("project", str(project)))
     typer.echo(_line("interpreter", _interpreter(project, service)))
-    typer.echo(_line("node", _node()))
+    _echo_lines("node", _node())
     typer.echo(_line("ui", _manifest(project)))
     typer.echo(_line("adapters", _adapters(project)))
-    for i, text in enumerate(_history(project)):
-        typer.echo(_line("history" if i == 0 else "", text))
+    _echo_lines("history", _history(project))
     tip = tips.history_tip(project, quiet=quiet)
     if tip:
         typer.echo("")

@@ -20,7 +20,7 @@ from pathlib import Path
 import typer
 
 from karni_cli import project as project_mod
-from karni_cli import tips
+from karni_cli import tips, toolchain
 from karni_cli.project import CliError, require_project
 
 _BARE_IGNORE = re.compile(r"jscpd:ignore-start\s*$")
@@ -33,8 +33,8 @@ def _frontend_duplication(project: Path) -> int:
     jscpd = frontend / "node_modules" / ".bin" / "jscpd"
     if not jscpd.exists():
         typer.echo(
-            "karni check: jscpd not installed. Run `npm install` in frontend/ "
-            "(or pass --no-frontend to skip frontend duplication checks).",
+            f"karni check: jscpd not installed. {toolchain.install_hint()}. "
+            "Pass --no-frontend to skip the frontend duplication checks.",
             err=True,
         )
         return 1
@@ -67,8 +67,8 @@ def _frontend_lint(project: Path) -> int:
     eslint = frontend / "node_modules" / ".bin" / "eslint"
     if not eslint.exists():
         typer.echo(
-            "karni check: eslint not installed. Run `npm install` in frontend/ "
-            "(or pass --no-frontend to skip the frontend checks).",
+            f"karni check: eslint not installed. {toolchain.install_hint()}. "
+            "Pass --no-frontend to skip the frontend checks.",
             err=True,
         )
         return 1

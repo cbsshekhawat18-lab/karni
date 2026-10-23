@@ -78,6 +78,21 @@ Framework and React 18 with TypeScript, and CI tests every Python version on
 each push. Python 3.12 is the floor because Karni's admin is built on
 django-unfold, whose current releases require Python 3.12.
 
+The frontend needs Node 20.19 or later and npm 11 or later. Node 24 LTS
+bundles both. CI runs the quickstart page on Node 20, with its bundled npm 10,
+and on Node 24, so the page's install step works on both.
+
+## Why does `npm install` fail with "Cannot read properties of null (reading 'edgesOut')"?
+
+The npm running it is version 10, which Node 20 and Node 22 bundle. npm 10
+crashes on a fresh install of a Karni frontend while it resolves Vite 8's
+optional peer dependencies. The crash comes before npm reads the project's
+`engines` field, so npm cannot print a clearer message. npm 11 fixed the bug.
+Run `npx npm@11 install` in `frontend/` in place of `npm install`, upgrade with
+`npm install -g npm@11`, or move to Node 24 LTS, which bundles npm 11.
+`karni doctor` shows the Node and npm on your PATH and flags either one when
+it is too old.
+
 ## How does Karni handle permissions?
 
 A Karni resource declares one `access` rule, such as `owned:organizer`, which

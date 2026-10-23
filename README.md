@@ -90,7 +90,7 @@ Karni stays a versioned dependency that you upgrade. A boilerplate is copied onc
 
 ## Quickstart
 
-You need Python 3.12 or later, Node 20.19 or later (24 LTS recommended) and Docker, which runs PostgreSQL.
+You need Python 3.12 or later, Node 20.19 or later with npm 11 or later (Node 24 LTS recommended, as it bundles npm 11) and Docker, which runs PostgreSQL. Node 20 and 22 bundle npm 10, which crashes in the frontend's `npm install`. On those, run `npm install -g npm@11` first, or use `npx npm@11 install` in place of `npm install`. `karni doctor` flags an npm or Node that is too old.
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
@@ -111,7 +111,7 @@ In a second terminal, in the same directory:
 
 ```sh
 cd ticket_shop/frontend
-npm install
+npm install     # npm 11 or later. On npm 10: npx npm@11 install
 npm run dev
 ```
 
