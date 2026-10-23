@@ -103,6 +103,7 @@ from karni.api.filters import KarniFilterBackend, KarniOrderingFilter, KarniSear
 from karni.api.optimizer import TargetScope, optimize, validate_hints
 from karni.api.related import mark_read_scoped
 from karni.api.serializers import build_serializer
+from karni.api.throttling import ActionRateThrottle, Throttle
 from karni.deprecation import warn_deprecated
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError, KarniWriteDeferred
 from karni.pagination import Unpaginated, check_pagination_class
@@ -251,6 +252,14 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     query_budget: ClassVar[Budget | None] = None
     pagination: ClassVar[Unpaginated | None] = None
     cache: ClassVar[Cache | Uncached | None] = None
+    #: ``Throttle(create="10/hour")`` limits each caller of the named actions, on
+    #: top of the project-wide ``anon``/``user`` throttles (:mod:`karni.api.throttling`).
+    #: It is added to ``throttle_classes`` at class definition. ``None`` adds no limit.
+    throttle: ClassVar[Throttle | None] = None
+    #: The throttle class a ``throttle`` declaration adds to ``throttle_classes``.
+    #: Override / escape hatch: a subclass of ``ActionRateThrottle`` with another
+    #: ``get_cache_key`` (a different caller identity).
+    action_throttle_class: ClassVar[type[ActionRateThrottle]] = ActionRateThrottle
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
 
@@ -285,6 +294,12 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         if not getattr(resolved, _SCOPED_MARK, False):
             cls.get_queryset = _scoped_get_queryset(resolved)  # type: ignore[method-assign]
         _validate_performance(cls)
+        if isinstance(cls.throttle, Throttle) and cls.action_throttle_class not in list(
+            cls.throttle_classes
+        ):
+            # The declaration rides in throttle_classes, so everything that
+            # switches DRF throttling off (tests, probes, a project) covers it.
+            cls.throttle_classes = [*cls.throttle_classes, cls.action_throttle_class]
         if "object_permission_classes" in cls.__dict__ and cls.object_permission_classes:
             # Still honoured (checked after the access object check) until removal.
             warn_deprecated(
@@ -989,6 +1004,22 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
             f"{name}.cache must be Cache(...) or Uncached(reason='...'), got {cache!r}.",
             code="E119",
         )
+    throttle = cls.__dict__.get("throttle")
+    if throttle is not None:
+        if not isinstance(throttle, Throttle):
+            raise KarniImproperlyConfigured(
+                f"{name}.throttle must be a Throttle, e.g. throttle = Throttle(create='10/hour'), "
+                f"got {throttle!r}.",
+                code="E132",
+            )
+        known = _STANDARD_ACTIONS | {extra.__name__ for extra in cls.get_extra_actions()}
+        unknown = sorted(set(throttle.rates) - known)
+        if unknown:
+            raise KarniImproperlyConfigured(
+                f"{name}.throttle names unknown action(s) {', '.join(unknown)}. "
+                f"Known: {', '.join(sorted(known - {'*'}))}.",
+                code="E132",
+            )
     for hint in ("select_related", "prefetch_related"):
         if hint in cls.__dict__:
             validate_hints(name, hint, cls.__dict__[hint])

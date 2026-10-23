@@ -8,7 +8,7 @@ import pytest
 import structlog
 from django.core.exceptions import ImproperlyConfigured
 
-from karni.conf import karni_settings
+from karni.conf import env, karni_settings
 from karni.conf.base import BASE, INSECURE_SECRET_KEY
 from karni.conf.dev import DEV
 from karni.conf.prod import PROD
@@ -59,6 +59,25 @@ def test_assignment_after_call_wins() -> None:
     karni_settings(ns, env_name="dev")
     ns["REST_FRAMEWORK"] = {"PAGE_SIZE": 7}  # a settings.py line below the call
     assert ns["REST_FRAMEWORK"] == {"PAGE_SIZE": 7}
+
+
+def test_env_reader_is_left_in_the_namespace(make_settings) -> None:
+    """A setting added after the call reads the environment through the same ``env``."""
+    ns = make_settings("dev")
+    assert ns["env"] is env
+    marker = object()
+    assert make_settings("dev", preset={"env": marker})["env"] is marker
+
+
+def test_silenced_system_checks_starts_empty_and_extends(make_settings) -> None:
+    ns = make_settings("dev")
+    assert ns["SILENCED_SYSTEM_CHECKS"] == []
+    ns["SILENCED_SYSTEM_CHECKS"] += ["karni.W967"]  # a settings.py line below the call
+    assert ns["SILENCED_SYSTEM_CHECKS"] == ["karni.W967"]
+    assert BASE["SILENCED_SYSTEM_CHECKS"] == []
+    assert make_settings("dev", preset={"SILENCED_SYSTEM_CHECKS": ["x"]})[
+        "SILENCED_SYSTEM_CHECKS"
+    ] == ["x"]
 
 
 def test_installed_apps_merge_preserves_user_order(make_settings) -> None:

@@ -48,9 +48,11 @@ whenever Django is exposed without a proxy that rewrites `X-Forwarded-For`,
 or a spoofed header defeats the per-IP throttles. The password-reset endpoint
 never reveals whether an address exists. Registration has a honeypot
 (`KARNI_ACCOUNTS_HONEYPOT_FIELD`), and `karni.W501` warns when the throttle
-counters would live in a per-process cache in production. Registration is
-open by default. While it is, `karni.W102` warns for every viewset that lets
-any signed-in user change and delete every row, and
+counters would live in a per-process cache in production. A public form of
+your own gets a per-caller limit with `throttle = Throttle(create="10/hour")`
+on its viewset ([rate limits](api.md#access-control)). Registration is open by
+default. While it is, `karni.W102` warns for every viewset that lets any
+signed-in user change and delete every row, and
 `KARNI_ACCOUNTS_REGISTRATION = False` closes it
 ([closing registration](accounts.md#closing-registration)).
 

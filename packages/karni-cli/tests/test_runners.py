@@ -241,6 +241,41 @@ def test_explicit_no_docker_wins_over_a_running_stack(
 # serve
 
 
+def test_serve_local_on_another_port_prints_the_proxy_line(
+    runner: CliRunner, project: Path, run: Recorder
+) -> None:
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text("")
+    result = _invoke(runner, "serve", "--local", "--port", "8020")
+    assert result.exit_code == 0, result.output
+    assert "cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+    assert run.cmd == [_py(project), "manage.py", "runserver", "127.0.0.1:8020"]
+
+
+def test_serve_local_proxy_line_reaches_a_bind_all_host(
+    runner: CliRunner, project: Path, run: Recorder
+) -> None:
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text("")
+    result = _invoke(runner, "serve", "--local", "--host", "0.0.0.0", "--port", "9000")
+    assert "KARNI_API_PROXY=http://127.0.0.1:9000 npm run dev" in result.output
+
+
+@pytest.mark.parametrize("frontend", [True, False])
+def test_serve_local_prints_no_proxy_line_when_the_default_reaches_it(
+    runner: CliRunner, project: Path, run: Recorder, frontend: bool
+) -> None:
+    if frontend:
+        (project / "frontend").mkdir()
+        (project / "frontend" / "vite.config.ts").write_text("")
+        argv = ["serve", "--local", "--host", "0.0.0.0"]
+    else:
+        argv = ["serve", "--local", "--port", "8020"]  # no frontend to point anywhere
+    result = _invoke(runner, *argv)
+    assert result.exit_code == 0, result.output
+    assert "KARNI_API_PROXY" not in result.output
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [

@@ -17,6 +17,9 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   (owner path), ``where`` (custom function name), ``any`` / ``all``
   (``|`` / ``&``), ``unscoped`` (the reason) and ``deny`` (no declaration).
   Display hints for clients only — the server enforces.
+* ``x-karni-throttle: "10/hour"`` on an operation whose action the viewset's
+  ``throttle`` declaration limits (:mod:`karni.api.throttling`): the rate in
+  force, settings included.
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -67,6 +70,7 @@ from karni.api.access import (
     describe_access,
 )
 from karni.api.expansion import auto_expandable_fields
+from karni.api.throttling import throttle_rate
 
 __all__ = ["KarniAutoSchema"]
 
@@ -88,7 +92,7 @@ class KarniAutoSchema(AutoSchema):
         method: str,
         registry: Any,
     ) -> dict[str, Any] | None:
-        """Stock operation plus ``x-karni-resource`` (routed list ops) and ``x-karni-access``."""
+        """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle`` extensions."""
         if self._karni_action() == "history" and not self._karni_audited():
             return None  # no history is kept for this resource: no operation to document
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
@@ -102,6 +106,9 @@ class KarniAutoSchema(AutoSchema):
         if view is not None:
             declaration, predicate = self._karni_access(view)
             operation["x-karni-access"] = describe_access(declaration, predicate)
+            rate = throttle_rate(view, self._karni_action())
+            if rate is not None:
+                operation["x-karni-throttle"] = rate
         return operation
 
     #: The detail routes drf-spectacular already names apart from the list.

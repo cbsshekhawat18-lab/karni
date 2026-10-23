@@ -106,6 +106,37 @@ def _running_interpreter() -> Path | None:
     return Path(sys.executable)
 
 
+_HAS_MODULE = (
+    "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec(sys.argv[1]) else 1)"
+)
+
+
+def project_has_module(project: Path, module: str) -> bool | None:
+    """Whether the project's interpreter can import ``module`` (``None``: no interpreter to ask).
+
+    Runs ``importlib.util.find_spec`` in :func:`venv_python`'s interpreter,
+    never in the one running karni-cli, so a package installed only in the
+    project counts. A docker-only project has no host interpreter, and
+    neither does a probe that fails or times out: both answer ``None``.
+    """
+    python = venv_python(project)
+    if python is None:
+        return None
+    try:
+        proc = subprocess.run(
+            [str(python), "-c", _HAS_MODULE, module],
+            cwd=project,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+            stdin=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return {0: True, 1: False}.get(proc.returncode)
+
+
 def compose_service_running(project: Path, service: str) -> bool:
     """True when ``docker compose ps`` reports the service as running."""
     try:

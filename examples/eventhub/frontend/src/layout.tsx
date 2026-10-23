@@ -1,7 +1,8 @@
 // The app shell: @karni/ui's <Layout>, with one nav entry per static route in
 // routes.tsx, in registration order. Pages from `karni make page` show up
 // here on their own.
-// Detail/edit routes ($id) and "new" forms are reached from their list page.
+// Detail/edit routes ($id) and "new" forms are reached from their list page,
+// and the sign-in page is listed only while nobody is signed in.
 import { Button, Layout, ThemeToggle, useAuth, type LayoutNavItem } from "@karni/ui";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -9,6 +10,13 @@ import { useEffect, useState } from "react";
 function label(path: string): string {
     const name = path.split("/").filter(Boolean).at(-1) ?? "home";
     return name.replace(/[-_]+/g, " ").replace(/^./, (first) => first.toUpperCase());
+}
+
+// Whether a route gets a nav entry. A signed-in user has no use for the
+// sign-in page, and it stays listed while the session is still loading.
+function inNav(path: string, signedOut: boolean): boolean {
+    if (path.includes("$") || path.endsWith("/new")) return false;
+    return signedOut || !path.endsWith("/login");
 }
 
 export default function AppLayout() {
@@ -20,7 +28,7 @@ export default function AppLayout() {
     const [navOpen, setNavOpen] = useState(false);
     useEffect(() => setNavOpen(false), [pathname]);
     const navItems: LayoutNavItem[] = Object.keys(router.routesByPath)
-        .filter((path) => !path.includes("$") && !path.endsWith("/new"))
+        .filter((path) => inNav(path, status !== "authenticated"))
         .map((href) => ({
             href,
             label: label(href),
