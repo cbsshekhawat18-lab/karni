@@ -21,7 +21,7 @@ scaffold.
 
 ---
 
-A [Karni](https://github.com/karni) project: batteries-included Django + DRF +
+A [Karni](https://github.com/cbsshekhawat18-lab/karni) project: batteries-included Django + DRF +
 Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.
 Anything you assign after the call wins.
@@ -56,7 +56,7 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 
 ## Frontend
 
-`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/karni).
+`frontend/` is Vite + React + TypeScript on [@karni/ui](https://github.com/cbsshekhawat18-lab/karni/tree/main/packages/karni-ui).
 `src/App.tsx` mounts `KarniProvider` (one `createKarniClient({ baseUrl: "/api" })`),
 `AuthProvider`, the router and a `Toaster`. `src/main.tsx` imports
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`

@@ -35,8 +35,9 @@ match on the code, not on the wording, which improves between releases.
 
 System checks run on `runserver`, `migrate`, `check` and every management
 command, so problems surface on boot rather than on the first request. Their
-ids are `karni.<code>` (silence a warning on purpose with
-`SILENCED_SYSTEM_CHECKS = ["karni.W001"]`).
+ids are `karni.<code>`. Silence a warning on purpose with
+`SILENCED_SYSTEM_CHECKS = ["karni.W001"]`. `karni_settings()` starts that list
+empty, so `SILENCED_SYSTEM_CHECKS += ["karni.W001"]` works in a project.
 
 End-user outcomes are not on this page: wrong credentials, expired or used
 tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
@@ -438,6 +439,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A field in APIMeta.write_only never appears in a response, but ?search= over it answers whether a row contains a value. That makes search a membership oracle on a hidden column.
 
 **Fix.** Remove the field from search_fields, or take it out of APIMeta.write_only if it may be read.
+
+<a id="e132"></a>
+
+#### E132: Throttle(...) is invalid
+
+*exception* · from `karni.api.throttling.Throttle; BaseViewSet.throttle`
+
+**Why Karni objects.** A viewset's throttle declaration names actions of that viewset and gives each a DRF rate, '<number>/<period>' with the period s, sec, second, m, min, minute, h, hour, d or day.
+
+**Fix.** Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has (the standard ones, or a custom @action by its method name).
 
 ### 2xx · Accounts
 
@@ -1283,7 +1294,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** A routed viewset declares search_fields, filterset_fields, ordering_fields or an ordering on a column no index covers, so every such list request reads the whole table. Fast with seed data, slow in production.
 
-**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then run karni make migration. `karni schema <app>` shows what serves each column. Silence karni.W967 for a table small enough to scan.
+**Fix.** Add the index the message names to Meta.indexes (a SearchField for search), then run karni make migration. `karni schema <app>` shows what serves each column. For a table small enough to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].
 
 <a id="e968"></a>
 

@@ -10,7 +10,12 @@ description: Every setting karni_settings() provides, with its default, environm
 Django, DRF, Celery, storage and Karni setting, most of them read from the
 environment (`.env` for host runs, the compose file or CI for the rest).
 Anything assigned *after* the call wins, and any name defined *before* it is
-never overwritten. This page lists the `KARNI_*` settings. The Django and
+never overwritten. The call also leaves `env`, the django-environ reader Karni
+reads its own defaults with, in the module, so a setting added after it reads
+the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.
+`SILENCED_SYSTEM_CHECKS` starts as an empty list, so
+`SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.
+This page lists the `KARNI_*` settings. The Django and
 DRF settings Karni derives are documented where the feature is.
 
 | Setting | Env | Default | What it does |

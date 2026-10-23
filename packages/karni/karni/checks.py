@@ -2,7 +2,8 @@
 
 Registered from :class:`karni.apps.KarniAppConfig`, so problems surface on
 boot (``runserver``, ``migrate``, ``check``) instead of at request time.
-Silence one deliberately with Django's ``SILENCED_SYSTEM_CHECKS``.
+Silence one deliberately with Django's ``SILENCED_SYSTEM_CHECKS``
+(``karni_settings()`` starts it as an empty list, so ``+=`` works).
 """
 
 from __future__ import annotations

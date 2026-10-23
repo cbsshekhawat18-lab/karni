@@ -72,8 +72,9 @@ match on the code, not on the wording, which improves between releases.
 
 System checks run on `runserver`, `migrate`, `check` and every management
 command, so problems surface on boot rather than on the first request. Their
-ids are `karni.<code>` (silence a warning on purpose with
-`SILENCED_SYSTEM_CHECKS = ["karni.W001"]`).
+ids are `karni.<code>`. Silence a warning on purpose with
+`SILENCED_SYSTEM_CHECKS = ["karni.W001"]`. `karni_settings()` starts that list
+empty, so `SILENCED_SYSTEM_CHECKS += ["karni.W001"]` works in a project.
 
 End-user outcomes are not on this page: wrong credentials, expired or used
 tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your

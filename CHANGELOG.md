@@ -14,6 +14,41 @@ apply codemods and list the manual steps. This file is the human summary.
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.
+- **A rate limit for one action.** `throttle = Throttle(create="10/hour")` on
+  a `BaseViewSet` limits each caller of that action, on top of the
+  project-wide `anon` and `user` throttles. A public contact form no longer
+  needs a hand-written `get_throttles()`. It is DRF's throttle under the
+  scope `"<route>.<action>"`, so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]`
+  replaces the rate or switches it off with `None`. The OpenAPI schema
+  publishes the rate as `x-karni-throttle`, and a bad declaration is `E132`.
+  See [rate limits](docs/api.md#access-control).
+- **`env` and `SILENCED_SYSTEM_CHECKS` after `karni_settings()`.** The call
+  leaves `env`, the django-environ reader Karni uses, in the settings module,
+  so a setting added below it reads `.env` without `import os`. It is also
+  importable as `from karni.conf import env`. `SILENCED_SYSTEM_CHECKS` now
+  starts as an empty list, so `SILENCED_SYSTEM_CHECKS += ["karni.W967"]` no
+  longer raises NameError. The `karni.W967` hint shows that exact line.
+- **`karni make model` asks the project about Pillow.** The ImageField note
+  appears only when the project's interpreter cannot import Pillow, or when
+  there is no host interpreter to ask (a Docker-only project). The scaffold
+  keeps depending on plain `karni`: `karni[images]` only adds Pillow, a
+  native dependency a project without image fields does not need, and the
+  note says to list `karni[images]` when one is added.
+- **`karni serve --local --port 8020` prints the proxy line.** On any address
+  other than `127.0.0.1:8000`, it prints the
+  `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev` line, so
+  the frontend's dev server reaches the same port.
+- **An edit form keeps a stored file without asking for it (@karni/ui).**
+  `ResourceForm` no longer marks a file or image field "required" on edit
+  when the row already has a file. The current file stays listed by name,
+  and saving without a new one keeps it.
+- **The sign-in page leaves the sidebar after sign-in.** The scaffold's
+  `layout.tsx` (and the example apps') lists a `.../login` route only while
+  nobody is signed in.
+- **Fixes in the scaffold and docs.** The scaffold's README linked to
+  `github.com/karni`, which is not Karni. It now links to the repository, and
+  `python -m karni.links check` catches the ownerless form too.
+  `docs/testing.md` opens with the four fixtures most tests use.
 
 ## 0.4.0 (2026-10-22)
 

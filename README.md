@@ -300,7 +300,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Response caching per viewset (`Cache`, `Uncached`)
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 Full reference: [karni.api](docs/REFERENCE.md#karniapi).

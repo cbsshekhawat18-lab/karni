@@ -36,6 +36,21 @@ def test_prose_carries_no_foreign_karni_urls() -> None:
     assert stale == [], "\n".join(stale)
 
 
+def test_prose_check_catches_the_ownerless_repository_url(tmp_path: Path) -> None:
+    """``github.com/karni`` is not Karni's repository: the check flags it like a foreign owner."""
+    (tmp_path / "templates").mkdir()
+    (tmp_path / "templates" / "README.md").write_text(
+        "A [Karni](https://github.com/karni) project.\n"
+        "On [@karni/ui](https://github.com/someone/karni/tree/main).\n"
+        f"See [the repo]({links.REPO_URL}) and [the docs]({links.DOCS_BASE_URL}).\n"
+        "Not Karni: https://github.com/karnival/x and https://github.com/x/karni-fork.\n"
+    )
+    assert links.stale_prose(tmp_path) == [
+        "templates/README.md:1: https://github.com/karni",
+        "templates/README.md:2: https://github.com/someone/karni",
+    ]
+
+
 def test_check_command_exits_clean() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "karni.links", "check"], capture_output=True, text=True, cwd=ROOT

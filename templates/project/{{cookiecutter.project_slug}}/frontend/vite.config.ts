@@ -6,6 +6,7 @@ import { defineConfig } from "vite";
 // API and health requests from the dev server are proxied to Django:
 // `karni serve --local` (runserver on 127.0.0.1:8000) by default;
 // docker-compose sets KARNI_API_PROXY=http://django:8000 for its container.
+// `karni serve --local --port 8020` prints the KARNI_API_PROXY line for its port.
 const target = process.env.KARNI_API_PROXY ?? "http://127.0.0.1:8000";
 const proxy = {
     "/api": { target, changeOrigin: true },

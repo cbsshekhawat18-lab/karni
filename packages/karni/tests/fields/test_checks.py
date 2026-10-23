@@ -273,6 +273,7 @@ def test_unindexed_search_filter_and_order_columns_warn(monkeypatch: pytest.Monk
     assert texts[2].startswith("TicketViewSet.search_fields searches Ticket.notes")
     hints = " ".join(str(message.hint) for message in messages)
     assert 'models.Index(fields=["status"]' in hints and "SearchField" in hints
+    assert 'SILENCED_SYSTEM_CHECKS = ["karni.W967"]' in hints
 
 
 @isolate_apps("tests.fieldsapp")

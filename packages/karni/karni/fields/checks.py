@@ -18,7 +18,8 @@ Registered through :mod:`karni.checks`, so they run on ``runserver``,
 * ``E970`` a ``class Karni`` option of the field layer is malformed.
 
 Override / escape hatch: each warning names its declaration-level opt-out;
-``SILENCED_SYSTEM_CHECKS`` silences any of them project-wide.
+``SILENCED_SYSTEM_CHECKS`` silences any of them project-wide
+(``karni_settings()`` starts it as an empty list, so ``+=`` works).
 """
 
 from __future__ import annotations
@@ -449,8 +450,8 @@ def check_usage_indexes(app_configs: Any = None, **kwargs: Any) -> list[checks.C
             check_warning(
                 "W967",
                 text,
-                hint=f"{_sentence(fix)}, then karni make migration. Silence karni.W967 for a "
-                "table small enough to scan.",
+                hint=f"{_sentence(fix)}, then karni make migration. For a table small enough "
+                'to scan, silence it instead: SILENCED_SYSTEM_CHECKS = ["karni.W967"].',
                 obj=model,
             )
         )

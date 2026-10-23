@@ -168,6 +168,19 @@ class Rendered:
     lines: list[str] = field(default_factory=list)
     imports: list[Import] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    #: ``Model.field`` of every ImageField: the project needs Pillow for them.
+    images: list[str] = field(default_factory=list)
+
+
+def pillow_note(images: list[str], *, missing: bool) -> str:
+    """The note for ImageFields. ``missing``: the project's interpreter was asked and has no Pillow."""
+    fields = ", ".join(images)
+    noun = "is an ImageField" if len(images) == 1 else "are ImageFields"
+    state = "and the project's Python has no Pillow" if missing else "so the project needs Pillow"
+    return (
+        f'note: {fields} {noun}, {state}. List "karni[images]" instead of "karni" in '
+        "pyproject.toml's dependencies (it adds Pillow) and reinstall: pip install 'karni[images]'."
+    )
 
 
 def parse_field(token: str) -> FieldSpec:
@@ -301,10 +314,8 @@ def render_model_body(
             args = [f"upload_to={upload}", *_optional_kwargs(spec)]
             out.lines.append(call(head + django, args, indent, line_length))
             if spec.kind == "image":
-                out.notes.append(
-                    f"note: {model}.{spec.name} is an ImageField, so the project needs Pillow "
-                    "(pip install 'karni[images]')."
-                )
+                # The caller asks the project's interpreter and notes Pillow only if it is missing.
+                out.images.append(f"{model}.{spec.name}")
         elif spec.kind == "choice":
             _render_choice(spec, out, indent, line_length)
         elif spec.kind in lifecycle_fields.TYPES:

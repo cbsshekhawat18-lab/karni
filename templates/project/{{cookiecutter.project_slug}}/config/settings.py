@@ -5,7 +5,9 @@ middleware, DRF, Celery, Redis cache, storage, logging, security headers,
 CORS and Sentry, all read from environment variables (see .env.example).
 
 Overriding: anything assigned *after* the call wins, and any name defined
-*before* the call is never overwritten by Karni.
+*before* the call is never overwritten by Karni. The call also leaves `env`
+here: the django-environ reader Karni reads its defaults with, so a setting
+added below can come from .env the same way.
 """
 
 from karni.conf import karni_settings
@@ -26,3 +28,6 @@ MIDDLEWARE += [  # noqa: F821
 # Any Django/Karni setting assigned here beats the Karni default, e.g.:
 # REST_FRAMEWORK["PAGE_SIZE"] = 25
 # CELERY_TASK_TIME_LIMIT = 600
+# FEATURE_X = env.bool("FEATURE_X", default=False)
+# SILENCED_SYSTEM_CHECKS starts empty. Extend it to silence a check on purpose:
+# SILENCED_SYSTEM_CHECKS += ["karni.W967"]

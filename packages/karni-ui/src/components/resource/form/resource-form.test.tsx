@@ -328,6 +328,54 @@ describe("ResourceForm edit mode (D3/D10)", () => {
     );
   });
 
+  it("does not mark a required file as required when the row already has one", async () => {
+    const user = userEvent.setup();
+    const { update } = setupMutations();
+    const requiredImage: ResourceSchema = {
+      ...eventSchema,
+      fields: eventSchema.fields.map((field) =>
+        field.name === "image" ? { ...field, required: true, nullable: false } : field,
+      ),
+    };
+    mockUseSchema.mockReturnValue({ data: requiredImage, isLoading: false, error: undefined });
+
+    const { unmount } = render(<ResourceForm resource="events" />);
+    expect(screen.getByRole("button", { name: "Image (required)" })).toBeInTheDocument();
+    unmount();
+
+    render(<ResourceForm resource="events" id={1} />);
+    // The stored file is listed by name, and the dropzone is not required.
+    expect(screen.getByRole("button", { name: "Image" })).toBeInTheDocument();
+    expect(screen.queryByText("(required)", { exact: false })).toBeNull();
+    expect(screen.getByRole("link", { name: "launch.png" })).toHaveAttribute(
+      "href",
+      String(eventRecord["image"]),
+    );
+
+    const title = screen.getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(update.mutateAsync).toHaveBeenCalledWith({ id: 1, values: { title: "Renamed" } }),
+    );
+  });
+
+  it("keeps a required file required on edit when the row has none", () => {
+    const requiredImage: ResourceSchema = {
+      ...eventSchema,
+      fields: eventSchema.fields.map((field) =>
+        field.name === "image" ? { ...field, required: true, nullable: false } : field,
+      ),
+    };
+    mockUseSchema.mockReturnValue({ data: requiredImage, isLoading: false, error: undefined });
+    mockUseResourceItem.mockImplementation(() =>
+      queryResult<Record<string, unknown>>({ ...eventRecord, image: null }),
+    );
+    render(<ResourceForm resource="events" id={1} />);
+    expect(screen.getByRole("button", { name: "Image (required)" })).toBeInTheDocument();
+  });
+
   it("shows the skeleton while the item loads", () => {
     mockUseResourceItem.mockImplementation(() =>
       queryResult<Record<string, unknown>>(undefined, { isLoading: true }),
