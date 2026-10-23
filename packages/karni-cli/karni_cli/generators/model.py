@@ -203,7 +203,8 @@ def command(
         "--access",
         help=(
             f"With viewset: {viewset_gen.ACCESS_CHOICES}. public-read: anyone reads, only "
-            f"role {viewset_gen.PUBLIC_READ_WRITER!r} (or :<role>) writes."
+            f"role {viewset_gen.PUBLIC_READ_WRITER!r} (or :<role>) writes. public-create: "
+            "anyone creates (a public form), only that role reads and writes."
         ),
     ),
     search: list[str] | None = typer.Option(

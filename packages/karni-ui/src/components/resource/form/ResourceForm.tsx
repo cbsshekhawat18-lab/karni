@@ -373,6 +373,10 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
   const mutations = useResourceMutations(resource);
   const baseId = React.useId();
   const inputIdOf = React.useCallback((name: string) => `${baseId}-${name}`, [baseId]);
+  // A public create's honeypot (x-karni-honeypot): a field no person sees or
+  // reaches. It is sent only when something filled it, which only a script does.
+  const honeypot = mode === "create" ? schema.operations.create?.honeypot : undefined;
+  const honeypotRef = React.useRef<HTMLInputElement>(null);
 
   const formFields = React.useMemo(
     () => writableFields(schema, fieldOverrides),
@@ -619,7 +623,9 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
         afterFailedValidation(jsonErrors, []);
         return;
       }
-      const payload = transformSubmit !== undefined ? transformSubmit(values) : values;
+      const trap = honeypot !== undefined ? (honeypotRef.current?.value ?? "") : "";
+      const sent = honeypot !== undefined && trap !== "" ? { ...values, [honeypot]: trap } : values;
+      const payload = transformSubmit !== undefined ? transformSubmit(sent) : sent;
       let result: Record<string, unknown>;
       try {
         result =
@@ -836,6 +842,20 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
           })}
           {extraFields}
         </fieldset>
+        {honeypot !== undefined ? (
+          <div aria-hidden="true" className="sr-only">
+            <label htmlFor={inputIdOf(honeypot)}>Leave this field empty</label>
+            <input
+              ref={honeypotRef}
+              id={inputIdOf(honeypot)}
+              name={honeypot}
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              defaultValue=""
+            />
+          </div>
+        ) : null}
         {actions !== undefined ? (
           actions
         ) : (

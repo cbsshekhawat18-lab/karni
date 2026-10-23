@@ -8,13 +8,34 @@ from karni_cli import project as project_mod
 from karni_cli.main import app
 
 
-def _fake_run(returncode: int):
+def _fake_run(returncode: int, expected: list[str] | None = None):
     def fake(project, args, **kwargs):
-        assert args == ["karni_check"]
+        assert args == (expected or ["karni_check"])
         assert kwargs.get("capture") is False
         return subprocess.CompletedProcess(args, returncode)
 
     return fake
+
+
+def test_deploy_passes_through_to_the_backend_check(runner, tmp_path, monkeypatch) -> None:
+    (tmp_path / "manage.py").write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_lint", lambda p: 0)
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(0, ["karni_check", "--deploy"]))
+    result = runner.invoke(app, ["check", "--deploy"])
+    assert result.exit_code == 0 and "karni check: ok" in result.output
+
+    # a deploy finding (a warning there) fails the whole run
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(1, ["karni_check", "--deploy"]))
+    result = runner.invoke(app, ["check", "--deploy"])
+    assert result.exit_code == 1 and "karni check: FAILED" in result.output
+
+
+def test_check_help_documents_deploy(runner) -> None:
+    result = runner.invoke(app, ["check", "--help"])
+    assert result.exit_code == 0
+    assert "--deploy" in result.output
 
 
 def test_exit_code_aggregates_backend_and_frontend(runner, tmp_path, monkeypatch) -> None:

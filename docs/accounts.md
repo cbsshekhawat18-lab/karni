@@ -147,6 +147,19 @@ your registration form hidden from view (`tabindex="-1"`, `autocomplete="off"`,
 visually hidden, never `display: none` alone, which some bots honour). Set
 the setting to `""` to turn it off.
 
+Your own public forms get the same protection without a registration form.
+A viewset with `create=Public()` has a honeypot of its own,
+`KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` (default `homepage`), which `@karni/ui`'s
+`ResourceForm` renders hidden, and a default rate limit,
+`KARNI_PUBLIC_CREATE_RATE` (10 an hour per caller). It is a separate setting
+because registration's default, `website`, is a common model field. A filled
+one logs `karni.api.honeypot` on the `karni.api` logger. See
+[rate limits](api.md#rate-limits).
+
+`@karni/ui` has no sign-up form and its `LoginForm` shows no sign-up link,
+so closing registration (below) needs no frontend change. A project that
+wants self-registration adds its own page that posts to `register/`.
+
 Every auth outcome is a structlog event on the `karni.accounts` logger:
 `accounts.login.ok` / `.failed` / `.2fa_required`, `accounts.logout`,
 `accounts.register.ok` / `.honeypot`, `accounts.email.verified`,

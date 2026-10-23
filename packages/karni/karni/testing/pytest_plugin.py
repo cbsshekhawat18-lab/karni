@@ -15,6 +15,11 @@ configured Django project it only reseeds factory randomness:
   a ``BaseViewSet`` action over its query budget fails with the grouped
   duplicate report (:mod:`karni.performance`). ``override_settings`` still
   changes it per test.
+* **Fresh rate limits per test.** DRF's throttles keep their counters in a
+  cache of their own for each test, empty at its start, so tests that post
+  to a public form (``KARNI_PUBLIC_CREATE_RATE``) or log in many times do
+  not use up each other's limits, and a run never inherits the counters of
+  an earlier run from Redis. A test that checks a limit still sees it work.
 * **Fixture** ``query_budget`` — :func:`karni.testing.performance.query_budget`::
 
       def test_report(client, query_budget):
@@ -29,7 +34,9 @@ configured Django project it only reseeds factory randomness:
 
 Override / escape hatches: ``pytest --karni-query-budget=warn`` (or ``off``)
 for one run, ``karni_query_budget_mode = warn`` in the pytest ini file for the
-project, ``-p no:karni`` to disable the plugin entirely.
+project, ``-p no:karni`` to disable the plugin entirely. Define a fixture
+named ``_karni_fresh_throttles`` in ``conftest.py`` to replace the per-test
+throttle cache (an empty one that does nothing keeps the shared cache).
 """
 
 from __future__ import annotations
@@ -117,6 +124,30 @@ def _karni_query_budget_mode(request: pytest.FixtureRequest) -> Iterator[None]:
             del settings.KARNI_QUERY_BUDGET_MODE
         else:
             settings.KARNI_QUERY_BUDGET_MODE = previous
+
+
+@pytest.fixture(autouse=True)
+def _karni_fresh_throttles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give DRF's throttles an empty cache of their own for this test.
+
+    ``SimpleRateThrottle.cache`` (shared by the ``anon``/``user`` throttles,
+    the auth throttles and :class:`karni.api.throttling.ActionRateThrottle`)
+    is the default cache, which outlives a test and, on Redis, a run.
+    """
+    try:
+        from django.conf import settings
+    except ImportError:  # pragma: no cover - Django is a karni dependency
+        return
+    if not settings.configured:
+        return
+    try:
+        from django.core.cache.backends.locmem import LocMemCache
+        from rest_framework.throttling import SimpleRateThrottle
+    except ImportError:  # pragma: no cover - DRF is a karni dependency
+        return
+    throttle_cache = LocMemCache("karni-test-throttles", {})
+    throttle_cache.clear()
+    monkeypatch.setattr(SimpleRateThrottle, "cache", throttle_cache)
 
 
 @pytest.fixture(autouse=True)

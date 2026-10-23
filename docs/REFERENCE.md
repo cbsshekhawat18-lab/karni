@@ -309,6 +309,7 @@ karni check [OPTIONS]
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` | on |  |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
+| `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 
 #### `karni explain`
 
@@ -788,7 +789,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `FIELDS...` |  | Fields as name:type[:arg][?]. Types: str[:len] text int float decimal[:max:places] bool date datetime url file image uuid choice:a\|b fk:Model m2m:Model o2o:Model. Typed fields (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] slug[:source] phone country currency json[:queried] array:str. A trailing ? makes the field optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
-| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
+| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
@@ -799,7 +800,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 
 Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py, with CRUD at `/api/<models>/`.
 
-It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anyone reads, only role "staff" writes, or the role `public-read:<role>` names), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
+It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anyone reads, only role "staff" writes, or the role `public-read:<role>` names), public-create (a public form: anyone creates, only role "staff" or `public-create:<role>` reads and writes), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
 
 ```
 karni make viewset [OPTIONS] MODEL
@@ -808,7 +809,7 @@ karni make viewset [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). |
-| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
+| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | search_fields, comma-separated or repeated (e.g. title,venue). |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
@@ -1145,7 +1146,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `HasRole` | class | The requesting user holds **any** of the named roles (Django groups). | `HasRole(*names: str) -> None` |
 | `Owned` | class | Rows whose `path` points at the requesting user. | `Owned(path: str \| None = None, *, bypass: Predicate \| None = None) -> None` |
 | `Public` | class | Everyone, anonymous included, on every row. The explicit public form. | methods `allows`, `rows`, `describe` |
-| `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str) -> None` |
+| `Throttle` | class | `throttle = Throttle(create="10/hour")`: a rate per action. | `Throttle(**rates: str \| None) -> None` |
 | `Uncached` | class | `cache = Uncached(reason="...")`: never cache this viewset's responses. | `Uncached(*, reason: str) -> None` |
 | `Unpaginated` | class | `pagination = Unpaginated(max_rows=N, reason="...")`: a viewset that returns lists. | `Unpaginated(*, max_rows: int, reason: str) -> None` |
 | `Unscoped` | class | `access = Unscoped(reason="...")`: turn Karni's access layer off for one viewset. | `Unscoped(*, reason: str) -> None` |
@@ -1255,6 +1256,8 @@ class Lead(BaseModel):
 | `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider",` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
 | `KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
 | `KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
+| `KARNI_PUBLIC_CREATE_RATE` | `KARNI_PUBLIC_CREATE_RATE` | `"10/hour"` | The limit on each caller (the user, else the client IP) of a `create` anyone may call (`create=Public()`), unless the viewset declares `throttle = Throttle(create=...)`. `None` or `""` turns this default off. See [rate limits](api.md#rate-limits). |
+| `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `"homepage"` | Name of the hidden form field on a public `create`. A request that fills it is answered 202 and nothing is saved. Off for a model that has a field of that name. `""` turns it off. See [rate limits](api.md#rate-limits). |
 
 ### Performance (ADR 0001 Decision 3)
 
@@ -1284,6 +1287,14 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
 | `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"],` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+
+### Security headers (karni.security)
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_CSP` | `KARNI_CSP` | `{}` | Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers). |
+| `KARNI_CSP_REPORT_ONLY` | `KARNI_CSP_REPORT_ONLY` | `None` | `True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`. |
+| `KARNI_PERMISSIONS_POLICY` | `KARNI_PERMISSIONS_POLICY` | `{}` | Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header. |
 
 ### Karni knobs
 
@@ -1599,6 +1610,16 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E505`](errors.md#e505) | check | The welcome page is reachable with DEBUG off |
 | [`E506`](errors.md#e506) | exception | A setting names a dotted path that cannot be imported |
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
+| [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
+| [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
+| [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |
+| [`W513`](errors.md#w513) | warning | CSRF_TRUSTED_ORIGINS is missing, a wildcard or plain http |
+| [`W514`](errors.md#w514) | warning | HSTS is off |
+| [`W515`](errors.md#w515) | warning | The session or CSRF cookie is not marked secure |
+| [`W516`](errors.md#w516) | warning | The admin is at /admin/ |
+| [`W517`](errors.md#w517) | warning | CORS allows every origin |
+| [`W518`](errors.md#w518) | warning | No enforced Content-Security-Policy |
+| [`W519`](errors.md#w519) | warning | The Content-Security-Policy lets any script run |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |

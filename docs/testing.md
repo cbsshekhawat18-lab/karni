@@ -353,6 +353,29 @@ Public API: `factory_for`, `auto_factory`, `explicit_factories`, `create`,
 `create_batch`, `build`, `clear_cache`, `FactoryBuilder`, `AutoFactory`
 (base of generated factories), `AutoSubFactory`, `DEFAULT_PASSWORD`.
 
+## Rate limits in tests
+
+The `karni` pytest plugin gives DRF's throttles an empty cache of their own
+at the start of every test. A suite that posts to a public form many times
+(each public `create` is limited to `KARNI_PUBLIC_CREATE_RATE`, 10 an hour
+by default), or logs in again and again, never runs out of requests because
+of an earlier test, and a run never inherits counters an earlier run left
+in Redis. Inside one test the limits still work, so a test can prove one:
+
+```python
+def test_the_contact_form_is_rate_limited(client_as, settings):
+    settings.KARNI_PUBLIC_CREATE_RATE = "2/hour"
+    anonymous = client_as(None)
+    enquiry = {"name": "Ada", "message": "Do you design schools?"}
+    for _ in range(2):
+        assert anonymous.post("/api/enquiries/", enquiry).status_code == 201
+    assert anonymous.post("/api/enquiries/", enquiry).status_code == 429
+```
+
+`assert_crud` and `assert_isolated` switch throttling off for the resource
+they test. To keep the shared cache instead, define an autouse fixture named
+`_karni_fresh_throttles` in `conftest.py` that does nothing.
+
 ## Queued listeners and Celery tasks
 
 A `queued=True` listener (or any task) dispatches on commit and runs in a

@@ -152,36 +152,6 @@ Owner fields: a direct FK to the user model named by `Owned` in `write` or
 `create` is stamped from `request.user` on create (`perform_create`) and is
 read-only in the generated serializer. The body never chooses the owner.
 
-**Rate limits for one action.** A form open to anonymous visitors needs a
-tighter limit than the project-wide `anon` throttle. Declare it per action:
-
-```python
-from karni.api import Access, BaseViewSet, HasRole, Public, Throttle
-
-class ContactViewSet(BaseViewSet):
-    model = Contact
-    access = Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())
-    throttle = Throttle(create="10/hour")
-```
-
-The rate uses DRF's format (`"<number>/<period>"`, the period `s`, `min`,
-`hour` or `day`). Each caller is counted on its own: the user id when signed
-in, else the client IP (honouring `NUM_PROXIES`). Over the rate, the action
-answers 429 with `Retry-After`. Actions the declaration does not name keep
-only the project-wide `anon` and `user` throttles. A custom `@action` is
-named by its method name, and an unknown name fails at class definition
-(`E132`).
-
-Settings win over the declaration. The scope is `"<route>.<action>"`
-(`contacts.create`), so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["contacts.create"]`
-replaces the rate, and `None` there switches the limit off. The rate in force
-is published on the operation as `x-karni-throttle`. The declaration rides in
-`throttle_classes`, so anything that turns DRF throttling off (`assert_crud`,
-`karni why`) turns it off too. For another caller identity, subclass
-`karni.api.throttling.ActionRateThrottle` and set `action_throttle_class` on
-the viewset. `throttle_classes` and `get_throttles()` still work as in plain
-DRF.
-
 **Posture and DRF permissions.** `REST_FRAMEWORK["DEFAULT_PERMISSION_CLASSES"]`
 (Karni default: `IsAuthenticated`) is **not** consulted for a viewset with an
 `Access` declaration. The declaration is the gate, so a permissive project
@@ -257,6 +227,89 @@ lists every viewset that sets it. `IsOwner`,
 `RolePermission` and `ObjectPermissionsMixin` remain for plain DRF views
 (see [accounts](accounts.md#roles-and-object-permissions)).
 
+## Rate limits
+
+A form open to anonymous visitors needs a tighter limit than the
+project-wide `anon` throttle, and Karni gives it one by itself.
+
+**Public creates are limited by default.** When a viewset's `create`
+predicate lets anonymous callers in (`create=Public()`, or a `write=Public()`
+that `create` defaults to, or `Public() | ...`), its `create` action is
+limited to `KARNI_PUBLIC_CREATE_RATE`, default `"10/hour"`. Each caller is
+counted on its own: the user id when signed in, else the client IP
+(honouring `NUM_PROXIES`). Over the rate, `create` answers 429 with
+`Retry-After`. A gate built from `Where(...)` is not treated as public,
+because its function decides per request. Declare a limit for it.
+
+```python
+from karni.api import Access, BaseViewSet, HasRole, Public
+
+class EnquiryViewSet(BaseViewSet):
+    model = Enquiry
+    # A contact form: anyone sends one, only staff read them. 10 per hour
+    # and caller, and a honeypot field, without a line of throttling code.
+    access = Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())
+```
+
+`karni make model Enquiry ... --with viewset --access public-create` writes
+that declaration.
+
+**Rates for any action.** `throttle = Throttle(...)` names actions and their
+rates in DRF's format (`"<number>/<period>"`, the period `s`, `min`, `hour`
+or `day`):
+
+```python
+from karni.api import Throttle
+
+class EnquiryViewSet(BaseViewSet):
+    ...
+    throttle = Throttle(create="3/hour", subscribe="20/day")
+```
+
+A declaration that names `create` replaces the public-create default, and
+`Throttle(create=None)` turns it off for that viewset. Actions without a
+rate keep only the project-wide `anon` and `user` throttles. A custom
+`@action` is named by its method name, and an unknown name fails at class
+definition (`E132`).
+
+Settings win over both. The scope is `"<route>.<action>"`
+(`enquiries.create`), so `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["enquiries.create"]`
+replaces the rate, and `None` there switches the limit off.
+`KARNI_PUBLIC_CREATE_RATE = None` (or an empty `KARNI_PUBLIC_CREATE_RATE=`
+in `.env`) turns the default off for every viewset. The rate in force is
+published on the operation as `x-karni-throttle`.
+
+The limit rides in `throttle_classes`, so anything that turns DRF throttling
+off (`assert_crud`, `karni why`) turns it off too, and the pytest plugin
+gives each test empty counters ([rate limits in tests](testing.md#rate-limits-in-tests)).
+A viewset that sets its own `throttle_classes` and declares no `throttle`
+owns its throttling, as in plain DRF, and gets no default. For another caller
+identity, subclass `karni.api.throttling.ActionRateThrottle` and set
+`action_throttle_class` on the viewset. `get_throttles()` still works as in
+plain DRF.
+
+**A honeypot on public creates.** The same viewsets accept one extra field,
+named by `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` (default `homepage`). A person
+never sees it: `@karni/ui`'s `ResourceForm` renders it out of sight, out of
+the tab order and hidden from screen readers. A request that fills it is a
+script, and is answered `202 Accepted` with nothing saved, the way
+`register/` treats its own honeypot. The event `karni.api.honeypot` is
+logged on `karni.api`. The field is not in the request body of the OpenAPI
+schema, so it is never required and never generated as a form field. The
+create operation names it in `x-karni-honeypot` instead.
+
+It is a separate setting from registration's `KARNI_ACCOUNTS_HONEYPOT_FIELD`
+because that one's default, `website`, is a common model field: a contact
+form that asks for a website would drop every real submission. When the
+model or its serializer has a field of the honeypot's name, the honeypot is
+off for that viewset. `""` turns it off everywhere, and a viewset's
+`get_honeypot_field()` can return `None` (off) or another name.
+
+**Imports stay closed.** A public `create` lets anyone send one row, not a
+file of rows. When `create` or `write` lets anonymous callers in, the import
+endpoints (`import/`, preview, commit) also need a signed-in user, who must
+still pass `create` or `write`.
+
 ## Field visibility
 
 A role can see a record without seeing every field of it (ADR 0002, P3).
@@ -308,8 +361,9 @@ under `/<resource>/import/`. `GET` describes the importable fields, `POST`
 uploads a file, `…/<job>/preview/` is the mandatory dry run, `…/<job>/commit/`
 writes in one transaction and one audit batch, and `…/import/template/` is the
 downloadable template. The gate is the declaration's `create` **or** `write`
-(`write_or_create_actions`), and each row is then checked on its own. See
-[import and export](import-export.md).
+(`write_or_create_actions`), and each row is then checked on its own. When
+either lets anonymous callers in, the gate also needs a signed-in user
+([imports stay closed](#rate-limits)). See [import and export](import-export.md).
 
 ## Deferred writes
 
@@ -780,7 +834,9 @@ nullable, required from blank/default) and adds:
   `{"any": [...]}`/`{"all": [...]}`, `{"unscoped": "<reason>"}`,
   `{"deny": ...}`. These are display hints only, and the server enforces.
   `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
-  viewset's `throttle` declaration limits, with the rate in force.
+  viewset's `throttle` declaration limits, or on a public `create`, with the
+  rate in force. `x-karni-honeypot` (`"homepage"`) is on a public `create`
+  with a honeypot field ([rate limits](#rate-limits)).
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

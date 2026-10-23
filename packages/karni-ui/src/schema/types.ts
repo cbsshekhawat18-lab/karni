@@ -84,6 +84,11 @@ export interface OperationDef {
   hasSearch?: boolean;
   /** The operation's `x-karni-access` rule, when the backend published one. */
   access?: KarniAccessRule;
+  /**
+   * `x-karni-honeypot` on a public create: the name of a field no person
+   * fills in. ResourceForm renders it hidden and sends it only when filled.
+   */
+  honeypot?: string;
 }
 
 export interface ResourceSchema {

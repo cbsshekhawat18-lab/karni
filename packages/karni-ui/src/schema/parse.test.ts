@@ -382,3 +382,33 @@ describe("parseOpenApi — enum choice labels", () => {
     expect(status.description).toBe("Visibility of the event.");
   });
 });
+
+describe("parseOpenApi: x-karni-honeypot", () => {
+  function contactDoc(createExtensions: Record<string, unknown>): unknown {
+    return {
+      openapi: "3.0.3",
+      paths: {
+        "/api/contacts/": {
+          get: { "x-karni-resource": "contacts", responses: {} },
+          post: { operationId: "contacts_create", responses: {}, ...createExtensions },
+        },
+      },
+    };
+  }
+
+  it("reads the honeypot field name off a public create", () => {
+    const contacts = parseOpenApi(contactDoc({ "x-karni-honeypot": "homepage" })).resources[
+      "contacts"
+    ];
+    expect(contacts?.operations.create?.honeypot).toBe("homepage");
+    // Never a form field of its own: the name lives on the operation only.
+    expect(contacts?.fields.map((field) => field.name)).not.toContain("homepage");
+  });
+
+  it("ignores a missing, empty or non-string extension", () => {
+    for (const extension of [{}, { "x-karni-honeypot": "" }, { "x-karni-honeypot": 7 }]) {
+      const contacts = parseOpenApi(contactDoc(extension)).resources["contacts"];
+      expect(contacts?.operations.create?.honeypot).toBeUndefined();
+    }
+  });
+});

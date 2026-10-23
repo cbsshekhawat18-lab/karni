@@ -90,7 +90,11 @@ def test_selection_between_versions() -> None:
     every = [change.id for change in changelog.load() if change.release == "0.2.0"]
     in_0_3 = {"django-5-2", "role-scope-paths-checked"}
     in_0_4 = {change.id for change in changelog.load() if change.release == "0.4.0"}
-    in_0_4_1 = {"public-read-writes-need-a-role"}
+    in_0_4_1 = {
+        "public-read-writes-need-a-role",
+        "public-creates-limited-by-default",
+        "security-headers-by-default",
+    }
     from_0_1 = _ids("0.1.0", "0.2.0")
     assert sorted(from_0_1) == sorted(every)
     # What breaks in 0.2 runs first, then what breaks in 1.0.
@@ -219,7 +223,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.1: 35 change(s), 5 mechanical, 30 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 37 change(s), 5 mechanical, 32 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

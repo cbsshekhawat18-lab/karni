@@ -501,6 +501,8 @@ function operationDef(
   if (expandEnum !== undefined) def.expandEnum = expandEnum;
   const access = op["x-karni-access"];
   if (isRecord(access)) def.access = access;
+  const honeypot = op["x-karni-honeypot"];
+  if (typeof honeypot === "string" && honeypot !== "") def.honeypot = honeypot;
   return def;
 }
 

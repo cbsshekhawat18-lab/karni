@@ -202,6 +202,9 @@ BASE: dict[str, Any] = {
         # chain at startup unless DEBUG is on (and KARNI_DEBUG_CAPTURE).
         "karni.debug.middleware.CaptureMiddleware",
         "django.middleware.security.SecurityMiddleware",
+        # Content-Security-Policy (report-only while DEBUG is on) and
+        # Permissions-Policy on every response. KARNI_CSP and friends tune it.
+        "karni.security.SecurityHeadersMiddleware",
         "corsheaders.middleware.CorsMiddleware",
         "django.contrib.sessions.middleware.SessionMiddleware",
         "django.middleware.common.CommonMiddleware",
@@ -383,8 +386,11 @@ BASE: dict[str, Any] = {
     "MEDIA_URL": "/media/",
     "STATIC_ROOT": env("STATIC_ROOT", default="/data/static"),
     "STATIC_URL": "/static/",
-    # --- CORS ---------------------------------------------------------------
+    # --- CORS and CSRF ------------------------------------------------------
     "CORS_ALLOWED_ORIGINS": env.list("CORS_ALLOWED_ORIGINS", default=[]),
+    # The https origins of the site for Django's CSRF check, e.g.
+    # https://example.com. Session mode adds KARNI_FRONTEND_URL's origin.
+    "CSRF_TRUSTED_ORIGINS": env.list("CSRF_TRUSTED_ORIGINS", default=[]),
     # --- API (karni.api) ----------------------------------------------------
     "KARNI_SEARCH_PROVIDER": env(
         "KARNI_SEARCH_PROVIDER",
@@ -394,6 +400,14 @@ BASE: dict[str, Any] = {
     # Zero-argument factory returning the router karni.api.urls exposes;
     # consumed at first URLconf import (overriding it later is a no-op).
     "KARNI_API_ROUTER": env("KARNI_API_ROUTER", default="karni.api.routers.get_default_router"),
+    # The limit on each caller of a create anyone may call (create=Public()),
+    # unless the viewset declares throttle = Throttle(create=...). "" or None: off.
+    "KARNI_PUBLIC_CREATE_RATE": env("KARNI_PUBLIC_CREATE_RATE", default="10/hour"),
+    # A hidden form field on such a create. A request that fills it is a
+    # script and is accepted without saving anything. "" turns it off.
+    "KARNI_PUBLIC_CREATE_HONEYPOT_FIELD": env(
+        "KARNI_PUBLIC_CREATE_HONEYPOT_FIELD", default="homepage"
+    ),
     # --- Performance (ADR 0001 Decision 3) ----------------------------------
     # Hard cap on ?page_size= for every Karni paginator; it may not be set
     # below the floor (25 = @karni/ui ResourceTable's page size; never < 1).
@@ -528,6 +542,16 @@ BASE: dict[str, Any] = {
             "karni_accounts.Permission",
         ],
     ),
+    # --- Security headers (karni.security) ----------------------------------
+    # Directives merged into Karni's Content-Security-Policy, e.g.
+    # {"font-src": ["https://fonts.gstatic.com"]}. None: no CSP header at all.
+    "KARNI_CSP": env.json("KARNI_CSP", default={}),
+    # True sends the policy as Content-Security-Policy-Report-Only, False
+    # enforces it. None (the default) follows DEBUG: report-only in development.
+    "KARNI_CSP_REPORT_ONLY": env.bool("KARNI_CSP_REPORT_ONLY", default=None),
+    # Browser features merged into Karni's Permissions-Policy, e.g.
+    # {"geolocation": ["self"]}. None: no Permissions-Policy header.
+    "KARNI_PERMISSIONS_POLICY": env.json("KARNI_PERMISSIONS_POLICY", default={}),
     # --- Karni knobs --------------------------------------------------------
     "KARNI_HEALTH_CHECKS": [
         "karni.health.checks.check_database",

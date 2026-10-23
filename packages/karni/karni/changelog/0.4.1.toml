@@ -14,3 +14,28 @@ who signs up change and delete every row. Review each viewset that declares \
 `read=Public(), write=Authenticated()`. `karni check` reports each one as karni.W102."""
 mechanical = false
 migration = "migrations/0.4.1.md#public-read-viewsets-review-who-may-write"
+
+[[change]]
+id = "public-creates-limited-by-default"
+kind = "behaviour"
+symbol = "BaseViewSet.create with create=Public()"
+summary = """\
+A `create` anyone may call is limited to KARNI_PUBLIC_CREATE_RATE (10 an hour per \
+caller) without a `throttle` declaration, a request that fills the honeypot field \
+(KARNI_PUBLIC_CREATE_HONEYPOT_FIELD, `homepage`) is answered 202 and saves nothing, \
+and its import endpoints need a signed-in user. Raise or remove the limit if a public \
+endpoint takes more than that from one caller."""
+mechanical = false
+migration = "migrations/0.4.1.md#public-creates-are-rate-limited"
+
+[[change]]
+id = "security-headers-by-default"
+kind = "behaviour"
+symbol = "karni.security.SecurityHeadersMiddleware"
+summary = """\
+Every response now carries a Content-Security-Policy, enforced with DEBUG off and \
+report-only with DEBUG on, and a Permissions-Policy. A page that loads scripts, styles \
+or fonts from another host, or runs an inline script, needs KARNI_CSP (or @csp_extend) \
+before it reaches production."""
+mechanical = false
+migration = "migrations/0.4.1.md#security-headers-on-every-response"
