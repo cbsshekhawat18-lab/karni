@@ -11,6 +11,28 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Security: `--access public-read` no longer lets every signed-in user
+  write.** In 0.4.0 the preset wrote `Access(read=Public(),
+  write=Authenticated())`. A new project also has open self-registration, so
+  anyone who signed up could create, change and delete every row of the
+  resource, and the generated test, acting as any signed-in user, passed. It
+  was found in a real project built on 0.4.0. The preset now writes
+  `write=HasRole("staff")`, and `--access public-read:<role>` names another
+  role. This changes a security-relevant default: review every viewset that
+  declares `read=Public(), write=Authenticated()`. `karni upgrade` lists the
+  step, and [the 0.4.1 migration note](docs/migrations/0.4.1.md) has the
+  details.
+- **`karni make test` acts as the role that may write.** For a viewset whose
+  writes need a role, the generated test uses the role the `write` predicate
+  names (then `create`, then `read`), so it exercises real creates, updates
+  and deletes instead of confirming the refusals.
+- **New warning `karni.W102`.** While registration is open, `karni check`
+  warns for every routed viewset whose `write` is `Authenticated()` or
+  `Public()` without a narrowing `HasRole`, `Granted`, `Owned` or `Can`.
+  `create=Authenticated()` with an owned `write` is not reported.
+- **`KARNI_ACCOUNTS_REGISTRATION` turns self-registration off.** It defaults
+  to `True`, so existing projects do not change. `False` leaves `register/`
+  out of the URLs (404) and out of the OpenAPI schema.
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.

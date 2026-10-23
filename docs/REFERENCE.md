@@ -788,7 +788,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `FIELDS...` |  | Fields as name:type[:arg][?]. Types: str[:len] text int float decimal[:max:places] bool date datetime url file image uuid choice:a\|b fk:Model m2m:Model o2o:Model. Typed fields (karni.fields): money[:EUR] percent[:min:max] quantity email[:unique] slug[:source] phone country currency json[:queried] array:str. A trailing ? makes the field optional. |
 | `--with` TEXT (repeatable) |  | Also generate: viewset, page, test, factory, seeder (comma-separated or repeated). |
 | `--all`, `-a` |  | Also generate the viewset, the pages and the API test. |
-| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. |
+| `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
@@ -799,7 +799,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 
 Add `<Model>ViewSet(BaseViewSet)` to APP/viewsets.py, with CRUD at `/api/<models>/`.
 
-It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anonymous reads), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
+It declares `model = <Model>` and the mandatory `access` (ADR 0001): granted (default: whatever KARNI_ROLES grants for the model, row-scoped), authenticated, public-read (anyone reads, only role "staff" writes, or the role `public-read:<role>` names), `owned:<field>` (rows whose `<field>` is the user), staff (role "staff") or `role:<name>`.
 
 ```
 karni make viewset [OPTIONS] MODEL
@@ -808,7 +808,7 @@ karni make viewset [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). |
-| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). |
+| `--access` TEXT |  | Who reads/writes: granted\|authenticated\|public-read[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. Default: granted (the roles' grants). public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. |
 | `--search` TEXT (repeatable) |  | search_fields, comma-separated or repeated (e.g. title,venue). |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
@@ -864,7 +864,7 @@ karni make test [OPTIONS] MODEL
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODEL` (required) |  | Model class name (e.g. Event). The model needs a viewset. |
-| `--role` TEXT |  | The role the test acts as. By default it is the first HasRole the viewset declares. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first). Otherwise the test uses any signed-in user. |
+| `--role` TEXT |  | The role the test acts as. By default it is the first HasRole the viewset's write predicate names (then create, then read), so the test really writes. For Granted() it is the first KARNI_ROLES role whose grant reaches the model (own/related first). Otherwise the test uses any signed-in user. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1226,6 +1226,7 @@ class Lead(BaseModel):
 | `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
 | `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
+| `KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
 | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
 | `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
@@ -1534,6 +1535,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E101`](errors.md#e101) | check | A viewset declares no access |
 | [`W101`](errors.md#w101) | warning | A hand-written serializer duplicates the one Karni generates |
 | [`E102`](errors.md#e102) | exception | access is not an Access(...) or Unscoped(...) declaration |
+| [`W102`](errors.md#w102) | warning | Any self-registered user may change and delete every row of a resource |
 | [`E103`](errors.md#e103) | exception | A predicate was expected but something else was given |
 | [`E104`](errors.md#e104) | exception | Owned() does not name a path to the user |
 | [`E105`](errors.md#e105) | exception | HasRole() names no roles |

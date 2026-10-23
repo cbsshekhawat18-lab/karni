@@ -12,8 +12,10 @@ social login, all mounted with one line:
 path("api/auth/", include("karni.accounts.urls")),
 ```
 
-Endpoints (all under the mount point): `register/`, `login/`, `logout/`,
-`refresh/`, `csrf/`, `me/`, `password/change/`, `password/reset/`,
+Endpoints (all under the mount point): `register/` (unless
+`KARNI_ACCOUNTS_REGISTRATION` is off, see [closing
+registration](#closing-registration)), `login/`, `logout/`, `refresh/`,
+`csrf/`, `me/`, `password/change/`, `password/reset/`,
 `password/reset/confirm/`, `email/verify/`, `email/verify/resend/`,
 `email/change/`, `email/change/confirm/`, and `2fa/…` when `KARNI_2FA` is on.
 
@@ -153,6 +155,30 @@ Every auth outcome is a structlog event on the `karni.accounts` logger:
 the address, so logs correlate without holding addresses. Alert on a burst
 of `accounts.login.failed` with one fingerprint (credential stuffing) or
 many (password spraying).
+
+## Closing registration
+
+Anyone may open an account through `register/` by default. That suits an app
+whose users sign themselves up. A site where staff create every account (a
+brochure site with a CMS, an internal tool) turns it off:
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_ACCOUNTS_REGISTRATION = False
+```
+
+or `KARNI_ACCOUNTS_REGISTRATION=False` in `.env`. The `register/` route is
+then not mounted, so it answers 404 and is absent from the OpenAPI schema
+and the generated TypeScript client. Every other endpoint stays. Create
+accounts in the admin or with `createsuperuser`, and give them roles there.
+
+Open registration means "signed in" proves nothing about trust. While it is
+on, `karni check` reports [karni.W102](errors.md#w102-any-self-registered-user-may-change-and-delete-every-row-of-a-resource)
+for every routed viewset whose `write` is `Authenticated()` or `Public()`
+without a narrowing `HasRole`, `Granted`, `Owned` or `Can`: anyone who signs
+up could change and delete every row. Tighten `write`, or close
+registration. `create=Authenticated()` with an `Owned(...)` write is the
+pattern for content users create, and is not reported.
 
 ## Roles as data
 

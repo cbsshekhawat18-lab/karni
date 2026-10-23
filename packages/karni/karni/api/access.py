@@ -85,6 +85,7 @@ __all__ = [
     "Unscoped",
     "Where",
     "action_predicate",
+    "admits_every_user",
     "apply_rows",
     "describe_access",
     "granted_action",
@@ -1150,6 +1151,43 @@ def _flatten_leaves(predicate: Predicate) -> list[Predicate]:
         else:
             found.append(current)
     return found
+
+
+def admits_every_user(predicate: Predicate) -> bool:
+    """Whether ``predicate`` lets every signed-in user through on every row.
+
+    True for :class:`Authenticated` and :class:`Public`, for an ``|`` with
+    such a part (``Owned(..., bypass=...)`` is one), and for an ``&`` whose
+    parts include one and none that narrows (:class:`HasRole`, :class:`Owned`,
+    :class:`Granted`, :class:`Can`). :class:`Where` is neither: its function
+    may or may not look at the user, so alone it is not reported, and it does
+    not count as narrowing. ``karni.W102`` uses this for a viewset's ``write``
+    predicate.
+    """
+    if isinstance(predicate, Authenticated | Public):
+        return True
+    if isinstance(predicate, Owned):
+        return predicate.bypass is not None and admits_every_user(predicate.bypass)
+    if isinstance(predicate, AnyOf):
+        return any(admits_every_user(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return any(admits_every_user(part) for part in predicate.parts) and not any(
+            _narrows(part) for part in predicate.parts
+        )
+    return False
+
+
+def _narrows(predicate: Predicate) -> bool:
+    """Whether ``predicate`` admits only some users or only some rows for a user."""
+    if isinstance(predicate, Owned):
+        return predicate.bypass is None or _narrows(predicate.bypass)
+    if isinstance(predicate, HasRole | Granted | Can):
+        return True
+    if isinstance(predicate, AnyOf):
+        return all(_narrows(part) for part in predicate.parts)
+    if isinstance(predicate, AllOf):
+        return any(_narrows(part) for part in predicate.parts)
+    return False
 
 
 def _leaves(declaration: Any, view_class: type[Any]) -> list[Predicate]:

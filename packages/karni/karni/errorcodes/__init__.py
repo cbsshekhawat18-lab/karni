@@ -575,6 +575,22 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "with APIMeta on the model. Keep serializer_class only for a serializer with custom "
         "fields or validation.",
     ),
+    _e(
+        "W102",
+        "Any self-registered user may change and delete every row of a resource",
+        "warning",
+        "karni.checks.check_open_writes",
+        "The viewset's `write` predicate is Authenticated() or Public(), not narrowed with & "
+        "by HasRole, Granted, Owned or Can, while KARNI_ACCOUNTS_REGISTRATION is True. "
+        "Anyone who opens an account through register/ can then update and delete every "
+        "row the viewset routes. A test that acts as any signed-in user passes and confirms "
+        "it. Karni 0.4.0's `--access public-read` preset generated this declaration.",
+        'Tighten write: HasRole("staff") (what `--access public-read` now writes), '
+        'Granted() (the roles\' grants) or Owned("<field>"). create=Authenticated() with '
+        "an Owned() write is the user-generated-content pattern and is not flagged. If "
+        "nobody may self-register, set KARNI_ACCOUNTS_REGISTRATION = False. If every "
+        "signed-in user is trusted, add 'karni.W102' to SILENCED_SYSTEM_CHECKS.",
+    ),
     # E2xx accounts
     _e(
         "E201",

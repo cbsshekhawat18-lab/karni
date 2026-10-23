@@ -1,0 +1,16 @@
+# Karni 0.4.1: what changed since 0.4.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.4.1.md.
+# No entry has a codemod: changing who may write a resource is a decision for the project.
+version = "0.4.1"
+
+[[change]]
+id = "public-read-writes-need-a-role"
+kind = "behaviour"
+symbol = "karni make --access public-read"
+summary = """\
+`--access public-read` now writes `Access(read=Public(), write=HasRole("staff"))`. \
+In 0.4.0 it wrote `write=Authenticated()`, which with open registration lets anyone \
+who signs up change and delete every row. Review each viewset that declares \
+`read=Public(), write=Authenticated()`. `karni check` reports each one as karni.W102."""
+mechanical = false
+migration = "migrations/0.4.1.md#public-read-viewsets-review-who-may-write"

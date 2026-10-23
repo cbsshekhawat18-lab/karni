@@ -216,6 +216,40 @@ def role_names(cls: ast.ClassDef) -> list[str]:
     return found
 
 
+def writing_roles(cls: ast.ClassDef) -> list[str]:
+    """The ``HasRole("...")`` names a test must hold to write, in order of preference.
+
+    The roles named in the ``write=`` keyword of ``Access(...)`` come first,
+    then those in ``create=``, then every other ``HasRole`` in the class
+    body. A test acting as the first of them exercises real creates,
+    updates and deletes, where a role named only in ``read=`` (say, a
+    ``viewer``) would only confirm the refusals.
+    """
+    found: list[str] = []
+    for slot in ("write", "create"):
+        for node in ast.walk(cls):
+            if not (isinstance(node, ast.Call) and _call_name(node) == "Access"):
+                continue
+            for keyword in node.keywords:
+                if keyword.arg == slot:
+                    found += [name for name in _role_names_in(keyword.value) if name not in found]
+    return found + [name for name in role_names(cls) if name not in found]
+
+
+def _role_names_in(node: ast.AST) -> list[str]:
+    found: list[str] = []
+    for call in ast.walk(node):
+        if isinstance(call, ast.Call) and _call_name(call) == "HasRole":
+            for arg in call.args:
+                if (
+                    isinstance(arg, ast.Constant)
+                    and isinstance(arg.value, str)
+                    and arg.value not in found
+                ):
+                    found.append(arg.value)
+    return found
+
+
 def granted_reads(cls: ast.ClassDef) -> bool:
     """Whether the class body calls ``Granted()`` — the roles' grants decide its rows."""
     return any(
