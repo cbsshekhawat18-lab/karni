@@ -688,7 +688,7 @@ Every generator follows the same rules:
 - The target app is `--app <label>`, else the project's only local app (local
   apps are the `# karni:apps` entries of config/settings.py).
 - Existing files change only through marker comments (`# karni:apps`,
-  `# karni:middleware`, `// karni:page-imports`, `// karni:routes`) or
+  `# karni:middleware`, `# karni:urls`, `// karni:page-imports`, `// karni:routes`) or
   AST-located appends. An unfamiliar layout is an error that names the manual
   step. Generated Python is ruff-clean (isort sections, ruff format layout).
 - It never imports Django: `karni make migration` (and `make model --migrate`)
@@ -716,6 +716,8 @@ service     Add a service module (<app>/services/<name>.py), the home of HTTP cl
 middleware  Add a middleware class to <app>/middleware.py, wired via # karni:middleware.
 page        Add a frontend page (<= 50 lines) composing @karni/ui, with its route.
 component   Add a React component that claims a role (registerComponentRole).
+site        Create a public site app (Django views, urls, templates, static) mounted at "/".
+view        Add a page to a site app: a function view, its template and its URL.
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
 
@@ -1057,6 +1059,42 @@ karni make component [OPTIONS] NAME
 | `NAME` (required) |  | Component name, PascalCase (e.g. StatusBadge). |
 | `--role` TEXT |  | Semantic role it claims (default: kebab-case of NAME). |
 | `--replace-reason` TEXT |  | Take over a role another component claims, saying why. |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+##### `karni make site`
+
+Create a public, server-rendered site app NAME and mount it at "/".
+
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and a page test, then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
+
+```
+karni make site [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | App label, snake_case (e.g. website). |
+| `--no-route` |  | Do not include the site at "" in config/urls.py. |
+| `--force` |  | Replace the home view and create only the missing files (existing ones are kept). |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+##### `karni make view`
+
+Add a page NAME to the site app APP: a view, its template and its URL.
+
+Writes `def NAME(request)` in APP/views.py, APP/templates/APP/NAME.html extending the site's base.html, and `path(..., views.NAME, name="NAME")` at the `# karni:urls` marker of APP/urls.py. The app must come from `karni make site`.
+
+```
+karni make view [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | View name, snake_case (e.g. about). |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--path` TEXT |  | URL path (default /&lt;name&gt;/). Captures such as /services/&lt;slug:slug&gt;/ become view parameters. |
+| `--no-route` |  | Do not register the URL in &lt;app&gt;/urls.py. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
@@ -1782,13 +1820,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K205`](errors.md#k205) | rule | No duplicated frontend code. |
 | [`K206`](errors.md#k206) | rule | Style with token classes. No literal values. |
 | [`K301`](errors.md#k301) | rule | Domain code only. Extend Karni. |
-| [`K302`](errors.md#k302) | rule | Never write auth/users, admin, serializers, routers, settings, infra, tables, forms. |
+| [`K302`](errors.md#k302) | rule | Never write auth, admin, serializers, routers, settings, infra, or app-screen tables and forms. |
 | [`K303`](errors.md#k303) | rule | Extend via props/methods, never fork. |
 | [`K304`](errors.md#k304) | rule | No extra state/form/table/HTTP/CSS library. |
 | [`K305`](errors.md#k305) | rule | Per entity: models.py and viewsets.py. |
-| [`K306`](errors.md#k306) | rule | Pages: frontend/src/pages/. |
+| [`K306`](errors.md#k306) | rule | App pages: frontend/src/pages/. Public site pages: K309. |
 | [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module. |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
+| [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
 
 ### ESLint plugin (`karni/…`)
 

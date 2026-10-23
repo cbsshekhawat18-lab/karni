@@ -96,6 +96,32 @@ def test_model_layer_is_reflected() -> None:
     assert "current_user" in rules_by_code()["K108"].rule
 
 
+def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None:
+    rules = rules_by_code()
+    k309 = rules["K309"]
+    assert k309.category == "architecture" and k309.severity == "must"
+    for phrase in (
+        "karni make site",
+        "karni make view",
+        'path("", ...)',
+        "`<app>/templates/<app>/`",
+        "`<app>/static/<app>/`",
+        "default manager",
+        "soft-deleted rows stay hidden",
+        "create=Public()",
+        "CSRF",
+        "K201, K202, K206",
+    ):
+        assert phrase in k309.rule, phrase
+    assert "karni make site" in k309.fix
+    # K302 and K306 are about app screens, and say where a public site goes instead.
+    assert "app screens" in rules["K302"].rule and "K309" in rules["K302"].rule
+    assert "App screens" in rules["K306"].rule and "K309" in rules["K306"].rule
+    assert "K309" in rules["K306"].summary and "K309" in rules["K305"].rule
+    new_page = next(p for p in PROCEDURES if p.name == "new-page")
+    assert "K309" in new_page.rules and "karni make view" in " ".join(new_page.steps)
+
+
 def test_procedures_reference_real_codes() -> None:
     codes = set(rules_by_code())
     names = [p.name for p in PROCEDURES]

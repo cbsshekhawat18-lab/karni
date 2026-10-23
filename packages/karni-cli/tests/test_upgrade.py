@@ -22,6 +22,8 @@ from karni_cli.upgrades.codemod import Codemod, Outcome, load_codemod
 from karni_cli.upgrades.python import RenameSetting, RenameSymbol
 from karni_cli.upgrades.typescript import RenameExport
 
+from .conftest import TEMPLATE
+
 UPGRADES = Path(changelog.__file__).resolve().parent
 FIXTURE_CHANGELOG = Path(__file__).parent / "fixtures" / "upgrade_changelog"
 #: FIXTURE codemod for the fixture changelog entry (no shipped @karni/ui change yet).
@@ -66,7 +68,8 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["all-objects"].codemod == "v1_0.all_objects_to_without"
     assert by_id["agent-guidance-files"].codemod == "v0_2.agent_guidance"
     assert by_id["mandatory-access"].mechanical is False
-    assert changelog.newest_release(by_id.values()) == "0.4.0"
+    assert changelog.newest_release(by_id.values()) == "0.4.1"
+    assert by_id["urls-marker"].codemod == "v0_4.urls_marker" and by_id["urls-marker"].mechanical
     assert by_id["operation-ids-by-param"].release == "0.4.0"
     assert by_id["agent-files-reworded"].kind == "project-files"
     assert by_id["django-5-2"].release == "0.3.0" and not by_id["django-5-2"].mechanical
@@ -88,6 +91,7 @@ def test_selection_between_versions() -> None:
     every = [change.id for change in changelog.load() if change.release == "0.2.0"]
     in_0_3 = {"django-5-2", "role-scope-paths-checked"}
     in_0_4 = {change.id for change in changelog.load() if change.release == "0.4.0"}
+    in_0_4_1 = {change.id for change in changelog.load() if change.release == "0.4.1"}
     from_0_1 = _ids("0.1.0", "0.2.0")
     assert sorted(from_0_1) == sorted(every)
     # What breaks in 0.2 runs first, then what breaks in 1.0.
@@ -96,11 +100,15 @@ def test_selection_between_versions() -> None:
     # From the deprecating release itself: the deprecations, not the 0.2 breaks again.
     assert deprecations <= set(_ids("0.2.0", "0.2.0"))
     assert "mandatory-access" not in _ids("0.2.0", "1.0")
-    assert set(_ids("0.2.0", "1.0")) == set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4
+    assert set(_ids("0.2.0", "1.0")) == set(_ids("0.2.0", "0.2.0")) | in_0_3 | in_0_4 | in_0_4_1
     assert in_0_3 <= set(_ids("0.2.0", "0.3.0"))
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
     assert in_0_4 <= set(_ids("0.3.0", "0.4.0"))
     assert not in_0_4 & set(_ids("0.2.0", "0.3.0"))  # a 0.3 target never sees 0.4 changes
+    assert in_0_4_1 == {"urls-marker", "agent-files-public-site"}
+    assert in_0_4_1 <= set(_ids("0.4.0", "0.4.1"))
+    assert not in_0_4 & set(_ids("0.4.0", "0.4.1"))  # 0.4.0's changes are behind a 0.4.0 project
+    assert not in_0_4_1 & set(_ids("0.3.0", "0.4.0"))
     assert _ids("1.0.0", "1.1") == []
     assert _ids("0.1.0", "0.1.9") == []  # replacements do not exist before 0.2
     assert set(_ids("0.2.0.dev3", "0.2.0")) == set(every)  # pre-releases count as before
@@ -202,7 +210,7 @@ def test_list_needs_no_project(runner, tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["upgrade", "--list"])
     assert result.exit_code == 0, result.output
-    assert "default --to: 0.4.0" in result.output
+    assert "default --to: 0.4.1" in result.output
     assert "all-objects  [api-change, codemod v1_0.all_objects_to_without, removed in 1.0]" in (
         result.output
     )
@@ -213,7 +221,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.0: 34 change(s), 5 mechanical, 29 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 36 change(s), 6 mechanical, 30 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (
@@ -243,7 +251,8 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "related-lookups: no uses found" in out
     assert "agent-guidance-files: nothing to change" in out
     assert "django-5-2: Django" in manual
-    assert "Next: review `git diff`, pin karni to 0.4.0" in out
+    assert "urls-marker: nothing to change" in out  # this project has no config/urls.py
+    assert "Next: review `git diff`, pin karni to 0.4.1" in out
 
     changed = set(_git(git_project, "status", "--porcelain").split())
     assert {"library/views.py", "library/models.py"} <= changed
@@ -396,3 +405,63 @@ def test_the_typescript_fixture_entry_end_to_end(
     assert '+import { ResourceTable } from "@karni/ui";' in result.output
     assert "      frontend/src/screen.tsx: 2" in result.output
     assert "DataTable" in screen.read_text()
+
+
+# v0_4.urls_marker: the scaffold's route marker, added to older projects
+
+SCAFFOLD_URLS = TEMPLATE / "{{cookiecutter.project_slug}}" / "config" / "urls.py"
+MARKER_LINES = (
+    "    # Project routes that `karni make` wires (a public site's include goes here).\n"
+    "    # karni:urls\n"
+)
+
+
+def _without_marker(text: str) -> str:
+    assert MARKER_LINES in text
+    return text.replace(MARKER_LINES, "")
+
+
+def test_the_urls_marker_codemod_restores_the_scaffold(tmp_path: Path) -> None:
+    scaffold = SCAFFOLD_URLS.read_text()
+    (tmp_path / "config").mkdir()
+    urls = tmp_path / "config" / "urls.py"
+    urls.write_text(_without_marker(scaffold))
+    codemod = load_codemod("v0_4.urls_marker")
+    assert codemod.apply(tmp_path).files == {"config/urls.py": 1}
+    # Before the comment that belongs to *welcome_urls(): exactly the new scaffold.
+    assert urls.read_text() == scaffold
+    again = codemod.apply(tmp_path)
+    assert again.files == {} and again.sites == []  # idempotent
+    assert urls.read_text() == scaffold
+
+
+def test_the_urls_marker_codemod_reports_a_urlconf_without_the_welcome_route(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "config").mkdir()
+    urls = tmp_path / "config" / "urls.py"
+    urls.write_text('urlpatterns = [\n    path("api/", include("karni.api.urls")),\n]\n')
+    before = urls.read_text()
+    outcome = load_codemod("v0_4.urls_marker").apply(tmp_path)
+    assert outcome.files == {}
+    assert len(outcome.sites) == 1 and "# karni:urls" in outcome.sites[0].render()
+    assert urls.read_text() == before
+    assert load_codemod("v0_4.urls_marker").apply(tmp_path / "missing").files == {}
+
+
+def test_upgrading_a_0_4_0_project_adds_the_marker_and_enables_make_site(
+    runner, generated_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    urls = generated_project / "config" / "urls.py"
+    urls.write_text(_without_marker(urls.read_text()))
+    monkeypatch.chdir(generated_project)
+    assert "No `# karni:urls` marker" in str(runner.invoke(app, ["make", "site", "web"]).exception)
+    result = runner.invoke(app, ["upgrade", "--from", "0.4.0", "--allow-dirty"])
+    assert result.exit_code == 0, result.output
+    assert "urls-marker: config/urls.py -> " not in result.output
+    assert "      config/urls.py: 1" in result.output
+    assert "agent-files-public-site: AGENTS.md and the agent adapter files" in result.output
+    assert MARKER_LINES in urls.read_text()
+    made = runner.invoke(app, ["make", "site", "web"])
+    assert made.exit_code == 0, made.output
+    assert 'path("", include("web.urls")),\n    # karni:urls\n' in urls.read_text()

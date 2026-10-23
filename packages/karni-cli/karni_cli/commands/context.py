@@ -3,10 +3,12 @@
 Backend inventory comes from ``manage.py karni_context``; COMPONENTS/HOOKS
 come from @karni/ui's build-generated dist/manifest.json. Absent manifest →
 those lines are omitted entirely (never stale, never guessed). Two lines are
-read statically from the project tree (no Django): APPS — the local apps in
-the ``# karni:apps`` block that live in this project — and PAGES — the files
-under ``frontend/src/pages/``. Together with ``karni rules`` this is enough
-for an agent to start work without reading files.
+read statically from the project tree (no Django): APPS, the local apps in
+the ``# karni:apps`` block that live in this project, PAGES, the files
+under ``frontend/src/pages/``, and SITE, the routes of every local urls.py
+that config/urls.py includes (the public site, webhooks). Together with
+``karni rules`` this is enough for an agent to start work without reading
+files.
 
 ``--with-history [PATH]`` appends a ``HISTORY:`` block from any history
 provider that detects a store (``karni.agent.history``), capped at ~300
@@ -27,6 +29,7 @@ from karni_cli import history
 from karni_cli import project as project_mod
 from karni_cli.project import CliError, require_project
 from karni_cli.settings_edit import MARKER
+from karni_cli.urls_edit import routes
 
 #: Mirrors karni.agent.history.HISTORY_TOKEN_CAP (that module enforces it); a
 #: constant here keeps `karni context --help` free of provider discovery.
@@ -96,9 +99,32 @@ def pages_line(project: Path) -> str | None:
     return "PAGES: " + " ".join(found) if found else None
 
 
+def site_line(project: Path) -> str | None:
+    """Routes of the local urls.py modules that config/urls.py includes, as ``app(/ /about/)``.
+
+    Read statically: a ``path("<prefix>", include("<module>.urls"))`` line in
+    config/urls.py whose module lives in the project, then every
+    ``path("<route>", ...)`` line of that module's urls.py.
+    """
+    config = project / "config" / "urls.py"
+    if not config.is_file():
+        return None
+    found: list[str] = []
+    for prefix, _, include in routes(config.read_text()):
+        if not include or not include.endswith(".urls"):
+            continue
+        module = include.removesuffix(".urls")
+        urls = project.joinpath(*module.split(".")) / "urls.py"
+        if not urls.is_file():
+            continue
+        paths = [f"/{prefix}{route}" for route, _, _ in routes(urls.read_text())]
+        found.append(f"{module.rsplit('.', 1)[-1]}({' '.join(paths)})")
+    return "SITE: " + " ".join(found) if found else None
+
+
 def assemble(backend_output: str, ui_lines: list[str]) -> str:
     """Merge UI lines into the backend sections, keeping the documented order
-    (MODELS, VIEWSETS, COMPONENTS, HOOKS, MODULES, BASES)."""
+    (MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE, MODULES, BASES)."""
     sections = [line for line in backend_output.split("\n") if line.strip()]
     insert_at = next(
         (i for i, line in enumerate(sections) if line.startswith(("MODULES:", "BASES:"))),
@@ -115,7 +141,7 @@ def build_context_text(
     service: str = "django",
     manifest: Path | None = None,
 ) -> str:
-    """The full inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, MODULES, BASES.
+    """The full inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE, MODULES, BASES.
 
     Raises :class:`CliError` when the backend inventory command fails.
     """
@@ -126,9 +152,7 @@ def build_context_text(
         raise CliError(f"manage.py karni_context failed (exit {proc.returncode}).", code="C009")
     found = find_manifest(project, manifest)
     ui_lines = manifest_lines(found) if found else []
-    pages = pages_line(project)
-    if pages:
-        ui_lines.append(pages)
+    ui_lines += [line for line in (pages_line(project), site_line(project)) if line]
     text = assemble(proc.stdout, ui_lines)
     apps = apps_line(project)
     return f"{apps}\n{text}" if apps else text

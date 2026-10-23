@@ -94,8 +94,8 @@ RULES: tuple[Rule, ...] = (
         summary="karni context first. Trust it.",
         rule=(
             "Run `karni context` before reading any files. It prints the current apps, "
-            "models, viewsets, UI components, hooks, pages and installed modules in a few "
-            "hundred tokens. Trust it."
+            "models, viewsets, UI components, hooks, pages, public site routes and installed "
+            "modules in a few hundred tokens. Trust it."
         ),
         rationale=(
             "The inventory is derived live from the app registry, the router and the "
@@ -204,8 +204,9 @@ RULES: tuple[Rule, ...] = (
         summary="Scaffold with karni make.",
         rule=(
             "Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, "
-            "listeners, management commands, services, middleware, pages, components and modules "
-            "with `karni make <type>` (`karni make --list` lists the types, `--dry-run` previews, "
+            "listeners, management commands, services, middleware, pages, components, modules, "
+            "site apps and their views with `karni make <type>` (`karni make --list` lists the "
+            "types, `--dry-run` previews, "
             "`--help` works per type). Never hand-create a file, class or route a generator "
             "makes. Run the generator, then edit what it wrote."
         ),
@@ -290,15 +291,21 @@ RULES: tuple[Rule, ...] = (
         category="architecture",
         severity="must",
         summary=(
-            "Never write auth/users, admin, serializers, routers, settings, infra, tables, forms."
+            "Never write auth, admin, serializers, routers, settings, infra, or app-screen "
+            "tables and forms."
         ),
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
             "settings, Docker/Compose config, Celery config, HTML tables, forms, or detail "
             "views. Karni provides all of these. If you think you need one, you need an "
-            "override on an existing Karni base instead."
+            "override on an existing Karni base instead. The tables, forms and detail views "
+            "meant here are app screens. A public server-rendered site (K309) is the one place "
+            "for hand-written HTML pages, and its forms still post to a BaseViewSet."
         ),
-        rationale="Each of these ships in Karni with tested defaults and override points.",
+        rationale=(
+            "Each of these ships in Karni with tested defaults and override points. A public "
+            "site is the client's own markup, so it has its own rule."
+        ),
         fix="Find the Karni base that provides it (`karni context` BASES) and override it.",
     ),
     Rule(
@@ -334,7 +341,8 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py`, nothing "
             "else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints "
-            "such as webhooks (viewsets ride the auto-router)."
+            "such as webhooks and a public site's pages (K309), because viewsets ride the "
+            "auto-router."
         ),
         rationale="Admin, serializers, filters, routes and schema are derived from those two.",
     ),
@@ -342,10 +350,11 @@ RULES: tuple[Rule, ...] = (
         code="K306",
         category="architecture",
         severity="must",
-        summary="Pages: frontend/src/pages/.",
+        summary="App pages: frontend/src/pages/. Public site pages: K309.",
         rule=(
-            "Frontend pages live in `frontend/src/pages/`, one file per page, with the route "
-            "registered alongside the existing pages."
+            "App screens (the React frontend) live in `frontend/src/pages/`, one file per page, "
+            "with the route registered alongside the existing pages. Public server-rendered "
+            "pages do not go there (K309)."
         ),
         rationale="The page cap (K202) and the inventory (`karni context` PAGES) rely on it.",
     ),
@@ -370,6 +379,34 @@ RULES: tuple[Rule, ...] = (
             "its internals."
         ),
         rationale="Patched internals break on the module's next release.",
+    ),
+    Rule(
+        code="K309",
+        category="architecture",
+        severity="must",
+        summary="Public site: a site app with Django views and templates.",
+        rule=(
+            "A public, server-rendered website (SEO-indexed pages in the client's own HTML and "
+            "CSS) is a site app, not React pages. `karni make site <app>` creates it: function "
+            "views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at "
+            '`path("", ...)` in config/urls.py (which replaces the welcome page), templates in '
+            "`<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. "
+            "`karni make view <name> --app <app>` adds a page. Views read content through each "
+            "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
+            "rows stay hidden) and filter drafts themselves. A public form posts to a "
+            "`BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends "
+            "the CSRF token, never to a hand-written form view. The React rules (K201, K202, "
+            "K206) apply to app screens only."
+        ),
+        rationale=(
+            "A marketing site must be crawlable and faithful to the client's design, which the "
+            "app-screen rules forbid for good reason. One Django app with plain views keeps the "
+            "API, the admin and the access layer as the only write path."
+        ),
+        fix=(
+            "Run `karni make site <app>`, then `karni make view <name> --app <app>` per page. "
+            "Karni's docs page public-site covers SEO and public forms."
+        ),
     ),
     # backend
     Rule(
@@ -811,7 +848,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "`frontend/src/pages/<name>.tsx` composing @karni/ui and does the rest a person "
             "would do by hand: register the route alongside the existing pages "
             "(frontend/src/routes.tsx). Without `--resource` it is a bare `<Page>`. Never "
-            "hand-roll tables, forms or fetching.",
+            "hand-roll tables, forms or fetching. A page of the public server-rendered site is "
+            "not an app screen: `karni make view <name> --app <site app>` (K309).",
             "Custom behaviour goes through props (`columns`, `fields`, `rowActions`, slots, "
             "custom cell/field renderers). Extend, never fork a variant.",
             "Keep the file at 50 lines or fewer. Data access only via @karni/ui hooks "
@@ -819,7 +857,7 @@ PROCEDURES: tuple[Procedure, ...] = (
             "hooks generated by `karni types`.",
             "`karni rules --check <the page file>` must report no violations.",
         ),
-        rules=("K009", "K201", "K202", "K204", "K303", "K306"),
+        rules=("K009", "K201", "K202", "K204", "K303", "K306", "K309"),
     ),
     Procedure(
         name="add-module",

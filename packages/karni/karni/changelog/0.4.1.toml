@@ -1,0 +1,26 @@
+# Karni 0.4.1: what changed since 0.4.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.4.1.md.
+version = "0.4.1"
+
+[[change]]
+id = "urls-marker"
+kind = "project-files"
+symbol = "config/urls.py"
+summary = """\
+The scaffold's config/urls.py carries a `# karni:urls` marker line inside \
+urlpatterns, before `*welcome_urls()`. `karni make site` and `karni make view` \
+insert routes there. The codemod adds the line to a project that lacks it."""
+mechanical = true
+codemod = "v0_4.urls_marker"
+migration = "migrations/0.4.1.md#a-marker-for-project-routes-in-configurlspy"
+
+[[change]]
+id = "agent-files-public-site"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The adapters say where app screens and a public site go, K302 and K306 are \
+about app screens and the new-page procedure points at rule K309. Run \
+`karni rules sync`, or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-run-karni-rules-sync"

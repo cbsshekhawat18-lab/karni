@@ -205,6 +205,10 @@ def instructions_body(title: str, data: AgentData, note: str = "") -> list[str]:
         "",
         "- Run `karni rules --check <file>` on every file you write and fix each violation it prints.",
         f"- Use `karni rules --procedure <name>` for routine tasks: {_procedure_names(data)}.",
+        (
+            "- App screens go in `frontend/src/pages/` (`karni make page`). A public, "
+            "server-rendered website goes in a site app (`karni make site`, rule K309)."
+        ),
         "- Run `karni check` before committing. Every enforced rule fails the build.",
         "",
         "If the `karni` command is unavailable, say so and stop. Do not guess the conventions.",

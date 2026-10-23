@@ -2163,7 +2163,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages and installed modules in a few hundred tokens. Trust it.
+**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it.
 
 **Why Karni objects.** The inventory is derived live from the app registry, the router and the @karni/ui manifest, so it is never stale and costs far fewer tokens than crawling source.
 
@@ -2247,7 +2247,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, listeners, management commands, services, middleware, pages, components and modules with `karni make <type>` (`karni make --list` lists the types, `--dry-run` previews, `--help` works per type). Never hand-create a file, class or route a generator makes. Run the generator, then edit what it wrote.
+**Rule.** Create apps, models, viewsets, serializers, migrations, tasks, schedules, events, listeners, management commands, services, middleware, pages, components, modules, site apps and their views with `karni make <type>` (`karni make --list` lists the types, `--dry-run` previews, `--help` works per type). Never hand-create a file, class or route a generator makes. Run the generator, then edit what it wrote.
 
 **Why Karni objects.** Generators emit the conventions in one step (BaseModel, a mandatory access declaration, settings and route markers, ruff-clean imports) and are tested to pass every rule. Hand-written scaffolding drifts.
 
@@ -2591,13 +2591,13 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k302"></a>
 
-### K302: Never write auth/users, admin, serializers, routers, settings, infra, tables, forms.
+### K302: Never write auth, admin, serializers, routers, settings, infra, or app-screen tables and forms.
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. If you think you need one, you need an override on an existing Karni base instead.
+**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
 
-**Why Karni objects.** Each of these ships in Karni with tested defaults and override points.
+**Why Karni objects.** Each of these ships in Karni with tested defaults and override points. A public site is the client's own markup, so it has its own rule.
 
 **Fix.** Find the Karni base that provides it (`karni context` BASES) and override it.
 
@@ -2631,7 +2631,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py`, nothing else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints such as webhooks (viewsets ride the auto-router).
+**Rule.** Backend code per entity goes in `<app>/models.py` and `<app>/viewsets.py`, nothing else. No admin.py, serializers.py or forms.py. urls.py is only for non-API endpoints such as webhooks and a public site's pages (K309), because viewsets ride the auto-router.
 
 **Why Karni objects.** Admin, serializers, filters, routes and schema are derived from those two.
 
@@ -2639,11 +2639,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k306"></a>
 
-### K306: Pages: frontend/src/pages/.
+### K306: App pages: frontend/src/pages/. Public site pages: K309.
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Frontend pages live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages.
+**Rule.** App screens (the React frontend) live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages. Public server-rendered pages do not go there (K309).
 
 **Why Karni objects.** The page cap (K202) and the inventory (`karni context` PAGES) rely on it.
 
@@ -2672,6 +2672,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Patched internals break on the module's next release.
 
 **Fix.** 
+
+<a id="k309"></a>
+
+### K309: Public site: a site app with Django views and templates.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. `karni make view <name> --app <app>` adds a page. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The React rules (K201, K202, K206) apply to app screens only.
+
+**Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
+
+**Fix.** Run `karni make site <app>`, then `karni make view <name> --app <app>` per page. Karni's docs page public-site covers SEO and public forms.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

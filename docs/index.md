@@ -52,6 +52,7 @@ myproject/
   events/seeds.py         demo data for `karni seed`
   events/tests/           assert_crud, assert_isolated
   frontend/src/pages/     ResourceTable / ResourceForm / ResourceDetail compositions
+  website/                optional public site: Django views and templates at / (karni make site)
 ```
 
 Everything generic lives in the `karni` package, `@karni/ui` and the

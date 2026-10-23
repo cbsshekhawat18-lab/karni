@@ -85,7 +85,7 @@ GENERATOR_RULES = """Every generator follows the same rules:
 - The target app is `--app <label>`, else the project's only local app (local
   apps are the `# karni:apps` entries of config/settings.py).
 - Existing files change only through marker comments (`# karni:apps`,
-  `# karni:middleware`, `// karni:page-imports`, `// karni:routes`) or
+  `# karni:middleware`, `# karni:urls`, `// karni:page-imports`, `// karni:routes`) or
   AST-located appends. An unfamiliar layout is an error that names the manual
   step. Generated Python is ruff-clean (isort sections, ruff format layout).
 - It never imports Django: `karni make migration` (and `make model --migrate`)

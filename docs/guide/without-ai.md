@@ -71,6 +71,7 @@ screens, seed data and a test file per resource.
 | Periodic work | `events/schedules.py` | `every("1d", send_digest)` |
 | External services | `events/services/` | the only place for HTTP clients |
 | Screens | `frontend/src/pages/` | compose `ResourceTable`, `ResourceForm`, `ResourceDetail` |
+| Public website | a site app: `website/views.py`, `website/templates/website/` | `karni make site website`, then `karni make view about` ([public pages](../public-site.md)) |
 | Demo data | `events/seeds.py` | field overrides and `seed()` |
 | Tests | `events/tests/` | `assert_crud`, `assert_isolated`, plus your flows |
 
