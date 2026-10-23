@@ -12,12 +12,46 @@ karni seed                         # 10 rows per model, seed 0
 karni seed --count 20 --seed 42    # the same 20 rows on every machine
 karni seed --reset                 # wipe the project's tables first
 karni seed --model events.Event    # only these models (repeatable)
+karni seed --force                 # add demo rows to tables that already hold rows
 karni seed --json                  # machine-readable report
 ```
 
 It wraps `manage.py karni_seed` through the project interpreter, like the
 other runners. `karni.seeding.seed()` is the importable form. It refuses to
 run with `DEBUG = False` (a production database) unless you pass `--force`.
+
+Seeding is for demo data: random rows that make an empty development
+database look used. A site's real copy, images and team belong in a content
+file loaded with [`karni load`](content-loading.md), which creates or updates
+exactly the rows the file lists and can run in every environment.
+
+## When seed refuses
+
+Before it writes anything, `karni seed` prints the models it will write to:
+
+```text
+Seeding 3 model(s): karni_accounts.User, events.Venue, events.Event
+```
+
+It then refuses (`E617`) when one of those tables already holds rows,
+because a seeded row carries no mark. Seed cannot tell its own rows from
+content someone loaded or typed in, and demo rows added on top would mix
+with that content for good. The rule is simple: **any row in a table the run
+would write to counts**, soft-deleted rows included. Two exceptions keep a
+fresh project seeding without flags:
+
+- **The user table is left out.** Users are matched by their login and never
+  deleted, and a fresh project may already have its superuser.
+- **`--model` narrows the check** to the tables that run seeds.
+
+To seed anyway:
+
+- `--reset` deletes the project models' rows first (users are kept), then
+  seeds. This is what a demo or end-to-end script runs every time.
+- `--force` adds demo rows on top of what is there.
+
+So a second plain `karni seed` on the same database refuses. Run
+`karni seed --reset` to start over with the same seed.
 
 ## What you get
 
@@ -39,7 +73,8 @@ run with `DEBUG = False` (a production database) unless you pass `--force`.
   `karni-password`. It is staff and superuser, and holds every role your
   `access` declarations name. About half of the user-owned rows belong to it,
   so every screen has data when you sign in. Users are matched by email, so
-  re-running never duplicates them and `--reset` never deletes them.
+  a re-run with `--reset` or `--force` never duplicates them, and `--reset`
+  never deletes them.
 - **Known logins.** `KARNI_SEED_LOGINS = {"organizer@example.com": ["organizer"],
   "attendee@example.com": ["attendee"]}` (env: JSON) creates those users with
   the demo password and the roles listed. These are the accounts a demo script
@@ -92,4 +127,5 @@ builds rows with everything inferred except what you pass.
 | A model never seeded | `class Meta: count = 0` in its seeder |
 | Different values for one field | A class attribute on the seeder |
 | Different inference everywhere | Subclass `karni.testing.values.ValueInference`, change its `rules`, and pass it to the builder |
-| Seed from your own code | `karni.seeding.seed(count=..., seed=..., models=...)` |
+| Seed from your own code | `karni.seeding.seed(count=..., seed=..., models=...)`. It does not refuse: check `karni.seeding.occupied(seed_plan())` yourself |
+| Real content, not demo data | A content file and [`karni load`](content-loading.md) |

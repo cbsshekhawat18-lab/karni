@@ -212,14 +212,63 @@ def test_the_management_command() -> None:
         call_command("karni_seed", "--model", "testapp.Tag")
     out = StringIO()
     call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--force", stdout=out)
+    assert out.getvalue().startswith("Seeding 1 model(s): testapp.Tag\n")
     assert "Seeded 1 model(s) with seed 0 (count 2)" in out.getvalue()
     out = StringIO()
     with override_settings(DEBUG=True):
         call_command(
             "karni_seed", "--model", "testapp.Tag", "--count", "3", "--seed", "9", "--json",
-            stdout=out,
+            "--reset", stdout=out,
         )  # fmt: skip
-    data = json.loads(out.getvalue())
+    data = json.loads(out.getvalue())  # --json prints only the report
     assert data["rows"] == {"testapp.Tag": 3} and data["seed"] == 9
+    assert data["plan"] == ["testapp.Tag"]
     with override_settings(DEBUG=True), pytest.raises(CommandError, match="no such model"):
         call_command("karni_seed", "--model", "nope.X")
+
+
+@override_settings(DEBUG=True)
+def test_seed_refuses_tables_that_already_hold_rows() -> None:
+    Tag.objects.create(name="real content")
+    out = StringIO()
+    with pytest.raises(CommandError) as caught:
+        call_command("karni_seed", "--model", "testapp.Venue", "--model", "testapp.Tag", stdout=out)
+    message = str(caught.value)
+    assert message.startswith("E617: Refusing to seed: these tables already hold rows: ")
+    assert "testapp.Tag (1)" in message and "testapp.Venue" not in message
+    assert "--reset" in message and "--force" in message and "karni load" in message
+    assert out.getvalue() == "Seeding 2 model(s): testapp.Tag, testapp.Venue\n"
+    assert Tag.objects.count() == 1 and not Venue.objects.exists()  # nothing was written
+
+    # --model narrows the check to the tables it seeds.
+    call_command("karni_seed", "--model", "testapp.Venue", "--count", "2", stdout=StringIO())
+    assert Venue.objects.count() == 2
+
+    # --force adds demo rows on top, and --reset wipes the tables first.
+    call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--force", stdout=out)
+    assert Tag.objects.count() == 3
+    call_command("karni_seed", "--model", "testapp.Tag", "--count", "2", "--reset", stdout=out)
+    assert Tag.objects.count() == 2 and not Tag.objects.filter(name="real content").exists()
+
+
+@override_settings(DEBUG=True)
+def test_existing_users_never_block_a_seed(django_user_model: Any) -> None:
+    django_user_model.objects.create_superuser(email="admin@example.com", password="x")
+    out = StringIO()
+    call_command(
+        "karni_seed", "--model", "testapp.Tag", "--model", "karni_accounts.User", "--count", "2",
+        stdout=out,
+    )  # fmt: skip
+    assert "Seeding 2 model(s): karni_accounts.User, testapp.Tag" in out.getvalue()
+    assert Tag.objects.count() == 2
+
+
+def test_occupied_and_planned_rows() -> None:
+    from karni.seeding import occupied, planned_rows
+
+    assert occupied([Venue, Tag, get_user_model()]) == {}
+    Tag.objects.create(name="x")
+    get_user_model().objects.create_user(email="someone@example.com", password="x")
+    assert occupied([Venue, Tag, get_user_model()]) == {"testapp.Tag": 1}
+    assert planned_rows(Tag, 7) == 7 and planned_rows(get_user_model(), 20) == 5
+    assert planned_rows(Publisher, 7) == PublisherSeeder.Meta.count

@@ -13,6 +13,7 @@ from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
 from karni_cli.commands.doctor import doctor
 from karni_cli.commands.explain import explain
+from karni_cli.commands.load import load
 from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
@@ -99,6 +100,7 @@ app.command(context_settings=PASSTHROUGH)(worker)
 app.command(context_settings=PASSTHROUGH)(beat)
 app.add_typer(schedule_app, name="schedule")
 app.command(context_settings=PASSTHROUGH)(seed)
+app.command(context_settings=PASSTHROUGH)(load)
 app.command("sync-roles", context_settings=PASSTHROUGH)(sync_roles)
 app.command(context_settings=PASSTHROUGH)(createsuperuser)
 app.command(context_settings=PASSTHROUGH)(manage)

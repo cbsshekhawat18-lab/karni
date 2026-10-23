@@ -1071,6 +1071,18 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Pass a client (or staff user) that can list the resource, and a row it does see as "
         "visible=. Test role-level refusals with assert_crud's denials instead.",
     ),
+    _e(
+        "E617",
+        "karni seed refuses to add demo rows to a table that already has rows",
+        "exception",
+        "karni seed; manage.py karni_seed",
+        "Seeded rows carry no mark, so seed cannot tell its own rows from real content. Adding "
+        "random demo rows to a table that holds content mixes the two for good. Any row in a "
+        "table the run would write to counts (the user table is left out: users are matched "
+        "by login and never deleted).",
+        "Pass --reset to wipe the project's tables first, --force to add demo rows on top, "
+        "--model to narrow the run to empty tables, or load real content with karni load.",
+    ),
     # E7xx agent tooling
     _e(
         "E701",
@@ -1141,6 +1153,31 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "request cannot pin a worker or build an unbounded file.",
         "Split the upload, narrow the export's filters, or raise the setting for a project "
         "that needs more.",
+    ),
+    _e(
+        "E804",
+        "A content file cannot be loaded",
+        "exception",
+        "karni load; manage.py karni_load; karni.transfer.loading",
+        "The file is missing, is not valid JSON or YAML, does not map model labels to lists of "
+        "rows, names a model that is not installed, nests rows under a model with no key to "
+        "match them on, or --as names no user. Nothing was written.",
+        "The message names the file and the problem. Keys are model labels (events.Event), "
+        "each holding a list of rows. A nested child needs a Karni.natural_key or a unique "
+        "constraint with its parent. YAML needs PyYAML, or write the file as JSON.",
+    ),
+    _e(
+        "E805",
+        "A content file holds rows that cannot be loaded",
+        "exception",
+        "karni load; manage.py karni_load; karni.transfer.loading",
+        "A row failed the validation the API runs (a missing required field, a bad choice, "
+        "clean(), uniqueness), names a field the model does not have or a file cannot set, "
+        "names a relation target that does not exist, lacks its key, or points at a file that "
+        "is not there. The whole load runs in one transaction, so every row was rolled back.",
+        "Each problem names the model, the row's key, the field and what is wrong. Fix the rows "
+        "(relations are named by the target's natural key, paths are relative to the content "
+        "file) and run again. karni load --dry-run checks a file without writing.",
     ),
     # E9xx debugging: karni why
     _e(

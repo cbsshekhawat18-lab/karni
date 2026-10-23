@@ -57,6 +57,16 @@ Every class attribute other than ``Meta`` overrides one field (a value or
 any factory-boy declaration); everything else stays inferred. An explicit
 factory in ``<app>/factories.py`` is the base when there is one.
 
+**Demo data, not content.** Seeded rows carry no mark, so a run cannot tell
+its own rows from real content. ``karni seed`` therefore prints the models
+it will write to and refuses (``E617``) when one of their tables already
+holds rows, unless ``--reset`` wipes them first or ``--force`` adds demo rows
+on top. The user table is left out of that check: users are matched by login
+and never deleted, and a fresh project already has its superuser.
+:func:`occupied` is the rule. Real content belongs in a content file loaded
+with ``karni load`` (:mod:`karni.transfer.loading`). The importable
+:func:`seed` does not refuse: the caller decides.
+
 Override / escape hatches: override :meth:`Seeder.seed` for full control of
 a model's rows (``context.create(n, **values)``, ``context.pick(Model)``,
 ``context.random``); subclass :class:`SeedBuilder` (or the value engine) and
@@ -101,6 +111,8 @@ __all__ = [
     "SeedReport",
     "Seeder",
     "clear_cache",
+    "occupied",
+    "planned_rows",
     "seed",
     "seed_plan",
     "seeders",
@@ -330,6 +342,37 @@ def seed_plan(models_: Sequence[Any] | None = None) -> list[type[models.Model]]:
     return _order(model for model in chosen if _seedable(model))
 
 
+def planned_rows(model: type[models.Model], count: int) -> int:
+    """Rows a run with ``count`` creates for ``model``: its seeder's ``Meta.count``, else ``count``.
+
+    The user model gets a quarter of ``count``, at least three (the demo
+    login and the known logins come on top).
+    """
+    default = count
+    if model is get_user_model():
+        default = max(3, math.ceil(count / 4))
+    seeder_class = seeders().get(model)
+    return seeder_class.row_count(default) if seeder_class else default
+
+
+def occupied(plan: Iterable[type[models.Model]]) -> dict[str, int]:
+    """Rows already in the tables a run would write to: ``label -> count``, users aside.
+
+    This is the rule ``karni seed`` refuses on. A seeded row carries no mark,
+    so any row counts, soft-deleted ones included. The user model is left
+    out: seed matches users by login and never deletes them.
+    """
+    found: dict[str, int] = {}
+    user_model = get_user_model()
+    for model in plan:
+        if model is user_model:
+            continue
+        total = model._base_manager.count()
+        if total:
+            found[model._meta.label] = total
+    return found
+
+
 # the run
 
 
@@ -339,6 +382,8 @@ class SeedReport:
 
     seed: int | str
     count: int
+    #: The models the run writes to, in seeding order.
+    plan: list[str] = field(default_factory=list)
     rows: dict[str, int] = field(default_factory=dict)
     reused: dict[str, int] = field(default_factory=dict)
     demo: str | None = None
@@ -377,6 +422,7 @@ class SeedReport:
         return {
             "seed": self.seed,
             "count": self.count,
+            "plan": self.plan,
             "rows": self.rows,
             "reused": self.reused,
             "demo": self.demo,
@@ -642,12 +688,12 @@ class _Run:
         if reset:
             self.reset(plan)
         registry = seeders()
+        self.report.plan = [
+            model._meta.label for model in plan if planned_rows(model, self.count) > 0
+        ]
         for model in plan:
             seeder_class = registry.get(model)
-            default = self.count
-            if model is self.user_model:
-                default = max(3, math.ceil(self.count / 4))
-            count = seeder_class.row_count(default) if seeder_class else default
+            count = planned_rows(model, self.count)
             if count <= 0:
                 continue
             declared = frozenset(seeder_class.declarations()) if seeder_class else frozenset()

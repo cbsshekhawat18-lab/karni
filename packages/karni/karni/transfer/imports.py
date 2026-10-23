@@ -126,7 +126,25 @@ class Importer:
     one (its ``access`` declaration gates and scopes the import); without a
     viewset the roles' grants do. ``serializer_class`` defaults to the
     viewset's (or the generated one) — the same validation the API runs.
+
+    Override / escape hatches: :attr:`skip_blank`, :attr:`write_pk`,
+    :meth:`readable`, :meth:`get_serializer`, :meth:`may_create`,
+    :meth:`may_update` and :meth:`write_queryset` are what a trusted caller
+    changes (:mod:`karni.transfer.loading` runs the
+    same row logic with full access and explicit blanks).
     """
+
+    #: A blank cell (``None`` or an empty string) leaves the field alone. The
+    #: content loader sets this ``False``: an explicit null or empty string in
+    #: a content file is written.
+    skip_blank: bool = True
+    #: Appended when a relation's target is not found: the user may lack the
+    #: right to see it. A caller with full access sets it to ``""``.
+    not_visible_note: str = " (or it is not visible to you)"
+    #: A created row keeps the primary key its row gives. It is off for uploads,
+    #: where an unknown id creates a new row. The content loader turns it on,
+    #: because a row keyed by its id must keep that id to be found again.
+    write_pk: bool = False
 
     def __init__(
         self,
@@ -201,6 +219,18 @@ class Importer:
         """The rows the user may change — where an import looks existing rows up."""
         return apply_rows(
             self.model._default_manager.all(), self._rows("write", "update", "change")
+        )
+
+    def readable(self, target: type[Model]) -> Any:
+        """The rows of ``target`` a relation cell may name: what the user may read."""
+        return target_read_scope(target._default_manager.all(), self.request)[0]
+
+    def get_serializer(
+        self, instance: Any | None, data: dict[str, Any]
+    ) -> serializers.BaseSerializer[Any]:
+        """The serializer one row is validated and saved with (partial for an update)."""
+        return self.serializer_class(
+            instance=instance, data=data, partial=instance is not None, context=self.context
         )
 
     def _stamps(self) -> dict[str, Any]:
@@ -332,48 +362,62 @@ class Importer:
         may_create: bool,
         may_update: bool,
         result: ImportResult,
-    ) -> None:
-        values = {name: value for name, value in values.items() if not _blank(value)}
+        *,
+        match: Sequence[str] = (),
+    ) -> tuple[str, Any | None]:
+        """One row: ``("created" | "updated" | "unchanged" | "error", the row or None)``.
+
+        ``match`` names more fields whose (resolved) values narrow the lookup
+        of the existing row besides the key: a composite key, or a child
+        matched among one parent's children rather than across the table.
+        """
+        values = dict(values)
+        if self.skip_blank:
+            values = {name: value for name, value in values.items() if not _blank(value)}
         if self.options.transform is not None:
             values = dict(self.options.transform(values))
         problems: list[tuple[str, str]] = []
         for name, spec in relation_specs.items():
-            if name in values:
+            if name in values and not _blank(values[name]):
                 values[name] = self._resolve(spec, values[name], problems)
         if problems:
             result.errors += 1
             for name, message in problems:
                 result.problem(line, name, message)
-            return
+            return "error", None
         try:
-            existing = self._existing(values)
+            existing = self._existing(values, match)
         except KarniValueError as exc:
             result.errors += 1
             result.problem(line, self.options.key or "", str(exc))
-            return
-        values.pop(self.model._meta.pk.name, None)  # the key matched; the pk is never written
+            return "error", None
+        pk_field = self.model._meta.pk
+        given_pk = values.pop(pk_field.name, None)  # the key matched, never update the pk
         if existing is None and not may_create:
             result.errors += 1
             result.problem(line, "", f"you may not add {self.model._meta.verbose_name} rows.")
-            return
+            return "error", None
         if existing is not None and not may_update:
             result.errors += 1
             result.problem(line, "", f"you may not change {self.model._meta.verbose_name} rows.")
-            return
-        serializer = self.serializer_class(
-            instance=existing, data=values, partial=existing is not None, context=self.context
-        )
+            return "error", None
+        serializer = self.get_serializer(existing, values)
         if not serializer.is_valid():
             result.errors += 1
             for name, message in _messages(serializer.errors):
                 result.problem(line, name, message)
-            return
+            return "error", None
         if existing is not None and self._unchanged(existing, serializer.validated_data):
             result.unchanged += 1
-            return
+            return "unchanged", existing
+        extras: dict[str, Any] = {}
+        if existing is None:
+            extras = self._stamps()
+            if self.write_pk and not _blank(given_pk):
+                extras[pk_field.attname] = pk_field.to_python(given_pk)
         try:
             with transaction.atomic():
-                saved = serializer.save(**(self._stamps() if existing is None else {}))
+                saved = serializer.save(**extras)
                 if existing is None:
                     rows = self._rows("create", "create", "add")
                     inside = rows is True or (
@@ -387,23 +431,24 @@ class Importer:
                         raise _RowFailed
         except _RowFailed:
             result.errors += 1
-            return
+            return "error", None
         except serializers.ValidationError as exc:
             result.errors += 1
             for name, message in _messages(exc.detail):
                 result.problem(line, name, message)
-            return
+            return "error", None
         except (DjangoValidationError, IntegrityError) as exc:
             result.errors += 1
             result.problem(line, "", str(exc).splitlines()[0])
-            return
+            return "error", None
         result.touched.append(str(saved.pk))
         if existing is None:
             result.created += 1
-        else:
-            result.updated += 1
+            return "created", saved
+        result.updated += 1
+        return "updated", saved
 
-    def _existing(self, values: dict[str, Any]) -> Any | None:
+    def _existing(self, values: dict[str, Any], match: Sequence[str] = ()) -> Any | None:
         key = self.options.key
         pk_name = self.model._meta.pk.name
         if key and key in values:
@@ -414,14 +459,18 @@ class Importer:
             return None
         if isinstance(value, Model):
             value = value.pk
+        conditions = {lookup: value}
+        for name in match:
+            other = values.get(name)
+            conditions[name] = other.pk if isinstance(other, Model) else other
         try:
-            found = self.write_queryset().filter(**{lookup: value}).first()
+            found = self.write_queryset().filter(**conditions).first()
         except (ValueError, DjangoValidationError) as exc:
             raise KarniValueError(f"{lookup}: {value!r} is not a valid value.") from exc
         if found is not None:
             return found
         model_field = self.model._meta.get_field(lookup)
-        if getattr(model_field, "unique", False) or model_field.primary_key:
+        if not match and (getattr(model_field, "unique", False) or model_field.primary_key):
             elsewhere = self.model._default_manager.filter(**{lookup: value}).exists()
             if elsewhere:
                 raise KarniValueError(
@@ -449,7 +498,7 @@ class Importer:
     def _lookup(
         self, target: type[Model], spec: ColumnSpec, value: Any, problems: list[tuple[str, str]]
     ) -> Any:
-        readable, _ = target_read_scope(target._default_manager.all(), self.request)
+        readable = self.readable(target)
         conditions = Q(pk=value) if _pk_like(target, value) else Q()
         if spec.lookup:
             conditions = (
@@ -469,8 +518,7 @@ class Importer:
             problems.append(
                 (
                     spec.name,
-                    f"no {target._meta.verbose_name} with {how} {value!r} (or it is not visible "
-                    "to you).",
+                    f"no {target._meta.verbose_name} with {how} {value!r}{self.not_visible_note}.",
                 )
             )
             return value

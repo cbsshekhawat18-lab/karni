@@ -27,7 +27,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Frontend**: [ui](#karni-ui)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Debugging**: [queries](#karni-queries)
-- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
+- **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
@@ -479,6 +479,8 @@ Fill every model with realistic demo data. It wraps `manage.py karni_seed [ARGS]
 
 Values come from field names and types (an `email` gets an email, `price` money, `starts_at` a near-future date). Relations point at seeded rows, and the same --seed gives the same rows. It prints a demo login (demo@example.com / karni-password). Per-model overrides live in `<app>/seeds.py` (`karni make seeder <Model>`).
 
+It first prints the models it will write to, and refuses when one of their tables already holds rows (users aside), because demo rows would mix with real content. Pass --reset to wipe the tables first or --force to add rows on top. Real content belongs in `karni load`.
+
 Example:
 
 ```sh
@@ -492,6 +494,28 @@ karni seed [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni load`
+
+Load real content from a JSON or YAML file. It wraps `manage.py karni_load FILE [ARGS]`.
+
+The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. `karni seed` is for demo data, `karni load` for real content.
+
+Example:
+
+```sh
+karni load content/site.json --dry-run
+```
+
+```
+karni load [OPTIONS] [ARGS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ARGS...` |  | The content file, then options passed to manage.py karni_load: --dry-run, --refresh-files, --prune, --as USER, --json. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 

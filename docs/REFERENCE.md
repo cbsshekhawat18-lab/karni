@@ -29,6 +29,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 |---|---|---|
 | `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/models.py) |
 | Realistic, connected seed data (`karni seed`, `<app>/seeds.py`) | `stable` | [seeds.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/seeds.py) |
+| Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
 | Model events and listeners, optionally queued to Celery (`@on_updated`) | `stable` | [listeners.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/listeners.py) |
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
@@ -556,6 +557,8 @@ Fill every model with realistic demo data. It wraps `manage.py karni_seed [ARGS]
 
 Values come from field names and types (an `email` gets an email, `price` money, `starts_at` a near-future date). Relations point at seeded rows, and the same --seed gives the same rows. It prints a demo login (demo@example.com / karni-password). Per-model overrides live in `<app>/seeds.py` (`karni make seeder <Model>`).
 
+It first prints the models it will write to, and refuses when one of their tables already holds rows (users aside), because demo rows would mix with real content. Pass --reset to wipe the tables first or --force to add rows on top. Real content belongs in `karni load`.
+
 Example:
 
 ```sh
@@ -569,6 +572,28 @@ karni seed [OPTIONS] [ARGS...]
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+#### `karni load`
+
+Load real content from a JSON or YAML file. It wraps `manage.py karni_load FILE [ARGS]`.
+
+The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. `karni seed` is for demo data, `karni load` for real content.
+
+Example:
+
+```sh
+karni load content/site.json --dry-run
+```
+
+```
+karni load [OPTIONS] [ARGS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `ARGS...` |  | The content file, then options passed to manage.py karni_load: --dry-run, --refresh-files, --prune, --as USER, --json. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -1611,6 +1636,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E614`](errors.md#e614) | exception | karni seed was given invalid arguments |
 | [`E615`](errors.md#e615) | exception | karni seed refuses to run with DEBUG = False |
 | [`E616`](errors.md#e616) | test | A hidden-row check has nothing to prove against |
+| [`E617`](errors.md#e617) | exception | karni seed refuses to add demo rows to a table that already has rows |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |
@@ -1618,6 +1644,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E801`](errors.md#e801) | api | An import cannot proceed as asked |
 | [`E802`](errors.md#e802) | api | The file format is not supported |
 | [`E803`](errors.md#e803) | api | Too many rows for one import or export |
+| [`E804`](errors.md#e804) | exception | A content file cannot be loaded |
+| [`E805`](errors.md#e805) | exception | A content file holds rows that cannot be loaded |
 | [`E901`](errors.md#e901) | exception | karni why: no API resource by that name |
 | [`E902`](errors.md#e902) | exception | karni why: no such user |
 | [`E903`](errors.md#e903) | exception | karni why: no request record for that id |

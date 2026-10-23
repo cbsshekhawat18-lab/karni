@@ -140,6 +140,14 @@ Celery task share `karni.transfer.services`
 `karni.transfer.exports.export_response` and
 `karni.transfer.template.template_response` are the downloads.
 
+### Content files
+
+An upload is for a person bringing a spreadsheet. A project's own content
+(the copy, images and children a site is made of) lives in a JSON or YAML
+file in the repository instead, and `karni load` loads it with the same row
+logic: the same keys, natural-key relations, serializer and hooks. See
+[Loading content](content-loading.md).
+
 ## In the admin
 
 Every Karni admin changelist has **Import**: a button under django-unfold, or

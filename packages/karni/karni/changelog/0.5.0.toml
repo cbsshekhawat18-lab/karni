@@ -1,0 +1,16 @@
+# Karni 0.5.0: what changed since 0.4 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.5.md.
+# None has a codemod: `karni upgrade` reports each one with its note.
+version = "0.5.0"
+
+[[change]]
+id = "seed-refuses-occupied-tables"
+kind = "behaviour"
+symbol = "karni seed (manage.py karni_seed)"
+summary = """\
+karni seed prints the models it will write to and refuses (E617) when one of \
+their tables already holds rows, users aside. A script that seeds a database \
+twice, or seeds after loading data, passes --reset to start over or --force \
+to add demo rows on top."""
+mechanical = false
+migration = "migrations/0.5.md#karni-seed-refuses-tables-that-already-hold-rows"

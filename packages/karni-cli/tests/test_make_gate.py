@@ -408,8 +408,19 @@ def test_generated_backend_runs_for_real(
     assert "generated backend OK" in verify.stdout
 
     # karni seed fills every model (the seeder pins Venue at 4) and prints the demo login.
+    # The check above left rows behind, so seed needs --force to add demo rows on top (E617).
     seeded = subprocess.run(
-        [str(python), "manage.py", "karni_seed", "--count", "6", "--seed", "42", "--json"],
+        [
+            str(python),
+            "manage.py",
+            "karni_seed",
+            "--count",
+            "6",
+            "--seed",
+            "42",
+            "--json",
+            "--force",
+        ],
         cwd=project,
         text=True,
         capture_output=True,

@@ -25,6 +25,11 @@ def seed(
     login (demo@example.com / karni-password). Per-model overrides live in
     `<app>/seeds.py` (`karni make seeder <Model>`).
 
+    It first prints the models it will write to, and refuses when one of
+    their tables already holds rows (users aside), because demo rows would
+    mix with real content. Pass --reset to wipe the tables first or --force
+    to add rows on top. Real content belongs in `karni load`.
+
     Example: karni seed --count 20 --seed 42 --reset
     """
     project = require_project()

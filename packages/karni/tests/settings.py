@@ -57,4 +57,6 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # Typed field layer (karni.fields): portable fields, no viewsets.
     "tests.fieldsapp",
     "tests.lifecycleapp",
+    # Content loading (karni load): no viewsets, so the API never sees it.
+    "tests.contentapp",
 ]

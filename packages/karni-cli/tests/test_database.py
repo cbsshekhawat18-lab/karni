@@ -127,6 +127,7 @@ def test_docker_runs_are_not_checked(tmp_path, monkeypatch) -> None:
         (["migrate"], "connect"),
         (["seed"], "connect"),
         (["sync-roles"], "connect"),
+        (["load", "content/site.json"], "connect"),
         (["createsuperuser", "--noinput"], "connect"),
         (["manage", "showmigrations"], "connect"),
         (["serve", "--local"], "connect"),
