@@ -59,4 +59,6 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.lifecycleapp",
     # Required FileField and ImageField (assert_crud's uploads), no routed viewsets.
     "tests.uploadsapp",
+    # Content loading (karni load): no viewsets, so the API never sees it.
+    "tests.contentapp",
 ]

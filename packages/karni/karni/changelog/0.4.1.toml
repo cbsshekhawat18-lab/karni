@@ -36,3 +36,15 @@ about app screens and the new-page procedure points at rule K309. Run \
 `karni rules sync`, or `karni rules sync --check` reports the files as stale."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-agent-files-run-karni-rules-sync"
+
+[[change]]
+id = "seed-refuses-occupied-tables"
+kind = "behaviour"
+symbol = "karni seed (manage.py karni_seed)"
+summary = """\
+karni seed prints the models it will write to and refuses (E617) when one of \
+their tables already holds rows, users aside. A script that seeds a database \
+twice, or seeds after loading data, passes --reset to start over or --force \
+to add demo rows on top."""
+mechanical = false
+migration = "migrations/0.4.1.md#karni-seed-refuses-tables-that-already-hold-rows"

@@ -146,6 +146,10 @@ VENV_CASES: list[tuple[list[str], list[str]]] = [
             "events.Event",
         ],
     ),
+    (
+        ["load", "content/site.json", "--dry-run", "--prune"],
+        ["manage.py", "karni_load", "content/site.json", "--dry-run", "--prune"],
+    ),
     (["createsuperuser"], ["manage.py", "createsuperuser"]),
     (
         ["createsuperuser", "--email", "a@example.com", "--noinput"],
@@ -345,6 +349,7 @@ def test_serve_without_docker_names_the_alternative(
         (["schedule", "run"], "karni_schedules --run NAME"),
         (["createsuperuser"], "manage.py createsuperuser"),
         (["seed"], "manage.py karni_seed [ARGS]"),
+        (["load"], "manage.py karni_load FILE [ARGS]"),
         (["manage"], "manage.py ARGS"),
     ],
 )

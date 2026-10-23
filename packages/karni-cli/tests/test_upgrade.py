@@ -72,7 +72,9 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["urls-marker"].codemod == "v0_4.urls_marker" and by_id["urls-marker"].mechanical
     assert by_id["public-read-writes-need-a-role"].release == "0.4.1"
     assert by_id["public-read-writes-need-a-role"].mechanical is False
+    assert by_id["seed-refuses-occupied-tables"].release == "0.4.1"
     assert by_id["operation-ids-by-param"].release == "0.4.0"
+    assert by_id["seed-refuses-occupied-tables"].release == "0.5.0"
     assert by_id["agent-files-reworded"].kind == "project-files"
     assert by_id["django-5-2"].release == "0.3.0" and not by_id["django-5-2"].mechanical
     assert by_id["role-scope-paths-checked"].release == "0.3.0"
@@ -107,7 +109,12 @@ def test_selection_between_versions() -> None:
     assert not in_0_3 & set(_ids("0.1.0", "0.2.0"))  # a 0.2 target never sees 0.3 changes
     assert in_0_4 <= set(_ids("0.3.0", "0.4.0"))
     assert not in_0_4 & set(_ids("0.2.0", "0.3.0"))  # a 0.3 target never sees 0.4 changes
-    assert in_0_4_1 == {"public-read-writes-need-a-role", "urls-marker", "agent-files-public-site"}
+    assert in_0_4_1 == {
+        "public-read-writes-need-a-role",
+        "urls-marker",
+        "agent-files-public-site",
+        "seed-refuses-occupied-tables",
+    }
     assert in_0_4_1 <= set(_ids("0.4.0", "0.4.1"))
     assert not in_0_4 & set(_ids("0.4.0", "0.4.1"))  # 0.4.0's changes are behind a 0.4.0 project
     assert not in_0_4_1 & set(_ids("0.3.0", "0.4.0"))
@@ -223,7 +230,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.1: 37 change(s), 6 mechanical, 31 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 38 change(s), 6 mechanical, 32 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

@@ -103,6 +103,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Real content from a JSON or YAML file, created or updated by natural key "
+        "(`karni load`)",
+    ),
+    Capability(
+        "models",
         "Model events and listeners, optionally queued to Celery (`@on_updated`)",
         ((f"{EH}/events/listeners.py", "@on_updated(Booking, queued=True)"),),
     ),

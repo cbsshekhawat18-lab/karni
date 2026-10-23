@@ -251,6 +251,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni beat`](docs/REFERENCE.md#karni-beat) | Run Celery beat |
 | [`karni schedule`](docs/REFERENCE.md#karni-schedule) | List and run the Celery beat schedules: [list](docs/REFERENCE.md#karni-schedule-list), [run](docs/REFERENCE.md#karni-schedule-run) |
 | [`karni seed`](docs/REFERENCE.md#karni-seed) | Fill every model with realistic demo data |
+| [`karni load`](docs/REFERENCE.md#karni-load) | Load real content from a JSON or YAML file |
 | [`karni sync-roles`](docs/REFERENCE.md#karni-sync-roles) | Create or update the roles KARNI_ROLES declares |
 | [`karni createsuperuser`](docs/REFERENCE.md#karni-createsuperuser) | Create an admin user |
 | [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command |
@@ -275,6 +276,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 <!-- generated:models -->
 - `stable` `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by`
 - `stable` Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)
+- `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)

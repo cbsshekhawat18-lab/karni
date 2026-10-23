@@ -59,6 +59,29 @@ apply codemods and list the manual steps. This file is the human summary.
   `expect=` when they are the point). When the rows the run created are
   missing from the list, the message names the read rule and `karni
   why-empty`, instead of blaming the paginator.
+- **`karni load` loads a project's real content from a file.** A JSON or
+  YAML file maps model labels to rows. Each row is matched by its natural
+  key (`Karni.import_key`, `Karni.natural_key`, a unique slug, or a unique
+  constraint) and created or updated, so a second run with the same file
+  changes nothing and says so. Relations name their targets by natural key.
+  File and image fields hold paths relative to the content file and upload
+  once (`--refresh-files` uploads again). A nested list holds a row's
+  children, matched by parent and key or position, and `--prune` deletes the
+  ones it no longer lists. The whole file loads in one transaction through
+  the API's serializer and `clean()`, and one bad row rolls everything back
+  with an error naming the file, model, key and field (`E804`, `E805`).
+  `--dry-run` prints created, updated and unchanged per model. `--as USER`
+  attributes the writes, and the change history records the load as one
+  batch. It reuses the importer's row logic (`karni.transfer.imports`), which
+  gains the escape hatches the loader needs. See
+  [Loading content](docs/content-loading.md).
+- **`karni seed` refuses tables that already hold rows.** It prints the
+  models it will write to, then refuses (`E617`) when one of their tables
+  already holds rows, because seed cannot tell its own rows from real
+  content. The user table is left out and `--model` narrows the check, so a
+  fresh project still seeds without flags. `--reset` starts over and
+  `--force` adds demo rows on top. See
+  [the migration note](docs/migrations/0.5.md#karni-seed-refuses-tables-that-already-hold-rows).
 - **The case study page is removed**, with the before/after line counts the
   README quoted from it. The `examples/social-leads` app stays as a practice
   project and keeps running in CI.

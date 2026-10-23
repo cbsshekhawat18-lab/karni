@@ -60,6 +60,7 @@ OPENS_DATABASE = frozenset(
     {
         "migrate",
         "karni_seed",
+        "karni_load",
         "karni_sync_roles",
         "createsuperuser",
         "runserver",
