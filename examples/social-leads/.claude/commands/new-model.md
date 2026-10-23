@@ -5,7 +5,7 @@ argument-hint: "<ModelName> [in <app>] [fields...]"
 Add a new domain model: $ARGUMENTS
 
 1. Run `karni context` to see existing apps, models and viewsets.
-2. `karni make model <Name> <field:type ...> --with viewset --access <who> [--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and its viewset (`-a` also adds list/detail/form pages). Field types: `karni make model --help`. `--access`: authenticated (default), public-read, owned:<fk to user>, staff, role:<name>. Edit the generated `access` for anything richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, serializer or router. The auto-router registers it, and the admin, filters and schema are derived.
+2. `karni make model <Name> <field:type ...> --with viewset --access <who> [--search f1,f2] [--app <app>]` writes the model on `karni.models.BaseModel` and its viewset (`-a` also adds list/detail/form pages). Field types: `karni make model --help`. `--access`: granted (default), authenticated, public-read (staff writes), owned:<fk to user>, staff, role:<name>. Edit the generated `access` for anything richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, serializer or router. The auto-router registers it, and the admin, filters and schema are derived.
 3. Add `class APIMeta:` / `class AdminMeta:` only for fields that must be hidden, read-only or write-only.
 4. `karni make migration && karni migrate && karni types`
 5. Verify: `karni context` lists the model and viewset, and GET /api/<plural>/ works for a caller `access` admits and is refused (401/403) or empty for one it does not.
