@@ -96,8 +96,8 @@ def _auth_throttle_rates(env: environ.Env) -> dict[str, str | None]:
     return {**AUTH_THROTTLE_DEFAULTS, **overrides}
 
 
-def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
-    """Build the ``STORAGES`` setting from the ``KARNI_STORAGE`` environment variable.
+def _storages(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
+    """Build the ``STORAGES`` setting from ``KARNI_STORAGE`` (``choice``, else the environment).
 
     ``KARNI_STORAGE="s3"`` selects :class:`karni.storage.S3Storage` (an
     S3-compatible backend that also works with MinIO/R2 via
@@ -106,8 +106,9 @@ def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
 
     Override / escape hatch: define ``STORAGES`` yourself in ``settings.py``
     before calling ``karni_settings()`` to replace the whole mapping.
+    ``karni_settings()`` passes a ``KARNI_STORAGE`` defined before the call as ``choice``.
     """
-    if env("KARNI_STORAGE", default="local") == "s3":
+    if (choice or env("KARNI_STORAGE", default="local")) == "s3":
         default = {"BACKEND": "karni.storage.S3Storage"}
     else:
         default = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
@@ -117,16 +118,17 @@ def _storages(env: environ.Env) -> dict[str, dict[str, Any]]:
     }
 
 
-def _caches(env: environ.Env) -> dict[str, dict[str, Any]]:
+def _caches(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, Any]]:
     """Build ``CACHES`` from ``KARNI_CACHE``: ``redis`` (at ``REDIS_URL``) or ``locmem``.
 
     ``locmem`` is for a host run without Redis (the quickstart): throttle
     counters then live per process, which ``karni.W501`` flags with DEBUG off.
 
     Override / escape hatch: define ``CACHES`` yourself in ``settings.py``
-    before calling ``karni_settings()``.
+    before calling ``karni_settings()``. ``karni_settings()`` passes a
+    ``KARNI_CACHE`` defined before the call as ``choice``.
     """
-    choice = env("KARNI_CACHE", default="redis")
+    choice = choice or env("KARNI_CACHE", default="redis")
     if choice == "locmem":
         return {
             "default": {

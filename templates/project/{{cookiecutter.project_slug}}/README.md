@@ -52,10 +52,13 @@ npm run build   # tsc + vite build into frontend/dist
 npm run lint    # ESLint with the karni/* enforcement rules
 ```
 
-The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
-For its container, docker compose sets `KARNI_API_PROXY=http://django:8000`.
-`karni serve --local --port 8020` prints the line that starts the dev server
-against that port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev`.
+The dev server proxies to `http://127.0.0.1:8000`, where `karni serve
+--local` runs Django. When port 8000 is taken, set `KARNI_DEV_PORT=8020` in
+`.env`: `karni serve --local` and the dev server both read it, and docker
+compose publishes Django on it. For its container, docker compose sets
+`KARNI_API_PROXY=http://django:8000`, which wins over `KARNI_DEV_PORT`.
+`karni serve --local --port 8030` prints how to point the dev server at that
+port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8030 npm run dev`.
 
 ## Using a local Karni checkout
 

@@ -312,7 +312,7 @@ karni serve [OPTIONS]
 | --- | --- | --- |
 | `--local` |  | Run manage.py runserver through the project .venv instead. |
 | `--host` TEXT |  | --local only. Default 127.0.0.1. |
-| `--port` INTEGER |  | --local only. Default 8000. Another port prints the KARNI_API_PROXY line that points the frontend's dev server at it. |
+| `--port` INTEGER |  | --local only. Default: KARNI_DEV_PORT from the environment or .env, else 8000 (the frontend's dev server proxies to the same port). Another port prints how to point the frontend at it. |
 | `--build` |  | compose only: rebuild images first. |
 | `--detach`, `-d` |  | compose only: run in background. |
 
@@ -690,7 +690,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `country:country / currency:currency` | CountryField() / CurrencyField() with a CHECK against the ISO list |
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
-| `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. Image needs Pillow |
+| `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes pyproject.toml depend on `karni[images]` (Pillow) |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
 | `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |

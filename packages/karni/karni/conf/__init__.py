@@ -24,13 +24,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from karni.conf.admin_logo import unfold_logo_entries
+from karni.conf.admin_logo import logo_paths, site_icon, site_logo
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
     OTP_MIDDLEWARE,
     SOCIAL_APPS,
     TWOFA_APPS,
+    _caches,
+    _storages,
     env,
 )
 from karni.conf.dev import DEV
@@ -39,7 +41,7 @@ from karni.conf.prod import PROD
 from karni.conf.sentry import maybe_init_sentry
 from karni.exceptions import KarniImproperlyConfigured
 
-__all__ = ["env", "karni_settings"]
+__all__ = ["CALL_TIME_SETTINGS", "env", "karni_settings", "settings_changed_after_call"]
 
 _PROFILES: dict[str, dict[str, Any]] = {"dev": DEV, "prod": PROD}
 
@@ -52,6 +54,34 @@ _LIST_MERGED_SETTINGS = ("INSTALLED_APPS", "MIDDLEWARE")
 #: three-occurrences rule: the group ships with its first producer
 #: (karni-payments) because `karni add` is contracted to rely on it.
 _SETTINGS_FRAGMENT_GROUP = "karni.settings"
+
+#: Settings ``karni_settings()`` reads during the call to compute other settings,
+#: with what it computes from each. Assigned after the call, such a setting
+#: changes nothing it fed, so the system check ``karni.E508`` reports it (see
+#: :func:`settings_changed_after_call`). Assign it before the call or pass it
+#: as a keyword override. ``KARNI_ADMIN_LOGO`` is not listed: the admin reads
+#: it on every request (:func:`karni.conf.admin_logo.site_logo`), so it works
+#: wherever it is assigned.
+CALL_TIME_SETTINGS: dict[str, str] = {
+    "KARNI_AUTH_MODE": (
+        "CSRF_TRUSTED_ORIGINS and CORS_ALLOW_CREDENTIALS (session mode), and django-otp's "
+        "middleware with KARNI_2FA"
+    ),
+    "KARNI_2FA": "INSTALLED_APPS and MIDDLEWARE (django-otp)",
+    "KARNI_SOCIAL_AUTH": (
+        "INSTALLED_APPS, MIDDLEWARE, AUTHENTICATION_BACKENDS and TEMPLATES (django-allauth)"
+    ),
+    "KARNI_SOCIAL_PROVIDERS": "INSTALLED_APPS (one django-allauth provider app each)",
+    "KARNI_FRONTEND_URL": "CSRF_TRUSTED_ORIGINS (session mode)",
+    "KARNI_AUTH_THROTTLE_RATES": "REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']",
+    "KARNI_JSON_LOGS": "LOGGING and the structlog renderer",
+    "KARNI_CACHE": "CACHES",
+    "KARNI_STORAGE": "STORAGES",
+}
+
+#: Per settings module (its ``__name__``): the namespace and a copy of each
+#: :data:`CALL_TIME_SETTINGS` value the call used, for karni.E508.
+_consumed: dict[str, tuple[MutableMapping[str, Any], dict[str, Any]]] = {}
 
 _CONTRIB_ADMIN = "django.contrib.admin"
 _AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
@@ -297,6 +327,36 @@ def _ensure_sqlite_dir(databases: Any) -> None:
         Path(name).parent.mkdir(parents=True, exist_ok=True)
 
 
+def _record_consumed(namespace: MutableMapping[str, Any], used: Iterable[str]) -> None:
+    """Keep a copy of each call-time input ``used``, keyed by the settings module's name.
+
+    A plain mapping without ``__name__`` (a test namespace) is not recorded.
+    """
+    module = namespace.get("__name__")
+    if not isinstance(module, str):
+        return
+    _consumed[module] = (namespace, {name: copy.deepcopy(namespace.get(name)) for name in used})
+
+
+def settings_changed_after_call(module: str | None) -> dict[str, tuple[Any, Any]]:
+    """Call-time inputs the settings module ``module`` reassigned after ``karni_settings()``.
+
+    Maps each setting of :data:`CALL_TIME_SETTINGS` whose value in the module
+    now differs from the value the call computed other settings from, to
+    ``(value during the call, value now)``. Empty when ``module`` never
+    called ``karni_settings()``. ``override_settings`` in tests changes
+    ``django.conf.settings``, not the module, so it is never reported.
+    """
+    if module is None or module not in _consumed:
+        return {}
+    namespace, used = _consumed[module]
+    return {
+        name: (before, namespace.get(name))
+        for name, before in used.items()
+        if namespace.get(name) != before
+    }
+
+
 def karni_settings(
     namespace: MutableMapping[str, Any],
     *,
@@ -360,6 +420,16 @@ def karni_settings(
     * ``SILENCED_SYSTEM_CHECKS``: starts as an empty list, so a project
       extends it (``SILENCED_SYSTEM_CHECKS += ["karni.W967"]``) instead of
       hitting a NameError.
+    * ``KARNI_CACHE`` / ``KARNI_STORAGE``: ``CACHES`` / ``STORAGES`` follow
+      their final value (namespace, override or environment) unless the
+      project supplies ``CACHES`` / ``STORAGES`` itself.
+    * ``KARNI_ADMIN_LOGO``: ``UNFOLD["SITE_LOGO"]`` and ``["SITE_ICON"]``
+      default to resolvers that read the setting on every admin request, so
+      it works wherever it is assigned. A bad value raises ``E303`` here.
+
+    The settings in :data:`CALL_TIME_SETTINGS` are read during the call.
+    Assigning one after the call cannot change what was computed from it, so
+    the system check ``karni.E508`` fails startup and names the setting.
 
     :param namespace: the target namespace, normally ``globals()`` of the
         project's settings module (any mutable mapping works).
@@ -406,6 +476,24 @@ def karni_settings(
     rest_framework_is_karni = (
         "REST_FRAMEWORK" not in namespace and "REST_FRAMEWORK" not in overrides
     )
+    # CACHES and STORAGES follow KARNI_CACHE / KARNI_STORAGE defined before the
+    # call too, not only the environment BASE read them from.
+    used = ["KARNI_AUTH_MODE", "KARNI_2FA", "KARNI_SOCIAL_AUTH"]
+    for flag, derived, build in (
+        ("KARNI_CACHE", "CACHES", _caches),
+        ("KARNI_STORAGE", "STORAGES", _storages),
+    ):
+        if derived not in namespace and derived not in overrides:
+            merged[derived] = build(env, str(final(flag) or "") or None)
+            used.append(flag)
+    if bool(final("KARNI_SOCIAL_AUTH")):
+        used.append("KARNI_SOCIAL_PROVIDERS")
+    if auth_mode == "session":
+        used.append("KARNI_FRONTEND_URL")
+    if rest_framework_is_karni:
+        used.append("KARNI_AUTH_THROTTLE_RATES")
+    if "LOGGING" not in namespace and "LOGGING" not in merged:
+        used.append("KARNI_JSON_LOGS")
 
     for key in _LIST_MERGED_SETTINGS:
         defaults = merged.pop(key, None)
@@ -442,11 +530,14 @@ def karni_settings(
             json=bool(namespace.get("KARNI_JSON_LOGS", profile == "prod"))
         )
 
-    # KARNI_ADMIN_LOGO → UNFOLD["SITE_LOGO"/"SITE_ICON"]; explicit UNFOLD keys win.
+    # KARNI_ADMIN_LOGO → UNFOLD["SITE_LOGO"/"SITE_ICON"], read per request so
+    # the setting works after the call too; explicit UNFOLD keys win.
+    logo_paths(namespace.get("KARNI_ADMIN_LOGO"))  # E303 now, not at the first admin page
     unfold = namespace.get("UNFOLD")
     if isinstance(unfold, dict):
-        for key, value in unfold_logo_entries(namespace.get("KARNI_ADMIN_LOGO")).items():
-            unfold.setdefault(key, value)
+        unfold.setdefault("SITE_LOGO", site_logo)
+        unfold.setdefault("SITE_ICON", site_icon)
 
     _ensure_sqlite_dir(namespace.get("DATABASES"))
+    _record_consumed(namespace, used)
     maybe_init_sentry(env)

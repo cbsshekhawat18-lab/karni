@@ -15,8 +15,32 @@ reads its own defaults with, in the module, so a setting added after it reads
 the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.
 `SILENCED_SYSTEM_CHECKS` starts as an empty list, so
 `SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.
+Settings read during the call are the exception (see below).
 This page lists the `KARNI_*` settings. The Django and
 DRF settings Karni derives are documented where the feature is.
+
+## Settings read during the call
+
+A few settings are read while `karni_settings()` runs, to compute other settings:
+
+- `KARNI_AUTH_MODE`: CSRF_TRUSTED_ORIGINS and CORS_ALLOW_CREDENTIALS (session mode), and django-otp's middleware with KARNI_2FA
+- `KARNI_2FA`: INSTALLED_APPS and MIDDLEWARE (django-otp)
+- `KARNI_SOCIAL_AUTH`: INSTALLED_APPS, MIDDLEWARE, AUTHENTICATION_BACKENDS and TEMPLATES (django-allauth)
+- `KARNI_SOCIAL_PROVIDERS`: INSTALLED_APPS (one django-allauth provider app each)
+- `KARNI_FRONTEND_URL`: CSRF_TRUSTED_ORIGINS (session mode)
+- `KARNI_AUTH_THROTTLE_RATES`: REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']
+- `KARNI_JSON_LOGS`: LOGGING and the structlog renderer
+- `KARNI_CACHE`: CACHES
+- `KARNI_STORAGE`: STORAGES
+
+Set them in `.env`, define them above the call, or pass them to it:
+`karni_settings(globals(), KARNI_AUTH_MODE="session")`. Assigned below the
+call, they cannot change what the call already computed from them, so startup
+fails with [`karni.E508`](errors.md#e508), which names the setting. Every other
+setting works below the call. `KARNI_ADMIN_LOGO` is one of them: the admin
+reads it on every request.
+
+## All settings
 
 | Setting | Env | Default | What it does |
 |---|---|---|---|

@@ -103,8 +103,9 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C007",
         "A configuration value is invalid",
-        "karni config, KARNI_AGENT_SOURCE, KARNI_TEMPLATES, KARNI_UI_SRC",
-        "karni reads its settings from karni config files and a few environment variables.",
+        "karni config, KARNI_AGENT_SOURCE, KARNI_TEMPLATES, KARNI_UI_SRC, KARNI_DEV_PORT",
+        "karni reads its settings from karni config files and a few environment variables "
+        "(the project's .env included).",
         "Use a value the message lists (karni config shows the known settings), or unset "
         "the environment variable.",
     ),

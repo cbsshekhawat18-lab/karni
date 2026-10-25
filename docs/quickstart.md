@@ -12,7 +12,8 @@ fails.
 You need Python 3.12+, Node 20.19+ with npm 11+ (Node 24 LTS recommended, as
 it bundles npm 11) and Docker, which runs the database. Node 20 and 22 bundle
 npm 10, which cannot install the frontend. Step 4 shows the one command that
-works on any of them.
+works on any of them. Without Docker, a PostgreSQL installed on the machine
+works too: see [Without Docker](#without-docker) below.
 
 ## 1. Install Karni and create a project
 
@@ -38,10 +39,42 @@ folder. pytest and pytest-django are the project's dev dependencies
 
 PostgreSQL is Karni's default and the database it is built and tested for:
 range columns, `EXCLUDE` constraints, trigram search and advisory locks exist
-only there. To try Karni without Docker, SQLite works too. Leave out the
-`docker compose` line and use `DATABASE_URL=sqlite:///data/db.sqlite3` in the
-`printf` line. Karni's system checks say which guarantees SQLite cannot
-give.
+only there. Without Docker, use a PostgreSQL installed on the machine (the
+[Without Docker](#without-docker) section below) or, to try Karni with no
+server at all, SQLite: leave out the `docker compose` line and use
+`DATABASE_URL=sqlite:///data/db.sqlite3` in the `printf` line. Karni's system
+checks say which guarantees SQLite cannot give.
+
+### Without Docker
+
+A PostgreSQL and a Redis installed on the machine replace the compose
+services. On macOS with Homebrew:
+
+```sh
+brew install postgresql@16 redis
+brew services start postgresql@16
+brew services start redis
+```
+
+On Debian or Ubuntu: `sudo apt install postgresql redis-server` (both start
+as services). Homebrew's PostgreSQL creates a superuser role named after
+your account, so the database URL needs no password. Point the project at the
+two services and create its database, then continue with step 2:
+
+```sh
+karni new "Ticket Shop" && cd ticket_shop
+cp .env.example .env
+printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' "$USER" >> .env
+createdb ticket_shop
+```
+
+`karni doctor` looks for a PostgreSQL and a Redis on the machine and prints
+these two `.env` lines, with your user and the project's name, whenever
+`.env` still names the compose hosts `db` and `redis`. With a local Redis,
+`.env` needs no `KARNI_CACHE=locmem` line, and `karni worker` runs the
+Celery worker when something needs it. On Debian or Ubuntu, the `postgres`
+system user owns the server: `sudo -u postgres createuser -s "$USER"` once,
+then `createdb` as above.
 
 ## 2. Add a domain
 
@@ -114,6 +147,10 @@ Plain `karni check` now runs the frontend checks too: ESLint with
 karni serve --local                  # Django on http://127.0.0.1:8000
 cd frontend && npm run dev           # the app on http://localhost:5173
 ```
+
+When port 8000 is taken, put `KARNI_DEV_PORT=8020` in `.env`: `karni serve
+--local` runs Django on that port and the frontend's dev server proxies
+`/api` to it, so nothing else changes.
 
 Open `http://127.0.0.1:8000/` first. It is Karni's welcome page, generated
 from the project as it is right now. It shows your models with their admin

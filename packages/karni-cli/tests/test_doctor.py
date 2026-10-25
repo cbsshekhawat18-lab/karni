@@ -12,7 +12,7 @@ import pytest
 
 import karni_cli.commands.check as check_mod
 import karni_cli.commands.doctor as doctor_mod
-from karni_cli import config, local_state, tips, toolchain
+from karni_cli import config, local_state, services, tips, toolchain
 from karni_cli import project as project_mod
 from karni_cli.environment import CI_ENV_VARS, is_ci
 from karni_cli.main import app
@@ -42,6 +42,9 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_ci: None) -> Pat
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
     )
     monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    # No real DNS lookup or connect: test_services covers the probes.
+    monkeypatch.setattr(services, "resolves", lambda host, timeout=0: False)
+    monkeypatch.setattr(services, "speaks", lambda *a, **k: None)
     return root
 
 
@@ -72,8 +75,17 @@ def test_no_ci_variables_is_not_ci() -> None:
 def test_doctor_reports_the_environment(runner, project: Path) -> None:
     result = runner.invoke(app, ["doctor", "-q"])
     assert result.exit_code == 0, result.output
-    labels = [line.split()[0] for line in result.stdout.splitlines() if line.strip()]
-    assert labels == ["project", "interpreter", "node", "ui", "adapters", "history"]
+    labels = [line.split()[0] for line in result.stdout.splitlines() if line[:1].strip()]
+    assert labels == [
+        "project",
+        "interpreter",
+        "database",
+        "redis",
+        "node",
+        "ui",
+        "adapters",
+        "history",
+    ]
     assert "node-9.9.9 (npm npm-9.9.9)" in result.stdout
     assert "manifest absent" in result.stdout
     assert "stale (24 files)" in result.stdout  # no adapters generated in this bare project
@@ -104,7 +116,9 @@ def test_doctor_flags_npm_10(runner, project: Path, monkeypatch) -> None:
     """Node 20's bundled npm 10.8.2 crashes in the frontend's npm install: doctor says so and how."""
     monkeypatch.setattr(doctor_mod, "tool_version", _versions("v20.20.1", "10.8.2"))
     out = runner.invoke(app, ["doctor", "-q"]).stdout
-    node_line, flag = out.splitlines()[2:4]
+    lines = out.splitlines()
+    at = next(i for i, line in enumerate(lines) if line.startswith("node"))
+    node_line, flag = lines[at : at + 2]
     assert node_line.split() == ["node", "v20.20.1", "(npm", "10.8.2)"]
     assert flag.startswith(" " * 12 + "too old: npm 10.8.2 is below 11")
     for fix in ("npx npm@11 install", "npm install -g npm@11", "Node 24 LTS"):

@@ -158,6 +158,30 @@ def settings(source: str | None = None) -> list[Setting]:
     return found
 
 
+def _call_time_section() -> list[str]:
+    """The settings ``karni_settings()`` reads during the call, from ``CALL_TIME_SETTINGS``."""
+    from karni.conf import CALL_TIME_SETTINGS
+
+    lines = [
+        "## Settings read during the call",
+        "",
+        "A few settings are read while `karni_settings()` runs, to compute other settings:",
+        "",
+    ]
+    lines += [f"- `{name}`: {derived}" for name, derived in CALL_TIME_SETTINGS.items()]
+    lines += [
+        "",
+        "Set them in `.env`, define them above the call, or pass them to it:",
+        '`karni_settings(globals(), KARNI_AUTH_MODE="session")`. Assigned below the',
+        "call, they cannot change what the call already computed from them, so startup",
+        "fails with [`karni.E508`](errors.md#e508), which names the setting. Every other",
+        "setting works below the call. `KARNI_ADMIN_LOGO` is one of them: the admin",
+        "reads it on every request.",
+        "",
+    ]
+    return lines
+
+
 def render(found: list[Setting] | None = None) -> str:
     rows = found if found is not None else settings()
     out = [
@@ -179,8 +203,12 @@ def render(found: list[Setting] | None = None) -> str:
         'the environment the same way: `FEATURE_X = env.bool("FEATURE_X", default=False)`.',
         "`SILENCED_SYSTEM_CHECKS` starts as an empty list, so",
         '`SILENCED_SYSTEM_CHECKS += ["karni.W967"]` silences a check without a NameError.',
+        "Settings read during the call are the exception (see below).",
         "This page lists the `KARNI_*` settings. The Django and",
         "DRF settings Karni derives are documented where the feature is.",
+        "",
+        *_call_time_section(),
+        "## All settings",
         "",
         "| Setting | Env | Default | What it does |",
         "|---|---|---|---|",

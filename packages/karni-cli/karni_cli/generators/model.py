@@ -14,6 +14,7 @@ from __future__ import annotations
 import typer
 
 from karni_cli import project as project_mod
+from karni_cli import pyproject_edit
 from karni_cli.generators import apitest as test_gen
 from karni_cli.generators import factory as factory_gen
 from karni_cli.generators import migration as migration_gen
@@ -34,9 +35,11 @@ from karni_cli.generators.core import (
 from karni_cli.generators.fields import (
     FieldSpec,
     RelationTarget,
+    images_extra_note,
     is_user_target,
     parse_fields,
     pillow_note,
+    reinstall_note,
     relation_name,
     render_model_body,
 )
@@ -94,6 +97,36 @@ def _targets(
     return resolved
 
 
+#: The extra that installs Pillow, which every ImageField needs.
+IMAGES_EXTRA = "images"
+
+
+def plan_images_extra(ws: Workspace, images: list[str]) -> None:
+    """Make the project's ``karni`` dependency ``karni[images]`` for ``images`` (ImageFields).
+
+    The one requirement string in ``pyproject.toml`` is edited in place
+    (:mod:`karni_cli.pyproject_edit`), so ``--dry-run`` shows it in the diff.
+    A project that lists the extra already is left alone. One the edit cannot
+    handle gets the manual step instead, when its Python lacks Pillow.
+    """
+    has_pillow = project_mod.project_has_module(ws.root, "PIL")
+    text = ws.read("pyproject.toml")
+    try:
+        if text is None:
+            raise pyproject_edit.CannotEdit("the project has no pyproject.toml")
+        edit = pyproject_edit.add_extra(text, "karni", IMAGES_EXTRA)
+    except pyproject_edit.CannotEdit as exc:
+        if has_pillow is not True:
+            ws.note(f"{pillow_note(images, missing=has_pillow is False)} ({exc}.)")
+        return
+    if edit is None:
+        if has_pillow is False:
+            ws.note(reinstall_note(images))
+        return
+    ws.write("pyproject.toml", edit.text)
+    ws.note(images_extra_note(images, edit.before, edit.after))
+
+
 def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
     """Plan the model class in ``<app>/models.py``; returns the class name."""
     model = require_pascal(name, "Model name")
@@ -122,9 +155,7 @@ def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
     for note in body.notes:
         ws.note(note)
     if body.images:
-        has_pillow = project_mod.project_has_module(ws.root, "PIL")
-        if has_pillow is not True:
-            ws.note(pillow_note(body.images, missing=has_pillow is False))
+        plan_images_extra(ws, body.images)
     return model
 
 
