@@ -139,7 +139,7 @@ no factory and no test scaffolding. The two commands in step 2 declared the
 domain, and the framework did the rest. From here:
 
 - The [tutorial](tutorial.md) builds the reference app, EventHub, with
-  payments, a Celery email and four roles, in 619 lines of project code.
+  payments, a Celery email and four roles, in 613 lines of project code.
 - [Building with an AI agent](guide/with-ai.md) shows the same workflow
   driven by Claude Code or Cursor.
 - [Building without one](guide/without-ai.md) lists every `karni make`
