@@ -607,11 +607,17 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
         "templates/website/base.html",
         "templates/website/home.html",
         "templates/404.html",
+        "templates/500.html",
         "static/website/site.css",
         "tests/test_pages.py",
     ):
         assert (site / rel).is_file(), rel
-    assert '    "website",\n]  # karni:apps' in (project / "config" / "settings.py").read_text()
+    settings = (project / "config" / "settings.py").read_text()
+    assert '    "website",\n    "karni_site",\n]  # karni:apps' in settings
+    # The site's runtime is the karni-site module, wired as `karni add site` does.
+    assert '"karni-site"' in (project / "pyproject.toml").read_text()
+    assert "karni-site: added to pyproject.toml and INSTALLED_APPS" in result.output
+    assert "Run `karni add site` again after installing" in result.output
     views = (site / "views.py").read_text()
     assert "def home(request: HttpRequest) -> HttpResponse:" in views
     assert 'return render(request, "website/home.html")' in views
@@ -623,7 +629,12 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     marker = config.index("    # karni:urls\n")
     assert config.index(INCLUDE) < marker < config.index("    *welcome_urls(),")
     base = (site / "templates" / "website" / "base.html").read_text()
+    assert base.startswith("{% load static karni_site %}<!DOCTYPE html>")
     assert '<link rel="canonical"' in base and "{% static 'website/site.css' %}" in base
+    assert (
+        '<a href="{% url \'website:home\' %}"{% ifactive "website:home" %} aria-current="page"'
+        "{% endifactive %}>Home</a>"
+    ) in base
     assert "<title>{% block title %}Website{% endblock %}</title>" in base
     assert '<meta name="description" content="{% block description %}{% endblock %}">' in base
     assert "<img" not in base
@@ -633,9 +644,17 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     assert 'PAGES = [\n    "/",\n    # karni:pages\n]\n' in test
     assert "    assert_pages(client, PAGES)\n" in test
     assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()
+    assert "Something went wrong" in (site / "templates" / "500.html").read_text()
+    assert config.endswith(
+        "# The site's own error pages (templates/404.html and 500.html), rendered with the\n"
+        "# request by karni_site, which falls back to a plain page if one fails.\n"
+        'handler404 = "karni_site.views.page_not_found"\n'
+        'handler500 = "karni_site.views.server_error"\n'
+    )
     assert "modified config/urls.py" in result.output
     assert "site: / -> website.views.home (website:home)" in result.output
-    assert "next: karni make view <name> --app website" in result.output
+    assert "next: karni import design <folder> --app website" in result.output
+    assert "karni make view <name> --app website" in result.output
     assert "karni make model" not in result.output
 
 
@@ -651,7 +670,9 @@ def test_site_is_idempotent_and_never_truncates(project: Path) -> None:
     assert (project / "website" / "templates" / "404.html").is_file()
     assert "# project code" in views.read_text()
     assert views.read_text().count("def home(") == 1
-    assert (project / "config" / "urls.py").read_text().count(INCLUDE) == 1
+    config = (project / "config" / "urls.py").read_text()
+    assert config.count(INCLUDE) == 1 and config.count("handler404 = ") == 1
+    assert (project / "config" / "settings.py").read_text().count('"karni_site"') == 1
     urls = (project / "website" / "urls.py").read_text()
     assert urls.count('path("", views.home, name="home")') == 1
 

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order — Crumb & Co</title>
+  <meta name="description" content="Order a cake or ask a question.">
+  <link rel="icon" href="img/logo.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Lora&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="top">
+    <a class="brand" href="index.html"><img src="img/logo.svg" alt="Crumb &amp; Co"></a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="menu.html">Menu</a>
+      <a href="contact.html?topic=order" class="active">Order</a>
+    </nav>
+  </header>
+
+  <section class="contact">
+    <h1>Order</h1>
+    <form action="https://forms.example.com/crumb" method="post">
+      <label>Email <input type="email" name="email"></label>
+      <button type="submit">Send</button>
+    </form>
+    <button type="button" onclick="history.back()">Back</button>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>&copy; 2026 Crumb &amp; Co &middot; <a href="menu.html#cakes">Cakes</a> &middot; <a href="https://maps.example.com/crumb">Find us</a></p>
+  </footer>
+</body>
+</html>

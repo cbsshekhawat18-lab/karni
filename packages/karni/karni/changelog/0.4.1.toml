@@ -73,3 +73,19 @@ twice, or seeds after loading data, passes --reset to start over or --force \
 to add demo rows on top."""
 mechanical = false
 migration = "migrations/0.4.1.md#karni-seed-refuses-tables-that-already-hold-rows"
+
+[[change]]
+id = "site-runtime-module"
+kind = "project-files"
+symbol = "karni make site"
+summary = """\
+A site app's runtime now comes from the karni-site module: the {% ifactive %} tag \
+for the current menu item, {% csp_hash %} and {% csp_allow %} for a design's inline \
+scripts and other origins under the Content-Security-Policy, and the error views \
+that render templates/404.html and 500.html with the request. `karni make site` \
+wires the module (the dependency, the `# karni:apps` entry, handler404 and \
+handler500 in config/urls.py) and writes templates/500.html. A site app created \
+before this gets the missing pieces from `karni make site <app> --force` after \
+`pip install karni-site`, and its base.html can load `karni_site` for the tags."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-site-apps-runtime-is-the-karni-site-module"

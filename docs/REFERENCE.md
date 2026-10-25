@@ -1093,7 +1093,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency and the `# karni:apps` entry are added as `karni add site` would. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1140,6 +1140,34 @@ karni make module [OPTIONS] NAME
 | `NAME` (required) |  | Module short name (e.g. payments, live-chat). |
 | `--dir` PATH |  | Parent directory (default: modules/ in the project, else the cwd). |
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+#### `karni import`
+
+Import a designer's files into the project.
+
+```
+karni import COMMAND [ARGS]...
+```
+
+##### `karni import design`
+
+Build the public site from a folder of static pages, keeping the design as written.
+
+Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
+
+Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since.
+
+```
+karni import design [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages, CSS, JavaScript and images. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--diff` |  | Report what changed since the last import and write nothing. |
+| `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
 ### Debugging
@@ -1443,6 +1471,14 @@ class Lead(BaseModel):
 | `RAZORPAY_KEY_SECRET` | `RAZORPAY_KEY_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `RAZORPAY_WEBHOOK_SECRET` | `RAZORPAY_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 
+### Module: karni-site
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_SITE_IS_ACTIVE` |  | `"karni_site.navigation.is_active"` | The function {% ifactive %} asks whether a pattern names the current page: (request, pattern) -&gt; bool. A dotted path, so a project can swap the rule. |
+| `KARNI_SITE_SERVER_ERROR_TEMPLATES` |  | `["500.html", "karni_site/500.html"]` | The templates karni_site.views.server_error tries in order. The first that renders is the page. The last is this module's plain page, which needs nothing. |
+| `KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
+
 ## Components and hooks
 
 Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the TypeScript compiler. *Required props* are the props without a default. Every component takes more ([UI guide](ui.md)).
@@ -1591,6 +1627,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
+| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | The current page in a menu, a design's inline scripts under the Content-Security-Policy, and error pages that cannot fail. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ## Error codes
@@ -1782,6 +1819,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`PAY007`](errors.md#pay007) | exception | The currency or amount cannot be charged exactly |
 | [`PAY008`](errors.md#pay008) | api | A checkout redirect URL points at an origin that is not allowed |
 | [`PAY009`](errors.md#pay009) | exception | A webhook event matches no local payment |
+| [`SITE001`](errors.md#site001) | check | Templates do not get the request |
+| [`SITE002`](errors.md#site002) | check | {% ifactive %} names a URL the project does not have |
+| [`SITE003`](errors.md#site003) | exception | A karni_site template tag is written wrongly |
 
 ### The `karni` command (`C`)
 
@@ -1810,6 +1850,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C108`](errors.md#c108) | cli | A karni marker is missing from a project file |
 | [`C109`](errors.md#c109) | cli | An explicit serializer needs a reason |
 | [`C110`](errors.md#c110) | cli | A project file cannot be parsed |
+| [`C111`](errors.md#c111) | cli | The design folder has nothing to import |
 | [`C199`](errors.md#c199) | cli | Internal error in karni |
 | [`C201`](errors.md#c201) | cli | karni upgrade needs a clean git work tree |
 | [`C202`](errors.md#c202) | cli | karni upgrade does not downgrade |

@@ -258,6 +258,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
 | [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [module](docs/REFERENCE.md#karni-make-module) |
+| [`karni import`](docs/REFERENCE.md#karni-import) | Import a designer's files into the project: [design](docs/REFERENCE.md#karni-import-design) |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -374,6 +375,7 @@ A module is a separate package for anything with its own service or a real memor
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
+- `experimental` `karni add site`: The current page in a menu, a design's inline scripts under the Content-Security-Policy, and error pages that cannot fail
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->
 

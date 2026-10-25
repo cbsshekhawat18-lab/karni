@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation]
+        package: [packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7

@@ -1832,6 +1832,38 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Usually nothing: the retry succeeds. If it keeps failing, the payment was created outside Karni (or in another environment sharing the webhook): check the provider ids in the message.
 
+## SITE (`SITE`)
+
+<a id="site001"></a>
+
+### SITE001: Templates do not get the request
+
+*system check (error)* · from `karni_site.checks`
+
+**Why Karni objects.** {% ifactive %} reads the current page from the request, and {% csp_hash %} and {% csp_allow %} add to the request's Content-Security-Policy. Without django.template.context_processors.request in the template engine's context_processors, no menu item is ever current and the design's inline scripts are blocked in production.
+
+**Fix.** Add 'django.template.context_processors.request' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py (karni_settings() includes it unless the project replaced TEMPLATES).
+
+<a id="site002"></a>
+
+### SITE002: {% ifactive %} names a URL the project does not have
+
+*system check (error)* · from `karni_site.checks`
+
+**Why Karni objects.** A menu item marks itself current when the request resolved to one of the URL names in its {% ifactive %}. A name that no URL pattern has, after a view was renamed or removed, never matches, so the item is never marked and nothing fails.
+
+**Fix.** Use the name `karni routes` lists for that page (`<app>:<name>`), or remove the name from the tag.
+
+<a id="site003"></a>
+
+### SITE003: A karni_site template tag is written wrongly
+
+*exception* · from `karni_site.templatetags.karni_site`
+
+**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". The template does not compile otherwise.
+
+**Fix.** Write the tag as the message shows. The karni-site README has an example of each.
+
 ## The karni command (`C`)
 
 <a id="c001"></a>
@@ -2063,6 +2095,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni make edits your files structurally and stops rather than guess.
 
 **Fix.** Fix the syntax error at the file and line in the message, then re-run.
+
+<a id="c111"></a>
+
+### C111: The design folder has nothing to import
+
+*karni command* · from `karni import design`
+
+**Why Karni objects.** karni import design reads a folder of static pages: every .html file in it is a page (a meta-refresh stub is a redirect), and every other file is copied as an asset.
+
+**Fix.** Pass the folder that holds the design's index.html and the other pages, with its css/, js/ and image folders inside it.
 
 <a id="c199"></a>
 
@@ -2850,11 +2892,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. `karni make view <name> --app <app>` adds a page. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app>`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. The site's runtime (the `{% ifactive %}` and `{% csp_hash %}` tags, the error pages) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
 
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
-**Fix.** Run `karni make site <app>`, then `karni make view <name> --app <app>` per page. Karni's docs page public-site covers SEO and public forms.
+**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app>` for a designer's pages or `karni make view <name> --app <app>` per page. Karni's docs page public-site covers SEO and public forms.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

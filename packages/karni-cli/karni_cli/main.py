@@ -13,6 +13,7 @@ from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
 from karni_cli.commands.doctor import doctor
 from karni_cli.commands.explain import explain
+from karni_cli.commands.import_design import import_app
 from karni_cli.commands.load import load
 from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
@@ -116,6 +117,8 @@ app.command("why-empty", help="Explain an empty list: which step removes the row
 # Generators: `karni make <type>` (+ hidden `karni make:<type>` aliases).
 app.add_typer(make_app, name="make")
 register_aliases(app)
+# Imports: `karni import design <dir>`.
+app.add_typer(import_app, name="import")
 
 
 def run() -> None:

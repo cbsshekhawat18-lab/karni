@@ -11,6 +11,42 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **A designer's static pages become the site: `karni import design <dir>
+  --app <app>`.** The folder's HTML, CSS, JavaScript and images become a site
+  app with the design kept as written. The files are copied unchanged under
+  `static/<app>/`, the header, navigation and footer every page shares go
+  into `base.html` (a block some pages share becomes a partial, a page whose
+  header differs keeps its own in a block override), each page becomes a
+  template extending it with a view and a route (`index.html` answers `/`,
+  `about.html` `/about/`, a folder a nested route), links become `{% url %}`
+  and asset paths `{% static %}` (anchors and query strings kept, `srcset`
+  and `url(...)` in style attributes included), a meta-refresh stub becomes a
+  permanent redirect, and the current menu item is marked with
+  `{% ifactive %}` wherever the designer marked it, whatever class or
+  attribute the design uses. Inline scripts are wrapped in `{% csp_hash %}`
+  so they run under the Content-Security-Policy, and the origins a page
+  loads from are declared with `{% csp_allow %}`. Every page joins the page
+  test. The report names the files no page or stylesheet uses and anything
+  that could not be mapped. `.karni/design.json` records the import: a
+  second run with a new version of the design reports what changed
+  (`--diff` reports only) and keeps every file the project edited since
+  (`--force` replaces them). The parsing, comparison and rewriting live in
+  `karni_cli.design` for the later `karni design` commands.
+  [docs/public-site.md](docs/public-site.md#import-a-design).
+- **New module `karni-site`: the runtime of a public site.** `{% ifactive
+  "<app>:<name>" %}` marks the current page in a menu around whatever markup
+  the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's
+  inline scripts and other origins pass the Content-Security-Policy for that
+  response only, and `karni_site.views.page_not_found` and `server_error`
+  render the site's own 404 and 500 pages with the request and fall back to
+  a plain page when one fails. `karni check` runs SITE001 (templates get the
+  request) and SITE002 (every URL name an `{% ifactive %}` names exists).
+  `karni make site` wires the module the way `karni add site` does, sets
+  `handler404` and `handler500`, and writes `templates/500.html`. In
+  core, `karni.security.extend_request_csp(request, {...})` adds sources for
+  one response from code that runs while it is built, and a hash added next
+  to `'unsafe-inline'` is left out, because a browser would otherwise ignore
+  the `'unsafe-inline'`. [docs/modules.md](docs/modules.md).
 - **Public server-rendered pages have a home.** `karni make site <app>`
   creates a site app (function views, `urls.py` with `app_name`, templates,
   static files, a 404 page) and includes it at `""` in `config/urls.py`, so

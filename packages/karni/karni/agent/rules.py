@@ -391,7 +391,11 @@ RULES: tuple[Rule, ...] = (
             "views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at "
             '`path("", ...)` in config/urls.py (which replaces the welcome page), templates in '
             "`<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. "
-            "`karni make view <name> --app <app>` adds a page. Views read content through each "
+            "A designer's static pages go in with `karni import design <dir> --app <app>`, "
+            "which keeps the markup as written, never by copying them by hand. "
+            "`karni make view <name> --app <app>` adds a page. The site's runtime (the "
+            "`{% ifactive %}` and `{% csp_hash %}` tags, the error pages) is the karni-site "
+            "module, never project code. Views read content through each "
             "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
             "rows stay hidden) and filter drafts themselves. A public form posts to a "
             "`BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends "
@@ -406,8 +410,9 @@ RULES: tuple[Rule, ...] = (
             "API, the admin and the access layer as the only write path."
         ),
         fix=(
-            "Run `karni make site <app>`, then `karni make view <name> --app <app>` per page. "
-            "Karni's docs page public-site covers SEO and public forms."
+            "Run `karni make site <app>`, then `karni import design <dir> --app <app>` for a "
+            "designer's pages or `karni make view <name> --app <app>` per page. Karni's docs "
+            "page public-site covers SEO and public forms."
         ),
     ),
     # backend

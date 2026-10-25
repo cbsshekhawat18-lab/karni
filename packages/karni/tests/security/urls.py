@@ -12,7 +12,7 @@ from drf_spectacular.views import (
 )
 
 from karni.scoping import admin_site
-from karni.security import csp_exempt, csp_extend
+from karni.security import csp_exempt, csp_extend, extend_request_csp, script_hash
 from karni.welcome.views import WelcomeView
 
 
@@ -28,6 +28,19 @@ def with_map(request: HttpRequest) -> HttpResponse:
 @csp_exempt
 def exempt(request: HttpRequest) -> HttpResponse:
     return HttpResponse("<p>exempt</p>")
+
+
+def while_rendering(request: HttpRequest) -> HttpResponse:
+    # What a template tag does while the page renders: it has the request, not the response.
+    extend_request_csp(request, {"script-src": [script_hash("run()")]})
+    extend_request_csp(request, {"style-src": "https://fonts.example.com"})
+    return HttpResponse("<script>run()</script>")
+
+
+@csp_extend({"img-src": ["https://tiles.example.com"]})
+def both_ways(request: HttpRequest) -> HttpResponse:
+    extend_request_csp(request, {"img-src": ["https://cdn.example.com"]})
+    return HttpResponse("<p>both</p>")
 
 
 def own_policy(request: HttpRequest) -> HttpResponse:
@@ -46,6 +59,8 @@ urlpatterns = [
     path("plain/", plain),
     path("map/", with_map),
     path("exempt/", exempt),
+    path("rendering/", while_rendering),
+    path("both/", both_ways),
     path("own/", own_policy),
     path("", WelcomeView.as_view()),
 ]
