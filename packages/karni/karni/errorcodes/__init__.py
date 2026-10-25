@@ -575,6 +575,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has "
         "(the standard ones, or a custom @action by its method name).",
     ),
+    # E1xx API: the staff app's dashboard
+    _e(
+        "E133",
+        "Karni.dashboard is malformed or names a field the model does not have",
+        "check",
+        "karni.dashboard.dashboard_spec; karni.checks.check_dashboards",
+        "The dashboard declaration is published in the OpenAPI schema and @karni/ui's "
+        "<Dashboard> counts rows with the list endpoint's filters. A field name with a typo, "
+        "a value the field does not have or a count without filters would show a wrong number, "
+        "so the declaration is refused at boot.",
+        "Write dashboard = True, or a dict with the keys label, order, total, new_days, by, "
+        "values, counts, recent, columns and date_field, naming fields of the model: e.g. "
+        "dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, "
+        "'recent': 5}.",
+    ),
     _e(
         "W101",
         "A hand-written serializer duplicates the one Karni generates",

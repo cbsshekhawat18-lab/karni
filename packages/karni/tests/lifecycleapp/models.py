@@ -33,6 +33,7 @@ class Order(BaseModel):
 
     class Karni:
         audit = ["title", "status"]
+        dashboard = True  # tests/test_dashboard.py: every default
 
     def __str__(self) -> str:
         return self.title or str(self.pk)

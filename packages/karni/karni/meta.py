@@ -155,6 +155,14 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "A callable, or its dotted path, run once an import commits, with the result.",
         'after_import = "shop.imports.reindex"',
     ),
+    Option(
+        "dashboard",
+        "`None`",
+        "Put the model on the staff app's dashboard: counts (all rows, new ones, one per "
+        "state) and the newest rows. `True` for the defaults, or a dict "
+        "([API: dashboard](api.md#the-staff-dashboard)).",
+        'dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}',
+    ),
     # typed field layer (karni.fields)
     Option(
         "append_only",

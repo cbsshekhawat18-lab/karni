@@ -1,8 +1,11 @@
-"""A tolerant CSS reader: the custom properties of each rule, and Tailwind 4 ``@theme`` blocks.
+"""A tolerant CSS reader: the declarations of each rule, and Tailwind 4 ``@theme`` blocks.
 
-It reads what ``karni ui detect`` needs and nothing more: rules nested in
-``@layer``, ``@media`` and ``@supports`` are found; ``@keyframes``,
-``@font-face`` and other blocks are skipped. It never raises on odd input.
+It reads what ``karni ui detect`` needs and nothing more: every rule's custom
+properties (``declarations``) and its ordinary properties (``properties``,
+which ``--css`` reads ``body``, ``a`` and ``button`` rules from); rules nested
+in ``@layer``, ``@media`` and ``@supports`` are found with their context;
+``@keyframes``, ``@font-face`` and other blocks are skipped. It never raises
+on odd input.
 """
 
 from __future__ import annotations
@@ -18,12 +21,17 @@ _NESTING_AT_RULES = frozenset(
 
 @dataclass(frozen=True)
 class Rule:
-    """One style rule (``selectors``) or one ``@theme`` block (``theme`` holds its prelude)."""
+    """One style rule (``selectors``) or one ``@theme`` block (``theme`` holds its prelude).
+
+    ``declarations`` holds the custom properties, ``properties`` the ordinary
+    ones (``background-color``, ``font-family``), names lowercased.
+    """
 
     selectors: tuple[str, ...]
     declarations: dict[str, str]
     context: tuple[str, ...] = ()
     theme: str = ""  # "@theme", "@theme inline", ... ; empty for a style rule
+    properties: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -89,6 +97,15 @@ def _matching_brace(text: str, start: int) -> int:
 
 def declarations(body: str) -> dict[str, str]:
     """The custom properties (``--name: value``) declared directly in a block body."""
+    return {name: value for name, value in all_declarations(body).items() if name.startswith("--")}
+
+
+def all_declarations(body: str) -> dict[str, str]:
+    """Every declaration directly in a block body: custom properties as written, others lowercased.
+
+    An ``!important`` flag is dropped from the value (``--css`` reads the value,
+    not the cascade).
+    """
     found: dict[str, str] = {}
     depth = 0
     start = 0
@@ -114,9 +131,16 @@ def declarations(body: str) -> dict[str, str]:
     for part in parts:
         name, sep, value = part.partition(":")
         name = name.strip()
-        if not sep or not name.startswith("--") or "{" in name:
+        if not sep or "{" in name or not name:
             continue
-        found[name] = " ".join(value.split())
+        if not name.startswith("--"):
+            name = name.lower()
+            if not re.match(r"^[a-z-]+$", name):
+                continue
+        value = " ".join(value.split())
+        if not name.startswith("--"):
+            value = re.sub(r"\s*!\s*important\s*$", "", value, flags=re.IGNORECASE)
+        found[name] = value
     return found
 
 
@@ -153,7 +177,15 @@ def _parse_into(sheet: Stylesheet, text: str, context: tuple[str, ...]) -> None:
                     _parse_into(sheet, body, (*context, prelude))
             elif prelude:
                 selectors = tuple(s.strip() for s in prelude.split(",") if s.strip())
-                sheet.rules.append(Rule(selectors, declarations(body), context))
+                everything = all_declarations(body)
+                sheet.rules.append(
+                    Rule(
+                        selectors,
+                        {k: v for k, v in everything.items() if k.startswith("--")},
+                        context,
+                        properties={k: v for k, v in everything.items() if not k.startswith("--")},
+                    )
+                )
             i = end + 1
             prelude_start = i
             continue

@@ -232,8 +232,22 @@ export const openApiFixture = {
       get: {
         operationId: "events_list",
         "x-karni-resource": "events",
+        // Karni.dashboard on the Event model, normalized by the server (karni.dashboard).
+        "x-karni-dashboard": {
+          label: "Events",
+          order: 0,
+          total: true,
+          new_days: 7,
+          date_field: "created_at",
+          by: "status",
+          values: ["draft", "published"],
+          counts: [{ label: "Public", params: { is_public: true } }],
+          recent: 3,
+          columns: ["title", "status"],
+        },
         parameters: [
           queryParam("category", { type: "string", enum: ["conference", "meetup", "workshop"] }),
+          queryParam("created_at__gte", { type: "string", format: "date-time" }),
           expandParam,
           queryParam("is_public", { type: "boolean" }),
           queryParam("ordering", { type: "string" }),

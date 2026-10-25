@@ -1,5 +1,6 @@
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import { AuthContext } from "../../../auth/provider";
 import { karniKeys } from "../../../hooks/keys";
 import type { ResourceItemParams } from "../../../hooks/types";
 import { useResourceItem } from "../../../hooks/useResourceItem";
@@ -22,6 +23,25 @@ import { EmptyValue } from "../empty-value";
 import { humanizeValue } from "../form/prepare";
 import { singularNoun } from "../nouns";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
+import { evaluateAccess } from "../table/access";
+import {
+  DefaultTransitions,
+  TransitionConfirm,
+  TransitionFailure,
+  askFirst,
+  stateLabel,
+  transitionError,
+  transitionTargets,
+  type ResourceDetailTransitionOptions,
+  type ResourceDetailTransitionTarget,
+  type ResourceDetailTransitionsProps,
+} from "./transitions";
+
+export type {
+  ResourceDetailTransitionOptions,
+  ResourceDetailTransitionTarget,
+  ResourceDetailTransitionsProps,
+};
 
 registerComponentRole("detail-view", "ResourceDetail");
 
@@ -101,6 +121,8 @@ export interface ResourceDetailSlots {
   DeleteDialog: React.ComponentType<ResourceDetailDeleteDialogProps>;
   /** Shown in place of the record once it is deleted from this view. */
   Deleted: React.ComponentType<ResourceDetailDeletedProps>;
+  /** The lifecycle buttons of one StateField (see the `transitions` prop). */
+  Transitions: React.ComponentType<ResourceDetailTransitionsProps>;
 }
 
 export interface ResourceDetailProps {
@@ -128,6 +150,16 @@ export interface ResourceDetailProps {
   canDelete?: boolean | ((item: Item) => boolean);
   /** Called after a confirmed delete succeeded (navigate away from here). */
   onDeleted?: (item: Item) => void;
+  /**
+   * Lifecycle buttons for a StateField (`x-karni-transitions` in the schema):
+   * one per state the record's current state may move to, shown when the API
+   * lets this user write the field. A click PATCHes the field, and a move into
+   * a terminal state asks first. Default true. `false` hides them, and an
+   * object tunes them (fields, button labels, which moves ask, who may).
+   */
+  transitions?: boolean | ResourceDetailTransitionOptions;
+  /** Called after a lifecycle move succeeded, with the record as the server returned it. */
+  onTransition?: (item: Item, field: string, target: string) => void;
   /** Replace parts of the view: Loading, Error, NotFound, EmptyValue, DeleteDialog, Deleted. */
   slots?: Partial<ResourceDetailSlots>;
   className?: string;
@@ -424,6 +456,7 @@ export const defaultResourceDetailSlots: ResourceDetailSlots = {
   EmptyValue: DefaultEmptyValue,
   DeleteDialog: DefaultDeleteDialog,
   Deleted: DefaultDeleted,
+  Transitions: DefaultTransitions,
 };
 
 function DetailRow(props: {
@@ -452,6 +485,31 @@ function DetailRow(props: {
       </dd>
     </div>
   );
+}
+
+/** The lifecycle fields of this record that show buttons, with their targets. */
+function lifecycleControls(
+  fields: readonly FieldDef[],
+  item: Item,
+  options: ResourceDetailTransitionOptions,
+  mayUpdate: () => boolean,
+): Array<{ field: FieldDef; current: string; targets: ResourceDetailTransitionTarget[] }> {
+  const chosen = fields.filter(
+    (field) =>
+      field.transitions !== undefined &&
+      (options.fields === undefined || options.fields.includes(field.name)),
+  );
+  if (chosen.length === 0 || !mayUpdate()) return [];
+  const found: Array<{
+    field: FieldDef;
+    current: string;
+    targets: ResourceDetailTransitionTarget[];
+  }> = [];
+  for (const field of chosen) {
+    const entry = transitionTargets(field, item, options);
+    if (entry !== null) found.push({ field, ...entry });
+  }
+  return found;
 }
 
 function allowed(rule: boolean | ((item: Item) => boolean) | undefined, item: Item): boolean {
@@ -514,6 +572,8 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     enableDelete = false,
     canDelete,
     onDeleted,
+    transitions = true,
+    onTransition,
     slots,
     className,
   } = props;
@@ -526,7 +586,23 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
 
   const schemaResult = useSchema(resource);
   const schemaFetching = useIsFetching({ queryKey: karniKeys.schema() }) > 0;
-  const { remove } = useResourceMutations(resource);
+  const { remove, update } = useResourceMutations(resource);
+  const auth = React.useContext(AuthContext);
+  const authStatus = auth?.status;
+  const authUser = auth?.user ?? null;
+  const identity = React.useMemo(
+    () => (authStatus === undefined ? null : { status: authStatus, user: authUser }),
+    [authStatus, authUser],
+  );
+  // lifecycle moves: the one asking for confirmation, the one saving, the last failure
+  const [asking, setAsking] = React.useState<{ field: string; target: string } | null>(null);
+  const [moving, setMoving] = React.useState<{ field: string; target: string } | null>(null);
+  const [moveFailure, setMoveFailure] = React.useState<{
+    field: FieldDef;
+    target: string;
+    error: unknown;
+  } | null>(null);
+  const [moved, setMoved] = React.useState("");
   const params: ResourceItemParams | undefined = React.useMemo(
     () => (expand !== undefined && expand.length > 0 ? { expand } : undefined),
     [expand],
@@ -635,7 +711,44 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
       : undefined;
   const mayEdit = onEdit !== undefined && canEdit !== false;
   const mayDelete = enableDelete && canDelete !== false;
-  const hasHeader = title !== undefined || actions !== undefined || mayEdit || mayDelete;
+  const transitionOptions: ResourceDetailTransitionOptions | null =
+    transitions === false ? null : transitions === true ? {} : transitions;
+  const lifecycle =
+    transitionOptions !== null && schema !== undefined && item !== undefined && !deleting
+      ? lifecycleControls(schema.fields, item, transitionOptions, () =>
+          schema.operations.update === undefined
+            ? false
+            : evaluateAccess(schema.operations.update.access, identity, item) !== false,
+        )
+      : [];
+  const hasLifecycle = lifecycle.length > 0;
+  const hasHeader =
+    title !== undefined || actions !== undefined || mayEdit || mayDelete || hasLifecycle;
+
+  const move = (field: FieldDef, target: string): void => {
+    if (item === undefined) return;
+    setAsking(null);
+    setMoveFailure(null);
+    setMoved("");
+    setMoving({ field: field.name, target });
+    update.mutate(
+      { id, values: { [field.name]: target } },
+      {
+        onSuccess: (saved) => {
+          setMoving(null);
+          setMoved(`${field.label} changed to ${stateLabel(field, target)}.`);
+          onTransition?.(saved, field.name, target);
+        },
+        onError: (failure) => {
+          setMoving(null);
+          setMoveFailure({ field, target, error: failure });
+        },
+      },
+    );
+  };
+  const askedFor =
+    asking === null ? undefined : lifecycle.find((entry) => entry.field.name === asking.field);
+  const askedTarget = askedFor?.targets.find((target) => target.value === asking?.target);
 
   const header = hasHeader ? (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -653,7 +766,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
       ) : (
         <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       )}
-      {actions !== undefined || mayEdit || mayDelete ? (
+      {actions !== undefined || mayEdit || mayDelete || hasLifecycle ? (
         <div className="flex flex-wrap items-center gap-2">
           {item === undefined ? (
             <>
@@ -667,6 +780,26 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
             </>
           ) : (
             <>
+              {lifecycle.map((entry) => (
+                <Slots.Transitions
+                  key={entry.field.name}
+                  field={entry.field}
+                  item={item}
+                  current={entry.current}
+                  currentLabel={stateLabel(entry.field, entry.current)}
+                  targets={entry.targets}
+                  pending={moving?.field === entry.field.name ? moving.target : null}
+                  onMove={(target) => {
+                    const chosen = entry.targets.find((candidate) => candidate.value === target);
+                    if (chosen === undefined) return;
+                    if (askFirst(transitionOptions?.confirm, chosen)) {
+                      setAsking({ field: entry.field.name, target });
+                    } else {
+                      move(entry.field, target);
+                    }
+                  }}
+                />
+              ))}
               {typeof actions === "function" ? actions(item) : actions}
               {onEdit !== undefined && mayEdit && allowed(canEdit, item) ? (
                 <Button variant="outline" onClick={() => onEdit(item)}>
@@ -722,6 +855,15 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   return (
     <div className={cn("space-y-6", className)}>
       {header}
+      <span role="status" className="sr-only">
+        {moved}
+      </span>
+      {moveFailure !== null ? (
+        <TransitionFailure
+          title={`Couldn't mark this ${label} as ${stateLabel(moveFailure.field, moveFailure.target)}`}
+          message={transitionError(moveFailure.error, moveFailure.field.name)}
+        />
+      ) : null}
       <dl className="[&>*+*]:border-t [&>*+*]:border-border">
         {domain.map((field) => (
           <DetailRow
@@ -760,6 +902,20 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
         </section>
       ) : null}
       {appended}
+      {askedFor !== undefined && askedTarget !== undefined ? (
+        <TransitionConfirm
+          open
+          onOpenChange={(open) => {
+            if (!open && moving === null) setAsking(null);
+          }}
+          resourceLabel={label}
+          field={askedFor.field}
+          currentLabel={stateLabel(askedFor.field, askedFor.current)}
+          target={askedTarget}
+          pending={moving !== null}
+          onConfirm={() => move(askedFor.field, askedTarget.value)}
+        />
+      ) : null}
       {mayDelete ? (
         <Slots.DeleteDialog
           open={deleteOpen}

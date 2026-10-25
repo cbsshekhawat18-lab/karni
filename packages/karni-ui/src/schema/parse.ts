@@ -22,6 +22,8 @@
  */
 
 import type {
+  DashboardCountDef,
+  DashboardDef,
   FieldDef,
   FieldKind,
   OperationDef,
@@ -184,6 +186,8 @@ interface PropertyInfo {
   relationValueType?: "uuid" | "integer" | "string";
   /** True when this side emits format: binary (request side of a file field). */
   binary: boolean;
+  transitions?: Readonly<Record<string, readonly string[]>>;
+  initial?: readonly string[];
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -204,6 +208,26 @@ function relationFromExtension(schema: SchemaObject): RelationRef | undefined {
     return { resource: ext.resource, many: ext.many === true };
   }
   return undefined;
+}
+
+function stringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+/** `x-karni-transitions` (state → next states) and `x-karni-initial`, when well formed. */
+function lifecycleFromExtension(
+  schema: SchemaObject,
+): Pick<PropertyInfo, "transitions" | "initial"> {
+  const raw = schema["x-karni-transitions"];
+  if (!isRecord(raw)) return {};
+  const transitions: Record<string, readonly string[]> = {};
+  for (const [state, next] of Object.entries(raw)) {
+    const targets = stringList(next);
+    if (targets !== undefined) transitions[state] = targets;
+  }
+  const initial = stringList(schema["x-karni-initial"]);
+  return initial !== undefined ? { transitions, initial } : { transitions };
 }
 
 function relationValueTypeOf(schema: SchemaObject): "uuid" | "integer" | "string" {
@@ -312,6 +336,7 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
     max: resolved.maximum,
     relation,
     binary: false,
+    ...lifecycleFromExtension(resolved),
   };
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
@@ -465,8 +490,60 @@ function mergeField(
     const valueType = requestInfo?.relationValueType ?? responseInfo?.relationValueType;
     if (valueType !== undefined) field.relationValueType = valueType;
   }
+  const transitions = responseInfo?.transitions ?? requestInfo?.transitions;
+  if (transitions !== undefined) field.transitions = transitions;
+  const initial = responseInfo?.initial ?? requestInfo?.initial;
+  if (initial !== undefined) field.initial = initial;
 
   return field;
+}
+
+// dashboard (x-karni-dashboard)
+
+type DashboardParam = DashboardCountDef["params"][string];
+
+function isScalar(value: unknown): value is string | number | boolean {
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function dashboardParams(raw: unknown): DashboardCountDef["params"] | undefined {
+  if (!isRecord(raw)) return undefined;
+  const params: Record<string, DashboardParam> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (isScalar(value)) params[name] = value;
+    else if (Array.isArray(value)) params[name] = value.filter(isScalar);
+  }
+  return Object.keys(params).length > 0 ? params : undefined;
+}
+
+/**
+ * The `x-karni-dashboard` extension of a list operation. The server fills in
+ * every default, so this only checks the shapes, dropping what is malformed.
+ */
+export function parseDashboard(raw: unknown): DashboardDef | undefined {
+  if (!isRecord(raw) || typeof raw.label !== "string") return undefined;
+  const counts: DashboardCountDef[] = [];
+  if (Array.isArray(raw.counts)) {
+    for (const entry of raw.counts) {
+      if (!isRecord(entry) || typeof entry.label !== "string") continue;
+      const params = dashboardParams(entry.params);
+      if (params !== undefined) counts.push({ label: entry.label, params });
+    }
+  }
+  const whole = (value: unknown, fallback: number): number =>
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return {
+    label: raw.label,
+    order: whole(raw.order, 0),
+    total: raw.total !== false,
+    newDays: Math.max(0, whole(raw.new_days, 0)),
+    dateField: typeof raw.date_field === "string" ? raw.date_field : null,
+    by: typeof raw.by === "string" ? raw.by : null,
+    values: stringList(raw.values) ?? [],
+    counts,
+    recent: Math.max(0, whole(raw.recent, 0)),
+    columns: stringList(raw.columns) ?? null,
+  };
 }
 
 // operation extraction
@@ -629,7 +706,11 @@ export function parseOpenApi(input: unknown): ParsedSchema {
       order += 1;
     }
 
-    resources[resource] = { resource, operations, fields };
+    const dashboard = parseDashboard(listOp["x-karni-dashboard"]);
+    resources[resource] =
+      dashboard !== undefined
+        ? { resource, operations, fields, dashboard }
+        : { resource, operations, fields };
   }
 
   const parsed: ParsedSchema = { resources };

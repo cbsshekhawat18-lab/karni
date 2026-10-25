@@ -150,12 +150,14 @@ Adopt the frontend's design system: map its theme onto Karni's `--karni-*` token
 
 It looks for a theme in this order. First shadcn/ui (`components.json`): Karni's tokens reference the project's CSS variables with `var()`, and `karni-primitives.tsx` registers its components as Karni's primitives. Next a Tailwind theme (`@theme` blocks, or the `tailwind.config` that Node evaluates in the project). Then a Material UI, Chakra UI or Mantine theme (literal values read from the source). Without any of these it uses Karni's defaults, listed for editing.
 
+`--css <path>` reads any stylesheet instead (plain CSS, Bootstrap, a design with no variables at all): its custom properties, then its body, link, button and input rules, mapped onto the colour, radius and font tokens as literal values. The report grades each token as found, inferred or defaulted. The same file then themes the admin.
+
 Writes one file the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import). The report lists every token mapped (from, to, value) and every value not mapped, with the reason. A generated file edited since is never overwritten without `--force`.
 
-Example:
+Examples:
 
 ```sh
-karni ui detect --dry-run
+karni ui detect --dry-run, karni ui detect --css design/ --dry-run
 ```
 
 ```
@@ -171,6 +173,7 @@ karni ui detect [OPTIONS]
 | `--force` |  | Overwrite generated files even if they were edited. |
 | `--dry-run` |  | Print the report and the files, but write nothing. |
 | `--json` |  | Print the report as JSON (for agents). |
+| `--css` PATH (repeatable) |  | Read these stylesheets (or directories of pages and the stylesheets they link) instead of the frontend's design system: any CSS, with variables or without. Repeatable. Later files win, as in a browser. |
 
 ## Agents and checks
 

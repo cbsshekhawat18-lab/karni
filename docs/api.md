@@ -813,6 +813,72 @@ def get_router():
 KARNI_API_ROUTER = "myproject.api.get_router"
 ```
 
+## The staff dashboard
+
+The staff app's home page (the scaffold's `frontend/src/pages/home.tsx`) is
+`@karni/ui`'s `<Dashboard>`. It shows the models that opt in, and nothing
+else: a shop puts its orders there, a clinic its appointments, a SaaS app its
+accounts and tickets. A model opts in next to its other `class Karni` options:
+
+```python
+class Order(BaseModel):
+    status = StateField(states=["draft", "confirmed", "shipped", "cancelled"], transitions={...})
+    due_on = models.DateField()
+
+    class Karni:
+        dashboard = True                       # every default below
+
+        dashboard = {                          # or say what to show
+            "label": "Orders",                 # the section heading (default: verbose_name_plural)
+            "order": 1,                        # position among the sections (default 0)
+            "total": True,                     # a count of every row the user may read
+            "new_days": 7,                     # a count of rows created in the last 7 days
+            "by": "status",                    # a count per value of this field
+            "values": ["draft", "confirmed"],  # only these values of `by`
+            "counts": {"Due today": {"due_on": "today"}},  # named counts, by list filters
+            "recent": 5,                       # the newest rows, in a table
+            "columns": ["number", "customer", "status"],
+            "date_field": "created_at",        # what "new" and "newest" mean
+        }
+```
+
+| Key | Default | What it does |
+|---|---|---|
+| `label` | the model's `verbose_name_plural`, capitalised | The section heading. |
+| `order` | `0` | Sections sort by it, then by label. |
+| `total` | `True` | A tile counting every row the user may read. |
+| `new_days` | `7` when the model has `created_at`, else `0` | A tile counting the rows whose `date_field` is within the last N days. |
+| `by` | the model's first `StateField` | A tile per value of this field: a `StateField`, a field with `choices`, or a `BooleanField`. |
+| `values` | the states that are not terminal (the ones that still need someone), else every choice | Which values of `by` get a tile. |
+| `counts` | `{}` | Named tiles. Each maps a label to the list endpoint's query parameters that count it (`{"status": "open"}`, `{"total__gte": 100}`, `{"due_on": "today"}`). `"today"`, `"today-7"` and `"today+1"` are dates relative to the day the page is viewed. |
+| `recent` | `5` | How many of the newest rows the section's table shows (`0` for none, at most 25). |
+| `columns` | `ResourceTable`'s default columns | The table's columns. |
+| `date_field` | `created_at` when the model has it | The date or datetime field behind `new_days` and the table's ordering. |
+
+The server normalizes the declaration (every default filled in) and publishes
+it as `x-karni-dashboard` on the model's list operation in the OpenAPI
+schema. `<Dashboard>` reads every resource that carries one and renders a
+`Stat` tile per count and a `ResourceTable` of the newest rows. Every number
+is a list request with `page_size=1` and the count's filters, so the row
+scope, the access rules and the field visibility of the API apply unchanged,
+and a resource the signed-in user may not list is left out. A count whose
+filter the list endpoint does not declare says so on its tile instead of
+showing a wrong number: the filters are the ones `ResourceTable` offers
+(a field's name, and `__gte` / `__lte` on numbers and dates, see
+[Filtering](#filtering)).
+
+A declaration that cannot work (an unknown key, a field the model does not
+have, a value `by` cannot hold, a count without filters) fails `karni check`
+with [`E133`](errors.md#e133) and is left out of the schema. `dashboard =
+False`, or no declaration, keeps the model off the page.
+
+On the frontend, `<Dashboard>` takes `resources` (which sections, in which
+order), `sections` (a function that rewrites the resolved sections before
+they render), `onOpen` and `onOpenList` (a row, or a tile's list with its
+filters), and `slots` for every part (`Section`, `Counts`, `Count`, `Recent`,
+`Empty`, `Loading`, `Error`). A home page can also compose `Stat` and
+`ResourceTable` by hand.
+
 ## Schema
 
 `KarniAutoSchema` (the conf default `DEFAULT_SCHEMA_CLASS`) keeps
@@ -836,7 +902,11 @@ nullable, required from blank/default) and adds:
   `x-karni-throttle` (`"10/hour"`) is on an operation whose action the
   viewset's `throttle` declaration limits, or on a public `create`, with the
   rate in force. `x-karni-honeypot` (`"homepage"`) is on a public `create`
-  with a honeypot field ([rate limits](#rate-limits)).
+  with a honeypot field ([rate limits](#rate-limits)). `x-karni-transitions`
+  and `x-karni-initial` are on a `StateField`'s property
+  ([lifecycle](lifecycle-and-capacity.md#the-api-the-admin-and-the-schema)),
+  and `x-karni-dashboard` on the list operation of a model that declares
+  [`Karni.dashboard`](#the-staff-dashboard).
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

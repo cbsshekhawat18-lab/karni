@@ -1,0 +1,8 @@
+/*
+ * karni/project-theme.css: the project's karni-theme.css, served to the admin.
+ *
+ * This project has none yet, so the admin wears Karni's default tokens.
+ * Run `karni ui detect` (or `karni ui detect --css <your stylesheet>`) in the
+ * frontend to write frontend/src/karni-theme.css, or point KARNI_THEME_CSS at
+ * the file. The staff app and the admin then read the same file.
+ */

@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 19 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 20 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -74,6 +74,7 @@ describe("generate-manifest role scan", () => {
       "change-history": "ChangeHistory",
       "resource-import": "ResourceImport",
       chart: "DataChart",
+      dashboard: "Dashboard",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",

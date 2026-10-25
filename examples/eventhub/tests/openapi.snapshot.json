@@ -2706,6 +2706,26 @@
             }
           ]
         },
+        "x-karni-dashboard": {
+          "by": "status",
+          "columns": [
+            "event",
+            "tier",
+            "quantity",
+            "status"
+          ],
+          "counts": [],
+          "date_field": "created_at",
+          "label": "Bookings",
+          "new_days": 7,
+          "order": 1,
+          "recent": 5,
+          "total": true,
+          "values": [
+            "pending",
+            "confirmed"
+          ]
+        },
         "x-karni-resource": "bookings"
       },
       "post": {
@@ -3754,6 +3774,26 @@
                 "staff"
               ]
             }
+          ]
+        },
+        "x-karni-dashboard": {
+          "by": "status",
+          "columns": [
+            "title",
+            "starts_at",
+            "status"
+          ],
+          "counts": [],
+          "date_field": "created_at",
+          "label": "Events",
+          "new_days": 7,
+          "order": 0,
+          "recent": 5,
+          "total": true,
+          "values": [
+            "draft",
+            "published",
+            "cancelled"
           ]
         },
         "x-karni-resource": "events"

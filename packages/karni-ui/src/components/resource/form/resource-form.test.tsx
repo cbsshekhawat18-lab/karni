@@ -344,13 +344,12 @@ describe("ResourceForm edit mode (D3/D10)", () => {
     unmount();
 
     render(<ResourceForm resource="events" id={1} />);
-    // The stored file is listed by name, and the dropzone is not required.
+    // The stored file shows as the current one, by name, and the dropzone is not required.
     expect(screen.getByRole("button", { name: "Image" })).toBeInTheDocument();
     expect(screen.queryByText("(required)", { exact: false })).toBeNull();
-    expect(screen.getByRole("link", { name: "launch.png" })).toHaveAttribute(
-      "href",
-      String(eventRecord["image"]),
-    );
+    const current = screen.getByRole("link", { name: "launch.png" });
+    expect(current).toHaveAttribute("href", String(eventRecord["image"]));
+    expect(current.closest("li")).toHaveTextContent(/^Current file\s*launch\.png/);
 
     const title = screen.getByRole("textbox", { name: "Title" });
     await user.clear(title);

@@ -1,8 +1,10 @@
 {% load static %}{% comment %}
 The stylesheets of Karni's own admin pages, included from their extrastyle
-block: @karni/ui's tokens, unless UNFOLD["STYLES"] already loaded them (a
-second copy would come after a project's own token overrides and undo them),
-then the controls and tables those pages share.
-{% endcomment %}{% static 'karni/tokens.css' as karni_tokens %}
+block: @karni/ui's tokens and the project's theme (karni-theme.css), unless
+UNFOLD["STYLES"] already loaded them (a second copy would come after a
+project's own token overrides and undo them), then the controls and tables
+those pages share.
+{% endcomment %}{% static 'karni/tokens.css' as karni_tokens %}{% static 'karni/project-theme.css' as karni_project_theme %}
 {% if karni_tokens not in styles %}<link rel="stylesheet" href="{{ karni_tokens }}">{% endif %}
+{% if karni_project_theme not in styles %}<link rel="stylesheet" href="{{ karni_project_theme }}">{% endif %}
 <link rel="stylesheet" href="{% static 'karni/admin-pages.css' %}">

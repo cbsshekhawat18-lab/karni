@@ -114,6 +114,7 @@ describe("package self-registrations", () => {
       "change-history": "ChangeHistory",
       "resource-import": "ResourceImport",
       chart: "DataChart",
+      dashboard: "Dashboard",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",

@@ -330,6 +330,22 @@ def _duplicate_serializer(viewset: type[Any], model: type[Any]) -> list[checks.C
     ]
 
 
+@checks.register(checks.Tags.models)
+def check_dashboards(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E133: every ``Karni.dashboard`` declaration names real fields and values."""
+    from karni.dashboard import dashboard_spec
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            try:
+                dashboard_spec(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+    return messages
+
+
 @checks.register(checks.Tags.urls)
 def check_welcome_route(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E505: the welcome page must be unreachable with ``DEBUG`` off.

@@ -42,12 +42,29 @@ describe("parseOpenApi — handwritten fixture", () => {
     expect(events.operations.remove?.method).toBe("delete");
   });
 
+  it("parses the dashboard declaration of a list operation (x-karni-dashboard)", () => {
+    expect(events?.dashboard).toEqual({
+      label: "Events",
+      order: 0,
+      total: true,
+      newDays: 7,
+      dateField: "created_at",
+      by: "status",
+      values: ["draft", "published"],
+      counts: [{ label: "Public", params: { is_public: true } }],
+      recent: 3,
+      columns: ["title", "status"],
+    });
+    expect(parsed.resources["venues"]?.dashboard).toBeUndefined();
+  });
+
   it("records declared list query params, the expand enum, and hasSearch", () => {
     const list = events?.operations.list;
     expect(list).toBeDefined();
     if (list === undefined) return;
     expect([...list.queryParams].sort()).toEqual([
       "category",
+      "created_at__gte",
       "expand",
       "is_public",
       "ordering",
@@ -410,5 +427,71 @@ describe("parseOpenApi: x-karni-honeypot", () => {
       const contacts = parseOpenApi(contactDoc(extension)).resources["contacts"];
       expect(contacts?.operations.create?.honeypot).toBeUndefined();
     }
+  });
+});
+
+describe("parseOpenApi — a StateField's lifecycle", () => {
+  // What drf-spectacular emits for a StateField: the enum by $ref, the
+  // lifecycle extensions next to it (karni.api.lifecycle).
+  const doc = {
+    openapi: "3.0.3",
+    paths: {
+      "/api/orders/": {
+        get: {
+          "x-karni-resource": "orders",
+          parameters: [],
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      results: { type: "array", items: { $ref: "#/components/schemas/Order" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        StatusEnum: { type: "string", enum: ["draft", "confirmed", "cancelled"] },
+        Order: {
+          type: "object",
+          properties: {
+            id: { type: "integer", readOnly: true },
+            status: {
+              allOf: [{ $ref: "#/components/schemas/StatusEnum" }],
+              "x-karni-transitions": {
+                draft: ["confirmed", "cancelled"],
+                confirmed: ["cancelled"],
+                cancelled: [],
+                broken: "not a list",
+              },
+              "x-karni-initial": ["draft"],
+            },
+          },
+        },
+      },
+    },
+  };
+
+  it("keeps the transitions and initial states on the field, dropping malformed entries", () => {
+    const status = parseOpenApi(doc).resources["orders"]?.fields.find(
+      (field) => field.name === "status",
+    );
+    expect(status?.kind).toBe("enum");
+    expect(status?.transitions).toEqual({
+      draft: ["confirmed", "cancelled"],
+      confirmed: ["cancelled"],
+      cancelled: [],
+    });
+    expect(status?.initial).toEqual(["draft"]);
+    const id = parseOpenApi(doc).resources["orders"]?.fields.find((field) => field.name === "id");
+    expect(id?.transitions).toBeUndefined();
   });
 });

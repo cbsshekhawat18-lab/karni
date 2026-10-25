@@ -13,6 +13,7 @@ import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as karniMark from "../src/components/brand/karni-mark.stories";
 import * as chart from "../src/components/chart/data-chart.stories";
+import * as dashboard from "../src/components/dashboard/dashboard.stories";
 import * as emptyState from "../src/components/empty-state/empty-state.stories";
 import * as fileUpload from "../src/components/file-upload/file-upload.stories";
 import * as layout from "../src/components/layout/layout.stories";
@@ -34,6 +35,7 @@ import * as toast from "../src/components/toast/toaster.stories";
 import * as theme from "../src/theme/theme.stories";
 
 const MODULES = {
+  Dashboard: composeStories(dashboard),
   DataChart: composeStories(chart),
   EmptyState: composeStories(emptyState),
   FileUpload: composeStories(fileUpload),

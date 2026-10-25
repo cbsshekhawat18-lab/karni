@@ -1,28 +1,31 @@
-import { Page } from "@karni/ui";
-import { useEffect, useState } from "react";
-import { fetchHealth, type Health } from "../api/health";
+// The dashboard: a Stat per count and the newest rows of every model that
+// opts in with `class Karni: dashboard = {...}` (see docs/api.md, "The staff
+// dashboard"). Nothing here names a model: the API's schema says what to show.
+import { Dashboard, Page } from "@karni/ui";
+import { useRouter } from "@tanstack/react-router";
 
 export default function HomePage() {
-    const [health, setHealth] = useState<Health | "checking">("checking");
-
-    useEffect(() => {
-        void fetchHealth().then(setHealth);
-    }, []);
-
+    const router = useRouter();
+    // A tile or a row opens its page when one exists (`karni make page` adds
+    // /<resource> and /<resource>/$id); until then the dashboard is the view.
+    const open = (path: string, exists: string): void => {
+        if (exists in router.routesByPath) router.history.push(path);
+    };
     return (
-        <Page
-            title="{{ cookiecutter.project_name }}"
-            description="Vite + React dev server. Requests to /api and /health are proxied to Django."
-        >
-            <p className="text-sm">
-                Backend readiness:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5">{health}</code>
-            </p>
-            <p className="text-sm">
-                <a className="font-medium underline underline-offset-4" href="/api/docs/">
-                    API docs
-                </a>
-            </p>
+        <Page title="Dashboard" description="What needs attention, and what came in last.">
+            <Dashboard
+                onOpen={(resource, row) =>
+                    open(`/${resource}/${String(row.id)}`, `/${resource}/$id`)
+                }
+                onOpenList={(resource, filters) => {
+                    const query = new URLSearchParams();
+                    for (const [name, value] of Object.entries(filters)) {
+                        if (value != null) query.set(`${resource}.${name}`, String(value));
+                    }
+                    const search = query.size > 0 ? `?${query.toString()}` : "";
+                    open(`/${resource}${search}`, `/${resource}`);
+                }}
+            />
         </Page>
     );
 }

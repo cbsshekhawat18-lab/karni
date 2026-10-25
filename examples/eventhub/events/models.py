@@ -39,6 +39,10 @@ class Event(BaseModel):
     # ?search= matches through this column's GIN index (karni.fields.SearchField).
     search = SearchField(sources=["title", "description"])
 
+    class Karni:
+        # The staff app's home page: a count per status and the newest events.
+        dashboard = {"by": "status", "recent": 5, "columns": ["title", "starts_at", "status"]}
+
     def __str__(self) -> str:
         return self.title
 
@@ -83,6 +87,10 @@ class Booking(BaseModel):
     class APIMeta:
         read_only = ["status", "payment", "confirmed_at"]
         exclude = ["confirmation_sent_at"]
+
+    class Karni:
+        # Pending and confirmed bookings (the StateField's open states), the newest first.
+        dashboard = {"order": 1, "columns": ["event", "tier", "quantity", "status"]}
 
     def __str__(self) -> str:
         return f"{self.quantity} x {self.tier} for {self.event}"

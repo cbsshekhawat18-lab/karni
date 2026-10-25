@@ -386,6 +386,13 @@ BASE: dict[str, Any] = {
     "MEDIA_URL": "/media/",
     "STATIC_ROOT": env("STATIC_ROOT", default="/data/static"),
     "STATIC_URL": "/static/",
+    # Django's two finders, then the one that serves the project's
+    # karni-theme.css to the admin as karni/project-theme.css (karni.admin.theme).
+    "STATICFILES_FINDERS": [
+        "django.contrib.staticfiles.finders.FileSystemFinder",
+        "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+        "karni.admin.theme.ProjectThemeFinder",
+    ],
     # --- CORS and CSRF ------------------------------------------------------
     "CORS_ALLOWED_ORIGINS": env.list("CORS_ALLOWED_ORIGINS", default=[]),
     # The https origins of the site for Django's CSRF check, e.g.
@@ -448,6 +455,9 @@ BASE: dict[str, Any] = {
         "STYLES": [
             "karni.admin.theme.tokens_stylesheet",
             "karni.admin.theme.unfold_theme_stylesheet",
+            # The project's karni-theme.css (KARNI_THEME_CSS), the file its
+            # staff app loads: one set of brand tokens for both.
+            "karni.admin.theme.project_theme_stylesheet",
         ],
         "COLORS": {
             # Unfold steps through this neutral scale itself (base-200 borders
@@ -500,6 +510,9 @@ BASE: dict[str, Any] = {
     # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.
     "KARNI_ADMIN_LOGO": env("KARNI_ADMIN_LOGO", default="") or None,
+    # The project's brand tokens, the file `karni ui detect` writes for the
+    # staff app; the admin loads it too (karni.admin.theme). "" for none.
+    "KARNI_THEME_CSS": env("KARNI_THEME_CSS", default="frontend/src/karni-theme.css"),
     # Where the scaffold mounts the Django admin; a path nobody guesses keeps
     # the login form out of scanners' lists. Trailing slash required.
     "KARNI_ADMIN_PATH": env("KARNI_ADMIN_PATH", default="admin/"),

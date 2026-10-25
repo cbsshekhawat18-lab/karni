@@ -66,7 +66,8 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
-| `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
+| `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
+| `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
 ### Permissions
 
@@ -229,12 +230,14 @@ Adopt the frontend's design system: map its theme onto Karni's `--karni-*` token
 
 It looks for a theme in this order. First shadcn/ui (`components.json`): Karni's tokens reference the project's CSS variables with `var()`, and `karni-primitives.tsx` registers its components as Karni's primitives. Next a Tailwind theme (`@theme` blocks, or the `tailwind.config` that Node evaluates in the project). Then a Material UI, Chakra UI or Mantine theme (literal values read from the source). Without any of these it uses Karni's defaults, listed for editing.
 
+`--css <path>` reads any stylesheet instead (plain CSS, Bootstrap, a design with no variables at all): its custom properties, then its body, link, button and input rules, mapped onto the colour, radius and font tokens as literal values. The report grades each token as found, inferred or defaulted. The same file then themes the admin.
+
 Writes one file the project owns, `karni-theme.css`, imported after `@karni/ui/styles.css` (wired into `src/main.tsx` when it has the scaffold's import). The report lists every token mapped (from, to, value) and every value not mapped, with the reason. A generated file edited since is never overwritten without `--force`.
 
-Example:
+Examples:
 
 ```sh
-karni ui detect --dry-run
+karni ui detect --dry-run, karni ui detect --css design/ --dry-run
 ```
 
 ```
@@ -250,6 +253,7 @@ karni ui detect [OPTIONS]
 | `--force` |  | Overwrite generated files even if they were edited. |
 | `--dry-run` |  | Print the report and the files, but write nothing. |
 | `--json` |  | Print the report as JSON (for agents). |
+| `--css` PATH (repeatable) |  | Read these stylesheets (or directories of pages and the stylesheets they link) instead of the frontend's design system: any CSS, with variables or without. Repeatable. Later files win, as in a browser. |
 
 ### Agents and checks
 
@@ -1266,6 +1270,7 @@ class Lead(BaseModel):
 | `import_lookup` | karni | `{}` | For a relation field, the field of the related model that its import column carries. | `import_lookup = {"customer": "email"}` |
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
+| `dashboard` | karni | `None` | Put the model on the staff app's dashboard: counts (all rows, new ones, one per state) and the newest rows. `True` for the defaults, or a dict ([API: dashboard](api.md#the-staff-dashboard)). | `dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}` |
 | `append_only` | karni | `False` | The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` timestamps (`True`) or on the listed columns. | `append_only = True` |
 | `cascade` | karni | `{}` | Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited model, each with the reason (silences `karni.W965` for that field). | `cascade = {"order": "a line item cannot outlive its order"}` |
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
@@ -1344,6 +1349,7 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
+| `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
 | `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"],` | App labels or `app_label.ModelName` entries the admin leaves out. |
 | `KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |
@@ -1508,6 +1514,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `EmptyState` | `title: React.ReactNode` | Centered placeholder for empty collections: icon, title, description and an action slot. | [empty-state.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/empty-state/empty-state.tsx) |
 | `FileUpload` |  | Drag-and-drop or click-to-browse file picker that shows the current file and the pending ones. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
 | `Stat` | `label: React.ReactNode`, `value: React.ReactNode` | KPI tile: label, value, optional delta and icon. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
+| `Dashboard` |  | The staff app's home page: a Stat per count and the newest rows of every model that opts in with `Karni.dashboard`. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points or named series. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 
 ### Hooks
@@ -1574,12 +1581,18 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `createMemoryTokenStorage` | function | In-memory adapter: most secure (nothing persisted anywhere), but a page reload logs the user out. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
+| `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
+| `routeLabel` | function | `/orders/line-items` → "Line items", `/` → "Home". | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
+| `routeNavItems` | function | Layout `navItems` for a router's route paths (TanStack Router: `Object.keys(router.routesByPath)`), with the active one marked. | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
 | `defaultModalSlots` | constant | The default pieces of the dialog, for wrapping one. | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
 | `toastVariants` | function | Per-variant toast styling, with colors that resolve through --karni-* tokens only (success leans on primary, error on destructive, info on muted). | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
 | `defaultToasterSlots` | constant | The default pieces of a toast, for wrapping one. | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
 | `defaultEmptyStateSlots` | constant | The default pieces of the placeholder, for wrapping one. | [empty-state.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/empty-state/empty-state.tsx) |
 | `defaultFileUploadSlots` | constant | The default pieces of the picker, for wrapping one. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
 | `defaultStatSlots` | constant | The default pieces of the tile, for wrapping one. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
+| `defaultDashboardSlots` | constant |  | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
+| `resolveRelativeDate` | function | A declared filter value: `"today"`, `"today-7"` and `"today+1"` become the date they name (local time, `YYYY-MM-DD`); anything else is returned as is. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
+| `resolveSection` | function | The counts and table of one resource, from its declaration (exported for tests and overrides). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 
 ## Modules
@@ -1642,6 +1655,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E130`](errors.md#e130) | test | An opt-out marker has no reason |
 | [`E131`](errors.md#e131) | check | search_fields names a write-only field |
 | [`E132`](errors.md#e132) | exception | Throttle(...) is invalid |
+| [`E133`](errors.md#e133) | check | Karni.dashboard is malformed or names a field the model does not have |
 | [`E201`](errors.md#e201) | exception | KARNI_ACCOUNTS_EMAIL_BACKEND is not an accounts email backend |
 | [`E202`](errors.md#e202) | exception | No KARNI_ACCOUNTS_LINKS entry for a token purpose |
 | [`E203`](errors.md#e203) | exception | create_user() or create_superuser() was called with invalid arguments |

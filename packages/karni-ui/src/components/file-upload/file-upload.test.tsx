@@ -80,6 +80,8 @@ describe("FileUpload", () => {
     render(<FileUpload value="https://files.example.com/events/launch.png?sig=abc" />);
     const link = screen.getByRole("link", { name: "launch.png" });
     expect(link).toHaveAttribute("href", "https://files.example.com/events/launch.png?sig=abc");
+    // A stored file says it is the current one (a pending File shows its size instead).
+    expect(link.closest("li")).toHaveTextContent(/^Current file\s*launch\.png/);
   });
 
   it("shows a pending File with its name and size", () => {
