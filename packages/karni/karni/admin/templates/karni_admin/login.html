@@ -1,0 +1,17 @@
+{% extends "admin/login.html" %}
+{% comment %}
+The admin login page with the header's logo above the title: the same
+`site_logo` unfold's header shows (KARNI_ADMIN_LOGO, or UNFOLD["SITE_LOGO"]).
+karni.admin sets it as the admin site's login_template unless the site has
+one already. Override this template to change the login page.
+{% endcomment %}
+
+{% block content %}
+    {% if site_logo %}
+        <div class="flex mb-8">
+            {% include "unfold/helpers/site_logo.html" %}
+        </div>
+    {% endif %}
+
+    {{ block.super }}
+{% endblock %}

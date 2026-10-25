@@ -74,7 +74,8 @@ npm run lint    # ESLint with the karni/* enforcement rules
 ```
 
 The dev server proxies to `http://127.0.0.1:8000` (`karni serve --local`).
-Docker compose sets `KARNI_API_PROXY=http://django:8000` for its container.
+`KARNI_DEV_PORT` in `.env` moves both to another port. Docker compose sets
+`KARNI_API_PROXY=http://django:8000` for its container.
 
 ## Using a local Karni checkout
 

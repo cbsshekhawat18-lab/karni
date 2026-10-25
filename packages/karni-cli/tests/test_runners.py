@@ -280,6 +280,95 @@ def test_serve_local_prints_no_proxy_line_when_the_default_reaches_it(
     assert "KARNI_API_PROXY" not in result.output
 
 
+# KARNI_DEV_PORT: one setting for runserver and the frontend's proxy
+
+#: The scaffold's vite.config.ts, which reads KARNI_DEV_PORT and KARNI_API_PROXY.
+SCAFFOLD_VITE = (
+    Path(__file__).resolve().parents[3]
+    / "templates"
+    / "project"
+    / "{{cookiecutter.project_slug}}"
+    / "frontend"
+    / "vite.config.ts"
+)
+
+
+@pytest.fixture
+def frontend(project: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The project with the scaffold's vite.config.ts; no KARNI_* variable in the environment."""
+    for name in ("KARNI_DEV_PORT", "KARNI_API_PROXY", "KARNI_DOTENV"):
+        monkeypatch.delenv(name, raising=False)
+    (project / "frontend").mkdir()
+    (project / "frontend" / "vite.config.ts").write_text(SCAFFOLD_VITE.read_text())
+    return project
+
+
+def test_the_scaffold_vite_config_reads_the_dev_port_from_the_project_env() -> None:
+    text = SCAFFOLD_VITE.read_text()
+    assert 'loadEnv(mode, fileURLToPath(new URL("..", import.meta.url)), "KARNI_")' in text
+    assert 'env.KARNI_API_PROXY || `http://127.0.0.1:${env.KARNI_DEV_PORT || "8000"}`' in text
+
+
+def test_serve_local_runs_on_the_dev_port_from_env_file(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    result = _invoke(runner, "serve", "--local")
+    assert result.exit_code == 0, result.output
+    assert run.cmd == [_py(frontend), "manage.py", "runserver", "127.0.0.1:8020"]
+    assert "KARNI_API_PROXY" not in result.output  # the dev server reads the same port
+
+
+def test_the_environment_beats_env_file_and_port_beats_both(
+    runner: CliRunner, frontend: Path, run: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    monkeypatch.setenv("KARNI_DEV_PORT", "8030")
+    assert _invoke(runner, "serve", "--local").exit_code == 0
+    assert run.calls[-1]["cmd"][-1] == "127.0.0.1:8030"
+    result = _invoke(runner, "serve", "--local", "--port", "8040")
+    assert run.calls[-1]["cmd"][-1] == "127.0.0.1:8040"
+    assert "Set KARNI_DEV_PORT=8040 in .env" in result.output
+    assert "KARNI_API_PROXY=http://127.0.0.1:8040 npm run dev" in result.output
+
+
+def test_karni_api_proxy_wins_over_the_dev_port(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\nKARNI_API_PROXY=http://127.0.0.1:9000\n")
+    result = _invoke(runner, "serve", "--local")
+    assert run.cmd[-1] == "127.0.0.1:8020"
+    assert "the dev server proxies /api to http://127.0.0.1:9000" in result.output
+    assert "Set KARNI_DEV_PORT" not in result.output  # it would not move the proxy
+    assert "cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+
+
+def test_an_older_frontend_config_gets_the_proxy_line(
+    runner: CliRunner, frontend: Path, run: Recorder
+) -> None:
+    (frontend / "frontend" / "vite.config.ts").write_text(
+        'const target = process.env.KARNI_API_PROXY ?? "http://127.0.0.1:8000";\n'
+    )
+    (frontend / ".env").write_text("KARNI_DEV_PORT=8020\n")
+    result = _invoke(runner, "serve", "--local")
+    assert run.cmd[-1] == "127.0.0.1:8020"
+    assert "proxies /api to http://127.0.0.1:8000" in result.output
+    assert "Set KARNI_DEV_PORT" not in result.output
+    assert "KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev" in result.output
+
+
+@pytest.mark.parametrize("value", ["eighty", "0", "70000"])
+def test_a_bad_dev_port_is_c007(
+    runner: CliRunner, frontend: Path, run: Recorder, value: str
+) -> None:
+    (frontend / ".env").write_text(f"KARNI_DEV_PORT={value}\n")
+    result = _invoke(runner, "serve", "--local")
+    assert result.exit_code != 0
+    assert isinstance(result.exception, CliError) and result.exception.code == "C007"
+    assert f"KARNI_DEV_PORT='{value}' (from .env) is not a port number" in str(result.exception)
+    assert run.calls == []
+
+
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [

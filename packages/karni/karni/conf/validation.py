@@ -447,6 +447,13 @@ class KarniSettingsModel(BaseModel):
                     f"KARNI_MATRIX_EXCLUDE entry {entry!r} must be a string "
                     "(an app_label or 'app_label.ModelName')"
                 )
+        # Read per request by the admin, so a bad value set after the call is caught here.
+        from karni.conf.admin_logo import logo_paths
+
+        try:
+            logo_paths(self.KARNI_ADMIN_LOGO)
+        except KarniImproperlyConfigured as exc:
+            errors.append(f"{exc.message.rstrip('.')} (E303)")
         for name in (
             "KARNI_ADMIN_LIST_DISPLAY_MAX",
             "KARNI_ADMIN_LIST_FILTER_MAX",

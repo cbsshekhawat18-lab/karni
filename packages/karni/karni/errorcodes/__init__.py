@@ -949,6 +949,24 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ),
     # W51x deploy checks (manage.py check --deploy, karni check --deploy)
     _e(
+        "E508",
+        "A setting is assigned where it cannot take effect",
+        "check",
+        "karni.checks.check_call_time_settings",
+        "karni_settings() reads a few settings during the call to compute others: "
+        "KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide "
+        "INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, "
+        "KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, "
+        "KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the "
+        "call, such a setting changes none of them, and the project would run with the "
+        "settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry "
+        "in UNFOLD (UNFOLD replaced after the call) shows no logo either.",
+        "Move the assignment above the `karni_settings(globals())` line, pass it as a "
+        "keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its "
+        "environment variable in .env. For the logo, change UNFOLD in place instead of "
+        "replacing it.",
+    ),
+    _e(
         "W510",
         "DEBUG is on in a deployment",
         "warning",

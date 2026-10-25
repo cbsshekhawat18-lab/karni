@@ -174,10 +174,51 @@ apply codemods and list the manual steps. This file is the human summary.
   keeps depending on plain `karni`: `karni[images]` only adds Pillow, a
   native dependency a project without image fields does not need, and the
   note says to list `karni[images]` when one is added.
-- **`karni serve --local --port 8020` prints the proxy line.** On any address
-  other than `127.0.0.1:8000`, it prints the
-  `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8020 npm run dev` line, so
-  the frontend's dev server reaches the same port.
+- **One dev port: `KARNI_DEV_PORT`.** Set it in `.env` and `karni serve
+  --local` runs Django on it, the scaffold's `frontend/vite.config.ts`
+  proxies `/api` and `/health` to it (read from `../.env` with Vite's
+  `loadEnv`), and `docker-compose.yml` publishes Django on it. The default
+  stays 8000, and `KARNI_API_PROXY` still wins when set. `karni serve --local`
+  prints how to point the frontend at the server whenever the two disagree
+  (`--port`, `--host`, a `KARNI_API_PROXY` that names another address, or a
+  `vite.config.ts` from before this setting), and a bad `KARNI_DEV_PORT` is
+  `C007`. The example apps' configs and compose files follow the scaffold.
+- **Settings read during the call fail loudly below it.** `karni_settings()`
+  reads `KARNI_AUTH_MODE`, `KARNI_2FA`, `KARNI_SOCIAL_AUTH`,
+  `KARNI_SOCIAL_PROVIDERS`, `KARNI_FRONTEND_URL`, `KARNI_AUTH_THROTTLE_RATES`,
+  `KARNI_JSON_LOGS`, `KARNI_CACHE` and `KARNI_STORAGE` during the call to
+  compute other settings. Assigned below the call, one of them changed
+  nothing and said nothing. Now the system check `karni.E508` fails startup
+  and names the setting, what was computed from it, and the fix (move it
+  above the call or pass it as a keyword). `KARNI_CACHE` and `KARNI_STORAGE`
+  defined above the call build `CACHES` and `STORAGES`, as the environment
+  does. The list is generated into [docs/settings.md](docs/settings.md) from
+  `karni.conf.CALL_TIME_SETTINGS`, and the scaffold's `settings.py` names it.
+- **`KARNI_ADMIN_LOGO` works wherever it is assigned, and on the login
+  screen.** It was read during the call, so a value assigned below it was
+  silently ignored. The admin now reads it on every request through
+  `karni.conf.admin_logo.site_logo` and `site_icon` in `UNFOLD`, a bad value
+  fails startup validation (`E303`), and the login screen shows the logo
+  above its title (`karni_admin/login.html`, set as the admin site's
+  `login_template` unless the site has one). Replacing `UNFOLD` below the
+  call while a logo is set is `karni.E508`.
+- **`karni make model` adds the images extra to pyproject.toml.** With an
+  image field, the `karni` requirement in `[project].dependencies` becomes
+  `karni[images]`, keeping its version spec, markers and other extras. Only
+  that one string changes, `--dry-run` shows the diff, the note names the
+  change and the reinstall (`pip install -e .`), and a project that lists the
+  extra already is left alone.
+- **`karni doctor` finds a local PostgreSQL and Redis.** Two new lines,
+  `database` and `redis`, show what `DATABASE_URL` and `REDIS_URL` name
+  (from the environment, `.env` or Karni's default, password masked) and
+  whether the server answers: a socket connect with a short timeout and one
+  protocol exchange, nothing read or written. When `.env` still names the
+  compose hosts `db` and `redis` and they do not resolve, doctor looks on
+  `127.0.0.1` at the default port and the configured one, and prints the
+  exact `.env` lines for the local services (`DATABASE_URL=postgres://<your
+  user>@127.0.0.1:5432/<project>`, `createdb <project>`,
+  `REDIS_URL=redis://127.0.0.1:6379/0`) or how to start them. The quickstart
+  has a "Without Docker" section with the Homebrew and apt steps.
 - **An edit form keeps a stored file without asking for it (@karni/ui).**
   `ResourceForm` no longer marks a file or image field "required" on edit
   when the row already has a file. The current file stays listed by name,

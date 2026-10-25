@@ -15,8 +15,9 @@ services:
       args:
         KARNI_SRC: ${KARNI_SRC:-}
     command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    # KARNI_DEV_PORT in .env moves the published port (default 8000).
     ports:
-      - "8000:8000"
+      - "${KARNI_DEV_PORT:-8000}:8000"
     env_file: .env
     volumes:
       - .:/app

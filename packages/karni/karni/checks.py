@@ -418,6 +418,59 @@ def check_throttle_cache(app_configs: Any = None, **kwargs: Any) -> list[checks.
     return []
 
 
+def _short(value: Any) -> str:
+    text = repr(value)
+    return text if len(text) <= 60 else text[:57] + "..."
+
+
+@checks.register()
+def check_call_time_settings(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E508: a setting assigned where it cannot take effect.
+
+    ``karni_settings()`` computes other settings from the ones in
+    :data:`karni.conf.CALL_TIME_SETTINGS` during the call. One reassigned
+    after the call changes none of them, so startup fails and names it
+    instead of running half-configured. Also reported: ``KARNI_ADMIN_LOGO``
+    set while ``UNFOLD`` has no ``SITE_LOGO`` entry, which happens when
+    ``UNFOLD`` is replaced after the call.
+    """
+    from django.conf import settings
+
+    from karni.conf import CALL_TIME_SETTINGS, settings_changed_after_call
+
+    module = getattr(settings, "SETTINGS_MODULE", None)
+    messages: list[checks.CheckMessage] = []
+    for name, (before, after) in settings_changed_after_call(module).items():
+        messages.append(
+            check_error(
+                "E508",
+                f"{name} is assigned after karni_settings() in {module} ({_short(before)} during "
+                f"the call, {_short(after)} now). karni_settings() computed "
+                f"{CALL_TIME_SETTINGS[name]} from it during the call, so the new value changes "
+                "none of them.",
+                hint=f"Move the assignment above the karni_settings(globals()) line, or pass it "
+                f"as karni_settings(globals(), {name}=...).",
+                obj=name,
+            )
+        )
+    logo = getattr(settings, "KARNI_ADMIN_LOGO", None)
+    unfold = getattr(settings, "UNFOLD", None)
+    if logo and isinstance(unfold, dict) and "SITE_LOGO" not in unfold:
+        messages.append(
+            check_error(
+                "E508",
+                f"KARNI_ADMIN_LOGO is {_short(logo)}, but UNFOLD has no 'SITE_LOGO' entry, so the "
+                "admin shows no logo. UNFOLD was replaced after karni_settings(), which drops the "
+                "entries Karni put there.",
+                hint="Change UNFOLD in place (UNFOLD['SITE_TITLE'] = ...) instead of replacing it, "
+                "or add 'SITE_LOGO': karni.conf.admin_logo.site_logo and 'SITE_ICON': "
+                "karni.conf.admin_logo.site_icon to your UNFOLD.",
+                obj="KARNI_ADMIN_LOGO",
+            )
+        )
+    return messages
+
+
 _REQUEST_ID_MIDDLEWARE = "karni.tracing.RequestIdMiddleware"
 _STRUCTLOG_MIDDLEWARE = "django_structlog.middlewares.RequestMiddleware"
 

@@ -52,7 +52,10 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ("tags:array:str[:len]", "ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only"),
     (
         "doc:file / photo:image",
-        'FileField / ImageField with `upload_to="<app>/<model>/"`. Image needs Pillow',
+        (
+            'FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes '
+            "pyproject.toml depend on `karni[images]` (Pillow)"
+        ),
     ),
     ("ref:uuid", "UUIDField(default=uuid.uuid4)"),
     ("status:choice:draft|live", "a TextChoices class + CharField(choices=..., default=first)"),
@@ -172,14 +175,37 @@ class Rendered:
     images: list[str] = field(default_factory=list)
 
 
-def pillow_note(images: list[str], *, missing: bool) -> str:
-    """The note for ImageFields. ``missing``: the project's interpreter was asked and has no Pillow."""
-    fields = ", ".join(images)
+def _image_fields(images: list[str]) -> str:
     noun = "is an ImageField" if len(images) == 1 else "are ImageFields"
+    return f"{', '.join(images)} {noun}"
+
+
+def pillow_note(images: list[str], *, missing: bool) -> str:
+    """The note for ImageFields when pyproject.toml cannot be edited.
+
+    ``missing``: the project's interpreter was asked and has no Pillow.
+    """
     state = "and the project's Python has no Pillow" if missing else "so the project needs Pillow"
     return (
-        f'note: {fields} {noun}, {state}. List "karni[images]" instead of "karni" in '
+        f'note: {_image_fields(images)}, {state}. List "karni[images]" instead of "karni" in '
         "pyproject.toml's dependencies (it adds Pillow) and reinstall: pip install 'karni[images]'."
+    )
+
+
+def images_extra_note(images: list[str], before: str, after: str) -> str:
+    """The note for the pyproject.toml edit that adds the ``images`` extra."""
+    return (
+        f'note: pyproject.toml: "{before}" -> "{after}", because {_image_fields(images)} and '
+        "the images extra installs Pillow. Then reinstall the project to install it: "
+        "pip install -e . (docker compose build for the image)."
+    )
+
+
+def reinstall_note(images: list[str]) -> str:
+    """The note when pyproject.toml lists the extra but the project's Python has no Pillow."""
+    return (
+        f"note: {_image_fields(images)}. pyproject.toml already lists karni[images], but the "
+        "project's Python has no Pillow. Reinstall the project: pip install -e ."
     )
 
 

@@ -798,6 +798,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES yourself in settings.py.
 
+<a id="e508"></a>
+
+#### E508: A setting is assigned where it cannot take effect
+
+*system check (error)* · from `karni.checks.check_call_time_settings`
+
+**Why Karni objects.** karni_settings() reads a few settings during the call to compute others: KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the call, such a setting changes none of them, and the project would run with the settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry in UNFOLD (UNFOLD replaced after the call) shows no logo either.
+
+**Fix.** Move the assignment above the `karni_settings(globals())` line, pass it as a keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its environment variable in .env. For the logo, change UNFOLD in place instead of replacing it.
+
 <a id="w510"></a>
 
 #### W510: DEBUG is on in a deployment
@@ -1898,9 +1908,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C007: A configuration value is invalid
 
-*karni command* · from `karni config, KARNI_AGENT_SOURCE, KARNI_TEMPLATES, KARNI_UI_SRC`
+*karni command* · from `karni config, KARNI_AGENT_SOURCE, KARNI_TEMPLATES, KARNI_UI_SRC, KARNI_DEV_PORT`
 
-**Why Karni objects.** karni reads its settings from karni config files and a few environment variables.
+**Why Karni objects.** karni reads its settings from karni config files and a few environment variables (the project's .env included).
 
 **Fix.** Use a value the message lists (karni config shows the known settings), or unset the environment variable.
 

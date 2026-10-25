@@ -326,12 +326,95 @@ def test_model_force_replaces_only_that_class(project: Path) -> None:
     assert "class Venue(BaseModel):" in models and "venue = " not in models
 
 
+@pytest.fixture
+def pillow(monkeypatch: pytest.MonkeyPatch) -> list[bool | None]:
+    """What the project's interpreter answers about Pillow: set ``pillow[0]`` (default False)."""
+    answer: list[bool | None] = [False]
+    monkeypatch.setattr(project_mod, "project_has_module", lambda root, module: answer[0])
+    return answer
+
+
+def _dependencies(project: Path) -> list[str]:
+    import tomllib
+
+    return tomllib.loads((project / "pyproject.toml").read_text())["project"]["dependencies"]
+
+
+def _set_karni(project: Path, requirement: str) -> str:
+    path = project / "pyproject.toml"
+    path.write_text(path.read_text().replace('    "karni",\n', f'    "{requirement}",\n', 1))
+    return path.read_text()
+
+
+def test_an_image_field_adds_the_images_extra_to_pyproject(
+    project: Path, pillow: list[bool | None]
+) -> None:
+    ok("make", "app", "events")
+    before = (project / "pyproject.toml").read_text()
+    assert _dependencies(project)[0] == "karni"
+    result = ok("make", "model", "Event", "title:str", "photo:image?", "logo:image?")
+    after = (project / "pyproject.toml").read_text()
+    assert after == before.replace('    "karni",\n', '    "karni[images]",\n', 1)
+    assert "modified pyproject.toml" in result.output
+    assert (
+        'note: pyproject.toml: "karni" -> "karni[images]", because Event.photo, Event.logo '
+        "are ImageFields and the images extra installs Pillow" in result.output
+    )
+    assert "pip install -e ." in result.output
+    ok("make", "model", "Poster", "image:image")  # already there now: left alone
+    assert (project / "pyproject.toml").read_text() == after
+
+
+def test_the_extra_merges_with_extras_and_keeps_the_version_spec(
+    project: Path, pillow: list[bool | None]
+) -> None:
+    ok("make", "app", "events")
+    _set_karni(project, "karni[s3]>=0.4,<0.5")
+    result = ok("make", "model", "Event", "photo:image")
+    assert _dependencies(project)[0] == "karni[s3,images]>=0.4,<0.5"
+    assert '"karni[s3]>=0.4,<0.5" -> "karni[s3,images]>=0.4,<0.5"' in result.output
+
+
+@pytest.mark.parametrize(
+    ("has_pillow", "expected"), [(True, None), (False, "Reinstall the project"), (None, None)]
+)
+def test_a_project_with_the_extra_is_left_unchanged(
+    project: Path, pillow: list[bool | None], has_pillow: bool | None, expected: str | None
+) -> None:
+    pillow[0] = has_pillow
+    ok("make", "app", "events")
+    text = _set_karni(project, "karni[images]>=0.4")
+    result = ok("make", "model", "Event", "photo:image")
+    assert (project / "pyproject.toml").read_text() == text
+    assert "pyproject.toml:" not in result.output
+    if expected is None:
+        assert "Pillow" not in result.output
+    else:
+        assert "pyproject.toml already lists karni[images]" in result.output
+        assert expected in result.output
+
+
+def test_dry_run_shows_the_pyproject_edit_and_writes_nothing(
+    project: Path, pillow: list[bool | None]
+) -> None:
+    ok("make", "app", "events")
+    before = (project / "pyproject.toml").read_text()
+    result = ok("make", "model", "Event", "photo:image", "--dry-run")
+    assert (project / "pyproject.toml").read_text() == before
+    assert "would modify pyproject.toml" in result.output
+    assert '-    "karni",' in result.output and '+    "karni[images]",' in result.output
+    assert "(dry run: nothing written)" in result.output
+
+
 @pytest.mark.parametrize(
     ("has_pillow", "expected"),
     [(True, None), (False, "has no Pillow"), (None, "so the project needs Pillow")],
 )
-def test_image_field_notes_pillow_only_when_the_project_lacks_it(
-    project: Path, monkeypatch: pytest.MonkeyPatch, has_pillow: bool | None, expected: str | None
+def test_without_an_editable_karni_dependency_the_note_names_the_step(
+    project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    has_pillow: bool | None,
+    expected: str | None,
 ) -> None:
     asked: list[tuple[Path, str]] = []
 
@@ -341,14 +424,16 @@ def test_image_field_notes_pillow_only_when_the_project_lacks_it(
 
     monkeypatch.setattr(project_mod, "project_has_module", probe)
     ok("make", "app", "events")
+    text = _set_karni(project, "django")  # karni is not a direct dependency here
     result = ok("make", "model", "Event", "title:str", "photo:image?", "logo:image?")
     assert asked == [(project.resolve(), "PIL")]  # the project's interpreter, asked once
+    assert (project / "pyproject.toml").read_text() == text
     if expected is None:
         assert "Pillow" not in result.output
     else:
         assert expected in result.output
         assert "Event.photo, Event.logo are ImageFields" in result.output
-        assert "karni[images]" in result.output
+        assert "karni is not in [project].dependencies" in result.output
     ok("make", "model", "Venue", "name:str")
     assert len(asked) == 1  # no image field, no probe
 

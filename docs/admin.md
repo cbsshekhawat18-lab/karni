@@ -290,6 +290,12 @@ del UNFOLD["COLORS"]
 UNFOLD = {"SITE_TITLE": "Ops", "SITE_HEADER": "Ops"}
 ```
 
+A replaced `UNFOLD` has no `SITE_LOGO` or `SITE_ICON` entry, so
+`KARNI_ADMIN_LOGO` then shows nothing, and startup fails with `karni.E508`
+while it is set. Change `UNFOLD` in place instead, or put the two entries
+back: `"SITE_LOGO": karni.conf.admin_logo.site_logo` and `"SITE_ICON":
+karni.conf.admin_logo.site_icon`.
+
 A static primary of your own keeps Karni's `unfold-theme.css`, which colours
 text on primary buttons with `--karni-color-primary-foreground`. That token is
 dark in dark mode, because Karni's primary is light there. If your primary
@@ -316,6 +322,15 @@ KARNI_ADMIN_LOGO = {"light": "img/mark.svg", "dark": "img/mark-dark.svg", "icon"
 Each value is passed to `static()`, and `dark` and `icon` fall back to
 `light`. `KARNI_ADMIN_LOGO = None` (the default, also the env value `""`)
 leaves the text header.
+
+The admin reads the setting on every request: `UNFOLD["SITE_LOGO"]` and
+`UNFOLD["SITE_ICON"]` hold `karni.conf.admin_logo.site_logo` and
+`site_icon`, which unfold calls with the request. So the setting works
+wherever `settings.py` assigns it, above or below `karni_settings()`, and an
+invalid value fails startup validation (`E303`). The login screen shows the
+same logo above its title: `karni.admin` gives the admin site the
+`karni_admin/login.html` template, which extends unfold's login page. A site
+that sets its own `login_template` keeps it.
 
 More escape hatches:
 

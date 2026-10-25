@@ -73,3 +73,56 @@ twice, or seeds after loading data, passes --reset to start over or --force \
 to add demo rows on top."""
 mechanical = false
 migration = "migrations/0.4.1.md#karni-seed-refuses-tables-that-already-hold-rows"
+
+[[change]]
+id = "settings-read-during-the-call"
+kind = "behaviour"
+symbol = "karni_settings() (karni.E508)"
+summary = """\
+karni_settings() reads KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH, \
+KARNI_SOCIAL_PROVIDERS, KARNI_FRONTEND_URL, KARNI_AUTH_THROTTLE_RATES, \
+KARNI_JSON_LOGS, KARNI_CACHE and KARNI_STORAGE during the call to compute other \
+settings. A settings module that assigns one of them below the call now fails \
+startup with karni.E508 instead of running with the settings computed from the \
+old value. Move the assignment above the call or pass it as a keyword."""
+mechanical = false
+migration = "migrations/0.4.1.md#settings-the-call-reads-fail-loudly-below-it"
+
+[[change]]
+id = "admin-logo-on-every-request"
+kind = "behaviour"
+symbol = "KARNI_ADMIN_LOGO"
+summary = """\
+The admin reads KARNI_ADMIN_LOGO on every request (UNFOLD["SITE_LOGO"] and \
+["SITE_ICON"] hold karni.conf.admin_logo.site_logo and site_icon), so the setting \
+takes effect below the karni_settings() call too, and the login screen shows the \
+same logo above its title. A project that replaces UNFOLD after the call while \
+KARNI_ADMIN_LOGO is set fails startup with karni.E508."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-admin-logo-works-wherever-it-is-assigned-and-on-the-login-screen"
+
+[[change]]
+id = "make-model-adds-images-extra"
+kind = "behaviour"
+symbol = "karni make model (image fields)"
+summary = """\
+karni make model with an image field changes the karni dependency in \
+pyproject.toml to karni[images] (keeping its version spec and other extras), \
+prints the change and says to reinstall. It edits only that one requirement \
+string, --dry-run shows the diff, and a project that already lists the extra \
+is left alone."""
+mechanical = false
+migration = "migrations/0.4.1.md#karni-make-model-adds-the-images-extra-to-pyprojecttoml"
+
+[[change]]
+id = "dev-port-in-env"
+kind = "project-files"
+symbol = "frontend/vite.config.ts and docker-compose.yml"
+summary = """\
+KARNI_DEV_PORT in .env is the dev port: karni serve --local runs Django on it, \
+the scaffold's frontend/vite.config.ts proxies /api and /health to it (read from \
+../.env with Vite's loadEnv), and docker-compose.yml publishes Django on it. \
+KARNI_API_PROXY still wins. A project's existing vite.config.ts keeps working: \
+karni serve --local prints the KARNI_API_PROXY line when the two disagree."""
+mechanical = false
+migration = "migrations/0.4.1.md#one-dev-port-karni_dev_port"
