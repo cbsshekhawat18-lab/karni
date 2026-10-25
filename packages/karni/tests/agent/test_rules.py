@@ -102,7 +102,9 @@ def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None
     assert k309.category == "architecture" and k309.severity == "must"
     for phrase in (
         "karni make site",
+        "karni import design",
         "karni make view",
+        "karni-site",
         'path("", ...)',
         "`<app>/templates/<app>/`",
         "`<app>/static/<app>/`",

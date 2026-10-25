@@ -1,5 +1,5 @@
 ---
-description: "For maintainers: lockstep versions across the five packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
+description: "For maintainers: lockstep versions across the ten packages, cutting a release, the release workflow with its dry-run mode, and one-time repository setup."
 ---
 
 # Releasing Karni
@@ -18,6 +18,7 @@ One tag publishes every package at the same version:
 | `karni-payments` | PyPI | `modules/karni-payments` |
 | `karni-approvals` | PyPI | `modules/karni-approvals` |
 | `karni-impersonation` | PyPI | `modules/karni-impersonation` |
+| `karni-site` | PyPI | `modules/karni-site` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
@@ -34,7 +35,7 @@ moves with every minor release.
    `docs/migrations/<major.minor>.md` exist and are complete. They are
    written in the pull requests that made the changes (CONTRIBUTING.md), not
    at release time.
-2. **Versions.** Set the new version in all nine manifests: the five
+2. **Versions.** Set the new version in all ten manifests: the six
    `pyproject.toml` files and the four `package.json` files (and their
    lockfiles). For a minor release, also move the module ranges on core.
 3. **Check locally:**
@@ -65,7 +66,7 @@ The tag runs `.github/workflows/release.yml`:
    against it), every package's LICENSE equals the root LICENSE, and the
    modules' ranges on core include the release. A dry run on a branch has
    no tag, so the version comes from `packages/karni/pyproject.toml`.
-4. **build-python**: sdists and wheels for the five Python packages, then
+4. **build-python**: sdists and wheels for the six Python packages, then
    `twine check --strict`, then the wheels installed into a clean venv where
    `karni --help` and `karni explain E104` must work. Uploaded as the
    `python-dist` artifact.
@@ -107,14 +108,14 @@ accepts the same version twice.
 
 ## One-time repository setup
 
-- **PyPI:** trusted publishing, no stored token. For each of the five
+- **PyPI:** trusted publishing, no stored token. For each of the six
   projects, while it does not exist yet, add a *pending publisher* under your
   PyPI account: **Your account → Publishing → Add a new pending publisher →
   GitHub**, with these values (the PyPI project name changes per project):
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

@@ -29,7 +29,8 @@ PY_PACKAGES := \
 	packages/karni-cli:karni_cli \
 	modules/karni-payments:karni_payments \
 	modules/karni-approvals:karni_approvals \
-	modules/karni-impersonation:karni_impersonation
+	modules/karni-impersonation:karni_impersonation \
+	modules/karni-site:karni_site
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.

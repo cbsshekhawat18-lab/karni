@@ -250,6 +250,15 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Fix the syntax error at the file and line in the message, then re-run.",
     ),
     _c(
+        "C111",
+        "The design folder has nothing to import",
+        "karni import design",
+        "karni import design reads a folder of static pages: every .html file in it is a page "
+        "(a meta-refresh stub is a redirect), and every other file is copied as an asset.",
+        "Pass the folder that holds the design's index.html and the other pages, with its "
+        "css/, js/ and image folders inside it.",
+    ),
+    _c(
         "C199",
         "Internal error in karni",
         "karni make, karni upgrade",

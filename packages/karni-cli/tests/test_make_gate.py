@@ -36,8 +36,10 @@ from typer.testing import CliRunner
 from karni_cli import agent_data
 from karni_cli.main import app
 
-from .conftest import REPO_ROOT, TEMPLATE
+from .conftest import REPO_ROOT, TEMPLATE, require_modules
 from .test_make import GENERATORS, ok, snapshot
+
+DESIGNS = Path(__file__).parent / "fixtures" / "designs"
 
 #: Every generator, both spellings, the chains, every --access / --on shape.
 SEQUENCE: list[list[str]] = [
@@ -445,6 +447,7 @@ def test_a_site_app_replaces_the_welcome_page(
     project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The scaffold answers "/" with the welcome page until `karni make site` claims it."""
+    require_modules("karni-site")  # the site app loads its runtime from it
     python = _project_interpreter(project, tmp_path, monkeypatch)
     ok("migrate")
 
@@ -508,6 +511,92 @@ def test_a_site_app_replaces_the_welcome_page(
         "  - /: links to /x/ (line ",
     ):
         assert line in output, output[-3000:]
+
+
+IMPORTED_SITE = """
+import django
+
+django.setup()
+
+from django.test import Client, override_settings
+from django.test.utils import setup_test_environment
+from karni.security import script_hash
+
+setup_test_environment()
+with override_settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
+    client = Client()
+    home = client.get("/")
+    assert home.status_code == 200, home.status_code
+    page = home.content.decode()
+    # The design's markup, with the current menu item marked as the designer did.
+    assert '<a href="/" class="active">Home</a>' in page, page
+    assert '<a href="/about/">About</a>' in page
+    assert '<section class="hero" style="background-image: url(&quot;/static/website/img/hero.jpg&quot;)">' in page
+    assert '<script>document.documentElement.classList.add("js");</script>' in page
+    policy = home.headers["Content-Security-Policy"]
+    assert script_hash('document.documentElement.classList.add("js");') in policy, policy
+    assert "https://fonts.googleapis.com" in policy and "https://fonts.gstatic.com" in policy
+    about = client.get("/about/").content.decode()
+    assert '<a href="/about/" class="active">About</a>' in about
+    assert "<code>{{ flour }} + {{ water }}</code>" in about
+    contact = client.get("/contact/")
+    assert 'onclick="history.back()"' in contact.content.decode()
+    contact_policy = contact.headers["Content-Security-Policy"]
+    assert "'unsafe-hashes'" in contact_policy and script_hash("history.back()") in contact_policy
+    assert "form-action 'self' https://forms.example.com" in contact_policy
+    moved = client.get("/specials/?week=12")
+    assert (moved.status_code, moved["Location"]) == (301, "/menu/?week=12"), moved["Location"]
+    missing = client.get("/no-such-page/")
+    assert missing.status_code == 404
+    # karni_site renders the site's 404 page with the request: the layout is there.
+    assert b"Page not found" in missing.content and b'<header class="top">' in missing.content
+print("imported site OK")
+"""
+
+
+@pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")
+def test_an_imported_design_runs_for_real(
+    project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`karni import design` on the bakery fixture: the pages, the policy, the redirect."""
+    require_modules("karni-site")
+    python = _project_interpreter(project, tmp_path, monkeypatch)
+    ok("migrate")
+    result = ok("import", "design", str(DESIGNS / "bakery"), "--app", "website")
+    assert "imported 4 page(s), 1 redirect(s), 0 partial(s), 7 file(s) copied." in result.output
+    # The module is importable through the project interpreter, so its guidance is recorded.
+    assert (project / ".karni" / "modules" / "site.md").is_file()
+    assert "<!-- karni:module:site -->" in (project / "AGENTS.md").read_text()
+    ok("manage", "check")
+    proc = subprocess.run(
+        [str(python), "-c", textwrap.dedent(IMPORTED_SITE)],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(project)},
+    )
+    assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-3000:]
+    assert proc.stdout.strip().splitlines()[-1] == "imported site OK"
+    tests = subprocess.run(
+        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
+    # A page added later extends the imported layout and passes the same test.
+    ok("make", "view", "team", "--app", "website")
+    tests = subprocess.run(
+        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
+    assert "karni check" not in tests.stdout
 
 
 @pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")

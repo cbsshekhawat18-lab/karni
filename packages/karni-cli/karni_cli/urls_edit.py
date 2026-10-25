@@ -26,7 +26,8 @@ from karni_cli.project import CliError
 URLS_MARKER = "# karni:urls"
 
 _PATH_ROUTE = re.compile(r"""(?<![\w.])path\(\s*(?P<quote>["'])(?P<route>[^"']*)(?P=quote)""")
-_NAME = re.compile(r"""name\s*=\s*["']([^"']+)["']""")
+# `name=`, not `pattern_name=` (a RedirectView's target).
+_NAME = re.compile(r"""(?<![\w.])name\s*=\s*["']([^"']+)["']""")
 _INCLUDE = re.compile(r"""include\(\s*["']([^"']+)["']""")
 
 

@@ -204,9 +204,20 @@ Some pages need more than the site-wide policy, and get it on that page only:
 A view of your own adds sources with `@csp_extend({...})` (the format of
 `KARNI_CSP`), sends no policy with `@csp_exempt`, or sets the header itself,
 which the middleware then leaves alone. For an inline script, allow its
-hash: `karni.security.script_hash(source)`. For anything else, subclass the
-middleware, override `csp_directives()` or `page_directives()`, and list
-the subclass in `MIDDLEWARE` in its place.
+hash: `karni.security.script_hash(source)`. Code that runs while the
+response is built and has the request but not the response, a template tag
+for example, adds sources for that response with
+`karni.security.extend_request_csp(request, {...})`. A public site built
+from a designer's pages uses it through the `karni-site` module's tags:
+`{% csp_hash %}` around an inline script allows exactly that script by its
+hash, and `{% csp_allow "font-src https://fonts.gstatic.com" %}` declares
+an origin next to the markup that loads from it, so the design runs under
+the policy without `'unsafe-inline'`
+([public pages](public-site.md#the-design-under-the-content-security-policy)).
+A hash added to a directive that already allows `'unsafe-inline'` is left
+out, because a browser that sees a hash ignores the `'unsafe-inline'`. For
+anything else, subclass the middleware, override `csp_directives()` or
+`page_directives()`, and list the subclass in `MIDDLEWARE` in its place.
 
 The `@karni/ui` app is served by Vite in development and by your static host
 in production, so Django's header does not reach its `index.html`. The

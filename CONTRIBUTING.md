@@ -84,7 +84,7 @@ make typecheck PYTHON=.venv/bin/python   # mypy (root mypy.ini), tsc --noEmit
 make format    PYTHON=.venv/bin/python   # fix formatting
 ```
 
-`make install` also installs the three optional modules in `modules/`, and
+`make install` also installs the four optional modules in `modules/`, and
 `make test` tests them. A few tests in `packages/karni` and
 `packages/karni-cli` check the modules' error codes and their documentation.
 With only the core packages installed (`pip install -e packages/karni -e
@@ -92,14 +92,14 @@ packages/karni-cli`, or `make install-py test-py CORE_ONLY=1`), those tests
 skip and name the module to install. CI runs both ways. Its full run sets
 `KARNI_REQUIRE_MODULES=1`, so there a missing module fails instead of skipping.
 
-CI also runs `packages/karni` and the three modules on PostgreSQL 16. Each
+CI also runs `packages/karni` and the four modules on PostgreSQL 16. Each
 suite's `tests/settings.py` pins SQLite, so CI layers the settings overlay
 `.github/ci/karni_postgres_settings.py` on top of it. To do the same locally,
 install `psycopg[binary]`, point `DATABASE_URL` at a server where you may
 create databases, and run pytest from the package's directory:
 
 ```sh
-cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation
+cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site
 PYTHONPATH=../../.github/ci DATABASE_URL=postgres://postgres:postgres@localhost:5432/karni \
     ../../.venv/bin/python -m pytest --ds=karni_postgres_settings --no-migrations
 ```

@@ -191,6 +191,16 @@ def test_view_decorators_and_a_header_the_view_set(client: Client) -> None:
     assert REPORT_ONLY not in own
 
 
+def test_sources_added_while_the_response_is_built(client: Client) -> None:
+    policy = _policy(client.get("/rendering/"))
+    assert policy["script-src"][-1] == script_hash("run()")
+    assert policy["style-src"][-1] == "https://fonts.example.com"
+    both = _policy(client.get("/both/"))
+    assert both["img-src"][-2:] == ["https://cdn.example.com", "https://tiles.example.com"]
+    # Only that response: the next page has the default policy.
+    assert script_hash("run()") not in _policy(client.get("/plain/"))["script-src"]
+
+
 def test_only_admin_pages_allow_eval(client: Client) -> None:
     admin = client.get("/staff-area/login/")
     assert admin.status_code == 200
@@ -267,6 +277,10 @@ def test_adding_unsafe_inline_drops_hashes_and_nonces() -> None:
         "'nonce-xyz'",
         "https://cdn.example",
     ]
+    # A hash added next to 'unsafe-inline' would switch it off in browsers: it is left out.
+    inline = {"script-src": ["'self'", "'unsafe-inline'"]}
+    added = merge_directives(inline, {"script-src": ["'unsafe-hashes'", "'sha256-def='"]})
+    assert added["script-src"] == ["'self'", "'unsafe-inline'", "'unsafe-hashes'"]
 
 
 def test_render_csp_joins_directives() -> None:

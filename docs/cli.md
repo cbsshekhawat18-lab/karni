@@ -29,7 +29,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make)
+- **Generators**: [make](#karni-make), [import](#karni-import)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
@@ -1014,7 +1014,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has. Add pages with `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency and the `# karni:apps` entry are added as `karni add site` would. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1061,6 +1061,34 @@ karni make module [OPTIONS] NAME
 | `NAME` (required) |  | Module short name (e.g. payments, live-chat). |
 | `--dir` PATH |  | Parent directory (default: modules/ in the project, else the cwd). |
 | `--force` |  | Create only the missing files of an existing module (keeps the rest). |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+### `karni import`
+
+Import a designer's files into the project.
+
+```
+karni import COMMAND [ARGS]...
+```
+
+#### `karni import design`
+
+Build the public site from a folder of static pages, keeping the design as written.
+
+Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
+
+Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since.
+
+```
+karni import design [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages, CSS, JavaScript and images. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--diff` |  | Report what changed since the last import and write nothing. |
+| `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
 ## Debugging

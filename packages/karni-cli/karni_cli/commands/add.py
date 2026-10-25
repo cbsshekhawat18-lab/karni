@@ -32,12 +32,13 @@ from karni_cli.project import (
 from karni_cli.settings_edit import add_app
 
 
-def _add_dependency(project_root: str, distribution: str) -> bool:
-    """Add the distribution to [project].dependencies. Returns False when present."""
-    pyproject = Path(project_root) / "pyproject.toml"
-    if not pyproject.is_file():
-        raise CliError("No pyproject.toml in the project root.", code="C207")
-    doc = tomlkit.parse(pyproject.read_text())
+def add_dependency_text(text: str, distribution: str) -> str | None:
+    """``pyproject.toml`` text with ``distribution`` in [project].dependencies, ``None`` if there.
+
+    Parsed with tomlkit, never string-matched. ``karni make site`` uses it
+    through the generators' workspace, ``karni add`` on the file.
+    """
+    doc = tomlkit.parse(text)
     try:
         deps = doc["project"]["dependencies"]
     except (KeyError, TypeError):
@@ -50,11 +51,22 @@ def _add_dependency(project_root: str, distribution: str) -> bool:
     for dep in deps:
         try:
             if canonicalize_name(Requirement(str(dep)).name) == target:
-                return False
+                return None
         except InvalidRequirement:
             continue
     deps.append(distribution)
-    pyproject.write_text(tomlkit.dumps(doc))
+    return tomlkit.dumps(doc)
+
+
+def _add_dependency(project_root: str, distribution: str) -> bool:
+    """Add the distribution to [project].dependencies. Returns False when present."""
+    pyproject = Path(project_root) / "pyproject.toml"
+    if not pyproject.is_file():
+        raise CliError("No pyproject.toml in the project root.", code="C207")
+    updated = add_dependency_text(pyproject.read_text(), distribution)
+    if updated is None:
+        return False
+    pyproject.write_text(updated)
     return True
 
 
@@ -114,6 +126,27 @@ def _refresh_adapters(project: Path) -> None:
         )
 
 
+def record_guidance(project: Path, module: str) -> bool:
+    """Record the installed module's agent guidance and refresh the adapters.
+
+    Returns ``False``, after saying to run ``karni add <module>`` again, when
+    the module is not importable through the project interpreter yet.
+    ``karni make site`` calls this for karni-site after wiring it.
+    """
+    app_name = f"karni_{module.replace('-', '_')}"
+    fragment = _read_agents_fragment(project, app_name)
+    if fragment is None:
+        typer.echo(
+            f"{app_name} is not importable yet. Run `karni add {module}` again "
+            "after installing to record its agent guidance."
+        )
+        return False
+    if record_module_fragment(project, module, fragment):
+        typer.echo(f"{(MODULES_DIR / f'{module}.md').as_posix()}: recorded agent guidance")
+    _refresh_adapters(project)
+    return True
+
+
 def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
     project = require_project()
     app_name = f"karni_{module.replace('-', '_')}"
@@ -125,16 +158,7 @@ def add(module: str = typer.Argument(..., help='Module short name, e.g. "payment
     typer.echo(f"{distribution}: {'added to' if dep_added else 'already in'} pyproject.toml")
     typer.echo(f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS")
 
-    fragment = _read_agents_fragment(project, app_name)
-    if fragment is None:
-        typer.echo(
-            f"{app_name} is not importable yet. Run `karni add {module}` again "
-            "after installing to record its agent guidance."
-        )
-    else:
-        if record_module_fragment(project, module, fragment):
-            typer.echo(f"{(MODULES_DIR / f'{module}.md').as_posix()}: recorded agent guidance")
-        _refresh_adapters(project)
+    record_guidance(project, module)
 
     typer.echo("If the module ships URLs, add the include to config/urls.py:")
     typer.echo(f'  path("{module}/", include("{app_name}.urls"))')

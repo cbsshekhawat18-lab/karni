@@ -2,10 +2,19 @@
 
 The site is a plain app: function views in ``views.py``, ``urls.py`` with
 ``app_name`` and a ``# karni:urls`` marker, the site's own HTML under
-``templates/<app>/`` (plus a ``templates/404.html``) and its CSS under
-``static/<app>/``. ``config/urls.py`` includes it at ``""`` through its
-own ``# karni:urls`` marker, so the home page replaces Karni's welcome
-page. ``karni make view`` adds pages (rule K309, docs/public-site.md).
+``templates/<app>/`` (plus ``templates/404.html`` and ``500.html``) and its
+CSS under ``static/<app>/``. ``config/urls.py`` includes it at ``""``
+through its own ``# karni:urls`` marker, so the home page replaces Karni's
+welcome page. ``karni make view`` adds pages and ``karni import design``
+fills the app from a designer's files (rule K309, docs/public-site.md).
+
+The runtime a site needs comes from the ``karni-site`` module, never from
+project code: ``{% ifactive %}`` for the current menu item, ``{% csp_hash %}``
+for a design's inline scripts, and the error views that render the site's
+own 404 and 500 pages with the request. The generator wires the module the
+way ``karni add site`` does (the dependency, the ``# karni:apps`` entry)
+when the project lacks it, and sets ``handler404`` and ``handler500`` in
+config/urls.py.
 
 ``tests/test_pages.py`` passes a ``PAGES`` list to
 ``karni.testing.assert_pages``. ``karni make view`` adds each new URL above
@@ -25,9 +34,11 @@ from pathlib import Path
 
 import typer
 
+from karni_cli.commands.add import add_dependency_text, record_guidance
 from karni_cli.generators import app as app_gen
 from karni_cli.generators.core import (
     DRY_RUN_OPTION,
+    SETTINGS,
     App,
     Workspace,
     local_apps,
@@ -36,20 +47,34 @@ from karni_cli.generators.core import (
 from karni_cli.generators.naming import humanize, require_snake
 from karni_cli.generators.pysource import (
     Import,
+    append,
     call,
     comment,
     docstring,
     ensure_imports,
+    parse,
     pystr,
     replace_or_append,
+    top_level,
 )
 from karni_cli.project import CliError
+from karni_cli.settings_edit import MARKER, add_entry, block_entries
 from karni_cli.urls_edit import URLS_MARKER, add_route, marker_line, routes
 
 NAME = "site"
 SUMMARY = 'Create a public site app (Django views, urls, templates, static) mounted at "/".'
 
 CONFIG_URLS = Path("config") / "urls.py"
+PYPROJECT = Path("pyproject.toml")
+#: The module every site app loads its runtime from.
+SITE_MODULE = "site"
+SITE_APP = "karni_site"
+SITE_DISTRIBUTION = "karni-site"
+#: The error views karni_site ships, set as Django's handlers in config/urls.py.
+HANDLERS = (
+    ("handler404", "karni_site.views.page_not_found"),
+    ("handler500", "karni_site.views.server_error"),
+)
 #: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
 PAGES_MARKER = "# karni:pages"
 _APP_NAME = re.compile(r"""^app_name\s*=\s*["']([^"']+)["']""", re.MULTILINE)
@@ -126,7 +151,7 @@ def urls_source(app: App, line_length: int) -> str:
 def base_source(app: App) -> str:
     title = humanize(app.label)
     return (
-        "{% load static %}<!DOCTYPE html>\n"
+        "{% load static karni_site %}<!DOCTYPE html>\n"
         '<html lang="en">\n'
         "<head>\n"
         '  <meta charset="utf-8">\n'
@@ -143,8 +168,10 @@ def base_source(app: App) -> str:
         "<body>\n"
         "  <header>\n"
         f"    <a href=\"{{% url '{app.label}:home' %}}\">{title}</a>\n"
+        "    {# Each link marks itself current with {% ifactive %} (karni-site). #}\n"
         '    <nav aria-label="Main">\n'
-        f"      <a href=\"{{% url '{app.label}:home' %}}\">Home</a>\n"
+        f'      <a href="{{% url \'{app.label}:home\' %}}"{{% ifactive "{app.label}:home" %}}'
+        ' aria-current="page"{% endifactive %}>Home</a>\n'
         "    </nav>\n"
         "  </header>\n"
         "  <main>\n"
@@ -189,6 +216,17 @@ def not_found_source(app: App) -> str:
         "The page you were looking for is not here.",
         "  <h1>Page not found</h1>\n"
         "  <p>The page you were looking for has moved or no longer exists.</p>\n"
+        f"  <p><a href=\"{{% url '{app.label}:home' %}}\">Back to the home page</a></p>\n",
+    )
+
+
+def server_error_source(app: App) -> str:
+    return page_source(
+        app,
+        "Something went wrong",
+        "The site could not show this page.",
+        "  <h1>Something went wrong</h1>\n"
+        "  <p>The site could not show this page. Please try again in a moment.</p>\n"
         f"  <p><a href=\"{{% url '{app.label}:home' %}}\">Back to the home page</a></p>\n",
     )
 
@@ -355,8 +393,86 @@ def wire_config_urls(ws: Workspace, app: App) -> None:
         ws.write(CONFIG_URLS, updated)
 
 
-def plan(ws: Workspace, name: str, *, register: bool = True) -> App:
-    """Plan the site app ``name`` (created, or an existing local app)."""
+def wire_site_module(ws: Workspace) -> bool:
+    """Wire karni-site the way ``karni add site`` does. Returns ``True`` when it was missing.
+
+    The dependency goes into pyproject.toml and ``karni_site`` into the
+    ``# karni:apps`` block, both through the workspace. The command records
+    the module's agent guidance after the commit (:func:`record_site_guidance`).
+    """
+    settings_text = ws.read(SETTINGS)
+    if settings_text is None:
+        raise CliError(f"{SETTINGS.as_posix()} not found. Run inside a Karni project.", code="C001")
+    added = False
+    if SITE_APP not in block_entries(settings_text):
+        updated = add_entry(
+            settings_text,
+            SITE_APP,
+            setting="INSTALLED_APPS",
+            marker=MARKER,
+            filename=SETTINGS.as_posix(),
+        )
+        if updated is not None:
+            ws.write(SETTINGS, updated)
+            added = True
+    pyproject = ws.read(PYPROJECT)
+    if pyproject is not None:
+        updated = add_dependency_text(pyproject, SITE_DISTRIBUTION)
+        if updated is not None:
+            ws.write(PYPROJECT, updated)
+            added = True
+    if added:
+        ws.note(
+            f"{SITE_DISTRIBUTION}: added to pyproject.toml and INSTALLED_APPS (the site's "
+            "template tags and error pages come from it). Install it: "
+            "uv pip install -r pyproject.toml, or docker compose build."
+        )
+    return added
+
+
+def record_site_guidance(ws: Workspace) -> None:
+    """After a commit: record karni-site's agent guidance, as ``karni add site`` does."""
+    record_guidance(ws.root, SITE_MODULE)
+
+
+def set_error_handlers(ws: Workspace) -> None:
+    """``handler404`` and ``handler500`` in config/urls.py: karni_site's views, once."""
+    rel = CONFIG_URLS.as_posix()
+    text = ws.read(CONFIG_URLS)
+    if text is None:
+        raise CliError(f"{rel} not found. Run inside a Karni project.", code="C001")
+    tree = parse(ws, rel, text)
+    missing = [(name, view) for name, view in HANDLERS if top_level(tree, name) is None]
+    if not missing:
+        return
+    block = comment(
+        "The site's own error pages (templates/404.html and 500.html), rendered with the "
+        "request by karni_site, which falls back to a plain page if one fails.",
+        "",
+        ws.line_length,
+    )
+    block += "\n" + "".join(f"{name} = {pystr(view)}\n" for name, view in missing)
+    ws.write(CONFIG_URLS, append(text, block))
+
+
+def ensure_runtime(ws: Workspace, app: App) -> None:
+    """What every site app needs from karni-site: the module, the handlers, a 500 page.
+
+    Idempotent, so an app created before this existed gets the missing pieces
+    (``karni make site <app> --force``, or ``karni import design``).
+    """
+    wire_site_module(ws)
+    set_error_handlers(ws)
+    if not ws.exists(app.file("templates", "500.html")):
+        ws.create(app.file("templates", "500.html"), server_error_source(app))
+
+
+def plan(ws: Workspace, name: str, *, register: bool = True, next_step: bool = True) -> App:
+    """Plan the site app ``name`` (created, or an existing local app).
+
+    ``next_step=False`` leaves out the "next:" note (``karni import design``
+    runs this as its first step).
+    """
     require_snake(name, "App name")
     app, _created = resolve_site_app(ws, name)
     ws.create_skeleton(
@@ -364,6 +480,7 @@ def plan(ws: Workspace, name: str, *, register: bool = True) -> App:
             base_template(app): base_source(app),
             page_template(app, "home"): home_source(app),
             app.file("templates", "404.html"): not_found_source(app),
+            app.file("templates", "500.html"): server_error_source(app),
             app.file("static", app.label, "site.css"): css_source(app),
             pages_test(app): tests_source(app, ws.line_length),
         }
@@ -374,6 +491,7 @@ def plan(ws: Workspace, name: str, *, register: bool = True) -> App:
         ws, app, "home", f"{app.label}/home.html", [], header=views_header(app, ws.line_length)
     )
     register_route(ws, app, "", "home")
+    ensure_runtime(ws, app)
     if register:
         wire_config_urls(ws, app)
     else:
@@ -386,7 +504,11 @@ def plan(ws: Workspace, name: str, *, register: bool = True) -> App:
         f"{ws.rel(app.file('templates', app.label))}/, CSS in "
         f"{ws.rel(app.file('static', app.label))}/. It replaces the welcome page at /."
     )
-    ws.note(f"next: karni make view <name> --app {app.label} [--path /about/]")
+    if next_step:
+        ws.note(
+            f"next: karni import design <folder> --app {app.label} for a designer's pages, or "
+            f"karni make view <name> --app {app.label} [--path /about/]"
+        )
     return app
 
 
@@ -406,14 +528,20 @@ def command(
 
     Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a
     `# karni:urls` marker), NAME/templates/NAME/base.html and home.html,
-    NAME/templates/404.html, NAME/static/NAME/site.css and
+    NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and
     NAME/tests/test_pages.py (assert_pages on every page in its PAGES list),
     then inserts `path("", include("NAME.urls"))` at the `# karni:urls`
-    marker of config/urls.py, so the home page replaces the welcome page. A
-    new app also gets the `karni make app` skeleton and the `# karni:apps`
-    entry. An existing app keeps every file it has. Add pages with `karni
-    make view`.
+    marker of config/urls.py, so the home page replaces the welcome page,
+    and sets handler404 and handler500 there to karni_site's views. The
+    site's runtime is the karni-site module: when the project lacks it, the
+    dependency and the `# karni:apps` entry are added as `karni add site`
+    would. A new app also gets the `karni make app` skeleton and the
+    `# karni:apps` entry. An existing app keeps every file it has (with
+    --force, only the missing files are created). Add pages with `karni
+    import design` or `karni make view`.
     """
     ws = project_workspace(force)
     plan(ws, name, register=not no_route)
     ws.commit(dry_run=dry_run)
+    if not dry_run:
+        record_site_guidance(ws)

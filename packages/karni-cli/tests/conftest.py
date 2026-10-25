@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
-MODULES = ("karni-payments", "karni-approvals", "karni-impersonation")
+MODULES = ("karni-payments", "karni-approvals", "karni-impersonation", "karni-site")
 #: Set where every module is installed (CI's Python jobs): a test that needs a
 #: module fails without it instead of skipping, so the coverage cannot drop out.
 REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
@@ -94,6 +94,15 @@ def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VIRTUAL_ENV", raising=False)
     # The suite's own interpreter has Django and karni; tests of that fallback restore it.
     monkeypatch.setattr(project_mod, "_running_interpreter", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def _no_compose_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`karni add` and `karni make site` read a module's guidance through the project
+    interpreter, else a running compose service: the suite never asks docker."""
+    from karni_cli.commands import add as add_command
+
+    monkeypatch.setattr(add_command, "compose_service_running", lambda project, service: False)
 
 
 @pytest.fixture(autouse=True)

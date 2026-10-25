@@ -61,6 +61,10 @@ PREFIXES = {
         "Safe 'log in as user' for Karni support staff: an explicit permission, no "
         "privilege escalation, a banner, a time limit, both identities in the audit trail."
     ),
+    "modules/karni-site/pyproject.toml": (
+        "Public websites for Karni: the current page in a menu, a design's inline scripts "
+        "under the Content-Security-Policy, and error pages that cannot fail."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),

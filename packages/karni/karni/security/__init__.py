@@ -10,7 +10,9 @@
 
 Override / escape hatch: the settings ``KARNI_CSP``,
 ``KARNI_CSP_REPORT_ONLY`` and ``KARNI_PERMISSIONS_POLICY``, the view
-decorators :func:`csp_extend` and :func:`csp_exempt`, a subclass of the
+decorators :func:`csp_extend` and :func:`csp_exempt`,
+:func:`extend_request_csp` for code that runs while a response is built (a
+template tag), a subclass of the
 middleware, and ``SILENCED_SYSTEM_CHECKS`` for a deploy check.
 """
 
@@ -23,6 +25,7 @@ from karni.security.headers import (
     csp_directives,
     csp_exempt,
     csp_extend,
+    extend_request_csp,
     permissions_policy,
     render_csp,
     script_hash,
@@ -35,6 +38,7 @@ __all__ = [
     "csp_directives",
     "csp_exempt",
     "csp_extend",
+    "extend_request_csp",
     "permissions_policy",
     "render_csp",
     "script_hash",

@@ -1,8 +1,8 @@
 name: Release
 
 # Pushing a tag vX.Y.Z publishes every package at X.Y.Z (lockstep versioning,
-# docs/releasing.md): karni, karni-cli, karni-payments, karni-approvals and
-# karni-impersonation to PyPI; @karni/ui, @karni/payments-ui,
+# docs/releasing.md): karni, karni-cli, karni-payments, karni-approvals,
+# karni-impersonation and karni-site to PyPI; @karni/ui, @karni/payments-ui,
 # @karni/approvals-ui and @karni/impersonation-ui to npm; each with build
 # provenance.
 #
@@ -144,7 +144,7 @@ jobs:
       - name: Build sdists and wheels
         run: |
           set -euo pipefail
-          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation; do
+          for d in packages/karni packages/karni-cli modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site; do
             python -m build --outdir dist "$d"
           done
           python -m twine check --strict dist/*
@@ -212,7 +212,7 @@ jobs:
       - name: One directory per project
         run: |
           set -euo pipefail
-          for project in karni karni_cli karni_payments karni_approvals karni_impersonation; do
+          for project in karni karni_cli karni_payments karni_approvals karni_impersonation karni_site; do
             mkdir -p "pypi/$project"
             mv dist/"$project"-[0-9]* "pypi/$project/"
           done
@@ -259,6 +259,13 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: pypi/karni_impersonation/
+          skip-existing: true
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          attestations: ${{ steps.auth.outputs.attest }}
+      - name: karni-site
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: pypi/karni_site/
           skip-existing: true
           password: ${{ secrets.PYPI_API_TOKEN }}
           attestations: ${{ steps.auth.outputs.attest }}

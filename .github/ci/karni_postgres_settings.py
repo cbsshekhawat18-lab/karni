@@ -1,6 +1,6 @@
 """CI-only settings overlay: run a package's test suite against PostgreSQL.
 
-Every suite that runs here (``packages/karni`` and the three modules in
+Every suite that runs here (``packages/karni`` and the four modules in
 ``modules/``) pins sqlite in-memory in its own ``tests/settings.py`` and does
 not read ``DATABASE_URL``, so the Postgres CI job layers this module on top
 instead. It imports whichever ``tests.settings`` the working directory

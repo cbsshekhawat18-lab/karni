@@ -22,12 +22,16 @@ Some pages need more than the default, and get it for that page only:
 * django-allauth's provider pages may submit forms that redirect to the provider.
 * Any view adds sources with :func:`csp_extend`, or sends no policy with
   :func:`csp_exempt`.
+* Code that runs while the response is built, such as a template tag, adds
+  sources for that request with :func:`extend_request_csp`. karni-site's
+  ``{% csp_hash %}`` uses it to allow a design's inline script by its hash.
 
 A response that already carries the header (set by the view) is left alone.
 
 Override / escape hatch: ``KARNI_CSP`` (merged directives, ``None`` turns
 the header off), ``KARNI_CSP_REPORT_ONLY``, ``KARNI_PERMISSIONS_POLICY``
-(``None`` turns it off), the two view decorators, or a subclass of the
+(``None`` turns it off), the two view decorators, :func:`extend_request_csp`,
+or a subclass of the
 middleware overriding :meth:`SecurityHeadersMiddleware.csp_directives` or
 :meth:`SecurityHeadersMiddleware.page_directives`, listed in ``MIDDLEWARE``
 in place of this one.
@@ -54,6 +58,7 @@ __all__ = [
     "csp_exempt",
     "csp_extend",
     "csp_header_name",
+    "extend_request_csp",
     "permissions_policy",
     "render_csp",
     "script_hash",
@@ -153,8 +158,9 @@ def merge_directives(base: Mapping[str, Iterable[str]], extra: Mapping[str, Any]
     Adding to a directive that is only ``'none'`` replaces the ``'none'``.
     Adding ``'unsafe-inline'`` drops the directive's hashes and nonces:
     browsers ignore ``'unsafe-inline'`` next to either, so keeping them would
-    block the inline code the addition is meant to allow. Sources are not
-    repeated.
+    block the inline code the addition is meant to allow. For the same
+    reason a hash or nonce added to a directive that already allows
+    ``'unsafe-inline'`` is left out. Sources are not repeated.
     """
     merged: Directives = {name: list(sources) for name, sources in base.items()}
     for name, value in extra.items():
@@ -167,7 +173,10 @@ def merge_directives(base: Mapping[str, Iterable[str]], extra: Mapping[str, Any]
             current = []
         if "'unsafe-inline'" in added:
             current = [source for source in current if not source.startswith(_PINNED_PREFIXES)]
+        inline = "'unsafe-inline'" in current or "'unsafe-inline'" in added
         for source in added:
+            if inline and source.startswith(_PINNED_PREFIXES):
+                continue
             if source not in current:
                 current.append(source)
         merged[name] = current or ["'none'"]
@@ -326,7 +335,7 @@ class SecurityHeadersMiddleware:
         return csp_directives()
 
     def page_directives(self, request: HttpRequest, response: HttpResponseBase) -> Directives:
-        """Sources this page adds: the admin, the API docs, allauth, :func:`csp_extend`."""
+        """Sources this page adds: admin, API docs, allauth, :func:`csp_extend`, the request's."""
         extra: Directives = {}
         match = getattr(request, "resolver_match", None)
         if match is not None:
@@ -341,9 +350,12 @@ class SecurityHeadersMiddleware:
             module = getattr(view_class or func, "__module__", "") or ""
             if module.startswith("allauth."):
                 extra = merge_directives(extra, SOCIAL_DIRECTIVES)
-        declared = getattr(response, "karni_csp_extend", None)
-        if declared:
-            extra = merge_directives(extra, declared)
+        for declared in (
+            getattr(request, "karni_csp_extend", None),
+            getattr(response, "karni_csp_extend", None),
+        ):
+            if declared:
+                extra = merge_directives(extra, declared)
         return extra
 
     def add_headers(self, request: HttpRequest, response: HttpResponseBase) -> None:
@@ -387,6 +399,22 @@ def csp_extend(directives: Mapping[str, Any]) -> Callable[[ViewFunc], ViewFunc]:
         return wrapped
 
     return decorator
+
+
+def extend_request_csp(request: HttpRequest, directives: Mapping[str, Any]) -> None:
+    """Add sources to the policy of the response to ``request`` only.
+
+    For code that runs while the response is built and has the request but
+    not the response, such as a template tag: karni-site's ``{% csp_hash %}``
+    allows the inline script it wraps by its hash. Merged like ``KARNI_CSP``
+    (sources added, ``None`` removes a directive), and repeated calls add up.
+    The sources are kept on ``request.karni_csp_extend``.
+    """
+    current = getattr(request, "karni_csp_extend", None) or {}
+    request.karni_csp_extend = merge_directives(  # type: ignore[attr-defined]
+        {name: _sources(value) for name, value in current.items() if value is not None},
+        directives,
+    )
 
 
 def csp_exempt(view: ViewFunc) -> ViewFunc:
