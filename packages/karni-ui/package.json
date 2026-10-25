@@ -116,7 +116,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@tanstack/react-query": "^5.104.3",
     "@tanstack/react-table": "^8.20.5",
-    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.6.8",
     "@types/node": "^24.0.0",
