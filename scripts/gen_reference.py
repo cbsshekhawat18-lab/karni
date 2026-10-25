@@ -160,7 +160,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "admin",
         "Every model registered with derived columns, filters and search, with no `admin.py`",
-        ((f"{EH}/config/urls.py", 'path("admin/", admin.site.urls)'),),
+        ((f"{EH}/config/urls.py", 'path(settings.KARNI_ADMIN_PATH, admin.site.urls)'),),
     ),
     Capability(
         "admin",

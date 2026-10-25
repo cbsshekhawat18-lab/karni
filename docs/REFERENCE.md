@@ -392,7 +392,7 @@ karni serve [OPTIONS]
 | --- | --- | --- |
 | `--local` |  | Run manage.py runserver through the project .venv instead. |
 | `--host` TEXT |  | --local only. Default 127.0.0.1. |
-| `--port` INTEGER |  | --local only. Default 8000. Another port prints the KARNI_API_PROXY line that points the frontend's dev server at it. |
+| `--port` INTEGER |  | --local only. Default: KARNI_DEV_PORT from the environment or .env, else 8000 (the frontend's dev server proxies to the same port). Another port prints how to point the frontend at it. |
 | `--build` |  | compose only: rebuild images first. |
 | `--detach`, `-d` |  | compose only: run in background. |
 
@@ -770,7 +770,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `country:country / currency:currency` | CountryField() / CurrencyField() with a CHECK against the ISO list |
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
-| `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. Image needs Pillow |
+| `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes pyproject.toml depend on `karni[images]` (Pillow) |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
 | `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
@@ -1675,6 +1675,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E505`](errors.md#e505) | check | The welcome page is reachable with DEBUG off |
 | [`E506`](errors.md#e506) | exception | A setting names a dotted path that cannot be imported |
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
+| [`E508`](errors.md#e508) | check | A setting is assigned where it cannot take effect |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |
