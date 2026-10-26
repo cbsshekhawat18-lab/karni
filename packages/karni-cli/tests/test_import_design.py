@@ -693,13 +693,13 @@ def test_the_import_hands_the_design_css_to_ui_detect(
     assert "staff app theme: themed from css/site.css" in result.output
 
 
-def test_the_staff_app_and_admin_take_the_design_colours(
-    project: Path, tmp_path: Path
-) -> None:
+def test_the_staff_app_and_admin_take_the_design_colours(project: Path, tmp_path: Path) -> None:
     design = tmp_path / "branded"
     shutil.copytree(BAKERY, design)
     css = design / "css" / "site.css"
-    css.write_text(":root { --brand: #8a3b12; }\n" + css.read_text(encoding="utf-8"), encoding="utf-8")
+    css.write_text(
+        ":root { --brand: #8a3b12; }\n" + css.read_text(encoding="utf-8"), encoding="utf-8"
+    )
 
     dry = ok("import", "design", str(design), "--app", "website", "--dry-run")
     assert "staff app theme: would write src/karni-theme.css" in dry.output
