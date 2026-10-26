@@ -669,6 +669,7 @@ page        Add a frontend page (<= 50 lines) composing @karni/ui, with its rout
 component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
+deploy      Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example.
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
 
@@ -1046,6 +1047,30 @@ karni make view [OPTIONS] NAME
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--path` TEXT |  | URL path (default /&lt;name&gt;/). Captures such as /services/&lt;slug:slug&gt;/ become view parameters. |
 | `--no-route` |  | Do not register the URL in &lt;app&gt;/urls.py. |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+#### `karni make deploy`
+
+Write the production stack: docker-compose.prod.yml, the Caddyfile and .env.prod.example.
+
+One command then starts it on a server: `docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build`. Every file is the project's to edit. docs/deploy.md is the walk-through.
+
+```
+karni make deploy [OPTIONS] TARGET
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `TARGET` (required) |  | What to write. `compose`: the Docker Compose stack. |
+| `--domain` TEXT |  | The site's host for .env.prod.example (default: DOMAIN in .env.example). |
+| `--app-path` TEXT | `/app/` | Path the staff app (frontend/) is served under, e.g. /app/ or /, on the site's host. |
+| `--app-domain` TEXT |  | Serve the staff app on its own host instead, e.g. app.example.com. |
+| `--app/--no-app` | on | Serve the staff app at all. |
+| `--celery/--no-celery` | on | Celery worker and beat services. |
+| `--backups/--no-backups` | on | The backup service. |
+| `--db/--no-db` | on | A PostgreSQL service (--no-db: a managed one). |
+| `--redis/--no-redis` | on | A Redis service (--no-redis: a managed one). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 

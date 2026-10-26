@@ -15,7 +15,8 @@ Code ranges
 ``E0xx``/``W0xx`` models, managers, scopes · ``E1xx``/``W1xx`` API (access,
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
-``E5xx`` settings and optional dependencies · ``E6xx`` testing and seeding ·
+``E5xx`` settings, optional dependencies, deploy checks and production
+(``karni.deploy``) · ``E6xx`` testing and seeding ·
 ``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
 ``E8xx`` import and export · ``E90x``–``E94x``/``W92x`` debugging (``karni
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
@@ -1100,6 +1101,35 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove those sources from KARNI_CSP['script-src']. Allow a script host by its origin, "
         "e.g. https://js.example.com, and an inline script by its hash with "
         "karni.security.script_hash() on the one view that needs it (@csp_extend).",
+    ),
+    # E52x running in production (karni.deploy)
+    _e(
+        "E520",
+        "The deploy checks failed when the container started",
+        "exception",
+        "karni.deploy.entrypoint (the production image's ENTRYPOINT)",
+        "The production image runs `karni check --deploy` before its command, so a "
+        "container with DEBUG on, the scaffold's SECRET_KEY, open hosts or another unsafe "
+        "value never serves a request. Each finding printed before the E520 line has its own "
+        "code (karni.W510 to karni.W519, a Django security warning, or a karni check hook).",
+        "Set the production values in the environment the container gets (.env.prod for "
+        "docker-compose.prod.yml) and start it again: `karni explain W511` and the others "
+        "say what each value must be. In an emergency KARNI_SKIP_DEPLOY_CHECK=1 starts it "
+        "without the checks, logged on every start. Remove it once the values are fixed.",
+    ),
+    _e(
+        "E521",
+        "A backup failed",
+        "exception",
+        "karni.deploy.backup (the backup service, karni-backup)",
+        "A backup that fails quietly is found missing on the day it is needed, so the backup "
+        "service reports the failure in its log, and its health check turns unhealthy until "
+        "a backup succeeds.",
+        "Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media "
+        "archive, S3) and its error. Check DATABASE_URL, that the client tools match the "
+        "database's major version (the backup image's POSTGRES_VERSION), the free space in "
+        "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
+        "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
     ),
     # E6xx testing and seeding
     _e(

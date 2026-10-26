@@ -166,6 +166,47 @@ apply codemods and list the manual steps. This file is the human summary.
   `CSRF_TRUSTED_ORIGINS` is read from the environment, and the scaffold's
   `.env.example` lists the production values to set. See
   [deploy checks](docs/security.md#deploy-checks).
+- **A production stack in every new project, booted in CI.** `karni new`
+  (and `karni make deploy compose` in an existing project) writes
+  `docker-compose.prod.yml`, the `Caddyfile` and `.env.prod.example`. The
+  stack has a one-shot `release` service (the deploy checks, `migrate`,
+  `collectstatic`, then `manage.py karni_publish_web`), `django` (gunicorn with
+  uvicorn workers), Celery `worker` and `beat`, `caddy` (automatic TLS for
+  `DOMAIN`, static and media files from the shared volume, the staff app at
+  `/app/`, everything else proxied to Django), `db`, `redis` and `backup`, with
+  health checks, restart policies, memory limits, log rotation, named volumes
+  and no bind mount of source. Flags cover what differs between projects:
+  `--app-path`, `--app-domain`, `--no-app`, `--no-celery`, `--no-db`,
+  `--no-redis`, `--no-backups`, `--domain`. The scaffold's `Dockerfile` gains
+  a `staff-app` stage (the frontend built with Vite's base set to the app's
+  path) and a `backup` target, and `frontend/src/routes.tsx` passes that base
+  to the router. `karni_publish_web` copies the Caddyfile, the built staff app
+  and a snippet with the security headers Django sends, computed from the
+  project's settings, into the volume Caddy reads, so a release or a rollback
+  changes them together. A new CI job, "Production stack (compose, smoke)",
+  creates a project, builds both images, starts the stack with generated
+  production values and checks health, a public page, the admin login,
+  static files, the staff app, the http redirect, the security headers, the
+  deploy gate and a restored backup. See [docs/deploy.md](docs/deploy.md).
+- **`karni check --deploy` at container start.** The production image's
+  entrypoint, `python -m karni.deploy.entrypoint`, runs the deploy checks
+  before its command and exits with `E520` when they fail.
+  `KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway, logged on every start, and
+  `KARNI_DEPLOY_CHECK_COMMAND` replaces the check. `python -m
+  karni.deploy.healthcheck` is the container health probe: it asks `/health/`
+  with an allowed host and `X-Forwarded-Proto: https`, which a plain request
+  in production does not pass.
+- **Backups with retention, and a tested restore.** `karni.deploy.backup`
+  (`karni-backup` in the backup image) dumps the database with `pg_dump` and
+  archives the media every `KARNI_BACKUP_INTERVAL_HOURS`, keeps the newest
+  `KARNI_BACKUP_KEEP`, uploads to `KARNI_BACKUP_S3_BUCKET` when it is set, and
+  restores in one transaction (`restore`, with `--create` for a second
+  database or `--clean` over the live one). `counts --against` compares the
+  row counts of two databases. A failure is `E521` and turns the service
+  unhealthy. It uses the standard library only.
+- **`KARNI_HEALTH_CHECKS` is read from the environment** (comma-separated),
+  so a deployment without a Celery worker leaves the Celery check out of
+  `/health/ready/`.
 - **`karni make test` acts as the role that may write.** For a viewset whose
   writes need a role, the generated test uses the role the `write` predicate
   names (then `create`, then `read`), so it exercises real creates, updates

@@ -568,11 +568,16 @@ BASE: dict[str, Any] = {
     # {"geolocation": ["self"]}. None: no Permissions-Policy header.
     "KARNI_PERMISSIONS_POLICY": env.json("KARNI_PERMISSIONS_POLICY", default={}),
     # --- Karni knobs --------------------------------------------------------
-    "KARNI_HEALTH_CHECKS": [
-        "karni.health.checks.check_database",
-        "karni.health.checks.check_cache",
-        "karni.health.checks.check_celery",
-    ],
+    # Comma-separated in the environment: a deployment without a Celery worker
+    # leaves check_celery out, so /health/ready/ does not wait for one.
+    "KARNI_HEALTH_CHECKS": env.list(
+        "KARNI_HEALTH_CHECKS",
+        default=[
+            "karni.health.checks.check_database",
+            "karni.health.checks.check_cache",
+            "karni.health.checks.check_celery",
+        ],
+    ),
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,

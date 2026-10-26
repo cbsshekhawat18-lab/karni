@@ -7,7 +7,7 @@ The site is https://cbsshekhawat18-lab.github.io/karni/ and the source is https:
 ## Start here
 
 - [Quickstart](https://cbsshekhawat18-lab.github.io/karni/quickstart/): install `karni` and `karni-cli`, run `karni new`, add a model and see the API, admin and UI appear.
-- [Tutorial: build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 613 lines of project code.
+- [Tutorial: build EventHub](https://cbsshekhawat18-lab.github.io/karni/tutorial/): the reference application (ticketing, payments, Celery, four roles) in 617 lines of project code.
 - [Building with an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/with-ai/): how Claude Code, Cursor and Copilot drive a Karni project through the generated adapter files, `karni context`, `karni rules` and `karni explain`.
 - [Building without an AI agent](https://cbsshekhawat18-lab.github.io/karni/guide/without-ai/): the same workflow by hand, command by command.
 

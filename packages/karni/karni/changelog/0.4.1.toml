@@ -182,3 +182,30 @@ of `:root`, so they no longer override Karni's dark palette under \
 regenerated with `karni ui detect --force` (or edited by hand)."""
 mechanical = false
 migration = "migrations/0.4.1.md#karni-themecss-keeps-dark-mode"
+
+[[change]]
+id = "production-stack"
+kind = "project-files"
+symbol = "docker-compose.prod.yml, Caddyfile, .env.prod.example and the Dockerfile"
+summary = """\
+A new project has a production stack: docker-compose.prod.yml (release, django, \
+worker, beat, caddy, db, redis, backup), the Caddyfile and .env.prod.example, \
+written by `karni make deploy compose`. The Dockerfile gains the staff-app and \
+backup targets, and the prod target's ENTRYPOINT runs `karni check --deploy` and \
+refuses to start on a failure (E520). To adopt it, copy those Dockerfile parts \
+from a fresh `karni new` project, then run `karni make deploy compose --force`, \
+which replaces the Caddyfile."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-production-stack-karni-make-deploy-compose"
+
+[[change]]
+id = "staff-app-base-path"
+kind = "project-files"
+symbol = "frontend/src/routes.tsx"
+summary = """\
+The scaffold's router takes Vite's base path (`basepath: import.meta.env.BASE_URL` \
+in createRouter), so the production build works under /app/, where Caddy serves \
+it. Add the line to a project's routes.tsx before serving the staff app under a \
+path. In development the base is /, and nothing changes."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-staff-app-follows-vites-base-path"

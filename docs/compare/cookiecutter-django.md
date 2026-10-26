@@ -25,8 +25,9 @@ assembling a project by hand.
   deployment.
 - **Deployment breadth.** cookiecutter-django documents Docker with Traefik and
   Let's Encrypt, Heroku and PythonAnywhere, with options for AWS, GCP and
-  Azure storage and four CI providers. Karni generates a Docker Compose stack
-  that has not yet been tested end to end.
+  Azure storage and four CI providers. Karni generates one production Docker
+  Compose stack for a single server (Caddy, PostgreSQL, Redis, Celery,
+  backups), which its CI boots and smoke-tests.
 - **No runtime dependency.** The generated project is plain Django, so nothing
   ties it to cookiecutter-django after generation. A Karni project depends on
   the `karni` package at runtime.
@@ -73,7 +74,7 @@ framework is an acceptable risk.
 | Admin per model | written by hand | derived (django-unfold) |
 | Row-level permissions | written by hand | declared once per resource |
 | Upgrading an existing project | no official path (cruft or Copier) | `karni upgrade` with codemods |
-| Deployment | Docker + Traefik, Heroku, PythonAnywhere, cloud storage options | Docker Compose, not yet tested end to end |
+| Deployment | Docker + Traefik, Heroku, PythonAnywhere, cloud storage options | Docker Compose on one server, booted in CI |
 | AI agent files in the project | none | AGENTS.md, CLAUDE.md and six more, MCP server |
 | Community | Discord, Stack Overflow tag, awesome-django | none yet |
 | Licence | BSD-3-Clause | Apache-2.0 |

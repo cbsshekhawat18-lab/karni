@@ -71,7 +71,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_THEME_CSS": 'The project\'s `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin).',
     "KARNI_ADMIN_BASE": "Dotted path of the `ModelAdmin` every derived admin is built on.",
     "KARNI_ADMIN_PATH": "URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production.",
-    "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default).",
+    "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out.",
     "KARNI_CSP": 'Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers).',
     "KARNI_CSP_REPORT_ONLY": "`True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`.",
     "KARNI_PERMISSIONS_POLICY": 'Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header.',
@@ -123,7 +123,7 @@ def _literal_default(lines: list[str], start: int) -> str:
     text = " ".join(collected)
     text = text.split(": ", 1)[1] if text.startswith('"KARNI_') else text
     text = re.sub(r"\s+", " ", text).rstrip(",").strip()
-    return re.sub(r",\s*([}\]])", r"\1", text)
+    return re.sub(r",\s*([}\])])", r"\1", text)
 
 
 def settings(source: str | None = None) -> list[Setting]:

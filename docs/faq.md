@@ -44,15 +44,16 @@ A Karni resource needs the model, an `access` rule and whatever is specific to
 the domain. The REST API, admin, permissions, React table and form, tests and
 seed data come from the framework. In Karni's reference application, EventHub,
 the `Venue` resource is a five-line model and a four-line viewset, and the
-whole application (ticketing, payments, a Celery email, four roles) is 613
+whole application (ticketing, payments, a Celery email, four roles) is 617
 lines of project code, as measured in the [tutorial](tutorial.md).
 
 ## Is Karni production-ready?
 
 Not yet. Karni 0.4.0 was released on 2026-10-22 with Django 5.2 LTS and
-Python 3.12 to 3.14, two reference applications and CI on every push, but it
-has no known production deployment and its Docker setup has not been tested
-end to end. Teams that need a framework with years of production use should
+Python 3.12 to 3.14, two reference applications and CI on every push. CI
+also boots a new project's production stack ([deploying to a server](deploy.md))
+and smoke-tests it, but Karni has no known production deployment. Teams that
+need a framework with years of production use should
 weigh that before choosing Karni ([comparisons](compare/index.md)).
 
 ## What happens when Karni releases a breaking change?

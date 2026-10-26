@@ -918,6 +918,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Remove those sources from KARNI_CSP['script-src']. Allow a script host by its origin, e.g. https://js.example.com, and an inline script by its hash with karni.security.script_hash() on the one view that needs it (@csp_extend).
 
+<a id="e520"></a>
+
+#### E520: The deploy checks failed when the container started
+
+*exception* · from `karni.deploy.entrypoint (the production image's ENTRYPOINT)`
+
+**Why Karni objects.** The production image runs `karni check --deploy` before its command, so a container with DEBUG on, the scaffold's SECRET_KEY, open hosts or another unsafe value never serves a request. Each finding printed before the E520 line has its own code (karni.W510 to karni.W519, a Django security warning, or a karni check hook).
+
+**Fix.** Set the production values in the environment the container gets (.env.prod for docker-compose.prod.yml) and start it again: `karni explain W511` and the others say what each value must be. In an emergency KARNI_SKIP_DEPLOY_CHECK=1 starts it without the checks, logged on every start. Remove it once the values are fixed.
+
+<a id="e521"></a>
+
+#### E521: A backup failed
+
+*exception* · from `karni.deploy.backup (the backup service, karni-backup)`
+
+**Why Karni objects.** A backup that fails quietly is found missing on the day it is needed, so the backup service reports the failure in its log, and its health check turns unhealthy until a backup succeeds.
+
+**Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>

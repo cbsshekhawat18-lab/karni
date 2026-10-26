@@ -2,7 +2,10 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+# Production secrets (docker-compose.prod.yml reads them, docs/deploy.md).
+.env.prod
 .karni-src/
+.karni-ui/
 frontend/node_modules/
 frontend/dist/
 /data/

@@ -18,6 +18,7 @@ from karni_cli.generators import (
     app,
     command,
     component,
+    deploy,
     event,
     factory,
     listener,
@@ -66,6 +67,7 @@ GENERATORS: tuple[Generator, ...] = tuple(
         component,
         site,
         view,
+        deploy,
         module,
     )
 )

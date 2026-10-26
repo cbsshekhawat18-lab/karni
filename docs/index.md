@@ -27,7 +27,7 @@ pagination, `?expand=`, an N+1-free query plan, an admin page, a generated
 form and table in the frontend, and a test that proves the whole surface in
 one line (`assert_crud`). The reference application,
 [EventHub](tutorial.md), is an event ticketing platform with payments, a
-Celery email and four roles in **613 lines of project code**, measured.
+Celery email and four roles in **617 lines of project code**, measured.
 
 ## Where to go
 
@@ -37,6 +37,7 @@ Celery email and four roles in **613 lines of project code**, measured.
 | Build a real app step by step | [Tutorial: EventHub](tutorial.md) |
 | Drive Karni from Claude Code, Cursor or another agent | [Building with an AI agent](guide/with-ai.md), [Karni for AI agents](agents.md) |
 | Build by hand, command by command | [Building without one](guide/without-ai.md) |
+| Put it in production on a server | [Deploying to a server](deploy.md) |
 | Look something up | the Reference section: [Models](models.md), [API](api.md), [the karni command](cli.md), [Error codes](errors.md), … |
 | Understand a design decision | the Concepts section, starting with [why serializers are generated](concepts/generated-serializers.md) |
 | Upgrade | [Stability promise](stability.md), then `karni upgrade` |

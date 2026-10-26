@@ -64,6 +64,7 @@ nav:
       - Building with an AI agent: guide/with-ai.md
       - Building without one: guide/without-ai.md
       - Adding an entity end to end: adding-an-entity.md
+      - Deploying to a server: deploy.md
   - FAQ: faq.md
   - Compare:
       - Overview: compare/index.md
