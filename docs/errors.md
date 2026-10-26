@@ -1964,6 +1964,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set it to 'app_label.ModelName' of a model that subclasses karni_site.models.AbstractSiteSettings and whose app is installed, or remove it for karni_site.SiteSettings.
 
+<a id="site020"></a>
+
+### SITE020: {% karni_form %} names a form Karni cannot find
+
+*system check (error)* · from `karni_site.forms.resolve_form; karni_site.form_checks`
+
+**Why Karni objects.** The tag finds a form by the name of its model ("enquiry" for Enquiry, "booking_request" for BookingRequest, or "app_label.model"), served by the viewset the API router registered for it, or by an entry in KARNI_SITE_FORMS. A name that matches no model, a model no viewset serves, or several models leaves the page without its form. karni check reports it before a visitor does.
+
+**Fix.** Create the form with karni make form <name> <field:type> ..., use the name of a model a viewset serves, write app_label.model when several apps have the name, or map the name in KARNI_SITE_FORMS = {"<name>": "app.viewsets.SomeViewSet"}.
+
+<a id="site021"></a>
+
+### SITE021: {% karni_form %} is written wrongly
+
+*exception* · from `karni_site.templatetags.karni_forms`
+
+**Why Karni objects.** The tag takes the form's name and then option="value" pairs it knows: fields, rows, labels, placeholders, widgets, next, id, classes, template, the texts (button, success, invalid, throttled, refused, failed, choose) and a <part>_class per part of the markup. labels, placeholders and widgets are "field: text | field: text", and every field they name must be one a visitor fills.
+
+**Fix.** Write it like {% karni_form "contact" fields="name,email,message" labels="name: Your name" classes="bootstrap" %}. The karni-site README lists every option.
+
+<a id="site022"></a>
+
+### SITE022: The form view is not routed
+
+*exception* · from `karni_site.forms.SiteForm.action`
+
+**Why Karni objects.** Every {% karni_form %} posts to karni_site's form view (karni_site:form), which saves the submission through the form's viewset and works without JavaScript. Without the include in config/urls.py the form has nowhere to post.
+
+**Fix.** Add path("", include("karni_site.urls")) to urlpatterns in config/urls.py, before the site's own include. karni make form adds it.
+
+<a id="site023"></a>
+
+### SITE023: A notification does not say who to email
+
+*exception* · from `karni_site.notify.recipients; karni_site.notify.notify_recipients`
+
+**Why Karni objects.** karni_site.notify.notify_recipients(row, setting="NAME", ...) emails the addresses in settings.NAME, and to=[...] emails fixed addresses. It needs exactly one of the two. A setting that does not exist is a typo or a missing line, and the email would never go out. An empty list only logs a warning.
+
+**Fix.** Pass setting= or to=. For a setting, add NAME = env.list("NAME", default=[]) to config/settings.py and NAME=team@example.com to .env (karni make form --notify NAME writes both).
+
 ## The karni command (`C`)
 
 <a id="c001"></a>
@@ -2992,11 +3032,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app> --editable`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. Text and images a client may change are `{% editable %}` and `{% editable_image %}` blocks, navigation is `{% get_menu "<name>" as items %}` looped in the design's markup, and the site's name, logo and contact details are `site`: never hard-coded, and never a model or template tag of the project's own. The site's runtime (these tags, `{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app> --editable`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. Text and images a client may change are `{% editable %}` and `{% editable_image %}` blocks, navigation is `{% get_menu "<name>" as items %}` looped in the design's markup, and the site's name, logo and contact details are `site`: never hard-coded, and never a model or template tag of the project's own. The site's runtime (these tags, `{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form (a contact form, a booking request, a sign-up) is `karni make form <name> <field:type> ... [--notify SETTING]` and `{% karni_form "<name>" %}` in the page: it saves through a `BaseViewSet` with `create=Public()`, works without JavaScript, carries the CSRF token and a honeypot, and its script, rate limit and email come from Karni. Never write a form view, a throttle or a form script for it. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
 
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
-**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page. Karni's docs page public-site covers editable content, SEO and public forms.
+**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

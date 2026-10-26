@@ -750,6 +750,7 @@ component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
 deploy      Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example.
+form        Add a public form: model, viewset, notification, tests, staff pages ({% karni_form %}).
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
 
@@ -1154,6 +1155,34 @@ karni make deploy [OPTIONS] TARGET
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
+##### `karni make form`
+
+Add a public form NAME with FIELDS: it works with and without JavaScript, safely.
+
+Writes the model (the visitor's fields, a status lifecycle and staff-only notes, hidden from visitors through field_roles, an admin inbox), a BaseViewSet with create=Public() (Karni's rate limit and honeypot apply by themselves), the tests, the staff app's pages when there is a frontend, and with --notify a queued email to the addresses in that setting. It wires karni-site and its form view. Put {% karni_form "NAME" %} in a site template: the output names the imported design's &lt;form&gt; it replaces, with the arguments that keep its markup.
+
+Example:
+
+```sh
+karni make form contact name:str email:email subject:str message:text --notify ENQUIRY_RECIPIENTS
+```
+
+```
+karni make form [OPTIONS] NAME [FIELDS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The form's name, snake_case: contact, booking_request, newsletter. |
+| `FIELDS...` |  | The fields a visitor fills, as name:type[:arg][?] (karni make model's DSL): str text email url phone int float decimal bool date datetime choice:a\|b country file image fk:Model m2m:Model. A trailing ? makes a field optional. |
+| `--notify` TEXT |  | A Django setting (e.g. ENQUIRY_RECIPIENTS) holding the addresses each new submission is emailed to, by a queued listener. Without it nothing is sent. |
+| `--states` TEXT |  | The inbox lifecycle of the status field (default new&gt;replied\|new&gt;archived\|replied&gt;archived): a,b,c moves in order, and a&gt;b\|a&gt;c declares each move. The first state is where a submission starts. |
+| `--role` TEXT | `staff` | The role that reads, answers and deletes submissions (default staff). |
+| `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
 ##### `karni make module`
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
@@ -1525,6 +1554,17 @@ class Lead(BaseModel):
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
+| `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |
+| `KARNI_SITE_FORM_CLASS` |  | `"karni_site.forms.SiteForm"` | The class that renders and submits a form. A dotted path to a karni_site.forms.SiteForm subclass, to change how fields are described or how a submission is saved. |
+| `KARNI_SITE_FORM_TEMPLATE` |  | `"karni_site/forms/form.html"` | The template {% karni_form %} renders. Each field renders karni_site/forms/field.html, or karni_site/forms/&lt;form&gt;/&lt;field&gt;.html or karni_site/forms/&lt;form&gt;/field.html when one exists. |
+| `KARNI_SITE_FORM_CLASSES` |  | `{}` | Class names on the form's markup, merged over the module's plain defaults: form, row, column, field, label, input, select, check, check_input, check_label, invalid, error, help, message, success, failure, button, required. |
+| `KARNI_SITE_FORM_PRESETS` |  | `{}` | Named sets of class names a tag picks with classes="&lt;name&gt;", merged over the shipped "bootstrap" preset (Bootstrap 5). {"salon": {"field": "field", "row": "form-row"}}. |
+| `KARNI_SITE_FORM_MESSAGES` |  | `{}` | The texts a form shows, merged over the defaults: success, invalid, throttled, refused, failed, choose (a select's empty option) and button. A tag's own success="..." wins. |
+| `KARNI_SITE_FORM_REQUIRED_MARK` |  | `"*"` | The text after a required field's label. |
+| `KARNI_SITE_FORM_SCRIPT` |  | `True` | Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors). False leaves the form working without JavaScript, and a site may load its own script. |
+| `KARNI_SITE_FORM_SENT_PARAM` |  | `"sent"` | The query parameter the page gets after a form was sent without JavaScript: ?sent=&lt;form&gt;. |
+| `KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
+| `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
 
 ## Components and hooks
 
@@ -1681,7 +1721,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
-| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, redirects, the current page in a menu, and error pages that cannot fail. |
+| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, public forms that work with and without JavaScript, redirects, the current page in a menu, and error pages that cannot fail. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ## Error codes
@@ -1886,6 +1926,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE007`](errors.md#site007) | exception | A menu item does not point at a page |
 | [`SITE008`](errors.md#site008) | check | One block key has two different defaults |
 | [`SITE009`](errors.md#site009) | exception | KARNI_SITE_SETTINGS_MODEL names no installed model |
+| [`SITE020`](errors.md#site020) | check | {% karni_form %} names a form Karni cannot find |
+| [`SITE021`](errors.md#site021) | exception | {% karni_form %} is written wrongly |
+| [`SITE022`](errors.md#site022) | exception | The form view is not routed |
+| [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
 
 ### The `karni` command (`C`)
 
