@@ -186,7 +186,7 @@ def test_a_site_made_afterwards_shares_the_root(project: Path) -> None:
 def test_an_imported_design_records_its_forms_and_the_tag_that_keeps_them(
     project: Path,
 ) -> None:
-    out = ok("import", "design", str(DESIGNS / "school"), "--app", "website").output
+    out = ok("import", "design", str(DESIGNS / "academy"), "--app", "website").output
     assert 'form: admissions.html:19 posts to "https://forms.example.org/hillside"' in out
     record = json.loads((project / ".karni" / "design.json").read_text())
     admissions = next(p for p in record["pages"] if p["source"] == "admissions.html")

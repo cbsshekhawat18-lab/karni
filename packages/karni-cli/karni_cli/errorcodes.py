@@ -259,6 +259,36 @@ CODES: Final[tuple[CliCode, ...]] = (
         "css/, js/ and image folders inside it.",
     ),
     _c(
+        "C121",
+        "The content map cannot be used",
+        "karni design extract --map",
+        "The map says which structure of the design is which model and which element is which "
+        "field. Extract follows it exactly, so a model, a field, a relation's target or a "
+        "selector it cannot follow stops it before anything is written.",
+        "Fix each problem the message lists in the map (the field names come from the map's "
+        '"fields", the selectors are CSS with an optional @attribute), or write a fresh draft '
+        "with karni design analyze <design> --map <file> --force.",
+    ),
+    _c(
+        "C122",
+        "The content map has decisions left",
+        "karni design extract --map",
+        "karni design analyze marks what the markup cannot settle with a decide entry: a list "
+        "on a detail page or a few items on the home page may be hand-picked or derived by a "
+        "query. Extract will not guess either way.",
+        'For each one: keep the value (remove its "decide", and add the field to the model\'s '
+        "karni make model command) or delete the value from the map and query the rows in the "
+        "view.",
+    ),
+    _c(
+        "C123",
+        "A content map is there already",
+        "karni design analyze --map",
+        "The map is a file the agent edits: names, decisions, selectors. Writing a new draft "
+        "over it would lose those edits.",
+        "Write the draft to another file, or pass --force to replace the map.",
+    ),
+    _c(
         "C199",
         "Internal error in karni",
         "karni make, karni upgrade",

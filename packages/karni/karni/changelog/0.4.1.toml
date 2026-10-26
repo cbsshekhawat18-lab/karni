@@ -222,3 +222,16 @@ form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, 
 or `karni rules sync --check` reports the files as stale."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-agent-files-name-karni-make-form"
+
+[[change]]
+id = "agent-files-site-from-design"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, site-from-design, takes an agent from a designer's pages to models, \
+the pages' real content (karni design analyze and extract, then karni load) and \
+templates that loop over the rows. `karni rules sync` writes its slash command files \
+and lists it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"

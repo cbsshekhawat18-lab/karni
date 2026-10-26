@@ -72,6 +72,7 @@ screens, seed data and a test file per resource.
 | External services | `events/services/` | the only place for HTTP clients |
 | Screens | `frontend/src/pages/` | compose `ResourceTable`, `ResourceForm`, `ResourceDetail` |
 | Public website | a site app: `website/views.py`, `website/templates/website/` | `karni make site website`, then `karni make view about` ([public pages](../public-site.md)) |
+| A design's content | models and `content/site.json` | `karni design analyze`, `karni design extract`, `karni load` ([from a design to content](../design-content.md)) |
 | Demo data | `events/seeds.py` | field overrides and `seed()` |
 | Tests | `events/tests/` | `assert_crud`, `assert_isolated`, plus your flows |
 

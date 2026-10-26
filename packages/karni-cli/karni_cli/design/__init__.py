@@ -16,6 +16,15 @@
   a design (``.karni/design.json``).
 * :mod:`karni_cli.design.site` plans the site app for a design: templates,
   partials, views, routes, redirects, assets and the report.
+* :mod:`karni_cli.design.analyze` (``karni design analyze``) finds the content
+  that repeats and proposes models for it, built from
+  :mod:`~karni_cli.design.scan` (values and repeated structures),
+  :mod:`~karni_cli.design.sources` (detail pages and lists that show the same
+  items), :mod:`~karni_cli.design.proposal` (models, fields, names, types)
+  and :mod:`~karni_cli.design.builder`.
+* :mod:`karni_cli.design.extract` (``karni design extract``) reads the pages
+  with a content map (selectors from :mod:`~karni_cli.design.select`, values
+  from :mod:`~karni_cli.design.values`) and writes a ``karni load`` file.
 """
 
 from __future__ import annotations

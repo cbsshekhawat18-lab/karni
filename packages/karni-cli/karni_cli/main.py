@@ -11,6 +11,7 @@ from karni_cli.commands.check import check
 from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
+from karni_cli.commands.design import design_app
 from karni_cli.commands.doctor import doctor
 from karni_cli.commands.explain import explain
 from karni_cli.commands.import_design import import_app
@@ -119,6 +120,8 @@ app.add_typer(make_app, name="make")
 register_aliases(app)
 # Imports: `karni import design <dir>`.
 app.add_typer(import_app, name="import")
+# A design's content: `karni design analyze <dir>`, `karni design extract <dir> --map <file>`.
+app.add_typer(design_app, name="design")
 
 
 def run() -> None:

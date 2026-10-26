@@ -2,32 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hillside School</title>
-  <meta name="description" content="A small primary school with a big garden.">
-  <link rel="stylesheet" href="css/bootstrap.css">
+  <title>Hillside Craft School</title>
+  <meta name="description" content="Pottery, drawing, weaving and printing courses for adults.">
   <link rel="stylesheet" href="css/school.css">
 </head>
 <body>
-  <nav class="navbar">
-    <a class="navbar-brand" href="index.html">Hillside School</a>
-    <a class="nav-link active" aria-current="page" href="index.html">Home</a>
-    <a class="nav-link" href="admissions.html">Admissions</a>
-  </nav>
-  <main class="container">
-    <h1>Welcome to Hillside</h1>
-    <p><img src="img/garden.svg" alt="The school garden"></p>
-  </main>
-  <footer class="footer">
-    <form class="row g-2" action="#" method="post">
-      <div class="col-auto">
-        <label class="visually-hidden" for="nl-email">Email</label>
-        <input type="email" class="form-control" id="nl-email" name="email" placeholder="Your email" required>
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-primary" type="submit">Subscribe</button>
-      </div>
-    </form>
+  <header class="masthead">
+    <a class="masthead__brand" href="index.html">Hillside Craft School</a>
+    <nav class="masthead__nav">
+      <a href="index.html" aria-current="page">Home</a>
+      <a href="courses.html">Courses</a>
+      <a href="teachers.html">Teachers</a>
+    </nav>
+  </header>
+
+  <section class="welcome">
+    <h1>Make something <em>with your hands</em></h1>
+    <p>Small classes in a converted barn, with every tool you need.</p>
+    <img src="img/studio.jpg" alt="The barn studio with long tables">
+  </section>
+
+  <section class="highlights">
+    <h2>Starting this autumn</h2>
+    <ul class="course-teasers">
+      <li class="course-teaser">
+        <a class="course-teaser__link" href="courses/pottery.html">
+          <img src="img/pottery.jpg" alt="Hands shaping clay on a wheel">
+          <h3>Wheel pottery</h3>
+        </a>
+        <p class="course-teaser__summary">Throw bowls and cups on the wheel.</p>
+      </li>
+      <li class="course-teaser">
+        <a class="course-teaser__link" href="courses/drawing.html">
+          <img src="img/drawing.jpg" alt="A charcoal sketch of a hand">
+          <h3>Life drawing</h3>
+        </a>
+        <p class="course-teaser__summary">Draw from a model, from quick poses to long ones.</p>
+      </li>
+      <li class="course-teaser">
+        <a class="course-teaser__link" href="courses/weaving.html">
+          <img src="img/weaving.jpg" alt="A loom with wool in three colours">
+          <h3>Weaving basics</h3>
+        </a>
+        <p class="course-teaser__summary">Warp a loom and weave a wall hanging.</p>
+      </li>
+    </ul>
+  </section>
+
+  <footer class="colophon">
+    <p>Hillside Craft School &middot; Evening and weekend courses &middot; <a href="courses.html">All courses</a></p>
   </footer>
 </body>
 </html>

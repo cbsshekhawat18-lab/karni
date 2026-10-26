@@ -77,10 +77,12 @@ from django.template.base import FilterExpression, Node, NodeList, Parser, Token
 from django.template.context import Context
 from django.utils.safestring import SafeString, mark_safe
 from karni.errorcodes import docs_url
+from karni.exceptions import KarniValueError
 from karni.security import extend_request_csp, script_hash
 
 from karni_site import blocks, menus, sitesettings
 from karni_site.navigation import any_active
+from karni_site.text import highlight
 
 register = template.Library()
 
@@ -105,6 +107,19 @@ def _flatten(values: Iterable[Any]) -> list[str]:
         elif value is not None and value != "":
             found.append(str(value))
     return found
+
+
+@register.filter("highlight")
+def highlight_filter(value: Any, spec: str = "em") -> str:
+    """``{{ heading|highlight:"span.accent" }}``: ``*marked*`` words in the design's markup.
+
+    See :mod:`karni_site.text`. A spec that is not a tag with classes fails the
+    render with ``SITE003``.
+    """
+    try:
+        return highlight(value, spec)
+    except KarniValueError as exc:
+        raise _syntax_error(exc.message) from None
 
 
 # {% ifactive %}

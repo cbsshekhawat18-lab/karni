@@ -29,7 +29,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make), [import](#karni-import)
+- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
@@ -505,7 +505,7 @@ karni seed [OPTIONS] [ARGS...]
 
 Load real content from a JSON or YAML file. It wraps `manage.py karni_load FILE [ARGS]`.
 
-The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. `karni seed` is for demo data, `karni load` for real content.
+The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. --dry-run lists, per model, each row it would create or change with the fields that change. `karni seed` is for demo data, `karni load` for real content (`karni design extract` writes it from a designer's pages).
 
 Example:
 
@@ -746,6 +746,8 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
+| `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1150,6 +1152,63 @@ karni import design [OPTIONS] DIRECTORY
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 | `--editable/--no-editable` |  | Make every text, image, menu and contact detail editable in the admin (karni-site blocks, menus and site settings). Remembered for later imports. |
+
+### `karni design`
+
+Read a designer's pages: the models their content needs, and the content itself.
+
+```
+karni design COMMAND [ARGS]...
+```
+
+#### `karni design analyze`
+
+Find the content that repeats in a design and propose models for it.
+
+Reads every page, sets aside what every page shares (the header, the footer), and finds the structures that repeat within and across pages: cards, list items, a gallery inside each project, a page per doctor. For each it infers the fields from the markup (a heading with its highlighted words, text, an image with its alt text, a link to another page, a list of tags, a date, a price, a number) and the relations between them (a card that links to a detail page is that page's model, a list of links to other items is a relation). Names come from the design's classes, headings and pages. It prints ready-to-run `karni make model` commands, models others point at first, and the decisions the markup cannot settle (a hand-picked list, or one a query derives).
+
+--map writes a draft content map: which structure is which model and which element is which field. Edit it, answer its decisions, then run `karni design extract`.
+
+Example:
+
+```sh
+karni design analyze ../design --map content/design-map.json
+```
+
+```
+karni design analyze [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages. |
+| `--app` TEXT |  | The app the models go in (default: the app karni import design used, else website). |
+| `--json` |  | Print the analysis as JSON. |
+| `--map` PATH |  | Write a draft content map to this file, for karni design extract. |
+| `--force` |  | Replace a map file that is there. |
+
+#### `karni design extract`
+
+Write the design's content as a `karni load` file, read with a content map.
+
+Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and image paths are relative to the output file, so `karni load` uploads the designer's own images. The map's open decisions must be answered first.
+
+Example:
+
+```sh
+karni design extract ../design --map content/design-map.json -o content/site.json
+```
+
+```
+karni design extract [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages. |
+| `--map` PATH (required) |  | The content map (karni design analyze --map writes a draft). |
+| `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
+| `--dry-run` |  | Print what would be written and write nothing. |
 
 ## Debugging
 

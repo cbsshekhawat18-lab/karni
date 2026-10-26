@@ -1,7 +1,8 @@
 ## Public site (karni-site)
 - Templates `{% load static karni_site %}` (rule K309). A designer's pages, never by hand:
   `karni import design <dir> --app <app> --editable`, again for a new version (`--diff` first).
-  Later pages: `karni make view`.
+- Content that repeats (cards, detail pages, galleries): `karni rules --procedure site-from-design`
+  (analyze, models, extract, load). Never retype it. Later pages: `karni make view`.
 - Never hard-code what a client may change: `{% editable "<page>.<name>" %}...{% endeditable %}`,
   `{% editable_image %}`, and `site` (`{{ site.name }}`, `site.phone_href`, `site.hours`).
 - Menus: `{% get_menu "header" as items %}` looped in the design's markup (`item.url`, `item.title`,
