@@ -143,6 +143,14 @@ What it does, page by page:
 - **Escapes what Django would read as a tag.** `{{`, `{%` and `{#` in the
   design's own text become `{% templatetag %}` tags, so the page renders the
   characters.
+- **Gives the staff app and the admin the design's brand.** The design's
+  stylesheets go through `karni ui detect --css`, which writes the
+  project's `frontend/src/karni-theme.css`: colours, radius and fonts taken
+  from the CSS custom properties, then from the body, link, button and input
+  rules. The admin loads the same file, so the brand is set once. A theme
+  file edited since Karni wrote it is kept, and the report says how to
+  replace it. A project without a `frontend/` is left as it is. See
+  [theming](theming.md#any-stylesheet-css).
 - **Reports what it could not map.** A broken link, a `<body>` attribute
   that differs between pages in a way that is not present or absent, a
   page without a description (the page test fails until the template

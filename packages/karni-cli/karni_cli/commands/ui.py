@@ -249,6 +249,45 @@ def _write(outcome: Outcome) -> list[dict[str, str]]:
     return actions
 
 
+def detect_from_css(root: Path, css: list[Path], *, dry_run: bool = False) -> str | None:
+    """Theme a project's staff app and admin from a design's stylesheets.
+
+    ``karni import design`` calls this with the design's CSS files. It writes the
+    project's ``karni-theme.css`` as ``karni ui detect --css`` does, and returns one
+    line for the import's report (``None`` when the project has no frontend). A theme
+    file edited since Karni wrote it is kept: the line says how to replace it.
+    """
+    try:
+        fe = frontend_mod.locate(root / "frontend")
+    except CliError as exc:
+        if exc.code != "C301":
+            raise
+        return None
+    today = dt.datetime.now().astimezone().date().isoformat()
+    outcome = plan_css(fe, paths=list(css), output=None, today=today)
+    assert outcome.css is not None
+    rel = fe.rel(outcome.theme.path)
+    graded = (
+        f"{len(outcome.css.found)} found, {len(outcome.css.inferred)} inferred, "
+        f"{len(outcome.css.defaulted)} defaulted"
+    )
+    if dry_run:
+        return f"would write {rel} ({graded})."
+    try:
+        _guard(outcome, force=False)
+    except CliError:
+        return (
+            f"kept {rel}, edited since Karni wrote it. To replace it with the design's "
+            "colours and fonts, run `karni ui detect --css <design dir> --force`."
+        )
+    actions = _write(outcome)
+    verb = "unchanged" if actions and actions[0]["action"] == "unchanged" else "wrote"
+    return (
+        f"{verb} {rel} ({graded}), so the staff app and the admin use the design's "
+        "colours and fonts. `karni ui detect --css <design dir> --dry-run` shows each token."
+    )
+
+
 def report(outcome: Outcome, actions: list[dict[str, str]], dry_run: bool) -> dict[str, Any]:
     """The machine-readable report (``--json``)."""
     fe = outcome.frontend

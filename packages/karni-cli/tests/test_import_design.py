@@ -678,7 +678,7 @@ def test_import_errors_and_dry_run(project: Path, tmp_path: Path) -> None:
     assert not (project / "website").exists()
 
 
-def test_the_staff_app_is_themed_from_the_css_when_ui_detect_knows_how(
+def test_the_import_hands_the_design_css_to_ui_detect(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[tuple[Path, list[str], bool]] = []
@@ -691,3 +691,36 @@ def test_the_staff_app_is_themed_from_the_css_when_ui_detect_knows_how(
     result = ok("import", "design", str(BAKERY), "--app", "website")
     assert calls == [(project, ["site.css"], False)]
     assert "staff app theme: themed from css/site.css" in result.output
+
+
+def test_the_staff_app_and_admin_take_the_design_colours(
+    project: Path, tmp_path: Path
+) -> None:
+    design = tmp_path / "branded"
+    shutil.copytree(BAKERY, design)
+    css = design / "css" / "site.css"
+    css.write_text(":root { --brand: #8a3b12; }\n" + css.read_text(encoding="utf-8"), encoding="utf-8")
+
+    dry = ok("import", "design", str(design), "--app", "website", "--dry-run")
+    assert "staff app theme: would write src/karni-theme.css" in dry.output
+    assert not (project / "frontend" / "src" / "karni-theme.css").exists()
+
+    result = ok("import", "design", str(design), "--app", "website")
+    assert "staff app theme: wrote src/karni-theme.css" in result.output
+    theme = (project / "frontend" / "src" / "karni-theme.css").read_text(encoding="utf-8")
+    assert "#8a3b12" in theme
+
+
+def test_an_edited_theme_is_kept_on_import(project: Path) -> None:
+    theme = project / "frontend" / "src" / "karni-theme.css"
+    theme.write_text(":root { --karni-color-primary: #123456; }\n", encoding="utf-8")
+    result = ok("import", "design", str(BAKERY), "--app", "website")
+    assert "staff app theme: kept src/karni-theme.css" in result.output
+    assert "--force" in result.output
+    assert "#123456" in theme.read_text(encoding="utf-8")
+
+
+def test_a_project_without_a_frontend_is_not_themed(project: Path) -> None:
+    shutil.rmtree(project / "frontend")
+    result = ok("import", "design", str(BAKERY), "--app", "website")
+    assert "staff app theme" not in result.output

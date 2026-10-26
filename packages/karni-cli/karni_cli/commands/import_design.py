@@ -20,7 +20,6 @@ them). ``--diff`` reports and writes nothing.
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import shutil
 from pathlib import Path
@@ -216,19 +215,14 @@ def _add_redirects(ws: Workspace, app: App, plan: SitePlan) -> None:
 
 
 def _theme_from_css(ws: Workspace, plan: SitePlan, *, dry_run: bool) -> None:
-    """Theme the staff app from the design's CSS when ``karni ui detect --css`` exists."""
-    try:
-        ui = importlib.import_module("karni_cli.commands.ui")
-    except ImportError:
-        return
-    hook = getattr(ui, "detect_from_css", None)
-    if not callable(hook):
-        return
+    """Theme the staff app and the admin from the design's CSS (``karni ui detect --css``)."""
+    from karni_cli.commands import ui
+
     css = [path for name, path in plan.assets.items() if name.lower().endswith(".css")]
     if not css:
         return
     try:
-        outcome = hook(ws.root, css, dry_run=dry_run)
+        outcome = ui.detect_from_css(ws.root, css, dry_run=dry_run)
     except CliError as exc:
         ws.note(f"staff app theme: not detected ({exc.message}). Run `karni ui detect --css`.")
         return
