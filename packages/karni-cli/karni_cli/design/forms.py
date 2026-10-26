@@ -265,6 +265,17 @@ def _describe(form: Node, source: str) -> DesignForm:
     if button is not None:
         markup["button"] = " ".join(button.classes(source))
     markup["form"] = " ".join(form.classes(source))
+    status = next(
+        (
+            node
+            for node in form.iter_elements()
+            if node is not form
+            and (node.attr(source, "role") == "status" or node.attr(source, "aria-live"))
+        ),
+        None,
+    )
+    if status is not None:  # where the design says "sent" or "try again"
+        markup["message"] = " ".join(status.classes(source))
     button_text = ""
     if button is not None:
         button_text = (
@@ -333,6 +344,7 @@ def suggest_tag(name: str, form: DesignForm, fields: Sequence[str]) -> str:
         markup = {key: value for key, value in markup.items() if key not in BOOTSTRAP}
     for key in (
         "form",
+        "message",
         "row",
         "column",
         "field",

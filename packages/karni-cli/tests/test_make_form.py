@@ -231,7 +231,8 @@ def test_design_forms_are_read_from_plain_markup_too() -> None:
     assert match is not None and match.line == 14 and match.button == "Book now"
     tag = suggest_tag("booking", match, ["name", "email", "day", "service"])
     assert tag == (
-        '{% karni_form "booking" form_class="booking-form" row_class="form-row" '
+        '{% karni_form "booking" form_class="booking-form" message_class="form-note" '
+        'row_class="form-row" '
         'field_class="field" required_class="req" button_class="btn btn-accent" '
         'rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" '
         'button="Book now" %}'
@@ -458,6 +459,7 @@ with override_settings(
     # the design's own form, now the tag: its markup kept
     home = client.get("/").content.decode()
     for markup in ('class="booking-form"', 'class="form-row"', 'class="field"',
+                   '<p class="form-note" role="status"',
                    'class="btn btn-accent"', ">Preferred day <", 'placeholder="Jane Doe"',
                    '<span class="req" aria-hidden="true">*</span>'):
         assert markup in home, (markup, home)

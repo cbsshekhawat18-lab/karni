@@ -451,7 +451,7 @@ that keeps that form's class names, rows, labels, placeholders and button:
 ```text
 design: website/templates/website/home.html:8: <form action="book.php"> with name, email, day, service (the fields of booking_request)
 replace: in website/templates/website/home.html, replace that <form> ... </form> (line 8) with:
-    {% karni_form "booking_request" form_class="booking-form" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" %}
+    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" %}
 ```
 
 ### The email
