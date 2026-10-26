@@ -58,7 +58,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
             'take a block key ("home.intro": lowercase words joined by dots, the page first), '
             "{% site_image %} a file field of the site's settings, {% site_defaults %} "
             'name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template '
-            "does not compile otherwise."
+            "does not compile otherwise. The highlight filter takes a tag with optional "
+            'classes ("span.accent", "em", or "" for none) and fails the render otherwise.'
         ),
         fix="Write the tag as the message shows. The karni-site README has an example of each.",
     ),

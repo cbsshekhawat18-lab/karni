@@ -1,0 +1,2 @@
+.hero__slides img { display: none; }
+.hero__slides img.is-shown { display: block; }

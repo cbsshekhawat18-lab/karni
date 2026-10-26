@@ -80,9 +80,10 @@ never by hand. For a site written from scratch, put the client's files under
 `templates/website/partials/` once they grow. Text and images the client may
 change are [blocks](#everything-the-client-edits), menus are
 `{% get_menu %}`, and the site's details are `site`: no project writes a
-template tag, a filter or a model for them. A command that loads the
-client's other content is project code (`karni make command`, or
-`karni load`).
+template tag, a filter or a model for them. The client's other content goes
+in models and comes from the design with [`karni design analyze` and
+`karni design extract`](design-content.md), then [`karni load`](content-loading.md):
+never a hand-written loading command.
 
 ## Import a design
 
@@ -193,10 +194,12 @@ template, and the diff says so. The import never deletes anything.
 ### What stays yours
 
 `karni make view` adds a page later. It extends the imported `base.html`
-and passes the same page test. Models for the client's own content (the
-services, the team, the projects) are project code, read as below. The
-import is a starting point that runs again, not a build step: edit the
-templates freely, and the next import keeps your edits.
+and passes the same page test. The content that repeats in the pages (cards,
+detail pages, galleries) becomes models and rows with
+[`karni design analyze`, `karni design extract` and `karni load`](design-content.md),
+and the templates loop over the rows. The import is a starting point that
+runs again, not a build step: edit the templates freely, and the next import
+keeps your edits.
 
 ## Everything the client edits
 
@@ -294,6 +297,10 @@ karni_site %}` at the top of a template gives it:
 - `{% csp_hash %}` and `{% csp_allow %}`, below.
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
+- `{{ value|highlight:"span.accent" }}` writes the words a field keeps as
+  `*marked words*` in the design's markup (`em`, `span.accent`, any tag with
+  classes), everything else escaped. `karni design extract` keeps the words a
+  heading sets apart that way, and `|highlight:""` drops the marks.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu

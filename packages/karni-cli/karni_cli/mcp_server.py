@@ -53,7 +53,8 @@ def context_tool() -> str:
 
 def rules_tool(code: str = "", procedure: str = "") -> str:
     """Karni conventions. No arguments: every rule's code + summary. ``code``: one rule in
-    full (why + fix). ``procedure``: steps for new-model, new-page, add-module or new-module."""
+    full (why + fix). ``procedure``: steps for new-model, new-page, add-module, new-module or
+    site-from-design."""
     project = _project()
     try:
         data = agent_data.load(project)

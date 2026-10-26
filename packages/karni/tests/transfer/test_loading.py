@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 from django.core.management import CommandError, call_command
+from django.test import override_settings
 
 from karni.audit.models import ChangeBatch
 from karni.transfer.loading import ContentImporter, LoadError, load_content
@@ -434,3 +435,62 @@ class TestCommand:
             call_command("karni_load", str(path), "--as", "ghost@example.com")
         with pytest.raises(CommandError, match="E804: .*no such file"):
             call_command("karni_load", str(tmp_path / "nope.json"))
+
+
+class TestDryRunDiff:
+    def test_a_dry_run_lists_each_row_and_field_it_would_change(self, tmp_path: Path) -> None:
+        site = _site()
+        load_content(_write(tmp_path, site))
+        site["contentapp.Project"][0]["title"] = "Nexus Tower"
+        site["contentapp.Project"][0]["services"] = []
+        site["contentapp.Service"].append({"slug": "repair", "title": "Repair", "image": ""})
+        site["contentapp.Project"][0]["gallery"] = site["contentapp.Project"][0]["gallery"][:2]
+        report = load_content(_write(tmp_path, site), dry_run=True, prune=True)
+        text = report.render()
+        assert "      ~ slug='nexus': title 'Nexus' -> 'Nexus Tower'" in text
+        assert "services [" in text and "-> []" in text  # the many-to-many change, by key
+        assert "      + slug='repair'" in text
+        assert "      - slug='nexus' > " in text  # the gallery image --prune would delete
+        assert Project.objects.get(slug="nexus").title == "Nexus"  # nothing was written
+        data = report.to_dict()
+        (change,) = data["models"]["contentapp.Project"]["changes"]
+        assert change["status"] == "updated" and change["fields"]["title"] == [
+            "'Nexus'",
+            "'Nexus Tower'",
+        ]
+        assert data["models"]["contentapp.Service"]["changes"] == [
+            {"row": "slug='repair'", "status": "created", "fields": {}}
+        ]
+        # A real run reports the same numbers and leaves the rows listed only in --json.
+        written = load_content(_write(tmp_path, site), prune=True)
+        assert "~ slug='nexus'" not in written.render()
+        assert (
+            written.to_dict()["models"]["contentapp.Project"]["changes"][0]["row"] == "slug='nexus'"
+        )
+
+    def test_an_upload_is_part_of_the_diff(self, tmp_path: Path) -> None:
+        site = _site()
+        load_content(_write(tmp_path, site))
+        report = load_content(_write(tmp_path, site), dry_run=True, refresh_files=True)
+        text = report.render()
+        assert "~ slug='design': image (file) -> 'design.png'" in text
+        assert report.models["contentapp.Project"].files == 1
+        unchanged = load_content(_write(tmp_path, site), dry_run=True)
+        assert unchanged.render().endswith("Nothing would change.")
+
+    def test_a_long_diff_is_cut_with_a_count(self, tmp_path: Path) -> None:
+        many = {"contentapp.Category": [{"slug": f"c{i}", "name": f"C {i}"} for i in range(25)]}
+        report = load_content(_write(tmp_path, many), dry_run=True)
+        lines = report.render().splitlines()
+        assert sum(1 for line in lines if line.startswith("      + ")) == 20
+        assert "      ... and 5 more" in lines
+
+
+@override_settings(DEBUG=True)
+def test_seed_refuses_the_tables_a_load_filled(tmp_path: Path) -> None:
+    load_content(_write(tmp_path, _site()))
+    with pytest.raises(
+        CommandError, match="E617: Refusing to seed: these tables already hold rows"
+    ):
+        call_command("karni_seed", "--model", "contentapp.Service", stdout=StringIO())
+    assert Service.objects.count() == 2

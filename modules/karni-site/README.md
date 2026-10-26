@@ -352,6 +352,22 @@ the project's `<template>_subject.txt` and `<template>_body.txt` (and
 `Reply-To`. An empty setting sends nothing and logs a warning. A missing one
 raises `SITE023`.
 
+### `highlight`: words the design sets apart
+
+```django
+<h2>{{ project.heading|highlight:"span.accent" }}</h2>   {# Custom homes, <span class="accent">crafted for place</span> #}
+<h1>{{ slide.heading|highlight:"em" }}</h1>
+<title>{{ project.heading|highlight:"" }}</title>          {# the words, without the marks #}
+```
+
+A design often highlights some words of a heading. `karni design extract`
+keeps them as `*marked words*` in the field (`Custom homes, *crafted for
+place*`), so staff edit plain text with asterisks in the admin. The filter
+escapes the value and wraps each marked part in the markup the spec names: a
+tag with optional classes. A literal asterisk is written `\*`. A spec that is
+not a tag fails the render with `SITE003`. `karni_site.text.highlight` is the
+same function for Python code.
+
 ### Error pages that cannot fail
 
 `karni_site.views.page_not_found` and `server_error` render the site's own

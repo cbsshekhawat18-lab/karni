@@ -2,6 +2,9 @@
 - Runtime for a site app (rule K309). Templates `{% load static karni_site %}`.
 - Import a designer's pages with `karni import design <dir> --app <app> --editable`, never by
   hand. A new design version: run it again (`--diff` first). Later pages: `karni make view`.
+- Content that repeats in the design (cards, detail pages, galleries): `karni rules
+  --procedure site-from-design` (analyze, models, extract, load). Never retype it.
+  Render highlighted words in a loaded value with `{{ value|highlight }}`.
 - Never hard-code text or images a client may change: `{% editable "<page>.<name>" %}...{% endeditable %}`
   and `{% editable_image "<page>.<name>" %}<img ...>{% endeditable_image %}`. The content is the default.
 - The site's details are `site` (`{{ site.name }}`, `site.phone_href`, `site.hours`, `site.social.<network>`),

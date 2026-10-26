@@ -21,6 +21,10 @@ karni load content/site.json --as editor@example.com --json
 It wraps `manage.py karni_load` through the project interpreter, like the
 other runners. `karni.transfer.loading.load_content()` is the importable form.
 
+When the content is in a designer's static pages, do not type it into the
+file: [`karni design extract`](design-content.md) writes it from the pages,
+in this format.
+
 ## Demo data or content
 
 | | `karni seed` | `karni load` |
@@ -278,8 +282,24 @@ the field and the problem. A file that cannot be read at all (missing, not
 valid JSON or YAML, the wrong shape, an unknown model) is `E804`.
 
 `--dry-run` runs every step inside a transaction and rolls it back. Its
-report shows what would be created, updated, left unchanged, pruned and
-uploaded.
+report is a diff per model: the counts, then each row it would create (`+`),
+each row it would change (`~`) with the fields that change, the old value
+and the new one, each file it would upload and each child `--prune` would
+delete (`-`). A model lists its first 20 rows and counts the rest:
+
+```text
+$ karni load content/site.json --dry-run --prune
+Dry run of content/site.json, nothing was written:
+  portfolio.Service       1 created, 0 updated, 2 unchanged
+      + slug='print'
+  portfolio.Project       0 created, 1 updated, 0 unchanged
+      ~ slug='harbour-house': title 'Harbour House' -> 'Harbour House, Kiel', services ['3f2c...', '9a1e...'] -> ['3f2c...']
+  portfolio.ProjectImage  0 created, 0 updated, 1 unchanged, 1 pruned
+      - slug='harbour-house' > The menu
+```
+
+`--json` prints the same report with each change under `"changes"` for every
+model, on a real run too.
 
 ## Who made the change
 

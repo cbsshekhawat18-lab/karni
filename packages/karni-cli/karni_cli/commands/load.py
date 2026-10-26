@@ -26,8 +26,10 @@ def load(
     image fields hold paths relative to the content file (uploaded once, or
     again with --refresh-files), and a nested list holds a row's children
     (--prune deletes the ones it does not name). One transaction with the
-    API's validation: an invalid row rolls everything back. `karni seed` is
-    for demo data, `karni load` for real content.
+    API's validation: an invalid row rolls everything back. --dry-run lists,
+    per model, each row it would create or change with the fields that change.
+    `karni seed` is for demo data, `karni load` for real content (`karni design
+    extract` writes it from a designer's pages).
 
     Example: karni load content/site.json --dry-run
     """
