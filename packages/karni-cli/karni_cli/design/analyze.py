@@ -62,6 +62,7 @@ from karni_cli.design.builder import (
 )
 from karni_cli.design.proposal import (
     Decision,
+    HighlightAdvice,
     Model,
     Namer,
     PageCopy,
@@ -79,6 +80,7 @@ from karni_cli.design.sources import (
     page_slug,
     read_design,
 )
+from karni_cli.design.values import HIGHLIGHT_MARKER
 
 __all__ = [
     "Analysis",
@@ -113,6 +115,8 @@ class Analysis:
     decisions: list[Decision]
     page_copy: list[PageCopy]
     notes: list[str] = field(default_factory=list)
+    #: How the site renders the words its fields highlight (``None``: no field does).
+    highlight: HighlightAdvice | None = None
 
     def commands(self) -> list[str]:
         """``karni make model`` commands, each model after the models it points at."""
@@ -151,6 +155,7 @@ class Analysis:
                 for c in self.page_copy
             ],
             "commands": self.commands(),
+            "highlight": self.highlight.to_dict() if self.highlight is not None else None,
             "notes": list(self.notes),
             "map": self.draft_map(),
         }
@@ -161,6 +166,7 @@ class Analysis:
             "version": MAP_VERSION,
             "design": design if design is not None else self.design,
             "app": self.app,
+            "marker": HIGHLIGHT_MARKER,
             "models": [_model_map(model) for model in self.models],
         }
 
@@ -187,6 +193,11 @@ class Analysis:
             lines.append("Left in the templates (page copy, not models):")
             for copy in self.page_copy:
                 lines.append(f"  - {copy.where}: {copy.step} x{copy.items}, {copy.reason}")
+        if self.highlight is not None:
+            lines.append("")
+            marker = self.highlight.marker
+            lines.append(f"Highlighted words (kept as {marker}words{marker}, one convention):")
+            lines.extend(f"  - {line}" for line in self.highlight.lines())
         if self.notes:
             lines.append("")
             lines.extend(self.notes)
@@ -312,9 +323,19 @@ def _model_map(model: Model) -> dict[str, Any]:
 
 
 def analyze(
-    design: Path, app: str, *, namer: Namer | None = None, label: str | None = None
+    design: Path,
+    app: str,
+    *,
+    namer: Namer | None = None,
+    label: str | None = None,
+    highlight: str | None = None,
 ) -> Analysis:
-    """Analyze the design folder ``design`` for models in ``app`` (see the module docstring)."""
+    """Analyze the design folder ``design`` for models in ``app`` (see the module docstring).
+
+    ``highlight`` is the markup ``KARNI_SITE_HIGHLIGHT`` already renders
+    (``span.accent``), when ``karni import design --editable`` recorded one: the
+    advice then names it instead of proposing a setting.
+    """
     pages, mapped = read_design(design, app)
     for page in pages:
         page.found = _scan_page(page)
@@ -326,7 +347,7 @@ def analyze(
         for page in family.pages:
             page.found = _scan_page(page, hints)
     sources = build_sources(pages, families)
-    builder = _Builder(pages, sources, mapped, namer or Namer(), app)
+    builder = _Builder(pages, sources, mapped, namer or Namer(), app, configured=highlight)
     builder.run()
     return Analysis(
         label if label is not None else str(design),
@@ -336,4 +357,5 @@ def analyze(
         builder.decisions,
         builder.page_copy,
         builder.notes,
+        builder.highlight,
     )

@@ -26,6 +26,7 @@ from karni_cli.design.rewrite import Mapped, Reference
 from karni_cli.design.scan import Collection, Hint, Scan, Slot, scan
 from karni_cli.design.values import (
     slugify,
+    unmark,
 )
 
 #: Share of a source's items that must point at another source's items to be the same items.
@@ -447,7 +448,7 @@ def _is_heading(key: tuple[tuple[str, ...], str, str]) -> bool:
 
 
 def _norm(text: str) -> str:
-    return collapse(text.replace("*", "").replace("\\", "")).casefold()
+    return collapse(unmark(text)).casefold()
 
 
 def _title_key(source: Source) -> tuple[tuple[str, ...], str, str] | None:

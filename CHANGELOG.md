@@ -78,11 +78,15 @@ apply codemods and list the manual steps. This file is the human summary.
   folders. What the markup cannot settle (a list on a detail page that may
   be hand-picked or derived, a few items shown on the home page, a card
   styled on its own that holds a list item's values) is a decision for the
-  agent, with the evidence. `--json` prints it as stable JSON, and `--map
-  <file>` writes a draft content map. `extract <dir> --map <file>` reads the pages with the map and writes their content in the
-  `karni load` format, values parsed by type, relations by key, children
-  nested, image paths relative to the output file. It refuses while a
-  decision is open (C122) or the map cannot be followed (C121).
+  agent, with the evidence. The report also gives the `KARNI_SITE_HIGHLIGHT`
+  that renders the design's highlighted words, or says that `karni import
+  design --editable` already wrote it. `--json` prints it all as stable
+  JSON, and `--map <file>` writes a draft content map. `extract <dir> --map
+  <file>` reads the pages with the map and writes their content in the
+  `karni load` format: values parsed by type, highlighted words between the
+  site's marker (`==words==`, the map's `"marker"`), relations by key,
+  children nested, image paths relative to the output file. It refuses
+  while a decision is open (C122) or the map cannot be followed (C121).
   [docs/design-content.md](docs/design-content.md).
 - **`karni load --dry-run` shows a diff per model.** Each row it would create,
   each row it would change with the fields that change (old and new value),
@@ -92,9 +96,13 @@ apply codemods and list the manual steps. This file is the human summary.
 - **`karni make model --order <field> --key <field>`** writes `Meta.ordering`
   and `Karni.import_key`, the field `karni load` matches rows on (a child
   row: its parent plus that field, such as `position`).
-- **`{{ value|highlight:"span.accent" }}` in karni-site** writes the words a
-  field keeps as `*marked words*` back in the design's markup, everything
-  else escaped. `|highlight:""` drops the marks.
+- **One convention for highlighted words: `{{ value|highlight }}` in
+  karni-site.** A model field keeps highlighted words the way an editable
+  block does, between `KARNI_SITE_HIGHLIGHT`'s marker (`==words==`), and the
+  filter renders them in the setting's tag and class, everything else
+  escaped. `|highlight:"span.dot"` names another markup for one value,
+  `|highlight:""` drops the marks. A backslash before the marker (`\==`)
+  keeps it as typed, in a field and in an editable block alike.
 - **New agent procedure `site-from-design`**: import, analyze, models,
   extract, load, then templates that loop over the rows. Run `karni rules
   sync` for its slash command files.

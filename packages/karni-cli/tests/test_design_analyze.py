@@ -162,17 +162,26 @@ def test_names_and_keys_come_from_the_markups_words() -> None:
     assert not any(values.is_utility_class(t) for t in ("card-title", "project-kicker", "lede"))
 
 
-def test_text_keeps_highlighted_words_and_leaves_out_decoration() -> None:
+def test_text_keeps_highlighted_words_between_the_sites_marker() -> None:
     source = (
         '<h2>Custom homes, <span class="accent">crafted for place</span></h2>'
-        '<a>Learn more <span class="arrow">→</span></a><p>A<br>B *</p>'
+        '<a>Learn more <span class="arrow">→</span></a><p>A<br>B == C *</p>'
     )
     doc = parse(source)
     heading, link, paragraph = (select(doc.root, tag, source)[0] for tag in ("h2", "a", "p"))
-    assert values.text_of(heading, source) == ("Custom homes, *crafted for place*", ["span.accent"])
+    # KARNI_SITE_HIGHLIGHT's default marker: a client types the same in an editable block.
+    assert values.HIGHLIGHT_MARKER == "=="
+    assert values.text_of(heading, source) == (
+        "Custom homes, ==crafted for place==",
+        ["span.accent"],
+    )
     assert values.text_of(link, source, drop=["span.arrow"])[0] == "Learn more"
-    assert values.text_of(paragraph, source)[0] == "A\nB \\*"
+    # A marker the text holds is escaped with a backslash, as karni_site reads it.
+    assert values.text_of(paragraph, source)[0] == "A\nB \\== C *"
     assert values.text_of(heading, source, highlight=False)[0] == "Custom homes, crafted for place"
+    assert values.text_of(paragraph, source, highlight=False)[0] == "A\nB == C *"
+    assert values.text_of(heading, source, marker="**")[0] == "Custom homes, **crafted for place**"
+    assert values.unmark("a \\== b ==c==") == "a == b c"
 
 
 # --- the scan -------------------------------------------------------------------
@@ -279,7 +288,11 @@ def test_a_school_with_courses_a_gallery_a_teacher_and_a_hand_picked_list() -> N
     # A hand-picked list of the same model is one-way: "self" would be symmetrical.
     assert types["related"] == "m2m:website.Course?"
     tagline = next(f for f in course.fields if f.name == "tagline")
-    assert tagline.highlight == ["em"] and 'highlight:"em"' in tagline.note
+    assert tagline.highlight == ["em"] and "{{ value|highlight }}" in tagline.note
+    # One markup for the site: the advice proposes KARNI_SITE_HIGHLIGHT for it.
+    assert analysis.highlight is not None
+    assert analysis.highlight.setting() == {"marker": "==", "tag": "em", "class": ""}
+    assert analysis.highlight.uses == {"em": ["Course.tagline"]}
     assert "teacher_2" not in types  # "Taught by Mia Chen" is the relation's text
     image = _model(analysis, "CourseImage")
     assert image.parent is course and image.accessor == "courseimage_set"
@@ -364,9 +377,12 @@ def test_the_analysis_as_json_is_stable_and_holds_the_draft_map() -> None:
         "decisions",
         "page_copy",
         "commands",
+        "highlight",
         "notes",
         "map",
     ]
+    assert data["highlight"]["setting"] == {"marker": "==", "tag": "em", "class": ""}
+    assert data["map"]["marker"] == "=="
     course = next(m for m in data["models"] if m["name"] == "Course")
     assert course["detail_pages"][0].startswith("courses/")
     related = next(f for f in course["fields"] if f["name"] == "related")
@@ -381,6 +397,25 @@ def test_the_analysis_as_json_is_stable_and_holds_the_draft_map() -> None:
     child = next(m for m in data["map"]["models"] if m["name"] == "CourseImage")
     assert child["parent"] == "Course" and child["key"] == "position"
     assert detail["values"]["courseimage_set"]["rows"]["caption"] == "figcaption"
+
+
+def test_highlighted_words_get_one_setting_for_the_whole_site() -> None:
+    text = _analysis("school").render()
+    assert "Highlighted words (kept as ==words==, one convention):" in text
+    assert (
+        'Course.tagline set words apart with <em>. Set `KARNI_SITE_HIGHLIGHT = {"marker": "==", '
+        '"tag": "em", "class": ""}` in config/settings.py: then {{ value|highlight }} renders '
+        "them, and a client types ==words== for the same in an editable block."
+    ) in text
+    # The markup karni import design --editable wrote: nothing to set, the filter needs no
+    # argument for the fields that use it, and names its own markup for any other.
+    told = analyze(DESIGNS / "school", "website", highlight="em").render()
+    assert "the markup karni import design --editable already wrote" in told
+    other = analyze(DESIGNS / "school", "website", highlight="span.accent")
+    tagline = next(f for f in _model(other, "Course").fields if f.name == "tagline")
+    assert 'render with {{ value|highlight:"em" }}' in tagline.note
+    assert 'KARNI_SITE_HIGHLIGHT renders <span class="accent">' in other.render()
+    assert _analysis("practice").highlight is None
 
 
 def test_the_human_report_lists_models_decisions_and_commands() -> None:

@@ -6,8 +6,11 @@ writes, read the same way by both:
 * :func:`text_of` is an element's text with entities decoded and whitespace
   collapsed. ``<br>`` is a line break. Words the design highlights inside a
   heading or a paragraph (``<em>``, ``<span class="accent">``, ``<mark>``)
-  are kept as ``*marked words*``, which ``{{ value|highlight:"span.accent" }}``
-  (``karni_site``) turns back into the design's markup.
+  are kept between two markers, ``==marked words==`` (:data:`HIGHLIGHT_MARKER`),
+  the convention ``KARNI_SITE_HIGHLIGHT`` sets for the whole site: a client
+  types it in an editable block, and ``{{ value|highlight }}`` (``karni_site``)
+  turns it back into the design's markup. A backslash before a marker keeps it
+  as text.
 * :func:`number`, :func:`price` and :func:`date` read a value only when the
   whole text is one (``"12 weeks"`` with the unit kept apart, ``"€4.50"``,
   ``"14 March 2026"``).
@@ -28,10 +31,12 @@ from typing import Final
 from karni_cli.design.parse import Node, collapse
 
 __all__ = [
+    "HIGHLIGHT_MARKER",
     "INLINE",
     "date",
     "highlight_spec",
     "is_utility_class",
+    "mark_pattern",
     "number",
     "pascal",
     "plural",
@@ -41,8 +46,14 @@ __all__ = [
     "slugify",
     "snake",
     "text_of",
+    "unmark",
     "words",
 ]
+
+#: What goes around highlighted words: KARNI_SITE_HIGHLIGHT's default marker (karni_site), so
+#: a field extracted from a design and an editable block mark words the same way. A content
+#: map's top-level "marker" overrides it for ``karni design extract``.
+HIGHLIGHT_MARKER: Final = "=="
 
 #: Elements that sit inside a line of text (phrasing content).
 INLINE: Final = frozenset(
@@ -267,33 +278,54 @@ def _emphasis(child: Node, parent_text: str, source: str) -> bool:
     return bool(inner) and inner != parent_text
 
 
+def mark_pattern(marker: str = HIGHLIGHT_MARKER) -> re.Pattern[str]:
+    """The words between two markers that no backslash escapes: ``==words==``."""
+    escaped = re.escape(marker)
+    return re.compile(rf"(?<!\\){escaped}(.+?)(?<!\\){escaped}", re.DOTALL)
+
+
+def unmark(text: str, marker: str = HIGHLIGHT_MARKER) -> str:
+    """``text`` without its highlight marks: the words, a ``\\==`` as ``==``."""
+    return mark_pattern(marker).sub(r"\1", text).replace("\\" + marker, marker)
+
+
 def text_of(
-    node: Node, source: str, *, highlight: bool = True, drop: Iterable[str] = ()
+    node: Node,
+    source: str,
+    *,
+    highlight: bool = True,
+    drop: Iterable[str] = (),
+    marker: str = HIGHLIGHT_MARKER,
 ) -> tuple[str, list[str]]:
     """The text of ``node`` and the highlight markup found in it.
 
-    Highlighted words (an emphasis element holding part of the text) become
-    ``*words*``, and a literal ``*`` is written ``\\*``. ``<br>`` becomes a line
-    break and every other run of whitespace one space. Elements written as
-    one of ``drop`` (``span.arrow``) are left out: decoration every item has.
+    With ``highlight``, highlighted words (an emphasis element holding part
+    of the text) go between two ``marker`` (``==words==``), and a marker the
+    text itself holds is written with a backslash before it (``\\==``).
+    ``<br>`` becomes a line break and every other run of whitespace one space.
+    Elements written as one of ``drop`` (``span.arrow``) are left out:
+    decoration every item has.
     """
     dropped = set(drop)
     whole = node.plain_text(source)
     found: list[str] = []
     pieces: list[str] = []
 
+    def literal(text: str) -> str:
+        return text.replace(marker, "\\" + marker) if highlight and marker else text
+
     def walk(current: Node) -> None:
         for child in current.children:
             if child.kind == "text":
-                pieces.append(unescape(child.text(source)).replace("*", "\\*"))
+                pieces.append(literal(unescape(child.text(source))))
             elif child.kind == "element":
                 if dropped and highlight_spec(child, source) in dropped:
                     continue
                 if child.tag == "br":
                     pieces.append("\n")
                 elif highlight and current is node and _emphasis(child, whole, source):
-                    inner = child.plain_text(source).replace("*", "\\*")
-                    pieces.append(f"*{inner}*")
+                    inner = literal(child.plain_text(source))
+                    pieces.append(f"{marker}{inner}{marker}")
                     spec = highlight_spec(child, source)
                     if spec not in found:
                         found.append(spec)

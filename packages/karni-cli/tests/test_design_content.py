@@ -122,6 +122,17 @@ def test_extract_then_load_fills_a_project_and_loading_again_changes_nothing(
         assert files == 5 + 4 + 4 + 6
     second = _load(python, project)
     assert not second["changed"]
+    if design == "school":
+        # Highlighted words arrive with KARNI_SITE_HIGHLIGHT's marker, as an editable block
+        # stores what a client types.
+        shell = _manage(
+            python,
+            project,
+            "shell",
+            "-c",
+            "from website.models import Course; print(Course.objects.get(slug='pottery').tagline)",
+        )
+        assert shell.stdout.strip().splitlines()[-1] == "Shape clay ==by hand==", shell.stderr
     again = ok(
         "design", "extract", folder, "--map", "content/design-map.json", "-o", "content/site.json"
     )

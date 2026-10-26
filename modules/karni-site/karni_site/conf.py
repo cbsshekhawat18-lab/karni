@@ -27,8 +27,10 @@ DEFAULTS: dict[str, Any] = {
     # fields of its own subclasses karni_site.models.AbstractSiteSettings and names
     # its model here, before karni_site's first migrate (like AUTH_USER_MODEL).
     "KARNI_SITE_SETTINGS_MODEL": "karni_site.SiteSettings",
-    # What a client types around words to highlight them in an editable block, and
-    # the element (with its class) the words render in. "" as the marker turns it off.
+    # What a client types around words to highlight them, in an editable block and in a
+    # field rendered with {{ value|highlight }}, and the element (with its class) the
+    # words render in. A backslash before the marker keeps it as typed. An empty marker
+    # turns it off.
     "KARNI_SITE_HIGHLIGHT": {"marker": "==", "tag": "mark", "class": ""},
     # The inline markup an edited block keeps: element -> the attributes it keeps.
     # Everything else is removed, its text kept. The highlight element joins it.

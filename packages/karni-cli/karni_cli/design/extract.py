@@ -12,12 +12,13 @@ The map (JSON)::
       "version": 1,
       "design": "../design",            # the design folder, relative to the map file
       "app": "website",                 # rows go to "<app>.<Model>"
+      "marker": "==",                   # around highlighted words: KARNI_SITE_HIGHLIGHT's marker
       "models": [
         {
           "name": "Course",
           "fields": {"slug": "slug:title", "title": "str:80", "price": "money:USD", ...},
           "key": "slug",                # the field each row is matched on
-          "highlight": {"tagline": "em"},  # fields that keep *marked* words
+          "highlight": {"tagline": "em"},  # fields that keep ==marked== words
           "sources": [
             {
               "pages": ["courses/pottery.html", ...],  # or "page": "courses.html"
@@ -102,7 +103,7 @@ from karni_cli.design.analyze import attr_key, link_key, page_slug, parse_value
 from karni_cli.design.parse import Document, Node, collapse, parse
 from karni_cli.design.rewrite import Mapped, page_route
 from karni_cli.design.select import Place, SelectorError, parse_place
-from karni_cli.design.values import slugify, text_of
+from karni_cli.design.values import HIGHLIGHT_MARKER, slugify, text_of
 
 __all__ = ["ExtractResult", "MapError", "Reader", "extract", "read_map"]
 
@@ -157,6 +158,12 @@ def check_map(data: Any, where: str = "the map") -> None:
     """Raise :class:`MapError` for anything extract cannot follow, decisions left open first."""
     if not isinstance(data, Mapping) or not isinstance(data.get("models"), list):
         raise MapError(f'{where}: the map is an object with a "models" list.')
+    marker = data.get("marker", HIGHLIGHT_MARKER)
+    if not isinstance(marker, str) or not marker.strip() or marker != marker.strip():
+        raise MapError(
+            f'{where}: "marker" is the text around highlighted words, such as "==" (the '
+            f"default, KARNI_SITE_HIGHLIGHT's), not {marker!r}."
+        )
     if data.get("version", MAP_VERSION) != MAP_VERSION:
         raise MapError(
             f"{where}: map version {data.get('version')!r}, this karni reads {MAP_VERSION}."
@@ -287,10 +294,14 @@ class Reader:
     :meth:`text` or :meth:`value`).
     """
 
-    def __init__(self, design: Path, output: Path, mapped: Mapped) -> None:
+    def __init__(
+        self, design: Path, output: Path, mapped: Mapped, marker: str = HIGHLIGHT_MARKER
+    ) -> None:
         self.design = design
         self.output = output
         self.mapped = mapped
+        #: What goes around highlighted words: the map's "marker", "==" by default.
+        self.marker = marker
         self.docs: dict[str, tuple[str, Document]] = {}
         self.problems: list[str] = []
 
@@ -307,7 +318,7 @@ class Reader:
         return place.nodes(root, source)
 
     def text(self, node: Node, source: str, *, highlight: bool, drop: Iterable[str] = ()) -> str:
-        return text_of(node, source, highlight=highlight, drop=drop)[0]
+        return text_of(node, source, highlight=highlight, drop=drop, marker=self.marker)[0]
 
     def raw(
         self, node: Node, place: Place, source: str, rule: Mapping[str, Any], highlight: bool
@@ -751,7 +762,8 @@ def extract(
     if not texts:
         raise MapError(f"{design} has no .html page.")
     _, mapped = design_site._read_pages(texts, files, str(spec.get("app") or "website"))
-    extractor = _Extractor(spec, reader(design, output, mapped))
+    marker = str(spec.get("marker") or HIGHLIGHT_MARKER)
+    extractor = _Extractor(spec, reader(design, output, mapped, marker))
     extractor.run()
     content = extractor.content()
     return ExtractResult(content, extractor.reader.problems)

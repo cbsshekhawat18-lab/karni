@@ -142,7 +142,10 @@ noreferrer"`. The template's own default is shown as written.
 The highlight convention is `KARNI_SITE_HIGHLIGHT`: the marker a client
 types, and the element and class it becomes. The default is `==words==` as
 `<mark>`. `karni import design --editable` sets it to the design's own
-markup when its headings highlight words (`<span class="highlight">`).
+markup when its headings highlight words (`<span class="highlight">`). It
+is one convention for the whole site: a model field rendered with
+[`{{ value|highlight }}`](#highlight-words-the-design-sets-apart) reads the
+same marker. A backslash before the marker (`\==`) keeps it as typed.
 
 An uploaded image keeps the design's markup: the `<img>` keeps its
 classes, loading hints and every other attribute, its `src` (and `alt`)
@@ -355,18 +358,24 @@ raises `SITE023`.
 ### `highlight`: words the design sets apart
 
 ```django
-<h2>{{ project.heading|highlight:"span.accent" }}</h2>   {# Custom homes, <span class="accent">crafted for place</span> #}
-<h1>{{ slide.heading|highlight:"em" }}</h1>
+<h2>{{ project.heading|highlight }}</h2>                  {# Custom homes, <span class="accent">crafted for place</span> #}
+<h1>{{ slide.heading|highlight:"em" }}</h1>               {# another markup for this value #}
 <title>{{ project.heading|highlight:"" }}</title>          {# the words, without the marks #}
 ```
 
 A design often highlights some words of a heading. `karni design extract`
-keeps them as `*marked words*` in the field (`Custom homes, *crafted for
-place*`), so staff edit plain text with asterisks in the admin. The filter
-escapes the value and wraps each marked part in the markup the spec names: a
-tag with optional classes. A literal asterisk is written `\*`. A spec that is
-not a tag fails the render with `SITE003`. `karni_site.text.highlight` is the
-same function for Python code.
+keeps them between the site's marker in the field (`Custom homes,
+==crafted for place==`), so staff edit a model field in the admin the way a
+client edits a block: one convention, `KARNI_SITE_HIGHLIGHT`, for the whole
+site. Without an argument the filter renders the marked words in the
+setting's tag and class (with `{"marker": "==", "tag": "span", "class":
+"accent"}` above). A spec names another markup for one value: a tag with
+optional classes (`"span.dot"`, `"em"`), and the marker stays the setting's.
+`""` drops the marks. Everything else is escaped, and a backslash before
+the marker (`\==`) keeps it as typed. A spec that is not a tag fails the
+render with `SITE003`. `karni_site.text.highlight` is the same function for
+Python code, and `karni_site.sanitize.apply_marks` the one editable blocks
+use.
 
 ### Error pages that cannot fail
 
@@ -388,7 +397,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` | `["404.html", "karni_site/404.html"]` | The templates `page_not_found` tries, in order. |
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` | `["500.html", "karni_site/500.html"]` | The templates `server_error` tries, in order. |
 | `KARNI_SITE_SETTINGS_MODEL` | `"karni_site.SiteSettings"` | The model `site` is. Swap it before karni_site's first migrate. |
-| `KARNI_SITE_HIGHLIGHT` | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them, and the element and class those words render in. `""` as the marker turns it off. |
+| `KARNI_SITE_HIGHLIGHT` | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them, in an editable block and in a field rendered with `{{ value|highlight }}`, and the element and class those words render in. A backslash before the marker keeps it as typed. `""` as the marker turns it off. |
 | `KARNI_SITE_INLINE_TAGS` | `b`, `strong`, `i`, `em`, `br`, and `a` with `href`, `title`, `target`, `rel` | The elements an edited block keeps, each with the attributes it keeps. The highlight element joins them. |
 | `KARNI_SITE_LINK_SCHEMES` | `["http", "https", "mailto", "tel"]` | The schemes a link in an edited block may use. A relative link always may. |
 | `KARNI_SITE_SANITIZER` | `"karni_site.sanitize.sanitize"` | The `(html) -> html` function that cleans an edited block. |

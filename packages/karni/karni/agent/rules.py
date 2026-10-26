@@ -954,9 +954,11 @@ PROCEDURES: tuple[Procedure, ...] = (
             "is not published, `select_related`/`prefetch_related` what the template loops "
             "over). The template keeps one copy of the item's markup inside `{% for %}` with "
             "`{{ row.field }}` where the map reads a value, `{{ row.image.url }}` for an image "
-            'and `{{ row.heading|highlight:"<markup>" }}` for highlighted words (the analysis '
-            "names the markup). A model's detail pages become one view and template with a "
-            "`<slug:slug>` capture, keeping each page's URL (the slug is the page's file name).",
+            "and `{{ row.heading|highlight }}` for highlighted words (`==words==`, the "
+            "site's one convention: set `KARNI_SITE_HIGHLIGHT` to the markup the analysis "
+            "names, unless `karni import design --editable` already did). A model's detail "
+            "pages become one view and template with a `<slug:slug>` capture, keeping each "
+            "page's URL (the slug is the page's file name).",
             "`karni test`: give each detail page a real URL in the page test's `PAGES` and load "
             'the content first in that test (`call_command("karni_load", "content/site.json")` '
             "in a fixture), so every page renders real rows.",
