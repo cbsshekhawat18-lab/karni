@@ -158,7 +158,7 @@ jobs:
           /tmp/clean/bin/karni --help
           /tmp/clean/bin/karni explain E104
           /tmp/clean/bin/python -c "import karni, karni.links; print('karni', karni.__version__, karni.links.DOCS_BASE_URL)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: dist/
@@ -186,7 +186,7 @@ jobs:
             npm pack --pack-destination npm-dist "./$d"
           done
           ls -l npm-dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: npm-dist
           path: npm-dist/
