@@ -724,3 +724,167 @@ def test_a_project_without_a_frontend_is_not_themed(project: Path) -> None:
     shutil.rmtree(project / "frontend")
     result = ok("import", "design", str(BAKERY), "--app", "website")
     assert "staff app theme" not in result.output
+
+
+# --- --editable ---------------------------------------------------------------
+
+
+def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: Path) -> None:
+    result = ok("import", "design", str(BAKERY), "--app", "website", "--editable")
+    out = result.output
+    assert "editable: 21 text block(s), 2 image(s), 1 menu(s) (header), edited in the admin." in out
+    assert "site details from the design (site_defaults in base.html): name='Crumb & Co', " in out
+    templates = project / "website" / "templates" / "website"
+    base = (templates / "base.html").read_text()
+    assert base.startswith(
+        '{% load static karni_site %}{% site_defaults name="Crumb & Co" '
+        'map_url="https://maps.example.com/crumb" %}{% csp_allow '
+    )
+    assert (
+        '<link rel="icon" href="{% site_image "favicon" url %}'
+        "{% static 'website/img/logo.svg' %}{% endsite_image %}\">"
+    ) in base
+    assert (
+        '{% site_image "logo" %}<img src="{% static \'website/img/logo.svg\' %}" '
+        'alt="{{ site.name }}">{% endsite_image %}'
+    ) in base
+    # The navigation is a menu, looping over the design's own markup.
+    assert (
+        '{% get_menu "header" seed="website/menus/header.html" as menu_header %}<nav>\n'
+        '      {% for item in menu_header %}<a href="{{ item.url }}"{% if item.active %} '
+        'class="active"{% endif %}{% if item.new_tab %} target="_blank" rel="noopener"'
+        "{% endif %}>{{ item.title }}</a>{% if not forloop.last %}\n      {% endif %}{% endfor %}\n"
+        "    </nav>"
+    ) in base
+    seed = (templates / "menus" / "header.html").read_text()
+    assert seed.startswith("{% load static karni_site %}\n<nav>")
+    assert "<a href=\"{% url 'website:contact' %}?topic=order\"" in seed
+    # A map link's address is the site's, its words a block.
+    assert (
+        '<a href="{{ site.map_url }}">{% editable "shared.footer.find_us" %}Find us'
+        "{% endeditable %}</a>"
+    ) in base
+    home = (templates / "home.html").read_text()
+    assert (
+        '<section class="hero" style="background-image: url(&quot;{% editable_image '
+        "\"home.hero.hero\" url %}{% static 'website/img/hero.jpg' %}{% endeditable_image %}"
+        '&quot;)">'
+    ) in home
+    assert '<h1>{% editable "home.hero.bread_worth_the_walk" %}Bread worth the walk' in home
+    # A plain link stays inside the text, the script is untouched.
+    assert (
+        '<p>{% editable "home.hero.baked_every_morning_see" %}Baked every morning. '
+        "<a href=\"{% url 'website:menu' %}\">See the menu</a>{% endeditable %}</p>"
+    ) in home
+    assert "<script>{% csp_hash %}" in home
+    about = (templates / "about.html").read_text()
+    assert (
+        '{% editable_image "about.story.the_wood_oven" %}<img src="{% static '
+        '\'website/img/oven.jpg\' %}" alt="The wood oven">{% endeditable_image %}'
+    ) in about
+    # Template syntax in the design's text stays escaped inside a block, and <code> is one.
+    assert (
+        '<code>{% editable "about.story.flour_water" %}{% templatetag openvariable %} flour'
+    ) in about
+    record = _design_json(project)["editable"]
+    assert record["enabled"] is True and record["menus"] == {"header": "website/menus/header.html"}
+    assert record["site"] == {"name": "Crumb & Co", "map_url": "https://maps.example.com/crumb"}
+    assert "home.hero.bread_worth_the_walk" in record["keys"].values()
+
+
+def test_a_reimport_keeps_every_key_where_the_text_was(project: Path, tmp_path: Path) -> None:
+    ok("import", "design", str(BAKERY), "--app", "website", "--editable")
+    keys = _design_json(project)["editable"]["keys"]
+    version2 = tmp_path / "bakery-v2"
+    shutil.copytree(BAKERY, version2)
+    index = version2 / "index.html"
+    index.write_text(index.read_text().replace("Bread worth the walk", "Fresh bread every day"))
+    # Without --editable the record keeps it editable.
+    ok("import", "design", str(version2))
+    home = (project / "website/templates/website/home.html").read_text()
+    assert '{% editable "home.hero.bread_worth_the_walk" %}Fresh bread every day' in home
+    assert _design_json(project)["editable"]["keys"] == keys
+    off = ok("import", "design", str(version2), "--no-editable")
+    assert "editable:" not in off.output
+    assert "{% editable" not in (project / "website/templates/website/home.html").read_text()
+    assert "editable" not in _design_json(project)
+
+
+def test_editable_clinic_turns_bootstrap_navigation_into_a_menu(project: Path) -> None:
+    result = ok("import", "design", str(CLINIC), "--app", "website", "--editable")
+    assert "1 menu(s) (header)" in result.output
+    templates = project / "website" / "templates"
+    base = (templates / "website" / "base.html").read_text()
+    assert (
+        '{% for item in menu_header %}<li class="nav-item"><a class="nav-link'
+        '{% if item.active %} active{% endif %}" href="{{ item.url }}"{% if item.active %} '
+        'aria-current="page"{% endif %}'
+    ) in base
+    # The site's name where the design writes it alone, a block where it is in a sentence.
+    assert '<a class="navbar-brand" href="{% url \'website:home\' %}">{{ site.name }}</a>' in base
+    assert '<small>{% editable "shared.footer.elm_street_clinic_services" %}' in base
+    team = (templates / "website" / "team.html").read_text()
+    assert (
+        '<span class="text-white-50">{% editable "team.header.opening_hours_8_to" %}'
+        "Opening hours: 8 to 18{% endeditable %}</span>"
+    ) in team
+    not_found = (templates / "404.html").read_text()
+    assert '{% editable "error_404.main.page_not_found" %}Page not found' in not_found
+    seed = (templates / "website" / "menus" / "header.html").read_text()
+    assert "{% url 'website:services' %}" in seed and "Team" in seed
+
+
+def test_editable_portfolio_menu_picture_and_email(project: Path) -> None:
+    result = ok("import", "design", str(PORTFOLIO), "--app", "website", "--editable")
+    assert "1 menu(s) (home-nav)" in result.output
+    home = (project / "website/templates/website/home.html").read_text()
+    assert (
+        '{% get_menu "home-nav" seed="website/menus/home-nav.html" as menu_home_nav %}'
+        '<nav class="jump">'
+    ) in home
+    assert '{% editable_image "home.top.a_lake_at_dawn" %}<picture>' in home
+    assert "</picture>{% endeditable_image %}" in home
+    assert '<p><a href="mailto:{{ site.email }}">{{ site.email }}</a></p>' in home
+    base = (project / "website/templates/website/base.html").read_text()
+    assert 'email="hello@example.com"' in base
+    assert '<script type="application/ld+json">{"@context"' in base
+
+
+def test_the_designs_highlight_becomes_the_setting(project: Path, tmp_path: Path) -> None:
+    design = tmp_path / "studio"
+    design.mkdir()
+    page = (
+        "<!DOCTYPE html><html><head><title>{title} | Studio</title>"
+        '<meta name="description" content="d"></head><body>'
+        '<header><nav><a href="index.html">Home</a> <a href="work.html">Work</a></nav></header>'
+        "<main>{main}</main></body></html>"
+    )
+    home_main = (
+        '<h1>Spaces with <span class="hl">light</span></h1>'
+        '<p>Call <a href="tel:+442079460000">020 7946 0000</a> or '
+        '<a href="https://www.instagram.com/studio">'
+        '<svg aria-hidden="true"></svg> Instagram</a></p>'
+    )
+    (design / "index.html").write_text(page.format(title="Home", main=home_main))
+    work_main = '<h1>Made <span class="hl">to last</span></h1>'
+    (design / "work.html").write_text(page.format(title="Work", main=work_main))
+    result = ok("import", "design", str(design), "--app", "website", "--editable")
+    assert 'highlight: <span class="hl"> in headings, typed as ==words==' in result.output
+    settings = (project / "config" / "settings.py").read_text()
+    assert 'KARNI_SITE_HIGHLIGHT = {"marker": "==", "tag": "span", "class": "hl"}' in settings
+    home = (project / "website/templates/website/home.html").read_text()
+    assert '<h1>{% editable "home.main.spaces_with_light" %}Spaces with <span class="hl">' in home
+    assert '<a href="{{ site.phone_href }}">{{ site.phone }}</a>' in home
+    assert (
+        '{% if site.social.instagram %}<a href="{{ site.social.instagram.url }}">'
+        '<svg aria-hidden="true"></svg> {% editable "home.main.instagram" %}Instagram'
+        "{% endeditable %}</a>{% endif %}"
+    ) in home
+    base = (project / "website/templates/website/base.html").read_text()
+    assert (
+        '{% site_defaults name="Studio" phone="020 7946 0000" phone_link="+442079460000" '
+        'social_instagram="https://www.instagram.com/studio" %}'
+    ) in base
+    # Run again: the setting is not written twice.
+    ok("import", "design", str(design))
+    assert (project / "config" / "settings.py").read_text().count("KARNI_SITE_HIGHLIGHT") == 1

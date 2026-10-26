@@ -391,10 +391,14 @@ RULES: tuple[Rule, ...] = (
             "views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at "
             '`path("", ...)` in config/urls.py (which replaces the welcome page), templates in '
             "`<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. "
-            "A designer's static pages go in with `karni import design <dir> --app <app>`, "
-            "which keeps the markup as written, never by copying them by hand. "
-            "`karni make view <name> --app <app>` adds a page. The site's runtime (the "
-            "`{% ifactive %}` and `{% csp_hash %}` tags, the error pages) is the karni-site "
+            "A designer's static pages go in with `karni import design <dir> --app <app> "
+            "--editable`, which keeps the markup as written, never by copying them by hand. "
+            "`karni make view <name> --app <app>` adds a page. Text and images a client may "
+            "change are `{% editable %}` and `{% editable_image %}` blocks, navigation is "
+            '`{% get_menu "<name>" as items %}` looped in the design\'s markup, and the '
+            "site's name, logo and contact details are `site`: never hard-coded, and never "
+            "a model or template tag of the project's own. The site's runtime (these tags, "
+            "`{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site "
             "module, never project code. Views read content through each "
             "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
             "rows stay hidden) and filter drafts themselves. A public form posts to a "
@@ -410,9 +414,9 @@ RULES: tuple[Rule, ...] = (
             "API, the admin and the access layer as the only write path."
         ),
         fix=(
-            "Run `karni make site <app>`, then `karni import design <dir> --app <app>` for a "
-            "designer's pages or `karni make view <name> --app <app>` per page. Karni's docs "
-            "page public-site covers SEO and public forms."
+            "Run `karni make site <app>`, then `karni import design <dir> --app <app> "
+            "--editable` for a designer's pages or `karni make view <name> --app <app>` per "
+            "page. Karni's docs page public-site covers editable content, SEO and public forms."
         ),
     ),
     # backend

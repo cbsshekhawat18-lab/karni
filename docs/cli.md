@@ -1018,7 +1018,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency and the `# karni:apps` entry are added as `karni add site` would. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency, the `# karni:apps` entry, its redirect middleware and its `site` context processor are added as `karni add site` would (then `karni migrate`). A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1105,7 +1105,9 @@ Build the public site from a folder of static pages, keeping the design as writt
 
 Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
 
-Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since.
+With --editable, every text becomes a block (`{% editable %}`), every image `{% editable_image %}`, each navigation a menu (`{% get_menu %}`) seeded from the design's links, and the site's name, logo, favicon, phone, email, map and social links come from the site's settings: the client changes all of it in the admin, and the templates hold the design's text as the defaults.
+
+Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since, and every block keeps its key.
 
 ```
 karni import design [OPTIONS] DIRECTORY
@@ -1118,6 +1120,7 @@ karni import design [OPTIONS] DIRECTORY
 | `--diff` |  | Report what changed since the last import and write nothing. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+| `--editable/--no-editable` |  | Make every text, image, menu and contact detail editable in the admin (karni-site blocks, menus and site settings). Remembered for later imports. |
 
 ## Debugging
 

@@ -15,6 +15,10 @@ what it could not map.
 of the design reports what changed, writes the files the project has not
 edited since the import, and keeps the edited ones (``--force`` replaces
 them). ``--diff`` reports and writes nothing.
+
+``--editable`` makes every text, image, menu and contact detail editable in
+the admin (:mod:`karni_cli.design.editable`). The record remembers it, so a
+later import stays editable until ``--no-editable``.
 """
 
 from __future__ import annotations
@@ -35,6 +39,7 @@ from karni_cli.generators.core import (
     APP_OPTION,
     DRY_RUN_OPTION,
     FORCE_OPTION,
+    SETTINGS,
     App,
     Workspace,
     local_apps,
@@ -230,6 +235,53 @@ def _theme_from_css(ws: Workspace, plan: SitePlan, *, dry_run: bool) -> None:
         ws.note(f"staff app theme: {outcome}")
 
 
+HIGHLIGHT_SETTING = "KARNI_SITE_HIGHLIGHT"
+
+
+def _highlight_setting(ws: Workspace, plan: SitePlan) -> None:
+    """Tell karni-site how the design highlights words, when the project has not said."""
+    found = (plan.design.get("editable") or {}).get("highlight")
+    if not found:
+        return
+    text = ws.read(SETTINGS)
+    if text is None or HIGHLIGHT_SETTING in text:
+        return
+    line = (
+        f'{HIGHLIGHT_SETTING} = {{"marker": "==", "tag": {pystr(found["tag"])}, '
+        f'"class": {pystr(found["class"])}}}'
+    )
+    block = (
+        "\n# The design highlights words in its headings with "
+        f'<{found["tag"]} class="{found["class"]}">. A client types ==words== in an editable\n'
+        "# block for the same (karni import design --editable).\n" + line + "\n"
+    )
+    ws.write(SETTINGS, text.rstrip("\n") + "\n" + block)
+
+
+def _editable_lines(plan: SitePlan) -> list[str]:
+    report = plan.editable
+    if report is None:
+        return []
+    menus = ", ".join(report.menus) or "none"
+    lines = [
+        (
+            f"editable: {report.blocks} text block(s), {report.images} image(s), "
+            f"{len(report.menus)} menu(s) ({menus}), edited in the admin."
+        )
+    ]
+    if report.site:
+        details = ", ".join(f"{name}={value!r}" for name, value in report.site.items())
+        lines.append(f"site details from the design (site_defaults in base.html): {details}")
+    found = (plan.design.get("editable") or {}).get("highlight")
+    if found:
+        lines.append(
+            f'highlight: <{found["tag"]} class="{found["class"]}"> in headings, typed as ==words== '
+            f"({HIGHLIGHT_SETTING} in config/settings.py)."
+        )
+    lines.extend(f"  - {note}" for note in report.notes)
+    return lines
+
+
 def _report(plan: SitePlan, writer: _Writer, copied: int, diff: list[str]) -> list[str]:
     lines: list[str] = []
     pages = len(plan.views)
@@ -238,6 +290,7 @@ def _report(plan: SitePlan, writer: _Writer, copied: int, diff: list[str]) -> li
         f"{len(plan.design.get('partials', []))} partial(s), {copied} file(s) copied."
     )
     lines.extend(plan.notes)
+    lines.extend(_editable_lines(plan))
     for redirect in plan.redirects:
         lines.append(f"redirect: /{redirect.route} -> {redirect.to} (from {redirect.source})")
     active = plan.design.get("active", {})
@@ -280,6 +333,14 @@ def design(
     ),
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
+    editable: bool | None = typer.Option(
+        None,
+        "--editable/--no-editable",
+        help=(
+            "Make every text, image, menu and contact detail editable in the admin "
+            "(karni-site blocks, menus and site settings). Remembered for later imports."
+        ),
+    ),
 ) -> None:
     """Build the public site from a folder of static pages, keeping the design as written.
 
@@ -296,8 +357,16 @@ def design(
     the page test. It reports the files it did not see used and anything it
     could not map. The app is created with `karni make site` when needed.
 
+    With --editable, every text becomes a block (`{% editable %}`), every
+    image `{% editable_image %}`, each navigation a menu (`{% get_menu %}`)
+    seeded from the design's links, and the site's name, logo, favicon,
+    phone, email, map and social links come from the site's settings: the
+    client changes all of it in the admin, and the templates hold the
+    design's text as the defaults.
+
     Writes .karni/design.json. A second run with a new version of the design
-    reports the changes and keeps every file the project edited since.
+    reports the changes and keeps every file the project edited since, and
+    every block keeps its key.
     """
     ws = project_workspace(force)
     source = _design_dir(directory)
@@ -316,8 +385,12 @@ def design(
                 code="C110",
             ) from None
     app_label = app or (record or {}).get("app")
+    if editable is None:
+        editable = bool(((record or {}).get("editable") or {}).get("enabled"))
     try:
-        plan = design_site.plan(source, app_label or "website", source_label=label)
+        plan = design_site.plan(
+            source, app_label or "website", source_label=label, editable=editable, previous=record
+        )
     except ValueError as exc:
         raise CliError(str(exc), code="C111") from None
     changes = compare.diff(record, plan.design) if record else []
@@ -330,7 +403,9 @@ def design(
         return
     site_app = _site_app(ws, app_label)
     if site_app.label != plan.app:
-        plan = design_site.plan(source, site_app.label, source_label=label)
+        plan = design_site.plan(
+            source, site_app.label, source_label=label, editable=editable, previous=record
+        )
         changes = compare.diff(record, plan.design) if record else []
     writer = _Writer(ws, site_app, record)
     for app_rel, content in plan.templates.items():
@@ -344,6 +419,7 @@ def design(
     copies = [
         copy for path, file in plan.assets.items() if (copy := writer.asset(path, file)) is not None
     ]
+    _highlight_setting(ws, plan)
     _theme_from_css(ws, plan, dry_run=dry_run)
     record_out = {**plan.design, "files": dict(sorted(writer.hashes.items()))}
     ws.write(DESIGN_RECORD, json.dumps(record_out, indent=2, ensure_ascii=False) + "\n")

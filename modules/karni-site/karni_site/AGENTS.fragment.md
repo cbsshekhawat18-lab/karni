@@ -1,12 +1,14 @@
 ## Public site (karni-site)
 - Runtime for a site app (rule K309). Templates `{% load static karni_site %}`.
-- Import a designer's static pages with `karni import design <dir> --app <app>`: never
-  copy them by hand. Re-run it for a new design version (`--diff` first). Pages added
-  later: `karni make view <name> --app <app>`.
-- Mark the current menu item with `{% ifactive "<app>:<name>" %}...{% endifactive %}`
-  around the design's own class or attribute. A new page joins the tag's list.
-- Inline scripts stay inline inside `{% csp_hash %}...{% endcsp_hash %}`, and another
-  origin is declared with `{% csp_allow "<directive> <origin>" %}` next to what loads
-  it. Never add 'unsafe-inline' to KARNI_CSP for a site.
-- config/urls.py: `handler404`/`handler500` are `karni_site.views.page_not_found`/
-  `server_error`. `karni check` runs SITE001 and SITE002.
+- Import a designer's pages with `karni import design <dir> --app <app> --editable`, never by
+  hand. A new design version: run it again (`--diff` first). Later pages: `karni make view`.
+- Never hard-code text or images a client may change: `{% editable "<page>.<name>" %}...{% endeditable %}`
+  and `{% editable_image "<page>.<name>" %}<img ...>{% endeditable_image %}`. The content is the default.
+- The site's details are `site` (`{{ site.name }}`, `site.phone_href`, `site.hours`, `site.social.<network>`),
+  their defaults `{% site_defaults name="..." %}` in base.html. No model or tag of your own for them.
+- Menus: `{% get_menu "header" as items %}` and a `{% for %}` in the design's markup (`item.url`,
+  `item.title`, `item.active`, `item.children`). No hand-written menu tag.
+- The current item outside a menu: `{% ifactive "<app>:<name>" %}` around the design's own class.
+- Inline scripts stay inside `{% csp_hash %}...{% endcsp_hash %}`, another origin is `{% csp_allow %}`.
+- Redirects, page titles and descriptions and the `editor` role are in the admin already.
+- `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008.

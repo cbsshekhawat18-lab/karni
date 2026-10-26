@@ -113,6 +113,10 @@ def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None
         "create=Public()",
         "CSRF",
         "K201, K202, K206",
+        "--editable",
+        "{% editable %}",
+        '{% get_menu "<name>" as items %}',
+        "never hard-coded",
     ):
         assert phrase in k309.rule, phrase
     assert "karni make site" in k309.fix

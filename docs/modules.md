@@ -209,6 +209,28 @@ tenant = "karni_tenancy.scopes:TenantScope"   # a karni.scopes.Scope subclass or
   `ImproperlyConfigured` naming the entry point (system check `karni.E002`).
   Projects reorder or disable scopes with `KARNI_SCOPES`.
 
+### 7c. Optional `karni.roles`: roles a module declares
+
+A module whose admin pages or API a kind of person uses on their own can
+declare that person's role, so a project does not write it. Installing the
+module and running `karni sync-roles` (every `karni migrate` does) creates
+it:
+
+```toml
+[project.entry-points."karni.roles"]
+site = "karni_site.roles:declared"   # a dict shaped like KARNI_ROLES, or a callable returning one
+```
+
+- The value is `{slug: {"name", "description", "grants"}}`, like
+  `KARNI_ROLES` ([roles as data](accounts.md#roles-as-data)). A callable is
+  called each time the roles are read, so it can read the module's own
+  settings, and returns `{}` while the module is not in `INSTALLED_APPS`.
+- The project wins: a slug `KARNI_ROLES` also names is the project's role.
+  Give the module a setting that names the slug or turns the role off
+  (karni-site has `KARNI_SITE_EDITOR_ROLE`).
+- A load failure or a value that is not a dict raises `ImproperlyConfigured`
+  naming the entry point (`E205`).
+
 ### 8. Tests: standalone, with fakes
 
 `tests/` runs with `python -m pytest` inside the module, against the
@@ -336,7 +358,7 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 |---|---|---|
 | `karni-payments` (`modules/karni-payments/`) | hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider. UI package: `@karni/payments-ui` | `pip install karni-payments && karni add payments` |
 | `karni-approvals` (`modules/karni-approvals/`) | maker-checker approvals. A model opts in with `class Karni: requires_approval = [...]`, and a guarded change becomes a pending change that a second person applies or rejects. It comes with a queue in the admin, `/api/pending-changes/`, notifications, timeouts, and every decision in `karni.audit`. UI package: `@karni/approvals-ui` | `pip install karni-approvals && karni add approvals` |
-| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, and its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails. `karni check` runs SITE001 and SITE002. No UI package. | `pip install karni-site && karni add site` (`karni make site` does this for you) |
+| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): everything the client sees edited in the admin, with the template's text as the default (`{% editable %}` and `{% editable_image %}` blocks with history, `{% get_menu %}` menus in the design's own markup, the site's name, logo and contact details as `site`, redirects, page titles and descriptions) and an `editor` role for it. `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, and its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails. `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008. No UI package. | `pip install karni-site && karni add site` (`karni make site` does this for you) |
 | `karni-impersonation` (`modules/karni-impersonation/`) | "log in as user" for support, done safely: an explicit `impersonate` permission (never implied by staff), no privilege escalation, a banner naming both identities with a one-click exit, a session record, every write attributed to both identities in `karni.audit`, a time limit and a hard block on deleting, exporting and payment changes. The threat model is in its README. UI package: `@karni/impersonation-ui` | `pip install karni-impersonation && karni add impersonation` |
 
 Each module's README is its reference (settings table, wiring, escape
@@ -349,5 +371,7 @@ declaration admitted an action. It also builds on `karni.audit`'s batches.
 `karni-site` builds on `karni.security.extend_request_csp`, which adds
 sources to one response's Content-Security-Policy from code that runs while
 the response is built ([security headers](security.md#security-headers)).
-It ships no model yet: [Public server-rendered pages](public-site.md) says
-what it gives a site.
+It declares its `editor` role through the `karni.roles` entry point
+([7c](#7c-optional-karniroles-roles-a-module-declares)) and ships its own
+`admin.py`, whose pages open for the roles' grants.
+[Public server-rendered pages](public-site.md) says what it gives a site.

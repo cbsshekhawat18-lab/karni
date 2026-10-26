@@ -62,6 +62,27 @@ def test_add_into_generated_project(
     assert "already in" in again.output
 
 
+def test_add_site_wires_its_middleware_and_context_processor(
+    runner, generated_project: Path, monkeypatch, no_docker
+) -> None:
+    from karni_cli.main import app
+
+    monkeypatch.chdir(generated_project)
+    result = runner.invoke(app, ["add", "site"])
+    assert result.exit_code == 0, result.output
+    settings = (generated_project / "config" / "settings.py").read_text()
+    assert '    "karni_site.middleware.RedirectMiddleware",\n]  # karni:middleware' in settings
+    assert settings.endswith(
+        'TEMPLATES[0]["OPTIONS"]["context_processors"] += [  # noqa: F821\n'
+        '    "karni_site.context_processors.site",\n'
+        "]  # karni:context_processors\n"
+    )
+    assert "karni_site.middleware.RedirectMiddleware: added to MIDDLEWARE" in result.output
+    again = runner.invoke(app, ["add", "site"])
+    assert again.exit_code == 0, again.output
+    assert (generated_project / "config" / "settings.py").read_text() == settings
+
+
 def test_add_prints_the_urls_include_line(
     runner, generated_project: Path, monkeypatch, no_docker
 ) -> None:

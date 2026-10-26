@@ -11,6 +11,36 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Everything a client sees on a public site is edited in the admin.**
+  The karni-site module now holds the site's own details (`SiteSettings`:
+  name, tagline, logo, favicon, the default share image, address, phone,
+  email, map link, opening hours and social links, as `site` in every
+  template, swappable through `KARNI_SITE_SETTINGS_MODEL`), editable blocks
+  (`{% editable "home.intro" %}...{% endeditable %}` and `{% editable_image
+  %}`, where the template's content is the default, stored on the first
+  render and followed until someone changes it, edited as plain text with
+  history, cleaned to a safe inline subset by a standard-library sanitiser
+  behind `KARNI_SITE_SANITIZER`, with a highlight convention set by
+  `KARNI_SITE_HIGHLIGHT`, and one cache read per page), menus (`{% get_menu
+  "header" as items %}` looped in the design's own markup, nested items that
+  go to a page by URL name, a row's page or an address, children from a
+  model's rows, the current page on each item, seeded from the design's
+  navigation), redirects (301 or 302, answered by
+  `karni_site.middleware.RedirectMiddleware` where the site has no page,
+  query strings passed on, loops refused with SITE006), per-page titles and
+  descriptions (`PageSeo`, looked up with `karni_site.seo.page_seo(request)`)
+  and an `editor` role that changes the content and nothing else. `karni
+  import design --editable` marks every text, image, menu and contact detail
+  of a designer's pages with these tags, with readable keys that
+  `.karni/design.json` keeps stable across imports. `karni make site` and
+  `karni add site` wire the middleware and the `site` context processor,
+  and `karni check` reports either missing (SITE004, SITE005).
+  [docs/public-site.md](docs/public-site.md#everything-the-client-edits).
+- **A module can declare roles: the `karni.roles` entry point.** Its roles
+  join `KARNI_ROLES` (the project's own win for the same slug), so `karni
+  sync-roles`, the permission matrix and `karni context` treat them like the
+  project's. [docs/modules.md](docs/modules.md#7c-optional-karniroles-roles-a-module-declares).
+
 - **A designer's static pages become the site: `karni import design <dir>
   --app <app>`.** The folder's HTML, CSS, JavaScript and images become a site
   app with the design kept as written. The files are copied unchanged under
