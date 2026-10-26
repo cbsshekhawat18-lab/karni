@@ -60,8 +60,55 @@ export interface FieldDef {
    * value schema (uuid string vs integer).
    */
   relationValueType?: "uuid" | "integer" | "string";
+  /**
+   * A lifecycle field (a StateField on the server): every state mapped to the
+   * states it may move to, from `x-karni-transitions`. A terminal state maps
+   * to `[]`. A display hint only: the server refuses an illegal move.
+   */
+  transitions?: Readonly<Record<string, readonly string[]>>;
+  /** The states a new row may start in (`x-karni-initial`), with `transitions`. */
+  initial?: readonly string[];
   /** Declaration order in the schema (response props first, request-only appended). */
   order: number;
+}
+
+/** One named count on the dashboard: a label and the list filters it counts with. */
+export interface DashboardCountDef {
+  label: string;
+  /**
+   * List query parameters. A value `"today"`, `"today-7"` or `"today+1"` is a
+   * date relative to the day the page is viewed.
+   */
+  params: Readonly<
+    Record<string, string | number | boolean | ReadonlyArray<string | number | boolean>>
+  >;
+}
+
+/**
+ * A model's `Karni.dashboard` declaration, normalized by the server and
+ * published as `x-karni-dashboard` on the list operation.
+ */
+export interface DashboardDef {
+  /** The section heading ("Orders"). */
+  label: string;
+  /** Sections sort by this, then by label. */
+  order: number;
+  /** A count of every row the user may read. */
+  total: boolean;
+  /** A count of the rows created in the last N days (0: none). */
+  newDays: number;
+  /** What "new" and "newest" are measured by (`created_at`), or null. */
+  dateField: string | null;
+  /** A count per value of this field (a StateField, choices or boolean), or null. */
+  by: string | null;
+  /** The values of `by` that get a count. */
+  values: readonly string[];
+  /** Named counts, each with its filters. */
+  counts: readonly DashboardCountDef[];
+  /** How many of the newest rows the table shows (0: no table). */
+  recent: number;
+  /** The table's columns. Null: ResourceTable's default columns. */
+  columns: readonly string[] | null;
 }
 
 /**
@@ -107,6 +154,8 @@ export interface ResourceSchema {
   };
   /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];
+  /** The model's dashboard declaration (`x-karni-dashboard`), when it opts in. */
+  dashboard?: DashboardDef;
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */

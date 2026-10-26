@@ -41,8 +41,13 @@ Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `@karni/ui/styles.css` (the `--karni-*` design tokens) and `src/index.css`
 (Tailwind 4 with the `@karni/ui/tailwind-preset`, loaded through `@config` from `tailwind.config.ts`).
 Every route renders inside `src/layout.tsx`, which is @karni/ui's `Layout` with one
-nav entry per static route in `src/routes.tsx`. That is how pages from
-`karni make page` (or `karni make model ... -a`) appear in the sidebar.
+nav entry per static route in `src/routes.tsx` (`routeNavItems`). That is how pages from
+`karni make page` (or `karni make model ... -a`) appear in the sidebar. Every page but
+a sign-in page sits behind `AuthGuard`, so a visitor who is not signed in sees the
+sign-in prompt, and `src/pages/home.tsx` is the dashboard: counts and the newest rows
+of every model that declares `class Karni: dashboard = {...}`. The admin wears the
+same brand as the app: `karni ui detect` (or `karni ui detect --css <stylesheet>`)
+writes `src/karni-theme.css`, and `KARNI_THEME_CSS` serves it to the admin too.
 
 ```sh
 cd frontend

@@ -12,12 +12,21 @@ The command inspects a frontend and maps what it finds onto the tokens every
    (:mod:`.designsystems`);
 4. nothing: Karni's defaults, listed in one file to edit (:mod:`.defaults`).
 
+``--css <path>`` is never auto-detected: it reads the stylesheets named (or
+the pages of a directory and what they link) and maps their variables and
+plain rules onto the tokens, as literals (:mod:`.plaincss`, also the function
+:func:`detect_css` for other tools).
+
 Everything lands in one file the project owns, ``karni-theme.css``
 (:mod:`.render`). Every value that is not mapped is reported with the reason;
 nothing is approximated silently.
 
 Escape hatches: ``--source`` picks the source instead of the detection order,
-``--output`` the file's place, ``--no-primitives`` skips the registry, and
-both generated files are the project's to edit (a re-run keeps edits unless
-``--force``).
+``--css`` reads any stylesheet instead, ``--output`` the file's place,
+``--no-primitives`` skips the registry, and both generated files are the
+project's to edit (a re-run keeps edits unless ``--force``).
 """
+
+from karni_cli.uitheme.plaincss import CssDetection, Provenance, detect_css
+
+__all__ = ["CssDetection", "Provenance", "detect_css"]

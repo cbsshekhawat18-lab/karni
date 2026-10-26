@@ -252,9 +252,13 @@ Unfold reads the `UNFOLD` setting. Karni's default:
   default the admin follows the system preference, like the welcome page.
   Dark mode is the `dark` class on `<html>` in all three.
 
-To retheme the admin the way you retheme `@karni/ui`, give it the same
-`--karni-*` overrides your frontend's `karni-theme.css` holds, as a static
-file appended after Karni's two:
+The project's own brand comes from the file its staff app loads:
+`frontend/src/karni-theme.css`, which `karni ui detect` writes. `KARNI_THEME_CSS`
+names it, `karni.admin.theme.ProjectThemeFinder` serves it as the static file
+`karni/project-theme.css`, and `STYLES` loads it third. One file, both
+screens: see [theming](theming.md#one-theme-for-the-staff-app-and-the-admin).
+To give the admin overrides of its own instead, append a static file after
+Karni's three:
 
 ```css
 /* static/css/admin-theme.css */

@@ -133,8 +133,10 @@ Only names that clearly mean a Karni token are mapped: the semantic colours
 the spacing unit and the `xs` to `2xl` type scale. A palette such as
 `brand: { 50 ... 950 }` is not a role, so it is reported with the line you
 could add, never turned into `primary` silently. Literal colours go to
-`:root` only: Tailwind colours have no dark variant, so dark mode keeps
-Karni's dark palette until you add a `.dark` block.
+`:root:not(.dark)` only: Tailwind colours have no dark variant, so dark mode
+keeps Karni's dark palette until you add a `.dark` block. (A plain `:root`
+block would tie with Karni's own `.dark` block and win, because
+`karni-theme.css` loads after `@karni/ui/styles.css`.)
 
 ## Material UI, Chakra UI, Mantine
 
@@ -155,6 +157,132 @@ key Karni has no token for. MUI's `secondary`, for example, is a second brand
 colour and not Karni's quiet secondary surface. It comes with the line to
 add if you want it anyway.
 
+## Any stylesheet: --css
+
+A design that is not a design system still has a brand. `karni ui detect
+--css <path>` reads any stylesheet and maps it onto the same tokens: plain
+CSS with a few custom properties, a Bootstrap theme, or a hand-written sheet
+with no variables at all. It is never auto-detected: you name the files.
+
+```sh
+karni ui detect --css design/styles.css --dry-run   # the report and the file
+karni ui detect --css design/                       # the pages' stylesheets, in link order
+karni ui detect --css vendor/bootstrap.css --css theme.css   # later files win
+```
+
+A `.css` file is read as it is. A directory is read through its pages: the
+local stylesheets its `.html` files link, in document order, each once. A
+directory without pages gives every `.css` file under it, framework files
+(`normalize*`, `reset*`, `bootstrap*`, `*.min.css`) first. A local `@import`
+is read before the file that imports it. A missing path is
+[C303](errors.md#c303), and `--css` with `--source` is
+[C106](errors.md#c106).
+
+The values written are literals, never `var()` references, so the file
+stands on its own: the staff app imports it after `@karni/ui/styles.css`
+and the admin loads the same file (see [one theme for both](#one-theme-for-the-staff-app-and-the-admin)).
+
+### What it reads, in three grades
+
+| Grade | Where the value comes from |
+| --- | --- |
+| **found** | A custom property whose name means the role, its `var()` chain resolved through the stylesheet's own variables. |
+| **inferred** | An ordinary rule (`body { background }`, `a { color }`, `button { border-radius }`), or a value derived from another token: the ring is the primary, the input border is the border, the text on a primary button is the stylesheet's own page colour with the most contrast (else white or black). |
+| **defaulted** | Nothing in the stylesheet says. The token is not written, Karni's default applies, and the report lists it with the reason. |
+
+Variable names are matched after lowercasing and dropping a common prefix
+(`bs-`, `wp--preset--color--`, `md-sys-color-`, `pico-`, `color-`, `clr-`,
+`c-`, `theme-`, `site-`, `global-`). An unshaded name beats a shade
+(`--brand` over `--brand-600`, then 600, then 500). Channel variables such
+as `--bs-primary-rgb` are read for resolving `var()` but never mapped
+themselves.
+
+| Token | Variable names | Rules it is inferred from |
+| --- | --- | --- |
+| `--karni-color-primary` | `primary`, `brand`, `main`, `primary-color`, else `accent`, then `link` | a primary button's background (`.btn-primary`, `button`, `.btn`, `[type=submit]`), else the `a` colour |
+| `--karni-color-primary-foreground` | `primary-foreground`, `primary-contrast`, `on-primary`, `primary-text` | the primary button's `color` when its background is the primary, else derived for contrast |
+| `--karni-color-background` | `background`, `bg`, `body-bg`, `page-bg`, `surface`, `paper`, `canvas` | `body` (or `html`) background |
+| `--karni-color-foreground` | `foreground`, `fg`, `text`, `text-color`, `body-color`, `ink`, `on-surface` | `body` colour |
+| `--karni-color-border` | `border`, `border-color`, `line`, `divider`, `outline`, `stroke` | `input`, `textarea` and `select` borders, else `hr`, else `table` |
+| `--karni-color-input` | `input`, `input-border`, `field-border` | the border colour |
+| `--karni-color-ring` | `ring`, `focus`, `focus-ring`, `focus-color` | the primary colour |
+| `--karni-color-muted` | `muted`, `subtle`, `secondary-bg`, `tertiary-bg`, `surface-2`, `bg-muted` | (none) |
+| `--karni-color-muted-foreground` | `muted-foreground`, `text-muted`, `secondary-color`, `text-secondary`, `hint` | `.text-muted`, `.muted`, `small`, `.caption`, `figcaption` colour |
+| `--karni-color-destructive` | `danger`, `error`, `destructive`, `negative`, `critical` | `.error`, `.danger`, `.is-invalid`, `.alert-danger` colour or border |
+| `--karni-radius` | `radius`, `border-radius`, `rounded`, `radius-md` | the button's `border-radius`, else an input's |
+| `--karni-font-sans` | `font-sans`, `font-body`, `body-font-family`, `font-family`, `font-base`, `font-sans-serif` | `body` `font-family` or `font` shorthand |
+| `--karni-font-mono` | `font-mono`, `font-monospace`, `font-code` | (none) |
+
+A heading or display font (`--font-display`, `--font-heading`) is reported
+as not mapped with the line to add, because Karni has one sans font and
+headings use it. So is a second brand colour (`--accent` next to `--brand`),
+with `--karni-color-accent` suggested. A value that reads a variable the
+stylesheets do not define, or that is not the role's kind (channels where a
+colour should be, a weight where a length should be), is reported, never
+guessed.
+
+### Light, dark, or both
+
+Variables and rules on `:root`, `html` or `body` are the light values. Those
+under `.dark`, `html.dark`, `[data-theme="dark"]`, `[data-bs-theme="dark"]`,
+`[data-mode="dark"]` or inside `@media (prefers-color-scheme: dark)` are the
+dark values and go to the `.dark` block. A stylesheet with no dark variant
+whose page background is dark is a dark design: its colours are written for
+both of Karni's modes (`:root, .dark`), and the report says so. A light-only
+design writes light colours only, under `:root:not(.dark)`, and the report
+notes that dark mode keeps Karni's dark palette. The radius and the fonts
+apply in both modes.
+
+### What the --css report says
+
+```text
+karni ui detect: plain CSS (1 stylesheet)
+Read: design/style.css
+
+Found (0):
+  (none)
+
+Inferred (11):
+  button { background-color } -> --karni-color-primary: #0e7c86 [light]
+  button { color }            -> --karni-color-primary-foreground: #ffffff [light]
+  body { background-color }   -> --karni-color-background: #f7fbfc [light]
+  body { color }              -> --karni-color-foreground: #1f2933 [light]
+  input { border }            -> --karni-color-border: #cbd5dc [light]
+  derived                     -> --karni-color-input: #cbd5dc [light]
+                                 (the border colour: inputs share it)
+  derived                     -> --karni-color-ring: #0e7c86 [light]
+                                 (the primary colour: the focus ring follows it)
+  .text-muted { color }       -> --karni-color-muted-foreground: #627d8a [light]
+  .error { color }            -> --karni-color-destructive: #c0392b [light]
+  button { border-radius }    -> --karni-radius: 6px
+  body { font }               -> --karni-font-sans: "Nunito", "Segoe UI", sans-serif
+
+Defaulted (2): Karni's own value applies
+  --karni-color-muted: no muted or secondary surface variable
+  --karni-font-mono: no monospace font variable
+```
+
+`--json` adds `found`, `inferred` and `defaulted` to the usual keys
+(`mapped`, `not_mapped`, `notes`, `files`, `wiring`). Without a frontend,
+`--css` still prints the report with `--dry-run` or `--json`, and writes the
+file wherever `--output` says.
+
+### From Python
+
+Other tools read a design the same way without writing anything:
+
+```python
+from karni_cli.uitheme import detect_css
+
+report = detect_css("design/")            # a file, a directory, or a list of them
+report.found, report.inferred, report.defaulted
+report.as_dict()                          # the --json shape
+report.theme_css(date="2026-01-01")       # the karni-theme.css text
+```
+
+`karni import design` calls it when `karni-cli` is installed, so an imported
+site's staff app wears the site's own brand.
+
 ## Nothing found
 
 `karni-theme.css` lists Karni's main tokens with their defaults, read from
@@ -165,6 +293,42 @@ the rest keep following Karni's releases.
 and a copy of today's defaults would pin them in every project instead of
 letting them come from the versioned `@karni/ui`. The scaffold's
 `src/index.css` points at `karni ui detect` instead.
+
+## One theme for the staff app and the admin
+
+`karni-theme.css` is the one file that holds a project's brand, and the
+admin reads it too. `karni_settings()` sets `KARNI_THEME_CSS` to
+`frontend/src/karni-theme.css` (relative to the project root, where `karni
+ui detect` writes it), and:
+
+- `karni.admin.theme.ProjectThemeFinder`, listed in `STATICFILES_FINDERS`,
+  serves that file as the static file `karni/project-theme.css`. `runserver`
+  reads the file live, and `collectstatic` copies it into `STATIC_ROOT`, so
+  production serves it from the site's own origin, which the
+  [Content-Security-Policy](security.md#security-headers)'s `style-src
+  'self'` allows.
+- `UNFOLD["STYLES"]` loads it third, after `karni/tokens.css` (Karni's
+  defaults) and `karni/unfold-theme.css` (unfold drawn with the tokens).
+  Karni's own admin pages load it the same way.
+
+Without the file, the URL serves an empty stylesheet with a comment that
+says how to make one, so a fresh project's admin wears Karni's defaults and
+never loads a missing file. The order of events in a new project:
+
+```sh
+karni new shop && cd shop
+karni ui detect --css ../design/style.css   # frontend/src/karni-theme.css
+karni serve                                 # the staff app and /admin/ both wear the brand
+```
+
+Only the `--karni-*` tokens reach the admin: a `karni-theme.css` written
+for shadcn/ui references the project's own variables (`var(--primary)`),
+which the admin does not define, so for a shared theme prefer the literal
+values `--css` writes, or add the variables to the admin with a stylesheet
+of your own. `KARNI_THEME_CSS` points at another file (an absolute path, or
+one relative to the project root), and `""` turns the admin side off. See
+[admin: theming](admin.md#theming) for the rest of the admin's look (its
+neutral scale, logo and unfold's own settings).
 
 ## What it does not do
 

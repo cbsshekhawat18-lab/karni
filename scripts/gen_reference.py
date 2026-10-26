@@ -203,7 +203,13 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
-        "Mantine theme as Karni's tokens, and shadcn/ui components as Karni's primitives",
+        "Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui "
+        "components as Karni's primitives",
+    ),
+    Capability(
+        "ui",
+        "`Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s "
+        "buttons for a `StateField`'s transitions",
     ),
     # permissions
     Capability(

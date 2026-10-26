@@ -167,6 +167,9 @@ export type {
   ResourceDetailDeletedProps,
   ResourceDetailEmptyValueProps,
   ResourceDetailDeleteDialogProps,
+  ResourceDetailTransitionOptions,
+  ResourceDetailTransitionTarget,
+  ResourceDetailTransitionsProps,
 } from "./components/resource/ResourceDetail";
 
 export { ResourceSelect, defaultResourceSelectSlots } from "./components/resource/ResourceSelect";
@@ -277,6 +280,8 @@ export type {
   FieldDef,
   OperationDef,
   ResourceSchema,
+  DashboardDef,
+  DashboardCountDef,
 } from "./schema/types";
 
 // auth
@@ -323,6 +328,8 @@ export type {
   LayoutSkipLinkProps,
   LayoutRouteFocusOptions,
 } from "./components/layout/layout";
+export { isSignInRoute, routeLabel, routeNavItems } from "./components/layout/route-nav";
+export type { RouteNavOptions } from "./components/layout/route-nav";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";
@@ -376,6 +383,25 @@ export type {
 
 export { Stat, defaultStatSlots } from "./components/stat/stat";
 export type { StatProps, StatSlots, StatSlotProps, StatDeltaProps } from "./components/stat/stat";
+
+export {
+  Dashboard,
+  defaultDashboardSlots,
+  resolveRelativeDate,
+  resolveSection,
+} from "./components/dashboard/dashboard";
+export type {
+  DashboardProps,
+  DashboardSlots,
+  DashboardSection,
+  DashboardCount,
+  DashboardCountProps,
+  DashboardCountsProps,
+  DashboardRecentProps,
+  DashboardSectionProps,
+  DashboardEmptyProps,
+  DashboardLoadingProps,
+} from "./components/dashboard/dashboard";
 
 export { DataChart, defaultDataChartSlots } from "./components/chart/data-chart";
 export type {

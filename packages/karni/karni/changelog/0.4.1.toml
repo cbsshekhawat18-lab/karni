@@ -142,3 +142,43 @@ before this gets the missing pieces from `karni make site <app> --force` after \
 `pip install karni-site`, and its base.html can load `karni_site` for the tags."""
 mechanical = false
 migration = "migrations/0.4.1.md#a-site-apps-runtime-is-the-karni-site-module"
+
+[[change]]
+id = "staff-app-guard-and-dashboard"
+kind = "project-files"
+symbol = "frontend/src/layout.tsx and frontend/src/pages/home.tsx"
+summary = """\
+The scaffold's layout now wraps every page but a sign-in page in \
+<AuthGuard explain>, builds its menu with @karni/ui's routeNavItems and offers \
+Sign out, and its home page is <Dashboard> (the models that declare \
+`class Karni: dashboard`) instead of the health-check placeholder. A project \
+scaffolded earlier keeps its own files: copy the two from a fresh `karni new` \
+to get the sign-in prompt and the dashboard."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-staff-app-requires-sign-in-and-opens-on-a-dashboard"
+
+[[change]]
+id = "admin-loads-project-theme"
+kind = "behaviour"
+symbol = "KARNI_THEME_CSS, UNFOLD['STYLES'], STATICFILES_FINDERS"
+summary = """\
+The admin now loads the project's frontend/src/karni-theme.css (KARNI_THEME_CSS) \
+as the static file karni/project-theme.css, served by \
+karni.admin.theme.ProjectThemeFinder, which karni_settings() adds to \
+STATICFILES_FINDERS. A project that appended its own admin stylesheet of \
+--karni-* overrides can drop it, and a project that defines STATICFILES_FINDERS \
+itself adds the finder to keep the file served."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-admin-wears-the-projects-karni-themecss"
+
+[[change]]
+id = "karni-theme-light-colours-scoped"
+kind = "behaviour"
+symbol = "karni ui detect (karni-theme.css)"
+summary = """\
+karni-theme.css now writes light-only colours under `:root:not(.dark)` instead \
+of `:root`, so they no longer override Karni's dark palette under \
+<html class="dark">. A file written by 0.4.0 keeps overriding it until it is \
+regenerated with `karni ui detect --force` (or edited by hand)."""
+mechanical = false
+migration = "migrations/0.4.1.md#karni-themecss-keeps-dark-mode"

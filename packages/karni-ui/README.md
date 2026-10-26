@@ -381,6 +381,31 @@ props, and you can always drop down to the hooks + primitives.
 />
 ```
 
+A `StateField` on the server publishes its lifecycle (`x-karni-transitions`),
+and `ResourceDetail` renders it: one button per state the record may move to
+from its current state ("Mark as Confirmed", "Mark as Cancelled"), shown when
+the API lets this user write the field. A click PATCHes the field, a move into
+a terminal state (one nothing leaves) asks first, and a refusal shows the
+server's own sentence. `transitions={false}` hides them, and an object tunes
+them:
+
+```tsx
+<ResourceDetail
+  resource="orders"
+  id={orderId}
+  transitions={{
+    labels: { cancelled: "Cancel order" }, // default "Mark as <state>"
+    confirm: ["cancelled", "refunded"], // default: the terminal states. true or false: all or none
+    can: (order, field, target) => target !== "refunded" || hasRole("finance"),
+  }}
+  onTransition={(order, field, target) => toast(`Now ${target}`)}
+/>
+```
+
+The `Transitions` slot replaces the buttons and receives the targets.
+`ResourceTable` puts a lifecycle field first in its derived filter bar, so the
+list filters by state before anything else.
+
 A 404 reads "Couldn't find this event" with the `back` action and no retry.
 Karni answers 404 for a record outside the user's scope too, so the words never
 say the record exists. A 403 reads "You can't view this event". Other failures
@@ -413,6 +438,29 @@ cleared optional field is left out of the request rather than sent as `null`
 
 Validation schemas are generated at runtime with `zodFor(schema, "create" | "update")`.
 `displayLabel(obj)` picks a human label for relation objects.
+
+### Dashboard: the home page from the schema
+
+`<Dashboard>` is the staff app's home page. A model that declares `class
+Karni: dashboard = {...}` on the server is published as `x-karni-dashboard` on
+its list operation, and the component renders one section per such model: a
+`Stat` tile per count (every row, the new ones, one per state, the named
+counts) and a `ResourceTable` of the newest rows. Every number is a list
+request with `page_size=1` and the count's filters, so the API's row scope and
+access rules apply, and a resource the user may not list is left out.
+
+```tsx
+<Dashboard
+  onOpen={(resource, row) => navigate(`/${resource}/${row.id}`)}
+  onOpenList={(resource, filters) => navigate(`/${resource}`, { search: filters })}
+/>
+```
+
+`resources` picks the sections (in that order), `sections` rewrites them
+before they render, `now` fixes "today" for relative dates, and `slots`
+replaces any part: `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`,
+`Error`. The declaration's keys are in the backend docs
+([api.md: the staff dashboard](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/api.md#the-staff-dashboard)).
 
 ### ResourceTable in every state
 
@@ -795,16 +843,17 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 </Layout>;
 ```
 
-| Component    | Slots                                                      |
-| ------------ | ---------------------------------------------------------- |
-| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink` |
-| `Page`       | `Header`, `Title`, `Description`, `Actions`                |
-| `Modal`      | `Header`, `Footer`, `CloseButton`                          |
-| `Toaster`    | `Title`, `Description`, `CloseButton`                      |
-| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                  |
-| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                          |
-| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                    |
-| `FileUpload` | `Dropzone`, `FileRow`                                      |
+| Component    | Slots                                                               |
+| ------------ | ------------------------------------------------------------------- |
+| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink`          |
+| `Page`       | `Header`, `Title`, `Description`, `Actions`                         |
+| `Modal`      | `Header`, `Footer`, `CloseButton`                                   |
+| `Toaster`    | `Title`, `Description`, `CloseButton`                               |
+| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                           |
+| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                                   |
+| `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error` |
+| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                             |
+| `FileUpload` | `Dropzone`, `FileRow`                                               |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
@@ -813,6 +862,16 @@ is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
 (use `className`). A custom `Modal` `Header` renders `ModalTitle` (and
 `ModalDescription`) so the dialog stays labelled. A custom `CloseButton` wraps
 its button in `ModalClose`.
+
+`routeNavItems(paths, { pathname, signedIn })` builds `Layout`'s `navItems`
+from a router's route paths (TanStack Router:
+`Object.keys(router.routesByPath)`): one entry per static route in
+registration order, the active one marked, routes with a `$param` and paths
+ending in `/new` left out (they are reached from their list page), and a
+sign-in page (`isSignInRoute`: `/login`, `/sign-in`) listed only while nobody
+is signed in. `label`, `hidden` and `signIn` replace each rule. The scaffold's
+`layout.tsx` uses it, with `<AuthGuard explain>` around every page but the
+sign-in page.
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take

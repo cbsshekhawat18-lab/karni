@@ -1,0 +1,20 @@
+/* A dark design with no light variant: a music venue's listings. */
+:root {
+  --color-bg: #0f1115;
+  --color-fg: #f2f2f2;
+  --color-primary: hsl(45 100% 55%);
+  --color-primary-contrast: #0f1115;
+  --color-border: rgb(255 255 255 / 0.12);
+  --color-muted: #1b1e26;
+  --color-text-muted: #9aa0ad;
+  --color-error: #ff5c5c;
+  --border-radius: 2px;
+  --font-family: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family);
+}

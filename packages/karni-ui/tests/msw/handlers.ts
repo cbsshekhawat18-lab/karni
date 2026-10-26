@@ -515,6 +515,10 @@ const eventHandlers = [
     if (isPublic !== null && isPublic !== "") {
       rows = rows.filter((event) => event.is_public === (isPublic === "true"));
     }
+    const createdSince = url.searchParams.get("created_at__gte");
+    if (createdSince !== null && createdSince !== "") {
+      rows = rows.filter((event) => event.created_at >= createdSince);
+    }
     const venue = url.searchParams.get("venue");
     if (venue !== null && venue !== "")
       rows = rows.filter((event) => event.venue === Number(venue));

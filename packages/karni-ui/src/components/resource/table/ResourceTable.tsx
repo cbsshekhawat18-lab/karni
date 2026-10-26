@@ -170,8 +170,9 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   pageSizeOptions?: readonly number[];
   /**
    * Field names to build the filter bar from. `false` disables it. Default:
-   * (enum/boolean/relation fields) ∩ declared list query params, domain
-   * fields first, audit fields only with `showAuditFields`, cap 4 (D5).
+   * (enum/boolean/relation fields) ∩ declared list query params, lifecycle
+   * (StateField) fields first, then domain fields, audit fields only with
+   * `showAuditFields`, cap 4 (D5).
    * Only enum, boolean and relation fields get controls.
    */
   filters?: readonly string[] | false;
@@ -419,18 +420,22 @@ export function ResourceTable<T = Record<string, unknown>>(
     }
     const declared = new Set(schema.operations.list?.queryParams ?? []);
     const { domain, audit } = partitionAuditFields(schema.fields);
-    return [...domain, ...audit]
-      .filter(
-        (field) =>
-          !field.writeOnly &&
-          !pinned.has(field.name) &&
-          (showAuditFields === true || !isAuditField(field)) &&
-          declared.has(field.name) &&
-          (field.kind === "enum" ||
-            field.kind === "boolean" ||
-            (field.kind === "relation" && field.relation !== undefined)),
-      )
-      .slice(0, MAX_DERIVED_FILTERS);
+    const eligible = [...domain, ...audit].filter(
+      (field) =>
+        !field.writeOnly &&
+        !pinned.has(field.name) &&
+        (showAuditFields === true || !isAuditField(field)) &&
+        declared.has(field.name) &&
+        (field.kind === "enum" ||
+          field.kind === "boolean" ||
+          (field.kind === "relation" && field.relation !== undefined)),
+    );
+    // A lifecycle field (a StateField) is the filter staff reach for first:
+    // it leads, and the cap never cuts it.
+    return [
+      ...eligible.filter((field) => field.transitions !== undefined),
+      ...eligible.filter((field) => field.transitions === undefined),
+    ].slice(0, MAX_DERIVED_FILTERS);
   }, [filters, pinned, schema, showAuditFields]);
 
   // view state: the URL (or component state with syncUrl={false})

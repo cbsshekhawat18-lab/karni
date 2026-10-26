@@ -1,0 +1,57 @@
+/* A clinic's site: no custom properties at all. */
+html {
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  font: 16px/1.6 "Nunito", "Segoe UI", sans-serif;
+  color: #1f2933;
+  background-color: #f7fbfc;
+}
+
+h1,
+h2,
+h3 {
+  color: #0b5c6b;
+  font-family: "Nunito", sans-serif;
+}
+
+a {
+  color: #0e7c86;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #0b5c6b;
+}
+
+button,
+input[type="submit"] {
+  background-color: #0e7c86;
+  color: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+}
+
+input,
+textarea,
+select {
+  border: 1px solid #cbd5dc;
+  border-radius: 4px;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #e1e8ed;
+}
+
+.text-muted,
+small {
+  color: #627d8a;
+}
+
+.error {
+  color: #c0392b;
+}

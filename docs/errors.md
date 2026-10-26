@@ -460,6 +460,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write `throttle = Throttle(create='10/hour')`, naming only actions the viewset has (the standard ones, or a custom @action by its method name).
 
+<a id="e133"></a>
+
+#### E133: Karni.dashboard is malformed or names a field the model does not have
+
+*system check (error)* · from `karni.dashboard.dashboard_spec; karni.checks.check_dashboards`
+
+**Why Karni objects.** The dashboard declaration is published in the OpenAPI schema and @karni/ui's <Dashboard> counts rows with the list endpoint's filters. A field name with a typo, a value the field does not have or a count without filters would show a wrong number, so the declaration is refused at boot.
+
+**Fix.** Write dashboard = True, or a dict with the keys label, order, total, new_days, by, values, counts, recent, columns and date_field, naming fields of the model: e.g. dashboard = {'by': 'status', 'counts': {'Due today': {'due_on': 'today'}}, 'recent': 5}.
+
 ### 2xx · Accounts
 
 <a id="e201"></a>

@@ -213,3 +213,10 @@ becomes a pending change a second person decides), and any module can use it
 the same way. Bulk SQL (`QuerySet.update()`, `bulk_create()`), raw saves and
 fixture loading never send it. `karni check`'s `audited-bulk-write` rule is
 the guard for those on audited models.
+
+## The staff dashboard
+
+A model that should be counted and listed on the staff app's home page says
+so next to its other `class Karni` options: `dashboard = True`, or a dict
+that picks the counts and the columns. The keys, the defaults and what the
+page shows are in [API: the staff dashboard](api.md#the-staff-dashboard).

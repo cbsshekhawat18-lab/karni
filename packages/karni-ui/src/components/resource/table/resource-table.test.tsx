@@ -635,6 +635,30 @@ describe("search box and filter bar (D5)", () => {
     expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument();
   });
 
+  it("a lifecycle field (x-karni-transitions) leads the derived filters, ahead of the cap", () => {
+    // status moved to the end of the declaration, after four other candidates
+    const others = eventsSchema.fields.filter((field) => field.name !== "status");
+    const status = eventsSchema.fields
+      .filter((field) => field.name === "status")
+      .map((field) => ({
+        ...field,
+        order: 99,
+        transitions: { DRAFT: ["PUBLISHED"], PUBLISHED: [] },
+      }));
+    mockUseSchema.mockReturnValue({
+      data: { ...eventsSchema, fields: [...others, ...status] },
+      isLoading: false,
+      error: null,
+    });
+    renderTable(<ResourceTable resource="events" />);
+    const controls = screen.getAllByRole("combobox").map((el) => el.getAttribute("aria-label"));
+    expect(controls[0]).toBe("Status");
+    expect(screen.getByLabelText("Is public")).toBeInTheDocument();
+    expect(screen.getByLabelText("Organizer")).toBeInTheDocument();
+    expect(screen.getByLabelText("Venue")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Tags")).not.toBeInTheDocument(); // the cap drops the fifth
+  });
+
   it("enum filter sends the raw member value and clears to no filter", async () => {
     const user = userEvent.setup();
     renderTable(<ResourceTable resource="events" />);

@@ -47,6 +47,48 @@ apply codemods and list the manual steps. This file is the human summary.
   one response from code that runs while it is built, and a hash added next
   to `'unsafe-inline'` is left out, because a browser would otherwise ignore
   the `'unsafe-inline'`. [docs/modules.md](docs/modules.md).
+- **A new project's staff app is ready to hand over.** The scaffold's
+  `layout.tsx` wraps every page but a sign-in page in `<AuthGuard explain>`,
+  so a visitor who is not signed in gets the sign-in prompt in place of a
+  page of errors, and offers "Sign out". Its menu comes from the new
+  `routeNavItems` in `@karni/ui` (one entry per static route, detail and
+  "new" routes left out, the sign-in page listed only while nobody is signed
+  in), which the example apps use too. Its home page is the new
+  `<Dashboard>`: a `Stat` tile per count and the newest rows of every model
+  that declares `class Karni: dashboard = {...}` (counts of every row, the
+  new ones, one per state, and named counts by list filters), published as
+  `x-karni-dashboard` on the list operation and checked at boot (`E133`).
+  Nothing in the page names a model. See
+  [docs/api.md](docs/api.md#the-staff-dashboard).
+- **`ResourceDetail` renders a `StateField`'s transitions as buttons.** One
+  per state the record may move to from its current state
+  (`x-karni-transitions`), shown when the API lets this user write the field.
+  A click PATCHes the field, a move into a terminal state asks first, and a
+  refusal shows the server's own sentence. `transitions` tunes labels,
+  confirmations and who may, or hides them, and the `Transitions` slot
+  replaces them. `ResourceTable` puts a lifecycle field first in its derived filters.
+  The parser exposes `transitions` and `initial` on a `FieldDef`.
+- **`karni ui detect --css <path>` maps any stylesheet.** Plain CSS, a
+  Bootstrap-style sheet, a design with no variables at all (then the body,
+  link, button, heading and input rules are read), one file or a directory
+  of pages. Custom properties whose name means a role are "found", values
+  taken from rules or derived (ring, input, a contrasting primary
+  foreground) are "inferred", the rest are "defaulted", and the report says
+  which. A dark-only design is written for both modes. It is also a function,
+  `karni_cli.uitheme.detect_css(paths)`, which `karni import design` calls.
+  See [docs/theming.md](docs/theming.md#any-stylesheet-css).
+- **One theme for the staff app and the admin.** `KARNI_THEME_CSS` (default
+  `frontend/src/karni-theme.css`, the file `karni ui detect` writes) is
+  served to the admin as the static file `karni/project-theme.css` by the
+  new `karni.admin.theme.ProjectThemeFinder` (live under `runserver`,
+  copied by `collectstatic`, same origin so the Content-Security-Policy
+  allows it) and loaded third in `UNFOLD["STYLES"]`. Without the file the
+  URL serves an empty stylesheet. See
+  [docs/theming.md](docs/theming.md#one-theme-for-the-staff-app-and-the-admin).
+- **`karni-theme.css` keeps dark mode.** Light-only colours are now written
+  under `:root:not(.dark)`, so they no longer override Karni's dark palette
+  under `<html class="dark">`. A file written by an earlier release is
+  regenerated with `karni ui detect --force`.
 - **Public server-rendered pages have a home.** `karni make site <app>`
   creates a site app (function views, `urls.py` with `app_name`, templates,
   static files, a 404 page) and includes it at `""` in `config/urls.py`, so

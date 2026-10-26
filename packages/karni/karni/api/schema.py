@@ -106,6 +106,9 @@ class KarniAutoSchema(AutoSchema):
             prefix = _route_for_viewset(type(self.view))
             if prefix is not None:
                 operation["x-karni-resource"] = prefix
+                dashboard = self._karni_dashboard()
+                if dashboard is not None:
+                    operation["x-karni-dashboard"] = dashboard
         view = self._karni_view()
         if view is not None:
             declaration, predicate = self._karni_access(view)
@@ -118,6 +121,25 @@ class KarniAutoSchema(AutoSchema):
                 if honeypot:
                     operation["x-karni-honeypot"] = honeypot
         return operation
+
+    def _karni_dashboard(self) -> dict[str, Any] | None:
+        """The model's ``Karni.dashboard`` (:mod:`karni.dashboard`), when it opts in.
+
+        A malformed declaration is left out here: ``karni check`` reports it
+        (``E133``), and a schema endpoint that answers 500 would hide it.
+        """
+        from karni.dashboard import dashboard_spec
+        from karni.errorcodes import KarniError
+
+        model = getattr(self.view, "model", None) or getattr(
+            getattr(self.view, "queryset", None), "model", None
+        )
+        if not isinstance(model, type) or not issubclass(model, Model):
+            return None
+        try:
+            return dashboard_spec(model)
+        except KarniError:
+            return None
 
     #: The detail routes drf-spectacular already names apart from the list.
     _DETAIL_ACTIONS = frozenset({"retrieve", "update", "partial_update", "destroy"})

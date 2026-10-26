@@ -234,14 +234,19 @@ function DefaultFileRow({
   return (
     <li className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted-subtle px-3 py-1.5 text-sm">
       {typeof file === "string" ? (
-        <a
-          href={file}
-          target="_blank"
-          rel="noreferrer"
-          className="truncate font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {name}
-        </a>
+        // A file already stored (the record's value on an edit form): says so,
+        // and links to it. Choosing a new file replaces it.
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 text-xs text-muted-foreground">Current file</span>
+          <a
+            href={file}
+            target="_blank"
+            rel="noreferrer"
+            className="truncate font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {name}
+          </a>
+        </span>
       ) : (
         <span className="truncate">
           {name}

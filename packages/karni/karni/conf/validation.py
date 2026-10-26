@@ -98,6 +98,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_IMPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_EXPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_ADMIN_LOGO: Any = None
+    KARNI_THEME_CSS: str | None = "frontend/src/karni-theme.css"
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"
     KARNI_PUBLIC_CREATE_RATE: str | None = "10/hour"
