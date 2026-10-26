@@ -11,4 +11,4 @@
 - The current item outside a menu: `{% ifactive "<app>:<name>" %}` around the design's own class.
 - Inline scripts stay inside `{% csp_hash %}...{% endcsp_hash %}`, another origin is `{% csp_allow %}`.
 - Redirects, page titles and descriptions and the `editor` role are in the admin already.
-- `karni check` runs SITE001, SITE002, SITE004 and SITE005.
+- `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008.

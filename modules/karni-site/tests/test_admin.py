@@ -82,7 +82,7 @@ def test_the_editor_edits_a_block_as_text(editor: Any, client: Client) -> None:
     # Saving the template's text unchanged keeps the block following the template.
     title = Block.objects.get(key="contact.hero.title")
     admin.post(
-        url(Block, "change", title.pk), {"text": 'Visit <span class="accent">the bakery</span>'}
+        url(Block, "change", title.pk), {"text": 'Visit <span class="highlight">the bakery</span>'}
     )
     title.refresh_from_db()
     assert not title.edited

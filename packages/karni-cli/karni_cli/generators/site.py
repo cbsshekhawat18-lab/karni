@@ -597,8 +597,9 @@ def command(
     marker of config/urls.py, so the home page replaces the welcome page,
     and sets handler404 and handler500 there to karni_site's views. The
     site's runtime is the karni-site module: when the project lacks it, the
-    dependency and the `# karni:apps` entry are added as `karni add site`
-    would. A new app also gets the `karni make app` skeleton and the
+    dependency, the `# karni:apps` entry, its redirect middleware and its
+    `site` context processor are added as `karni add site` would (then
+    `karni migrate`). A new app also gets the `karni make app` skeleton and the
     `# karni:apps` entry. An existing app keeps every file it has (with
     --force, only the missing files are created). Add pages with `karni
     import design` or `karni make view`.

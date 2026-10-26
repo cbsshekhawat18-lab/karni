@@ -47,9 +47,9 @@ DEFAULTS: dict[str, Any] = {
     # The file types an image upload may be (by extension, checked against the
     # file's own bytes). SVG is left out on purpose: an SVG file can carry script.
     "KARNI_SITE_IMAGE_TYPES": ["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"],
-    # The cache alias, and the seconds a cached block, menu, redirect or setting
-    # lives. Every save clears what it changed, so the timeout is only a backstop.
+    # The cache alias blocks, menus, redirects, page SEO entries and the settings live in.
     "KARNI_SITE_CACHE": "default",
+    # Seconds a cached entry lives. Every save clears what it changed, so this is a backstop.
     "KARNI_SITE_CACHE_TIMEOUT": 3600,
     # Whether the first render of a template stores its defaults (blocks, a menu's
     # seed, the site's details). False: nothing is written while a page renders.

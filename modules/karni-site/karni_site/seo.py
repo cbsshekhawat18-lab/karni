@@ -2,7 +2,7 @@
 
 :func:`page_seo` answers "is there an entry for this page": the entry for
 the request's exact path first, then the one for its URL name (which covers
-every page of that view). Each answer, found or not, is cached; saving an
+every page of that view). Each answer, found or not, is cached. Saving an
 entry makes every cached answer stale. The tag that renders the title,
 description, share image and robots line reads this, then the object in the
 template's context, then the site's settings.

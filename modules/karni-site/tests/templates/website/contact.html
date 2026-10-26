@@ -2,7 +2,7 @@
 {% block title %}Contact{% endblock %}
 {% block content %}{% site_defaults name="Crumb & Co" phone="(0123) 456 789" phone_link="+440123456789" email="hello@example.com" social_instagram="https://instagram.com/crumb" %}
 <section class="contact">
-  <h1>{% editable "contact.hero.title" %}Visit <span class="accent">the bakery</span>{% endeditable %}</h1>
+  <h1>{% editable "contact.hero.title" %}Visit <span class="highlight">the bakery</span>{% endeditable %}</h1>
   <p class="lede">{% editable "contact.hero.text" %}Open <b>every</b> morning.<br>Closed on Mondays.{% endeditable %}</p>
   <p><a href="{{ site.phone_href }}">{{ site.phone }}</a> <a href="{{ site.email_href }}">{{ site.email }}</a></p>
   {% if site.social.instagram %}<a class="social" href="{{ site.social.instagram.url }}">Instagram</a>{% endif %}

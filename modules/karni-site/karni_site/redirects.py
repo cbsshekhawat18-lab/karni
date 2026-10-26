@@ -3,7 +3,7 @@
 A redirect matches the request's path. One whose old address has a query
 string matches only that exact query and is tried first. Without one, any
 query the request has is passed on to the new address. Each address looked
-up is cached, found or not, so a lookup is one cache read; saving a
+up is cached, found or not, so a lookup is one cache read. Saving a
 redirect makes every cached answer stale.
 
 A redirect that would send a visitor in a circle (``/a/`` to ``/b/`` and

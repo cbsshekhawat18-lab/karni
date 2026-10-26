@@ -288,6 +288,14 @@ filters on is resolved at boot. One that does not exist on a model the grant
 covers fails `karni check` with [`E214`](errors.md#e214), never a 500 at
 request time.
 
+A module can declare a role too, through the `karni.roles` entry point
+([the module contract](modules.md#7c-optional-karniroles-roles-a-module-declares)).
+karni-site declares `editor`, for the people who change a public site's
+content. Module roles join the declaration under `KARNI_ROLES`: name the
+same slug there to replace one, and the module's own setting turns it off
+(`KARNI_SITE_EDITOR_ROLE = None`). `karni sync-roles`, the permission
+matrix and `karni context` treat them like the project's own.
+
 The defaults are deliberately boring. A model with no `Karni` class is owned
 by whoever created it, has no scope paths and has the four standard actions.
 The shipped `KARNI_ROLES` is `staff` (everything), `user` and `customer`

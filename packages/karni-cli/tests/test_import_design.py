@@ -699,7 +699,7 @@ def test_the_staff_app_is_themed_from_the_css_when_ui_detect_knows_how(
 def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: Path) -> None:
     result = ok("import", "design", str(BAKERY), "--app", "website", "--editable")
     out = result.output
-    assert "editable: 20 text block(s), 2 image(s), 1 menu(s) (header), edited in the admin." in out
+    assert "editable: 21 text block(s), 2 image(s), 1 menu(s) (header), edited in the admin." in out
     assert "site details from the design (site_defaults in base.html): name='Crumb & Co', " in out
     templates = project / "website" / "templates" / "website"
     base = (templates / "base.html").read_text()
@@ -749,8 +749,10 @@ def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: 
         '{% editable_image "about.story.the_wood_oven" %}<img src="{% static '
         '\'website/img/oven.jpg\' %}" alt="The wood oven">{% endeditable_image %}'
     ) in about
-    # Template syntax in the design's text stays escaped inside a block.
-    assert "{% templatetag openvariable %} flour" in about
+    # Template syntax in the design's text stays escaped inside a block, and <code> is one.
+    assert (
+        '<code>{% editable "about.story.flour_water" %}{% templatetag openvariable %} flour'
+    ) in about
     record = _design_json(project)["editable"]
     assert record["enabled"] is True and record["menus"] == {"header": "website/menus/header.html"}
     assert record["site"] == {"name": "Crumb & Co", "map_url": "https://maps.example.com/crumb"}

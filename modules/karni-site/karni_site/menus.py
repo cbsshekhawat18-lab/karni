@@ -91,6 +91,10 @@ def _path_patterns(url: str) -> list[str]:
     return [parts.path]
 
 
+class _NoTarget(LookupError):
+    """An item whose page, row or model is gone: it is left out of the menu."""
+
+
 def _row(model: type[Any], pk: str) -> Any | None:
     """The row ``pk`` of ``model`` through its default manager, or ``None`` (a bad key too)."""
     try:
@@ -100,22 +104,22 @@ def _row(model: type[Any], pk: str) -> Any | None:
 
 
 def target(item: Any) -> tuple[str, list[str], str]:
-    """``(address, current-page patterns, default title)`` of an item, or ``ValueError``."""
+    """``(address, current-page patterns, default title)`` of an item (``_NoTarget`` if gone)."""
     if item.route:
         kwargs = item.route_kwargs or None
         try:
             url = reverse(item.route, kwargs=kwargs)
         except NoReverseMatch as exc:
-            raise ValueError(f"no page is named {item.route!r}") from exc
+            raise _NoTarget(f"no page is named {item.route!r}") from exc
         patterns = _path_patterns(url) if kwargs else [item.route]
         return url + item.suffix, patterns, item.route.rsplit(":", 1)[-1].replace("_", " ").title()
     if item.content_type_id and item.object_id:
         model = item.content_type.model_class()
         if model is None:
-            raise ValueError("its model no longer exists")
+            raise _NoTarget("its model no longer exists")
         row = _row(model, item.object_id)
         if row is None or not hasattr(row, "get_absolute_url"):
-            raise ValueError("its row no longer exists")
+            raise _NoTarget("its row no longer exists")
         url = str(row.get_absolute_url())
         return url + item.suffix, _path_patterns(url), str(row)
     url = item.url
@@ -125,7 +129,7 @@ def target(item: Any) -> tuple[str, list[str], str]:
 def _node(item: Any, children: dict[Any, list[Any]]) -> dict[str, Any] | None:
     try:
         url, patterns, fallback = target(item)
-    except ValueError as exc:
+    except _NoTarget as exc:
         logger.warning("karni_site: menu item %s is left out: %s", item.pk, exc)
         return None
     kids = [node for child in children.get(item.pk, []) if (node := _node(child, children))]

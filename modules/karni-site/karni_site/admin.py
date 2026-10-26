@@ -340,9 +340,11 @@ class BlockAdmin(SiteAdmin):
     def shows(self, obj: Block) -> str:
         if obj.kind == Block.Kind.IMAGE:
             return _image_preview(_file_url(obj.image) or obj.default_src)
+        from html import unescape
+
         from django.utils.html import strip_tags
 
-        return Truncator(strip_tags(obj.html)).chars(90)
+        return Truncator(unescape(strip_tags(obj.html))).chars(90)
 
     @admin.display(description=_("the template's version"))
     def template_default(self, obj: Block) -> str:

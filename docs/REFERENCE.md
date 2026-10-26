@@ -1093,7 +1093,7 @@ karni make component [OPTIONS] NAME
 
 Create a public, server-rendered site app NAME and mount it at "/".
 
-Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency and the `# karni:apps` entry are added as `karni add site` would. A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
+Writes NAME/views.py (a home view), NAME/urls.py (app_name NAME, a `# karni:urls` marker), NAME/templates/NAME/base.html and home.html, NAME/templates/404.html and 500.html, NAME/static/NAME/site.css and NAME/tests/test_pages.py (assert_pages on every page in its PAGES list), then inserts `path("", include("NAME.urls"))` at the `# karni:urls` marker of config/urls.py, so the home page replaces the welcome page, and sets handler404 and handler500 there to karni_site's views. The site's runtime is the karni-site module: when the project lacks it, the dependency, the `# karni:apps` entry, its redirect middleware and its `site` context processor are added as `karni add site` would (then `karni migrate`). A new app also gets the `karni make app` skeleton and the `# karni:apps` entry. An existing app keeps every file it has (with --force, only the missing files are created). Add pages with `karni import design` or `karni make view`.
 
 ```
 karni make site [OPTIONS] NAME
@@ -1156,7 +1156,9 @@ Build the public site from a folder of static pages, keeping the design as writt
 
 Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
 
-Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since.
+With --editable, every text becomes a block (`{% editable %}`), every image `{% editable_image %}`, each navigation a menu (`{% get_menu %}`) seeded from the design's links, and the site's name, logo, favicon, phone, email, map and social links come from the site's settings: the client changes all of it in the admin, and the templates hold the design's text as the defaults.
+
+Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since, and every block keeps its key.
 
 ```
 karni import design [OPTIONS] DIRECTORY
@@ -1169,6 +1171,7 @@ karni import design [OPTIONS] DIRECTORY
 | `--diff` |  | Report what changed since the last import and write nothing. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+| `--editable/--no-editable` |  | Make every text, image, menu and contact detail editable in the admin (karni-site blocks, menus and site settings). Remembered for later imports. |
 
 ### Debugging
 
@@ -1478,6 +1481,19 @@ class Lead(BaseModel):
 | `KARNI_SITE_IS_ACTIVE` |  | `"karni_site.navigation.is_active"` | The function {% ifactive %} asks whether a pattern names the current page: (request, pattern) -&gt; bool. A dotted path, so a project can swap the rule. |
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` |  | `["500.html", "karni_site/500.html"]` | The templates karni_site.views.server_error tries in order. The first that renders is the page. The last is this module's plain page, which needs nothing. |
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
+| `KARNI_SITE_SETTINGS_MODEL` |  | `"karni_site.SiteSettings"` | The model `site` is in every template: "app_label.ModelName". A project with fields of its own subclasses karni_site.models.AbstractSiteSettings and names its model here, before karni_site's first migrate (like AUTH_USER_MODEL). |
+| `KARNI_SITE_HIGHLIGHT` |  | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them in an editable block, and the element (with its class) the words render in. "" as the marker turns it off. |
+| `KARNI_SITE_INLINE_TAGS` |  | `{ "b": [], "strong": [], "i": [], "em": [], "br": [], "a": ["href", "title", "target", "rel"], }` | The inline markup an edited block keeps: element -&gt; the attributes it keeps. Everything else is removed, its text kept. The highlight element joins it. |
+| `KARNI_SITE_LINK_SCHEMES` |  | `["http", "https", "mailto", "tel"]` | The schemes a link in an edited block may use. A relative link always may. |
+| `KARNI_SITE_SANITIZER` |  | `"karni_site.sanitize.sanitize"` | The function that cleans a block's HTML: (html) -&gt; html. A dotted path. |
+| `KARNI_SITE_IMAGE_TYPES` |  | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The file types an image upload may be (by extension, checked against the file's own bytes). SVG is left out on purpose: an SVG file can carry script. |
+| `KARNI_SITE_CACHE` |  | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings live in. |
+| `KARNI_SITE_CACHE_TIMEOUT` |  | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
+| `KARNI_SITE_SEED_ON_RENDER` |  | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
+| `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
+| `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
+| `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
+| `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
 
 ## Components and hooks
 
@@ -1627,7 +1643,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
-| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | The current page in a menu, a design's inline scripts under the Content-Security-Policy, and error pages that cannot fail. |
+| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, redirects, the current page in a menu, and error pages that cannot fail. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ## Error codes
@@ -1823,6 +1839,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE001`](errors.md#site001) | check | Templates do not get the request |
 | [`SITE002`](errors.md#site002) | check | {% ifactive %} names a URL the project does not have |
 | [`SITE003`](errors.md#site003) | exception | A karni_site template tag is written wrongly |
+| [`SITE004`](errors.md#site004) | check | Templates do not get `site` |
+| [`SITE005`](errors.md#site005) | check | The redirect middleware is not installed |
+| [`SITE006`](errors.md#site006) | exception | A redirect would send visitors in a circle |
+| [`SITE007`](errors.md#site007) | exception | A menu item does not point at a page |
+| [`SITE008`](errors.md#site008) | check | One block key has two different defaults |
+| [`SITE009`](errors.md#site009) | exception | KARNI_SITE_SETTINGS_MODEL names no installed model |
 
 ### The `karni` command (`C`)
 

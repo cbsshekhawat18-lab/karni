@@ -40,6 +40,28 @@ def test_the_site_processor_and_the_redirect_middleware_are_required(settings: S
     assert middleware.startswith("SITE005: add 'karni_site.middleware.RedirectMiddleware'")
 
 
+def test_one_key_with_two_defaults_is_reported(settings: Settings, tmp_path: Path) -> None:
+    (tmp_path / "a.html").write_text(
+        '{% load karni_site %}{% editable "home.intro" %}Hello\n  there{% endeditable %}\n'
+        '{% editable "home.same" %}Shared{% endeditable %}'
+    )
+    (tmp_path / "b.html").write_text(
+        '{% load karni_site %}{% editable "home.intro" %}Hello there{% endeditable %}\n'
+        '{% editable "home.same" %}Shared{% endeditable %}\n'
+        '{% editable "home.intro" %}Goodbye{% endeditable %}\n'
+        '{% editable_image "home.same" %}<img src="x.png" alt="">{% endeditable_image %}'
+    )
+    templates = copy.deepcopy(settings.TEMPLATES)
+    templates[0]["DIRS"] = [tmp_path]
+    settings.TEMPLATES = templates
+    failures = checks.run_checks()
+    assert [f.split(": block")[0] for f in failures] == [
+        f"SITE008: {tmp_path / 'b.html'}:3",
+        f"SITE008: {tmp_path / 'b.html'}:4",
+    ]
+    assert f"than at {tmp_path / 'a.html'}:1" in failures[0]
+
+
 def test_unknown_url_names_in_ifactive_are_reported(settings: Settings, tmp_path: Path) -> None:
     (tmp_path / "nav.html").write_text(
         "{% load karni_site %}\n"

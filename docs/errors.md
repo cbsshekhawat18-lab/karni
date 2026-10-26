@@ -1870,9 +1870,69 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.templatetags.karni_site`
 
-**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". The template does not compile otherwise.
+**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". {% editable %} and {% editable_image %} take a block key ("home.intro": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template does not compile otherwise.
 
 **Fix.** Write the tag as the message shows. The karni-site README has an example of each.
+
+<a id="site004"></a>
+
+### SITE004: Templates do not get `site`
+
+*system check (error)* · from `karni_site.checks`
+
+**Why Karni objects.** `site` (the site's name, logo, contact details, opening hours and social links, edited in the admin) reaches templates through the context processor karni_site.context_processors.site. Without it every {{ site.<field> }} renders empty and nothing fails.
+
+**Fix.** Add 'karni_site.context_processors.site' to TEMPLATES[0]['OPTIONS']['context_processors'] in config/settings.py. `karni make site <app>` adds it.
+
+<a id="site005"></a>
+
+### SITE005: The redirect middleware is not installed
+
+*system check (error)* · from `karni_site.checks`
+
+**Why Karni objects.** Redirects a client adds in the admin are answered by karni_site.middleware.RedirectMiddleware. Without it they are stored and never used, and the old addresses answer 404.
+
+**Fix.** Add 'karni_site.middleware.RedirectMiddleware' to the `# karni:middleware` block of config/settings.py. `karni make site <app>` adds it.
+
+<a id="site006"></a>
+
+### SITE006: A redirect would send visitors in a circle
+
+*exception* · from `karni_site.redirects`
+
+**Why Karni objects.** The new address of a redirect is itself redirected, through one redirect or several, back to the old address. A browser would follow the chain until it gives up, so the page could never be reached.
+
+**Fix.** Point the redirect at the page's final address, or remove the redirect that leads back. The message lists the chain.
+
+<a id="site007"></a>
+
+### SITE007: A menu item does not point at a page
+
+*exception* · from `karni_site.menus`
+
+**Why Karni objects.** A menu item goes to exactly one place: one of the site's pages by URL name, a row's own page (its get_absolute_url), or an address. An item with none of them (and no children from a model), with a URL name no route has, with a row that no longer exists, with an address such as javascript:, or under itself, would render a broken link.
+
+**Fix.** Choose where the item goes in the admin (or set route, content_type and object_id, or url), and pick a parent from the same menu.
+
+<a id="site008"></a>
+
+### SITE008: One block key has two different defaults
+
+*system check (error)* · from `karni_site.checks`
+
+**Why Karni objects.** A block is stored once per key. While nobody has edited it, it follows its template's default, so a key written with one default in one template and another default elsewhere (or used for text in one place and an image in another) would be stored again on every render and show the other place's text.
+
+**Fix.** Give each place its own key (`karni import design --editable` does), or the same default in both when the text is meant to be shared.
+
+<a id="site009"></a>
+
+### SITE009: KARNI_SITE_SETTINGS_MODEL names no installed model
+
+*exception* · from `karni_site.sitesettings`
+
+**Why Karni objects.** `site`, the admin's site settings and the editor role read the model KARNI_SITE_SETTINGS_MODEL names. A label that is not an installed model (a typo, an app missing from INSTALLED_APPS) leaves them nothing to read.
+
+**Fix.** Set it to 'app_label.ModelName' of a model that subclasses karni_site.models.AbstractSiteSettings and whose app is installed, or remove it for karni_site.SiteSettings.
 
 ## The karni command (`C`)
 
@@ -2902,11 +2962,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app>`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. The site's runtime (the `{% ifactive %}` and `{% csp_hash %}` tags, the error pages) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
+**Rule.** A public, server-rendered website (SEO-indexed pages in the client's own HTML and CSS) is a site app, not React pages. `karni make site <app>` creates it: function views in `<app>/views.py`, `<app>/urls.py` with `app_name`, included at `path("", ...)` in config/urls.py (which replaces the welcome page), templates in `<app>/templates/<app>/` and the site's CSS and JS in `<app>/static/<app>/`. A designer's static pages go in with `karni import design <dir> --app <app> --editable`, which keeps the markup as written, never by copying them by hand. `karni make view <name> --app <app>` adds a page. Text and images a client may change are `{% editable %}` and `{% editable_image %}` blocks, navigation is `{% get_menu "<name>" as items %}` looped in the design's markup, and the site's name, logo and contact details are `site`: never hard-coded, and never a model or template tag of the project's own. The site's runtime (these tags, `{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site module, never project code. Views read content through each model's default manager (`Model.objects`, so model scopes apply and soft-deleted rows stay hidden) and filter drafts themselves. A public form posts to a `BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends the CSRF token, never to a hand-written form view. The site's page test, `<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a page whose path has a capture a real URL there. The React rules (K201, K202, K206) apply to app screens only.
 
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
-**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app>` for a designer's pages or `karni make view <name> --app <app>` per page. Karni's docs page public-site covers SEO and public forms.
+**Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page. Karni's docs page public-site covers editable content, SEO and public forms.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

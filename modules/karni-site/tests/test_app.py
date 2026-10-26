@@ -51,4 +51,4 @@ def test_entry_points_register_codes_and_checks() -> None:
     }
     assert all("site" in names for names in groups.values()), groups
     codes = {code for code in registry() if code.startswith("SITE")}
-    assert codes == {f"SITE00{n}" for n in range(1, 8)}
+    assert codes == {f"SITE00{n}" for n in range(1, 10)}

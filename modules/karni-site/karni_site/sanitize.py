@@ -11,7 +11,7 @@ needs no sanitising dependency.
 
 A client never edits HTML they cannot read. :func:`to_editing` shows a
 block with its line breaks as new lines and the highlight element as the
-marker (``==every scale==``), and :func:`from_editing` turns the edited text
+marker (``==fresh every morning==``), and :func:`from_editing` turns the edited text
 back into clean HTML.
 
 Override / escape hatch: ``KARNI_SITE_SANITIZER`` names another
@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from html import escape
+from html import escape, unescape
 from html.parser import HTMLParser
 
 from django.utils.module_loading import import_string
@@ -244,9 +244,21 @@ def _highlight_pattern(mark: Highlight) -> re.Pattern[str]:
     return re.compile(start + r"(?P<inner>.*?)" + rf"</{tag}\s*>", re.S | re.I)
 
 
+_ENTITY = re.compile(r"&(#\d+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+_AMP = re.compile(r"&amp;(?![#A-Za-z0-9]+;)")
+
+
+def _readable(text: str) -> str:
+    """Entities as the characters they are (``&copy;`` as ``©``), except ``<`` and ``>``."""
+    text = _ENTITY.sub(
+        lambda m: m.group(0) if m.group(1) in ("lt", "gt", "amp") else unescape(m.group(0)), text
+    )
+    return _AMP.sub("&", text)
+
+
 def to_editing(html: str) -> str:
-    """A block's HTML as the text a client edits: new lines for ``<br>``, markers."""
-    text = re.sub(r"\s+", " ", str(html)).strip()
+    """A block's HTML as the text a client edits: new lines for ``<br>``, markers, characters."""
+    text = _readable(re.sub(r"\s+", " ", str(html)).strip())
     text = re.sub(r"\s*<br\s*/?>\s*", "\n", text, flags=re.I)
     mark = highlight()
     if mark.marker and mark.tag:

@@ -62,8 +62,8 @@ PREFIXES = {
         "privilege escalation, a banner, a time limit, both identities in the audit trail."
     ),
     "modules/karni-site/pyproject.toml": (
-        "Public websites for Karni: the current page in a menu, a design's inline scripts "
-        "under the Content-Security-Policy, and error pages that cannot fail."
+        "Public websites for Karni: every text, image and menu editable in the admin, "
+        "redirects, the current page in a menu, and error pages that cannot fail."
     ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."

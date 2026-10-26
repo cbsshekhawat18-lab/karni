@@ -124,4 +124,36 @@ CODES: Final[tuple[ErrorCode, ...]] = (
             "object_id, or url), and pick a parent from the same menu."
         ),
     ),
+    ErrorCode(
+        code="SITE008",
+        title="One block key has two different defaults",
+        kind="check",
+        source=f"{_SOURCE}.checks",
+        why=(
+            "A block is stored once per key. While nobody has edited it, it follows its "
+            "template's default, so a key written with one default in one template and another "
+            "default elsewhere (or used for text in one place and an image in another) would "
+            "be stored again on every render and show the other place's text."
+        ),
+        fix=(
+            "Give each place its own key (`karni import design --editable` does), or the same "
+            "default in both when the text is meant to be shared."
+        ),
+    ),
+    ErrorCode(
+        code="SITE009",
+        title="KARNI_SITE_SETTINGS_MODEL names no installed model",
+        kind="exception",
+        source=f"{_SOURCE}.sitesettings",
+        why=(
+            "`site`, the admin's site settings and the editor role read the model "
+            "KARNI_SITE_SETTINGS_MODEL names. A label that is not an installed model (a typo, "
+            "an app missing from INSTALLED_APPS) leaves them nothing to read."
+        ),
+        fix=(
+            "Set it to 'app_label.ModelName' of a model that subclasses "
+            "karni_site.models.AbstractSiteSettings and whose app is installed, or remove it "
+            "for karni_site.SiteSettings."
+        ),
+    ),
 )

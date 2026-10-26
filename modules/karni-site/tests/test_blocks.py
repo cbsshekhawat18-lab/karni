@@ -67,7 +67,7 @@ def test_an_edited_block_shows_the_edit_and_an_untouched_one_follows_the_templat
 
 def test_a_page_renders_its_blocks_with_the_request(client: Client) -> None:
     page = client.get("/contact/").content.decode()
-    assert '<h1>Visit <span class="accent">the bakery</span></h1>' in page
+    assert '<h1>Visit <span class="highlight">the bakery</span></h1>' in page
     title = Block.objects.get(key="contact.hero.title")
     title.html = "Come and <b>see</b> us"
     title.save()
@@ -115,23 +115,31 @@ def test_an_edit_is_cleaned_when_it_is_saved() -> None:
     assert render('{% editable "home.note" %}Hello{% endeditable %}') == "<b>Hi</b> <a>y</a>"
 
 
+def test_a_client_edits_characters_not_entities() -> None:
+    html = "&copy; 2026 Crumb &amp; Co &middot; 5 &lt; 6 &amp;copy;"
+    assert to_editing(html) == "\u00a9 2026 Crumb & Co \u00b7 5 &lt; 6 &amp;copy;"
+    assert from_editing(to_editing(html)) == (
+        "\u00a9 2026 Crumb &amp; Co \u00b7 5 &lt; 6 &amp;copy;"
+    )
+
+
 def test_the_highlight_convention_is_a_setting(settings: Settings) -> None:
-    assert to_editing("Work across <mark>every scale</mark><br>\n  now") == (
-        "Work across ==every scale==\nnow"
+    assert to_editing("Bread from <mark>our own oven</mark><br>\n  now") == (
+        "Bread from ==our own oven==\nnow"
     )
-    assert from_editing("Work across ==every scale==\nnow") == (
-        "Work across <mark>every scale</mark><br>\nnow"
+    assert from_editing("Bread from ==our own oven==\nnow") == (
+        "Bread from <mark>our own oven</mark><br>\nnow"
     )
-    settings.KARNI_SITE_HIGHLIGHT = {"marker": "*", "tag": "span", "class": "accent"}
-    assert from_editing("Work across *every scale*") == (
-        'Work across <span class="accent">every scale</span>'
+    settings.KARNI_SITE_HIGHLIGHT = {"marker": "^^", "tag": "span", "class": "highlight"}
+    assert from_editing("Bread from ^^our own oven^^") == (
+        'Bread from <span class="highlight">our own oven</span>'
     )
-    assert to_editing('Work <span class="accent">here</span> <span>plain</span>') == (
-        "Work *here* <span>plain</span>"
+    assert to_editing('Work <span class="highlight">here</span> <span>plain</span>') == (
+        "Work ^^here^^ <span>plain</span>"
     )
-    assert sanitize('<span class="accent">a</span><span class="other">b</span><mark>c</mark>') == (
-        '<span class="accent">a</span>bc'
-    )
+    assert sanitize(
+        '<span class="highlight">a</span><span class="other">b</span><mark>c</mark>'
+    ) == ('<span class="highlight">a</span>bc')
 
 
 def test_a_page_of_blocks_is_one_cache_read(settings: Settings) -> None:

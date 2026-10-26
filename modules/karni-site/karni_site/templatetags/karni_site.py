@@ -72,6 +72,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from django import template
+from django.template import Engine
 from django.template.base import FilterExpression, Node, NodeList, Parser, Token
 from django.template.context import Context
 from django.utils.safestring import SafeString, mark_safe
@@ -430,8 +431,7 @@ def do_site_defaults(parser: Parser, token: Token) -> SiteDefaultsNode:
                 "{% site_defaults %} takes name=value pairs for "
                 f"{', '.join(sitesettings.SEEDABLE)}, or social_<network>=<address>. Got {bit}."
             )
-        assert match is not None
-        values[name] = parser.compile_filter(match.group(2))
+        values[name] = parser.compile_filter(bit.split("=", 1)[1])
     if not values:
         raise _syntax_error('{% site_defaults %} needs at least one value: name="..."')
     return SiteDefaultsNode(values)
@@ -453,8 +453,10 @@ class GetMenuNode(Node):
         seed_path = str(self.seed.resolve(context) or "") if self.seed is not None else ""
 
         def seed() -> str:
-            assert context.template is not None
-            template = context.template.engine.get_template(seed_path)
+            engine = (
+                context.template.engine if context.template is not None else Engine.get_default()
+            )
+            template = engine.get_template(seed_path)
             with context.push():
                 return str(template.render(context))
 

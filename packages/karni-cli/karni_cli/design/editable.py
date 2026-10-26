@@ -78,8 +78,7 @@ SKIP: Final = frozenset(
         "textarea",
         "title",
         "head",
-        "code",
-        "pre",
+        "pre",  # its whitespace is its meaning: an edit as plain text would lose it
     }
 )
 #: Inline elements a block keeps, with the attributes they may carry (karni-site's defaults).
@@ -223,7 +222,7 @@ def detect_highlight(pages: Iterable[Any]) -> tuple[str, str] | None:
     """The ``(tag, class)`` a design wraps highlighted words of its headings in, or ``None``.
 
     An inline element with exactly one class and nothing else, inside
-    headings, on two or more headings: ``<span class="accent">``.
+    headings, on two or more headings: ``<span class="highlight">``.
     """
     found: Counter[tuple[str, str]] = Counter()
     for page in pages:
@@ -411,7 +410,7 @@ class Editable:
     def _seed(self, name: str) -> str:
         return f"{self.app}/menus/{name}.html"
 
-    # the current-page markers P4 found, so menu items compare without them
+    # the current-page markers the import found, so menu items compare without them
 
     def _find_markers(self, layout: compare.Layout, by_key: Mapping[str, Any]) -> None:
         for group in layout.groups():

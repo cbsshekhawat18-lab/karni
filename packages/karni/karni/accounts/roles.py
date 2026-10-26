@@ -42,9 +42,9 @@ entry point group (:func:`module_roles`): the value is a mapping shaped like
 under the project's own roles, so a slug ``KARNI_ROLES`` also names is the
 project's.
 
-Override / escape hatch: replace ``KARNI_ROLES`` entirely; name a module's
-role there to redefine it; register custom scopes; call :func:`sync_roles`
-yourself with your own declaration.
+Override / escape hatch: replace ``KARNI_ROLES`` entirely, name a module's
+role there to redefine it, register custom scopes, or call
+:func:`sync_roles` yourself with your own declaration.
 """
 
 from __future__ import annotations

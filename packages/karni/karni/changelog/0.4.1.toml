@@ -136,8 +136,10 @@ A site app's runtime now comes from the karni-site module: the {% ifactive %} ta
 for the current menu item, {% csp_hash %} and {% csp_allow %} for a design's inline \
 scripts and other origins under the Content-Security-Policy, and the error views \
 that render templates/404.html and 500.html with the request. `karni make site` \
-wires the module (the dependency, the `# karni:apps` entry, handler404 and \
-handler500 in config/urls.py) and writes templates/500.html. A site app created \
+wires the module (the dependency, the `# karni:apps` entry, its redirect \
+middleware in the `# karni:middleware` block, its `site` context processor, \
+handler404 and handler500 in config/urls.py) and writes templates/500.html. The \
+module has tables, so run `karni migrate` after installing it. A site app created \
 before this gets the missing pieces from `karni make site <app> --force` after \
 `pip install karni-site`, and its base.html can load `karni_site` for the tags."""
 mechanical = false

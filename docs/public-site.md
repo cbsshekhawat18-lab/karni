@@ -1,5 +1,5 @@
 ---
-description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, the karni-site runtime, content read through the default manager, SEO basics, a page test with assert_pages, and public forms that post to a BaseViewSet."
+description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, every text, image, menu and contact detail editable in the admin, the karni-site runtime, content read through the default manager, SEO basics, a page test with assert_pages, and public forms that post to a BaseViewSet."
 ---
 
 # Public server-rendered pages
@@ -9,9 +9,10 @@ also need a public website: pages that search engines index, rendered on the
 server, in the client's own HTML and CSS. That site is a plain Django app in
 the project, called a site app here. `karni make site` creates one,
 `karni import design` fills it from a designer's static pages, and `karni
-make view` adds pages to it. Its runtime (the template tags, the error pages)
-is the `karni-site` module. Rule K309 (`karni rules --explain K309`) states
-the convention for agents.
+make view` adds pages to it. Its runtime (the template tags, the error
+pages, and everything the client edits in the admin: the text, the images,
+the menus, the contact details, the redirects) is the `karni-site` module.
+Rule K309 (`karni rules --explain K309`) states the convention for agents.
 
 ## App pages or a site app
 
@@ -57,8 +58,11 @@ It also inserts `path("", include("website.urls"))` at the `# karni:urls`
 marker of `config/urls.py` and sets `handler404` and `handler500` there to
 the views of the [`karni-site` module](#the-karni-site-module), which it
 wires into the project as `karni add site` would (the dependency in
-`pyproject.toml`, `karni_site` in the `# karni:apps` block). Install it
-afterwards. A new app first gets the `karni make app` skeleton and its
+`pyproject.toml`, `karni_site` in the `# karni:apps` block, its redirect
+middleware in the `# karni:middleware` block and its `site` context
+processor). Install it afterwards and run `karni migrate`. The generated
+`base.html` shows the site's name from `site`, which the client changes in
+the admin. A new app first gets the `karni make app` skeleton and its
 `# karni:apps` entry. An existing local app gets only the missing site
 files, and its `views.py` and `urls.py` are extended in place.
 
@@ -73,10 +77,12 @@ A designer's static pages go in with [`karni import design`](#import-a-design),
 never by hand. For a site written from scratch, put the client's files under
 `static/website/` unchanged and link them from `base.html` with
 `{% static %}`. Split the header and footer into
-`templates/website/partials/` once they grow. Template filters and a
-command that loads the client's content are project code: put them in
-`website/templatetags/` and in a management command (`karni make command`).
-Karni ships no helpers for them.
+`templates/website/partials/` once they grow. Text and images the client may
+change are [blocks](#everything-the-client-edits), menus are
+`{% get_menu %}`, and the site's details are `site`: no project writes a
+template tag, a filter or a model for them. A command that loads the
+client's other content is project code (`karni make command`, or
+`karni load`).
 
 ## Import a design
 
@@ -87,9 +93,15 @@ kept as written:
 
 ```bash
 karni make site website                       # optional: import design runs it when needed
-karni import design ../design --app website
+karni import design ../design --app website --editable
+karni migrate
 karni test
 ```
+
+With `--editable`, every text, image, menu and contact detail becomes
+editable in the admin, with the design's own as the defaults (see
+[Everything the client edits](#everything-the-client-edits)). Without it the
+pages are plain templates.
 
 What it does, page by page:
 
@@ -173,10 +185,88 @@ template, and the diff says so. The import never deletes anything.
 ### What stays yours
 
 `karni make view` adds a page later. It extends the imported `base.html`
-and passes the same page test. Content the client edits in the admin,
-template filters and loaders are project code, as above. The import is a
-starting point that runs again, not a build step: edit the templates
-freely, and the next import keeps your edits.
+and passes the same page test. Models for the client's own content (the
+services, the team, the projects) are project code, read as below. The
+import is a starting point that runs again, not a build step: edit the
+templates freely, and the next import keeps your edits.
+
+## Everything the client edits
+
+A client changes their site in the admin: a sentence on the home page, a
+photo, a menu entry, the phone number, the opening hours, a page's title.
+No project models each paragraph for that. `karni import design --editable`
+marks it all in the design's pages with the `karni-site` tags, and the same
+tags work in a template written by hand:
+
+```django
+{% load static karni_site %}{% site_defaults name="Crumb & Co" phone="01234 567890" email="hello@example.com" %}
+...
+<a class="brand" href="{% url 'website:home' %}">{% site_image "logo" %}<img src="{% static 'website/img/logo.svg' %}" alt="{{ site.name }}">{% endsite_image %}</a>
+{% get_menu "header" seed="website/menus/header.html" as items %}<nav>
+  {% for item in items %}<a href="{{ item.url }}"{% if item.active %} class="active"{% endif %}>{{ item.title }}</a>{% endfor %}
+</nav>
+<h1>{% editable "home.hero.title" %}Bread worth the walk{% endeditable %}</h1>
+{% editable_image "home.hero.photo" %}<img src="{% static 'website/img/oven.jpg' %}" alt="The wood oven">{% endeditable_image %}
+<p><a href="{{ site.phone_href }}">{{ site.phone }}</a></p>
+```
+
+- **The template is the default.** The first render stores each block's
+  text or image, the menu's links (from its `seed` template, the design's
+  own navigation) and the site's details (`{% site_defaults %}`). Until the
+  client changes one, it follows the template: a new version of the design
+  changes it. Once they change it, their version stays.
+- **Text** is edited as plain text: a new line is a line break, and words
+  between the highlight markers (`==fresh every morning==`) render in the design's
+  highlight. Bold, emphasis and links are kept, and everything else is
+  removed when it is saved: scripts, styles, event attributes, `javascript:`
+  links.
+- **Images** are uploaded in place of the design's. The `<img>` keeps its
+  classes and attributes, and only its address and alternative text change.
+- **Menus** loop over the items in the design's own markup. An item goes to
+  one of the site's pages (by URL name), a row's page, or an address, and
+  can list the rows of a model as its children, so a submenu of services
+  follows the services the client adds.
+- **The site's details** (`site`): name, tagline, logo, favicon, the default
+  share image, address, phone, email, map link, opening hours and social
+  links.
+- **Redirects** for old addresses, and **page titles and descriptions** per
+  page.
+
+What the import marks:
+
+- each run of text, with the inline markup a block keeps, becomes a block.
+  Its key is the page, the section and the first words:
+  `home.hero.bread_worth_the_walk`, or `shared.footer.opening_hours` for
+  what every page shares. A text that is exactly the site's name becomes
+  `{{ site.name }}`.
+- each `<img>` and `<picture>`, and each image in a `style` attribute,
+  becomes an image block. The image in the header or footer that links home
+  (or is named like a logo) is the site's logo, and the first
+  `<link rel="icon">` its favicon.
+- the first `tel:`, `mailto:` and map link and every link to a social
+  profile take their addresses from `site`.
+- a navigation whose items share one markup (a list of links, nested lists
+  for a submenu, or links side by side) becomes `{% get_menu %}` and a
+  loop, seeded from `templates/<app>/menus/<name>.html`. One whose items
+  differ keeps its markup and its link texts become blocks, and the report
+  says where.
+- headings that highlight words with the same element and class
+  (`<span class="highlight">`) set `KARNI_SITE_HIGHLIGHT` in
+  config/settings.py, so the client types `==words==` for the same.
+
+`.karni/design.json` records each block's key and where it was. The next
+import gives the same place the same key, so the client's edits stay
+attached when the designer changes the text, and the record keeps the
+import editable until `--no-editable`. Left as written: `<pre>` (its
+whitespace is its meaning), text in attributes (a form field's
+placeholder, an `aria-label`), images in stylesheets, and the `<title>` and
+description, which are the page's [SEO entry](#seo-basics).
+
+The client needs the admin and a role. The module declares `editor`:
+staff status and the role let a person change the site's content, menus,
+details and page titles, and nothing else (no enquiries, users, settings
+or redirects). The [module's README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+has the settings and every escape hatch.
 
 ## The karni-site module
 
@@ -190,7 +280,12 @@ karni_site %}` at the top of a template gives it:
   around whatever the design uses for the current page, a class, a token
   inside a class, or a whole attribute. `karni check` reports a name no URL
   has (`SITE002`).
+- `{% editable %}`, `{% editable_image %}`, `{% site_image %}`,
+  `{% site_defaults %}` and `{% get_menu %}`, and `site` in every template:
+  [everything the client edits](#everything-the-client-edits).
 - `{% csp_hash %}` and `{% csp_allow %}`, below.
+- the redirect middleware, which answers the admin's redirects where the
+  site has no page.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu
@@ -339,7 +434,10 @@ change. `collectstatic` copies `static/website/` into `STATIC_ROOT`.
   `{% block description %}`. The generated `base.html` puts them in
   `<title>` and `<meta name="description">`. The title falls back to the
   site's name, and the description to nothing, so the page test fails a
-  page that forgets its description.
+  page that forgets its description. The admin's *Page titles and
+  descriptions* hold a title, description, share image and *hide from
+  search engines* per page (by URL name or path), which
+  `karni_site.seo.page_seo(request)` looks up.
 - **Canonical link.** `base.html` writes
   `<link rel="canonical">` from the request's scheme, host and path, without
   the query string. Set `ALLOWED_HOSTS` to the real domain in production.
@@ -417,4 +515,6 @@ each invalid field.
 `karni context` prints them on its `SITE:` line. `karni check` covers the
 site app like any other app, runs `karni-site`'s checks (`SITE001`: the
 templates get the request, `SITE002`: every `{% ifactive %}` names a URL
-that exists), and `karni test` runs its page test.
+that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
+middleware is installed, `SITE008`: no block key has two defaults), and
+`karni test` runs its page test.

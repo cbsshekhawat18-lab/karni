@@ -144,5 +144,6 @@ def test_a_project_can_swap_the_model_name_through_the_setting(settings: Setting
     settings.KARNI_SITE_SETTINGS_MODEL = "karni_site.Nowhere"
     from django.core.exceptions import ImproperlyConfigured
 
-    with pytest.raises(ImproperlyConfigured, match="KARNI_SITE_SETTINGS_MODEL"):
+    with pytest.raises(ImproperlyConfigured, match="KARNI_SITE_SETTINGS_MODEL") as failed:
         sitesettings.settings_model()
+    assert getattr(failed.value, "code", "") == "SITE009"

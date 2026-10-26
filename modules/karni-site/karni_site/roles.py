@@ -27,6 +27,7 @@ def editor_grants() -> dict[str, str]:
     label = f"{settings.app_label}.{settings.model_name}"
     return {
         f"{label}:view": "all",
+        f"{label}:add": "all",  # the one row, when no template has stored it yet
         f"{label}:change": "all",
         "karni_site.openinghours:*": "all",
         "karni_site.sociallink:*": "all",

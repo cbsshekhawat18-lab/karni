@@ -4,6 +4,7 @@ SITE001: the template engine passes the request to templates.
 SITE002: every URL name a ``{% ifactive %}`` names exists.
 SITE004: the template engine puts ``site`` in every template.
 SITE005: the redirect middleware is installed.
+SITE008: one block key is not given two different defaults.
 
 Every check is skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 """
@@ -25,12 +26,18 @@ REQUEST_CODE = "SITE001"
 NAME_CODE = "SITE002"
 SITE_CODE = "SITE004"
 MIDDLEWARE_CODE = "SITE005"
+KEY_CODE = "SITE008"
 REQUEST_PROCESSOR = "django.template.context_processors.request"
 SITE_PROCESSOR = "karni_site.context_processors.site"
 REDIRECT_MIDDLEWARE = "karni_site.middleware.RedirectMiddleware"
 DJANGO_BACKEND = "django.template.backends.django.DjangoTemplates"
 _IFACTIVE = re.compile(r"\{%-?\s*ifactive\s+(.*?)\s*-?%\}", re.S)
 _WILDCARD = re.compile(r"[*?\[]")
+_BLOCK = re.compile(
+    r"\{%-?\s*(?P<tag>editable|editable_image)\s+(?P<q>[\"'])(?P<key>[^\"']+)(?P=q)[^%]*%\}"
+    r"(?P<default>.*?)\{%-?\s*end(?P=tag)\s*-?%\}",
+    re.S,
+)
 
 
 def url_names(patterns: list[Any] | None = None, prefix: str = "") -> Iterator[str]:
@@ -122,6 +129,27 @@ def _unknown_names(known: set[str]) -> list[str]:
     return failures
 
 
+def _conflicting_keys() -> list[str]:
+    """Keys whose defaults differ between two places: the stored block would flip between them."""
+    seen: dict[str, tuple[str, str, Path, int]] = {}
+    failures: list[str] = []
+    for directory in template_dirs():
+        for path in sorted(directory.rglob("*.html")):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for match in _BLOCK.finditer(text):
+                key, tag = match.group("key"), match.group("tag")
+                default = " ".join(match.group("default").split())
+                line = text.count("\n", 0, match.start()) + 1
+                first = seen.setdefault(key, (tag, default, path, line))
+                if first[:2] != (tag, default):
+                    failures.append(
+                        f"{KEY_CODE}: {path}:{line}: block {key!r} has another default (or kind) "
+                        f"than at {first[2]}:{first[3]}. Give each place its own key, or the same "
+                        "default in both."
+                    )
+    return failures
+
+
 def run_checks() -> list[str]:
     from django.apps import apps
 
@@ -145,6 +173,7 @@ def run_checks() -> list[str]:
             "of config/settings.py (karni make site does it). Without it the redirects in the "
             "admin never answer."
         )
+    failures.extend(_conflicting_keys())
     try:
         known = set(url_names())
     except Exception as exc:  # noqa: BLE001 - Django's own check reports a broken URLconf

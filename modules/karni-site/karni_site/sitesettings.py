@@ -21,8 +21,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from django.apps import apps
-from django.core.exceptions import ImproperlyConfigured
 from django.db import DatabaseError, IntegrityError, models, transaction
+from karni.exceptions import KarniImproperlyConfigured
 
 from karni_site import caching, conf
 
@@ -36,6 +36,7 @@ __all__ = [
 ]
 
 logger = logging.getLogger("karni_site")
+MODEL_CODE = "SITE009"
 
 #: The fields ``{% site_defaults %}`` may give a default for (plus ``social_<name>``).
 SEEDABLE = ("name", "tagline", "address", "phone", "phone_link", "email", "map_url")
@@ -70,9 +71,10 @@ def settings_model() -> type[models.Model]:
     try:
         return apps.get_model(label, require_ready=False)
     except (ValueError, LookupError) as exc:
-        raise ImproperlyConfigured(
+        raise KarniImproperlyConfigured(
             f"KARNI_SITE_SETTINGS_MODEL is {label!r}, which is not an installed model "
-            "('app_label.ModelName', a subclass of karni_site.models.AbstractSiteSettings)."
+            "('app_label.ModelName', a subclass of karni_site.models.AbstractSiteSettings).",
+            code=MODEL_CODE,
         ) from exc
 
 

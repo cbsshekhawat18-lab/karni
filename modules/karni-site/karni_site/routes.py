@@ -7,7 +7,7 @@ whose rows have a page (``get_absolute_url``), for a menu item that points
 at a row or lists a model's rows.
 
 Override / escape hatch: a menu item or page SEO entry written in code (or
-with ``karni load``) may name any URL name; these lists only fill the
+with ``karni load``) may name any URL name. These lists only fill the
 admin's choices.
 """
 
