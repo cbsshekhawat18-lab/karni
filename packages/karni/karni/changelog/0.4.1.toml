@@ -211,3 +211,14 @@ it. Add the line to a project's routes.tsx before serving the staff app under a 
 path. In development the base is /, and nothing changes."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-staff-app-follows-vites-base-path"
+
+[[change]]
+id = "agent-files-public-forms"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+Rule K309 and the new-model procedure now name `karni make form` for a public \
+form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, \
+or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-name-karni-make-form"

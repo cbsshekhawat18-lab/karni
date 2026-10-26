@@ -401,9 +401,13 @@ RULES: tuple[Rule, ...] = (
             "`{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site "
             "module, never project code. Views read content through each "
             "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
-            "rows stay hidden) and filter drafts themselves. A public form posts to a "
-            "`BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends "
-            "the CSRF token, never to a hand-written form view. The site's page test, "
+            "rows stay hidden) and filter drafts themselves. A public form (a contact form, a "
+            "booking request, a sign-up) is `karni make form <name> <field:type> ... "
+            '[--notify SETTING]` and `{% karni_form "<name>" %}` in the page: it saves '
+            "through a `BaseViewSet` with `create=Public()`, works without JavaScript, carries "
+            "the CSRF token and a honeypot, and its script, rate limit and email come from "
+            "Karni. Never write a form view, a throttle or a form script for it. The site's "
+            "page test, "
             "`<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a "
             "page whose path has a capture a real URL there. The React rules (K201, K202, "
             "K206) apply to app screens only."
@@ -416,7 +420,8 @@ RULES: tuple[Rule, ...] = (
         fix=(
             "Run `karni make site <app>`, then `karni import design <dir> --app <app> "
             "--editable` for a designer's pages or `karni make view <name> --app <app>` per "
-            "page. Karni's docs page public-site covers editable content, SEO and public forms."
+            "page, and `karni make form` for each form. Karni's docs page public-site covers "
+            "editable content, SEO and public forms."
         ),
     ),
     # backend
@@ -821,7 +826,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "its viewset (`-a` also adds list/detail/form pages). Field types: "
             "`karni make model --help`. `--access`: granted (default), public-read (anyone "
             "reads, staff write), public-create (a public form that anyone may send and staff "
-            "read, rate-limited by Karni), owned:<fk to user>, staff, role:<name>, authenticated. "
+            "read, rate-limited by Karni; `karni make form` writes a whole public form with its "
+            "tests, email and page tag), owned:<fk to user>, staff, role:<name>, authenticated. "
             "Edit the generated `access` for anything "
             "richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, "
             "serializer or router. The auto-router registers it, and the admin, filters and "

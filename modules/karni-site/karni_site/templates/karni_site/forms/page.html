@@ -1,0 +1,14 @@
+{% load i18n karni_site %}{% get_current_language as LANGUAGE_CODE %}<!DOCTYPE html>
+{# The page a form is shown on, with its errors, when the page it was sent from cannot be rendered again (KARNI_SITE_FORM_PAGE_TEMPLATE). #}
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ form_name|capfirst }}</title>
+</head>
+<body>
+  <main>
+    {% karni_form form_name %}
+  </main>
+</body>
+</html>

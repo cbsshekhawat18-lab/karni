@@ -41,6 +41,7 @@ GENERATORS = {
     "site",
     "view",
     "deploy",
+    "form",
     "module",
 }
 

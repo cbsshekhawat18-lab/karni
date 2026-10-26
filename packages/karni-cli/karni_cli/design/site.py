@@ -35,6 +35,7 @@ from typing import Any, Final
 
 from karni_cli.design import compare, rewrite
 from karni_cli.design.compare import Block, Group, Layout, Variation
+from karni_cli.design.forms import forms_in
 from karni_cli.design.parse import Document, Node, parse
 from karni_cli.design.rewrite import Mapped, Policy, Rewriter
 
@@ -551,6 +552,9 @@ def plan(
                 if isinstance(item, Block)
             ],
             "partials": [item for item in plan_for.content if isinstance(item, str)],
+            # Each <form> of the page (lines of the design's file): karni make form names the
+            # one its {% karni_form %} replaces.
+            "forms": [form.as_record() for form in forms_in(page.text)],
         }
         if page.error:
             error_records.append({"source": page.path, "template": page.path})
@@ -666,6 +670,7 @@ def plan(
         result.design["editable"] = editor.finish(result.templates, base_name, renderer)
         result.editable = editor.report
     _notes(result, layout, content_pages)
+    _form_notes(result, content_pages)
     return result
 
 
@@ -870,3 +875,16 @@ def _notes(result: SitePlan, layout: Layout, pages: list[PageSource]) -> None:
         result.notes.append(
             f"partial {group.name} (<{group.tag}>): {', '.join(sorted(group.instances))}"
         )
+
+
+def _form_notes(result: SitePlan, pages: list[PageSource]) -> None:
+    """A note per ``<form>``: it posts where the design said, until a tag replaces it."""
+    for page in pages:
+        for form in forms_in(page.text):
+            fields = ", ".join(form.names) or "no named fields"
+            target = f' to "{form.action}"' if form.action else ""
+            result.notes.append(
+                f"form: {page.path}:{form.line} posts{target} ({fields}). Make it a working "
+                "form: karni make form <name> <field:type> ... prints the {% karni_form %} "
+                "that replaces it."
+            )

@@ -482,3 +482,11 @@ def do_get_menu(parser: Parser, token: Token) -> GetMenuNode:
             raise _syntax_error(usage)
         seed = parser.compile_filter(bits[2].removeprefix("seed="))
     return GetMenuNode(parser.compile_filter(bits[1]), seed, bits[-1])
+
+
+# {% karni_form %}: public forms. The tag lives in karni_site.templatetags.karni_forms and is
+# part of this library too, so one {% load karni_site %} gives a page every site tag.
+
+from karni_site.templatetags.karni_forms import register as _forms  # noqa: E402
+
+register.tags.update(_forms.tags)

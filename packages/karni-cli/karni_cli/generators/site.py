@@ -134,7 +134,7 @@ def views_header(app: App, line_length: int) -> str:
             f"{app.label}: the public website's pages, rendered from templates/{app.label}/ "
             "(`karni make view <name>`). Read content through each model's default manager "
             "(`Model.objects`), so model scopes apply, and filter drafts here. A public form "
-            "posts to a BaseViewSet declared create=Public().",
+            'is `karni make form` and {% karni_form "<name>" %} in a template.',
             "",
             line_length,
         )
@@ -391,7 +391,8 @@ def wire_config_urls(ws: Workspace, app: App) -> None:
     if text is None:
         raise CliError(f"{rel} not found. Run inside a Karni project.", code="C001")
     for route, _, include in routes(text):
-        if route == "" and include not in (None, f"{app.module}.urls"):
+        # karni_site's own URLs (the form view) live at "" next to the site's.
+        if route == "" and include not in (None, f"{app.module}.urls", "karni_site.urls"):
             raise CliError(
                 f'{rel} already includes {include!r} at "". One app answers the root. Remove '
                 "that include, or add the site's pages to that app instead.",

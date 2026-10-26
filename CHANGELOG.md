@@ -77,6 +77,41 @@ apply codemods and list the manual steps. This file is the human summary.
   one response from code that runs while it is built, and a hash added next
   to `'unsafe-inline'` is left out, because a browser would otherwise ignore
   the `'unsafe-inline'`. [docs/modules.md](docs/modules.md).
+- **Public forms in one command: `karni make form`.** `karni make form
+  contact name:str email:email subject:str message:text --notify
+  ENQUIRY_RECIPIENTS` writes a contact form, a booking request, a newsletter
+  sign-up or a job application alike: the model (the visitor's fields from
+  the field DSL, a `status` StateField for the inbox from `--states`,
+  staff-only `notes`, both hidden from visitors through `field_roles`,
+  `audit`, `dashboard`, an admin inbox and an indexed search), a
+  `BaseViewSet` with `create=Public()` read by `--role` (Karni's rate limit
+  and honeypot apply, no throttle is written), the project's tests
+  (anonymous submit, without JavaScript, the email, the protected fields,
+  the rate limit, staff-only reading, `assert_crud`), the staff app's pages,
+  and with `--notify` a queued listener, its email templates and the
+  recipients setting. Without `--notify` nothing is sent. When the site came
+  from `karni import design`, the command names the template and line of
+  the design's `<form>` it replaces and prints the tag with the arguments
+  that keep that form's class names, rows, labels and button. The import
+  now records each page's forms in `.karni/design.json` and lists them in
+  its report. [docs/public-site.md](docs/public-site.md#public-forms).
+- **karni-site: `{% karni_form "<name>" %}` and its view.** The tag renders
+  the fields a visitor fills from the form viewset's create serializer, with
+  labels, required marks, limits, choices, the CSRF token and the honeypot.
+  It works without JavaScript: the browser posts to `karni_site:form`, which
+  saves through the viewset's own `create` (access, rate limit, honeypot,
+  validation and history are the API's), then redirects back with
+  `?sent=<name>` or renders the page again, by its own view, with the
+  errors next to each field (400, 429, 403). `karni_site/forms.js` submits
+  in place with inline errors and the rate-limit message, and runs under
+  the enforced Content-Security-Policy because it is a static file with no
+  inline code. Class names and markup come from the tag's arguments
+  (`classes="bootstrap"`, `field_class`, `rows`, `labels`, ...), the
+  `KARNI_SITE_FORM_*` settings and overridable templates.
+  `karni_site.notify.notify_recipients` emails a row to the addresses a
+  setting names, from the project's templates, with `Reply-To`. New codes:
+  SITE020 (a check: a tag names a form that does not exist), SITE021 to
+  SITE023. Rule K309 and the `new-model` procedure name `karni make form`.
 - **A new project's staff app is ready to hand over.** The scaffold's
   `layout.tsx` wraps every page but a sign-in page in `<AuthGuard explain>`,
   so a visitor who is not signed in gets the sign-in prompt in place of a

@@ -63,7 +63,8 @@ PREFIXES = {
     ),
     "modules/karni-site/pyproject.toml": (
         "Public websites for Karni: every text, image and menu editable in the admin, "
-        "redirects, the current page in a menu, and error pages that cannot fail."
+        "public forms that work with and without JavaScript, redirects, the current page "
+        "in a menu, and error pages that cannot fail."
     ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."

@@ -81,6 +81,14 @@ jobs:
         run: |
           npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/tailwind3" tailwindcss@3
           echo "KARNI_TEST_TAILWIND3=$RUNNER_TEMP/tailwind3/node_modules" >> "$GITHUB_ENV"
+      # karni make form's test submits the generated forms in headless Chromium under
+      # the enforced Content-Security-Policy (KARNI_TEST_PLAYWRIGHT), and is skipped
+      # without it.
+      - name: Playwright and Chromium for karni make form's browser test
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/playwright" playwright@1.64.1
+          "$RUNNER_TEMP/playwright/node_modules/.bin/playwright" install --with-deps chromium
+          echo "KARNI_TEST_PLAYWRIGHT=$RUNNER_TEMP/playwright/node_modules" >> "$GITHUB_ENV"
 
       - name: Versions
         run: python -c "import sys, django; print(sys.version); print('Django', django.get_version())"

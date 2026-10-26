@@ -6,6 +6,8 @@ SITE004: the template engine puts ``site`` in every template.
 SITE005: the redirect middleware is installed.
 SITE008: one block key is not given two different defaults.
 
+SITE020: every form a ``{% karni_form %}`` names exists (:mod:`karni_site.form_checks`).
+
 Every check is skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 """
 
@@ -182,4 +184,7 @@ def run_checks() -> list[str]:
         )
         return failures
     failures.extend(_unknown_names(known))
+    from karni_site.form_checks import unknown_forms  # SITE020: each {% karni_form %} name
+
+    failures.extend(unknown_forms())
     return failures

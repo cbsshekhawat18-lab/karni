@@ -94,6 +94,11 @@ SEQUENCE: list[list[str]] = [
     ["make", "site", "website"],
     ["make:view", "about", "--app", "website"],
     ["make", "view", "service", "--app", "website", "--path", "/services/<slug:slug>/"],
+    ["make", "form", "enquiry", "name:str:120", "email:email", "message:text",
+     "--notify", "ENQUIRY_RECIPIENTS", "--app", "website"],
+    ["make", "form", "booking-request", "name:str:80", "email:email", "day:date",
+     "service:choice:cut|colour", "phone:phone?", "--states", "requested>confirmed|requested>declined",
+     "--app", "website"],
     ["make", "module", "live-chat"],
     ["make", "deploy", "compose", "--force", "--app-path", "/staff/", "--no-backups"],
 ]  # fmt: skip

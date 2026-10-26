@@ -1,0 +1,5 @@
+{% extends "website/base.html" %}{% load karni_site %}
+{% block title %}Contact{% endblock %}
+{% block content %}<h1>Book an appointment</h1>
+{% karni_form "appointment_request" rows="name,email" labels="name: Your name" placeholders="email: you@example.com" %}
+{% karni_form "subscriber" classes="bootstrap" button="Subscribe" success="You are on the list." %}{% endblock %}

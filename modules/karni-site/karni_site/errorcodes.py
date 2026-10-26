@@ -6,6 +6,8 @@ from typing import Final
 
 from karni.errorcodes import ErrorCode
 
+from karni_site.form_errorcodes import FORM_CODES
+
 __all__ = ["CODES"]
 
 _SOURCE = "karni_site"
@@ -156,4 +158,5 @@ CODES: Final[tuple[ErrorCode, ...]] = (
             "for karni_site.SiteSettings."
         ),
     ),
+    *FORM_CODES,
 )
