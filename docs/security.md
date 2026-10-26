@@ -151,6 +151,12 @@ Django itself already sends `Referrer-Policy: same-origin`,
 `X-Content-Type-Options: nosniff`, `Cross-Origin-Opener-Policy` and
 `X-Frame-Options`, so the middleware does not repeat them.
 
+In the production stack Caddy serves some files itself: the staff app, static
+files and uploads. On every release `manage.py karni_publish_web` writes the
+headers Django would send, computed from the same settings, into a snippet the
+`Caddyfile` imports, so the staff app gets the same policy as a Django page
+([deploying to a server](deploy.md#the-staff-app)).
+
 ### The Content-Security-Policy
 
 | Directive | Default | Why |
@@ -273,3 +279,14 @@ whose fix names the setting to change in a Karni project. The other
 warnings `karni check` knows, such as `karni.W102` for a resource any
 signed-in user may change, fail a deploy check too. Silence one you accept
 on purpose with `SILENCED_SYSTEM_CHECKS += ["karni.W516"]`.
+
+### At container start
+
+The production image runs the same checks before any command it starts
+(`python -m karni.deploy.entrypoint`, the `ENTRYPOINT` of the scaffold's
+`prod` target, and the `entrypoint` of `docker-compose.prod.yml`). A failing
+check stops the container with [`E520`](errors.md#e520-the-deploy-checks-failed-when-the-container-started),
+so a deployment with a development value never serves a request.
+`KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway in an emergency, and every
+start then logs that the checks did not run. `KARNI_DEPLOY_CHECK_COMMAND`
+replaces the check command. See [deploying to a server](deploy.md).

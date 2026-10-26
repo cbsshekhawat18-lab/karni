@@ -2,7 +2,9 @@
 
 The template carries no agent guidance files: they are generated afterwards
 by the same code as ``karni rules sync`` (AGENTS.md, CLAUDE.md, Cursor,
-Windsurf, Copilot, Cline, Aider, Junie adapters + slash commands).
+Windsurf, Copilot, Cline, Aider, Junie adapters + slash commands). The
+production stack (docker-compose.prod.yml, the Caddyfile, .env.prod.example)
+is written the same way, by ``karni make deploy compose``'s code.
 
 @karni/ui is resolved like the template: ``KARNI_UI_SRC`` > the monorepo
 checkout's ``packages/karni-ui`` > the npm release. A local source becomes
@@ -22,6 +24,7 @@ import typer
 from karni_cli import agent_data, scaffold, toolchain
 from karni_cli.adapters import sync
 from karni_cli.brand import print_mark
+from karni_cli.generators import deploy
 from karni_cli.scaffold import resolve_template, validate_name
 
 
@@ -96,7 +99,12 @@ def new(
         output_dir=str(output_dir),
     )
     adapters = write_agent_adapters(output_dir / slug)
-    typer.echo(f"Created {output_dir / slug} ({adapters} agent adapter files)")
+    # The production stack: the same files `karni make deploy compose` writes.
+    deploy.write_new_project(output_dir / slug, domain=domain)
+    typer.echo(
+        f"Created {output_dir / slug} ({adapters} agent adapter files, and the production "
+        f"stack in {deploy.COMPOSE_FILE}: docs/deploy.md)"
+    )
     if ui_source is not None:
         typer.echo(f"@karni/ui: {ui_spec} (local checkout)")
     else:

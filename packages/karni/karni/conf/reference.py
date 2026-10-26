@@ -70,7 +70,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ADMIN_LOGO": 'Logo for the admin header and login: `karni` for Karni\'s mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming).',
     "KARNI_ADMIN_BASE": "Dotted path of the `ModelAdmin` every derived admin is built on.",
     "KARNI_ADMIN_PATH": "URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production.",
-    "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default).",
+    "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out.",
     "KARNI_CSP": 'Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers).',
     "KARNI_CSP_REPORT_ONLY": "`True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`.",
     "KARNI_PERMISSIONS_POLICY": 'Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header.',
@@ -122,7 +122,7 @@ def _literal_default(lines: list[str], start: int) -> str:
     text = " ".join(collected)
     text = text.split(": ", 1)[1] if text.startswith('"KARNI_') else text
     text = re.sub(r"\s+", " ", text).rstrip(",").strip()
-    return re.sub(r",\s*([}\]])", r"\1", text)
+    return re.sub(r",\s*([}\])])", r"\1", text)
 
 
 def settings(source: str | None = None) -> list[Setting]:

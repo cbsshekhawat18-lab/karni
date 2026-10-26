@@ -130,7 +130,7 @@ Without Python 3.12 on your machine, run the `karni` command from its container 
 | An upstream fix reaches your code | only for Django itself | no | by regenerating and merging | through `karni upgrade` |
 | Teams, subscriptions, multi-tenancy | no | no | yes, mature | no (payments only, as a module) |
 | Maturity | the standard | large community, many years in production | large, actively supported | version 0.4, two reference apps |
-| Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated Docker Compose stack, not yet verified end to end |
+| Deployment | your choice | Docker and cloud guides, widely used | deploy guides for several platforms | a generated production Docker Compose stack (Caddy, PostgreSQL, Redis, Celery, backups) that CI boots and smoke-tests |
 | AI agent guidance in the project | none | none in the generated project | rule files, CLAUDE.md / AGENTS.md, Claude Code skills and MCP | adapters for eight tools from one rule set, `karni context`, a build-failing `karni check`, an MCP server |
 
 Choose Cookiecutter Django or SaaS Pegasus for a proven, complete starting point that you will own. Choose Karni to keep the generic code upstream, and accept a younger framework for it.
@@ -257,7 +257,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command |
 | [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
 | [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
-| [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [module](docs/REFERENCE.md#karni-make-module) |
+| [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [deploy](docs/REFERENCE.md#karni-make-deploy), [module](docs/REFERENCE.md#karni-make-module) |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -456,7 +456,7 @@ Yes. Nothing in Karni calls a language model, and every generator, such as `karn
 The model, an `access` rule and whatever is specific to your domain. In the reference app EventHub, the `Venue` resource is a five-line model and a four-line viewset.
 
 **Is it production-ready?**
-Not yet. Version 0.4.0 has two reference applications and CI on every push, but no known production deployment and a Docker path that has not been tested end to end.
+Not yet. Version 0.4.0 has two reference applications and CI on every push, which also boots a new project's production Docker stack and smoke-tests it, but Karni has no known production deployment.
 
 **What happens when Karni releases a breaking change?**
 A public name keeps working for at least one minor release, with a `KarniDeprecationWarning` that names the release that removes it. `karni upgrade --to <version>` applies the mechanical changes and lists, by file and line, what it could not change ([stability promise](docs/stability.md)).
@@ -474,11 +474,11 @@ Version 0.4.0 was released on 2026-10-22, with Django 5.2 LTS and Python 3.12 to
 
 - **Stable:** models, the API with `access`, roles with the `all` and `own` scopes, the admin, the schema-driven components, change history, import and export, the testing helpers and the agent tooling.
 - **Built, not yet used by a reference app:** the `related:` and `custom:` scopes, field visibility per role, row scope in the admin, and the approvals and impersonation modules.
-- **Not done:** an end-to-end test of the Docker stack, the tenancy module.
+- **Not done:** the tenancy module.
 
 ## Documentation, contributing, security, license
 
-- **Documentation:** <https://cbsshekhawat18-lab.github.io/karni/>, with the [quickstart](docs/quickstart.md), the [tutorial](docs/tutorial.md) and the [reference](docs/REFERENCE.md).
+- **Documentation:** <https://cbsshekhawat18-lab.github.io/karni/>, with the [quickstart](docs/quickstart.md), the [tutorial](docs/tutorial.md), [deploying to a server](docs/deploy.md) and the [reference](docs/REFERENCE.md).
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). A second reference application with its friction log helps most.
 - **Security:** report problems privately, as [SECURITY.md](SECURITY.md) describes.
 - **License:** [Apache License 2.0](LICENSE).

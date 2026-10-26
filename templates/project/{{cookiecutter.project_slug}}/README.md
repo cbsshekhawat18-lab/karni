@@ -163,19 +163,27 @@ It is MIT licensed, local-only, and made by Karni's author.
 
 ## Production
 
-The `prod` Dockerfile target builds a slim, non-root image that runs
-`gunicorn config.asgi:application` with uvicorn workers and collects static
-files to `/data/static` at build time:
+`docker-compose.prod.yml` is the production stack: a one-shot `release`
+service (the deploy checks, migrations, `collectstatic`, the web server's
+files), `django` (gunicorn with uvicorn workers), Celery `worker` and `beat`,
+`caddy` (automatic TLS for `DOMAIN`, static and media files, the staff app at
+`/app/`, everything else proxied to Django), `db`, `redis` and `backup`
+(database and media, on a schedule, with retention). On a server with Docker:
 
 ```sh
-docker build --target prod -t {{ cookiecutter.project_slug }}:latest .
+cp .env.prod.example .env.prod      # fill in every empty value, never commit it
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
-Run it with `DJANGO_ENV=prod`, a real `SECRET_KEY` and `ALLOWED_HOSTS`.
-Karni validates the configuration at startup and fails loudly on anything
-insecure or missing. Put Caddy in front using the provided `Caddyfile`: it
-provisions TLS for `$DOMAIN` automatically, serves `/static/*` and `/media/*`
-from `/data` (share the `/data` volume between the django container and
-Caddy), and reverse-proxies everything else to `django:8000`. For the
-frontend, `npm run build` in `frontend/` produces static assets you can serve
-from Caddy or any CDN.
+Every container from the `prod` image runs `karni check --deploy` before its
+command, and refuses to start while a value is unsafe (E520).
+`KARNI_SKIP_DEPLOY_CHECK=1` starts it anyway in an emergency, logged on every
+start. The staff app in `frontend/` is built into the image and served by
+Caddy, with the same security headers Django sends.
+
+[Deploying to a server](https://cbsshekhawat18-lab.github.io/karni/deploy/)
+covers DNS, TLS, the first superuser, updates without failed requests,
+rollback, logs, backups and restore. `karni make deploy compose --force`
+rewrites the three files with other choices: the staff app on another path or
+host (`--app-path`, `--app-domain`), no Celery, a managed database or Redis,
+no backups.

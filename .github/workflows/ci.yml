@@ -441,6 +441,166 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
+  # The production stack a new project gets (docs/deploy.md), booted for real:
+  # `karni new` with this checkout's packages and a public site page, the prod
+  # and backup images built (base layers cached in GitHub Actions), then
+  # `docker compose up` with production values. It checks every service is
+  # healthy, the migrations ran, HTTPS through Caddy (health, a public page, the
+  # admin login at its private path, static files, the staff app and a deep
+  # link, the http redirect, the security headers), the deploy gate refusing a
+  # development value inside the image, and a backup restored into a second
+  # database with the same rows. Every value is generated here: no secrets.
+  # ---------------------------------------------------------------------------
+  production-stack:
+    name: Production stack (compose, smoke)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      COMPOSE: docker compose -f docker-compose.prod.yml --env-file .env.prod
+      SMOKE: ${{ github.workspace }}/.github/ci/prod_smoke.py
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: packages/karni-ui/package-lock.json
+
+      - name: Install karni and karni-cli from this checkout
+        run: python -m pip install -q -e packages/karni -e packages/karni-cli
+
+      # The scaffold's frontend names this checkout's @karni/ui ("file:"), which
+      # an image build cannot reach, so it is packed into the project
+      # (KARNI_UI_TARBALL), as docs/deploy.md describes for a local checkout.
+      - name: Build and pack @karni/ui
+        working-directory: packages/karni-ui
+        run: |
+          npm ci
+          npm run build
+          mkdir -p "$RUNNER_TEMP/karni-ui"
+          npm pack --pack-destination "$RUNNER_TEMP/karni-ui"
+
+      - name: A new project with a public site, this checkout's packages vendored
+        env:
+          KARNI_UI_SRC: ${{ github.workspace }}/packages/karni-ui
+        run: |
+          set -euo pipefail
+          karni new "Prod Smoke" --domain localhost -o "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/prod_smoke"
+          test -f docker-compose.prod.yml && test -f Caddyfile && test -f .env.prod.example
+          karni make site website
+          cp -r "$GITHUB_WORKSPACE/packages/karni" .karni-src
+          mkdir -p .karni-ui && cp "$RUNNER_TEMP"/karni-ui/*.tgz .karni-ui/karni-ui.tgz
+          echo "PROJECT=$PWD" >> "$GITHUB_ENV"
+
+      - name: .env.prod from .env.prod.example, every empty value generated
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          python "$SMOKE" env .env.prod.example \
+            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz > .env.prod
+          grep -E "^(DJANGO_ENV|DOMAIN|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS)=" .env.prod
+          echo "ADMIN_PATH=$(grep '^KARNI_ADMIN_PATH=' .env.prod | cut -d= -f2)" >> "$GITHUB_ENV"
+          $COMPOSE config --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build the prod image (django, worker, beat, release)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.PROJECT }}
+          target: prod
+          load: true
+          tags: prod_smoke:latest
+          build-args: |
+            KARNI_SRC=.karni-src
+            KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz
+            KARNI_APP_PATH=/app/
+          cache-from: type=gha,scope=production-stack-prod
+          cache-to: type=gha,mode=max,scope=production-stack-prod
+
+      - name: Build the backup image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.PROJECT }}
+          target: backup
+          load: true
+          tags: prod_smoke-backup:latest
+          build-args: |
+            KARNI_SRC=.karni-src
+            POSTGRES_VERSION=16
+          cache-from: type=gha,scope=production-stack-backup
+          cache-to: type=gha,mode=max,scope=production-stack-backup
+
+      - name: Start the stack
+        working-directory: ${{ env.PROJECT }}
+        run: $COMPOSE up -d --no-build
+
+      - name: The release step exited 0 and every service is healthy
+        working-directory: ${{ env.PROJECT }}
+        run: python "$SMOKE" wait --timeout 300
+
+      - name: Migrations applied, a superuser created
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE exec -T django python manage.py migrate --check
+          $COMPOSE exec -T -e DJANGO_SUPERUSER_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(16))')" \
+            django python manage.py createsuperuser --noinput --email owner@example.com
+
+      - name: HTTPS through Caddy (health, pages, admin, static, staff app, headers)
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
+          python "$SMOKE" check --base-url https://localhost --cafile "$RUNNER_TEMP/caddy-root.crt" \
+            --admin-path "$ADMIN_PATH" --app-path /app/ --http-url http://localhost/ \
+            --expect-check database --expect-check cache --expect-check celery
+
+      - name: The deploy gate refuses DEBUG=True in the image, and the escape hatch says so
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -uo pipefail
+          if $COMPOSE run --rm --no-deps -T -e DEBUG=True release true > "$RUNNER_TEMP/gate.log" 2>&1; then
+            cat "$RUNNER_TEMP/gate.log"; echo "DEBUG=True started"; exit 1
+          fi
+          grep -q "karni.W510" "$RUNNER_TEMP/gate.log" && grep -q "(E520)" "$RUNNER_TEMP/gate.log" \
+            || { cat "$RUNNER_TEMP/gate.log"; exit 1; }
+          $COMPOSE run --rm --no-deps -T -e DEBUG=True -e KARNI_SKIP_DEPLOY_CHECK=1 release true \
+            > "$RUNNER_TEMP/skip.log" 2>&1 || { cat "$RUNNER_TEMP/skip.log"; exit 1; }
+          grep "WARNING" "$RUNNER_TEMP/skip.log"
+          grep -q "did NOT run (E520)" "$RUNNER_TEMP/skip.log"
+
+      - name: A backup restored into a second database has the same rows
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          set -euo pipefail
+          $COMPOSE exec -T backup karni-backup run
+          $COMPOSE exec -T backup karni-backup list
+          $COMPOSE exec -T backup sh -c 'karni-backup restore latest --create \
+            --database-url "${DATABASE_URL%/*}/restore_check" \
+            && karni-backup counts --database-url "$DATABASE_URL" --against "${DATABASE_URL%/*}/restore_check"'
+          $COMPOSE exec -T backup karni-backup check
+
+      - name: Logs
+        if: failure() && env.PROJECT != ''
+        working-directory: ${{ env.PROJECT }}
+        run: |
+          $COMPOSE ps -a
+          $COMPOSE logs --no-color --tail 300
+
+      - name: Tear down
+        if: always() && env.PROJECT != ''
+        working-directory: ${{ env.PROJECT }}
+        run: $COMPOSE down -v --remove-orphans
+
+  # ---------------------------------------------------------------------------
   # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui and modules/karni-impersonation/ui.
   # ---------------------------------------------------------------------------
   ui:

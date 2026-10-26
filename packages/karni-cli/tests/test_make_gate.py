@@ -93,6 +93,7 @@ SEQUENCE: list[list[str]] = [
     ["make:view", "about", "--app", "website"],
     ["make", "view", "service", "--app", "website", "--path", "/services/<slug:slug>/"],
     ["make", "module", "live-chat"],
+    ["make", "deploy", "compose", "--force", "--app-path", "/staff/", "--no-backups"],
 ]  # fmt: skip
 
 TS_PARSE = """

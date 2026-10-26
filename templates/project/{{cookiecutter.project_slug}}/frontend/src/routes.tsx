@@ -15,7 +15,12 @@ const routes = [
     // karni:routes
 ];
 
-export const router = createRouter({ routeTree: root.addChildren(routes) });
+// basepath is the Vite base: / in development, and in production the path the
+// build is served under (KARNI_APP_PATH, /app/ by default, docs/deploy.md).
+export const router = createRouter({
+    routeTree: root.addChildren(routes),
+    basepath: import.meta.env.BASE_URL,
+});
 
 declare module "@tanstack/react-router" {
     interface Register {
