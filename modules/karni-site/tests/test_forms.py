@@ -2,7 +2,7 @@
 
 The forms come from tests/formapp: an appointment request (a clinic), a newsletter
 sign-up (a school), a job application with a file (a joinery workshop) and a members-only feedback
-form. The pages are tests/formapp/templates/website/contact.html and apply.html.
+form. The pages are tests/formapp/templates/website/book.html and apply.html.
 """
 
 from __future__ import annotations
@@ -34,12 +34,12 @@ VALID = {
     "reason": "checkup",
     "day": "2030-01-15",
     "message": "First time here.",
-    "karni-next": "/contact/#karni-form-appointment_request",
+    "karni-next": "/book/#karni-form-appointment_request",
 }
 JSON = {"HTTP_ACCEPT": "application/json"}
 
 
-def page(client: Client, path: str = "/contact/") -> str:
+def page(client: Client, path: str = "/book/") -> str:
     response = client.get(path)
     assert response.status_code == 200, response.content
     return response.content.decode()
@@ -64,7 +64,7 @@ def test_the_tag_renders_the_fields_a_visitor_fills(client: Client) -> None:
     form = html.split('<form id="karni-form-appointment_request"', 1)[1].split("</form>", 1)[0]
     # CSRF, the page to come back to, the honeypot, no staff-only field.
     assert 'name="csrfmiddlewaretoken"' in form
-    assert 'name="karni-next" value="/contact/#karni-form-appointment_request"' in form
+    assert 'name="karni-next" value="/book/#karni-form-appointment_request"' in form
     assert 'name="homepage" tabindex="-1" autocomplete="off"' in form
     assert 'name="status"' not in form and 'name="notes"' not in form
     # Labels, required marks, limits and autofill from the model and the serializer.
@@ -88,7 +88,7 @@ def test_the_tag_renders_the_fields_a_visitor_fills(client: Client) -> None:
 
 
 def test_one_script_per_page_from_the_site_itself(client: Client) -> None:
-    response = client.get("/contact/")
+    response = client.get("/book/")
     html = response.content.decode()
     assert html.count('<script src="/static/karni_site/forms.js" defer></script>') == 1
     policy = response.headers["Content-Security-Policy"]  # enforced: DEBUG is off in tests
@@ -116,7 +116,7 @@ def test_a_staff_member_sees_the_publics_form(client: Client) -> None:
 def test_settings_and_arguments_set_the_classes(settings: Settings, rf: RequestFactory) -> None:
     settings.KARNI_SITE_FORM_CLASSES = {"field": "field", "input": "input"}
     settings.KARNI_SITE_FORM_PRESETS = {"workshop": {"row": "form-row", "button": "btn"}}
-    request = rf.get("/contact/")
+    request = rf.get("/book/")
     html = Template(
         '{% load karni_site %}{% karni_form "subscriber" classes="workshop" input_class="text" %}'
     ).render(RequestContext(request))
@@ -217,7 +217,7 @@ def test_a_sent_form_redirects_back_and_says_so(client: Client) -> None:
     response = client.post(FORM, VALID)
     assert response.status_code == 303
     assert response["Location"] == (
-        "/contact/?sent=appointment_request#karni-form-appointment_request"
+        "/book/?sent=appointment_request#karni-form-appointment_request"
     )
     row = AppointmentRequest.objects.get()
     assert (row.name, row.status, str(row.day)) == ("Ada Lovelace", "new", "2030-01-15")
@@ -276,7 +276,7 @@ def test_the_rate_limit_shows_its_message(client: Client, settings: Settings) ->
 def test_the_csrf_check_applies() -> None:
     client = Client(enforce_csrf_checks=True)
     assert client.post(FORM, VALID).status_code == 403
-    html = client.get("/contact/").content.decode()
+    html = client.get("/book/").content.decode()
     token = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html)
     assert token
     response = client.post(FORM, {**VALID, "csrfmiddlewaretoken": token.group(1)})
@@ -327,7 +327,7 @@ def test_json_answers_for_the_script(client: Client, settings: Settings) -> None
     assert sent.status_code == 201
     body = sent.json()
     assert body["ok"] is True and body["status"] == "success"
-    assert body["redirect"] == "/contact/?sent=appointment_request#karni-form-appointment_request"
+    assert body["redirect"] == "/book/?sent=appointment_request#karni-form-appointment_request"
     invalid = client.post(FORM, {**VALID, "email": "nope"}, **JSON)
     assert invalid.status_code == 400
     assert invalid.json()["errors"] == {"email": ["Enter a valid email address."]}

@@ -39,6 +39,7 @@ site = (
         path("services/web/", page("website/home.html"), name="service_web"),
         path("services/<slug:slug>/", service, name="service"),
         path("contact/", page("website/contact.html"), name="contact"),
+        path("book/", page("website/book.html"), name="book"),
         path("apply/", page("website/apply.html"), name="apply"),
     ],
     "website",
