@@ -56,7 +56,7 @@ jobs:
       npm: ${{ steps.mode.outputs.npm }}
       tag: ${{ steps.mode.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: mode
         env:
           PUBLISHING: ${{ vars.KARNI_PUBLISHING }}
@@ -119,7 +119,7 @@ jobs:
     needs: mode
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -134,7 +134,7 @@ jobs:
     needs: [ci, check]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -169,7 +169,7 @@ jobs:
     needs: [ci, check]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -277,7 +277,7 @@ jobs:
       contents: read
       id-token: write # npm trusted publishing + provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -312,7 +312,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: python-dist
