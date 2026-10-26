@@ -1900,7 +1900,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni_site.templatetags.karni_site`
 
-**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". {% editable %} and {% editable_image %} take a block key ("home.intro": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template does not compile otherwise.
+**Why Karni objects.** {% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, or `attribute`. {% csp_allow %} takes arguments like "font-src https://fonts.gstatic.com". {% editable %} and {% editable_image %} take a block key ("home.intro": lowercase words joined by dots, the page first), {% site_image %} a file field of the site's settings, {% site_defaults %} name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template does not compile otherwise. The highlight filter takes a tag with optional classes ("span.accent", "em", or "" for none) and fails the render otherwise.
 
 **Fix.** Write the tag as the message shows. The karni-site README has an example of each.
 
@@ -2246,6 +2246,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass the folder that holds the design's index.html and the other pages, with its css/, js/ and image folders inside it.
 
+<a id="c121"></a>
+
+### C121: The content map cannot be used
+
+*karni command* · from `karni design extract --map`
+
+**Why Karni objects.** The map says which structure of the design is which model and which element is which field. Extract follows it exactly, so a model, a field, a relation's target or a selector it cannot follow stops it before anything is written.
+
+**Fix.** Fix each problem the message lists in the map (the field names come from the map's "fields", the selectors are CSS with an optional @attribute), or write a fresh draft with karni design analyze <design> --map <file> --force.
+
+<a id="c122"></a>
+
+### C122: The content map has decisions left
+
+*karni command* · from `karni design extract --map`
+
+**Why Karni objects.** karni design analyze marks what the markup cannot settle with a decide entry: a list on a detail page or a few items on the home page may be hand-picked or derived by a query. Extract will not guess either way.
+
+**Fix.** For each one: keep the value (remove its "decide", and add the field to the model's karni make model command) or delete the value from the map and query the rows in the view.
+
+<a id="c123"></a>
+
+### C123: A content map is there already
+
+*karni command* · from `karni design analyze --map`
+
+**Why Karni objects.** The map is a file the agent edits: names, decisions, selectors. Writing a new draft over it would lose those edits.
+
+**Fix.** Write the draft to another file, or pass --force to replace the map.
+
 <a id="c199"></a>
 
 ### C199: Internal error in karni
@@ -2576,7 +2606,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module. Run one with `karni rules --procedure <name>`, or with the matching slash command where your tool has one.
+**Rule.** Prefer the standard procedures for routine work: new-model, new-page, add-module, new-module, site-from-design. Run one with `karni rules --procedure <name>`, or with the matching slash command where your tool has one.
 
 **Why Karni objects.** The procedures encode the shortest correct path for routine work.
 
