@@ -475,3 +475,55 @@ def test_roles_section_degrades_on_a_bad_declaration(capsys: Any) -> None:
     with override_settings(KARNI_ROLES={"x": "nope"}):
         assert roles_section() is None
     assert "role inventory unavailable" in capsys.readouterr().err
+
+
+# roles a module declares (the karni.roles entry point group)
+
+MODULE_ROLES = {
+    "curator": {"name": "Curator", "grants": {"testapp.venue:*": "all"}},
+    "organizer": {"name": "Module organizer", "grants": {"testapp.venue:view": "all"}},
+}
+
+
+def _declares(monkeypatch: pytest.MonkeyPatch, *points: tuple[str, Any]) -> None:
+    from importlib import metadata
+
+    loaded = {name: value for name, value in points}
+
+    class _Point(metadata.EntryPoint):
+        def load(self) -> Any:
+            value = loaded[self.name]
+            if isinstance(value, Exception):
+                raise value
+            return value
+
+    entries = tuple(
+        _Point(name=name, value=f"fake.module:{name}", group="karni.roles") for name, _ in points
+    )
+    monkeypatch.setattr(roles_mod, "_role_entry_points", lambda: entries)
+
+
+def test_a_module_declares_roles_under_the_projects_own(monkeypatch: pytest.MonkeyPatch) -> None:
+    _declares(monkeypatch, ("gallery", lambda: MODULE_ROLES), ("empty", lambda: {}))
+    with override_settings(KARNI_ROLES=PROJECT_ROLES):
+        specs = {spec.slug: spec for spec in declared_roles()}
+        report = sync_roles()
+    assert specs["curator"].name == "Curator"
+    # The project names `organizer` too, so its own declaration wins.
+    assert specs["organizer"].name == "Organizer"
+    assert "curator" in report.grants and "curator" not in report.undeclared_roles
+    assert Role.objects.filter(slug="curator").exists()
+    # An explicit declaration is only that declaration.
+    assert {spec.slug for spec in declared_roles({"solo": {"grants": {}}})} == {"solo"}
+
+
+def test_a_broken_module_role_declaration_names_its_entry_point(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _declares(monkeypatch, ("broken", RuntimeError("no settings")))
+    with pytest.raises(KarniImproperlyConfigured, match="'broken'.*failed to load") as failed:
+        declared_roles()
+    assert failed.value.code == "E205"
+    _declares(monkeypatch, ("odd", ["editor"]))
+    with pytest.raises(KarniImproperlyConfigured, match="must give a dict"):
+        declared_roles()

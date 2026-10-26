@@ -467,6 +467,7 @@ def test_a_site_app_replaces_the_welcome_page(
     ok("make", "site", "website")
     ok("make", "view", "about")
     ok("make", "view", "service", "--path", "/services/<slug:slug>/")
+    ok("migrate")  # karni-site's tables: the site's details, blocks, menus
     assert run(ROOT_PAGE) == "SITE"
     assert run(SITE_PAGES) == "site pages OK"
     ok("manage", "check")
@@ -499,7 +500,11 @@ def test_a_site_app_replaces_the_welcome_page(
     )
     home = site / "templates" / "website" / "home.html"
     text = re.sub(r"\{% block description %\}.*?\{% endblock %\}\n", "", home.read_text())
-    home.write_text(text.replace("<h1>Website</h1>\n", '<h1>Website</h1>\n  <a href="/x/">X</a>\n'))
+    home.write_text(
+        text.replace(
+            "<h1>{{ site.name }}</h1>\n", '<h1>{{ site.name }}</h1>\n  <a href="/x/">X</a>\n'
+        )
+    )
     tests = page_test()
     output = tests.stdout + tests.stderr
     assert tests.returncode == 1, output[-3000:]
@@ -597,6 +602,86 @@ def test_an_imported_design_runs_for_real(
     )
     assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
     assert "karni check" not in tests.stdout
+
+
+EDITABLE_SITE = """
+import django
+
+django.setup()
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client, override_settings
+from django.test.utils import setup_test_environment
+from karni_site.models import Block, MenuItem, Redirect, SiteSettings
+
+setup_test_environment()
+PNG = b"\\x89PNG\\r\\n\\x1a\\n" + b"\\x00" * 64
+with override_settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
+    client = Client()
+    page = client.get("/").content.decode()
+    # The first render is the design, unchanged.
+    assert '<a href="/" class="active">Home</a>' in page, page
+    assert '<a href="/about/">About</a>' in page
+    assert '<a class="brand" href="/"><img src="/static/website/img/logo.svg" alt="Crumb &amp; Co"></a>' in page
+    assert '<h1>Bread worth the walk</h1>' in page
+    assert '<a href="https://maps.example.com/crumb">Find us</a>' in page
+    # The client changes a text, a menu entry, the site's name, logo and map link.
+    block = Block.objects.get(key="home.hero.bread_worth_the_walk")
+    block.html = "Fresh <b>bread</b><script>x()</script>"
+    block.save()
+    item = MenuItem.objects.get(menu__name="header", title="About")
+    item.title = "Our story"
+    item.save()
+    site = SiteSettings.objects.get()
+    site.name = "Crumb and Co"
+    site.map_url = "https://maps.example.com/new"
+    site.logo = SimpleUploadedFile("logo.png", PNG)
+    site.save()
+    hero = Block.objects.get(key="home.hero.hero")
+    hero.image = SimpleUploadedFile("hero.png", PNG)
+    hero.save()
+    page = client.get("/").content.decode()
+    assert "<h1>Fresh <b>bread</b></h1>" in page, page
+    assert '<a href="/about/">Our story</a>' in page
+    assert f'<img src="{site.logo.url}" alt="Crumb and Co">' in page
+    assert '<a href="https://maps.example.com/new">Find us</a>' in page
+    assert f"url(&quot;{hero.image.url}&quot;)" in page
+    assert '<a href="/about/" class="active">Our story</a>' in client.get("/about/").content.decode()
+    Redirect.objects.create(old_path="/old-menu/", new_url="/menu/")
+    moved = client.get("/old-menu/")
+    assert (moved.status_code, moved["Location"]) == (301, "/menu/")
+print("editable site OK")
+"""
+
+
+@pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")
+def test_an_editable_design_is_changed_in_the_database(
+    project: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`karni import design --editable`: the design first, then what the client changes."""
+    require_modules("karni-site")
+    python = _project_interpreter(project, tmp_path, monkeypatch)
+    ok("import", "design", str(DESIGNS / "bakery"), "--app", "website", "--editable")
+    ok("migrate")
+    ok("manage", "check")
+    proc = subprocess.run(
+        [str(python), "-c", textwrap.dedent(EDITABLE_SITE)],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(project)},
+    )
+    assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-3000:]
+    assert proc.stdout.strip().splitlines()[-1] == "editable site OK"
+    tests = subprocess.run(
+        [str(python), "-m", "pytest", "-q", "-p", "no:cacheprovider", "website/tests"],
+        cwd=project,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
 
 
 @pytest.mark.skipif(not _karni_importable(), reason="needs karni + Django in this interpreter")

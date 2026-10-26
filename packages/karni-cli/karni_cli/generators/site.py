@@ -58,7 +58,7 @@ from karni_cli.generators.pysource import (
     top_level,
 )
 from karni_cli.project import CliError
-from karni_cli.settings_edit import MARKER, add_entry, block_entries
+from karni_cli.settings_edit import MARKER, MIDDLEWARE_MARKER, add_entry, block_entries
 from karni_cli.urls_edit import URLS_MARKER, add_route, marker_line, routes
 
 NAME = "site"
@@ -74,6 +74,18 @@ SITE_DISTRIBUTION = "karni-site"
 HANDLERS = (
     ("handler404", "karni_site.views.page_not_found"),
     ("handler500", "karni_site.views.server_error"),
+)
+#: The middleware that answers the redirects a client adds in the admin.
+REDIRECT_MIDDLEWARE = "karni_site.middleware.RedirectMiddleware"
+#: The context processor that puts the site's details (`site`) in every template.
+SITE_PROCESSOR = "karni_site.context_processors.site"
+PROCESSORS_SETTING = 'TEMPLATES[0]["OPTIONS"]["context_processors"]'
+PROCESSORS_MARKER = "# karni:context_processors"
+PROCESSORS_BLOCK = (
+    "# --- Public site (karni-site): `site`, the site's details, in every template ----\n"
+    f"{PROCESSORS_SETTING} += [  # noqa: F821\n"
+    f'    "{SITE_PROCESSOR}",\n'
+    f"]  {PROCESSORS_MARKER}\n"
 )
 #: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
 PAGES_MARKER = "# karni:pages"
@@ -151,13 +163,14 @@ def urls_source(app: App, line_length: int) -> str:
 def base_source(app: App) -> str:
     title = humanize(app.label)
     return (
-        "{% load static karni_site %}<!DOCTYPE html>\n"
+        "{% load static karni_site %}"
+        "{# The site's details are `site`, edited in the admin. Its name starts as this: #}"
+        f'{{% site_defaults name="{title}" %}}<!DOCTYPE html>\n'
         '<html lang="en">\n'
         "<head>\n"
         '  <meta charset="utf-8">\n'
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        f"  {{# The site's name: here and in the header link below. #}}\n"
-        f"  <title>{{% block title %}}{title}{{% endblock %}}</title>\n"
+        "  <title>{% block title %}{{ site.name }}{% endblock %}</title>\n"
         "  {# One sentence per page for search results. The page test fails an empty one. #}\n"
         '  <meta name="description" content="{% block description %}{% endblock %}">\n'
         "  {# The page's address without its query string, so ?utm_ links do not count twice. #}\n"
@@ -167,7 +180,7 @@ def base_source(app: App) -> str:
         "</head>\n"
         "<body>\n"
         "  <header>\n"
-        f"    <a href=\"{{% url '{app.label}:home' %}}\">{title}</a>\n"
+        f"    <a href=\"{{% url '{app.label}:home' %}}\">{{{{ site.name }}}}</a>\n"
         "    {# Each link marks itself current with {% ifactive %} (karni-site). #}\n"
         '    <nav aria-label="Main">\n'
         f'      <a href="{{% url \'{app.label}:home\' %}}"{{% ifactive "{app.label}:home" %}}'
@@ -178,7 +191,7 @@ def base_source(app: App) -> str:
         "    {% block content %}{% endblock %}\n"
         "  </main>\n"
         "  <footer>\n"
-        f'    <p>&copy; {{% now "Y" %}} {title}</p>\n'
+        '    <p>&copy; {% now "Y" %} {{ site.name }}</p>\n'
         "  </footer>\n"
         "</body>\n"
         "</html>\n"
@@ -187,7 +200,7 @@ def base_source(app: App) -> str:
 
 def page_source(app: App, title: str, description: str, body: str) -> str:
     return (
-        f'{{% extends "{app.label}/base.html" %}}\n'
+        f'{{% extends "{app.label}/base.html" %}}{{% load karni_site %}}\n'
         f"{{% block title %}}{title}{{% endblock %}}\n"
         f"{{% block description %}}{description}{{% endblock %}}\n"
         "{% block content %}\n"
@@ -197,15 +210,16 @@ def page_source(app: App, title: str, description: str, body: str) -> str:
 
 
 def home_source(app: App) -> str:
-    title = humanize(app.label)
     return page_source(
         app,
         "Home",
         "One sentence that search engines show under this page's title.",
-        f"  <h1>{title}</h1>\n"
-        "  <p>This page is rendered by Django from "
+        "  <h1>{{ site.name }}</h1>\n"
+        "  {# Text a client may change is a block, edited in the admin (karni-site). #}\n"
+        '  <p>{% editable "home.intro" %}This page is rendered by Django from '
         f"{app.label}/templates/{app.label}/home.html. Replace it with the site's own "
-        f"markup. Its stylesheet is {app.label}/static/{app.label}/site.css.</p>\n",
+        f"markup. Its stylesheet is {app.label}/static/{app.label}/site.css."
+        "{% endeditable %}</p>\n",
     )
 
 
@@ -393,6 +407,49 @@ def wire_config_urls(ws: Workspace, app: App) -> None:
         ws.write(CONFIG_URLS, updated)
 
 
+def wire_site_settings(text: str, filename: str) -> tuple[str, list[str]]:
+    """Settings ``text`` with karni-site's redirect middleware and ``site`` context processor.
+
+    The middleware goes into the ``# karni:middleware`` block, the context
+    processor into a ``# karni:context_processors`` block appended once. Each
+    is added only when the text does not name it yet. Returns the text and
+    what changed (or what to add by hand).
+    """
+    notes: list[str] = []
+    if REDIRECT_MIDDLEWARE not in text:
+        try:
+            updated = add_entry(
+                text,
+                REDIRECT_MIDDLEWARE,
+                setting="MIDDLEWARE",
+                marker=MIDDLEWARE_MARKER,
+                filename=filename,
+            )
+        except CliError:
+            notes.append(
+                f"add {REDIRECT_MIDDLEWARE!r} to MIDDLEWARE in {filename} yourself (no "
+                f"`{MIDDLEWARE_MARKER}` block): the admin's redirects need it."
+            )
+        else:
+            if updated is not None:
+                text = updated
+                notes.append(f"{REDIRECT_MIDDLEWARE}: added to MIDDLEWARE (the admin's redirects)")
+    if SITE_PROCESSOR not in text:
+        if PROCESSORS_MARKER in text:
+            updated = add_entry(
+                text,
+                SITE_PROCESSOR,
+                setting=PROCESSORS_SETTING,
+                marker=PROCESSORS_MARKER,
+                filename=filename,
+            )
+            text = updated if updated is not None else text
+        else:
+            text = text.rstrip("\n") + "\n\n" + PROCESSORS_BLOCK
+        notes.append(f"{SITE_PROCESSOR}: added to the context processors (`site` in templates)")
+    return text, notes
+
+
 def wire_site_module(ws: Workspace) -> bool:
     """Wire karni-site the way ``karni add site`` does. Returns ``True`` when it was missing.
 
@@ -413,8 +470,14 @@ def wire_site_module(ws: Workspace) -> bool:
             filename=SETTINGS.as_posix(),
         )
         if updated is not None:
+            settings_text = updated
             ws.write(SETTINGS, updated)
             added = True
+    wired, wiring = wire_site_settings(settings_text, SETTINGS.as_posix())
+    if wired != settings_text:
+        ws.write(SETTINGS, wired)
+    for note in wiring:
+        ws.note(note)
     pyproject = ws.read(PYPROJECT)
     if pyproject is not None:
         updated = add_dependency_text(pyproject, SITE_DISTRIBUTION)
@@ -424,8 +487,8 @@ def wire_site_module(ws: Workspace) -> bool:
     if added:
         ws.note(
             f"{SITE_DISTRIBUTION}: added to pyproject.toml and INSTALLED_APPS (the site's "
-            "template tags and error pages come from it). Install it: "
-            "uv pip install -r pyproject.toml, or docker compose build."
+            "template tags, error pages and editable content come from it). Install it "
+            "(uv pip install -r pyproject.toml, or docker compose build), then karni migrate."
         )
     return added
 

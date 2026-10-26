@@ -1,0 +1,13 @@
+{% extends "website/base.html" %}{% load static karni_site %}
+{% block title %}Contact{% endblock %}
+{% block content %}{% site_defaults name="Crumb & Co" phone="(0123) 456 789" phone_link="+440123456789" email="hello@example.com" social_instagram="https://instagram.com/crumb" %}
+<section class="contact">
+  <h1>{% editable "contact.hero.title" %}Visit <span class="accent">the bakery</span>{% endeditable %}</h1>
+  <p class="lede">{% editable "contact.hero.text" %}Open <b>every</b> morning.<br>Closed on Mondays.{% endeditable %}</p>
+  <p><a href="{{ site.phone_href }}">{{ site.phone }}</a> <a href="{{ site.email_href }}">{{ site.email }}</a></p>
+  {% if site.social.instagram %}<a class="social" href="{{ site.social.instagram.url }}">Instagram</a>{% endif %}
+  <ul class="hours">{% for row in site.hours %}<li>{{ row.days }}: {{ row.times }}</li>{% endfor %}</ul>
+  {% editable_image "contact.hero.photo" %}<picture><source srcset="{% static 'website/shop.webp' %}" type="image/webp"><img class="photo" src="{% static 'website/shop.jpg' %}" srcset="{% static 'website/shop-2x.jpg' %} 2x" alt="The shop front" loading="lazy"></picture>{% endeditable_image %}
+  <div class="band" style="background-image: url(&quot;{% editable_image "contact.band.background" url %}{% static 'website/band.png' %}{% endeditable_image %}&quot;)"></div>
+  {% site_image "logo" %}<img class="logo" src="{% static 'website/logo.svg' %}" alt="{{ site.name }}">{% endsite_image %}
+</section>{% endblock %}

@@ -1,12 +1,18 @@
-"""A small site: three pages in the ``website`` namespace, a page that fails, error handlers."""
+"""A small site: pages in the ``website`` namespace, a failing page, error handlers, the admin."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import include, path
+from django.utils.module_loading import import_string
+
+from tests.testapp.models import Service
+
+_admin_site = import_string(settings.KARNI_ADMIN_SITE)
 
 
 def page(template: str) -> Callable[[HttpRequest], HttpResponse]:
@@ -14,6 +20,11 @@ def page(template: str) -> Callable[[HttpRequest], HttpResponse]:
         return render(request, template)
 
     return view
+
+
+def service(request: HttpRequest, slug: str) -> HttpResponse:
+    found = get_object_or_404(Service.objects.filter(published=True), slug=slug)
+    return render(request, "website/service.html", {"service": found})
 
 
 def boom(request: HttpRequest) -> HttpResponse:
@@ -25,11 +36,14 @@ site = (
         path("", page("website/home.html"), name="home"),
         path("about/", page("website/about.html"), name="about"),
         path("services/web/", page("website/home.html"), name="service_web"),
+        path("services/<slug:slug>/", service, name="service"),
+        path("contact/", page("website/contact.html"), name="contact"),
     ],
     "website",
 )
 
 urlpatterns = [
+    path("admin/", _admin_site.urls),
     path("api/", include("karni.api.urls")),
     path("boom/", boom),
     path("", include(site)),

@@ -36,8 +36,15 @@ and :func:`rows_for` compiles the scopes into a ``Q`` for the row filter.
 Nothing here compares a role to a literal: ``staff``/``user``/``customer``
 are only the default *value* of ``KARNI_ROLES``, in ``karni.conf.base``.
 
-Override / escape hatch: replace ``KARNI_ROLES`` entirely; register custom
-scopes; call :func:`sync_roles` yourself with your own declaration.
+An installed module may declare roles of its own through the ``karni.roles``
+entry point group (:func:`module_roles`): the value is a mapping shaped like
+``KARNI_ROLES``, or a callable returning one. They join the declaration
+under the project's own roles, so a slug ``KARNI_ROLES`` also names is the
+project's.
+
+Override / escape hatch: replace ``KARNI_ROLES`` entirely; name a module's
+role there to redefine it; register custom scopes; call :func:`sync_roles`
+yourself with your own declaration.
 """
 
 from __future__ import annotations
@@ -45,6 +52,8 @@ from __future__ import annotations
 import fnmatch
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
+from functools import cache
+from importlib import metadata
 from typing import Any, Final
 
 from django.apps import apps
@@ -64,6 +73,7 @@ __all__ = [
     "grant_rows",
     "grant_sources",
     "grants_for",
+    "module_roles",
     "permission_keys",
     "register_scope",
     "requires",
@@ -73,6 +83,8 @@ __all__ = [
 ]
 
 SETTING: Final = "KARNI_ROLES"
+#: The entry point group through which an installed module declares roles.
+ENTRY_POINT_GROUP: Final = "karni.roles"
 SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom")
 
 #: The scope of a declared grant the permission matrix revoked: a row that
@@ -125,11 +137,61 @@ def _scope_parts(scope: str, where: str) -> tuple[str, str]:
     return kind, path
 
 
+@cache
+def _role_entry_points() -> tuple[metadata.EntryPoint, ...]:
+    return tuple(
+        sorted(metadata.entry_points(group=ENTRY_POINT_GROUP), key=lambda point: point.name)
+    )
+
+
+def module_roles() -> dict[str, Any]:
+    """The roles installed modules declare through the ``karni.roles`` entry point group.
+
+    Each entry point names a mapping shaped like ``KARNI_ROLES`` or a callable
+    returning one (it may read the module's own settings, and returns ``{}``
+    to declare nothing). Entry points are read in name order, and the first
+    to declare a slug keeps it.
+    """
+    found: dict[str, Any] = {}
+    for point in _role_entry_points():
+        try:
+            value = point.load()
+            declared = value() if callable(value) else value
+        except Exception as exc:
+            raise KarniImproperlyConfigured(
+                f"The {ENTRY_POINT_GROUP} entry point {point.name!r} ({point.value}) failed to "
+                f"load: {exc}. Fix or uninstall the module that declares it.",
+                code="E205",
+            ) from exc
+        if not declared:
+            continue
+        if not isinstance(declared, Mapping):
+            raise KarniImproperlyConfigured(
+                f"The {ENTRY_POINT_GROUP} entry point {point.name!r} ({point.value}) must give "
+                f"a dict of role slug -> {{name, description, system, grants}}, got "
+                f"{type(declared).__name__}.",
+                code="E205",
+            )
+        for slug, spec in declared.items():
+            found.setdefault(slug, spec)
+    return found
+
+
 def declared_roles(declaration: Mapping[str, Any] | None = None) -> list[RoleSpec]:
-    """The role set from ``KARNI_ROLES`` (or ``declaration``), validated."""
+    """The role set from ``KARNI_ROLES`` (or ``declaration``), validated.
+
+    Without ``declaration``, the roles installed modules declare
+    (:func:`module_roles`) come first and ``KARNI_ROLES`` wins for a slug
+    both name.
+    """
     from django.conf import settings
 
-    raw = declaration if declaration is not None else getattr(settings, SETTING, None) or {}
+    if declaration is not None:
+        raw: Any = declaration
+    else:
+        raw = getattr(settings, SETTING, None) or {}
+        if isinstance(raw, Mapping):
+            raw = {**module_roles(), **raw}
     if not isinstance(raw, Mapping):
         raise KarniImproperlyConfigured(
             f"{SETTING} must be a dict of role slug -> {{name, description, system, grants}}, "
@@ -264,8 +326,8 @@ class SyncReport:
             lines.append(f"  {slug:<20} {count:>4} grant(s)  {state}")
         if self.undeclared_roles:
             lines.append(
-                "In the database but not in KARNI_ROLES (kept, so remove them yourself if "
-                "unwanted): " + ", ".join(self.undeclared_roles)
+                "In the database but not declared in KARNI_ROLES or by a module (kept, so remove "
+                "them yourself if unwanted): " + ", ".join(self.undeclared_roles)
             )
         if self.overridden:
             lines.append(

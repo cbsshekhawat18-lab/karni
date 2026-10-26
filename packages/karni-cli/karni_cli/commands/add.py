@@ -147,6 +147,18 @@ def record_guidance(project: Path, module: str) -> bool:
     return True
 
 
+def _wire_site(settings_path: Path) -> None:
+    """karni-site also needs its redirect middleware and its ``site`` context processor."""
+    from karni_cli.generators.site import wire_site_settings
+
+    text = settings_path.read_text()
+    updated, notes = wire_site_settings(text, "config/settings.py")
+    if updated != text:
+        settings_path.write_text(updated)
+    for note in notes:
+        typer.echo(note)
+
+
 def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
     project = require_project()
     app_name = f"karni_{module.replace('-', '_')}"
@@ -157,6 +169,8 @@ def add(module: str = typer.Argument(..., help='Module short name, e.g. "payment
 
     typer.echo(f"{distribution}: {'added to' if dep_added else 'already in'} pyproject.toml")
     typer.echo(f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS")
+    if module == "site":
+        _wire_site(project / "config" / "settings.py")
 
     record_guidance(project, module)
 

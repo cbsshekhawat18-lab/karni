@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-site"
 version = "0.4.0"
-description = "Public websites for Karni: the current page in a menu, a design's inline scripts under the Content-Security-Policy, and error pages that cannot fail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+description = "Public websites for Karni: every word and image of a site editable in the admin, menus, redirects, page titles, a content editor role, the current page in a menu, a design's inline scripts under the Content-Security-Policy, and error pages that cannot fail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["django", "karni", "website", "templates", "navigation", "csp", "seo"]
+keywords = ["django", "karni", "website", "templates", "navigation", "csp", "seo", "cms", "menus", "redirects"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
@@ -45,6 +45,10 @@ site = "karni_site.errorcodes:CODES"
 
 [project.entry-points."karni.checks"]
 site = "karni_site.checks:run_checks"
+
+# The content editor role (karni.accounts roles): merged under KARNI_ROLES.
+[project.entry-points."karni.roles"]
+site = "karni_site.roles:declared"
 
 [dependency-groups]
 dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]

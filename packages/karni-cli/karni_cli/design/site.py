@@ -93,6 +93,9 @@ class PageSource:
     canonical: Node | None = None
     nodes_by_start: dict[int, Node] = field(default_factory=dict)
     token_starts: list[int] = field(default_factory=list)
+    #: What ``--editable`` changes in this page (:class:`karni_cli.design.editable.Overlay`).
+    overlay: Any = None
+    element_starts: list[int] = field(default_factory=list)
 
     @property
     def dir(self) -> str:
@@ -133,6 +136,8 @@ class SitePlan:
     notes: list[str] = field(default_factory=list)
     #: The ``.karni/design.json`` record (without the ``files`` hashes the command adds).
     design: dict[str, Any] = field(default_factory=dict)
+    #: What ``--editable`` made editable (:class:`karni_cli.design.editable.Report`), or ``None``.
+    editable: Any = None
 
 
 # reading
@@ -294,9 +299,23 @@ class _Renderer:
         tokens = page.doc.tokens
         out: list[str] = []
         index = -1
+        overlay = page.overlay
         i = bisect_left(page.token_starts, start)
         while i < len(tokens) and tokens[i].start < end:
             token = tokens[i]
+            if overlay is not None:
+                replaced = overlay.replacement(token.start)
+                if replaced is not None:
+                    stop, value = replaced
+                    out.append(
+                        value if isinstance(value, str) else value(self, page, variations, start)
+                    )
+                    while i < len(tokens) and tokens[i].start < stop:
+                        if tokens[i].kind in ("start", "startend"):
+                            index += 1
+                        i += 1
+                    continue
+                out.append(overlay.before(token.start))
             if token.kind in ("start", "startend"):
                 node = page.nodes_by_start[token.start]
                 index += 1
@@ -307,6 +326,8 @@ class _Renderer:
                         f"{page.path}:{page.line(node.start)}: <{node.tag}>: {problem}"
                         for problem in problems
                     )
+                if overlay is not None:
+                    text = overlay.tag(node.start, text)
                 out.append(text)
                 if (
                     token.kind == "start"
@@ -324,8 +345,12 @@ class _Renderer:
                         out.append(inner)
                     while i + 1 < len(tokens) and tokens[i + 1].start < node.close_token.start:
                         i += 1
+            elif overlay is not None:
+                out.append(overlay.text(token, page.text))
             else:
                 out.append(rewrite.escape_template_syntax(token.text(page.text)))
+            if overlay is not None:
+                out.append(overlay.after(tokens[i].end))
             i += 1
         return "".join(out)
 
@@ -381,8 +406,20 @@ def _lead(page: PageSource, block: Block) -> str:
     return rewrite.escape_template_syntax(block.lead(page.text))
 
 
-def plan(design: Path, app: str, *, source_label: str | None = None) -> SitePlan:
-    """Plan the site app ``app`` for the design folder ``design``."""
+def plan(
+    design: Path,
+    app: str,
+    *,
+    source_label: str | None = None,
+    editable: bool = False,
+    previous: dict[str, Any] | None = None,
+) -> SitePlan:
+    """Plan the site app ``app`` for the design folder ``design``.
+
+    ``editable=True`` makes every text, image and menu editable in the admin
+    (:mod:`karni_cli.design.editable`); ``previous`` is the last import's
+    record, whose block keys it keeps.
+    """
     texts, files = scan(design)
     result = SitePlan(app)
     if not texts:
@@ -411,6 +448,18 @@ def plan(design: Path, app: str, *, source_label: str | None = None) -> SitePlan
             head_counts[sig] = head_counts.get(sig, 0) + 1
     shared_head = {sig for sig, count in head_counts.items() if count == len(content_pages)}
     site = compare.site_name(_title_text(page) for page in content_pages)
+    editor = None
+    if editable:
+        from karni_cli.design.editable import Editable, detect_highlight
+
+        editor = Editable(
+            app,
+            mapped,
+            site_name=unescape(site),
+            highlight=detect_highlight(content_pages),
+            previous=previous,
+        )
+        editor.prepare(content_pages, layout, renderer.by_key)
     base = _render_base(reference, content_pages, layout, renderer, shared_head, site, result)
     base_name = f"{app}/base.html"
     result.templates[f"templates/{base_name}"] = base
@@ -613,6 +662,9 @@ def plan(design: Path, app: str, *, source_label: str | None = None) -> SitePlan
         },
         "unmapped": list(result.problems),
     }
+    if editor is not None:
+        result.design["editable"] = editor.finish(result.templates, base_name, renderer)
+        result.editable = editor.report
     _notes(result, layout, content_pages)
     return result
 

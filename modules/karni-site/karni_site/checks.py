@@ -2,8 +2,10 @@
 
 SITE001: the template engine passes the request to templates.
 SITE002: every URL name a ``{% ifactive %}`` names exists.
+SITE004: the template engine puts ``site`` in every template.
+SITE005: the redirect middleware is installed.
 
-Both are skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
+Every check is skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 """
 
 from __future__ import annotations
@@ -21,7 +23,11 @@ __all__ = ["run_checks", "template_dirs", "url_names"]
 
 REQUEST_CODE = "SITE001"
 NAME_CODE = "SITE002"
+SITE_CODE = "SITE004"
+MIDDLEWARE_CODE = "SITE005"
 REQUEST_PROCESSOR = "django.template.context_processors.request"
+SITE_PROCESSOR = "karni_site.context_processors.site"
+REDIRECT_MIDDLEWARE = "karni_site.middleware.RedirectMiddleware"
 DJANGO_BACKEND = "django.template.backends.django.DjangoTemplates"
 _IFACTIVE = re.compile(r"\{%-?\s*ifactive\s+(.*?)\s*-?%\}", re.S)
 _WILDCARD = re.compile(r"[*?\[]")
@@ -67,7 +73,7 @@ def template_dirs() -> list[Path]:
     return [path for path in found if path.is_dir() and not _installed_elsewhere(path)]
 
 
-def _request_processor_missing() -> bool:
+def _processor_missing(processor: str) -> bool:
     from django.conf import settings
 
     engines = [
@@ -76,9 +82,19 @@ def _request_processor_missing() -> bool:
         if engine.get("BACKEND") == DJANGO_BACKEND
     ]
     return bool(engines) and not any(
-        REQUEST_PROCESSOR in (engine.get("OPTIONS", {}).get("context_processors") or [])
+        processor in (engine.get("OPTIONS", {}).get("context_processors") or [])
         for engine in engines
     )
+
+
+def _request_processor_missing() -> bool:
+    return _processor_missing(REQUEST_PROCESSOR)
+
+
+def _middleware_missing() -> bool:
+    from django.conf import settings
+
+    return REDIRECT_MIDDLEWARE not in (getattr(settings, "MIDDLEWARE", None) or [])
 
 
 def _unknown_names(known: set[str]) -> list[str]:
@@ -116,6 +132,18 @@ def run_checks() -> list[str]:
         failures.append(
             f"{REQUEST_CODE}: add {REQUEST_PROCESSOR!r} to the context_processors of TEMPLATES. "
             "{% ifactive %} and the Content-Security-Policy tags read the request."
+        )
+    if _processor_missing(SITE_PROCESSOR):
+        failures.append(
+            f"{SITE_CODE}: add {SITE_PROCESSOR!r} to the context_processors of TEMPLATES "
+            "(karni make site does it). Without it `site` is empty in every template, so the "
+            "site's name, contact details and logo do not show."
+        )
+    if _middleware_missing():
+        failures.append(
+            f"{MIDDLEWARE_CODE}: add {REDIRECT_MIDDLEWARE!r} to the `# karni:middleware` block "
+            "of config/settings.py (karni make site does it). Without it the redirects in the "
+            "admin never answer."
         )
     try:
         known = set(url_names())

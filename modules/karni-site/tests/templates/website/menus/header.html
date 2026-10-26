@@ -1,0 +1,13 @@
+{% load karni_site %}<ul class="nav-links">
+  <li><a href="{% url 'website:home' %}"{% ifactive "website:home" %} class="active"{% endifactive %}>Home</a></li>
+  <li class="has-sub">
+    <a href="{% url 'website:about' %}">About us</a>
+    <ul class="sub-menu">
+      <li><a href="{% url 'website:service_web' %}">Web</a></li>
+      <li><a href="{% url 'website:contact' %}?topic=order">Order</a>
+      <li><a href="{% url 'website:about' %}#team">Team</a></li>
+    </ul>
+  </li>
+  <li><a href="https://maps.example.com/shop">Find us</a></li>
+  <li><a href="#footer">Bottom</a></li>
+</ul>

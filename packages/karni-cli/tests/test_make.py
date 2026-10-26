@@ -699,6 +699,12 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
         assert (site / rel).is_file(), rel
     settings = (project / "config" / "settings.py").read_text()
     assert '    "website",\n    "karni_site",\n]  # karni:apps' in settings
+    assert '    "karni_site.middleware.RedirectMiddleware",\n]  # karni:middleware' in settings
+    assert settings.endswith(
+        'TEMPLATES[0]["OPTIONS"]["context_processors"] += [  # noqa: F821\n'
+        '    "karni_site.context_processors.site",\n'
+        "]  # karni:context_processors\n"
+    )
     # The site's runtime is the karni-site module, wired as `karni add site` does.
     assert '"karni-site"' in (project / "pyproject.toml").read_text()
     assert "karni-site: added to pyproject.toml and INSTALLED_APPS" in result.output
@@ -714,13 +720,16 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     marker = config.index("    # karni:urls\n")
     assert config.index(INCLUDE) < marker < config.index("    *welcome_urls(),")
     base = (site / "templates" / "website" / "base.html").read_text()
-    assert base.startswith("{% load static karni_site %}<!DOCTYPE html>")
+    assert base.startswith("{% load static karni_site %}{# The site's details are `site`")
+    assert '{% site_defaults name="Website" %}<!DOCTYPE html>' in base
     assert '<link rel="canonical"' in base and "{% static 'website/site.css' %}" in base
     assert (
         '<a href="{% url \'website:home\' %}"{% ifactive "website:home" %} aria-current="page"'
         "{% endifactive %}>Home</a>"
     ) in base
-    assert "<title>{% block title %}Website{% endblock %}</title>" in base
+    assert "<title>{% block title %}{{ site.name }}{% endblock %}</title>" in base
+    home = (site / "templates" / "website" / "home.html").read_text()
+    assert "<h1>{{ site.name }}</h1>" in home and '{% editable "home.intro" %}' in home
     assert '<meta name="description" content="{% block description %}{% endblock %}">' in base
     assert "<img" not in base
     # The page test runs assert_pages over a list that `karni make view` extends.
@@ -757,7 +766,9 @@ def test_site_is_idempotent_and_never_truncates(project: Path) -> None:
     assert views.read_text().count("def home(") == 1
     config = (project / "config" / "urls.py").read_text()
     assert config.count(INCLUDE) == 1 and config.count("handler404 = ") == 1
-    assert (project / "config" / "settings.py").read_text().count('"karni_site"') == 1
+    settings = (project / "config" / "settings.py").read_text()
+    assert settings.count('"karni_site"') == 1
+    assert settings.count("RedirectMiddleware") == settings.count("context_processors.site") == 1
     urls = (project / "website" / "urls.py").read_text()
     assert urls.count('path("", views.home, name="home")') == 1
 
