@@ -200,3 +200,11 @@ def do_csp_allow(parser: Parser, token: Token) -> CspAllowNode:
         if bit[:1] in "\"'" and bit[-1:] == bit[:1]:
             parse_spec(bit[1:-1])  # a literal: wrong here is wrong on every render
     return CspAllowNode([parser.compile_filter(bit) for bit in bits])
+
+
+# {% karni_form %}: public forms. The tag lives in karni_site.templatetags.karni_forms and is
+# part of this library too, so one {% load karni_site %} gives a page every site tag.
+
+from karni_site.templatetags.karni_forms import register as _forms  # noqa: E402
+
+register.tags.update(_forms.tags)

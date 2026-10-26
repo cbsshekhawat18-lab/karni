@@ -182,3 +182,14 @@ of `:root`, so they no longer override Karni's dark palette under \
 regenerated with `karni ui detect --force` (or edited by hand)."""
 mechanical = false
 migration = "migrations/0.4.1.md#karni-themecss-keeps-dark-mode"
+
+[[change]]
+id = "agent-files-public-forms"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+Rule K309 and the new-model procedure now name `karni make form` for a public \
+form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, \
+or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-name-karni-make-form"

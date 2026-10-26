@@ -1,4 +1,5 @@
-"""A small site: three pages in the ``website`` namespace, a page that fails, error handlers."""
+"""A small site: pages in the ``website`` namespace (two with forms), a page that fails,
+karni_site's form view and the error handlers."""
 
 from __future__ import annotations
 
@@ -25,6 +26,8 @@ site = (
         path("", page("website/home.html"), name="home"),
         path("about/", page("website/about.html"), name="about"),
         path("services/web/", page("website/home.html"), name="service_web"),
+        path("contact/", page("website/contact.html"), name="contact"),
+        path("apply/", page("website/apply.html"), name="apply"),
     ],
     "website",
 )
@@ -32,6 +35,7 @@ site = (
 urlpatterns = [
     path("api/", include("karni.api.urls")),
     path("boom/", boom),
+    path("", include("karni_site.urls")),
     path("", include(site)),
 ]
 

@@ -112,6 +112,8 @@ def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None
         "soft-deleted rows stay hidden",
         "create=Public()",
         "CSRF",
+        "karni make form",
+        "{% karni_form",
         "K201, K202, K206",
     ):
         assert phrase in k309.rule, phrase

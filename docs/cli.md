@@ -669,6 +669,7 @@ page        Add a frontend page (<= 50 lines) composing @karni/ui, with its rout
 component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
+form        Add a public form: model, viewset, notification, tests, staff pages ({% karni_form %}).
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
 
@@ -1046,6 +1047,34 @@ karni make view [OPTIONS] NAME
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--path` TEXT |  | URL path (default /&lt;name&gt;/). Captures such as /services/&lt;slug:slug&gt;/ become view parameters. |
 | `--no-route` |  | Do not register the URL in &lt;app&gt;/urls.py. |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
+#### `karni make form`
+
+Add a public form NAME with FIELDS: it works with and without JavaScript, safely.
+
+Writes the model (the visitor's fields, a status lifecycle and staff-only notes, hidden from visitors through field_roles, an admin inbox), a BaseViewSet with create=Public() (Karni's rate limit and honeypot apply by themselves), the tests, the staff app's pages when there is a frontend, and with --notify a queued email to the addresses in that setting. It wires karni-site and its form view. Put {% karni_form "NAME" %} in a site template: the output names the imported design's &lt;form&gt; it replaces, with the arguments that keep its markup.
+
+Example:
+
+```sh
+karni make form contact name:str email:email subject:str message:text --notify ENQUIRY_RECIPIENTS
+```
+
+```
+karni make form [OPTIONS] NAME [FIELDS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The form's name, snake_case: contact, booking_request, newsletter. |
+| `FIELDS...` |  | The fields a visitor fills, as name:type[:arg][?] (karni make model's DSL): str text email url phone int float decimal bool date datetime choice:a\|b country file image fk:Model m2m:Model. A trailing ? makes a field optional. |
+| `--notify` TEXT |  | A Django setting (e.g. ENQUIRY_RECIPIENTS) holding the addresses each new submission is emailed to, by a queued listener. Without it nothing is sent. |
+| `--states` TEXT |  | The inbox lifecycle of the status field (default new&gt;replied\|new&gt;archived\|replied&gt;archived): a,b,c moves in order, and a&gt;b\|a&gt;c declares each move. The first state is where a submission starts. |
+| `--role` TEXT | `staff` | The role that reads, answers and deletes submissions (default staff). |
+| `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 

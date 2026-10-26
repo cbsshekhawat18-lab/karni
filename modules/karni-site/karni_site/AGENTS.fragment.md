@@ -8,5 +8,7 @@
 - Inline scripts stay inline inside `{% csp_hash %}...{% endcsp_hash %}`, and another
   origin is declared with `{% csp_allow "<directive> <origin>" %}` next to what loads
   it. Never add 'unsafe-inline' to KARNI_CSP for a site.
+- A public form: `karni make form <name> <field:type> ... [--notify SETTING]`, then
+  `{% karni_form "<name>" %}` in the page. Never hand-write its view, throttle or script.
 - config/urls.py: `handler404`/`handler500` are `karni_site.views.page_not_found`/
-  `server_error`. `karni check` runs SITE001 and SITE002.
+  `server_error`. `karni check` runs SITE001, SITE002 and SITE020.

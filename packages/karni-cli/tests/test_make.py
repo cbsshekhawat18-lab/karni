@@ -40,6 +40,7 @@ GENERATORS = {
     "component",
     "site",
     "view",
+    "form",
     "module",
 }
 

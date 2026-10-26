@@ -336,7 +336,7 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 |---|---|---|
 | `karni-payments` (`modules/karni-payments/`) | hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider. UI package: `@karni/payments-ui` | `pip install karni-payments && karni add payments` |
 | `karni-approvals` (`modules/karni-approvals/`) | maker-checker approvals. A model opts in with `class Karni: requires_approval = [...]`, and a guarded change becomes a pending change that a second person applies or rejects. It comes with a queue in the admin, `/api/pending-changes/`, notifications, timeouts, and every decision in `karni.audit`. UI package: `@karni/approvals-ui` | `pip install karni-approvals && karni add approvals` |
-| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, and its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails. `karni check` runs SITE001 and SITE002. No UI package. | `pip install karni-site && karni add site` (`karni make site` does this for you) |
+| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails, and `{% karni_form %}` renders a public form (`karni make form`) that posts to the form's viewset without JavaScript and in place with it, under the enforced policy, with `notify_recipients` for its email. `karni check` runs SITE001, SITE002 and SITE020. No UI package. | `pip install karni-site && karni add site` (`karni make site` and `karni make form` do this for you) |
 | `karni-impersonation` (`modules/karni-impersonation/`) | "log in as user" for support, done safely: an explicit `impersonate` permission (never implied by staff), no privilege escalation, a banner naming both identities with a one-click exit, a session record, every write attributed to both identities in `karni.audit`, a time limit and a hard block on deleting, exporting and payment changes. The threat model is in its README. UI package: `@karni/impersonation-ui` | `pip install karni-impersonation && karni add impersonation` |
 
 Each module's README is its reference (settings table, wiring, escape
@@ -349,5 +349,6 @@ declaration admitted an action. It also builds on `karni.audit`'s batches.
 `karni-site` builds on `karni.security.extend_request_csp`, which adds
 sources to one response's Content-Security-Policy from code that runs while
 the response is built ([security headers](security.md#security-headers)).
-It ships no model yet: [Public server-rendered pages](public-site.md) says
-what it gives a site.
+Its forms save through the form viewset's own `create`, so a form adds no
+second write path. It ships no model yet: [Public server-rendered
+pages](public-site.md) says what it gives a site.

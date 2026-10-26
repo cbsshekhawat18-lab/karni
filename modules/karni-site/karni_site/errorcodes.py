@@ -6,6 +6,8 @@ from typing import Final
 
 from karni.errorcodes import ErrorCode
 
+from karni_site.form_errorcodes import FORM_CODES
+
 __all__ = ["CODES"]
 
 _SOURCE = "karni_site"
@@ -56,4 +58,5 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         ),
         fix="Write the tag as the message shows. The karni-site README has an example of each.",
     ),
+    *FORM_CODES,
 )

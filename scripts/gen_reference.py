@@ -719,9 +719,11 @@ def _module_settings(module_dir: Path) -> list[tuple[str, str, str, str]]:
     tree = ast.parse(source)
     rows = []
     for node in ast.walk(tree):
-        if not (isinstance(node, ast.AnnAssign | ast.Assign)):
+        if not (isinstance(node, ast.AnnAssign | ast.Assign | ast.AugAssign)):
             continue
-        targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
+        if isinstance(node, ast.AugAssign) and not isinstance(node.op, ast.BitOr):
+            continue  # DEFAULTS |= {...} adds a block of settings; nothing else does
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
         if not any(isinstance(t, ast.Name) and t.id == "DEFAULTS" for t in targets):
             continue
         if not isinstance(node.value, ast.Dict):

@@ -2,8 +2,9 @@
 
 SITE001: the template engine passes the request to templates.
 SITE002: every URL name a ``{% ifactive %}`` names exists.
+SITE020: every form a ``{% karni_form %}`` names exists (:mod:`karni_site.form_checks`).
 
-Both are skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
+All are skipped when ``karni_site`` is not in ``INSTALLED_APPS``.
 """
 
 from __future__ import annotations
@@ -125,4 +126,7 @@ def run_checks() -> list[str]:
         )
         return failures
     failures.extend(_unknown_names(known))
+    from karni_site.form_checks import unknown_forms  # SITE020: each {% karni_form %} name
+
+    failures.extend(unknown_forms())
     return failures
