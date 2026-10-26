@@ -168,7 +168,7 @@ function resolveScalar(value: Scalar, now: Date): Scalar {
 
 /**
  * A declared filter value: `"today"`, `"today-7"` and `"today+1"` become the
- * date they name (local time, `YYYY-MM-DD`); anything else is returned as is.
+ * date they name (local time, `YYYY-MM-DD`). Anything else is returned as is.
  */
 export function resolveRelativeDate(value: FilterValue, now: Date): FilterValue {
   if (Array.isArray(value)) return value.map((item) => resolveScalar(item, now));
@@ -376,6 +376,7 @@ function DefaultLoading({ slow }: DashboardLoadingProps): React.ReactElement {
   );
 }
 
+/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultDashboardSlots: DashboardSlots = {
   Section: DefaultSection,
   Counts: DefaultCounts,
