@@ -259,6 +259,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [module](docs/REFERENCE.md#karni-make-module) |
 | [`karni import`](docs/REFERENCE.md#karni-import) | Import a designer's files into the project: [design](docs/REFERENCE.md#karni-import-design) |
+| [`karni design`](docs/REFERENCE.md#karni-design) | Read a designer's pages: the models their content needs, and the content itself: [analyze](docs/REFERENCE.md#karni-design-analyze), [extract](docs/REFERENCE.md#karni-design-extract) |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -278,6 +279,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `stable` `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by`
 - `stable` Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)
 - `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
+- `experimental` Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
@@ -395,7 +397,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`.
+Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`.
 <!-- /generated:agents -->
 
 Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).

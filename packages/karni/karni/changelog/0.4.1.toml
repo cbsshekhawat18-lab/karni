@@ -142,3 +142,16 @@ before this gets the missing pieces from `karni make site <app> --force` after \
 `pip install karni-site`, and its base.html can load `karni_site` for the tags."""
 mechanical = false
 migration = "migrations/0.4.1.md#a-site-apps-runtime-is-the-karni-site-module"
+
+[[change]]
+id = "agent-files-site-from-design"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, site-from-design, takes an agent from a designer's pages to models, \
+the pages' real content (karni design analyze and extract, then karni load) and \
+templates that loop over the rows. `karni rules sync` writes its slash command files \
+and lists it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"

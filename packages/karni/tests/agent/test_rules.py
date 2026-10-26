@@ -127,11 +127,34 @@ def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None
 def test_procedures_reference_real_codes() -> None:
     codes = set(rules_by_code())
     names = [p.name for p in PROCEDURES]
-    assert names == ["new-model", "new-page", "add-module", "new-module"]
+    assert names == ["new-model", "new-page", "add-module", "new-module", "site-from-design"]
     for procedure in PROCEDURES:
         assert "{arguments}" in procedure.intro
         assert set(procedure.rules) <= codes, procedure.name
         assert procedure.steps
+
+
+def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
+    procedure = next(p for p in PROCEDURES if p.name == "site-from-design")
+    steps = procedure.steps
+    order = [
+        "`karni import design <design folder> --app <site app>`",
+        "`karni design analyze <design folder> --app <site app> --map",
+        "Answer every decision in the map",
+        "Run the `karni make model` commands in the order printed",
+        "`karni design extract <design folder> --map content/design-map.json -o",
+        "`karni load content/site.json --dry-run`",
+        "inside `{% for %}`",
+        'call_command("karni_load", "content/site.json")',
+    ]
+    found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
+    assert found == sorted(found), found
+    load = next(step for step in steps if "karni load" in step)
+    assert "Nothing changed" in load and "karni seed" in load
+    loops = next(step for step in steps if "{% for %}" in step)
+    assert "|highlight:" in loops and "<slug:slug>" in loops and "Model.objects" in loops
+    assert "K309" in procedure.rules and "{arguments}" in procedure.intro
+    assert "nothing is invented" in procedure.outro.lower()
 
 
 def test_dump_is_json_shaped() -> None:

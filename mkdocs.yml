@@ -90,6 +90,7 @@ nav:
       - "@karni/ui": ui.md
       - Theming (karni ui detect): theming.md
       - Public server-rendered pages: public-site.md
+      - From a design to content: design-content.md
       - The karni command: cli.md
       - Error codes: errors.md
       - Enforcement: enforcement.md

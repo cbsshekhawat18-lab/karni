@@ -73,10 +73,11 @@ A designer's static pages go in with [`karni import design`](#import-a-design),
 never by hand. For a site written from scratch, put the client's files under
 `static/website/` unchanged and link them from `base.html` with
 `{% static %}`. Split the header and footer into
-`templates/website/partials/` once they grow. Template filters and a
-command that loads the client's content are project code: put them in
-`website/templatetags/` and in a management command (`karni make command`).
-Karni ships no helpers for them.
+`templates/website/partials/` once they grow. The client's content goes in
+models and comes from the design with [`karni design analyze` and
+`karni design extract`](design-content.md), then [`karni load`](content-loading.md):
+never a hand-written loading command. A template filter only this site needs
+is project code in `website/templatetags/`.
 
 ## Import a design
 
@@ -173,10 +174,12 @@ template, and the diff says so. The import never deletes anything.
 ### What stays yours
 
 `karni make view` adds a page later. It extends the imported `base.html`
-and passes the same page test. Content the client edits in the admin,
-template filters and loaders are project code, as above. The import is a
-starting point that runs again, not a build step: edit the templates
-freely, and the next import keeps your edits.
+and passes the same page test. The content that repeats in the pages (cards,
+detail pages, galleries) becomes models and rows with
+[`karni design analyze`, `karni design extract` and `karni load`](design-content.md),
+and the templates loop over the rows. The import is a starting point that
+runs again, not a build step: edit the templates freely, and the next import
+keeps your edits.
 
 ## The karni-site module
 
@@ -191,6 +194,10 @@ karni_site %}` at the top of a template gives it:
   inside a class, or a whole attribute. `karni check` reports a name no URL
   has (`SITE002`).
 - `{% csp_hash %}` and `{% csp_allow %}`, below.
+- `{{ value|highlight:"span.accent" }}` writes the words a field keeps as
+  `*marked words*` in the design's markup (`em`, `span.accent`, any tag with
+  classes), everything else escaped. `karni design extract` keeps the words a
+  heading sets apart that way, and `|highlight:""` drops the marks.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu

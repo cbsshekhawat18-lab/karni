@@ -52,7 +52,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         why=(
             "{% ifactive %} needs at least one URL name or path. {% csp_hash %} takes nothing, "
             "or `attribute`. {% csp_allow %} takes arguments like "
-            '"font-src https://fonts.gstatic.com". The template does not compile otherwise.'
+            '"font-src https://fonts.gstatic.com". The template does not compile otherwise. '
+            'The highlight filter takes a tag with optional classes ("span.accent", "em", or '
+            '"" for none) and fails the render otherwise.'
         ),
         fix="Write the tag as the message shows. The karni-site README has an example of each.",
     ),

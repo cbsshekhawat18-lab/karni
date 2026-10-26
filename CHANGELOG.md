@@ -33,6 +33,41 @@ apply codemods and list the manual steps. This file is the human summary.
   (`--force` replaces them). The parsing, comparison and rewriting live in
   `karni_cli.design` for the later `karni design` commands.
   [docs/public-site.md](docs/public-site.md#import-a-design).
+- **The content that repeats in a design becomes models and rows: `karni
+  design analyze` and `karni design extract`.** `analyze <dir>` reads a
+  designer's pages and finds the structures repeated within and across them
+  (cards, list items, a gallery inside each project, a page per doctor). It
+  infers the fields from the markup (a heading with its highlighted words,
+  text, an image and its alt, a link, a list of tags, a date, a price, a
+  number), merges the places that show the same items (a card that links to
+  a detail page, an anchor that is an item's `id`, a shared key or title),
+  finds the relations (a list of links to another model's items, an
+  attribute holding its keys, items nested in another model's items) and
+  prints ready-to-run `karni make model` commands, models others point at
+  first. Names come from the design's classes, headings, labels, pages and
+  folders. What the markup cannot settle (a list on a detail page that may
+  be hand-picked or derived, a few items shown on the home page, a card
+  styled on its own that holds a list item's values) is a decision for the
+  agent, with the evidence. `--json` prints it as stable JSON, and `--map
+  <file>` writes a draft content map. `extract <dir> --map <file>` reads the pages with the map and writes their content in the
+  `karni load` format, values parsed by type, relations by key, children
+  nested, image paths relative to the output file. It refuses while a
+  decision is open (C122) or the map cannot be followed (C121).
+  [docs/design-content.md](docs/design-content.md).
+- **`karni load --dry-run` shows a diff per model.** Each row it would create,
+  each row it would change with the fields that change (old and new value),
+  each file it would upload and each child `--prune` would delete, the first
+  20 rows of a model listed and the rest counted. `--json` carries the same
+  rows under `"changes"`. [docs/content-loading.md](docs/content-loading.md#validation-and-errors).
+- **`karni make model --order <field> --key <field>`** writes `Meta.ordering`
+  and `Karni.import_key`, the field `karni load` matches rows on (a child
+  row: its parent plus that field, such as `position`).
+- **`{{ value|highlight:"span.accent" }}` in karni-site** writes the words a
+  field keeps as `*marked words*` back in the design's markup, everything
+  else escaped. `|highlight:""` drops the marks.
+- **New agent procedure `site-from-design`**: import, analyze, models,
+  extract, load, then templates that loop over the rows. Run `karni rules
+  sync` for its slash command files.
 - **New module `karni-site`: the runtime of a public site.** `{% ifactive
   "<app>:<name>" %}` marks the current page in a menu around whatever markup
   the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's
