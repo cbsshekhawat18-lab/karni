@@ -505,6 +505,7 @@ under the enforced Content-Security-Policy as it is.
 | `fields="name,email"` | which fields, in this order (default: every one a visitor fills) |
 | `rows="name,email\|phone,company"` | fields that share a row element |
 | `labels`, `placeholders`, `widgets` | `"field: text \| field: text"`. Widgets: input, textarea, select, radios, checkboxes |
+| `attrs="message: rows=4 \| guests: min=1 max=8"` | attributes of a field's control, as the design sets them: `rows`, `cols`, `min`, `max`, `step`, `pattern`, `size`, `inputmode`, `autocomplete` (single quotes around a value with spaces). The form's own `name`, `type`, `value`, `required` and `class` cannot be replaced (`SITE021`) |
 | `button`, `success`, `invalid`, `throttled`, `refused`, `failed`, `choose` | the texts |
 | `next="/thanks/"` | where a sent form goes (default: back to this page) |
 | `id` | the form's id (default `karni-form-<name>`) |
@@ -521,9 +522,11 @@ name to a viewset. A name no form has fails `karni check` (`SITE020`).
 When the site came from `karni import design`, `karni make form` names the
 template and line of the design's `<form>` it replaces and prints the tag
 with the arguments that keep that form's own class names, rows, labels,
-placeholders and button. It matches the design's controls to the form's
-fields by name, then by label and type, says which control fills which
-field, and adds `editable=` after an editable import.
+placeholders, button and control attributes (`attrs=`). It matches the
+design's controls to the form's fields by name, then by label and type, says
+which control fills which field, and adds `editable=` after an editable
+import. `karni make form <name> --tag` prints the tag again and writes
+nothing.
 
 ### `notify_recipients`: the email a new submission sends
 

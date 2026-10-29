@@ -664,7 +664,7 @@ in `karni make model`'s field DSL, and writes:
 | `<app>/viewsets.py` | a `BaseViewSet` with `Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())` (`--role` names another role) |
 | `<app>/listeners.py` | with `--notify SETTING`: a queued listener that emails each new row to the addresses in that setting |
 | `<app>/templates/<app>/email/<name>_subject.txt`, `_body.txt` | with `--notify`: the email, yours to edit |
-| `config/settings.py`, `.env.example` | with `--notify`: `SETTING = env.list("SETTING", default=[])` and the line to fill |
+| `config/settings.py`, `.env.example`, `.env.prod.example` | with `--notify`: `SETTING = env.list("SETTING", default=[])` and the line to fill in each env file |
 | `<app>/tests/test_<name>_form.py` | anonymous submit, the form without JavaScript, the email (or none), the staff-only fields, the rate limit, staff-only reading, and `assert_crud` for the role |
 | `frontend/src/pages/` | the staff app's list, detail (with the lifecycle buttons) and form pages |
 | `config/urls.py` | `path("", include("karni_site.urls"))`: the view every form posts to |
@@ -725,7 +725,11 @@ sent message become blocks under that key (`home.booking.email.label`,
 When the site came from `karni import design`, the import lists each
 `<form>` of the design (it is in `.karni/design.json` too), and `karni make
 form` names the template and the line of the form it replaces, with the tag
-that keeps that form's class names, rows, labels, placeholders and button.
+that keeps that form's class names, rows, labels, placeholders, button and
+the attributes of its controls (a textarea's `rows`, an input's `min`, `max`,
+`step` or `pattern`, as `attrs="message: rows=4"`). `karni make form <name>
+--tag` prints that tag again later and writes nothing, so a form made
+already does not have to be made again to see it.
 It matches each of the design's controls to a field of the form: by its
 name, then by its label and its type (the design's `day` with the label
 *Preferred date* fills `preferred_date`), then by its type alone when one

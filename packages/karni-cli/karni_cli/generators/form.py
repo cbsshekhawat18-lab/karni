@@ -30,16 +30,20 @@ runtime is the ``karni-site`` module:
 It prints the tag to put in a page, ``{% karni_form "<name>" %}``. When the
 project's site came from ``karni import design`` and one of its templates
 holds a ``<form>``, it names the template and the line, and prints the tag
-with the arguments that keep that form's own class names, labels, rows and
-button.
+with the arguments that keep that form's own class names, labels, rows,
+button and control attributes (a textarea's ``rows``, an input's ``min``,
+``max``, ``step`` or ``pattern``). ``karni make form <name> --tag`` prints
+the tag again later and writes nothing.
 """
 
 from __future__ import annotations
 
+import ast
 import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import typer
 
@@ -547,17 +551,17 @@ def _editable(ws: Workspace) -> bool:
     return bool((record.get("editable") or {}).get("enabled"))
 
 
-def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
+def design_notes(ws: Workspace, name: str, fields: Mapping[str, str]) -> None:
     """Which imported template holds the ``<form>`` this one replaces, and the tag that keeps it.
 
-    The design's controls are matched to the model's fields by name, then by
-    their label and type (:func:`karni_cli.design.forms.match_fields`), and
-    the notes say which control fills which field and which fill none.
+    ``fields`` maps the form's field names to their kinds (``"date"``). The
+    design's controls are matched to them by name, then by their label and
+    type (:func:`karni_cli.design.forms.match_fields`), and the notes say
+    which control fills which field and which fill none.
     """
     found = _design_forms(ws)
     if not found:
         return
-    fields = {spec.name: spec.kind for spec in specs}
     best = best_match([form for _, form, _page in found], fields)
     for template, form, _page in found:
         mark = form is best
@@ -583,7 +587,7 @@ def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
     )
     editable = f"{page}.{name}" if _editable(ws) else ""
     filled = {match.model for match in matches}
-    extra = [spec.name for spec in specs if spec.name not in filled]
+    extra = [field_name for field_name in fields if field_name not in filled]
     lines = [
         f"replace: in {template}, replace that <form> ... </form> (line {best.line}) with:",
         f"    {suggest_tag(name, best, fields, editable=editable)}",
@@ -603,7 +607,99 @@ def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
             f'  editable="{editable}": the labels, placeholders, button and sent message are '
             f"blocks the client edits in the admin (Page content, {editable}.*)."
         )
+    if any(item.attrs for item in best.fields):
+        lines.append(
+            '  attrs="...": the design\'s own rows, min, max, step or pattern on those fields.'
+        )
+    lines.append(f"  `karni make form {name} --tag` prints this again, and writes nothing.")
     ws.note("\n".join(lines))
+
+
+#: Django field classes and the field DSL kind each one is, for ``--tag`` (no Django needed).
+_KINDS: Final[dict[str, str]] = {
+    "CharField": "str",
+    "SlugField": "str",
+    "TextField": "text",
+    "EmailField": "email",
+    "URLField": "url",
+    "PhoneField": "phone",
+    "IntegerField": "int",
+    "SmallIntegerField": "int",
+    "BigIntegerField": "int",
+    "PositiveIntegerField": "int",
+    "PositiveSmallIntegerField": "int",
+    "FloatField": "float",
+    "DecimalField": "decimal",
+    "BooleanField": "bool",
+    "DateField": "date",
+    "DateTimeField": "datetime",
+    "CountryField": "country",
+    "FileField": "file",
+    "ImageField": "image",
+    "ForeignKey": "fk",
+    "ManyToManyField": "m2m",
+}
+
+
+def model_fields(ws: Workspace, app: App, model: str) -> dict[str, str]:
+    """The visitor's fields of the form's model in ``<app>/models.py``: name -> DSL kind.
+
+    Read from the source, as ``karni make form`` wrote them. The inbox's own
+    fields (status, notes, search) are left out, and so is anything a visitor
+    does not fill.
+
+    :raises CliError: ``C105`` when the app has no such model yet.
+    """
+    path = models_file(ws, app)
+    rel = ws.rel(path)
+    text = ws.read(path) or ""
+    cls = next(
+        (
+            node
+            for node in (parse(ws, rel, text).body if text else [])
+            if isinstance(node, ast.ClassDef) and node.name == model
+        ),
+        None,
+    )
+    if cls is None:
+        raise CliError(
+            f"{rel} has no class {model}, so there is no form to print a tag for. Make it "
+            f"first: karni make form {snake(model)} <field:type> ... (--tag prints the tag of a "
+            "form made already).",
+            code="C105",
+        )
+    found: dict[str, str] = {}
+    for stmt in cls.body:
+        if not (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1):
+            continue
+        target, value = stmt.targets[0], stmt.value
+        if not isinstance(target, ast.Name) or not isinstance(value, ast.Call):
+            continue
+        if target.id in {STATUS, NOTES, SEARCH}:
+            continue
+        called = value.func
+        name = called.attr if isinstance(called, ast.Attribute) else getattr(called, "id", "")
+        kind = _KINDS.get(name)
+        if kind is None:
+            continue
+        if kind == "str" and any(keyword.arg == "choices" for keyword in value.keywords):
+            kind = "choice"
+        found[target.id] = kind
+    return found
+
+
+def print_tag(ws: Workspace, app: App, raw_name: str, tokens: list[str]) -> None:
+    """``--tag``: the tag and the design notes again, for a form made already. Writes nothing."""
+    name = form_name(raw_name)
+    fields = (
+        {spec.name: spec.kind for spec in form_fields(tokens)}
+        if tokens
+        else model_fields(ws, app, pascal(name))
+    )
+    ws.note(f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template')
+    design_notes(ws, name, fields)
+    for note in ws.notes:
+        typer.echo(note)
 
 
 # the tests
@@ -852,8 +948,11 @@ def plan(
             f"role: declare {role!r} in KARNI_ROLES (config/settings.py): field_roles and the "
             "viewset name it, and karni check refuses a role nobody declared (E212)."
         )
-    ws.note(f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template')
-    design_notes(ws, name, specs)
+    ws.note(
+        f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template '
+        f"(karni make form {name} --tag prints it again)"
+    )
+    design_notes(ws, name, {spec.name: spec.kind for spec in specs})
     return name
 
 
@@ -895,6 +994,15 @@ def command(
     migrate: bool = typer.Option(
         False, "--migrate", help="Run `karni make migration` for the app afterwards."
     ),
+    tag: bool = typer.Option(
+        False,
+        "--tag",
+        help=(
+            "Write nothing: print the {% karni_form %} tag of a form made already, with the "
+            "arguments that keep the imported design's <form>. Its fields are read from the "
+            "model unless FIELDS are given."
+        ),
+    ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
@@ -916,7 +1024,19 @@ def command(
     """
     ws = project_workspace(force)
     target = resolve_app(ws, app)
-    form = plan(ws, target, name, fields or [], notify=notify, states=states, role=role)
+    if tag:
+        print_tag(ws, target, name, fields or [])
+        return
+    try:
+        form = plan(ws, target, name, fields or [], notify=notify, states=states, role=role)
+    except CliError as exc:
+        if exc.code != "C101":
+            raise
+        raise CliError(
+            f"{exc.message} To print the form's tag again without writing anything: "
+            f"karni make form {form_name(name)} --tag",
+            code="C101",
+        ) from exc
     if not migrate:
         ws.note(f"next: karni make migration --app {target.label}, then karni test")
     ws.commit(dry_run=dry_run)
@@ -927,4 +1047,7 @@ def command(
         code = migration_gen.run(ws.root, target.label)
         if code != 0:
             raise typer.Exit(code)
-    typer.echo(f'done: {{% karni_form "{form}" %}} is ready for a page.')
+    typer.echo(
+        f'done: {{% karni_form "{form}" %}} is ready for a page. '
+        f"karni make form {form} --tag prints the tag again."
+    )

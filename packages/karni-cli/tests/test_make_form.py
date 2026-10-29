@@ -35,7 +35,7 @@ from karni_cli.design.forms import best_match, forms_in, match_fields, suggest_t
 from karni_cli.main import app
 
 from .conftest import REPO_ROOT, TEMPLATE, require_modules
-from .test_make import fails, ok
+from .test_make import fails, ok, snapshot
 from .test_make_gate import OVERLAY, _karni_importable
 
 DESIGNS = Path(__file__).parent / "fixtures" / "designs"
@@ -223,11 +223,27 @@ def test_an_imported_design_records_its_forms_and_the_tag_that_keeps_them(
     assert "design: website/templates/website/admissions.html:" in out
     assert "(the fields of admission)" in out
     tag = out.split("replace: in website/templates/website/admissions.html", 1)[1]
-    assert (
+    printed = (
         '{% karni_form "admission" classes="bootstrap" rows="parent_name,email" '
         'labels="parent_name: Your name | visit: We would like to visit" '
-        'placeholders="email: you@example.com" button="Send enquiry" id="enquiry" %}'
-    ) in tag
+        'placeholders="email: you@example.com" attrs="message: rows=4" button="Send enquiry" '
+        'id="enquiry" %}'
+    )
+    assert printed in tag
+    assert "`karni make form admission --tag` prints this again" in tag
+    assert "karni make form admission --tag prints the tag again." in out
+    # Printed again, from the model's own fields, and nothing is written.
+    before = snapshot(project)
+    again = ok("make", "form", "admission", "--tag").output
+    assert snapshot(project) == before
+    assert printed in again and "created" not in again and "modified" not in again
+    assert "design: website/templates/website/admissions.html:" in again
+    # Made already: a second run refuses, and says how to print the tag.
+    fails(
+        "make", "form", "admission", "parent_name:str:120",
+        match="print the form's tag again without writing anything: karni make form admission --tag",
+    )  # fmt: skip
+    fails("make", "form", "brochure", "--tag", match="C105")
     # The footer's sign-up form is in the layout: a newsletter replaces that one.
     out = ok("make", "form", *NEWSLETTER).output
     assert "replace: in website/templates/website/" in out
@@ -248,6 +264,24 @@ def test_design_forms_are_read_from_plain_markup_too() -> None:
     )
     # A form that shares less than half its fields is not this form.
     assert best_match(forms, ["email"]) is None
+
+
+def test_the_tag_keeps_a_controls_own_attributes() -> None:
+    form = forms_in(
+        '<form><label for="m">Message</label><textarea id="m" name="message" rows="6" '
+        'cols="30"></textarea><label for="g">Guests</label><input id="g" name="guests" '
+        'type="number" min="1" max="8" step="1"><label for="z">Postcode</label><input id="z" '
+        'name="postcode" pattern="[A-Z0-9 ]+" inputmode="text"><label for="c">Code</label>'
+        '<input id="c" name="code" pattern="a|b" size="4"><button>Send</button></form>'
+    )[0]
+    fields = {"message": "text", "guests": "int", "postcode": "str", "code": "str"}
+    tag = suggest_tag("booking", form, fields)
+    assert _one_tag(tag), tag
+    assert (
+        'attrs="message: rows=6 cols=30 | guests: min=1 max=8 step=1 | postcode: '
+        "pattern='[A-Z0-9 ]+' inputmode=text | code: size=4\""
+    ) in tag  # a pattern with "|" would split the argument: it is left out
+    assert form.as_record()["fields"][0]["attrs"] == {"rows": "6", "cols": "30"}
 
 
 def _one_tag(text: str) -> bool:
