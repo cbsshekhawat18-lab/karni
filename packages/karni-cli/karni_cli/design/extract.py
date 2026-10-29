@@ -13,6 +13,7 @@ The map (JSON)::
       "design": "../design",            # the design folder, relative to the map file
       "app": "website",                 # rows go to "<app>.<Model>"
       "marker": "==",                   # around highlighted words: KARNI_SITE_HIGHLIGHT's marker
+      "decimal": ",",                   # optional: the decimal mark, else each page's <html lang>
       "models": [
         {
           "name": "Course",
@@ -78,9 +79,11 @@ A value is a place, or an object with ``select`` (the place) and one of:
 * ``decide``: a question the analysis left for the agent. Extract refuses to
   run until every ``decide`` is answered (removed, or the value deleted).
 
-The value is parsed by the field's type: a number from ``"12 weeks"``, an
-amount from ``"€4.50"``, a date from ``"14 March 2026"`` or a ``datetime``
-attribute, a path for an image.
+The value is parsed by the field's type: a number from ``"12 weeks"`` (and
+``"4,000"`` as 4000, ``"1.234,5"`` where the page's ``<html lang>`` writes a
+decimal comma, or the map's ``"decimal"`` says so), an amount from
+``"€4.50"``, a date from ``"14 March 2026"`` or a ``datetime`` attribute, a
+path for an image.
 
 Override / escape hatch: :func:`extract` takes ``reader=``, a
 :class:`Reader` subclass, to read values another way.
@@ -103,7 +106,13 @@ from karni_cli.design.analyze import attr_key, link_key, page_slug, parse_value
 from karni_cli.design.parse import Document, Node, collapse, parse
 from karni_cli.design.rewrite import Mapped, page_route
 from karni_cli.design.select import Place, SelectorError, parse_place
-from karni_cli.design.values import HIGHLIGHT_MARKER, slugify, text_of
+from karni_cli.design.values import (
+    HIGHLIGHT_MARKER,
+    decimal_mark,
+    page_language,
+    slugify,
+    text_of,
+)
 
 __all__ = ["ExtractResult", "MapError", "Reader", "extract", "read_map"]
 
@@ -163,6 +172,11 @@ def check_map(data: Any, where: str = "the map") -> None:
         raise MapError(
             f'{where}: "marker" is the text around highlighted words, such as "==" (the '
             f"default, KARNI_SITE_HIGHLIGHT's), not {marker!r}."
+        )
+    if data.get("decimal") not in (None, ",", "."):
+        raise MapError(
+            f'{where}: "decimal" is the decimal mark the pages write, "," or ".", not '
+            f"{data.get('decimal')!r}. Leave it out to read each page's <html lang>."
         )
     if data.get("version", MAP_VERSION) != MAP_VERSION:
         raise MapError(
@@ -295,13 +309,20 @@ class Reader:
     """
 
     def __init__(
-        self, design: Path, output: Path, mapped: Mapped, marker: str = HIGHLIGHT_MARKER
+        self,
+        design: Path,
+        output: Path,
+        mapped: Mapped,
+        marker: str = HIGHLIGHT_MARKER,
+        decimal: str | None = None,
     ) -> None:
         self.design = design
         self.output = output
         self.mapped = mapped
         #: What goes around highlighted words: the map's "marker", "==" by default.
         self.marker = marker
+        #: The map's "decimal" (``","`` or ``"."``): else each page's ``<html lang>`` says.
+        self.decimal = decimal
         self.docs: dict[str, tuple[str, Document]] = {}
         self.problems: list[str] = []
 
@@ -313,6 +334,13 @@ class Reader:
             text = file.read_bytes().decode("utf-8-sig", errors="surrogateescape")
             self.docs[path] = (text, parse(text))
         return self.docs[path]
+
+    def decimal_mark(self, path: str) -> str | None:
+        """The decimal mark of page ``path``: the map's, else its ``<html lang>``'s."""
+        if self.decimal:
+            return self.decimal
+        text, doc = self.page(path)
+        return decimal_mark(page_language(doc, text))
 
     def nodes(self, root: Node, place: Place, source: str) -> list[Node]:
         return place.nodes(root, source)
@@ -486,7 +514,9 @@ class _Extractor:
             return None
         if options.get("all"):
             texts = [self.reader.raw(node, place, source, options, highlight) for node in nodes]
-            return parse_value("text", kind, "\n\n".join(t for t in texts if t))
+            return parse_value(
+                "text", kind, "\n\n".join(t for t in texts if t), self.reader.decimal_mark(page)
+            )
         raw = self.reader.raw(nodes[0], place, source, options, highlight)
         if base == "image":
             return self.reader.image(raw, page)
@@ -496,7 +526,7 @@ class _Extractor:
             return True
         if base in ("datetime",):
             return raw or None
-        return parse_value("text", kind.rstrip("?"), raw)
+        return parse_value("text", kind.rstrip("?"), raw, self.reader.decimal_mark(page))
 
     def children(
         self,
@@ -763,7 +793,9 @@ def extract(
         raise MapError(f"{design} has no .html page.")
     _, mapped = design_site._read_pages(texts, files, str(spec.get("app") or "website"))
     marker = str(spec.get("marker") or HIGHLIGHT_MARKER)
-    extractor = _Extractor(spec, reader(design, output, mapped, marker))
+    values = reader(design, output, mapped, marker)
+    values.decimal = str(spec.get("decimal") or "") or None
+    extractor = _Extractor(spec, values)
     extractor.run()
     content = extractor.content()
     return ExtractResult(content, extractor.reader.problems)

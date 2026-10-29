@@ -149,6 +149,31 @@ def test_numbers_prices_and_dates_are_read_only_when_the_whole_text_is_one() -> 
     assert parse_value("text", "str:80", "") is None
 
 
+def test_thousands_separators_and_the_pages_decimal_mark() -> None:
+    # Without a language a number reads the English way: a lone comma before three
+    # digits groups thousands, a point is the decimal mark.
+    assert values.number("4,000")[0] == Decimal(4000)  # type: ignore[index]
+    assert values.number("12,500 patients") == (Decimal(12500), "", " patients")
+    assert values.number("1,234,567")[0] == Decimal(1234567)  # type: ignore[index]
+    assert values.number("1 234")[0] == Decimal(1234)  # type: ignore[index]
+    assert values.number("1\u202f234")[0] == Decimal(1234)  # type: ignore[index]
+    assert values.number("1'234'567")[0] == Decimal(1234567)  # type: ignore[index]
+    assert values.number("4.9")[0] == Decimal("4.9")  # type: ignore[index]
+    assert values.number("1,234.5")[0] == Decimal("1234.5")  # type: ignore[index]
+    assert values.number("1.234,5")[0] == Decimal("1234.5")  # type: ignore[index]
+    # A page in a language with a decimal comma: "4.000" groups, "4,5" is four and a half.
+    comma = values.decimal_mark("de-DE")
+    assert comma == "," and values.decimal_mark("de-CH") == "." and values.decimal_mark("") is None
+    assert values.number("4.000", comma)[0] == Decimal(4000)  # type: ignore[index]
+    assert values.number("4,5", comma)[0] == Decimal("4.5")  # type: ignore[index]
+    assert values.number("1.234.567,89", comma)[0] == Decimal("1234567.89")  # type: ignore[index]
+    assert parse_value("text", "int", "4,000") == 4000
+    assert parse_value("text", "int", "4.000", ",") == 4000
+    assert parse_value("text", "decimal:10:2", "1.234,5", ",") == "1234.5"
+    assert infer_type("text", ["4,000", "25", "1,200"])[0] == "int"
+    assert infer_type("text", ["4.000", "25"], ",")[0] == "int"
+
+
 def test_names_and_keys_come_from_the_markups_words() -> None:
     assert values.words("team-card__photoWide") == ["team", "card", "photo", "wide"]
     assert values.snake("Key services") == "key_services"
@@ -345,6 +370,112 @@ def test_a_studio_with_sliders_filters_and_galleries() -> None:
     founder_only = {f.name for f in member.columns if f.decide}
     assert founder_only == {"founder", "awards", "image_alt", "text"}
     assert all(name not in analysis.commands()[1] for name in founder_only)
+
+
+_LAYOUT = """<!doctype html><html lang="{lang}"><head><title>{title}</title>
+<meta name="description" content="{title} page."></head><body>
+<header class="top"><a href="index.html">Home</a> <a href="about.html">About</a></header>
+<main>{main}</main>
+<footer class="bottom"><p>Made by hand.</p></footer></body></html>"""
+
+
+def _site(tmp_path: Path, main: str, lang: str = "en") -> Path:
+    design = tmp_path / "design"
+    design.mkdir()
+    (design / "img").mkdir()
+    for index in range(1, 4):
+        (design / "img" / f"p{index}.jpg").write_bytes(b"\xff\xd8\xff")
+    (design / "index.html").write_text(_LAYOUT.format(lang=lang, title="Home", main=main))
+    about = "<section class='story'><h1>About us</h1><p>A small team.</p></section>"
+    (design / "about.html").write_text(_LAYOUT.format(lang=lang, title="About", main=about))
+    return design
+
+
+SLIDES = "".join(
+    f'<div class="slide"><img src="img/p{i}.jpg" alt="Picture {i}"><h2>Heading {i}</h2>'
+    f"<p>Line {i} of the slider.</p></div>"
+    for i in range(1, 4)
+)
+
+
+@pytest.mark.parametrize(
+    ("main", "figure"),
+    [
+        # A clinic: the slider and the figures in sections of their own.
+        (
+            f'<section class="hero">{SLIDES}</section><section class="numbers">'
+            + "".join(
+                f'<div class="number"><strong>{n}</strong><span>{label}</span></div>'
+                for n, label in (("25", "years in town"), ("4,000", "patients"), ("4.9", "rating"))
+            )
+            + "</section>",
+            "div.number",
+        ),
+        # A bakery in plain divs, no sections at all: only the figures say what they are.
+        (
+            f'<div class="carousel">{SLIDES}</div><div class="facts">'
+            + "".join(
+                f'<p class="fact"><b>{n}</b> <i>{label}</i></p>'
+                for n, label in (("12", "ovens"), ("98%", "local flour"), ("10k+", "loaves a week"))
+            )
+            + "</div>",
+            "p.fact",
+        ),
+    ],
+)
+def test_a_row_of_figures_is_page_copy_not_a_model(tmp_path: Path, main: str, figure: str) -> None:
+    analysis = analyze(_site(tmp_path, main), "website")
+    (slide,) = analysis.models
+    assert set(_types(slide)) == {"title", "slug", "image", "image_alt", "text", "position"}
+    assert not any("item by item" in note for note in slide.notes)
+    copy = next(c for c in analysis.page_copy if c.step == figure)
+    assert copy.items == 3 and copy.reason.startswith("figures")
+
+
+def test_a_list_with_pictures_or_inner_lists_is_not_figures(tmp_path: Path) -> None:
+    # A portfolio's projects: a year and a title, but a picture each: rows.
+    projects = "".join(
+        f'<article class="project"><img src="img/p{i}.jpg" alt="Project {i}">'
+        f"<span class='year'>202{i}</span><h3>Project {i}</h3></article>"
+        for i in range(1, 4)
+    )
+    # Price plans: a price and a name, and a list of what each includes: rows too.
+    plans = "".join(
+        f'<div class="plan"><h3>Plan {name}</h3><p class="price">€{price}</p>'
+        f"<ul><li>{name} feature one</li><li>{name} feature two</li></ul></div>"
+        for name, price in (("Basic", 9), ("Plus", 19), ("Team", 49))
+    )
+    analysis = analyze(
+        _site(tmp_path, f"<section class='work'>{projects}</section>"
+              f"<section class='pricing'>{plans}</section>"),
+        "website",
+    )  # fmt: skip
+    assert {m.name for m in analysis.models} >= {"Project", "Plan"}
+    assert not any(c.reason.startswith("figures") for c in analysis.page_copy)
+
+
+def test_a_sliders_captions_in_the_same_section_are_still_its_rows(tmp_path: Path) -> None:
+    pictures = "".join(f'<img class="shot" src="img/p{i}.jpg" alt="Shot {i}">' for i in (1, 2, 3))
+    captions = "".join(f'<p class="caption">Caption number {i}</p>' for i in (1, 2, 3))
+    main = (
+        f'<section class="gallery"><div class="shots">{pictures}</div>'
+        f'<div class="captions">{captions}</div></section>'
+    )
+    analysis = analyze(_site(tmp_path, main), "website")
+    (model,) = analysis.models
+    assert any("item by item" in note for note in model.notes)
+    assert "Caption number 1" in {f.example for f in model.columns}
+
+
+def test_figures_on_a_page_in_german_read_its_numbers(tmp_path: Path) -> None:
+    cards = "".join(
+        f'<article class="haus"><img src="img/p{i}.jpg" alt="Haus {i}"><h3>Haus {i}</h3>'
+        f"<p class='flaeche'>{area} m²</p></article>"
+        for i, area in ((1, "1.250"), (2, "980"), (3, "2.400"))
+    )
+    analysis = analyze(_site(tmp_path, f"<section>{cards}</section>", lang="de"), "website")
+    (model,) = analysis.models
+    assert _types(model)["flaeche"] == "int"
 
 
 def test_names_come_from_the_markup_not_from_a_list(tmp_path: Path) -> None:

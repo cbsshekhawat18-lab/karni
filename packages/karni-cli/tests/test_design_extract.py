@@ -156,6 +156,47 @@ def test_open_decisions_and_maps_extract_cannot_follow_are_refused(tmp_path: Pat
         read_map(tmp_path / "missing.json")
 
 
+def test_numbers_are_read_in_the_pages_language(tmp_path: Path) -> None:
+    design = tmp_path / "design"
+    design.mkdir()
+    page = """<!doctype html><html lang="{lang}"><head><title>Figures</title></head><body><main>
+    <ul class="count">{items}</ul></main></body></html>"""
+    items = "".join(
+        f'<li class="entry" id="e{i}"><b>{n}</b></li>' for i, n in enumerate(("4,000", "1.234,5"))
+    )
+    spec: dict[str, Any] = {
+        "version": 1,
+        "app": "website",
+        "models": [
+            {
+                "name": "Entry",
+                "fields": {"slug": "slug:title", "amount": "decimal:10:2"},
+                "key": "slug",
+                "sources": [
+                    {
+                        "page": "index.html",
+                        "items": "li.entry",
+                        "key": {"from": "attr", "name": "id"},
+                        "values": {"amount": "b"},
+                    }
+                ],
+            }
+        ],
+    }
+    output = tmp_path / "site.json"
+    (design / "index.html").write_text(page.format(lang="en", items=items))
+    rows = _rows(extract(design, spec, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4000" and rows["e1"]["amount"] == "1234.5"
+    (design / "index.html").write_text(page.format(lang="de-DE", items=items))
+    rows = _rows(extract(design, spec, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4.000" and rows["e1"]["amount"] == "1234.5"
+    # The map's "decimal" decides for every page; a value it does not know is refused.
+    rows = _rows(extract(design, {**spec, "decimal": "."}, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4000"
+    with pytest.raises(MapError, match='"decimal" is the decimal mark'):
+        check_map({**spec, "decimal": "comma"})
+
+
 def test_the_maps_marker_goes_around_highlighted_words(tmp_path: Path) -> None:
     data = _map("school")
     assert data["marker"] == "=="

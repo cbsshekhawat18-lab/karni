@@ -13,7 +13,10 @@ writes, read the same way by both:
   as text.
 * :func:`number`, :func:`price` and :func:`date` read a value only when the
   whole text is one (``"12 weeks"`` with the unit kept apart, ``"€4.50"``,
-  ``"14 March 2026"``).
+  ``"14 March 2026"``). A number's thousands separators are read as such
+  (``"4,000"`` is 4000, ``"1 234"`` is 1234), and a page whose ``<html
+  lang>`` writes decimals with a comma is read that way (``"1.234,5"``,
+  ``"4,5"``): :func:`decimal_mark`.
 * :func:`slugify`, :func:`snake` and :func:`pascal` make keys and names from
   the markup's own words.
 """
@@ -26,7 +29,7 @@ from collections.abc import Iterable
 from datetime import date as Date
 from decimal import Decimal, InvalidOperation
 from html import unescape
-from typing import Final
+from typing import Any, Final
 
 from karni_cli.design.parse import Node, collapse
 
@@ -34,10 +37,12 @@ __all__ = [
     "HIGHLIGHT_MARKER",
     "INLINE",
     "date",
+    "decimal_mark",
     "highlight_spec",
     "is_utility_class",
     "mark_pattern",
     "number",
+    "page_language",
     "pascal",
     "plural",
     "price",
@@ -189,9 +194,27 @@ _PRICE = re.compile(
     rf"^(?P<before>[^\d]*?)(?P<cur1>[€$£¥₹₩]|\b(?:{'|'.join(sorted(_CODES))})\b)?\s*{_AMOUNT}"
     rf"\s*(?P<cur2>[€$£¥₹₩]|\b(?:{'|'.join(sorted(_CODES))})\b)?(?P<after>[^\d]*)$"
 )
+#: Separators between groups of three digits: a comma, a dot, an apostrophe, a space.
+_GROUP_SEPARATORS: Final = ",.'’\u00a0\u202f "
 _NUMBER = re.compile(
-    r"^(?P<before>[^\d+\-]{0,12}?)(?P<value>[+-]?\d+(?:[.,]\d+)?)(?P<after>\D{0,16})$"
+    r"^(?P<before>[^\d+\-]{0,12}?)"
+    r"(?P<value>[+-]?(?:\d{1,3}(?:[,.'’\u00a0\u202f ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?))"
+    r"(?P<after>\D{0,16})$"
 )
+#: Languages that write a decimal comma (``4,5``), by their primary subtag (CLDR).
+_COMMA_LANGUAGES: Final = frozenset(
+    {
+        "af", "az", "be", "bg", "bs", "ca", "cs", "da", "de", "el", "es", "et", "eu", "fi",
+        "fo", "fr", "gl", "hr", "hu", "hy", "id", "is", "it", "ka", "kk", "ky", "lt", "lv",
+        "mk", "mn", "nb", "nl", "nn", "no", "pl", "pt", "ro", "ru", "sk", "sl", "sq", "sr",
+        "sv", "tr", "uk", "uz", "vi",
+    }
+)  # fmt: skip
+#: Regions of those languages that write a decimal point.
+_POINT_REGIONS: Final = frozenset(
+    {"de-ch", "de-li", "it-ch", "es-mx", "es-us", "es-pr", "es-do", "es-gt", "es-hn", "es-ni",
+     "es-pa", "es-sv", "fr-ca"}
+)  # fmt: skip
 
 
 def words(text: str) -> list[str]:
@@ -341,14 +364,67 @@ def text_of(
     return text.strip(), found
 
 
-def number(text: str) -> tuple[Decimal, str, str] | None:
-    """``"12 weeks"`` → (12, "", " weeks"). ``None`` unless the text is one number and a unit."""
+def page_language(document: Any, source: str) -> str:
+    """The ``lang`` of a page's ``<html>`` (``"de-CH"``), or ``""``."""
+    root = getattr(document, "root", None)
+    if root is None:
+        return ""
+    html = next(iter(root.find_all("html")), None)
+    return str(html.attr(source, "lang") or "").strip() if html is not None else ""
+
+
+def decimal_mark(language: str | None) -> str | None:
+    """``","`` for a language that writes ``4,5``, ``"."`` for one that writes ``4.5``.
+
+    ``None`` when the page says no language: a number is then read the
+    English way, with a lone ``,`` before three digits a thousands separator.
+    """
+    tag = (language or "").strip().lower().replace("_", "-")
+    if not tag:
+        return None
+    if tag in _POINT_REGIONS or "-".join(tag.split("-")[:2]) in _POINT_REGIONS:
+        return "."
+    return "," if tag.split("-")[0] in _COMMA_LANGUAGES else "."
+
+
+def _decimal(raw: str, decimal: str | None) -> Decimal:
+    """The digits of ``raw`` as a Decimal: group separators dropped, the decimal mark a point."""
+    sign = raw[0] if raw[:1] in "+-" else ""
+    body = raw[len(sign) :]
+    marks = [(index, char) for index, char in enumerate(body) if not char.isdigit()]
+    if not marks:
+        return Decimal(sign + body)
+    kinds = {char for _, char in marks}
+    last_index, last = marks[-1]
+    tail = body[last_index + 1 :]
+    if len(kinds) > 1:
+        point = last if last in ".," else ""  # 1.234,5 and 1,234.5: the last one
+    elif len(marks) > 1 or last not in ".,":
+        point = ""  # 1,234,567, 1 234, 1'234: groups only
+    elif len(tail) != 3:
+        point = last  # 4,5 or 4.25: a decimal, whatever the language
+    else:  # 4,000 or 4.000: the language decides, English by default
+        point = last if last == (decimal or ".") else ""
+    digits = "".join(
+        "." if index == last_index and point else char
+        for index, char in enumerate(body)
+        if char.isdigit() or (index == last_index and point)
+    )
+    return Decimal(sign + digits)
+
+
+def number(text: str, decimal: str | None = None) -> tuple[Decimal, str, str] | None:
+    """``"12 weeks"`` → (12, "", " weeks"). ``None`` unless the text is one number and a unit.
+
+    ``decimal`` is the page's decimal mark (:func:`decimal_mark`): it
+    decides only a lone separator before exactly three digits, ``"4,000"``
+    (4000, or 4.0 where a comma is the decimal mark).
+    """
     match = _NUMBER.match(text.strip())
     if match is None:
         return None
-    raw = match.group("value").replace(",", ".")
     try:
-        value = Decimal(raw)
+        value = _decimal(match.group("value"), decimal)
     except InvalidOperation:
         return None
     return value, match.group("before"), match.group("after")

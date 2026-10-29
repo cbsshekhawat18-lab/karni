@@ -61,7 +61,11 @@ import reads, and works from the markup alone:
    more row of that model, with a flag named after its own class: a founder's
    card above the team cards. It is a decision.
 7. **What stays markup.** A list of one or two short values on one page
-   (opening hours, figures in a row) stays in its template. A list inside an
+   (opening hours, figures in a row) stays in its template. So does a short
+   run of figures, each item a number (`25`, `4,000`, `98%`, `10k+`) and one
+   or two short labels with no picture, link or inner list: a row of
+   statistics is the page's copy, never a model, and never the other half
+   of a slider next to it. A list inside an
    item without pictures becomes a JSON field (a list of strings, of pairs for
    a `<dl>`, of objects), and one with pictures a child model. A section only
    some detail pages have stays in those pages' templates. A structure found
@@ -69,7 +73,8 @@ import reads, and works from the markup alone:
    with a `page` field, and a foreign key to the detail page's model when it
    is on detail pages too. Two lists in one section with as many items each
    (a slider's pictures and its captions) are read as the same rows, item by
-   item, and the report says so.
+   item, and the report says so. Two lists in sections of their own
+   (`<section>`, `<article>`, `<aside>`) are two things.
 
 Every model and field name comes from the design: a class (with BEM
 elements and the item's prefix taken off, so `course-card__summary` is
@@ -88,7 +93,7 @@ folder name. Rename anything in the map.
 | A definition list | `json`, `[term, definition]` pairs |
 | `<time datetime="...">` or a date written out ("14 March 2026") | `date` |
 | A price ("€4.50", "From $12") | `decimal:10:2`, the symbol left in the template |
-| A number with the same words around it ("12 weeks") | `int`, the words left in the template |
+| A number with the same words around it ("12 weeks", "4,000 patients") | `int`, the words left in the template |
 | `01`, `02`, `03` before the items | the rows' `position`, not a field |
 | `01 — Design` | `position`, and `Design` as the field |
 | A badge only some items have ("New", "Vegan") | `bool` |
@@ -233,6 +238,12 @@ overwrites it (`C123`) unless you pass `--force`.
 }
 ```
 
+Numbers are read in the page's language. A separator between groups of
+three digits is dropped (`4,000`, `1 234`, `1'234`). Where the page's `<html
+lang>` writes a decimal comma (`de`, `fr`, `es` and most of Europe), `4.000` is
+4000 and `1.234,5` is 1234.5. Without a language a number is read the English
+way. The map's top-level `"decimal": ","` (or `"."`) decides for every page.
+
 The top-level `"marker"` is what extract writes around highlighted words:
 `"=="` by default, `KARNI_SITE_HIGHLIGHT`'s default. Change it only together
 with the setting's `"marker"`, so the site keeps one convention.
@@ -278,8 +289,8 @@ Wrote content/site.json:
 
 The output is a [content file](content-loading.md): one list of rows per
 model, models others point at first, child rows nested under their parent.
-Each value is parsed by its field's type (`"12 weeks"` is `12`, `"€4.50"` is
-`"4.50"`, `"14 March 2026"` is `"2026-03-14"`), relations name their rows by
+Each value is parsed by its field's type (`"12 weeks"` is `12`, `"4,000"` is
+`4000`, `"€4.50"` is `"4.50"`, `"14 March 2026"` is `"2026-03-14"`), relations name their rows by
 key, and image paths are relative to the output file, pointing into the
 design folder, so `karni load` uploads the designer's own images once.
 Extract lists what to check: an image the design does not have, two pages
