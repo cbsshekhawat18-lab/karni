@@ -27,9 +27,11 @@ from karni_cli.design.sources import (
     _norm,
 )
 from karni_cli.design.values import (
+    HIGHLIGHT_MARKER,
     UI_WORDS,
     date,
     is_utility_class,
+    mark_pattern,
     number,
     pascal,
     plural,
@@ -262,6 +264,72 @@ class Decision:
             "evidence": self.evidence,
             "choices": self.choices,
         }
+
+
+@dataclass
+class HighlightAdvice:
+    """How the site renders highlighted words: one ``KARNI_SITE_HIGHLIGHT`` for every field.
+
+    ``default`` is the markup ``{{ value|highlight }}`` renders (``span.accent``):
+    the one the setting holds (``configured``) or, without one, the one most
+    fields use. ``uses`` lists the fields per markup.
+    """
+
+    marker: str
+    default: str
+    configured: str | None
+    uses: dict[str, list[str]]
+
+    def setting(self) -> dict[str, str]:
+        tag, *classes = self.default.split(".")
+        return {"marker": self.marker, "tag": tag, "class": " ".join(classes)}
+
+    def setting_line(self) -> str:
+        values = ", ".join(f'"{key}": "{value}"' for key, value in self.setting().items())
+        return f"KARNI_SITE_HIGHLIGHT = {{{values}}}"
+
+    def lines(self) -> list[str]:
+        """The advice for a person, one line per markup."""
+        found: list[str] = []
+        own = ", ".join(self.uses.get(self.default, []))
+        element = _element(self.default)
+        if self.configured is not None and self.default in self.uses:
+            found.append(
+                f"{own} set words apart with {element}, the markup karni import design "
+                "--editable already wrote to KARNI_SITE_HIGHLIGHT: render them with "
+                "{{ value|highlight }}."
+            )
+        elif self.configured is not None:
+            found.append(
+                f"KARNI_SITE_HIGHLIGHT renders {element} (karni import design --editable "
+                "wrote it), and no field here uses it."
+            )
+        else:
+            found.append(
+                f"{own} set words apart with {element}. Set `{self.setting_line()}` in "
+                "config/settings.py: then {{ value|highlight }} renders them, and a client "
+                f"types {self.marker}words{self.marker} for the same in an editable block."
+            )
+        for spec, names in self.uses.items():
+            if spec != self.default:
+                found.append(
+                    f"{', '.join(names)} set words apart with {_element(spec)}: render them "
+                    f'with {{{{ value|highlight:"{spec}" }}}}.'
+                )
+        return found
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "marker": self.marker,
+            "setting": self.setting(),
+            "configured": self.configured,
+            "fields": {spec: list(names) for spec, names in self.uses.items()},
+        }
+
+
+def _element(spec: str) -> str:
+    tag, *classes = spec.split(".")
+    return f'<{tag} class="{" ".join(classes)}">' if classes else f"<{tag}>"
 
 
 @dataclass
@@ -558,7 +626,7 @@ def _position_like(values: list[str]) -> bool:
     return [int(n[0]) for n in found if n is not None] == list(range(1, len(values) + 1))
 
 
-_MARKED = re.compile(r"(?<!\\)\*(.+?)(?<!\\)\*")
+_MARKED = mark_pattern(HIGHLIGHT_MARKER)
 
 
 def _decorations(present: list[tuple[Entry, Slot]]) -> tuple[dict[int, str], list[str]]:
@@ -581,7 +649,7 @@ def _decorations(present: list[tuple[Entry, Slot]]) -> tuple[dict[int, str], lis
             dropped.append(spec)
     for key, value in texts.items():
         for mark in common:
-            value = value.replace(f"*{mark}*", "")
+            value = value.replace(f"{HIGHLIGHT_MARKER}{mark}{HIGHLIGHT_MARKER}", "")
         texts[key] = collapse(value)
     return texts, dropped
 

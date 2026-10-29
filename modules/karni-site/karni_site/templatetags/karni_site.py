@@ -110,11 +110,12 @@ def _flatten(values: Iterable[Any]) -> list[str]:
 
 
 @register.filter("highlight")
-def highlight_filter(value: Any, spec: str = "em") -> str:
-    """``{{ heading|highlight:"span.accent" }}``: ``*marked*`` words in the design's markup.
+def highlight_filter(value: Any, spec: str | None = None) -> str:
+    """``{{ heading|highlight }}``: ``==marked==`` words in ``KARNI_SITE_HIGHLIGHT``'s markup.
 
-    See :mod:`karni_site.text`. A spec that is not a tag with classes fails the
-    render with ``SITE003``.
+    ``{{ heading|highlight:"span.accent" }}`` names another markup, ``""``
+    none. See :mod:`karni_site.text`. A spec that is not a tag with classes
+    fails the render with ``SITE003``.
     """
     try:
         return highlight(value, spec)

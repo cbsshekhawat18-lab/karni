@@ -21,6 +21,7 @@ from karni_cli.design.proposal import (
     Binding,
     Decision,
     Field,
+    HighlightAdvice,
     Model,
     Namer,
     PageCopy,
@@ -60,6 +61,7 @@ from karni_cli.design.sources import (
     same_items,
 )
 from karni_cli.design.values import (
+    HIGHLIGHT_MARKER,
     is_utility_class,
     pascal,
     singular,
@@ -89,8 +91,18 @@ def _strong(sources: Sequence[Source]) -> bool:
 
 class _Builder:
     def __init__(
-        self, pages: list[Page], sources: list[Source], mapped: Mapped, namer: Namer, app: str
+        self,
+        pages: list[Page],
+        sources: list[Source],
+        mapped: Mapped,
+        namer: Namer,
+        app: str,
+        configured: str | None = None,
     ) -> None:
+        #: The highlight markup KARNI_SITE_HIGHLIGHT already holds (``span.accent``), when
+        #: ``karni import design --editable`` recorded one.
+        self.configured = configured
+        self.highlight: HighlightAdvice | None = None
         self.pages = pages
         self.sources = sources
         self.mapped = mapped
@@ -149,6 +161,7 @@ class _Builder:
         self.keys()
         self.bind()
         self.types()
+        self.highlights()
         self.decide()
         self.order()
 
@@ -770,6 +783,7 @@ class _Builder:
                     spec not in target.highlight
                     and spec not in options.get("drop", [])
                     and kind == "text"
+                    and target.kind in ("value", "title")
                 ):
                     target.highlight.append(spec)
 
@@ -1529,11 +1543,6 @@ class _Builder:
                     else:
                         f.type, note = infer_type(f.slot_kind, raw)
                         f.note = f.note or note
-                    if f.highlight:
-                        f.note = (
-                            f"highlighted words are *marked*: render with "
-                            f'{{{{ value|highlight:"{f.highlight[0]}" }}}}'
-                        )
                 elif f.kind == "bool":
                     f.type = "bool"
                     missing = False
@@ -1621,6 +1630,30 @@ class _Builder:
             )
             tail.append(Field("position", "int", kind="position", example="1"))
         model.fields = [*head, *model.fields, *tail]
+
+    # highlighted words
+
+    def highlights(self) -> None:
+        """One markup for the site's highlighted words: the one KARNI_SITE_HIGHLIGHT holds
+        (``karni import design --editable`` wrote it), else the one most fields use. A field
+        with another markup names it in the filter."""
+        fields = [(m, f) for m in self.models for f in m.columns if f.highlight]
+        if not fields:
+            return
+        uses: dict[str, list[str]] = {}
+        for model, f in fields:
+            uses.setdefault(f.highlight[0], []).append(f"{model.name}.{f.name}")
+        default = self.configured or max(uses, key=lambda spec: len(uses[spec]))
+        marked = f"{HIGHLIGHT_MARKER}marked{HIGHLIGHT_MARKER}"
+        for _, f in fields:
+            spec = f.highlight[0]
+            how = (
+                "{{ value|highlight }}"
+                if spec == default
+                else (f'{{{{ value|highlight:"{spec}" }}}}')
+            )
+            f.note = f"highlighted words are {marked}: render with {how}"
+        self.highlight = HighlightAdvice(HIGHLIGHT_MARKER, default, self.configured, uses)
 
     # decisions
 

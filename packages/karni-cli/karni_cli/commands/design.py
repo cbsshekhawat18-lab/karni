@@ -43,23 +43,34 @@ def _design_dir(directory: Path) -> Path:
     return directory.resolve()
 
 
-def _app_label(app: str | None) -> str:
-    """``--app``, else the app ``karni import design`` recorded, else ``website``."""
-    if app:
-        return app
+def _record() -> dict[str, Any]:
+    """What ``karni import design`` recorded (``.karni/design.json``), or nothing."""
     for folder in (Path.cwd(), *Path.cwd().parents):
         record = folder / DESIGN_RECORD
         if record.is_file():
             try:
-                found = json.loads(record.read_text(encoding="utf-8")).get("app")
+                found = json.loads(record.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
-                break
-            if found:
-                return str(found)
-            break
+                return {}
+            return found if isinstance(found, dict) else {}
         if (folder / "manage.py").is_file():
             break
-    return "website"
+    return {}
+
+
+def _app_label(app: str | None, record: dict[str, Any]) -> str:
+    """``--app``, else the app ``karni import design`` recorded, else ``website``."""
+    return app or str(record.get("app") or "") or "website"
+
+
+def _recorded_highlight(record: dict[str, Any]) -> str | None:
+    """The markup ``karni import design --editable`` wrote to KARNI_SITE_HIGHLIGHT
+    (``span.accent``), or ``None``."""
+    found = (record.get("editable") or {}).get("highlight")
+    if not isinstance(found, dict) or not found.get("tag"):
+        return None
+    classes = str(found.get("class") or "").split()
+    return str(found["tag"]) + "".join(f".{name}" for name in classes)
 
 
 def _label(path: Path) -> str:
@@ -91,13 +102,15 @@ def analyze(
     footer), and finds the structures that repeat within and across pages:
     cards, list items, a gallery inside each project, a page per doctor. For
     each it infers the fields from the markup (a heading with its highlighted
-    words, text, an image with its alt text, a link to another page, a list
-    of tags, a date, a price, a number) and the relations between them (a
-    card that links to a detail page is that page's model, a list of links
-    to other items is a relation). Names come from the design's classes,
-    headings and pages. It prints ready-to-run `karni make model` commands,
-    models others point at first, and the decisions the markup cannot settle
-    (a hand-picked list, or one a query derives).
+    words kept as ==words==, text, an image with its alt text, a link to
+    another page, a list of tags, a date, a price, a number) and the
+    relations between them (a card that links to a detail page is that
+    page's model, a list of links to other items is a relation). Names come
+    from the design's classes, headings and pages. It prints ready-to-run
+    `karni make model` commands, models others point at first, the decisions
+    the markup cannot settle (a hand-picked list, or one a query derives),
+    and the KARNI_SITE_HIGHLIGHT that renders the highlighted words with
+    `{{ value|highlight }}`.
 
     --map writes a draft content map: which structure is which model and
     which element is which field. Edit it, answer its decisions, then run
@@ -106,9 +119,12 @@ def analyze(
     Example: karni design analyze ../design --map content/design-map.json
     """
     source = _design_dir(directory)
-    label = _app_label(app)
+    record = _record()
+    label = _app_label(app, record)
     try:
-        analysis = run_analysis(source, label, label=_label(source))
+        analysis = run_analysis(
+            source, label, label=_label(source), highlight=_recorded_highlight(record)
+        )
     except ValueError as exc:
         raise CliError(str(exc), code="C111") from None
     if map_file is not None:

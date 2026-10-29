@@ -1,19 +1,25 @@
-"""Words a design highlights inside a line, kept as ``*marked words*`` in content.
+"""Words a field highlights, rendered in the design's markup: the ``highlight`` filter.
 
-``karni design extract`` writes ``Custom homes, *crafted for place*`` for a
-heading whose last words the design wraps in ``<span class="accent">``. The
-``highlight`` filter (``{% load karni_site %}``) writes that markup back,
-everything else escaped:
+A site has one convention for highlighted words, ``KARNI_SITE_HIGHLIGHT``:
+the marker a client types around them (``==words==`` by default) and the
+element they render in (``<mark>``). Editable blocks use it, and so do model
+fields: ``karni design extract`` writes ``Custom homes, ==crafted for place==``
+for a heading whose last words the design wraps in ``<span class="accent">``,
+and staff edit the field in the admin the same way they edit a block.
 
-``{{ project.heading|highlight:"span.accent" }}``
-    ``Custom homes, <span class="accent">crafted for place</span>``.
+``{{ project.heading|highlight }}``
+    the words in ``KARNI_SITE_HIGHLIGHT``'s tag and class:
+    ``Custom homes, <span class="accent">crafted for place</span>`` once the
+    setting says ``"tag": "span", "class": "accent"``.
 ``{{ slide.badge|highlight:"span.dot" }}``, ``{{ x|highlight:"em" }}``
-    any tag, with or without classes.
+    another markup for this value, any tag with or without classes. The
+    marker is still the setting's.
 ``{{ project.heading|highlight:"" }}``
     the words without the marks, for a ``<title>`` or an ``alt``.
 
-A literal asterisk is written ``\\*`` in the content. Staff edit the field in
-the admin as plain text with asterisks: no HTML reaches the page.
+Everything else is escaped: no HTML from a field reaches the page. A
+backslash before the marker (``\\==``) keeps it as typed, as it does in an
+editable block (:func:`karni_site.sanitize.apply_marks`).
 
 Override / escape hatch: :func:`highlight` is a plain function, so a
 project's own filter can call it with another markup.
@@ -28,9 +34,10 @@ from django.utils.html import conditional_escape
 from django.utils.safestring import SafeString, mark_safe
 from karni.exceptions import KarniValueError
 
+from karni_site import sanitize
+
 __all__ = ["highlight", "markup"]
 
-_MARKED: Final = re.compile(r"(?<!\\)\*(.+?)(?<!\\)\*", re.DOTALL)
 _TAG: Final = re.compile(r"^[a-z][a-z0-9-]*$")
 _CLASS: Final = re.compile(r"^-?[_a-zA-Z][-_a-zA-Z0-9]*$")
 
@@ -53,9 +60,18 @@ def markup(spec: str) -> tuple[str, str]:
     return f"<{tag}{attribute}>", f"</{tag}>"
 
 
-def highlight(value: Any, spec: str = "em") -> SafeString:
-    """``value`` escaped, each ``*marked*`` part wrapped in the markup ``spec`` names."""
-    opening, closing = markup(str(spec))
+def highlight(value: Any, spec: str | None = None) -> SafeString:
+    """``value`` escaped, each part between two markers wrapped in the highlight markup.
+
+    The marker is ``KARNI_SITE_HIGHLIGHT``'s. The markup is the setting's tag
+    and class without ``spec``, else the one ``spec`` names (``""``: none).
+    """
+    mark = sanitize.highlight()
+    if spec is None:
+        opening, closing = (mark.start_tag(), mark.end_tag()) if mark.tag else ("", "")
+    else:
+        opening, closing = markup(str(spec))
     escaped = str(conditional_escape("" if value is None else value))
-    wrapped = _MARKED.sub(lambda match: f"{opening}{match.group(1)}{closing}", escaped)
-    return mark_safe(wrapped.replace("\\*", "*"))  # noqa: S308 - every part was escaped above
+    marker = str(conditional_escape(mark.marker))
+    # Every part was escaped above, the markup is a validated tag and class.
+    return mark_safe(sanitize.apply_marks(escaped, marker, opening, closing))  # noqa: S308

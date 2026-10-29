@@ -228,7 +228,8 @@ tags work in a template written by hand:
   changes it. Once they change it, their version stays.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
-  highlight. Bold, emphasis and links are kept, and everything else is
+  highlight (a backslash before the marker keeps it as typed). Model fields
+  rendered with `{{ value|highlight }}` read the same markers. Bold, emphasis and links are kept, and everything else is
   removed when it is saved: scripts, styles, event attributes, `javascript:`
   links.
 - **Images** are uploaded in place of the design's. The `<img>` keeps its
@@ -297,10 +298,13 @@ karni_site %}` at the top of a template gives it:
 - `{% csp_hash %}` and `{% csp_allow %}`, below.
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
-- `{{ value|highlight:"span.accent" }}` writes the words a field keeps as
-  `*marked words*` in the design's markup (`em`, `span.accent`, any tag with
-  classes), everything else escaped. `karni design extract` keeps the words a
-  heading sets apart that way, and `|highlight:""` drops the marks.
+- `{{ value|highlight }}` renders the words a field keeps between the
+  highlight markers (`==marked words==`) in `KARNI_SITE_HIGHLIGHT`'s tag and
+  class, everything else escaped: the same convention an editable block
+  uses, so a client types `==words==` everywhere. `karni design extract`
+  keeps the words a heading sets apart that way. `|highlight:"em"` names
+  another markup for one value, `|highlight:""` drops the marks, and a
+  backslash before the marker (`\==`) keeps it as typed.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu

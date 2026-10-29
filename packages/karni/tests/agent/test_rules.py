@@ -158,7 +158,8 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
     load = next(step for step in steps if "karni load" in step)
     assert "Nothing changed" in load and "karni seed" in load
     loops = next(step for step in steps if "{% for %}" in step)
-    assert "|highlight:" in loops and "<slug:slug>" in loops and "Model.objects" in loops
+    assert "|highlight }}" in loops and "KARNI_SITE_HIGHLIGHT" in loops
+    assert "<slug:slug>" in loops and "Model.objects" in loops
     assert "K309" in procedure.rules and "{arguments}" in procedure.intro
     assert "nothing is invented" in procedure.outro.lower()
 

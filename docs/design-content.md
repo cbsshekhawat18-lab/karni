@@ -74,7 +74,7 @@ folder name. Rename anything in the map.
 
 | The markup shows | The field |
 |---|---|
-| A heading, with words set apart (`<em>`, `<span class="accent">`) | `str`, the words kept as `*marked words*` |
+| A heading, with words set apart (`<em>`, `<span class="accent">`) | `str`, the words kept as `==marked words==` |
 | A paragraph, or several in a row | `str`, or `text` joined by blank lines |
 | An image | `image`, and its `alt` as `<name>_alt` |
 | A link to a page of the design that is not a row | `str:200`, the page's URL path |
@@ -127,8 +127,8 @@ Teacher: 3 row(s), on teachers.html
 Course: 4 row(s), on courses.html, courses/drawing.html, ... and 2 more
   detail pages: 4 (courses/pottery.html, ...)
   title        str:80               Wheel pottery
-  tagline      str:80               Shape clay *by hand*
-                                    note: highlighted words are *marked*: render with {{ value|highlight:"em" }}
+  tagline      str:80               Shape clay ==by hand==
+                                    note: highlighted words are ==marked==: render with {{ value|highlight }}
   weeks        int                  12 weeks
   start        date                 2026-09-01
   price        decimal:10:2         $240
@@ -144,6 +144,9 @@ Decide (2), the markup cannot tell:
      It shows 3 of 4: Wheel pottery, Life drawing, Weaving basics.
   ...
 
+Highlighted words (kept as ==words==, one convention):
+  - Course.tagline set words apart with <em>. Set `KARNI_SITE_HIGHLIGHT = {"marker": "==", "tag": "em", "class": ""}` in config/settings.py: then {{ value|highlight }} renders them, and a client types ==words== for the same in an editable block.
+
 Commands (models others point at come first):
   karni make model Teacher title:str:80 slug:slug:title photo:image ... --app website --order position
   karni make model Course title:str:80 slug:slug:title ... 'teacher:fk:Teacher?' position:int --app website --order position
@@ -155,6 +158,23 @@ design's order, and `--key position` lets `karni load` match a child row by
 its parent and position. A field a decision names joins its model's command
 once you keep it (a list of the same model, once the model exists, with
 `--force`). `--app` defaults to the app `karni import design` used.
+
+### Highlighted words: one convention
+
+A site has one convention for highlighted words, `KARNI_SITE_HIGHLIGHT`
+([karni-site](public-site.md#the-karni-site-module)): the marker a client
+types around them (`==words==` by default) and the element they render in.
+Editable blocks use it, and the fields analyze proposes use it too: extract
+keeps the words a heading sets apart as `==crafted for place==`, so staff
+edit a field and a block the same way. A marker the text itself holds is
+written with a backslash before it (`\==`).
+
+The report says which markup the design uses and where. When `karni import
+design --editable` already wrote `KARNI_SITE_HIGHLIGHT` with that markup,
+it says so. Otherwise it gives the setting to add, so that
+`{{ value|highlight }}` needs no argument. A field whose markup differs (an
+icon in a badge, `<span class="dot">`) names its own:
+`{{ slide.badge|highlight:"span.dot" }}`.
 
 `--json` prints the same as stable JSON: the pages, the models with every
 field (type, optional, example, the relation's target, the decision), the
@@ -173,6 +193,7 @@ overwrites it (`C123`) unless you pass `--force`.
   "version": 1,
   "design": "../../design",
   "app": "website",
+  "marker": "==",
   "models": [
     {
       "name": "Course",
@@ -205,6 +226,10 @@ overwrites it (`C123`) unless you pass `--force`.
   ]
 }
 ```
+
+The top-level `"marker"` is what extract writes around highlighted words:
+`"=="` by default, `KARNI_SITE_HIGHLIGHT`'s default. Change it only together
+with the setting's `"marker"`, so the site keeps one convention.
 
 A **source** is where a model's items are: `page` (or `pages`, for detail
 pages and lists on them), `items` (a selector for the items, absent when the
@@ -287,7 +312,7 @@ def course(request: HttpRequest, slug: str) -> HttpResponse:
 ```django
 {% load static karni_site %}
 <h1 class="course__title">{{ course.title }}</h1>
-<h2 class="course__tagline">{{ course.tagline|highlight:"em" }}</h2>
+<h2 class="course__tagline">{{ course.tagline|highlight }}</h2>
 <div class="gallery">
   {% for picture in course.courseimage_set.all %}
   <figure class="gallery__item"><img src="{{ picture.image.url }}" alt="{{ picture.image_alt }}"><figcaption>{{ picture.caption }}</figcaption></figure>
@@ -295,9 +320,11 @@ def course(request: HttpRequest, slug: str) -> HttpResponse:
 </div>
 ```
 
-`{{ value|highlight:"span.accent" }}` (from [karni-site](public-site.md#the-karni-site-module))
-writes the `*marked words*` back in the design's markup, everything else
-escaped. `|highlight:""` drops the marks, for a `<title>` or an `alt`.
+`{{ value|highlight }}` (from [karni-site](public-site.md#the-karni-site-module))
+writes the `==marked words==` back in `KARNI_SITE_HIGHLIGHT`'s markup (here
+`{"marker": "==", "tag": "em", "class": ""}`), everything else escaped.
+`|highlight:"span.dot"` names another markup for one value, and
+`|highlight:""` drops the marks, for a `<title>` or an `alt`.
 
 ## Limits and escape hatches
 

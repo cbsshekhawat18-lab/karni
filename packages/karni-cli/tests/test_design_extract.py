@@ -57,7 +57,7 @@ def test_extract_writes_load_content_with_image_paths_relative_to_the_file(tmp_p
     assert pottery["title"] == "Wheel pottery" and pottery["position"] == 1
     assert pottery["weeks"] == 12 and pottery["price"] == "240"
     assert pottery["start"] == "2026-09-01" and pottery["level"] == "Beginner"
-    assert pottery["tagline"] == "Shape clay *by hand*"
+    assert pottery["tagline"] == "Shape clay ==by hand=="
     assert pottery["topics"] == ["Centring and opening", "Pulling walls", "Trimming and glazing"]
     assert pottery["teacher"] == "mia-chen" and pottery["related"] == ["drawing", "printing"]
     assert pottery["description"].startswith("Twelve evenings on the potter's wheel")
@@ -111,7 +111,7 @@ def test_nested_rows_point_at_their_parent_and_pages_set_their_placement(tmp_pat
     studio = extract(DESIGNS / "studio", _map("studio"), tmp_path / "b.json").content
     slides = _rows(studio, "website.Slide")
     assert slides["home-2"]["page"] == "home" and slides["about-1"]["page"] == "about"
-    assert slides["home-1"]["heading"] == "Houses that *listen* to their site"
+    assert slides["home-1"]["heading"] == "Houses that ==listen== to their site"
     assert "heading" not in slides["about-1"]  # the captions are only on the home page
     members = _rows(studio, "website.Member")
     assert members["ola-nord"]["founder"] is True and members["ola-nord"]["awards"] == [
@@ -154,6 +154,20 @@ def test_open_decisions_and_maps_extract_cannot_follow_are_refused(tmp_path: Pat
         read_map(bad)
     with pytest.raises(MapError, match="no such file"):
         read_map(tmp_path / "missing.json")
+
+
+def test_the_maps_marker_goes_around_highlighted_words(tmp_path: Path) -> None:
+    data = _map("school")
+    assert data["marker"] == "=="
+    data["marker"] = "**"
+    rows = _rows(
+        extract(DESIGNS / "school", data, tmp_path / "site.json").content, "website.Course"
+    )
+    assert rows["pottery"]["tagline"] == "Shape clay **by hand**"
+    assert rows["drawing"]["title"] == "Life drawing"  # a field without highlight has no marks
+    data["marker"] = " "
+    with pytest.raises(MapError, match='"marker" is the text around highlighted words'):
+        check_map(data)
 
 
 def test_a_field_renamed_in_the_map_is_read_under_its_new_name(tmp_path: Path) -> None:
@@ -262,6 +276,19 @@ def test_the_app_defaults_to_the_one_the_import_recorded(
     monkeypatch.chdir(tmp_path / "content")
     data = json.loads(ok("design", "analyze", str(DESIGNS / "practice"), "--json").output)
     assert data["app"] == "site" and data["commands"][0].endswith("--app site --order position")
+
+
+def test_the_highlight_import_design_editable_recorded_is_the_sites(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / ".karni").mkdir()
+    record = {"version": 1, "app": "website", "editable": {"highlight": {"tag": "em", "class": ""}}}
+    (tmp_path / ".karni" / "design.json").write_text(json.dumps(record))
+    monkeypatch.chdir(tmp_path)
+    data = json.loads(ok("design", "analyze", str(DESIGNS / "school"), "--json").output)
+    assert data["highlight"]["configured"] == "em"
+    text = ok("design", "analyze", str(DESIGNS / "school")).output
+    assert "already wrote to KARNI_SITE_HIGHLIGHT: render them with {{ value|highlight }}" in text
 
 
 def test_the_design_commands_are_listed() -> None:
