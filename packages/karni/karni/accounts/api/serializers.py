@@ -34,6 +34,8 @@ __all__ = [
     "PasswordResetConfirmSerializer",
     "PasswordResetSerializer",
     "RegisterSerializer",
+    "SocialNameSerializer",
+    "SocialTokenLoginSerializer",
 ]
 
 _PASSWORD_STYLE: dict[str, str] = {"input_type": "password"}
@@ -219,3 +221,26 @@ class EmailChangeSerializer(CurrentPasswordMixin):
     """
 
     new_email = serializers.EmailField()
+
+
+class SocialNameSerializer(serializers.Serializer):
+    """Experimental. The optional ``name`` of ``social/<provider>/``: Apple's first sign-in."""
+
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+
+
+class SocialTokenLoginSerializer(serializers.Serializer):
+    """Experimental. Request body of ``social/<provider>/``: the ID token, a nonce and a name.
+
+    ``nonce`` is the raw value the app generated for this sign-in (the token
+    carries it, or its SHA-256 hex digest). ``name`` is used only when the
+    token creates an account and carries no name itself, which is what Apple
+    does: it sends the name to the app once, on the first sign-in.
+    """
+
+    id_token = serializers.CharField(max_length=16384, trim_whitespace=True)
+    nonce = serializers.CharField(
+        max_length=512, required=False, allow_blank=True, trim_whitespace=True
+    )
+    name = SocialNameSerializer(required=False, allow_null=True)

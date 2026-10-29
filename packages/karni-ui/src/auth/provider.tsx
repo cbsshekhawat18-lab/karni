@@ -47,7 +47,13 @@ import { karniKeys } from "../hooks/keys";
 import { useKarniClient } from "../schema/provider";
 import { AuthEngine } from "./engine";
 import { createLocalStorageTokenStorage, type TokenStorage } from "./storage";
-import type { AuthStatus, KarniUser, LoginResult } from "./types";
+import type {
+  AuthStatus,
+  KarniUser,
+  LoginResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+} from "./types";
 
 export interface AuthProviderProps {
   /**
@@ -79,6 +85,17 @@ export interface AuthContextValue {
    * mode), e.g. after starting or stopping an impersonated session.
    */
   adoptTokens(access: string | null, refresh: string | null): Promise<void>;
+  /**
+   * Experimental. Signs in with a provider's ID token (`POST
+   * <authBasePath>/social/<provider>/`). Optional so a hand-built context
+   * value (stories, tests) stays valid. `AuthProvider` always provides it.
+   * Use it through `useSocialLogin` or `SocialButton`.
+   */
+  socialLogin?: (
+    provider: string,
+    idToken: string,
+    options?: SocialSignInOptions,
+  ) => Promise<SocialLoginResult>;
 }
 
 /**
@@ -146,6 +163,7 @@ export function AuthProvider({
       logout: () => engine.logout(),
       refresh: () => engine.refresh(),
       adoptTokens: (access, refresh) => engine.adoptTokens(access, refresh),
+      socialLogin: (provider, idToken, options) => engine.socialLogin(provider, idToken, options),
     }),
     [engine, snapshot],
   );

@@ -157,6 +157,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("api", "Response caching per viewset (`Cache`, `Uncached`)"),
     Capability(
         "api",
+        "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "
+        "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
@@ -204,6 +209,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
+    Capability(
+        "ui",
+        "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "
+        "SDK. Experimental tier",
+    ),
     Capability(
         "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "

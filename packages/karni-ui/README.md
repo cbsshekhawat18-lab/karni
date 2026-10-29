@@ -328,6 +328,7 @@ holds Karni's own, so a project can wrap one instead of rewriting it. Every
 | `ChangeHistory`  | `Loading`, `Error`, `Empty`, `Entry`                                                     |
 | `LoginForm`      | `Error` (+ `id` for `aria-describedby`, and `described`: the failure worded for sign-in) |
 | `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
+| `SocialButton`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
 
 Loading placeholders take the real layout from the start (ResourceDetail
 draws one row per field the schema declares, plus the title and action
@@ -738,6 +739,35 @@ and a dropped connection. The message is announced. Both fields point at it
 (`aria-describedby`) and are marked invalid when they are the problem. The
 email stays after a failure, and wrong credentials clear and focus the password.
 The email field takes focus on mount (`autoFocus={false}` turns that off).
+
+### Sign-in with an ID token (experimental)
+
+`SocialButton` signs in with a Google, Microsoft or Apple ID token, against
+the backend's `POST <authBasePath>/social/<provider>/` ([accounts: sign-in with
+an ID token](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-an-id-token-google-microsoft-apple)).
+Karni bundles no provider SDK: `getIdToken` is your own call into Google
+Identity Services, MSAL or Sign in with Apple JS, and resolves with the ID
+token (and the nonce you generated), or `null` when the user closed the
+provider's window.
+
+```tsx
+<SocialButton
+  provider="google"
+  getIdToken={async () => ({ idToken: await askGoogleForAnIdToken(nonce), nonce })}
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The button shows progress, says in plain words why a sign-in was refused
+(from the Karni code: an unverified email, sign-up closed, an inactive
+account, ...), and shows a new account that waits for an administrator as its
+own state (`onAwaitingApproval`). For a button of your own, use the hook:
+`const { signIn, status, error } = useSocialLogin("google")`. `signIn(idToken,
+{ nonce, name })` adopts the token pair in JWT mode, re-syncs the session
+user in session mode, and resolves `{ ok, user }`, `{ requires2fa,
+ephemeralToken }` (LoginForm's 2FA step) or `{ awaitingApproval, detail }`.
+Both names are experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your

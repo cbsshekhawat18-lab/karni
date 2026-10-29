@@ -42,7 +42,7 @@ endif
 
 UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui
 
-KARNI_EXTRAS := s3,images,sentry,social,2fa
+KARNI_EXTRAS := s3,images,sentry,social,social-token,2fa
 # ruff is pinned to .pre-commit-config.yaml's rev: one version decides the format
 # (0.17 started formatting Python blocks inside Markdown).
 PY_DEV_TOOLS := pytest pytest-django factory-boy Pillow ruff==0.16.9 mypy types-PyYAML pre-commit

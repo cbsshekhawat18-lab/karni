@@ -28,3 +28,24 @@ export type AuthStatus = "loading" | "authenticated" | "anonymous";
  */
 export type LoginResult =
   { ok: true; user: KarniUser } | { requires2fa: true; ephemeralToken: string };
+
+/**
+ * Experimental. What the app sends along with an ID token. `nonce` is the raw
+ * value it generated for this sign-in (the token carries it, or its SHA-256
+ * hex digest, as Apple does). `name` is Apple's first-sign-in name, used only
+ * when the token creates an account.
+ */
+export interface SocialSignInOptions {
+  nonce?: string;
+  name?: { firstName?: string; lastName?: string };
+}
+
+/**
+ * Experimental. The result of signing in with an ID token: signed in, the 2FA
+ * step (the same `ephemeralToken` LoginForm's `on2FA` receives), or a new
+ * account that waits for an administrator (nothing signed in).
+ */
+export type SocialLoginResult =
+  | { ok: true; user: KarniUser }
+  | { requires2fa: true; ephemeralToken: string }
+  | { awaitingApproval: true; detail: string };

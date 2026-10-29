@@ -12,6 +12,9 @@
  *   search + pagination (ResourceSelect fodder)
  * - *\/api/auth/{login,refresh,logout,me,csrf,2fa/login}/ → JWT flows with
  *   rotating refresh tokens (D6)
+ * - POST *\/api/auth/social/{google,microsoft,apple}/ → sign-in with an ID
+ *   token: each of TEST_ID_TOKENS answers one way (signed in, the 2FA gate,
+ *   awaiting approval, refusals with their Karni codes). Other providers 404
  *
  * State: module-level in-memory DB + token registry. Vitest isolates test
  * files, so state is fresh per file; within a file call `resetMswData()` in
@@ -172,6 +175,17 @@ export const TEST_2FA_USER = {
   roles: ["viewer"],
 };
 
+/** ID tokens the simulated `social/<provider>/` endpoint understands, one per outcome. */
+export const TEST_ID_TOKENS = {
+  valid: "id-token-valid",
+  twoFactor: "id-token-2fa",
+  pending: "id-token-pending",
+  expired: "id-token-expired",
+  unverified: "id-token-unverified",
+  closed: "id-token-signup-closed",
+  unavailable: "id-token-keys-unavailable",
+} as const;
+
 export const TEST_OTP = "123456";
 export const TEST_EPHEMERAL_TOKEN = "ephemeral-2fa-token";
 export const TEST_CSRF_TOKEN = "test-csrf-token";
@@ -197,8 +211,15 @@ function issueTokens(): { access: string; refresh: string } {
   return { access, refresh };
 }
 
+/** Every body posted to `social/<provider>/`, with the provider, for assertions. */
+const socialRequests: Array<{ provider: string; body: unknown }> = [];
+
 /** Hooks for auth suites to stage 401s and dead sessions deterministically. */
 export const authTestControls = {
+  /** The bodies posted to `social/<provider>/` so far (cleared by resetMswData). */
+  socialRequests(): ReadonlyArray<{ provider: string; body: unknown }> {
+    return socialRequests;
+  },
   /** Expire every issued access token: next Bearer request 401s (D6 races). */
   invalidateAccessTokens(): void {
     authState.validAccessTokens.clear();
@@ -227,6 +248,7 @@ export function resetMswData(): void {
   authState.counter = 0;
   authState.validAccessTokens.clear();
   authState.currentRefreshToken = null;
+  socialRequests.length = 0;
 }
 
 // --- shared helpers ----------------------------------------------------------
@@ -750,6 +772,43 @@ const authHandlers = [
       );
     }
     return HttpResponse.json(meUser());
+  }),
+
+  http.post("*/api/auth/social/:provider/", async ({ request, params }) => {
+    const provider = String(params["provider"]);
+    const body: unknown = await request.json().catch(() => null);
+    socialRequests.push({ provider, body });
+    const refusal = (status: number, code: string, detail: string) =>
+      HttpResponse.json({ code, detail: `${code}: ${detail}` }, { status });
+    if (!["google", "microsoft", "apple"].includes(provider)) {
+      return refusal(404, "E225", `No sign-in provider '${provider}' is configured.`);
+    }
+    const token = isRecord(body) && typeof body["id_token"] === "string" ? body["id_token"] : "";
+    switch (token) {
+      case TEST_ID_TOKENS.valid:
+        return HttpResponse.json({ ...issueTokens(), user: meUser() });
+      case TEST_ID_TOKENS.twoFactor:
+        return HttpResponse.json({ requires_2fa: true, ephemeral_token: TEST_EPHEMERAL_TOKEN });
+      case TEST_ID_TOKENS.pending:
+        return HttpResponse.json(
+          {
+            code: "E224",
+            detail: "E224: The account was created and awaits an administrator's approval.",
+            awaiting_approval: true,
+          },
+          { status: 202 },
+        );
+      case TEST_ID_TOKENS.expired:
+        return refusal(401, "E218", "The ID token has expired.");
+      case TEST_ID_TOKENS.unverified:
+        return refusal(400, "E222", "The provider did not verify the address.");
+      case TEST_ID_TOKENS.closed:
+        return refusal(400, "E223", "KARNI_SOCIAL_TOKEN_SIGNUP is 'existing'.");
+      case TEST_ID_TOKENS.unavailable:
+        return refusal(503, "E219", "Karni could not fetch the provider's signing keys.");
+      default:
+        return refusal(401, "E215", "The ID token is not a well-formed JWT.");
+    }
   }),
 
   http.get(

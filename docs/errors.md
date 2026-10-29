@@ -612,6 +612,136 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Give the model the path the scope expects (`class Karni: owner_field = 'workspace__members'`, or the scope path), teach the custom scope the new model, or narrow the grant's pattern so it does not cover the model.
 
+<a id="e215"></a>
+
+#### E215: The ID token is not valid
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token (POST <auth>/social/<provider>/)`
+
+**Why Karni objects.** Karni verifies an ID token offline: a JWT signed with one of the provider's published keys, with the algorithm the provider uses, carrying exp, iat, iss, aud and sub. A token that is malformed, signed with another key or algorithm, missing one of those claims, or issued in the future (iat or nbf past the leeway) proves nothing, so the answer is a 401.
+
+**Fix.** Send the ID token itself (not the access token, and not the authorization code) exactly as the provider's SDK returned it, and get a fresh one. A token issued in the future means the server's clock is off: fix the clock, or raise KARNI_SOCIAL_TOKEN_LEEWAY.
+
+<a id="e216"></a>
+
+#### E216: The ID token was issued for another application
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** A token's aud claim names the client id it was issued to. Accepting a token issued to another application would let any app that signs its users in with the same provider sign them in here too, so aud must be one of the configured client ids (401).
+
+**Fix.** Add the client id the app uses to KARNI_SOCIAL_TOKEN_PROVIDERS[<provider>]['client_ids']: the web client id, and each iOS and Android client id (for Apple, the service id and the bundle id).
+
+<a id="e217"></a>
+
+#### E217: The ID token comes from another issuer or tenant
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** Each provider has its own issuer: accounts.google.com, https://appleid.apple.com, or for Microsoft https://login.microsoftonline.com/<tenant id>/v2.0 with the token's own tid. A Microsoft token from a tenant the 'tenants' setting does not allow is refused the same way (401).
+
+**Fix.** Check that the token comes from the provider of the URL it was posted to. For Microsoft, request a v2.0 token and list its tenant (or 'common', 'organizations' or 'consumers') in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['tenants'].
+
+<a id="e218"></a>
+
+#### E218: The ID token has expired
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** ID tokens live minutes to an hour. Karni accepts one up to its exp claim plus KARNI_SOCIAL_TOKEN_LEEWAY seconds (401 after that).
+
+**Fix.** Get a fresh token from the provider's SDK right before posting it. Do not store ID tokens for later.
+
+<a id="e219"></a>
+
+#### E219: The ID token's signing key is unknown
+
+*API 400 response* · from `karni.accounts.social_token.signing_key`
+
+**Why Karni objects.** Karni looks the token's kid up in the provider's key set (JWKS), cached for KARNI_SOCIAL_TOKEN_JWKS_TTL seconds. An unknown kid fetches the key set again, at most once a minute per provider, so a rotated key works within a minute. A kid that is still missing answers 401. A key set that cannot be fetched answers 503.
+
+**Fix.** Send a token the provider issued recently. A 503 means the server cannot reach the provider's JWKS URL: check its outbound network, or the fetcher named in KARNI_SOCIAL_TOKEN_JWKS_FETCHER.
+
+<a id="e220"></a>
+
+#### E220: The ID token's nonce does not match
+
+*API 400 response* · from `karni.accounts.social_token.verify_id_token`
+
+**Why Karni objects.** A nonce binds the token to one sign-in attempt, so a stolen token cannot be replayed. When the request sends a nonce, the token's nonce claim must equal it, or its SHA-256 hex digest (Apple's convention: the app passes the hash to Apple and the raw value to Karni). A provider with 'require_nonce' refuses a request without one (401).
+
+**Fix.** Post the nonce the app generated for this sign-in, the raw value. Generate a new one for every attempt.
+
+<a id="e221"></a>
+
+#### E221: The ID token carries no email address
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** A token whose identity is not linked yet is matched to an account by its email. Without an email claim (for Microsoft, email or an email-shaped preferred_username) there is nothing to match or create (400).
+
+**Fix.** Request the email scope. Apple sends the email only on the first sign-in of a user, so that first answer must reach Karni.
+
+<a id="e222"></a>
+
+#### E222: The provider did not verify the email address
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** Karni creates an account from a token, or links a token to the account with the same email, only when the provider says it verified the address. Otherwise anyone could put someone else's address in a token and take over their account. Microsoft tokens count as verified only with the xms_edov claim true or a tenant listed in 'trusted_tenants' (400). An identity already linked signs in without this check.
+
+**Fix.** For Microsoft, add the xms_edov optional claim to the app registration, or list your organisation's tenant id in KARNI_SOCIAL_TOKEN_PROVIDERS['microsoft']['trusted_tenants']. Otherwise the user signs in with a password, or with a provider that verified the address.
+
+<a id="e223"></a>
+
+#### E223: Sign-up with an ID token is closed
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** KARNI_SOCIAL_TOKEN_SIGNUP is 'existing' (the default while KARNI_ACCOUNTS_REGISTRATION is False): only an identity already linked, or an account with the token's email, may sign in. Nobody else gets an account (400).
+
+**Fix.** Create the account first (in the admin, or let staff invite the user), then sign in with the token. To let anyone in, set KARNI_SOCIAL_TOKEN_SIGNUP = 'open', or 'approval' to create accounts an administrator activates.
+
+<a id="e224"></a>
+
+#### E224: The account awaits an administrator's approval
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** With KARNI_SOCIAL_TOKEN_SIGNUP = 'approval', a token without an account creates an inactive one. The answer is a 202 with this code and no credentials, again on each sign-in until an administrator activates the account.
+
+**Fix.** An administrator ticks 'Active' on the user's page in the admin. The next sign-in then succeeds.
+
+<a id="e225"></a>
+
+#### E225: This sign-in provider is not configured
+
+*API 400 response* · from `karni.accounts.api.views.SocialTokenLoginView`
+
+**Why Karni objects.** Each provider named in KARNI_SOCIAL_TOKEN_PROVIDERS gets its own social/<provider>/ route. A provider the setting does not name answers 404.
+
+**Fix.** Add the provider with its client ids to KARNI_SOCIAL_TOKEN_PROVIDERS, or post to the route of a configured one.
+
+<a id="e226"></a>
+
+#### E226: The account is inactive
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** An inactive user never signs in, by password or by token (401).
+
+**Fix.** An administrator activates the account in the admin, if it should sign in.
+
+<a id="e227"></a>
+
+#### E227: An account with this email exists and is not linked
+
+*API 400 response* · from `karni.accounts.social_token.sign_in`
+
+**Why Karni objects.** KARNI_SOCIAL_TOKEN_LINK_VERIFIED is False, so a token is never linked to an existing account that has a password, even when the provider verified the email (400).
+
+**Fix.** Sign in with the password. Linking a provider from a signed-in session is not built yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the default).
+
 ### 3xx · Admin
 
 <a id="e301"></a>
@@ -817,6 +947,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni_settings() reads a few settings during the call to compute others: KARNI_AUTH_MODE, KARNI_2FA, KARNI_SOCIAL_AUTH and KARNI_SOCIAL_PROVIDERS decide INSTALLED_APPS and MIDDLEWARE, KARNI_FRONTEND_URL feeds CSRF_TRUSTED_ORIGINS, KARNI_AUTH_THROTTLE_RATES the throttle rates, KARNI_JSON_LOGS builds LOGGING, KARNI_CACHE builds CACHES and KARNI_STORAGE builds STORAGES. Assigned after the call, such a setting changes none of them, and the project would run with the settings computed from the old value. A KARNI_ADMIN_LOGO with no SITE_LOGO entry in UNFOLD (UNFOLD replaced after the call) shows no logo either.
 
 **Fix.** Move the assignment above the `karni_settings(globals())` line, pass it as a keyword (`karni_settings(globals(), KARNI_AUTH_MODE='session')`) or set its environment variable in .env. For the logo, change UNFOLD in place instead of replacing it.
+
+<a id="e509"></a>
+
+#### E509: Sign-in with an ID token needs the cryptography package
+
+*exception* · from `karni.conf.validation (at startup), karni.accounts.social_token`
+
+**Why Karni objects.** Google, Microsoft and Apple sign their ID tokens with RS256 (an EC key uses ES256). PyJWT verifies those only with the cryptography package, which a plain install of Karni leaves out.
+
+**Fix.** Run pip install 'karni[social-token]', or empty KARNI_SOCIAL_TOKEN_PROVIDERS.
 
 <a id="w510"></a>
 

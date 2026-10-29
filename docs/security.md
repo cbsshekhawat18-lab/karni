@@ -71,7 +71,10 @@ tokens are short-lived JWTs (15 minutes) with refresh rotation and
 blacklisting on logout and password reset. Cookie sessions with the CSRF
 bootstrap are the alternative. One-time tokens are stored hashed, single-use,
 per purpose, with TTLs. There is an email-verification gate, plus optional
-TOTP 2FA and social login. See [accounts](accounts.md).
+TOTP 2FA, social login, and (experimental) [sign-in with a Google, Microsoft
+or Apple ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple),
+verified offline against the audience, issuer, nonce and verified email. See
+[accounts](accounts.md).
 
 **Abuse.** Every auth endpoint has per-IP throttles, and login has a
 per-account throttle as well (`KARNI_AUTH_THROTTLE_RATES`). `NUM_PROXIES` is

@@ -63,6 +63,7 @@ from karni.accounts.api.serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     RegisterSerializer,
+    SocialTokenLoginSerializer,
 )
 from karni.accounts.api.throttles import AccountRateThrottle, AuthScopedRateThrottle
 from karni.accounts.tokens import TokenError
@@ -83,6 +84,7 @@ __all__ = [
     "PasswordResetView",
     "RefreshView",
     "RegisterView",
+    "SocialTokenLoginView",
     "auth_mode",
 ]
 
@@ -258,6 +260,104 @@ class LoginView(APIView):
         else:
             _session_login(request, user)
         _log().info("accounts.login.ok", user_id=str(user.pk), mode=auth_mode())
+        data["user"] = MeSerializer(user, context={"request": request}).data
+        return Response(data)
+
+
+@extend_schema(
+    request=SocialTokenLoginSerializer,
+    responses={200: OpenApiTypes.OBJECT, 202: OpenApiTypes.OBJECT},
+)
+@method_decorator(ensure_csrf_cookie, name="dispatch")
+class SocialTokenLoginView(APIView):
+    """Experimental. ``POST social/<provider>/``: sign in with a provider's ID token (both modes).
+
+    The body is ``{"id_token", "nonce"?, "name"?}`` (see
+    :class:`SocialTokenLoginSerializer`). The token is verified offline by
+    :func:`karni.accounts.social_token.verify_id_token` and the account
+    chosen by :func:`karni.accounts.social_token.sign_in`. The answer is the
+    one ``login/`` gives: ``{"access", "refresh", "user"}`` in JWT mode, a
+    session plus ``{"user"}`` in session mode, or the 2FA gate payload. A
+    refusal is ``{"code", "detail"}`` with a 400 or 401 (404 ``E225`` for a
+    provider that is not configured, 503 ``E219`` when its keys cannot be
+    fetched), and a new account awaiting approval is a 202 with ``E224`` and
+    no credentials.
+
+    ``karni.accounts.urls`` mounts one route per configured provider and
+    passes its name as ``provider``. Override / escape hatch: subclass and
+    declare ``path("api/auth/social/<provider>/", ...)`` before the include,
+    or set ``throttle_classes`` / ``throttle_scope`` (``auth.social``).
+    """
+
+    permission_classes: ClassVar[list[type]] = [AllowAny]
+    throttle_classes: ClassVar[list[type]] = [AuthScopedRateThrottle]
+    throttle_scope = "auth.social"
+    serializer_class = SocialTokenLoginSerializer
+
+    def post(self, request: Request, provider: str = "") -> Response:
+        from karni.accounts import social_token
+
+        try:
+            idp = social_token.get_provider(provider)
+            if idp is None:
+                raise social_token.SocialTokenRefused(
+                    "provider_not_configured",
+                    f"No sign-in provider {provider!r} is configured in "
+                    "KARNI_SOCIAL_TOKEN_PROVIDERS.",
+                    code="E225",
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            serializer = self.serializer_class(data=request.data, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            body = serializer.validated_data
+            claims = social_token.verify_id_token(idp, body["id_token"], nonce=body.get("nonce"))
+            result = social_token.sign_in(idp, claims, name=body.get("name"))
+        except social_token.SocialTokenRefused as exc:
+            _log().warning(
+                "accounts.social.refused",
+                provider=provider,
+                reason=exc.reason,
+                code=exc.code,
+                **({"email": email_fingerprint(exc.email)} if exc.email else {}),
+            )
+            return Response(exc.payload(), status=exc.status)
+
+        user = result.user
+        if result.awaiting_approval:
+            refused = social_token.SocialTokenRefused(
+                "awaiting_approval",
+                "The account was created and awaits an administrator's approval.",
+                code="E224",
+                status=status.HTTP_202_ACCEPTED,
+            )
+            _log().info(
+                "accounts.social.refused",
+                provider=provider,
+                reason=refused.reason,
+                code=refused.code,
+                user_id=str(user.pk),
+            )
+            return Response(refused.payload(), status=refused.status)
+
+        gate = _twofa_gate_payload(user)
+        if gate is not None:
+            _log().info("accounts.social.2fa_required", provider=provider, user_id=str(user.pk))
+            return Response(gate)
+
+        data: dict[str, Any] = {}
+        if auth_mode() == MODE_JWT:
+            data.update(_issue_jwt_pair(user))
+        else:
+            _session_login(request, user)
+        social_token.mark_used(result.identity)
+        _log().info(
+            "accounts.social.ok",
+            provider=provider,
+            user_id=str(user.pk),
+            mode=auth_mode(),
+            created=result.created,
+            linked=result.linked,
+        )
         data["user"] = MeSerializer(user, context={"request": request}).data
         return Response(data)
 

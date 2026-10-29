@@ -11,6 +11,35 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Experimental names: a tier of the stability promise.** A new public name
+  may ship as experimental first: marked `Experimental.` in its docstring, by
+  an *Experimental* note in its docs and by *Experimental tier* in the
+  reference. It may change or be removed in a minor release without the
+  deprecation cycle, each change noted here and in the migration notes, and
+  it becomes stable once a reference application uses it. Error codes stay
+  permanent. [docs/stability.md](docs/stability.md#experimental-names).
+- **Sign in with a Google, Microsoft or Apple ID token (experimental).** A
+  mobile app or a single-page app posts the ID token its provider's SDK
+  returned to `POST api/auth/social/<provider>/` and gets what `login/`
+  gives: a token pair in JWT mode, a session in session mode, or the 2FA
+  gate. Karni verifies the token offline against the provider's key set
+  (cached, fetched again on a rotated key at most once a minute), with the
+  audience among the configured client ids, the issuer (Microsoft's per
+  tenant, with a `tenants` allowlist), the expiry and the nonce (raw or
+  SHA-256). Providers are small classes a project can add to or replace
+  (`IdTokenProvider`). `KARNI_SOCIAL_TOKEN_SIGNUP` (`open`, `approval` for
+  accounts an administrator activates, or `existing`) and
+  `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` decide who gets in. Linked identities
+  live in the new `SocialIdentity` model (run `karni migrate`), shown
+  read-only in the admin, and a link survives an email change. A Microsoft
+  address counts as verified only with the `xms_edov` claim or a tenant in
+  `trusted_tenants`. Each refusal has a code, `E215` to `E227`, and the
+  endpoint its own throttle scope, `auth.social`. Needs `pip install
+  'karni[social-token]'` (`E509` without it). It works in both modes and does
+  not need `KARNI_SOCIAL_AUTH`, which stays session-only. `@karni/ui` adds
+  `useSocialLogin(provider)` and `SocialButton` (the app's own provider SDK
+  supplies the token: Karni bundles none).
+  [docs/accounts.md](docs/accounts.md#sign-in-with-an-id-token-google-microsoft-apple).
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and

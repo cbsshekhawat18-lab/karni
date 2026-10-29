@@ -8,6 +8,11 @@ here explicitly — ``karni.admin``'s autodiscover deliberately skips
 ``AbstractBaseUser`` subclasses (its amendment C5). Its change form carries
 the **Effective permissions** button (ADR 0002, P5).
 
+Sign-in with an ID token (experimental) links provider identities in
+``SocialIdentity``: they are listed read-only on each user's change page (an
+inline) and in their own read-only changelist. Links are written only by the
+sign-in flow.
+
 The role tables are registered here too: :class:`RoleAdmin` (editable, with
 the **Permission matrix** and **Effective permissions** pages as changelist
 buttons — ``admin:karni_accounts_role_permission_matrix`` and
@@ -99,6 +104,47 @@ def _fallback_urls(
     return urls
 
 
+def _unfold_tabular_inline() -> type[Any]:
+    """django-unfold's ``TabularInline``, or Django's on another ``KARNI_ADMIN_BASE``."""
+    try:
+        from unfold.admin import TabularInline
+    except ImportError:  # pragma: no cover - unfold is a core dependency
+        from django.contrib.admin import TabularInline
+    return TabularInline
+
+
+#: The ``SocialIdentity`` columns the admin shows, all read-only.
+_IDENTITY_FIELDS = ("provider", "subject", "email_at_link", "created_at", "last_used_at")
+
+
+def _build_identity_inline() -> type[Any]:
+    """The read-only list of a user's linked provider identities (experimental)."""
+    from karni.accounts.models import SocialIdentity
+
+    class SocialIdentityInline(_unfold_tabular_inline()):  # type: ignore[misc]
+        """Provider identities linked by sign-in with an ID token. Read-only."""
+
+        model = SocialIdentity
+        fk_name = "user"
+        fields = _IDENTITY_FIELDS
+        readonly_fields = _IDENTITY_FIELDS
+        extra = 0
+        can_delete = False
+        show_change_link = False
+        verbose_name_plural = "linked sign-in identities"
+
+        def has_add_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+    return SocialIdentityInline
+
+
 def _build_user_admin() -> type[Any]:
     """Construct the concrete ``KarniUserAdmin`` class.
 
@@ -169,6 +215,7 @@ def _build_user_admin() -> type[Any]:
         add_fieldsets = (
             (None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),
         )
+        inlines = (_build_identity_inline(),)
         actions_detail = ["effective_permissions"]
 
         @action(
@@ -193,6 +240,32 @@ def _build_user_admin() -> type[Any]:
             ]
 
     return KarniUserAdmin
+
+
+def _build_identity_admin() -> type[Any]:
+    """``SocialIdentityAdmin``: every linked provider identity, read-only (experimental)."""
+    from karni.admin import KarniModelAdmin
+
+    class SocialIdentityAdmin(KarniModelAdmin):
+        """Provider identities linked by sign-in with an ID token. Nothing here is editable."""
+
+        list_display = ("user", "provider", "email_at_link", "created_at", "last_used_at")
+        list_select_related = ("user",)
+        list_filter = ("provider",)
+        search_fields = ("user__email", "email_at_link", "subject")
+        fields = ("user", *_IDENTITY_FIELDS)
+        readonly_fields = ("user", *_IDENTITY_FIELDS)
+
+        def has_add_permission(self, request: Any) -> bool:
+            return False
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+    return SocialIdentityAdmin
 
 
 def _build_role_admins() -> tuple[type[Any], type[Any], type[Any]]:
@@ -342,8 +415,8 @@ def __getattr__(name: str) -> Any:
 
 
 def _register_role_admins() -> None:
-    """Register the role tables on the configured admin site (idempotent)."""
-    from karni.accounts.models import Permission, Role, RolePermission
+    """Register the role tables and linked identities on the admin site (idempotent)."""
+    from karni.accounts.models import Permission, Role, RolePermission, SocialIdentity
 
     site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
     from karni.imports import import_setting
@@ -353,6 +426,8 @@ def _register_role_admins() -> None:
     for model, model_admin in zip((Role, Permission, RolePermission), classes, strict=True):
         if not site.is_registered(model):
             site.register(model, model_admin)
+    if not site.is_registered(SocialIdentity):
+        site.register(SocialIdentity, _build_identity_admin())
 
 
 def _register_default_user_admin() -> None:

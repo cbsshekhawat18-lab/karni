@@ -17,6 +17,12 @@ mode). Only the optional feature blocks are conditional at import time:
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;
+* ``social/<provider>/`` (experimental) exists for each provider named in
+  ``KARNI_SOCIAL_TOKEN_PROVIDERS``: sign-in with that provider's ID token, in
+  both modes (:class:`~karni.accounts.api.views.SocialTokenLoginView`). An
+  unconfigured provider has no route and answers 404. These routes come
+  before allauth's, whose pages sit one level deeper
+  (``social/<provider>/login/``, ``social/signup/``), so the two coexist;
 * ``social/...`` mounts allauth's socialaccount + provider URLs when
   ``KARNI_SOCIAL_AUTH`` is enabled (session mode only — the jwt+social combo
   is rejected by ``karni.conf`` validation, amendment A2). Deliberately *not*
@@ -121,11 +127,34 @@ def _social_urlpatterns() -> list[URLPattern | URLResolver]:
     return patterns
 
 
+def _social_token_urlpatterns() -> list[URLPattern | URLResolver]:
+    """One ``social/<provider>/`` route per ``KARNI_SOCIAL_TOKEN_PROVIDERS`` entry (experimental).
+
+    The route passes the provider's name to the view as ``provider``. A name
+    startup validation would refuse (not a slug, or one of allauth's own
+    ``login`` and ``signup``) gets no route.
+    """
+    from karni.accounts.social_token import PROVIDER_NAME_RE, RESERVED_NAMES
+
+    providers = getattr(settings, "KARNI_SOCIAL_TOKEN_PROVIDERS", None) or {}
+    return [
+        path(
+            f"social/{name}/",
+            views.SocialTokenLoginView.as_view(),
+            {"provider": name},
+            name=f"karni-accounts-social-token-{name}",
+        )
+        for name in providers
+        if isinstance(name, str) and PROVIDER_NAME_RE.match(name) and name not in RESERVED_NAMES
+    ]
+
+
 def build_urlpatterns() -> list[URLPattern | URLResolver]:
     """The auth URL patterns for the current settings (what ``urlpatterns`` holds).
 
     ``register/`` is present while ``KARNI_ACCOUNTS_REGISTRATION`` is true,
-    ``2fa/`` while ``KARNI_2FA`` is, and ``social/`` while
+    ``2fa/`` while ``KARNI_2FA`` is, ``social/<provider>/`` for each provider
+    in ``KARNI_SOCIAL_TOKEN_PROVIDERS``, and allauth's ``social/`` while
     ``KARNI_SOCIAL_AUTH`` is.
     """
     patterns: list[URLPattern | URLResolver] = list(_PERMISSION_PATTERNS)
@@ -138,6 +167,9 @@ def build_urlpatterns() -> list[URLPattern | URLResolver]:
         # karni.accounts.twofa exposes its own ``urlpatterns`` (setup/, confirm/,
         # disable/, login/). The dotted-path include keeps the import conditional.
         patterns.append(path("2fa/", include("karni.accounts.twofa")))
+    # Before allauth's include: first match wins, and allauth's provider pages
+    # are one level deeper (social/<provider>/login/), so both resolve.
+    patterns += _social_token_urlpatterns()
     if getattr(settings, "KARNI_SOCIAL_AUTH", False):
         patterns.append(path("social/", include(_social_urlpatterns())))
     return patterns

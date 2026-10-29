@@ -17,7 +17,9 @@ Endpoints (all under the mount point): `register/` (unless
 registration](#closing-registration)), `login/`, `logout/`, `refresh/`,
 `csrf/`, `me/`, `password/change/`, `password/reset/`,
 `password/reset/confirm/`, `email/verify/`, `email/verify/resend/`,
-`email/change/`, `email/change/confirm/`, and `2fa/…` when `KARNI_2FA` is on.
+`email/change/`, `email/change/confirm/`, `2fa/…` when `KARNI_2FA` is on,
+and `social/<provider>/` for each provider in `KARNI_SOCIAL_TOKEN_PROVIDERS`
+([sign-in with an ID token](#sign-in-with-an-id-token-google-microsoft-apple)).
 
 ## Swapping the user model
 
@@ -163,7 +165,9 @@ wants self-registration adds its own page that posts to `register/`.
 Every auth outcome is a structlog event on the `karni.accounts` logger:
 `accounts.login.ok` / `.failed` / `.2fa_required`, `accounts.logout`,
 `accounts.register.ok` / `.honeypot`, `accounts.email.verified`,
-`accounts.password_reset.requested` / `.confirmed`. Successes carry
+`accounts.password_reset.requested` / `.confirmed`, and for sign-in with an
+ID token `accounts.social.ok` / `.created` / `.linked` / `.2fa_required` /
+`.refused` (with a `reason` and the `code`). Successes carry
 `user_id`. Failures carry `email`, a 16-character SHA-256 fingerprint of
 the address, so logs correlate without holding addresses. Alert on a burst
 of `accounts.login.failed` with one fingerprint (credential stuffing) or
@@ -444,6 +448,7 @@ the default cache, which is Redis in the Karni stack). Defaults:
 | `auth.verify` | `10/hour` | verify + resend |
 | `auth.email_change` | `5/hour` | change + confirm |
 | `auth.2fa` | `10/min` | 2FA endpoints |
+| `auth.social` | `10/min` | sign-in with an ID token (`social/<provider>/`) |
 
 Tune via `KARNI_AUTH_THROTTLE_RATES`, a partial dict (setting, or JSON env
 var) merged over the defaults before landing in
@@ -482,12 +487,229 @@ Set `KARNI_SOCIAL_AUTH=True` and list providers, e.g.
 apps, provider apps, middleware, `SITE_ID`, authentication backends and the
 email-only account settings.
 
-**v0.1 limitation: social auth is session-mode only.** Only the provider /
+**allauth's redirect flow is session-mode only.** Only the provider /
 socialaccount URLs are exposed (no parallel allauth HTML account surface),
 and `KARNI_SOCIAL_AUTH=True` with `KARNI_AUTH_MODE="jwt"` fails startup
-validation (an allauth-headless JWT strategy is future work). Verified social
-signups mirror into `User.email_verified`, and Karni's field stays the single
-source of truth.
+validation. Verified social signups mirror into `User.email_verified`, and
+Karni's field stays the single source of truth. For a mobile app, a
+single-page app or JWT mode, use [sign-in with an ID
+token](#sign-in-with-an-id-token-google-microsoft-apple) instead: it works in
+both modes and needs neither `KARNI_SOCIAL_AUTH` nor allauth.
+
+## Sign in with an ID token (Google, Microsoft, Apple)
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
+    `karni.accounts.social_token`, the `SocialIdentity` model, and
+    `useSocialLogin` and `SocialButton` in `@karni/ui`. They may change in a
+    minor release, and each change is in the CHANGELOG. The error codes keep
+    their meaning.
+
+The app signs the user in with the provider's own SDK (Google Identity
+Services, MSAL, Sign in with Apple) and gets an OpenID Connect ID token. It
+posts the token to Karni, which verifies it offline against the provider's
+published keys and answers exactly like `login/`: a token pair in JWT mode, a
+session in session mode, or the 2FA gate. It works in both auth modes and
+does not need `KARNI_SOCIAL_AUTH` or django-allauth.
+
+```bash
+pip install 'karni[social-token]'
+```
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_SOCIAL_TOKEN_PROVIDERS = {
+    "google": {"client_ids": ["<web client id>", "<iOS client id>", "<Android client id>"]},
+    "microsoft": {"client_ids": ["<application id>"], "tenants": ["organizations"]},
+    "apple": {"client_ids": ["<service id>", "<bundle id>"]},
+}
+```
+
+Each provider listed gets `POST api/auth/social/<provider>/`. A provider the
+setting does not list has no route and answers 404. Without the extra,
+startup fails with [`E509`](errors.md#e509).
+
+### Settings
+
+| Setting | Default | What it does |
+|---|---|---|
+| `KARNI_SOCIAL_TOKEN_PROVIDERS` | `{}` | The providers, each `{"client_ids": [...]}` plus the keys below. |
+| `KARNI_SOCIAL_TOKEN_SIGNUP` | `None` | `"open"`, `"approval"` or `"existing"` (see [sign-up and linking](#sign-up-and-linking)). `None` is `"open"` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `"existing"`. |
+| `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` | `True` | Link a token to the existing account with its email when the provider verified the address. |
+| `KARNI_SOCIAL_TOKEN_LEEWAY` | `60` | Seconds of clock skew allowed on `exp`, `iat` and `nbf` (0 to 300). |
+| `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `21600` | Seconds a provider's key set stays in the default cache (6 hours). |
+| `KARNI_SOCIAL_TOKEN_JWKS_FETCHER` | `"karni.accounts.social_token.fetch_jwks"` | The function `(url) -> dict` that fetches a key set. Tests and proxies swap it. |
+
+A provider's entry takes:
+
+- `client_ids` (required): every client id a token may be issued to. For
+  Google, the web client id and each iOS and Android client id. For
+  Microsoft, the application (client) id of each app registration. For
+  Apple, the service id (the web) and the bundle id (iOS).
+- `require_nonce` (default `False`): refuse a request without a nonce.
+- `tenants` (Microsoft, default `["common"]`): `common` (any tenant),
+  `organizations` (any work or school tenant), `consumers` (personal
+  Microsoft accounts) or tenant ids.
+- `trusted_tenants` (Microsoft, default `[]`): tenant ids whose email
+  addresses count as verified.
+- `class`: the dotted path of your own `IdTokenProvider` subclass, to add a
+  provider or replace a built-in one.
+
+Startup validation checks every entry: a missing or empty `client_ids`, a
+key the provider does not read, a tenant that is not a tenant id or one of
+the three names, a provider name that is not a lowercase slug or is
+allauth's (`login`, `signup`), and an unknown provider without `class`.
+
+### The request and the answer
+
+```http
+POST /api/auth/social/google/
+Content-Type: application/json
+
+{"id_token": "<the ID token>", "nonce": "<the raw nonce>", "name": {"first_name": "Ada", "last_name": "Lovelace"}}
+```
+
+`nonce` and `name` are optional. `name` is for Apple, which sends the user's
+name to the app once, on the first sign-in, and never in the token. Karni
+uses it only when the token creates an account and carries no name of its
+own, and never for an existing user.
+
+| Answer | Status | Body |
+|---|---|---|
+| Signed in, JWT mode | 200 | `{"access", "refresh", "user"}`, as `login/` |
+| Signed in, session mode | 200 | `{"user"}` and the session cookie |
+| The account has 2FA | 200 | `{"requires_2fa": true, "ephemeral_token"}`: finish at `2fa/login/` |
+| A new account awaits approval | 202 | `{"code": "E224", "detail", "awaiting_approval": true}`, nothing signed in |
+| Refused | 400, 401, 404 or 503 | `{"code", "detail"}` (codes below) |
+
+### A web app
+
+`@karni/ui` has the button and the hook. Karni bundles no provider SDK:
+`getIdToken` is your call into Google Identity Services, MSAL or Sign in with
+Apple JS, and resolves with the ID token and the nonce you generated.
+
+```tsx
+import { SocialButton } from "@karni/ui";
+
+<SocialButton
+  provider="google"
+  getIdToken={async () => ({ idToken: await askGoogleForAnIdToken(nonce), nonce })}
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>;
+```
+
+It shows progress, says in plain words why a sign-in was refused, and shows a
+new account that waits for approval as its own state. For your own button,
+`useSocialLogin("google")` returns `{ signIn(idToken, { nonce, name }),
+status, error }`: in JWT mode it adopts the token pair, in session mode it
+re-syncs the session user, and a `requires_2fa` answer goes to the same 2FA
+step `LoginForm`'s `on2FA` uses ([UI guide](ui.md)).
+
+### A mobile app
+
+A native app calls the endpoint directly with the token its SDK returned
+(Google Sign-In for iOS or Android, MSAL, `ASAuthorizationAppleIDCredential`):
+
+```bash
+curl -X POST https://api.example.com/api/auth/social/apple/ \
+  -H "Content-Type: application/json" \
+  -d '{"id_token": "<identity token>", "nonce": "<raw nonce>", "name": {"first_name": "Ada", "last_name": "Lovelace"}}'
+```
+
+In JWT mode the answer carries `access` and `refresh`. Send `Authorization:
+Bearer <access>` and rotate with `refresh/`, exactly as after `login/`.
+
+### Sign-up and linking
+
+A verified token finds its account in this order:
+
+1. **An identity already linked.** `SocialIdentity` holds one row per
+   provider and subject (the provider's id for the person: `sub`, or
+   `<tid>:<oid>` for Microsoft). A linked identity signs in by subject, so
+   the link survives a change of the user's email.
+2. **An account with the token's email.** The token is linked to it when the
+   provider verified the address ([`E222`](errors.md#e222) otherwise). An
+   account whose own address was never verified becomes verified, and its
+   password is cleared and its refresh tokens revoked: whoever opened it may
+   not own the address (see the security notes). Tick *Email verified* when
+   you create an account in the admin to keep its password. With
+   `KARNI_SOCIAL_TOKEN_LINK_VERIFIED = False`, an account that has a password
+   is never linked ([`E227`](errors.md#e227)): the user signs in with the
+   password. Linking a provider from a signed-in session is not built yet.
+3. **Nobody.** A new account needs an address the provider verified
+   ([`E222`](errors.md#e222)), and `KARNI_SOCIAL_TOKEN_SIGNUP` decides:
+    - `"open"` creates the account, verified, with no password and the
+      `KARNI_ACCOUNTS_DEFAULT_ROLES`, and signs it in.
+    - `"approval"` creates it inactive and answers 202
+      [`E224`](errors.md#e224) with no credentials, again on each attempt. An
+      administrator ticks *Active* on the user's page, and the next sign-in
+      succeeds.
+    - `"existing"` refuses ([`E223`](errors.md#e223)): only accounts that
+      exist may sign in. Staff create them first.
+
+An inactive user never signs in ([`E226`](errors.md#e226)).
+
+The admin lists each user's linked identities read-only on the user's page,
+and all of them under *Social identities*. django-allauth's redirect flow
+(`KARNI_SOCIAL_AUTH`) keeps its own `SocialAccount` table: the two are
+separate, and neither reads the other's links.
+
+### Error codes
+
+| Code | Status | Meaning |
+|---|---|---|
+| [`E215`](errors.md#e215) | 401 | The token is malformed, signed with another key or algorithm, lacks a required claim, or is not valid yet. |
+| [`E216`](errors.md#e216) | 401 | Its `aud` is not one of the configured client ids. |
+| [`E217`](errors.md#e217) | 401 | Its issuer is not the provider's, or the Microsoft tenant is not allowed. |
+| [`E218`](errors.md#e218) | 401 | It has expired. |
+| [`E219`](errors.md#e219) | 401, 503 | Its signing key is not in the provider's key set (401), or the key set cannot be fetched (503). |
+| [`E220`](errors.md#e220) | 401 | Its nonce matches neither the nonce sent nor its SHA-256, or a required nonce is missing. |
+| [`E221`](errors.md#e221) | 400 | It carries no email address. |
+| [`E222`](errors.md#e222) | 400 | The provider did not verify the address, so nothing is created or linked. |
+| [`E223`](errors.md#e223) | 400 | Sign-up is closed (`"existing"`). |
+| [`E224`](errors.md#e224) | 202 | The new account awaits an administrator's approval. |
+| [`E225`](errors.md#e225) | 404 | The provider is not configured. |
+| [`E226`](errors.md#e226) | 401 | The account is inactive. |
+| [`E227`](errors.md#e227) | 400 | An account with the address exists and has a password, and linking is off. |
+
+`karni explain E222` prints the fix for each one.
+
+### Security notes
+
+- **List every client id, and only yours.** The `aud` check is what keeps a
+  token issued to another app (any app that signs its users in with Google)
+  from signing them in to yours.
+- **Send a nonce.** Generate a new random value for every sign-in, pass it
+  (or, for Apple, its SHA-256) to the provider and post the raw value to
+  Karni. A token copied from somewhere else then carries the wrong nonce.
+  `require_nonce` makes it mandatory for a provider.
+- **Microsoft email is not verified by default.** A Microsoft tenant's
+  administrator can put any address in a user's `email` or
+  `preferred_username`, so Karni counts it as verified only when the token
+  has the optional `xms_edov` claim true (add it in the app registration's
+  token configuration) or comes from a tenant in `trusted_tenants`, such as
+  your own organisation's. Without one of them, a Microsoft token creates no
+  account and links to none ([`E222`](errors.md#e222)), and only an identity
+  already linked signs in.
+- **An unverified account is not trusted with a link.** With open
+  registration, someone can register a password account under another
+  person's address before that person ever signs in. When the person later
+  signs in with a provider that verified the address, Karni links the
+  identity and clears the password the other party set, so they cannot sign
+  in with it.
+- **Keys are fetched, tokens are not sent anywhere.** Karni fetches each
+  provider's public keys (JWKS) over HTTPS and keeps them in the default
+  cache for `KARNI_SOCIAL_TOKEN_JWKS_TTL` seconds. A token signed with a key
+  that is not in the cached set fetches the set again, at most once a minute
+  per provider, so a rotated key works within a minute and a flood of made-up
+  key ids costs one fetch a minute.
+- **Only the provider's algorithms.** Built-in providers accept RS256 only,
+  so a token signed with `none` or an HMAC key is refused.
+- **Rate limit and logs.** The endpoint has its own throttle scope,
+  `auth.social`. The log events carry the provider, the user id or an email
+  fingerprint and the refusal's `reason`, never the token or the address.
 
 ## Admin
 

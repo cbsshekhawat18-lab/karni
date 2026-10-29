@@ -46,6 +46,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | CSV and XLSX export of any list (`/export/?format=`) | `stable` | [test_leads.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/tests/test_leads.py) |
 | Import from CSV or XLSX with a mandatory preview (`/import/`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Response caching per viewset (`Cache`, `Uncached`) | `experimental` | Karni's own tests |
+| Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -67,6 +68,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
+| `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -1457,6 +1459,12 @@ class Lead(BaseModel):
 | `KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`). |
 | `KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`, session mode only). |
 | `KARNI_SOCIAL_PROVIDERS` | `KARNI_SOCIAL_PROVIDERS` | `[]` | Comma-separated allauth providers to enable, e.g. `google,github`. |
+| `KARNI_SOCIAL_TOKEN_PROVIDERS` | `KARNI_SOCIAL_TOKEN_PROVIDERS` | `{}` | Experimental. The providers whose ID tokens sign users in, in both auth modes and without `KARNI_SOCIAL_AUTH`: `{"google": {"client_ids": [...]}, "microsoft": {"client_ids": [...], "tenants": [...], "trusted_tenants": [...]}, "apple": {"client_ids": [...]}}`, each with optional `require_nonce` and `class` (a dotted `IdTokenProvider` path). Each one mounts `social/<provider>/`. Needs `karni[social-token]`. See [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). |
+| `KARNI_SOCIAL_TOKEN_SIGNUP` | `KARNI_SOCIAL_TOKEN_SIGNUP` | `None` | Experimental. What a token without an account does: `open` creates the account, `approval` creates it inactive until an administrator activates it, `existing` refuses (`E223`). `None` is `open` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `existing`. |
+| `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` | `KARNI_SOCIAL_TOKEN_LINK_VERIFIED` | `True` | Experimental. Link a token to the existing account with its email when the provider verified the address. `False` refuses an account that has a password (`E227`). |
+| `KARNI_SOCIAL_TOKEN_LEEWAY` | `KARNI_SOCIAL_TOKEN_LEEWAY` | `60` | Experimental. Seconds of clock skew allowed on a token's `exp`, `iat` and `nbf` (0 to 300). |
+| `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `21600` | Experimental. Seconds a provider's signing keys (JWKS) stay in the default cache. An unknown key id fetches them again, at most once a minute per provider. |
+| `KARNI_SOCIAL_TOKEN_JWKS_FETCHER` |  | `"karni.accounts.social_token.fetch_jwks"` | Experimental. Dotted path of the function `(url) -> dict` that fetches a key set (HTTPS, 5 second timeout by default). |
 | `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
 | `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
@@ -1520,7 +1528,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 
 ### Security headers (karni.security)
 
@@ -1698,6 +1706,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `AuthProvider` |  | Rendered inside `KarniProvider`, it holds the signed-in user and attaches credentials (JWT or session) to every request. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
 | `AuthGuard` |  | Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
+| `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an `<h1>` title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `Layout` |  | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` |  | The Karni mark as inline SVG, so there is no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
@@ -1732,6 +1741,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
+| `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
 
 ### Functions and constants
@@ -1774,6 +1784,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultLoginFormSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `createLocalStorageTokenStorage` | function | The default storage, which keeps the refresh token in localStorage. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
 | `createMemoryTokenStorage` | function | In-memory adapter: most secure (nothing persisted anywhere), but a page reload logs the user out. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
+| `defaultSocialButtonSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `describeSocialError` | function | Experimental. A SocialButton failure in plain words, from the Karni code of the refusal (E215 to E227), never a status code. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -1866,6 +1878,19 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E212`](errors.md#e212) | check | Karni.field_roles is malformed, names a missing field or an undeclared role |
 | [`E213`](errors.md#e213) | api | The permission matrix refused a change |
 | [`E214`](errors.md#e214) | check | A role's scope names a path the model does not have |
+| [`E215`](errors.md#e215) | api | The ID token is not valid |
+| [`E216`](errors.md#e216) | api | The ID token was issued for another application |
+| [`E217`](errors.md#e217) | api | The ID token comes from another issuer or tenant |
+| [`E218`](errors.md#e218) | api | The ID token has expired |
+| [`E219`](errors.md#e219) | api | The ID token's signing key is unknown |
+| [`E220`](errors.md#e220) | api | The ID token's nonce does not match |
+| [`E221`](errors.md#e221) | api | The ID token carries no email address |
+| [`E222`](errors.md#e222) | api | The provider did not verify the email address |
+| [`E223`](errors.md#e223) | api | Sign-up with an ID token is closed |
+| [`E224`](errors.md#e224) | api | The account awaits an administrator's approval |
+| [`E225`](errors.md#e225) | api | This sign-in provider is not configured |
+| [`E226`](errors.md#e226) | api | The account is inactive |
+| [`E227`](errors.md#e227) | api | An account with this email exists and is not linked |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
@@ -1886,6 +1911,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E506`](errors.md#e506) | exception | A setting names a dotted path that cannot be imported |
 | [`E507`](errors.md#e507) | exception | KARNI_CACHE names an unknown cache backend |
 | [`E508`](errors.md#e508) | check | A setting is assigned where it cannot take effect |
+| [`E509`](errors.md#e509) | exception | Sign-in with an ID token needs the cryptography package |
 | [`W510`](errors.md#w510) | warning | DEBUG is on in a deployment |
 | [`W511`](errors.md#w511) | warning | SECRET_KEY is weak or a development key |
 | [`W512`](errors.md#w512) | warning | ALLOWED_HOSTS is empty or allows every host |

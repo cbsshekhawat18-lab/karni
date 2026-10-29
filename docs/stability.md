@@ -151,6 +151,13 @@ An experimental name becomes stable in a minor release, once a reference
 application uses it. The CHANGELOG entry of that release says so, and from
 then on the promise above applies in full.
 
+Experimental now:
+
+- [Sign-in with an ID token (Google, Microsoft, Apple)](accounts.md#sign-in-with-an-id-token-google-microsoft-apple):
+  the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
+  `karni.accounts.social_token`, the `SocialIdentity` model, and
+  `useSocialLogin` and `SocialButton` in `@karni/ui`.
+
 ## Supported platforms
 
 | Component | Supported |

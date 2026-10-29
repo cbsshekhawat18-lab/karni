@@ -113,6 +113,7 @@ DEFAULT_MATRIX_EXCLUDE: tuple[str, ...] = (
     "karni_audit",
     "karni_accounts.OneTimeToken",
     "karni_accounts.Permission",
+    "karni_accounts.SocialIdentity",
 )
 
 _ORIGIN_DECLARED: Final = "declared"

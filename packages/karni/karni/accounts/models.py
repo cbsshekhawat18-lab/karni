@@ -20,6 +20,7 @@ from django.db import models
 from django.utils import timezone
 
 from karni.accounts.managers import KarniUserManager
+from karni.fields.constraints import LiveUniqueConstraint
 from karni.models import BaseModel
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ __all__ = [
     "Permission",
     "Role",
     "RolePermission",
+    "SocialIdentity",
     "User",
 ]
 
@@ -175,6 +177,50 @@ class OneTimeToken(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.purpose} token for user {self.user_id}"
+
+
+class SocialIdentity(BaseModel):
+    """Experimental. One provider identity (Google, Microsoft, Apple, ...) linked to a user.
+
+    Written by sign-in with an ID token (:mod:`karni.accounts.social_token`):
+    ``subject`` is the provider's stable id for the person (the token's
+    ``sub``, or ``<tid>:<oid>`` for Microsoft), unique per provider among live
+    rows. Once linked, the identity signs in by subject alone, so the link
+    survives a change of the user's email. ``email_at_link`` records the
+    address the token carried when the link was made, and ``last_used_at``
+    the latest sign-in through it.
+
+    django-allauth's session redirect flow (``KARNI_SOCIAL_AUTH``) keeps its
+    own ``SocialAccount`` table. The two are separate and never read each
+    other.
+
+    Override / escape hatch: rows are written only by
+    :func:`karni.accounts.social_token.sign_in`, and the admin shows them
+    read-only. Delete a row (``hard_delete()``) to unlink an identity.
+    """
+
+    provider = models.CharField(max_length=32)
+    subject = models.CharField(max_length=255)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="social_identities",
+    )
+    email_at_link = models.EmailField(blank=True, default="")
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "social identity"
+        verbose_name_plural = "social identities"
+        ordering: ClassVar[list[str]] = ["provider", "created_at"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            LiveUniqueConstraint(
+                fields=["provider", "subject"], name="karni_socialidentity_provider_subject"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.provider} identity of user {self.user_id}"
 
 
 # roles as data

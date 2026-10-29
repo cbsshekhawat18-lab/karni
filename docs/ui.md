@@ -42,6 +42,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `AuthProvider`
 - `AuthGuard` (role `auth-guard`)
 - `LoginForm` (role `login-form`)
+- `SocialButton` (role `social-sign-in`, experimental)
 - `KarniProvider`
 
 ## Primitives
@@ -66,6 +67,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
 - `useSchema`: The parsed OpenAPI schema of one resource (fields, operations, access).
+- `useSocialLogin`: Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).
 - `useTheme`: See the package README.
 - `useToast`: Show a toast through the mounted `Toaster`.
 - `useUnsavedChangesGuard`: `{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.
@@ -94,6 +96,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `permission-denied` | `PermissionDenied` |
 | `resource-form` | `ResourceForm` |
 | `resource-import` | `ResourceImport` |
+| `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |
 | `theme-toggle` | `ThemeToggle` |
 | `toast` | `Toaster` |

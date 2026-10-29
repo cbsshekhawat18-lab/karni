@@ -51,7 +51,13 @@
  */
 import type { KarniClient } from "../schema/client";
 import type { TokenStorage } from "./storage";
-import type { AuthStatus, KarniUser, LoginResult } from "./types";
+import type {
+  AuthStatus,
+  KarniUser,
+  LoginResult,
+  SocialLoginResult,
+  SocialSignInOptions,
+} from "./types";
 
 export type AuthMode = "jwt" | "session";
 
@@ -134,6 +140,14 @@ function read2fa(value: unknown): { ephemeralToken: string } | null {
   return typeof record.ephemeral_token === "string"
     ? { ephemeralToken: record.ephemeral_token }
     : null;
+}
+
+/** A 202 from `social/<provider>/` whose account awaits an administrator (code E224). */
+function readApproval(value: unknown): { detail: string } | null {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (record.awaiting_approval !== true && record.code !== "E224") return null;
+  return { detail: typeof record.detail === "string" ? record.detail : "" };
 }
 
 export class AuthEngine {
@@ -411,6 +425,73 @@ export class AuthEngine {
           "{ access, refresh } (JWT mode) or { requires_2fa, ephemeral_token }, got " +
           `${describeShape(data)}. Check the backend's KARNI_AUTH_MODE and the ` +
           'AuthProvider "mode" prop.',
+      );
+    }
+    this.tokenStorage.set(refresh);
+    this.accessToken = access;
+    const user = normalizeUser(record.user) ?? (await this.fetchMe(path));
+    this.setState("authenticated", user);
+    return { ok: true, user };
+  }
+
+  /**
+   * Experimental. Signs in with a provider's ID token: `POST
+   * <authBasePath>/social/<provider>/`. JWT mode adopts the returned token
+   * pair, the way `adoptTokens` does. Session mode re-syncs the session user
+   * from `/me/`, which also proves the session cookie came back. A
+   * `requires_2fa` answer and an account awaiting approval resolve without
+   * signing anyone in. Refusals reject with the `KarniApiError` (its `data`
+   * carries the Karni `code`, E215 to E227).
+   */
+  async socialLogin(
+    provider: string,
+    idToken: string,
+    options: SocialSignInOptions = {},
+  ): Promise<SocialLoginResult> {
+    await this.ensureInitialized();
+    const path = `${this.authBasePath}/social/${encodeURIComponent(provider)}/`;
+    const body: Record<string, unknown> = { id_token: idToken };
+    if (options.nonce !== undefined && options.nonce !== "") body.nonce = options.nonce;
+    if (options.name !== undefined) {
+      body.name = {
+        first_name: options.name.firstName ?? "",
+        last_name: options.name.lastName ?? "",
+      };
+    }
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(path, {
+      method: "POST",
+      body,
+      skipAuthRefresh: true,
+    });
+    const twoFactor = read2fa(data);
+    if (twoFactor !== null) {
+      return { requires2fa: true, ephemeralToken: twoFactor.ephemeralToken };
+    }
+    const approval = readApproval(data);
+    if (approval !== null) return { awaitingApproval: true, detail: approval.detail };
+
+    if (this.mode === "session") {
+      await this.syncUser();
+      const user = this.state.user;
+      if (user === null) {
+        throw new Error(
+          `Karni auth: POST ${path} succeeded but ${this.authBasePath}/me/ did not return ` +
+            "the user. The session cookie did not come back: check the cookie's SameSite " +
+            "and Secure settings for a cross-site setup.",
+        );
+      }
+      return { ok: true, user };
+    }
+    const record =
+      typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};
+    const { access, refresh } = record;
+    if (typeof access !== "string" || typeof refresh !== "string") {
+      throw new Error(
+        `Karni auth: unexpected response from POST ${path}. Expected ` +
+          "{ access, refresh, user } (JWT mode), { requires_2fa, ephemeral_token } or an " +
+          `awaiting-approval answer, got ${describeShape(data)}. Check the backend's ` +
+          'KARNI_AUTH_MODE and the AuthProvider "mode" prop.',
       );
     }
     this.tokenStorage.set(refresh);

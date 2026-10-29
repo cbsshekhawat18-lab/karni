@@ -46,6 +46,7 @@ DEFAULT_AUTH_THROTTLE_RATES: dict[str, str | None] = {
     "auth.verify": "10/hour",
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
+    "auth.social": "10/min",
 }
 """Contract-default rates per auth scope, used only as a fallback when a scope
 is absent from ``DEFAULT_THROTTLE_RATES`` (``karni.conf`` normally merges the

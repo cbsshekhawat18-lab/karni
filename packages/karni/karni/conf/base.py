@@ -73,6 +73,7 @@ AUTH_THROTTLE_DEFAULTS: dict[str, str | None] = {
     "auth.verify": "10/hour",
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
+    "auth.social": "10/min",
 }
 """Default per-scope throttle rates for the ``karni.accounts`` endpoints.
 
@@ -259,6 +260,21 @@ BASE: dict[str, Any] = {
     "KARNI_2FA": env.bool("KARNI_2FA", default=False),
     "KARNI_SOCIAL_AUTH": env.bool("KARNI_SOCIAL_AUTH", default=False),
     "KARNI_SOCIAL_PROVIDERS": env.list("KARNI_SOCIAL_PROVIDERS", default=[]),
+    # Sign-in with a Google, Microsoft or Apple ID token (experimental), in both
+    # auth modes and independent of KARNI_SOCIAL_AUTH: {name: {"client_ids": [...]}}.
+    # Each configured name mounts social/<name>/. Needs karni[social-token].
+    "KARNI_SOCIAL_TOKEN_PROVIDERS": env.json("KARNI_SOCIAL_TOKEN_PROVIDERS", default={}),
+    # Who a token without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_SOCIAL_TOKEN_SIGNUP": env("KARNI_SOCIAL_TOKEN_SIGNUP", default=None),
+    # Link a token to an existing account with its email (only a provider-verified one).
+    "KARNI_SOCIAL_TOKEN_LINK_VERIFIED": env.bool("KARNI_SOCIAL_TOKEN_LINK_VERIFIED", default=True),
+    # Seconds of clock skew allowed on exp, iat and nbf.
+    "KARNI_SOCIAL_TOKEN_LEEWAY": env.int("KARNI_SOCIAL_TOKEN_LEEWAY", default=60),
+    # Seconds a provider's key set (JWKS) stays in the default cache.
+    "KARNI_SOCIAL_TOKEN_JWKS_TTL": env.int("KARNI_SOCIAL_TOKEN_JWKS_TTL", default=21600),
+    # Dotted path of the function that fetches a key set: (url) -> dict.
+    "KARNI_SOCIAL_TOKEN_JWKS_FETCHER": "karni.accounts.social_token.fetch_jwks",
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
@@ -560,6 +576,7 @@ BASE: dict[str, Any] = {
             "karni_transfer",
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
+            "karni_accounts.SocialIdentity",
         ],
     ),
     # --- Security headers (karni.security) ----------------------------------
