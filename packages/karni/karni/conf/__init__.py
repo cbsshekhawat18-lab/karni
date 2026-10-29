@@ -310,6 +310,37 @@ def _apply_session_mode_origins(namespace: MutableMapping[str, Any]) -> None:
     namespace.setdefault("CORS_ALLOW_CREDENTIALS", True)
 
 
+#: Folders a relative value of which is read from the project root, not the cwd.
+_PROJECT_RELATIVE_ROOTS = ("MEDIA_ROOT", "STATIC_ROOT")
+
+
+def _project_root(namespace: MutableMapping[str, Any]) -> Path | None:
+    """``BASE_DIR``, else the folder above the settings package, else ``None``."""
+    if namespace.get("BASE_DIR"):
+        return Path(str(namespace["BASE_DIR"])).resolve()
+    file = namespace.get("__file__")
+    return Path(str(file)).resolve().parent.parent if file else None
+
+
+def _anchor_file_roots(namespace: MutableMapping[str, Any], predefined: set[str]) -> None:
+    """Read a relative ``MEDIA_ROOT`` / ``STATIC_ROOT`` Karni set from the project root.
+
+    The dev profile's ``data/media`` (or ``MEDIA_ROOT=data/media`` in
+    ``.env``) is then ``<project>/data/media`` whatever folder a command
+    runs from. A value defined in the settings module before the call is
+    left as written, and so is anything without a known project root.
+    """
+    root = _project_root(namespace)
+    if root is None:
+        return
+    for name in _PROJECT_RELATIVE_ROOTS:
+        value = namespace.get(name)
+        if name in predefined or not isinstance(value, str | Path) or not str(value):
+            continue
+        if not Path(value).is_absolute():
+            namespace[name] = str(root / value)
+
+
 def _ensure_sqlite_dir(databases: Any) -> None:
     """Create the folder of a file-backed SQLite database (``sqlite:///data/db.sqlite3``).
 
@@ -509,10 +540,12 @@ def karni_settings(
         else:
             namespace[key] = _dedupe(defaults)
 
+    predefined = set(namespace)
     for key, value in merged.items():
         namespace.setdefault(key, value)
     # The reader behind every env-backed default, for settings added after the call.
     namespace.setdefault("env", env)
+    _anchor_file_roots(namespace, predefined)
 
     if rest_framework_is_karni:
         rates = namespace["REST_FRAMEWORK"].setdefault("DEFAULT_THROTTLE_RATES", {})

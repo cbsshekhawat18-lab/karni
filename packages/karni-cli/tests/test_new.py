@@ -61,6 +61,26 @@ def test_new_project_installs_with_pip_install_e(runner, tmp_path: Path, monkeyp
     assert "pip install -e ." in (tmp_path / "shop" / "README.md").read_text()
 
 
+def test_new_stores_files_under_the_project_and_on_the_volume_in_containers(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """A host run (karni serve --local) uses data/ under the project, a container /data."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    result = runner.invoke(app, ["new", "Files", "-o", str(tmp_path)])
+    assert result.exit_code == 0, result.output
+    project = tmp_path / "files"
+    active = [
+        line
+        for line in (project / ".env.example").read_text().splitlines()
+        if line.startswith(("MEDIA_ROOT=", "STATIC_ROOT="))
+    ]
+    assert active == [], "an active /data line in .env breaks a host run"
+    dockerfile = (project / "Dockerfile").read_text()
+    assert dockerfile.count("MEDIA_ROOT=/data/media") == 2  # the base (dev) and prod stages
+    assert dockerfile.count("STATIC_ROOT=/data/static") == 2
+    assert "/data/" in (project / ".gitignore").read_text().splitlines()
+
+
 def test_slug_rules() -> None:
     assert derive_slug("My App") == "my_app"
     assert validate_name("acme-board") == "acme_board"

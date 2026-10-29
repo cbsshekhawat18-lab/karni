@@ -341,3 +341,18 @@ Redis. A test that needs the project's own cache takes \
 pytest ini file keeps it for every test."""
 mechanical = false
 migration = "migrations/0.4.1.md#tests-run-on-an-empty-local-memory-cache"
+
+[[change]]
+id = "dev-files-under-the-project"
+kind = "behaviour"
+symbol = "MEDIA_ROOT and STATIC_ROOT (dev profile)"
+summary = """\
+In the dev profile MEDIA_ROOT and STATIC_ROOT default to data/media and \
+data/static under the project root, and a relative value is read from the \
+project root, not the working directory. Production keeps /data/media and \
+/data/static. The scaffold's Dockerfile sets /data in every container and its \
+.env.example no longer sets the two. A project whose .env sets them keeps its \
+values. Add the two ENV lines to an earlier Dockerfile before removing them \
+from .env."""
+mechanical = false
+migration = "migrations/0.4.1.md#files-under-the-project-in-development"

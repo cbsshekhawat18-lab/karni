@@ -7,7 +7,10 @@ human-readable console structlog output (``KARNI_JSON_LOGS = False`` — the
 actual ``LOGGING`` dict is built by
 :func:`karni.conf.logging.build_logging` inside ``karni_settings()``), query
 budgets that warn instead of raising (``KARNI_QUERY_BUDGET_MODE = "warn"``)
-and the per-request query log (``KARNI_QUERY_LOG``).
+and the per-request query log (``KARNI_QUERY_LOG``), and uploads and static
+files under the project (``MEDIA_ROOT = "data/media"``, ``STATIC_ROOT =
+"data/static"``, read from the project root), so a run on the host stores
+files without a ``/data`` folder.
 
 Override / escape hatch: every key obeys the same setdefault semantics as
 ``BASE`` — define it in your settings module before calling
@@ -32,5 +35,10 @@ DEV: dict[str, Any] = {
     # every request's query count, duplicates and time are logged.
     "KARNI_QUERY_BUDGET_MODE": env("KARNI_QUERY_BUDGET_MODE", default="warn"),
     "KARNI_QUERY_LOG": env.bool("KARNI_QUERY_LOG", default=True),
+    # Uploads and collected static files under the project (data/ is git-ignored),
+    # read from the project root. The container image sets /data/media and
+    # /data/static, and production keeps BASE's /data defaults.
+    "MEDIA_ROOT": env("MEDIA_ROOT", default="data/media"),
+    "STATIC_ROOT": env("STATIC_ROOT", default="data/static"),
 }
 """Development overrides merged over ``BASE`` for the ``"dev"`` profile."""

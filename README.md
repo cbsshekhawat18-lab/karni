@@ -98,7 +98,7 @@ pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 docker compose up -d --wait db
-printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\n' >> .env
 karni make app events
 karni make model Event title:str:200 starts_at:datetime organizer:fk:User -a --access owned:organizer
 karni make migration --app events && karni migrate

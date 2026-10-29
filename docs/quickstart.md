@@ -24,7 +24,7 @@ pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 docker compose up -d --wait db
-printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\n' >> .env
 ```
 
 `karni new` wrote a Django project configured by one call
@@ -67,7 +67,7 @@ two services and create its database, then continue with step 2:
 ```sh
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
-printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' "$USER" >> .env
+printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\n' "$USER" >> .env
 createdb ticket_shop
 ```
 
