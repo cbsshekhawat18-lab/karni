@@ -949,7 +949,7 @@ def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
         own_routes.add(path)
     for name in layout.ROUTES_BLOCKS:
         found = read_block(text, name) or ""
-        own_routes -= set(page_gen._ROUTE_PATH.findall(found))
+        own_routes -= set(page_gen.ROUTE_PATH.findall(found))
     taken = sorted(own_routes & karni_paths)
     if taken:
         raise CliError(
@@ -964,7 +964,7 @@ def _render_pages(ws: Workspace, out: Output, inputs: Inputs) -> None:
     for page in pages:
         _owned(out, inputs, layout.page_file(page.spec.name), page_text(page.spec, routes))
         imports.append(f'import {page.spec.component} from "./pages/karni/{page.spec.name}";')
-        entries += [page_gen._route_line(page.spec, path).strip() for path in page.spec.paths]
+        entries += [page_gen.route_line(page.spec, path).strip() for path in page.spec.paths]
     blocks = {
         layout.ROUTES_BLOCKS[0]: "\n".join(imports),
         layout.ROUTES_BLOCKS[1]: "\n".join(entries),

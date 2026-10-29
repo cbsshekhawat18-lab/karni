@@ -16,6 +16,7 @@ import json
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import textwrap
 from collections.abc import Iterator
@@ -123,12 +124,26 @@ class Built:
 
 @pytest.fixture(scope="module")
 def harbour(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Built]:
-    """The fixture spec built into an empty project, every step real (frontend tools stubbed)."""
+    """The fixture spec built into an empty ``karni new`` project, every step real.
+
+    npm is stubbed as the suite's conftest stubs it, and so are the frontend tools.
+    """
+    from karni_cli import scaffold
+
     require_modules("karni-payments", "karni-site")
     parent = tmp_path_factory.mktemp("build-harbour")
     with pytest.MonkeyPatch.context() as mp:
         mp.setenv("KARNI_TEMPLATES", str(TEMPLATE))
-        root = _render(parent, "Harbour Yoga", "site+app")
+        mp.setattr(
+            scaffold,
+            "run_npm",
+            lambda argv, cwd: subprocess.CompletedProcess(argv, 127, "", "npm disabled"),
+        )
+        created = CliRunner().invoke(
+            app, ["new", "Harbour Yoga", "--kind", "site+app", "-o", str(parent)]
+        )
+        assert created.exit_code == 0, created.output
+        root = parent / "harbour_yoga"
         shutil.copy(FIXTURE, root / "karni.yaml")
         _env(mp, root)
         _frontend(mp)
