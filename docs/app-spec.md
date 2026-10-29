@@ -771,3 +771,5 @@ owner}`, each step `{name, status, summary}` with `status` one of `done`,
 | [C283](errors.md#c283) | a project class karni build must remove has code of its own |
 | [C284](errors.md#c284) | a marker karni build writes at is missing |
 | [C285](errors.md#c285) | `.karni/build.json` cannot be read |
+| [E304](errors.md#e304) | `manage.py karni_makemigrations --renames` is not a rename list |
+| [E305](errors.md#e305) | an app has two latest migrations, so the renames have no place (`makemigrations --merge` first) |
