@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Final
 
 from karni_cli.design.parse import Node
 from karni_cli.design.proposal import (
@@ -62,13 +62,65 @@ from karni_cli.design.sources import (
 )
 from karni_cli.design.values import (
     HIGHLIGHT_MARKER,
+    decimal_mark,
     is_utility_class,
+    page_language,
     pascal,
     singular,
     slugify,
     snake,
     words,
 )
+
+#: The reason a row of figures stays in its template.
+FIGURES: Final = "figures (a number and a short label per item) on this page"
+#: A figure as a design writes it: ``25``, ``4,000``, ``4.9``, ``98%``, ``10k+``, ``24/7``, ``$2M``.
+_FIGURE: Final = re.compile(r"\d")
+_FIGURE_REST: Final = re.compile(r"[\d\s.,'’/%+×*★$€£¥₹:-]")
+#: Elements that make a part of a page on their own.
+_SECTIONS: Final = frozenset({"section", "article", "aside", "header", "footer", "main", "nav"})
+
+
+def _is_figure(text: str) -> bool:
+    """A number written for show, with at most a short unit (``k``, ``M``, ``yrs``)."""
+    value = text.strip()
+    if not value or len(value) > 12 or not _FIGURE.search(value):
+        return False
+    return len(_FIGURE_REST.sub("", value)) <= 3
+
+
+def _figures(source: Source) -> bool:
+    """A short run of figures: each item one number and one or two short labels, nothing else.
+
+    A row of statistics (``25`` *years in town*, ``4,000`` *customers*) is
+    page copy: its numbers are the page's own words, not rows a client adds
+    to. A list with pictures, links, nested lists or longer texts is not.
+    """
+    if not 2 <= len(source.entries) <= 8:
+        return False
+    for entry in source.entries:
+        if entry.collections:
+            return False
+        texts = [slot.value for slot in entry.slots if slot.kind == "text"]
+        if any(slot.kind not in ("text", "id", "data", "flag") for slot in entry.slots):
+            return False
+        numbers = [text for text in texts if _is_figure(text)]
+        labels = [text for text in texts if not _is_figure(text)]
+        if len(numbers) != 1 or not 1 <= len(labels) <= 2:
+            return False
+        if any(len(label.split()) > 8 for label in labels):
+            return False
+    return True
+
+
+def _section(node: Node | None) -> Node | None:
+    """The nearest section-like element holding ``node`` (itself included)."""
+    current = node
+    while current is not None and current.kind == "element":
+        if current.tag in _SECTIONS:
+            return current
+        current = current.parent
+    return None
 
 
 def _strong(sources: Sequence[Source]) -> bool:
@@ -125,6 +177,10 @@ class _Builder:
         #: id(lone source) → the list whose items it looks like.
         self.lone: dict[int, Source] = {}
         self.later: list[tuple[Model, Field, Source]] = []  # detail lists, decided once all exist
+        #: The decimal mark the design's pages write (their ``<html lang>``), ``None`` unknown.
+        languages = Counter(page_language(page.doc, page.text) for page in pages)
+        languages.pop("", None)
+        self.decimal = decimal_mark(languages.most_common(1)[0][0]) if languages else None
 
     # clusters
 
@@ -278,6 +334,12 @@ class _Builder:
             detail.append(source)
         if not fixed and not detail:
             return
+        if fixed and not detail and all(_figures(source) for source in fixed):
+            for source in fixed:
+                self.page_copy.append(
+                    PageCopy(source.page.path, source.step, len(source.entries), FIGURES, source)
+                )
+            return
         strong = _strong(group)
         if not strong:
             for source in fixed:
@@ -318,10 +380,13 @@ class _Builder:
         self.add_model(model)
 
     def zip(self) -> None:
-        """A list next to another with as many items, in the same block, holds the same rows.
+        """A list next to another with as many items, in the same part of a page, holds the
+        same rows.
 
         A slider's pictures and its captions are often two lists. They are read
-        as one: the captions' fields join the pictures' model, item by item.
+        as one: the captions' fields join the pictures' model, item by item. Two
+        lists in sections of their own are two things (a slider and a row of
+        figures below it), and a row of figures is never a model's other half.
         """
         copies = {(c.where, c.step): c for c in self.page_copy}
         for model in list(self.models):
@@ -345,6 +410,10 @@ class _Builder:
                     if owner is not None and (owner is model or len(owner.sources) > 1):
                         continue
                     if owner is None and copy is None:
+                        continue
+                    if copy is not None and copy.reason == FIGURES:
+                        continue
+                    if _section(source.container) is not _section(other.container):
                         continue
                     if owner is not None:
                         self.models.remove(owner)
@@ -904,12 +973,63 @@ class _Builder:
             if model.kind == "items":
                 self.subsets(model)
         self.derived_titles()
+        self.reverse_relations()
+
+    def reverse_relations(self) -> None:
+        """A link to another row that only shows the rows pointing back is no field.
+
+        A treatment page that links to its stories, while each story names its
+        treatment, holds one relation seen from both ends: the story's foreign
+        key stays, and the page loops over ``treatment.story_set``.
+        """
+        for model in self.models:
+            for f in list(model.fields):
+                if f.kind != "relation" or f.many or f.target is None or f.target is model:
+                    continue
+                other = f.target
+                back = next(
+                    (
+                        g
+                        for g in other.fields
+                        if g.kind == "relation" and not g.many and g.target is model
+                    ),
+                    None,
+                )
+                if back is None:
+                    continue
+                pointing: dict[int, set[int]] = {}
+                for eid, row in back.values.items():
+                    if isinstance(row, Entity):
+                        pointing.setdefault(id(row), set()).add(eid)
+                shown = {eid: row for eid, row in f.values.items() if isinstance(row, Entity)}
+                if not shown or any(
+                    id(row) not in pointing.get(eid, set()) for eid, row in shown.items()
+                ):
+                    continue
+                model.fields.remove(f)
+                accessor = other.name.lower() + "_set"
+                model.notes.append(
+                    f"{f.name} shows the {other.name} rows whose {back.name} is this "
+                    f"{model.name}: loop over {snake(model.name)}.{accessor}.all in the "
+                    "template, not a field."
+                )
 
     def derived_titles(self) -> None:
-        """A value that is always another model's title shows that row: the template reads it
-        through the relation, so it is not a field."""
+        """A text that always names another model's row shows that row: a relation, not a field.
+
+        The text is the row's title ("Taught by Mia Chen") or its key (a tag
+        ``whitening`` naming the ``whitening`` treatment). When the model
+        already points at that row another way (a link), the text is read
+        through that relation and dropped. Otherwise the text becomes the
+        relation, and the map reads it ``"by": "title"`` or ``"by": "key"``.
+        """
         titles = {
-            id(m): {_norm(self._title(e)) for e in m.entities} - {""}
+            id(m): {_norm(self._title(e)): e for e in m.entities if _norm(self._title(e))}
+            for m in self.models
+            if m.kind == "items"
+        }
+        keys = {
+            id(m): {t[4:]: e for e in m.entities for t in e.tokens if t.startswith("key:")}
             for m in self.models
             if m.kind == "items"
         }
@@ -917,19 +1037,48 @@ class _Builder:
             for f in list(model.fields):
                 if f.kind != "value" or f.slot_kind != "text":
                     continue
-                shown = {_norm(str(v)) for v in f.values.values() if v}
+                raw = {eid: str(v) for eid, v in f.values.items() if v}
+                shown = {_norm(v) for v in raw.values()}
                 if len(shown) < 2:
                     continue
                 for other in self.models:
                     if other is model or id(other) not in titles:
                         continue
-                    if shown <= titles[id(other)]:
+                    by_title, by_key = titles[id(other)], keys[id(other)]
+                    if shown <= set(by_title):
+                        by, rows = "title", {eid: by_title[_norm(v)] for eid, v in raw.items()}
+                    elif all(slugify(v) in by_key for v in raw.values()):
+                        by, rows = "key", {eid: by_key[slugify(v)] for eid, v in raw.items()}
+                    else:
+                        continue
+                    linked = any(
+                        g is not f and g.kind == "relation" and g.target is other and not g.many
+                        for g in model.fields
+                    )
+                    if linked:
                         model.fields.remove(f)
                         model.notes.append(
-                            f"{f.name} always shows a {other.name} title: read it through a "
+                            f"{f.name} always shows a {other.name} {by}: read it through the "
                             f"relation to {other.name} in the template, not as a field."
                         )
                         break
+                    wanted = snake(other.name)
+                    if f.name != wanted:
+                        f.name = self._unique(model, wanted)
+                    f.kind, f.type, f.optional, f.target = (
+                        "relation",
+                        f"fk:{other.name}",
+                        True,
+                        other,
+                    )
+                    f.values = dict(rows)
+                    for rule in f.rules:
+                        rule.options.update({"to": other.name, "by": by})
+                    f.note = (
+                        f"the text names a {other.name} by its {by}: a relation, read "
+                        f'"by": "{by}" in the map'
+                    )
+                    break
 
     def nested_relation(self, model: Model, source: Source, parent: Model) -> None:
         parents: dict[int, set[int]] = {}
@@ -1539,9 +1688,9 @@ class _Builder:
                     if f.slot_kind == "alt":
                         f.type = _str_size(raw)
                     elif f.slot_kind == "data":
-                        f.type, f.note = infer_type("text", raw)
+                        f.type, f.note = infer_type("text", raw, self.decimal)
                     else:
-                        f.type, note = infer_type(f.slot_kind, raw)
+                        f.type, note = infer_type(f.slot_kind, raw, self.decimal)
                         f.note = f.note or note
                 elif f.kind == "bool":
                     f.type = "bool"

@@ -123,6 +123,36 @@ def test_a_large_image_without_copies(settings: Settings) -> None:
     assert "2400 pixels wide, shown 400 wide" in failures[0]
 
 
+def test_the_check_makes_the_copies_no_worker_made(
+    settings: Settings, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # An upload whose copies were never made: its on_commit (the queue) never ran.
+    late = Project.objects.create(
+        title="Late upload",
+        slug="late",
+        summary="A big photo.",
+        photo=upload("late.jpg", 2400, 1200),
+    )
+    from django.core.files.storage import default_storage
+
+    from karni_site import renditions
+
+    assert not default_storage.exists(renditions.manifest_name(late.photo.name))
+    crawl = checks_seo.SeoCrawl()
+    assert crawl.run() == []
+    assert crawl.made == [late.photo.name]
+    assert default_storage.exists(renditions.manifest_name(late.photo.name))
+    # The hook says which it made and why.
+    renditions.forget(late.photo.name)
+    other = Project.objects.create(
+        title="Second", slug="second", summary="Another photo.", photo=upload("two.jpg", 2400, 1200)
+    )
+    assert checks_seo.run_checks() == []
+    out = capsys.readouterr().out
+    assert "made the smaller copies of 1 upload(s)" in out and other.photo.name in out
+    assert "no Celery worker had made them yet" in out
+
+
 def test_the_sitemap_and_the_pages_must_agree(settings: Settings, projects: list[Project]) -> None:
     # A draft the list still links to, and a sitemap that names a page that is gone.
     projects[1].published = False
@@ -152,6 +182,22 @@ def with_a_gone_page() -> dict[str, Any]:
             return item
 
     return {**sitemaps(), "gone": Gone()}
+
+
+def test_a_menu_item_whose_page_is_gone(projects: list[Project]) -> None:
+    from karni_site.models import Menu, MenuItem
+
+    menu = Menu.objects.create(name="footer")
+    MenuItem.objects.create(menu=menu, title="About", route="website:about", order=0)
+    # Seeded while a project had a page of its own, before they became one view.
+    MenuItem.objects.create(menu=menu, title="The cake", route="website:project_wedding", order=1)
+    MenuItem.objects.create(menu=menu, title="Off", route="website:gone", enabled=False, order=2)
+    failures = checks_seo.SeoCrawl().run()
+    (menu_failure,) = [f for f in failures if f.startswith("SITE007")]
+    assert "menu 'footer', item 'The cake': no page is named 'website:project_wedding'" in (
+        menu_failure
+    )
+    assert "Choose its page again in the admin's Menus" in menu_failure
 
 
 def test_a_site_without_the_sitemap(settings: Settings) -> None:

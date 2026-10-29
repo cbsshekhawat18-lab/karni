@@ -44,7 +44,7 @@ from typing import Any
 import typer
 
 from karni_cli.commands.add import record_guidance
-from karni_cli.design.forms import DesignForm, best_match, forms_in, suggest_tag
+from karni_cli.design.forms import DesignForm, best_match, forms_in, match_fields, suggest_tag
 from karni_cli.generators import migration as migration_gen
 from karni_cli.generators import model as model_gen
 from karni_cli.generators import site as site_gen
@@ -460,8 +460,30 @@ def _design_record(ws: Workspace) -> dict[str, Any] | None:
     return record if isinstance(record, dict) else None
 
 
+def _page_keys(record: dict[str, Any]) -> dict[str, str]:
+    """Template name → the first part of its blocks' keys, as the import gave them."""
+    found: dict[str, str] = {}
+    base = record.get("base")
+    if isinstance(base, dict) and base.get("template"):
+        found[str(base["template"])] = "shared"
+    for entry in record.get("partials") or []:
+        if isinstance(entry, dict) and entry.get("template"):
+            found[str(entry["template"])] = "shared"
+    for key in ("pages", "error_pages"):
+        for entry in record.get(key) or []:
+            if isinstance(entry, dict) and entry.get("template"):
+                name = str(entry.get("name") or "")
+                found[str(entry["template"])] = re.sub(r"[^a-z0-9_]+", "_", name.lower()) or "page"
+    return found
+
+
 def design_forms(ws: Workspace) -> list[tuple[str, DesignForm]]:
     """``(template path, form)`` for every ``<form>`` in the imported design's templates."""
+    return [(path, form) for path, form, _page in _design_forms(ws)]
+
+
+def _design_forms(ws: Workspace) -> list[tuple[str, DesignForm, str]]:
+    """``(template path, form, page key)`` for every ``<form>`` of the imported templates."""
     record = _design_record(ws)
     if record is None:
         return []
@@ -469,32 +491,36 @@ def design_forms(ws: Workspace) -> list[tuple[str, DesignForm]]:
     app = next((a for a in local_apps(ws) if label in (a.label, a.module)), None)
     if app is None:
         return []
-    names: list[str] = []
-    base = record.get("base")
-    if isinstance(base, dict) and base.get("template"):
-        names.append(str(base["template"]))
-    for key in ("partials", "pages", "error_pages"):
-        for entry in record.get(key) or []:
-            if isinstance(entry, dict) and entry.get("template"):
-                names.append(str(entry["template"]))
-    found: list[tuple[str, DesignForm]] = []
-    for template in dict.fromkeys(names):
+    pages = _page_keys(record)
+    found: list[tuple[str, DesignForm, str]] = []
+    for template, page in pages.items():
         path = app.file("templates", template)
         source = ws.read(path)
         if source is None:
             continue
-        found += [(ws.rel(path), form) for form in forms_in(source)]
+        found += [(ws.rel(path), form, page) for form in forms_in(source)]
     return found
 
 
+def _editable(ws: Workspace) -> bool:
+    """Whether the import made the site editable (``--editable``)."""
+    record = _design_record(ws) or {}
+    return bool((record.get("editable") or {}).get("enabled"))
+
+
 def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
-    """Which imported template holds the ``<form>`` this one replaces, and the tag that keeps it."""
-    found = design_forms(ws)
+    """Which imported template holds the ``<form>`` this one replaces, and the tag that keeps it.
+
+    The design's controls are matched to the model's fields by name, then by
+    their label and type (:func:`karni_cli.design.forms.match_fields`), and
+    the notes say which control fills which field and which fill none.
+    """
+    found = _design_forms(ws)
     if not found:
         return
-    fields = [spec.name for spec in specs]
-    best = best_match([form for _, form in found], fields)
-    for template, form in found:
+    fields = {spec.name: spec.kind for spec in specs}
+    best = best_match([form for _, form, _page in found], fields)
+    for template, form, _page in found:
         mark = form is best
         ws.note(
             f"design: {template}:{form.line}: <form"
@@ -509,18 +535,36 @@ def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
             "where the form belongs."
         )
         return
-    template = next(t for t, form in found if form is best)
-    missing = [n for n in best.names if n not in fields]
+    template, page = next((t, p) for t, form, p in found if form is best)
+    matches, unmatched = match_fields(best, fields)
     ws.note(
-        f"replace: in {template}, replace that <form> ... </form> (line {best.line}) with:\n"
-        f"    {suggest_tag(name, best, fields)}"
-        + (
-            f"\n  The design's form also asks for {', '.join(missing)}, which {name} has no "
-            "field for: add them to the command, or leave them out."
-            if missing
-            else ""
-        )
+        "fields: the design's form fills "
+        + ", ".join(match.describe(best) for match in matches)
+        + "."
     )
+    editable = f"{page}.{name}" if _editable(ws) else ""
+    filled = {match.model for match in matches}
+    extra = [spec.name for spec in specs if spec.name not in filled]
+    lines = [
+        f"replace: in {template}, replace that <form> ... </form> (line {best.line}) with:",
+        f"    {suggest_tag(name, best, fields, editable=editable)}",
+    ]
+    if unmatched:
+        lines.append(
+            f"  The design's form also asks for {', '.join(unmatched)}, which no field of {name} "
+            "fills: add them to the command, rename a field to match, or leave them out."
+        )
+    if extra:
+        lines.append(
+            f"  {name} also has {', '.join(extra)}, which the design's form does not show: the "
+            'tag renders them too (fields="..." chooses which).'
+        )
+    if editable:
+        lines.append(
+            f'  editable="{editable}": the labels, placeholders, button and sent message are '
+            f"blocks the client edits in the admin (Page content, {editable}.*)."
+        )
+    ws.note("\n".join(lines))
 
 
 # the tests

@@ -494,7 +494,9 @@ def plan(
             shared=shared,
         )
         editor.prepare(content_pages, layout, renderer.by_key)
-    base = _render_base(reference, content_pages, layout, renderer, shared_head, site, result)
+    base = _render_base(
+        reference, content_pages, layout, renderer, shared_head, site, result, editor
+    )
     base_name = f"{app}/base.html"
     result.templates[f"templates/{base_name}"] = base
 
@@ -711,6 +713,7 @@ def plan(
         "unmapped": list(result.problems),
     }
     if editor is not None:
+        editor.share_fallback(result.unused_assets)
         result.design["editable"] = editor.finish(result.templates, base_name, renderer)
         result.editable = editor.report
         if editor.left_out:
@@ -769,8 +772,15 @@ def _render_base(
     shared_head: set[str],
     site: str,
     result: SitePlan,
+    editor: Any = None,
 ) -> str:
-    """The layout: the reference page's skeleton, the shared head, the shared blocks."""
+    """The layout: the reference page's skeleton, the shared head, the shared blocks.
+
+    With ``editor`` (an editable import), a share image every page has that is
+    a file of the design becomes the site's default share image
+    (``share_image`` in ``{% site_defaults %}``) instead of a tag in the
+    template, so the client's upload in the site settings replaces it.
+    """
     text = reference.text
     assert reference.rewriter is not None
     renderer.begin()
@@ -812,6 +822,7 @@ def _render_base(
                     sig in shared_head
                     and not seo.derived(node, text)
                     and node not in (reference.title, reference.description, reference.canonical)
+                    and not (editor is not None and editor.share_default(reference, node))
                 ):
                     defaults.append(renderer.span(reference, node.start, node.end))
             elif sig in shared_head:

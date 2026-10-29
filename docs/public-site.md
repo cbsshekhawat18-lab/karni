@@ -130,7 +130,10 @@ files, and its `views.py` and `urls.py` are extended in place.
 `base.html`, the URL at the marker in the site's `urls.py`, and the same URL
 in the page test (see [The page test](#the-page-test)). Its path defaults to
 `/<name>/`. A capture such as `<slug:slug>` becomes a view parameter and a
-template variable. Both commands take `--dry-run`, and `--no-route` when you
+template variable. A view with a capture usually replaces the pages of one
+folder (a model's detail pages becoming one view): an `{% ifactive %}` that
+named those pages' views gets the folder's path instead (`"/services/*"`),
+so the menu item stays marked on every page of the folder. Both commands take `--dry-run`, and `--no-route` when you
 want to wire the URL yourself.
 
 A designer's static pages go in with [`karni import design`](#import-a-design),
@@ -320,7 +323,9 @@ tags work in a template written by hand:
   changes it. Once they change it, their version stays.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
-  highlight (a backslash before the marker keeps it as typed). Model fields
+  highlight (a backslash before the marker keeps it as typed). A template's
+  default reads the markers too: `{% editable "home.title" %}Bread ==worth==
+  the walk{% endeditable %}` shows the highlight before anyone edits it. Model fields
   rendered with `{{ value|highlight }}` read the same markers. Bold, emphasis and links are kept, and everything else is
   removed when it is saved: scripts, styles, event attributes, `javascript:`
   links.
@@ -332,7 +337,9 @@ tags work in a template written by hand:
   follows the services the client adds.
 - **The site's details** (`site`): name, tagline, logo, favicon, the default
   share image, address, phone, email, map link, opening hours and social
-  links.
+  links. `{% site_defaults %}` gives the logo, the favicon and the share
+  image as static paths (`share_image="website/img/share.jpg"`), used until
+  the client uploads their own.
 - **Redirects** for old addresses, and **page titles and descriptions** per
   page.
 
@@ -349,14 +356,30 @@ What the import marks:
   `<link rel="icon">` its favicon.
 - the first `tel:`, `mailto:` and map link and every link to a social
   profile take their addresses from `site`.
+- opening hours a table, a definition list, a list or lines of text show
+  (days, then times or a word for closed, in English, German, French,
+  Spanish, Italian, Dutch or Portuguese) become a loop over `site.hours` in
+  the design's own markup, seeded once with `{% site_defaults hours="..." %}`.
+  When the footer and the contact page both show them, both loop over the
+  same rows, seeded from the one whose markup parts days from times, so the
+  client enters them once. Lists that show different hours, or a row that
+  does not read as hours, stay text blocks, and the report says so.
+- an `og:image` every page has becomes the site's default share image
+  (`share_image` in `{% site_defaults %}`, with the logo and the favicon),
+  so the client replaces it in *Site settings*. Without one, the one image
+  no page uses that is named for sharing (`share.jpg`, `og-image.png`) is
+  taken, and the report says so.
 - a navigation whose items share one markup (a list of links, nested lists
   for a submenu, or links side by side) becomes `{% get_menu %}` and a
   loop, seeded from `templates/<app>/menus/<name>.html`. One whose items
   differ keeps its markup and its link texts become blocks, and the report
   says where.
 - headings that highlight words with the same element and class
-  (`<span class="highlight">`) set `KARNI_SITE_HIGHLIGHT` in
-  config/settings.py, so the client types `==words==` for the same.
+  (`<span class="highlight">`), or the same element without one (`<em>`),
+  set `KARNI_SITE_HIGHLIGHT` in config/settings.py once, so the client
+  types `==words==` for the same. Characters a design writes around words
+  (`*whole*`) are its text, not a highlight. A `==` in the design's own text
+  is written `\==`, so the page shows it as written.
 
 `.karni/design.json` records each block's key and where it was. The next
 import gives the same place the same key, so the client's edits stay
@@ -604,7 +627,9 @@ search engines without project code:
 reports titles and descriptions missing or shared between pages, images
 without alt text, without width and height or much larger than shown,
 broken internal links, and pages missing from the sitemap (`SITE010` to
-`SITE018`). The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+`SITE018`). It makes the smaller copies of the uploads the pages show that
+have none yet, in its own process, and names them, so it passes in
+development without a Celery worker. The site keeps queueing them. The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
 lists every setting.
 
 ## Public forms
@@ -686,15 +711,32 @@ templates:
 The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-site/README.md)
 lists every argument and setting.
 
+`editable="<key>"` makes the form's texts editable in the admin like the
+rest of the page: each field's label and placeholder, the button and the
+sent message become blocks under that key (`home.booking.email.label`,
+`home.booking.button`), with the tag's own texts as their defaults:
+
+```django
+{% karni_form "booking_request" labels="day: Preferred day" button="Book now" editable="home.booking" %}
+```
+
 When the site came from `karni import design`, the import lists each
 `<form>` of the design (it is in `.karni/design.json` too), and `karni make
 form` names the template and the line of the form it replaces, with the tag
-that keeps that form's class names, rows, labels, placeholders and button:
+that keeps that form's class names, rows, labels, placeholders and button.
+It matches each of the design's controls to a field of the form: by its
+name, then by its label and its type (the design's `day` with the label
+*Preferred date* fills `preferred_date`), then by its type alone when one
+control and one field of that type are left. It says which control fills
+which field, and names the controls no field fills and the fields the
+design does not show. After an editable import the tag gets `editable=`,
+and its arguments are always plain text:
 
 ```text
 design: website/templates/website/home.html:8: <form action="book.php"> with name, email, day, service (the fields of booking_request)
+fields: the design's form fills name -> name, email -> email, day -> day, service -> service.
 replace: in website/templates/website/home.html, replace that <form> ... </form> (line 8) with:
-    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" %}
+    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" editable="home.booking_request" %}
 ```
 
 ### The email
@@ -737,4 +779,5 @@ that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
 middleware is installed, `SITE008`: no block key has two defaults, `SITE020`:
 every `{% karni_form %}` names a form that exists), and `karni test` runs its
 page test and each form's test. `karni check --seo` renders every page
-and checks what search engines read ([SEO by default](#seo-by-default)).
+and checks what search engines read ([SEO by default](#seo-by-default)), and
+names a menu item whose page is gone (`SITE007`).

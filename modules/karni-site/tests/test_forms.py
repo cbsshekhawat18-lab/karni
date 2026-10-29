@@ -127,6 +127,45 @@ def test_settings_and_arguments_set_the_classes(settings: Settings, rf: RequestF
         )
 
 
+def test_editable_texts_are_blocks_the_client_changes(rf: RequestFactory) -> None:
+    from karni_site.models import Block
+
+    source = (
+        '{% load karni_site %}{% karni_form "appointment_request" editable="book.appointment" '
+        'labels="name: Your name | day: Preferred day" placeholders="email: you@clinic.example" '
+        'button="Book now" success="See you soon & thanks." %}'
+    )
+    html = Template(source).render(RequestContext(rf.get("/book/")))
+    # The tag's texts are the defaults, stored as blocks under the prefix.
+    assert ">Preferred day <span" in html and 'placeholder="you@clinic.example"' in html
+    assert ">Book now</button>" in html
+    assert 'data-karni-success="See you soon &amp; thanks."' in html
+    keys = set(Block.objects.filter(page="book").values_list("key", flat=True))
+    assert {
+        "book.appointment.name.label",
+        "book.appointment.day.label",
+        "book.appointment.email.label",
+        "book.appointment.email.placeholder",
+        "book.appointment.button",
+        "book.appointment.success",
+    } <= keys
+    # A field without a label in the tag starts from the model's.
+    stored = Block.objects.get(key="book.appointment.reason.label")
+    assert stored.default_html == "Reason"
+    # The client's edits show on the next render, as text.
+    for key, text in (("book.appointment.day.label", "Which day suits you?"),
+                      ("book.appointment.button", "Request <b>it</b>")):  # fmt: skip
+        block = Block.objects.get(key=key)
+        block.html = text
+        block.save()
+    html = Template(source).render(RequestContext(rf.get("/book/")))
+    assert ">Which day suits you? <span" in html and ">Request it</button>" in html
+    with pytest.raises(Exception, match="SITE021"):
+        Template('{% load karni_site %}{% karni_form "subscriber" editable="Book Form" %}').render(
+            RequestContext(rf.get("/book/"))
+        )
+
+
 def test_a_choice_as_radios_keeps_the_choice_on_a_second_render(rf: RequestFactory) -> None:
     template = Template(
         '{% load karni_site %}{% karni_form "appointment_request" widgets="reason: radios" %}'

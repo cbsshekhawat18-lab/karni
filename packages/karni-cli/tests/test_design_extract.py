@@ -46,10 +46,19 @@ def test_extract_writes_load_content_with_image_paths_relative_to_the_file(tmp_p
     teachers = _rows(result.content, "website.Teacher")
     assert list(teachers) == ["mia-chen", "omar-haddad", "lena-berg"]
     assert teachers["mia-chen"]["position"] == 1
+    # The images are named next to the content file, at their path in the design.
     photo = teachers["mia-chen"]["photo"]
+    assert photo == "files/img/mia.jpg"
+    assert result.files[photo] == DESIGNS / "school" / "img" / "mia.jpg"
+    assert not (output.parent / photo).exists()  # extract writes nothing itself
+    # With copy_files=False the paths point into the design, as written.
+    kept = _rows(
+        extract(DESIGNS / "school", _map("school"), output, copy_files=False).content,
+        "website.Teacher",
+    )["mia-chen"]["photo"]
     assert (
-        not photo.startswith("/")
-        and (output.parent / photo).resolve() == (DESIGNS / "school" / "img" / "mia.jpg").resolve()
+        not kept.startswith("/")
+        and (output.parent / kept).resolve() == (DESIGNS / "school" / "img" / "mia.jpg").resolve()
     )
     courses = _rows(result.content, "website.Course")
     assert list(courses) == ["pottery", "drawing", "weaving", "printing"]  # the list's order
@@ -156,6 +165,119 @@ def test_open_decisions_and_maps_extract_cannot_follow_are_refused(tmp_path: Pat
         read_map(tmp_path / "missing.json")
 
 
+def test_numbers_are_read_in_the_pages_language(tmp_path: Path) -> None:
+    design = tmp_path / "design"
+    design.mkdir()
+    page = """<!doctype html><html lang="{lang}"><head><title>Figures</title></head><body><main>
+    <ul class="count">{items}</ul></main></body></html>"""
+    items = "".join(
+        f'<li class="entry" id="e{i}"><b>{n}</b></li>' for i, n in enumerate(("4,000", "1.234,5"))
+    )
+    spec: dict[str, Any] = {
+        "version": 1,
+        "app": "website",
+        "models": [
+            {
+                "name": "Entry",
+                "fields": {"slug": "slug:title", "amount": "decimal:10:2"},
+                "key": "slug",
+                "sources": [
+                    {
+                        "page": "index.html",
+                        "items": "li.entry",
+                        "key": {"from": "attr", "name": "id"},
+                        "values": {"amount": "b"},
+                    }
+                ],
+            }
+        ],
+    }
+    output = tmp_path / "site.json"
+    (design / "index.html").write_text(page.format(lang="en", items=items))
+    rows = _rows(extract(design, spec, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4000" and rows["e1"]["amount"] == "1234.5"
+    (design / "index.html").write_text(page.format(lang="de-DE", items=items))
+    rows = _rows(extract(design, spec, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4.000" and rows["e1"]["amount"] == "1234.5"
+    # The map's "decimal" decides for every page; a value it does not know is refused.
+    rows = _rows(extract(design, {**spec, "decimal": "."}, output).content, "website.Entry")
+    assert rows["e0"]["amount"] == "4000"
+    with pytest.raises(MapError, match='"decimal" is the decimal mark'):
+        check_map({**spec, "decimal": "comma"})
+
+
+def _people_and_classes(tmp_path: Path) -> Path:
+    """Teachers on one page, classes that name their teacher by name and their room by key."""
+    design = tmp_path / "design"
+    (design / "img").mkdir(parents=True)
+    head = (
+        "<!doctype html><html><head><title>{0}</title></head><body><main>{1}</main></body></html>"
+    )
+    teachers = "".join(
+        f'<article class="teacher"><img src="img/{key}.jpg" alt="{name}"><h3>{name}</h3>'
+        f'<p class="bio">{name} teaches here.</p></article>'
+        for key, name in (("mia", "Mia Chen"), ("omar", "Omar Haddad"), ("lena", "Lena Berg"))
+    )
+    for key in ("mia", "omar", "lena"):
+        (design / "img" / f"{key}.jpg").write_bytes(b"\xff\xd8\xff")
+    rooms = "".join(
+        f'<div class="room" id="{key}"><img src="img/{key}.jpg" alt="{title}"><h3>{title}</h3>'
+        f"<p>Seats {seats}.</p></div>"
+        for key, title, seats in (("mia", "Studio", 8), ("omar", "Hall", 30), ("lena", "Yard", 12))
+    )
+    classes = "".join(
+        f'<li class="class"><h4>{title}</h4><p class="by">{teacher}</p>'
+        f'<span class="room">{room}</span></li>'
+        for title, teacher, room in (
+            ("Clay basics", "Mia Chen", "mia"),
+            ("Big drawing", "Omar Haddad", "omar"),
+            ("Outdoor sketching", "Lena Berg", "lena"),
+        )
+    )
+    (design / "index.html").write_text(head.format("Teachers", teachers))
+    (design / "rooms.html").write_text(head.format("Rooms", rooms))
+    (design / "classes.html").write_text(head.format("Classes", f"<ul>{classes}</ul>"))
+    return design
+
+
+def test_a_text_that_names_another_row_is_a_relation_by_title_or_key(tmp_path: Path) -> None:
+    design = _people_and_classes(tmp_path)
+    analysis = analyze(design, "website")
+    spec = analysis.draft_map(str(design))
+    model = next(m for m in spec["models"] if m["name"] == "Class")
+    values = model["sources"][0]["values"]
+    by = {
+        name: rule["by"] for name, rule in values.items() if isinstance(rule, dict) and "by" in rule
+    }
+    assert by == {"teacher": "title", "room": "key"}
+    assert model["fields"]["teacher"] == "fk:Teacher?" and model["fields"]["room"] == "fk:Room?"
+    rows = _rows(extract(design, spec, tmp_path / "site.json").content, "website.Class")
+    assert rows["clay-basics"]["teacher"] == "mia-chen" and rows["clay-basics"]["room"] == "mia"
+
+
+def test_an_option_value_extract_does_not_know_is_refused(tmp_path: Path) -> None:
+    design = _people_and_classes(tmp_path)
+    spec = analyze(design, "website").draft_map(str(design))
+    model = next(m for m in spec["models"] if m["name"] == "Class")
+    model["sources"][0]["values"]["teacher"]["by"] = "name"
+    with pytest.raises(MapError, match="\"by\" is 'name', which extract does not know") as raised:
+        check_map(spec)
+    assert raised.value.code == "C124" and '"link", "key", "title"' in str(raised.value)
+    model["sources"][0]["key"] = {"from": "slug"}
+    with pytest.raises(MapError, match="key's \"from\" is 'slug'"):
+        check_map(spec)
+    # Through the command: C124, with the values it takes.
+    model["sources"][0]["key"] = {"from": "field", "field": "title"}
+    map_file = tmp_path / "map.json"
+    map_file.write_text(json.dumps(spec))
+    fails("design", "extract", str(design), "--map", str(map_file), match="C124")
+    # "by" without "to" is a map extract cannot follow.
+    model["sources"][0]["values"]["teacher"] = {"select": "p.by", "by": "title"}
+    with pytest.raises(MapError, match='"by" says how a relation names its row') as raised:
+        check_map(spec)
+    assert raised.value.code is None
+
+
 def test_the_maps_marker_goes_around_highlighted_words(tmp_path: Path) -> None:
     data = _map("school")
     assert data["marker"] == "=="
@@ -260,8 +382,21 @@ def test_extract_refuses_open_decisions_then_writes_the_content(
     assert "website.Course   4 row(s) (8 child row(s))" in first.output
     content = json.loads((tmp_path / "content" / "site.json").read_text())
     assert content["website.Course"][0]["slug"] == "pottery"
+    # The project holds the images the content names: the design folder can be anywhere.
+    photo = content["website.Teacher"][0]["photo"]
+    copied = tmp_path / "content" / photo
+    assert photo.startswith("files/img/") and copied.is_file()
+    assert copied.read_bytes() == (Path(design) / photo.removeprefix("files/")).read_bytes()
+    assert "images: " in first.output and "copied, 0 unchanged" in first.output
     second = ok("design", "extract", design, "--map", "map.json")
     assert "The content is unchanged since the last extract." in second.output
+    assert "(0 copied, 15 unchanged)" in second.output
+    kept = ok(
+        "design", "extract", design, "--map", "map.json", "-o", "kept/site.json", "--keep-paths"
+    )
+    assert "images:" not in kept.output and not (tmp_path / "kept" / "files").exists()
+    path = json.loads((tmp_path / "kept" / "site.json").read_text())["website.Teacher"][0]["photo"]
+    assert (tmp_path / "kept" / path).resolve() == (Path(design) / "img" / "mia.jpg").resolve()
     (tmp_path / "bad.json").write_text('{"models": [{"name": "X"}]}')
     fails("design", "extract", design, "--map", "bad.json", match="C121")
 

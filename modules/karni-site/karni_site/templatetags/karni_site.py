@@ -290,8 +290,12 @@ class EditableNode(Node):
         self.nodelist = nodelist
 
     def render(self, context: Context) -> SafeString:
+        from karni_site.sanitize import apply_highlight
+
         key = _resolved_key(self.key, context, "editable")
-        default = str(self.nodelist.render(context))
+        # The template's words between the markers (==words==) are the highlight, as in an
+        # edit: the default is stored and shown the way the client's text would be.
+        default = apply_highlight(str(self.nodelist.render(context)))
         return mark_safe(blocks.text(key, default, _request(context)))  # noqa: S308 - template default or cleaned HTML
 
 
@@ -438,17 +442,22 @@ class SiteDefaultsNode(Node):
 
 @register.tag("site_defaults")
 def do_site_defaults(parser: Parser, token: Token) -> SiteDefaultsNode:
-    """``{% site_defaults name="..." phone="..." social_<network>="https://..." %}``."""
+    """``{% site_defaults name="..." share_image="<static path>" social_<network>="..." %}``."""
     from django.template.base import kwarg_re
 
     values: dict[str, FilterExpression] = {}
+    images = sorted(sitesettings.file_fields())
     for bit in token.split_contents()[1:]:
         match = kwarg_re.match(bit)
         name = match.group(1) if match else None
-        if not name or (name not in sitesettings.SEEDABLE and not name.startswith("social_")):
+        known = name in sitesettings.SEEDABLE or name in images or name == sitesettings.HOURS
+        if not name or (not known and not name.startswith("social_")):
             raise _syntax_error(
                 "{% site_defaults %} takes name=value pairs for "
-                f"{', '.join(sitesettings.SEEDABLE)}, or social_<network>=<address>. Got {bit}."
+                f"{', '.join(sitesettings.SEEDABLE)}, a static path for "
+                f'{", ".join(images)} (share_image="website/img/share.jpg"), the opening hours '
+                '(hours="Mon to Fri=9:00 to 17:00|Sat=Closed"), or '
+                f"social_<network>=<address>. Got {bit}."
             )
         values[name] = parser.compile_filter(bit.split("=", 1)[1])
     if not values:

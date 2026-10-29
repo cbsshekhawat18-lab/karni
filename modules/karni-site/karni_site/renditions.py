@@ -24,6 +24,11 @@ copied: the original is shown as uploaded, and the manifest still records
 its width and height (read by :mod:`karni_site.imagesize`), so pages keep
 their ``width`` and ``height``.
 
+Inside :func:`made_inline` the missing copies are made at once, in this
+process, instead of queued: ``karni check --seo`` does that, so it judges
+the copies a worker would make even where no worker runs (development).
+The site itself always queues them.
+
 Override / escape hatch: ``KARNI_SITE_IMAGE_WIDTHS``, ``KARNI_SITE_IMAGE_QUALITY``,
 ``KARNI_SITE_IMAGE_MAX_SIZE``, ``KARNI_SITE_QUEUE_RENDITIONS`` and
 ``KARNI_SITE_RENDITIONER`` (a ``(name, storage) -> Manifest`` function that
@@ -36,7 +41,9 @@ import hashlib
 import json
 import logging
 import re
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from functools import partial
 from io import BytesIO
@@ -65,6 +72,7 @@ __all__ = [
     "info",
     "is_derived",
     "make",
+    "made_inline",
     "manifest_name",
     "queue",
     "read_manifest",
@@ -94,6 +102,23 @@ _ENCODINGS: dict[str, dict[str, Any]] = {
     "WEBP": {"quality": 90},
 }
 _pillow_missing_logged = False
+#: The names whose copies were made at once, inside :func:`made_inline`; ``None`` outside.
+_INLINE: ContextVar[list[str] | None] = ContextVar("karni_site_inline_copies", default=None)
+
+
+@contextmanager
+def made_inline() -> Iterator[list[str]]:
+    """Make missing copies at once instead of queueing them, and list the names made.
+
+    For a run that judges the copies (``karni check --seo``) where no Celery
+    worker may be running. Outside it, copies are queued as always.
+    """
+    made: list[str] = []
+    token = _INLINE.set(made)
+    try:
+        yield made
+    finally:
+        _INLINE.reset(token)
 
 
 @dataclass(frozen=True)
@@ -260,6 +285,12 @@ def info(value: Any) -> Manifest | None:
         store.set(key, manifest.as_dict(), caching.timeout())
         return manifest
     queue(source)
+    try:
+        made = store.get(key)  # made already: an eager Celery, or made_inline()
+    except Exception:  # noqa: BLE001 - a cache that is down shows the original
+        made = None
+    if made:
+        return Manifest.from_dict(made)
     interim = _local_size(source)
     store.set(key, interim.as_dict() if interim else {}, _RETRY)
     return interim
@@ -271,6 +302,14 @@ def queue(value: Any, *, force: bool = False) -> None:
     if source is None or is_derived(source.name):
         return
     if not conf.get("KARNI_SITE_QUEUE_RENDITIONS"):
+        return
+    inline = _INLINE.get()
+    if inline is not None:
+        try:
+            if make(source.name, source.ref, force=force) is not None:
+                inline.append(source.name)
+        except Exception:  # noqa: BLE001 - an unreadable image is judged as it is
+            logger.warning("karni_site: the copies of %s could not be made", source.name)
         return
     store = caching.cache()
     lock = caching.key("image-queued", hashlib.sha256(source.name.encode()).hexdigest()[:40])

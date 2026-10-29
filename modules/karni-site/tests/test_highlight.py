@@ -66,3 +66,26 @@ def test_a_spec_that_is_not_markup_is_refused() -> None:
         markup('span onclick="x"')
     with pytest.raises(TemplateSyntaxError, match="SITE003"):
         render('{{ v|highlight:"<script>" }}', v="==x==")
+
+
+@pytest.mark.django_db
+def test_a_blocks_template_default_renders_its_marked_words_highlighted() -> None:
+    from karni_site.models import Block
+
+    em = {"marker": "==", "tag": "em", "class": ""}
+    source = (
+        '{% editable "home.intro.title" %}Gentle care, ==honest== advice \\== plain'
+        "{% endeditable %} "
+        '{% editable "home.intro.lead" %}A <em>design</em> word{% endeditable %} '
+        '{% editable "home.intro.stars" %}Request an *appointment*{% endeditable %}'
+    )
+    with override_settings(KARNI_SITE_HIGHLIGHT=em):
+        html = render(source)
+        # The marker is the highlight, a backslash keeps it, the design's markup stays,
+        # and characters a design writes around words are its text.
+        assert "Gentle care, <em>honest</em> advice == plain" in html
+        assert "A <em>design</em> word" in html and "Request an *appointment*" in html
+        block = Block.objects.get(key="home.intro.title")
+        assert block.default_html == "Gentle care, <em>honest</em> advice == plain"
+        # The client edits it with the marker, as any block.
+        assert to_editing(block.html) == "Gentle care, ==honest== advice \\== plain"

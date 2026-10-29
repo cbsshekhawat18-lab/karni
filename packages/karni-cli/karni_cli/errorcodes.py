@@ -299,6 +299,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Write the draft to another file, or pass --force to replace the map.",
     ),
     _c(
+        "C124",
+        "A content map option has a value extract does not know",
+        "karni design extract --map",
+        'Some options of the map take one of a few values: a relation\'s "by" (absent for a '
+        'link to the row\'s page, "key" for the row\'s key, "title" for its title), a key\'s '
+        '"from" (page, link, attr, field, position) and "link" ("path"). A value outside them '
+        "would be read some other way without a word, so extract refuses it.",
+        "Write one of the values the message lists, or leave the option out for its default. "
+        "docs/design-content.md#the-content-map describes each.",
+    ),
+    _c(
         "C199",
         "Internal error in karni",
         "karni make, karni upgrade",

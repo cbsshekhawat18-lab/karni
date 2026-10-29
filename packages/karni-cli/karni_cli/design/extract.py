@@ -6,6 +6,12 @@ element is which field. This module reads the pages with it and writes the
 content in the format :mod:`karni.transfer.loading` loads, image paths
 relative to the output file. Nothing is retyped and nothing is made up.
 
+The images the content names are copied next to the output file, under
+``files/`` at their path in the design (``content/files/img/mia.jpg``), so
+the project holds everything ``karni load`` reads even when the design
+folder is elsewhere. ``copy_files=False`` (``--keep-paths``) points at the
+design's own files instead.
+
 The map (JSON)::
 
     {
@@ -13,6 +19,7 @@ The map (JSON)::
       "design": "../design",            # the design folder, relative to the map file
       "app": "website",                 # rows go to "<app>.<Model>"
       "marker": "==",                   # around highlighted words: KARNI_SITE_HIGHLIGHT's marker
+      "decimal": ",",                   # optional: the decimal mark, else each page's <html lang>
       "models": [
         {
           "name": "Course",
@@ -78,9 +85,11 @@ A value is a place, or an object with ``select`` (the place) and one of:
 * ``decide``: a question the analysis left for the agent. Extract refuses to
   run until every ``decide`` is answered (removed, or the value deleted).
 
-The value is parsed by the field's type: a number from ``"12 weeks"``, an
-amount from ``"€4.50"``, a date from ``"14 March 2026"`` or a ``datetime``
-attribute, a path for an image.
+The value is parsed by the field's type: a number from ``"12 weeks"`` (and
+``"4,000"`` as 4000, ``"1.234,5"`` where the page's ``<html lang>`` writes a
+decimal comma, or the map's ``"decimal"`` says so), an amount from
+``"€4.50"``, a date from ``"14 March 2026"`` or a ``datetime`` attribute, a
+path for an image.
 
 Override / escape hatch: :func:`extract` takes ``reader=``, a
 :class:`Reader` subclass, to read values another way.
@@ -103,9 +112,18 @@ from karni_cli.design.analyze import attr_key, link_key, page_slug, parse_value
 from karni_cli.design.parse import Document, Node, collapse, parse
 from karni_cli.design.rewrite import Mapped, page_route
 from karni_cli.design.select import Place, SelectorError, parse_place
-from karni_cli.design.values import HIGHLIGHT_MARKER, slugify, text_of
+from karni_cli.design.values import (
+    HIGHLIGHT_MARKER,
+    decimal_mark,
+    page_language,
+    slugify,
+    text_of,
+)
 
-__all__ = ["ExtractResult", "MapError", "Reader", "extract", "read_map"]
+__all__ = ["FILES_DIR", "ExtractResult", "MapError", "Reader", "extract", "read_map"]
+
+#: The folder next to the content file the design's images are copied into.
+FILES_DIR: Final = "files"
 
 MAP_VERSION: Final = 1
 _SOURCE_KEYS: Final = frozenset(
@@ -132,12 +150,35 @@ _VALUE_KEYS: Final = frozenset(
 )
 
 
-class MapError(ValueError):
-    """The map cannot be used: what is wrong and where. ``pending`` lists open decisions."""
+#: The values some options take: a relation's ``by``, a key's ``from``, a value's ``link``.
+BY_VALUES: Final = ("link", "key", "title")
+FROM_VALUES: Final = ("page", "link", "attr", "field", "position")
+LINK_VALUES: Final = ("path",)
+#: The code of a map whose only problems are option values extract does not know.
+VALUE_CODE: Final = "C124"
 
-    def __init__(self, message: str, *, pending: list[str] | None = None) -> None:
+
+class MapError(ValueError):
+    """The map cannot be used: what is wrong and where. ``pending`` lists open decisions.
+
+    ``code`` is ``C124`` when every problem is an option value extract does not
+    know (a relation's ``"by"``), else ``None`` (the command's ``C121``).
+    """
+
+    def __init__(
+        self, message: str, *, pending: list[str] | None = None, code: str | None = None
+    ) -> None:
         super().__init__(message)
         self.pending = list(pending or [])
+        self.code = code
+
+
+def _choice(value: Any, allowed: tuple[str, ...], what: str, where: str) -> str | None:
+    """The problem with ``value`` for an option that takes one of ``allowed``, or ``None``."""
+    if value is None or value in allowed:
+        return None
+    listed = ", ".join(f'"{item}"' for item in allowed)
+    return f"{where}: {what} is {value!r}, which extract does not know. Write one of {listed}."
 
 
 def read_map(path: Path) -> dict[str, Any]:
@@ -164,6 +205,11 @@ def check_map(data: Any, where: str = "the map") -> None:
             f'{where}: "marker" is the text around highlighted words, such as "==" (the '
             f"default, KARNI_SITE_HIGHLIGHT's), not {marker!r}."
         )
+    if data.get("decimal") not in (None, ",", "."):
+        raise MapError(
+            f'{where}: "decimal" is the decimal mark the pages write, "," or ".", not '
+            f"{data.get('decimal')!r}. Leave it out to read each page's <html lang>."
+        )
     if data.get("version", MAP_VERSION) != MAP_VERSION:
         raise MapError(
             f"{where}: map version {data.get('version')!r}, this karni reads {MAP_VERSION}."
@@ -171,6 +217,7 @@ def check_map(data: Any, where: str = "the map") -> None:
     names = {str(m.get("name")) for m in data["models"] if isinstance(m, Mapping)}
     pending: list[str] = []
     problems: list[str] = []
+    unknown_values: list[str] = []
     for model in data["models"]:
         if not isinstance(model, Mapping) or not model.get("name"):
             problems.append('every model is an object with a "name".')
@@ -197,6 +244,21 @@ def check_map(data: Any, where: str = "the map") -> None:
                 problems.append(f"{label}: unknown key(s) {', '.join(sorted(unknown))}.")
             if not source.get("page") and not source.get("pages"):
                 problems.append(f'{label}: give "page" or "pages".')
+            for key_rule, what in (
+                (source.get("key"), "key"),
+                (
+                    (source.get("parent") or {}).get("key")
+                    if isinstance(source.get("parent"), Mapping)
+                    else None,
+                    "parent key",
+                ),
+            ):
+                if isinstance(key_rule, Mapping):
+                    found = _choice(
+                        key_rule.get("from"), FROM_VALUES, f'its {what}\'s "from"', label
+                    )
+                    if found:
+                        unknown_values.append(found)
             for place_name in ("items", "within"):
                 if source.get(place_name):
                     _check_selector(str(source[place_name]), f"{label} {place_name}", problems)
@@ -217,6 +279,14 @@ def check_map(data: Any, where: str = "the map") -> None:
                         problems.append(
                             f"{where_}: relation to {target!r}, not a model of the map."
                         )
+                    for option, allowed in (("by", BY_VALUES), ("link", LINK_VALUES)):
+                        found = _choice(rule.get(option), allowed, f'"{option}"', where_)
+                        if found:
+                            unknown_values.append(found)
+                    if rule.get("by") is not None and not target:
+                        problems.append(
+                            f'{where_}: "by" says how a relation names its row, so it needs "to".'
+                        )
                     place = str(rule.get("select", ":scope"))
                 else:
                     place = str(rule)
@@ -224,9 +294,13 @@ def check_map(data: Any, where: str = "the map") -> None:
                     parse_place(place)
                 except SelectorError as exc:
                     problems.append(f"{where_}: {exc}")
-    if problems:
-        listed = "\n".join(f"  - {problem}" for problem in problems)
-        raise MapError(f"{where}: {len(problems)} problem(s):\n{listed}")
+    if problems or unknown_values:
+        every = [*problems, *unknown_values]
+        listed = "\n".join(f"  - {problem}" for problem in every)
+        raise MapError(
+            f"{where}: {len(every)} problem(s):\n{listed}",
+            code=None if problems else VALUE_CODE,
+        )
     if pending:
         listed = "\n".join(f"  - {item}" for item in pending)
         raise MapError(
@@ -249,6 +323,21 @@ class ExtractResult:
 
     content: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
+    #: The design's files the content names: path next to the output file -> the design's file.
+    files: dict[str, Path] = field(default_factory=dict)
+
+    def copy_files(self, output: Path) -> list[str]:
+        """Copy :attr:`files` next to ``output``. The paths written (unchanged ones are skipped)."""
+        written: list[str] = []
+        for name, source in sorted(self.files.items()):
+            target = output.parent / name
+            data = source.read_bytes()
+            if target.is_file() and target.read_bytes() == data:
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            written.append(name)
+        return written
 
     def counts(self) -> dict[str, int]:
         return {label: len(rows) for label, rows in self.content.items()}
@@ -295,13 +384,24 @@ class Reader:
     """
 
     def __init__(
-        self, design: Path, output: Path, mapped: Mapped, marker: str = HIGHLIGHT_MARKER
+        self,
+        design: Path,
+        output: Path,
+        mapped: Mapped,
+        marker: str = HIGHLIGHT_MARKER,
+        decimal: str | None = None,
     ) -> None:
         self.design = design
         self.output = output
         self.mapped = mapped
         #: What goes around highlighted words: the map's "marker", "==" by default.
         self.marker = marker
+        #: The map's "decimal" (``","`` or ``"."``): else each page's ``<html lang>`` says.
+        self.decimal = decimal
+        #: Whether images are copied next to the output (``files/``) or named in the design.
+        self.copy_files = True
+        #: The copies to make: path next to the output file -> the design's file.
+        self.files: dict[str, Path] = {}
         self.docs: dict[str, tuple[str, Document]] = {}
         self.problems: list[str] = []
 
@@ -313,6 +413,13 @@ class Reader:
             text = file.read_bytes().decode("utf-8-sig", errors="surrogateescape")
             self.docs[path] = (text, parse(text))
         return self.docs[path]
+
+    def decimal_mark(self, path: str) -> str | None:
+        """The decimal mark of page ``path``: the map's, else its ``<html lang>``'s."""
+        if self.decimal:
+            return self.decimal
+        text, doc = self.page(path)
+        return decimal_mark(page_language(doc, text))
 
     def nodes(self, root: Node, place: Place, source: str) -> list[Node]:
         return place.nodes(root, source)
@@ -341,7 +448,12 @@ class Reader:
         return text
 
     def image(self, value: str, page: str) -> str:
-        """An image path as the content file names it: relative to the output file."""
+        """An image path as the content file names it: relative to the output file.
+
+        With :attr:`copy_files` the image is copied under ``files/`` next to
+        the output file (at its path in the design), else the path points
+        into the design folder.
+        """
         if not value:
             return ""
         ref = self.mapped.resolve(unescape(value), posixpath.dirname(page))
@@ -352,6 +464,11 @@ class Reader:
         if not target.is_file():
             self.problems.append(f"{page}: the image {value!r} is not in the design.")
             return ""
+        if self.copy_files:
+            inside = target.resolve().relative_to(self.design.resolve()).as_posix()
+            name = f"{FILES_DIR}/{inside}"
+            self.files[name] = target
+            return name
         return Path(os.path.relpath(target.resolve(), self.output.parent.resolve())).as_posix()
 
     def link(self, value: str, page: str) -> str:
@@ -486,7 +603,9 @@ class _Extractor:
             return None
         if options.get("all"):
             texts = [self.reader.raw(node, place, source, options, highlight) for node in nodes]
-            return parse_value("text", kind, "\n\n".join(t for t in texts if t))
+            return parse_value(
+                "text", kind, "\n\n".join(t for t in texts if t), self.reader.decimal_mark(page)
+            )
         raw = self.reader.raw(nodes[0], place, source, options, highlight)
         if base == "image":
             return self.reader.image(raw, page)
@@ -496,7 +615,7 @@ class _Extractor:
             return True
         if base in ("datetime",):
             return raw or None
-        return parse_value("text", kind.rstrip("?"), raw)
+        return parse_value("text", kind.rstrip("?"), raw, self.reader.decimal_mark(page))
 
     def children(
         self,
@@ -752,8 +871,14 @@ def extract(
     output: Path,
     *,
     reader: type[Reader] = Reader,
+    copy_files: bool = True,
 ) -> ExtractResult:
     """The content of ``design`` read with the map ``spec``, for a file at ``output``.
+
+    With ``copy_files`` the images are named under ``files/`` next to
+    ``output`` and listed in :attr:`ExtractResult.files` for
+    :meth:`ExtractResult.copy_files`, else they point into ``design``.
+    Nothing is written here.
 
     :raises MapError: the map is not usable or has decisions left.
     """
@@ -763,7 +888,10 @@ def extract(
         raise MapError(f"{design} has no .html page.")
     _, mapped = design_site._read_pages(texts, files, str(spec.get("app") or "website"))
     marker = str(spec.get("marker") or HIGHLIGHT_MARKER)
-    extractor = _Extractor(spec, reader(design, output, mapped, marker))
+    values = reader(design, output, mapped, marker)
+    values.decimal = str(spec.get("decimal") or "") or None
+    values.copy_files = copy_files
+    extractor = _Extractor(spec, values)
     extractor.run()
     content = extractor.content()
-    return ExtractResult(content, extractor.reader.problems)
+    return ExtractResult(content, extractor.reader.problems, dict(extractor.reader.files))

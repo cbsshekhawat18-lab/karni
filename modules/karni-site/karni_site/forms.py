@@ -23,6 +23,12 @@ name is ``name`` (``"enquiry"``, ``"booking_request"`` for
 ``BookingRequest``, or ``"shop.enquiry"``), served by the viewset the API
 router registered for it.
 
+With ``editable="<key>"`` the texts a client may want to change (each
+field's label and placeholder, the button, the sent message) are read from
+editable blocks (:mod:`karni_site.blocks`) under that key, with the tag's
+own texts as the defaults, so they are edited in the admin like the rest of
+the page.
+
 Override / escape hatch: ``KARNI_SITE_FORMS`` names any viewset.
 ``KARNI_SITE_FORM_CLASS`` swaps :class:`SiteForm` (override
 :meth:`SiteForm.fields`, :meth:`SiteForm.describe`, :meth:`SiteForm.submit`
@@ -37,6 +43,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import html
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -51,6 +58,7 @@ from django.http import HttpRequest, QueryDict
 from django.template import Template, loader
 from django.test.signals import setting_changed
 from django.urls import NoReverseMatch, reverse
+from django.utils.html import strip_tags
 from django.utils.module_loading import import_string
 from django.utils.safestring import SafeString, mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -867,6 +875,35 @@ class SiteForm:
                 code=_ROUTE_CODE,
             ) from exc
 
+    def editable_text(self, key: str, default: str, request: HttpRequest | None) -> str:
+        """The plain text of block ``key``: the client's edit, else ``default``.
+
+        The block stores HTML like every text block, so the default goes in
+        escaped and the result comes out as text, which the form's template
+        escapes again where it writes it.
+        """
+        from karni_site import blocks
+
+        stored = blocks.text(key, html.escape(str(default), quote=False), request)
+        return html.unescape(strip_tags(stored)).strip()
+
+    def editable_key(self, options: Mapping[str, Any]) -> str:
+        """The ``editable="..."`` block key prefix, or ``""``.
+
+        :raises KarniImproperlyConfigured: ``SITE021`` for a prefix that is not a block key.
+        """
+        from karni_site.models import KEY_PATTERN
+
+        prefix = _text(options.get("editable")).strip()
+        if prefix and not re.match(KEY_PATTERN, prefix):
+            raise KarniImproperlyConfigured(
+                f'{{% karni_form {self.name!r} %}} editable="{prefix}" is not a block key: '
+                "lowercase words joined by dots, the page first, such as "
+                'editable="contact.enquiry".',
+                code="SITE021",
+            )
+        return prefix
+
     def layout(self, request: HttpRequest | None, options: Mapping[str, Any]) -> FormView:
         """The :class:`FormView` for ``options`` (the tag's arguments)."""
         overrides = {
@@ -896,6 +933,18 @@ class SiteForm:
                 code="SITE021",
             )
         order = chosen or [name for name, _ in available]
+        prefix = self.editable_key(options)
+        if prefix:
+            for key in ("button", "success"):
+                texts[key] = self.editable_text(f"{prefix}.{key}", str(texts[key]), request)
+            for name in order:
+                item = by_name[name]
+                default = labels.get(name) or str(getattr(item, "label", None) or name)
+                labels[name] = self.editable_text(f"{prefix}.{name}.label", default, request)
+                if hints.get(name):
+                    hints[name] = self.editable_text(
+                        f"{prefix}.{name}.placeholder", hints[name], request
+                    )
         views: dict[str, FieldView] = {}
         for name in order:
             view = self.describe(

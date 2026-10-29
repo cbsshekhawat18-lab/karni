@@ -61,6 +61,10 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_SITE_MENU_ROWS": "karni_site.menus.menu_rows",
     # At most this many rows per "children from" item.
     "KARNI_SITE_MENU_ROWS_LIMIT": 100,
+    # True: a menu item is active (item.active) on every page under its own path too, so
+    # "Services" at /services/ stays marked on /services/web/. The home page (/) never is.
+    # False: an item is active on its own page and when one of its children is.
+    "KARNI_SITE_MENU_SECTIONS": True,
     # False: an admin redirect answers only where the site has no page (a 404), and a
     # request for a page that exists costs nothing. True: every request is looked up
     # before the view runs, one cache read each.

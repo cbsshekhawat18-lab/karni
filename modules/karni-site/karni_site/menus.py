@@ -3,8 +3,10 @@
 A menu's tree (titles, addresses, children, the rows a ``children_from``
 item expands to) is built once and cached. The current page is marked per
 request on the :class:`MenuEntry` objects the tag returns: ``item.current``
-when the item is the current page, ``item.active`` when it or one of its
-children is. The template keeps the design's markup and only reads these.
+when the item is the current page, ``item.active`` when it, a page under its
+own path (``/services/web/`` for ``/services/``, ``KARNI_SITE_MENU_SECTIONS``)
+or one of its children is. The template keeps the design's markup and only
+reads these.
 
 A menu the database does not have yet can be seeded from markup
 (:func:`seed_menu`): the links of a design's navigation, nested lists
@@ -43,6 +45,7 @@ from karni_site.navigation import any_active
 __all__ = [
     "Link",
     "MenuEntry",
+    "NoTarget",
     "entries",
     "item_fields",
     "menu_rows",
@@ -91,8 +94,11 @@ def _path_patterns(url: str) -> list[str]:
     return [parts.path]
 
 
-class _NoTarget(LookupError):
+class NoTarget(LookupError):
     """An item whose page, row or model is gone: it is left out of the menu."""
+
+
+_NoTarget = NoTarget
 
 
 def _row(model: type[Any], pk: str) -> Any | None:
@@ -140,8 +146,18 @@ def _node(item: Any, children: dict[Any, list[Any]]) -> dict[str, Any] | None:
         "url": url,
         "new_tab": item.new_tab,
         "patterns": patterns,
+        "section": _section(url),
         "children": kids,
     }
+
+
+def _section(url: str) -> str:
+    """The path whose pages an item stands for (``/services/``), or ``""`` (home, elsewhere)."""
+    parts = urlsplit(url)
+    path = parts.path
+    if parts.scheme or parts.netloc or not path.startswith("/") or path == "/":
+        return ""
+    return path if path.endswith("/") else ""
 
 
 def _rows(item: Any) -> list[dict[str, Any]]:
@@ -196,12 +212,16 @@ def tree(name: str) -> list[dict[str, Any]] | None:
 def _entry(node: dict[str, Any], request: Any) -> MenuEntry:
     children = [_entry(child, request) for child in node["children"]]
     current = any_active(request, node["patterns"]) if node["patterns"] else False
+    section = str(node.get("section") or "")
+    below = bool(section) and bool(conf.get("KARNI_SITE_MENU_SECTIONS"))
     return MenuEntry(
         title=node["title"],
         url=node["url"],
         new_tab=node["new_tab"],
         current=current,
-        active=current or any(child.active for child in children),
+        active=current
+        or any(child.active for child in children)
+        or (below and any_active(request, [section + "*"])),
         children=children,
     )
 

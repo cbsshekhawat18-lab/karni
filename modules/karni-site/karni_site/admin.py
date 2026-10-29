@@ -230,9 +230,11 @@ class SiteSettingsAdmin(SiteAdmin):
         return fieldsets
 
     def _preview(self, obj: Any, field: str) -> str:
+        from karni_site.sitesettings import image_url
+
         url = _file_url(getattr(obj, field, None))
         if not url and obj is not None:
-            url = str(((obj.seeded or {}).get("images") or {}).get(field) or "")
+            url = image_url(obj, field)
         return _image_preview(url)
 
     @admin.display(description=_("logo shown"))

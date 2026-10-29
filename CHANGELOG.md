@@ -179,6 +179,23 @@ apply codemods and list the manual steps. This file is the human summary.
   proposes it), as `"self"`. A many-to-many to itself is
   `symmetrical=False`: a hand-picked list goes one way, so `karni load` sets
   each row's own list and a second load changes nothing.
+- **A site built from a design needs fewer hand edits.** `karni make form`
+  prints a tag that always compiles, matches the design's fields to the
+  model's by label and type, and adds `editable="<key>"`, which makes the
+  form's labels, placeholders, button and message editable blocks. `karni
+  design analyze` keeps a row of figures as page copy and writes `"by":
+  "key"` or `"by": "title"` for a text that names another row (an unknown
+  value is `C124`). `karni design extract` reads thousands separators and
+  the page's decimal mark, and copies the images it names to
+  `content/files/` (`--keep-paths` for the old paths). A menu item stays
+  active on the pages under its path (`KARNI_SITE_MENU_SECTIONS`), `karni
+  make view` with a capture rewrites `{% ifactive %}` names of the pages it
+  replaces, and `karni check --seo` names a menu item whose page is gone
+  (`SITE007`) and makes the image copies no worker made. `{% site_defaults %}`
+  takes `share_image`, `logo`, `favicon` and `hours`, and an editable import
+  fills them from the design: its `og:image` and its opening hours, which
+  become `site.hours`. A design's plain `<em>` in headings is its highlight,
+  and a block's default renders the marker.
 - **New module `karni-site`: the runtime of a public site.** `{% ifactive
   "<app>:<name>" %}` marks the current page in a menu around whatever markup
   the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's

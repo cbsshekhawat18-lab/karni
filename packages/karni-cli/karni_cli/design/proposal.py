@@ -543,8 +543,11 @@ def _str_size(values: list[str]) -> str:
     return "text"
 
 
-def infer_type(kind: str, values: list[str]) -> tuple[str, str]:
-    """The ``karni make model`` type for the values of one slot kind, and a note."""
+def infer_type(kind: str, values: list[str], decimal: str | None = None) -> tuple[str, str]:
+    """The ``karni make model`` type for the values of one slot kind, and a note.
+
+    ``decimal`` is the design's decimal mark (:func:`karni_cli.design.values.decimal_mark`).
+    """
     present = [v for v in values if v != ""]
     if kind == "image":
         return "image", ""
@@ -572,7 +575,7 @@ def infer_type(kind: str, values: list[str]) -> tuple[str, str]:
         if arounds != {"|"}:
             note += ", and so do the words around the amount"
         return "decimal:10:2", note + " (money:<code> if the project computes with it)"
-    numbers = [number(v) for v in present]
+    numbers = [number(v, decimal) for v in present]
     if len(present) >= 2 and all(n is not None for n in numbers):
         affixes = {(n[1], n[2]) for n in numbers if n is not None}
         if len(affixes) == 1:
@@ -589,21 +592,24 @@ def infer_type(kind: str, values: list[str]) -> tuple[str, str]:
     return _str_size(present), ""
 
 
-def parse_value(kind: str, dsl: str, raw: str) -> Any:
+def parse_value(kind: str, dsl: str, raw: str, decimal: str | None = None) -> Any:
     """``raw`` (text as the design shows it) as a content file holds it for the type ``dsl``.
 
-    ``"12 weeks"`` is 12 for ``int``, ``"€4.50"`` is ``"4.50"`` for ``money``,
-    ``"14 March 2026"`` is ``"2026-03-14"`` for ``date``. A value that does not
-    parse is ``None`` (the field is left out), an empty one too.
+    ``"12 weeks"`` is 12 for ``int``, ``"4,000"`` is 4000, ``"€4.50"`` is
+    ``"4.50"`` for ``money``, ``"14 March 2026"`` is ``"2026-03-14"`` for
+    ``date``. ``decimal`` is the page's decimal mark (``","`` reads
+    ``"1.234,5"`` and ``"4,000"`` the way that language writes them). A
+    value that does not parse is ``None`` (the field is left out), an empty
+    one too.
     """
     base = dsl.rstrip("?").split(":", 1)[0]
     if raw == "":
         return None
     if base == "int":
-        found = number(raw)
+        found = number(raw, decimal)
         return int(found[0]) if found is not None else None
-    if base in ("decimal", "money"):
-        found = price(raw) or number(raw)
+    if base in ("decimal", "money", "float"):
+        found = price(raw) or number(raw, decimal)
         return str(found[0]) if found is not None else None
     if base == "date":
         parsed = date(raw)

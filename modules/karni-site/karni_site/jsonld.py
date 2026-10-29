@@ -171,6 +171,17 @@ def _file_url(value: Any, request: Any) -> str:
     return ""
 
 
+def _default(site: Any, field: str, request: Any) -> str:
+    """The template's default for an image the client has not uploaded, absolute, or ``""``."""
+    from karni_site.metadata import absolute
+    from karni_site.sitesettings import image_url
+
+    if not hasattr(site, "_meta"):
+        return ""
+    address = image_url(site, field)
+    return absolute(address, request) if address else ""
+
+
 def build(request: Any, site: Any) -> dict[str, Any] | None:
     """The site's JSON-LD: a ``WebSite`` and who runs it. ``None`` without a name or a type."""
     from karni_site.metadata import site_url
@@ -184,10 +195,11 @@ def build(request: Any, site: Any) -> dict[str, Any] | None:
     tagline = str(getattr(site, "tagline", "") or "").strip()
     if tagline:
         who["description"] = tagline
-    logo = _file_url(getattr(site, "logo", None), request)
+    logo = _file_url(getattr(site, "logo", None), request) or _default(site, "logo", request)
     if logo:
         who["logo"] = logo
-    image = _file_url(getattr(site, "share_image", None), request) or logo
+    image = _file_url(getattr(site, "share_image", None), request)
+    image = image or _default(site, "share_image", request) or logo
     if image:
         who["image"] = image
     phone = str(getattr(site, "phone_link", "") or getattr(site, "phone", "") or "").strip()

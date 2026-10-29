@@ -54,14 +54,23 @@ import reads, and works from the markup alone:
    model's items with each item in one place is a foreign key (cards under
    their menu section). An attribute whose tokens are another model's keys
    (`data-tags="houses interiors"`) is a relation too. A text that is always
-   another model's title ("Taught by Mia Chen") is that relation's, not a
-   field.
+   another model's title ("Taught by Mia Chen") or key (a tag `whitening`
+   naming the `whitening` treatment) is that relation: a foreign key the map
+   reads `"by": "title"` or `"by": "key"`, or nothing when a link already
+   points at the row. A detail page that links to the rows pointing back at
+   it (a treatment page listing its stories, each story naming its
+   treatment) holds the same relation from the other end: the page loops
+   over `treatment.story_set`, and the report says so.
 6. **One more row.** A single block on the page of a list, with the values
    that list's items hold (a class-named one among them), is proposed as one
    more row of that model, with a flag named after its own class: a founder's
    card above the team cards. It is a decision.
 7. **What stays markup.** A list of one or two short values on one page
-   (opening hours, figures in a row) stays in its template. A list inside an
+   (opening hours, figures in a row) stays in its template. So does a short
+   run of figures, each item a number (`25`, `4,000`, `98%`, `10k+`) and one
+   or two short labels with no picture, link or inner list: a row of
+   statistics is the page's copy, never a model, and never the other half
+   of a slider next to it. A list inside an
    item without pictures becomes a JSON field (a list of strings, of pairs for
    a `<dl>`, of objects), and one with pictures a child model. A section only
    some detail pages have stays in those pages' templates. A structure found
@@ -69,7 +78,8 @@ import reads, and works from the markup alone:
    with a `page` field, and a foreign key to the detail page's model when it
    is on detail pages too. Two lists in one section with as many items each
    (a slider's pictures and its captions) are read as the same rows, item by
-   item, and the report says so.
+   item, and the report says so. Two lists in sections of their own
+   (`<section>`, `<article>`, `<aside>`) are two things.
 
 Every model and field name comes from the design: a class (with BEM
 elements and the item's prefix taken off, so `course-card__summary` is
@@ -88,7 +98,7 @@ folder name. Rename anything in the map.
 | A definition list | `json`, `[term, definition]` pairs |
 | `<time datetime="...">` or a date written out ("14 March 2026") | `date` |
 | A price ("€4.50", "From $12") | `decimal:10:2`, the symbol left in the template |
-| A number with the same words around it ("12 weeks") | `int`, the words left in the template |
+| A number with the same words around it ("12 weeks", "4,000 patients") | `int`, the words left in the template |
 | `01`, `02`, `03` before the items | the rows' `position`, not a field |
 | `01 — Design` | `position`, and `Design` as the field |
 | A badge only some items have ("New", "Vegan") | `bool` |
@@ -233,6 +243,12 @@ overwrites it (`C123`) unless you pass `--force`.
 }
 ```
 
+Numbers are read in the page's language. A separator between groups of
+three digits is dropped (`4,000`, `1 234`, `1'234`). Where the page's `<html
+lang>` writes a decimal comma (`de`, `fr`, `es` and most of Europe), `4.000` is
+4000 and `1.234,5` is 1234.5. Without a language a number is read the English
+way. The map's top-level `"decimal": ","` (or `"."`) decides for every page.
+
 The top-level `"marker"` is what extract writes around highlighted words:
 `"=="` by default, `KARNI_SITE_HIGHLIGHT`'s default. Change it only together
 with the setting's `"marker"`, so the site keeps one convention.
@@ -261,11 +277,26 @@ the item's own text. Selectors support types, classes, ids, attributes,
 compound (`p:not(.role)`), the child and descendant combinators and comma
 groups. A value can also be an object with
 `select` and one of: `all` (every match's text, joined), `list` (a list),
-`fields` (a list of objects), `pairs` (a definition list), `to` with `many`,
-`split` or `by` (a relation, by link, by key or by title), `rows` (child rows),
-`present` (true when the place matches), `drop` (markup to leave out),
-`pattern` (a regular expression whose last group is the value), `link:
-"path"` (a page's URL path) and `decide` (an open decision).
+`fields` (a list of objects), `pairs` (a definition list), `to` (a
+relation, see below), `rows` (child rows), `present` (true when the place
+matches), `drop` (markup to leave out), `pattern` (a regular expression
+whose last group is the value), `link: "path"` (a page's URL path) and
+`decide` (an open decision).
+
+A **relation** is `{"select": ..., "to": "<Model>"}`, and `"by"` says how
+the place names the related row:
+
+| `"by"` | The place holds | Example |
+| --- | --- | --- |
+| absent (or `"link"`) | a link to the row's page or `#anchor` | `"a.teacher@href"` |
+| `"key"` | the row's key, as text or an attribute (`data-type="houses"`) | a tag `<li>whitening</li>` for the row keyed `whitening` |
+| `"title"` | the row's title, as text | `<p>Mia Chen</p>` for the teacher of that name |
+
+`"many": true` makes it a list (a many-to-many field), and `"split": true`
+reads an attribute that holds several keys (`data-tags="a b"`). Analyze
+writes `"by"` when a text names the row. Any other value of `"by"`, of a
+key's `"from"` or of `"link"` is refused with `C124`, because extract would
+otherwise read the place another way without a word.
 
 ## Extract
 
@@ -278,10 +309,15 @@ Wrote content/site.json:
 
 The output is a [content file](content-loading.md): one list of rows per
 model, models others point at first, child rows nested under their parent.
-Each value is parsed by its field's type (`"12 weeks"` is `12`, `"€4.50"` is
-`"4.50"`, `"14 March 2026"` is `"2026-03-14"`), relations name their rows by
-key, and image paths are relative to the output file, pointing into the
-design folder, so `karni load` uploads the designer's own images once.
+Each value is parsed by its field's type (`"12 weeks"` is `12`, `"4,000"` is
+`4000`, `"€4.50"` is `"4.50"`, `"14 March 2026"` is `"2026-03-14"`), and
+relations name their rows by key. The images the content names are copied
+next to the output file, under `files/` at their path in the design
+(`content/files/img/mia.jpg`), and the content file names those copies, so
+`karni load` uploads the designer's own images and the project holds every
+file it reads, wherever the design folder is. Commit `content/files/` with
+the content file. A copy that has not changed is not written again.
+`--keep-paths` names the design's own files instead (`../design/img/mia.jpg`).
 Extract lists what to check: an image the design does not have, two pages
 that disagree on a value, a required field some row has no value for. A
 map it cannot follow stops it before anything is written (`C121`).

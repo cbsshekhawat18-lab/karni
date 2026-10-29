@@ -17,7 +17,16 @@ with karni-site's tags (``karni_site.templatetags.karni_site``):
 * **The site's details.** The site's name wherever a text is exactly the
   name, the first phone number (``tel:``), email address (``mailto:``) and
   map link, and links to social profiles come from ``site``. Their values
-  are the defaults of one ``{% site_defaults %}`` at the top of base.html.
+  are the defaults of one ``{% site_defaults %}`` at the top of base.html,
+  with the logo, the favicon and the share image as static paths: the
+  ``og:image`` every page has, or else an image no page uses that is named
+  for sharing (``share.jpg``, ``og-image.png``).
+* **Opening hours.** A table, list or lines of days and times
+  (:mod:`karni_cli.design.hours`) become a loop over ``site.hours`` in the
+  design's own markup, seeded once with ``{% site_defaults hours="..." %}``.
+  When the footer and the contact page both show them, both loop over the
+  same rows, seeded from the one whose markup parts days from times. Lists
+  that show different hours stay text blocks, and the report says so.
 * **Menus.** A navigation whose items share one markup (a list of links,
   nested lists for submenus, or bare links side by side) becomes
   ``{% get_menu %}`` and a ``{% for %}`` loop in that markup, seeded from
@@ -47,7 +56,7 @@ from html import unescape
 from typing import Any, Final
 from urllib.parse import urlsplit
 
-from karni_cli.design import compare, rewrite
+from karni_cli.design import compare, hours, rewrite
 from karni_cli.design.parse import Node, Token, attributes, collapse
 
 __all__ = [
@@ -123,6 +132,15 @@ _HAS_WORD = re.compile(r"[^\W_]")
 _STATIC = re.compile(r"\{% static (['\"])(?P<path>[^'\"]+)\1 %\}")
 _WORDS = re.compile(r"[a-z0-9]+")
 _TEMPLATE = re.compile(r"\{%|%\}|\{\{|\}\}|\{#|#\}")
+#: The head tags that name a page's share image.
+_SHARE_TAGS: Final = frozenset({"og:image", "og:image:url", "og:image:secure_url", "twitter:image"})
+#: A file name that says the image is for sharing: share.jpg, og-image.png, social-card.webp.
+_SHARE_NAME = re.compile(r"(?:^|[-_.\s])(?:share|og|opengraph|social)(?:[-_.\s]|$)", re.IGNORECASE)
+_RASTER: Final = (".jpg", ".jpeg", ".png", ".webp")
+#: Inline elements a design highlights words of a heading with.
+_HIGHLIGHT_TAGS: Final = frozenset({"span", "em", "strong", "mark", "b", "i"})
+#: The marker KARNI_SITE_HIGHLIGHT reads around highlighted words (the import writes it).
+MARKER: Final = "=="
 
 
 # keys
@@ -205,6 +223,8 @@ class Overlay:
                 out.append(self.after(point))
             if point in self.text_replace:
                 stop, value = self.text_replace[point]
+                if point > start:
+                    out.append(self.before(point))
                 out.append(value)
                 position = stop
                 continue
@@ -221,8 +241,10 @@ class Overlay:
 def detect_highlight(pages: Iterable[Any]) -> tuple[str, str] | None:
     """The ``(tag, class)`` a design wraps highlighted words of its headings in, or ``None``.
 
-    An inline element with exactly one class and nothing else, inside
-    headings, on two or more headings: ``<span class="highlight">``.
+    An inline element around some of a heading's words, with exactly one
+    class (``<span class="highlight">``) or none (``<em>``), on two or more
+    headings. The most common one wins. Words a design marks with
+    characters (``*whole*``) are text, not a highlight.
     """
     found: Counter[tuple[str, str]] = Counter()
     for page in pages:
@@ -230,15 +252,19 @@ def detect_highlight(pages: Iterable[Any]) -> tuple[str, str] | None:
         for heading in body.iter_elements():
             if not _HEADING.match(heading.tag):
                 continue
+            whole = heading.plain_text(page.text)
             for child in heading.elements():
+                if child.tag not in _HIGHLIGHT_TAGS:
+                    continue
+                inner = child.plain_text(page.text)
+                if not inner or inner == whole:
+                    continue  # the whole heading is not a highlight
                 attrs = child.attrs(page.text)
                 classes = (attrs.get("class") or "").split()
-                if (
-                    child.tag in ("span", "em", "strong", "mark", "b", "i")
-                    and set(attrs) == {"class"}
-                    and len(classes) == 1
-                ):
+                if set(attrs) == {"class"} and len(classes) == 1:
                     found[(child.tag, classes[0])] += 1
+                elif not attrs and child.tag != "span":
+                    found[(child.tag, "")] += 1
     if not found:
         return None
     best, count = found.most_common(1)[0]
@@ -322,6 +348,8 @@ class Editable:
         self.logo_src: str | None = None
         self.menu_names: set[str] = set()
         self.keys: dict[str, str] = {}
+        #: Page path → starts of the elements a loop over site.hours replaced (never walked).
+        self.hours_parts: dict[str, set[int]] = {}
 
     # entry points
 
@@ -371,6 +399,7 @@ class Editable:
                             None,
                         )
                     )
+        self._plan_hours(regions)
         for page, node, prefix, section, region, group in regions:
             in_layout = group is not None
             self._walk(
@@ -393,7 +422,9 @@ class Editable:
         base = templates[base_rel]
         load = "{% load static karni_site %}"
         if self.defaults and base.startswith(load):
-            pairs = " ".join(f'{name}="{_quoted(value)}"' for name, value in self.defaults.items())
+            images = ("logo", "favicon", "share_image")  # the static paths go last
+            ordered = sorted(self.defaults.items(), key=lambda item: item[0] in images)
+            pairs = " ".join(f'{name}="{_quoted(value)}"' for name, value in ordered)
             templates[base_rel] = load + "{% site_defaults " + pairs + " %}" + base[len(load) :]
         for menu in self.menus:
             original = menu.page.overlay
@@ -425,6 +456,163 @@ class Editable:
     def _seed(self, name: str) -> str:
         return f"{self.app}/menus/{name}.html"
 
+    # opening hours
+
+    def _plan_hours(self, regions: list[tuple[Any, Node, str, str, str, Any]]) -> None:
+        """Make the design's opening hours ``site.hours``, when every list of them agrees."""
+        found: list[tuple[Any, hours.HoursList, bool]] = []
+        for page, root, _prefix, _section, _region, group in regions:
+            inside: list[Node] = []
+            for node in root.iter_elements():
+                if node.tag in SKIP or self._row(page, node):
+                    continue
+                if any(node.start >= done.start and node.end <= done.end for done in inside):
+                    continue
+                listed = hours.find(node, page.text)
+                if listed is not None and self._plain_rows(listed, page):
+                    found.append((page, listed, group is not None and group != "override"))
+                    inside.append(node)
+        if not found:
+            return
+        where = [self._where(page, listed, shared) for page, listed, shared in found]
+        first = found[0][1]
+        if not all(hours.same_hours(first, listed) for _page, listed, _shared in found):
+            self.report.notes.append(
+                f"opening hours: {' and '.join(where)} show different hours, so they stay text "
+                "blocks. Loop over site.hours by hand where they are the same hours."
+            )
+            return
+        seed = max(found, key=lambda entry: entry[1].explicit)[1]
+        text = "|".join(f"{days}={times}" for days, times in seed.rows)
+        if any(char in "".join(d + t for d, t in seed.rows) for char in '|="'):
+            return
+        self.defaults["hours"] = collapse(unescape(text))
+        for page, listed, _shared in found:
+            self._loop_hours(page, listed)
+        shown = ", ".join(f"{days} {times}" for days, times in seed.rows)
+        note = (
+            f"opening hours: {' and '.join(where)} now loop over site.hours, seeded from "
+            f"{self._where(*next((p, h, sh) for p, h, sh in found if h is seed))} ({shown}): "
+            "the client enters them once, in Site settings."
+        )
+        other = [w for (_p, h, _s), w in zip(found, where, strict=True) if h.rows != seed.rows]
+        if other:
+            named = " and ".join(other)
+            note += f" {named[:1].upper()}{named[1:]} wrote them another way, and now shows these."
+        self.report.notes.append(note)
+
+    def _plain_rows(self, listed: hours.HoursList, page: Any) -> bool:
+        """Whether every cell of the list holds text only (its markup can loop as it is)."""
+        return all(
+            all(child.kind == "text" for child in cell.children)
+            for pair in listed.cells
+            for cell in pair
+        )
+
+    def _where(self, page: Any, listed: hours.HoursList, shared: bool) -> str:
+        if shared:
+            return "the layout shared by every page"
+        line = page.text.count("\n", 0, listed.node.start) + 1
+        return f"{page.path}:{line}"
+
+    def _loop_hours(self, page: Any, listed: hours.HoursList) -> None:
+        """Replace the list's rows with one row's markup looped over ``site.hours``."""
+        text = page.text
+        esc = rewrite.escape_template_syntax
+        parts = self.hours_parts.setdefault(page.path, set())
+        overlay: Overlay = page.overlay
+        if listed.kind == "lines":
+            begin, finish = listed.node.inner
+            breaks = [child for child in listed.node.children if child.kind == "element"]
+            brk = text[breaks[0].start : breaks[0].end] if breaks else "<br>"
+            lead = text[begin:finish][: len(text[begin:finish]) - len(text[begin:finish].lstrip())]
+            tail = text[begin:finish][len(text[begin:finish].rstrip()) :]
+            loop = (
+                lead + "{% for row in site.hours %}{{ row.days }} {{ row.times }}"
+                "{% if not forloop.last %}" + brk + "{% endif %}{% endfor %}" + tail
+            )
+            overlay.replace[begin] = (finish, loop)
+            parts.add(listed.node.start)
+            return
+        items = listed.items
+        if listed.kind == "dl":
+            first_end = listed.cells[0][1].end
+            last_end = listed.cells[-1][1].end
+            between = text[first_end : items[1].start] if len(items) > 1 else ""
+        else:
+            first_end, last_end = items[0].end, items[-1].end
+            between = text[items[0].end : items[1].start] if len(items) > 1 else ""
+        start = items[0].start
+        markup: list[str] = []
+        position = start
+        if listed.kind == "list":
+            inner = items[0].inner
+            markup += [esc(text[start : inner[0]]), "{{ row.days }} {{ row.times }}"]
+            position = inner[1]
+        else:
+            days, times = listed.cells[0]
+            for cell, variable in ((days, "{{ row.days }}"), (times, "{{ row.times }}")):
+                inner = cell.inner
+                markup += [esc(text[position : inner[0]]), variable]
+                position = inner[1]
+        markup.append(esc(text[position:first_end]))
+        loop = (
+            "{% for row in site.hours %}"
+            + "".join(markup)
+            + "{% if not forloop.last %}"
+            + esc(between)
+            + "{% endif %}{% endfor %}"
+        )
+        overlay.replace[start] = (last_end, loop)
+        for item in items:
+            parts.add(item.start)
+        for pair in listed.cells:
+            parts.update(cell.start for cell in pair)
+
+    # the share image
+
+    def share_default(self, page: Any, node: Node) -> bool:
+        """Take a shared ``og:image`` of a design file as the site's default share image.
+
+        ``True`` when ``node`` is one: base.html then leaves it out of
+        ``{% karni_seo %}``, which writes the site's share image instead.
+        """
+        if node.tag != "meta":
+            return False
+        attrs = node.attrs(page.text)
+        key = (attrs.get("property") or attrs.get("name") or "").strip().lower()
+        if key not in _SHARE_TAGS:
+            return False
+        ref = self.mapped.resolve(unescape(attrs.get("content") or ""), page.dir)
+        if ref.kind != "asset":
+            return False
+        if "share_image" not in self.defaults:
+            self.defaults["share_image"] = f"{self.app}/{ref.path}"
+            self.report.notes.append(
+                f"share image: the {key} every page has ({ref.path}) is the site's default "
+                "(share_image in {% site_defaults %}). The client replaces it in Site settings."
+            )
+        return True
+
+    def share_fallback(self, unused: Iterable[str]) -> None:
+        """Without an ``og:image``, the one image no page uses that is named for sharing."""
+        if "share_image" in self.defaults:
+            return
+        named = [
+            path
+            for path in unused
+            if path.lower().endswith(_RASTER)
+            and _SHARE_NAME.search(posixpath.basename(path).rsplit(".", 1)[0])
+        ]
+        if len(named) != 1:
+            return
+        self.defaults["share_image"] = f"{self.app}/{named[0]}"
+        self.report.notes.append(
+            f"share image: no page has an og:image, and {named[0]}, which no page uses, is named "
+            "for sharing: it is the site's default (share_image in {% site_defaults %}). "
+            "Remove it there if it is not."
+        )
+
     # the current-page markers the import found, so menu items compare without them
 
     def _find_markers(self, layout: compare.Layout, by_key: Mapping[str, Any]) -> None:
@@ -453,6 +641,7 @@ class Editable:
                     found[ref.path] += 1
         if found:
             self.logo_src = found.most_common(1)[0][0]
+            self.defaults.setdefault("logo", f"{self.app}/{self.logo_src}")
 
     def _links_home(self, node: Node, page: Any) -> bool:
         parent = node.parent
@@ -529,6 +718,8 @@ class Editable:
     ) -> None:
         if node.kind != "element" or node.tag in SKIP:
             return
+        if node.start in self.hours_parts.get(page.path, ()):
+            return  # a row of opening hours: rendered from site.hours
         if self._row(page, node):
             self.left_out[page.path] = self.left_out.get(page.path, 0) + 1
             return
@@ -587,8 +778,18 @@ class Editable:
             overlay.text_replace[start] = (end, "{{ site.name }}")
             return
 
+        literal = [
+            offset
+            for node in nodes
+            for token in _text_tokens(node)
+            for offset in _marker_offsets(text, token.start, token.end)
+            if start <= offset and offset + len(MARKER) <= end
+        ]
+
         def apply(key: str) -> None:
             overlay.wrap(start, end, '{% editable "' + key + '" %}', "{% endeditable %}")
+            for offset in literal:  # the design's own "==", kept as text (karni_site: \\==)
+                overlay.text_replace[offset] = (offset + len(MARKER), "\\" + MARKER)
 
         self.items.append(
             _Item(page, path, prefix, section, short_name(plain, "text"), apply, text=raw)
@@ -784,6 +985,7 @@ class Editable:
             if node.tag == "link" and "icon" in rels:
                 ref = self.mapped.resolve(node.attr(reference.text, "href") or "", reference.dir)
                 if ref.kind == "asset":
+                    self.defaults.setdefault("favicon", f"{self.app}/{ref.path}")
                     reference.overlay.tag_transform(
                         node.start,
                         lambda text: _wrap_attribute(
@@ -965,6 +1167,26 @@ class Editable:
 
 
 # rendering a menu
+
+
+def _text_tokens(node: Node) -> Iterable[Node]:
+    """The text nodes of ``node`` and inside it."""
+    if node.kind == "text":
+        yield node
+        return
+    for child in node.iter():
+        if child.kind == "text":
+            yield child
+
+
+def _marker_offsets(source: str, start: int, end: int) -> list[int]:
+    """Where the highlight marker starts in ``source[start:end]``, left to right, apart."""
+    found: list[int] = []
+    at = source.find(MARKER, start, end)
+    while at != -1:
+        found.append(at)
+        at = source.find(MARKER, at + len(MARKER), end)
+    return found
 
 
 def _menu_renderer(editable: Editable, menu: _Menu) -> Render:

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 from io import BytesIO
 from pathlib import Path
 
@@ -63,6 +64,47 @@ def test_a_design_without_share_tags_gets_the_tag_around_its_title() -> None:
         "{% block seo %}{% endblock %}{% endkarni_seo %}\n"
         '  <link rel="icon" href="{% static \'website/img/logo.svg\' %}">'
     ) in base
+
+
+def _bakery_with(tmp_path: Path, head: str = "", files: tuple[str, ...] = ()) -> Path:
+    design = tmp_path / "design"
+    shutil.copytree(BAKERY, design)
+    for page in design.glob("*.html"):
+        page.write_text(page.read_text().replace('  <link rel="icon"', head + '  <link rel="icon"'))
+    for name in files:
+        (design / name).write_bytes((design / "img" / "hero.jpg").read_bytes())
+    return design
+
+
+def test_a_share_image_every_page_has_is_the_sites_default(tmp_path: Path) -> None:
+    design = _bakery_with(
+        tmp_path, '  <meta property="og:image" content="img/share.jpg">\n', ("img/share.jpg",)
+    )
+    plan = site.plan(design, "website", editable=True)
+    base = plan.templates["templates/website/base.html"]
+    defaults = base.split("{% site_defaults ", 1)[1].split(" %}", 1)[0]
+    assert 'share_image="website/img/share.jpg"' in defaults
+    assert (
+        'logo="website/img/logo.svg"' in defaults and 'favicon="website/img/logo.svg"' in defaults
+    )
+    # The template no longer holds the tag, so the client's upload replaces the design's.
+    assert "og:image" not in base
+    assert any("share image: the og:image every page has (img/share.jpg)" in n for n in (
+        plan.editable.notes if plan.editable else []
+    ))  # fmt: skip
+    # A plain import keeps the tag inside {% karni_seo %} as the default.
+    plain = site.plan(design, "website").templates["templates/website/base.html"]
+    assert '<meta property="og:image" content="{% static \'website/img/share.jpg\' %}">' in plain
+
+
+def test_an_unused_image_named_for_sharing_is_the_default_share_image(tmp_path: Path) -> None:
+    design = _bakery_with(tmp_path, files=("img/og-image.png",))
+    base = site.plan(design, "website", editable=True).templates["templates/website/base.html"]
+    assert 'share_image="website/img/og-image.png"' in base
+    # Two images named for sharing: no guess.
+    two = _bakery_with(tmp_path / "two", files=("img/og-image.png", "img/share.jpg"))
+    base = site.plan(two, "website", editable=True).templates["templates/website/base.html"]
+    assert "share_image=" not in base
 
 
 def test_images_get_their_size_and_smaller_copies() -> None:

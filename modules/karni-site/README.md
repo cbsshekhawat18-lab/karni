@@ -111,6 +111,19 @@ The design's values are the defaults, given once at the top of the layout:
 {% load static karni_site %}{% site_defaults name="Crumb & Co" phone="01234 567890" email="hello@example.com" social_instagram="https://www.instagram.com/crumb" %}
 ```
 
+`hours="Monday to Friday=8:00 to 18:00|Saturday=9:00 to 13:00|Sunday=Closed"`
+seeds the opening hours rows: each `|` a row, the days before `=`, the times
+after. They are added when the site has none and follow the template while
+they are as it gave them. Once the client changes or deletes them, theirs
+stay.
+
+The logo, the favicon and the default share image take a static path
+(`share_image="website/img/share.jpg"`, or any file field of the settings
+model): the field stays empty, and `{% karni_seo %}` (the share image and
+the JSON-LD's logo) and the admin's preview use that file until the client
+uploads one. `karni_site.sitesettings.image_url(site, "share_image")` gives
+the address the same way for your own code.
+
 A field is filled the first time and follows the template until someone
 changes it in the admin. A field the client empties stays empty, and a
 social link they delete is not added again. `{% site_image "logo" %}<img
@@ -148,12 +161,15 @@ on the standard library's `html.parser`): it keeps the elements
 other element with its text kept, every event attribute (`onclick`), and
 any link whose scheme `KARNI_SITE_LINK_SCHEMES` does not list
 (`javascript:`, `data:`). A link that opens a new tab gets `rel="noopener
-noreferrer"`. The template's own default is shown as written.
+noreferrer"`. The template's own default is shown as written, with the
+words between the highlight markers in the highlight's markup, the way an
+edited text shows them.
 
 The highlight convention is `KARNI_SITE_HIGHLIGHT`: the marker a client
 types, and the element and class it becomes. The default is `==words==` as
 `<mark>`. `karni import design --editable` sets it to the design's own
-markup when its headings highlight words (`<span class="highlight">`). It
+markup when its headings highlight words (`<span class="highlight">`, or
+`<em>` without a class). It
 is one convention for the whole site: a model field rendered with
 [`{{ value|highlight }}`](#highlight-words-the-design-sets-apart) reads the
 same marker. A backslash before the marker (`\==`) keeps it as typed.
@@ -184,7 +200,10 @@ entry. When the database cannot be read, the template's default is shown.
 ```
 
 Each item has `title`, `url`, `new_tab`, `current` (this page), `active`
-(this page or one under it) and `children`. An item in the admin goes to
+(this page, a page under the item's own path, or one of its children:
+*Treatments* at `/treatments/` stays active on `/treatments/whitening/`, and
+the home page `/` stands for no section) and `children`.
+`KARNI_SITE_MENU_SECTIONS = False` leaves out the pages under the path. An item in the admin goes to
 one of the site's pages (its URL name, so a changed path follows), a row's
 own page (its `get_absolute_url()`), or an address (`https://...`,
 `#section`, `mailto:`), with an optional `#section` or `?query` after it.
@@ -364,8 +383,15 @@ as a first visit would. It reports:
 | `SITE016` | an image without smaller copies that is wider than `KARNI_SITE_SEO_PIXEL_RATIO` times its `width`, wider than the widest copy, or heavier than `KARNI_SITE_SEO_IMAGE_BYTES` |
 | `SITE017` | a link, image, stylesheet or script of the site that answers an error |
 | `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
+| `SITE007` | a menu item whose page, row or model is gone (a view renamed or replaced since the menu was seeded), which the menu leaves out |
 
-`KARNI_SITE_SEO_IGNORE` lists paths it never requests.
+An upload a page shows without its smaller copies gets them first, made in
+the check's own process, and the check names those images: in development
+no Celery worker may have made them yet, and the check judges what the site
+serves once one has. The site itself always queues the copies (in a project
+with `CELERY_TASK_ALWAYS_EAGER = True` the first page that shows the image
+makes them and uses them). `KARNI_SITE_QUEUE_RENDITIONS = False` makes none
+in the check either. `KARNI_SITE_SEO_IGNORE` lists paths it never requests.
 
 ### The editor role
 
@@ -395,7 +421,11 @@ a path (`"/about/"`, `"/blog/*"`). A variable holding a name or a list works
 too. Without the request in the context nothing is current.
 
 `karni import design` writes these tags from the design itself: on each
-link, the pages where the designer marked it current.
+link, the pages where the designer marked it current. When a model's detail
+pages become one view (`karni make view project --path
+"/work/<slug:slug>/"`), the command rewrites each `{% ifactive %}` that named
+the old pages' views to the folder's path (`"/work/*"`), and `karni check`
+(`SITE002`) names any left naming a view that is gone.
 
 ### `{% csp_hash %}` and `{% csp_allow %}`: the design under the Content-Security-Policy
 
@@ -476,6 +506,7 @@ under the enforced Content-Security-Policy as it is.
 | `classes="bootstrap"` | a preset of class names (`KARNI_SITE_FORM_PRESETS`) |
 | `<part>_class` | the class of one part: `form`, `row`, `column`, `field`, `label`, `input`, `select`, `check`, `check_input`, `check_label`, `invalid`, `error`, `help`, `message`, `success`, `failure`, `button`, `required` |
 | `template` | another template for the whole form |
+| `editable="contact.enquiry"` | each field's label and placeholder, the button and the sent message are editable blocks under that key (`contact.enquiry.email.label`, `contact.enquiry.button`), the texts above as their defaults |
 
 The name is the model's (`"contact"` for `Contact`, `"booking_request"` for
 `BookingRequest`, `"shop.enquiry"` when two apps have one), served by the
@@ -485,7 +516,9 @@ name to a viewset. A name no form has fails `karni check` (`SITE020`).
 When the site came from `karni import design`, `karni make form` names the
 template and line of the design's `<form>` it replaces and prints the tag
 with the arguments that keep that form's own class names, rows, labels,
-placeholders and button.
+placeholders and button. It matches the design's controls to the form's
+fields by name, then by label and type, says which control fills which
+field, and adds `editable=` after an editable import.
 
 ### `notify_recipients`: the email a new submission sends
 
@@ -562,6 +595,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
+| `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
 | `KARNI_SITE_FORMS` | `{}` | Form name to a viewset's dotted path or a model label, for a name that is not a model's. |

@@ -440,6 +440,7 @@ def resolve(context: Any, request: Any, head: Head | None = None) -> PageMeta:
     """The page's values, each from the first place that has one (see the module docstring)."""
     from karni_site.seo import page_seo
     from karni_site.sitesettings import get_site_settings
+    from karni_site.sitesettings import image_url as default_image
 
     head = head or Head()
     found = context.get("site")
@@ -471,6 +472,7 @@ def resolve(context: Any, request: Any, head: Head | None = None) -> PageMeta:
     image = image or from_object.get("image")
     image = image or head.meta.get("og:image") or head.meta.get("og:image:url")
     image = image or head.meta.get("twitter:image") or getattr(site, "share_image", None)
+    image = image or default_image(site, "share_image")
     image_url, image_width, image_height = _image(image, request) if image else ("", None, None)
 
     canonical: str = ""

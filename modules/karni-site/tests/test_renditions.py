@@ -150,6 +150,34 @@ def test_a_page_queues_the_copies_it_misses_once(
     assert queued == [(found.photo.name, "testapp.Project.photo", False)]
 
 
+def test_copies_an_eager_celery_makes_serve_the_same_render(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings.KARNI_SITE_QUEUE_RENDITIONS = False
+    found = Project.objects.create(title="Now", slug="now", photo=upload("now.jpg", 1200, 600))
+    settings.KARNI_SITE_QUEUE_RENDITIONS = True
+    # Outside a transaction on_commit runs at once, and the eager task makes the copies.
+    monkeypatch.setattr(renditions.transaction, "on_commit", lambda callback: callback())
+    html = render('{% image found.photo width=300 alt="Now" %}', found=found)
+    assert "srcset=" in html and ".320w.webp 320w" in html
+
+
+def test_made_inline_makes_the_missing_copies_instead_of_queueing(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings.KARNI_SITE_QUEUE_RENDITIONS = False
+    found = Project.objects.create(title="Here", slug="here", photo=upload("here.jpg", 1200, 600))
+    settings.KARNI_SITE_QUEUE_RENDITIONS = True
+    from karni_site import tasks
+
+    queued: list[Any] = []
+    monkeypatch.setattr(tasks.make_renditions, "apply_async", lambda *a, **k: queued.append(a))
+    with renditions.made_inline() as made:
+        html = render('{% image found.photo width=300 alt="Here" %}', found=found)
+    assert made == [found.photo.name] and queued == []
+    assert "srcset=" in html and default_storage.exists(renditions.manifest_name(found.photo.name))
+
+
 def test_the_copies_go_through_the_projects_storage(
     settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:

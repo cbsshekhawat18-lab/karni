@@ -950,9 +950,10 @@ PROCEDURES: tuple[Procedure, ...] = (
             "come first), then `karni make migration && karni migrate`. Staff edit the rows in "
             "the admin as it is: write no viewset, serializer or admin class for them.",
             "`karni design extract <design folder> --map content/design-map.json -o "
-            "content/site.json` writes the pages' real content, with image paths relative to "
-            "the file. Fix what it reports (a missing image, two pages that disagree on a value, "
-            "a required field without one) in the map or the models, then extract again.",
+            "content/site.json` writes the pages' real content and copies the images it names "
+            "to `content/files/`. Fix what it reports (a missing image, two pages that disagree "
+            "on a value, a required field without one) in the map or the models, then extract "
+            "again.",
             "`karni load content/site.json --dry-run` shows what changes per model, row by row. "
             "Then `karni load content/site.json`, and once more: the second run must say "
             "Nothing changed. Commit `content/`. Never fill these tables with `karni seed` (it "
@@ -968,17 +969,21 @@ PROCEDURES: tuple[Procedure, ...] = (
             "pages become one view and template with a `<slug:slug>` capture, keeping each "
             "page's URL (the slug is the page's file name).",
             "For those detail pages: `karni make view <model> --app <site app> --path "
-            '"/<folder>/<slug:slug>/"` writes the view, its template and its route. Build the '
+            '"/<folder>/<slug:slug>/"` writes the view, its template and its route, and turns '
+            "every `{% ifactive %}` naming the old pages' views into the folder's path "
+            '(`"/<folder>/*"`). Build the '
             "template from one detail page's template (its blocks stay, their keys start with the "
             "model's name), read the row with `get_object_or_404(Model.objects, slug=slug)`, "
             "delete the old pages' views, routes and templates, and point every link at "
-            "`{% url '<site app>:<model>' row.slug %}`.",
+            "`{% url '<site app>:<model>' row.slug %}`. `karni check` (SITE002) and `karni check "
+            "--seo` (SITE007, a menu item still pointing at an old page) name what is left.",
             "For each `<form>` the import named: `karni make form <name> <field:type> ...` with "
             "the design's fields (`--notify <SETTING>` for the email that tells staff) writes "
             "the model, its viewset, the tests and the email, and prints the `{% karni_form %}` "
-            "tag that keeps the form's classes, labels and button. Put the tag where the "
-            "`<form>` was, then `karni make migration && karni migrate`. Never write a form "
-            "view, a form template or a throttle.",
+            "tag that keeps the form's classes, labels and button, with `editable=` so the "
+            "client edits its texts, and says which design field fills which model field. Put "
+            "the tag where the `<form>` was, then `karni make migration && karni migrate`. "
+            "Never write a form view, a form template or a throttle.",
             "`{% karni_seo %}` in `base.html` writes each page's title, description, canonical "
             "link, share tags and JSON-LD, a detail page takes them from its row (`class Karni: "
             'seo = {"title": "name", "description": "intro"}` when its fields have other '
