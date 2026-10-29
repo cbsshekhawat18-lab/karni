@@ -1290,7 +1290,7 @@ karni design analyze [OPTIONS] DIRECTORY
 
 Write the design's content as a `karni load` file, read with a content map.
 
-Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and image paths are relative to the output file, so `karni load` uploads the designer's own images. The map's open decisions must be answered first.
+Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and the images are copied next to the output file (files/ beside it, at their path in the design), so `karni load` uploads the designer's own images and the project needs nothing outside it. --keep-paths points into the design folder instead. The map's open decisions must be answered first.
 
 Example:
 
@@ -1308,6 +1308,7 @@ karni design extract [OPTIONS] DIRECTORY
 | `--map` PATH (required) |  | The content map (karni design analyze --map writes a draft). |
 | `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
 | `--dry-run` |  | Print what would be written and write nothing. |
+| `--keep-paths` |  | Point image paths into the design folder instead of copying the images next to the output file (files/). |
 
 ### Debugging
 
@@ -1633,6 +1634,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_SEED_ON_RENDER` |  | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
 | `KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -&gt; iterable of rows with get_absolute_url(). A dotted path. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
+| `KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
 | `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |

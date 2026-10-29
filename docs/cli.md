@@ -1209,7 +1209,7 @@ karni design analyze [OPTIONS] DIRECTORY
 
 Write the design's content as a `karni load` file, read with a content map.
 
-Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and image paths are relative to the output file, so `karni load` uploads the designer's own images. The map's open decisions must be answered first.
+Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and the images are copied next to the output file (files/ beside it, at their path in the design), so `karni load` uploads the designer's own images and the project needs nothing outside it. --keep-paths points into the design folder instead. The map's open decisions must be answered first.
 
 Example:
 
@@ -1227,6 +1227,7 @@ karni design extract [OPTIONS] DIRECTORY
 | `--map` PATH (required) |  | The content map (karni design analyze --map writes a draft). |
 | `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
 | `--dry-run` |  | Print what would be written and write nothing. |
+| `--keep-paths` |  | Point image paths into the design folder instead of copying the images next to the output file (files/). |
 
 ## Debugging
 
