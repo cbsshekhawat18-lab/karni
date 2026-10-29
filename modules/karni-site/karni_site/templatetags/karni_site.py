@@ -450,12 +450,13 @@ def do_site_defaults(parser: Parser, token: Token) -> SiteDefaultsNode:
     for bit in token.split_contents()[1:]:
         match = kwarg_re.match(bit)
         name = match.group(1) if match else None
-        known = name in sitesettings.SEEDABLE or name in images
+        known = name in sitesettings.SEEDABLE or name in images or name == sitesettings.HOURS
         if not name or (not known and not name.startswith("social_")):
             raise _syntax_error(
                 "{% site_defaults %} takes name=value pairs for "
                 f"{', '.join(sitesettings.SEEDABLE)}, a static path for "
-                f'{", ".join(images)} (share_image="website/img/share.jpg"), or '
+                f'{", ".join(images)} (share_image="website/img/share.jpg"), the opening hours '
+                '(hours="Mon to Fri=9:00 to 17:00|Sat=Closed"), or '
                 f"social_<network>=<address>. Got {bit}."
             )
         values[name] = parser.compile_filter(bit.split("=", 1)[1])

@@ -21,6 +21,12 @@ with karni-site's tags (``karni_site.templatetags.karni_site``):
   with the logo, the favicon and the share image as static paths: the
   ``og:image`` every page has, or else an image no page uses that is named
   for sharing (``share.jpg``, ``og-image.png``).
+* **Opening hours.** A table, list or lines of days and times
+  (:mod:`karni_cli.design.hours`) become a loop over ``site.hours`` in the
+  design's own markup, seeded once with ``{% site_defaults hours="..." %}``.
+  When the footer and the contact page both show them, both loop over the
+  same rows, seeded from the one whose markup parts days from times. Lists
+  that show different hours stay text blocks, and the report says so.
 * **Menus.** A navigation whose items share one markup (a list of links,
   nested lists for submenus, or bare links side by side) becomes
   ``{% get_menu %}`` and a ``{% for %}`` loop in that markup, seeded from
@@ -50,7 +56,7 @@ from html import unescape
 from typing import Any, Final
 from urllib.parse import urlsplit
 
-from karni_cli.design import compare, rewrite
+from karni_cli.design import compare, hours, rewrite
 from karni_cli.design.parse import Node, Token, attributes, collapse
 
 __all__ = [
@@ -342,6 +348,8 @@ class Editable:
         self.logo_src: str | None = None
         self.menu_names: set[str] = set()
         self.keys: dict[str, str] = {}
+        #: Page path → starts of the elements a loop over site.hours replaced (never walked).
+        self.hours_parts: dict[str, set[int]] = {}
 
     # entry points
 
@@ -391,6 +399,7 @@ class Editable:
                             None,
                         )
                     )
+        self._plan_hours(regions)
         for page, node, prefix, section, region, group in regions:
             in_layout = group is not None
             self._walk(
@@ -446,6 +455,119 @@ class Editable:
 
     def _seed(self, name: str) -> str:
         return f"{self.app}/menus/{name}.html"
+
+    # opening hours
+
+    def _plan_hours(self, regions: list[tuple[Any, Node, str, str, str, Any]]) -> None:
+        """Make the design's opening hours ``site.hours``, when every list of them agrees."""
+        found: list[tuple[Any, hours.HoursList, bool]] = []
+        for page, root, _prefix, _section, _region, group in regions:
+            inside: list[Node] = []
+            for node in root.iter_elements():
+                if node.tag in SKIP or self._row(page, node):
+                    continue
+                if any(node.start >= done.start and node.end <= done.end for done in inside):
+                    continue
+                listed = hours.find(node, page.text)
+                if listed is not None and self._plain_rows(listed, page):
+                    found.append((page, listed, group is not None and group != "override"))
+                    inside.append(node)
+        if not found:
+            return
+        where = [self._where(page, listed, shared) for page, listed, shared in found]
+        first = found[0][1]
+        if not all(hours.same_hours(first, listed) for _page, listed, _shared in found):
+            self.report.notes.append(
+                f"opening hours: {' and '.join(where)} show different hours, so they stay text "
+                "blocks. Loop over site.hours by hand where they are the same hours."
+            )
+            return
+        seed = max(found, key=lambda entry: entry[1].explicit)[1]
+        text = "|".join(f"{days}={times}" for days, times in seed.rows)
+        if any(char in "".join(d + t for d, t in seed.rows) for char in '|="'):
+            return
+        self.defaults["hours"] = collapse(unescape(text))
+        for page, listed, _shared in found:
+            self._loop_hours(page, listed)
+        shown = ", ".join(f"{days} {times}" for days, times in seed.rows)
+        note = (
+            f"opening hours: {' and '.join(where)} now loop over site.hours, seeded from "
+            f"{self._where(*next((p, h, sh) for p, h, sh in found if h is seed))} ({shown}): "
+            "the client enters them once, in Site settings."
+        )
+        other = [w for (_p, h, _s), w in zip(found, where, strict=True) if h.rows != seed.rows]
+        if other:
+            named = " and ".join(other)
+            note += f" {named[:1].upper()}{named[1:]} wrote them another way, and now shows these."
+        self.report.notes.append(note)
+
+    def _plain_rows(self, listed: hours.HoursList, page: Any) -> bool:
+        """Whether every cell of the list holds text only (its markup can loop as it is)."""
+        return all(
+            all(child.kind == "text" for child in cell.children)
+            for pair in listed.cells
+            for cell in pair
+        )
+
+    def _where(self, page: Any, listed: hours.HoursList, shared: bool) -> str:
+        if shared:
+            return "the layout shared by every page"
+        line = page.text.count("\n", 0, listed.node.start) + 1
+        return f"{page.path}:{line}"
+
+    def _loop_hours(self, page: Any, listed: hours.HoursList) -> None:
+        """Replace the list's rows with one row's markup looped over ``site.hours``."""
+        text = page.text
+        esc = rewrite.escape_template_syntax
+        parts = self.hours_parts.setdefault(page.path, set())
+        overlay: Overlay = page.overlay
+        if listed.kind == "lines":
+            begin, finish = listed.node.inner
+            breaks = [child for child in listed.node.children if child.kind == "element"]
+            brk = text[breaks[0].start : breaks[0].end] if breaks else "<br>"
+            lead = text[begin:finish][: len(text[begin:finish]) - len(text[begin:finish].lstrip())]
+            tail = text[begin:finish][len(text[begin:finish].rstrip()) :]
+            loop = (
+                lead + "{% for row in site.hours %}{{ row.days }} {{ row.times }}"
+                "{% if not forloop.last %}" + brk + "{% endif %}{% endfor %}" + tail
+            )
+            overlay.replace[begin] = (finish, loop)
+            parts.add(listed.node.start)
+            return
+        items = listed.items
+        if listed.kind == "dl":
+            first_end = listed.cells[0][1].end
+            last_end = listed.cells[-1][1].end
+            between = text[first_end : items[1].start] if len(items) > 1 else ""
+        else:
+            first_end, last_end = items[0].end, items[-1].end
+            between = text[items[0].end : items[1].start] if len(items) > 1 else ""
+        start = items[0].start
+        markup: list[str] = []
+        position = start
+        if listed.kind == "list":
+            inner = items[0].inner
+            markup += [esc(text[start : inner[0]]), "{{ row.days }} {{ row.times }}"]
+            position = inner[1]
+        else:
+            days, times = listed.cells[0]
+            for cell, variable in ((days, "{{ row.days }}"), (times, "{{ row.times }}")):
+                inner = cell.inner
+                markup += [esc(text[position : inner[0]]), variable]
+                position = inner[1]
+        markup.append(esc(text[position:first_end]))
+        loop = (
+            "{% for row in site.hours %}"
+            + "".join(markup)
+            + "{% if not forloop.last %}"
+            + esc(between)
+            + "{% endif %}{% endfor %}"
+        )
+        overlay.replace[start] = (last_end, loop)
+        for item in items:
+            parts.add(item.start)
+        for pair in listed.cells:
+            parts.update(cell.start for cell in pair)
 
     # the share image
 
@@ -596,6 +718,8 @@ class Editable:
     ) -> None:
         if node.kind != "element" or node.tag in SKIP:
             return
+        if node.start in self.hours_parts.get(page.path, ()):
+            return  # a row of opening hours: rendered from site.hours
         if self._row(page, node):
             self.left_out[page.path] = self.left_out.get(page.path, 0) + 1
             return

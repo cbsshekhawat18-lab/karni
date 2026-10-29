@@ -10,6 +10,12 @@ a field the template gives a default for is filled the first time, and
 keeps following the template's value until someone changes it in the
 admin. ``seeded`` on the row records what each template gave.
 
+``hours="Monday to Friday=8:00 to 18:00|Saturday=9:00 to 13:00|Sunday=Closed"``
+seeds the opening hours rows (``site.hours``): each ``|`` a row, its days
+before ``=`` and its times after. They are added when the site has none, and
+follow the template while they are as it gave them. Once the client changes
+them, theirs stay, and hours a client deleted are not added again.
+
 An image field (``logo``, ``favicon``, ``share_image``, or any file field of
 the settings model) takes a static path as its default:
 ``{% site_defaults share_image="website/img/share.jpg" %}``. The file field
@@ -33,7 +39,9 @@ from karni.exceptions import KarniImproperlyConfigured
 from karni_site import caching, conf
 
 __all__ = [
+    "HOURS",
     "SEEDABLE",
+    "hours_rows",
     "file_fields",
     "forget",
     "get_site_settings",
@@ -48,6 +56,8 @@ MODEL_CODE = "SITE009"
 
 #: The fields ``{% site_defaults %}`` may give a default for (plus ``social_<name>``).
 SEEDABLE = ("name", "tagline", "address", "phone", "phone_link", "email", "map_url")
+#: ``{% site_defaults hours="..." %}``: the opening hours rows, not a field of the row.
+HOURS = "hours"
 #: How a social network's slug is written as a name.
 _SOCIAL_NAMES = {
     "facebook": "Facebook",
@@ -168,7 +178,7 @@ def _plan(current: Any, defaults: Mapping[str, str]) -> tuple[dict[str, Any], di
         if field in files:
             static[field] = value  # a default address only: the file field stays the client's
             continue
-        if field.startswith("social_") or field == "images":
+        if field.startswith("social_") or field in ("images", HOURS):
             continue
         now = getattr(current, field, "") or ""
         if field not in seeded:
@@ -193,6 +203,8 @@ def _plan(current: Any, defaults: Mapping[str, str]) -> tuple[dict[str, Any], di
         seeded["images"] = images
     if static:
         seeded["static"] = static
+    if HOURS in defaults:
+        seeded[HOURS] = str(defaults[HOURS])
     return changes, seeded
 
 
@@ -216,11 +228,14 @@ def seed(defaults: Mapping[str, Any]) -> Any | None:
                 row = model()
             changes, seeded = _plan(row, defaults)
             old_social = dict((row.seeded or {}).get("social") or {})
+            old_hours = (row.seeded or {}).get(HOURS)
             for field, value in changes.items():
                 setattr(row, field, value)
             row.seeded = seeded
             row.save()
             _seed_social(row, old_social, dict(seeded.get("social") or {}))
+            if HOURS in defaults:
+                _seed_hours(row, old_hours, str(defaults[HOURS]))
     except IntegrityError:
         forget()
         return None
@@ -229,6 +244,34 @@ def seed(defaults: Mapping[str, Any]) -> Any | None:
         return None
     forget()
     return get_site_settings()
+
+
+def hours_rows(text: str) -> list[tuple[str, str]]:
+    """``"Mon to Fri=9:00 to 17:00|Sun=Closed"`` as ``[(days, times), ...]``."""
+    found: list[tuple[str, str]] = []
+    for part in str(text or "").split("|"):
+        days, _sep, times = part.partition("=")
+        if days.strip():
+            found.append((" ".join(days.split()), " ".join(times.split())))
+    return found
+
+
+def _seed_hours(row: Any, before: str | None, after: str) -> None:
+    """The template's opening hours, unless the client has their own (or deleted them)."""
+    from karni_site.models import OpeningHours
+
+    existing = [(h.days, h.times) for h in OpeningHours.objects.filter(site=row)]
+    wanted = hours_rows(after)
+    if before is None:
+        if existing:
+            return  # entered before the template gave any: the client's
+    elif existing != hours_rows(before) or not existing:
+        return  # changed or deleted in the admin: theirs stay
+    if existing == wanted:
+        return
+    OpeningHours.objects.filter(site=row).delete()
+    for order, (days, times) in enumerate(wanted):
+        OpeningHours.objects.create(site=row, days=days, times=times, order=order)
 
 
 def _seed_social(row: Any, before: Mapping[str, str], after: Mapping[str, str]) -> None:

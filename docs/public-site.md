@@ -356,6 +356,14 @@ What the import marks:
   `<link rel="icon">` its favicon.
 - the first `tel:`, `mailto:` and map link and every link to a social
   profile take their addresses from `site`.
+- opening hours a table, a definition list, a list or lines of text show
+  (days, then times or a word for closed, in English, German, French,
+  Spanish, Italian, Dutch or Portuguese) become a loop over `site.hours` in
+  the design's own markup, seeded once with `{% site_defaults hours="..." %}`.
+  When the footer and the contact page both show them, both loop over the
+  same rows, seeded from the one whose markup parts days from times, so the
+  client enters them once. Lists that show different hours, or a row that
+  does not read as hours, stay text blocks, and the report says so.
 - an `og:image` every page has becomes the site's default share image
   (`share_image` in `{% site_defaults %}`, with the logo and the favicon),
   so the client replaces it in *Site settings*. Without one, the one image

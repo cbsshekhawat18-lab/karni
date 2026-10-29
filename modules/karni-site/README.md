@@ -111,6 +111,12 @@ The design's values are the defaults, given once at the top of the layout:
 {% load static karni_site %}{% site_defaults name="Crumb & Co" phone="01234 567890" email="hello@example.com" social_instagram="https://www.instagram.com/crumb" %}
 ```
 
+`hours="Monday to Friday=8:00 to 18:00|Saturday=9:00 to 13:00|Sunday=Closed"`
+seeds the opening hours rows: each `|` a row, the days before `=`, the times
+after. They are added when the site has none and follow the template while
+they are as it gave them. Once the client changes or deletes them, theirs
+stay.
+
 The logo, the favicon and the default share image take a static path
 (`share_image="website/img/share.jpg"`, or any file field of the settings
 model): the field stays empty, and `{% karni_seo %}` (the share image and

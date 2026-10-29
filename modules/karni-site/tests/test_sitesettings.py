@@ -85,6 +85,28 @@ def test_a_field_the_client_cleared_stays_cleared() -> None:
     assert render('{% site_defaults email="hi@example.com" %}[{{ site.email }}]') == "[]"
 
 
+def test_the_templates_opening_hours_seed_site_hours_once() -> None:
+    loop = "{% for row in site.hours %}[{{ row.days }}|{{ row.times }}]{% endfor %}"
+    first = (
+        '{% site_defaults hours="Mon to Fri=8:00 to 18:00|Saturday=9:00 to 13:00|Sunday=Closed" %}'
+    )
+    assert render(first + loop) == (
+        "[Mon to Fri|8:00 to 18:00][Saturday|9:00 to 13:00][Sunday|Closed]"
+    )
+    # Unchanged in the admin, the hours follow the template.
+    later = '{% site_defaults hours="Mon to Fri=8:00 to 17:00|Sunday=Closed" %}'
+    assert render(later + loop) == "[Mon to Fri|8:00 to 17:00][Sunday|Closed]"
+    # Changed by the client, theirs stay; and hours they deleted are not added again.
+    row = OpeningHours.objects.get(days="Sunday")
+    row.times = "10:00 to 12:00"
+    row.save()
+    assert render(first + loop) == "[Mon to Fri|8:00 to 17:00][Sunday|10:00 to 12:00]"
+    OpeningHours.objects.all().delete()
+    sitesettings.forget()
+    assert render(later + loop) == ""
+    assert sitesettings.hours_rows(" Mon =9-5 | | Sun ") == [("Mon", "9-5"), ("Sun", "")]
+
+
 def test_settings_are_one_cache_read_and_a_save_clears_them() -> None:
     render('{% site_defaults name="Studio" %}')
     render("{{ site.name }}")

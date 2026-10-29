@@ -901,6 +901,69 @@ def test_characters_around_words_are_not_a_highlight(project: Path, tmp_path: Pa
     assert '{% editable "home.main.request_an_appointment" %}Request an *appointment*' in home
 
 
+_HOURS_PAGE = (
+    '<!DOCTYPE html><html lang="{lang}"><head><title>{title} | Corner Bakery</title>'
+    '<meta name="description" content="d"></head><body>'
+    '<header><nav><a href="index.html">Home</a> <a href="visit.html">Visit</a></nav></header>'
+    "<main>{main}</main>"
+    '<footer><h4>Open</h4><p class="when">{footer}</p></footer></body></html>'
+)
+
+
+def _hours_design(tmp_path: Path, footer: str, visit: str, lang: str = "en") -> Path:
+    design = tmp_path / "bakery"
+    design.mkdir()
+    home = "<h1>Bread every morning</h1>"
+    for name, title, main in (("index", "Home", home), ("visit", "Visit", visit)):
+        (design / f"{name}.html").write_text(
+            _HOURS_PAGE.format(lang=lang, title=title, main=main, footer=footer)
+        )
+    return design
+
+
+def test_opening_hours_shown_twice_are_site_hours_entered_once(
+    project: Path, tmp_path: Path
+) -> None:
+    design = _hours_design(
+        tmp_path,
+        "Tue&ndash;Sat 7:00&ndash;14:00<br>Sun 8:00&ndash;12:00<br>Mon closed",
+        '<h1>Visit</h1><dl class="times"><dt>Tuesday to Saturday</dt><dd>7:00 to 14:00</dd>'
+        "<dt>Sunday</dt><dd>8:00 to 12:00</dd><dt>Monday</dt><dd>Closed</dd></dl>",
+    )
+    result = ok("import", "design", str(design), "--app", "website", "--editable")
+    templates = project / "website" / "templates" / "website"
+    base = (templates / "base.html").read_text()
+    assert 'hours="Tuesday to Saturday=7:00 to 14:00|Sunday=8:00 to 12:00|Monday=Closed"' in base
+    # The footer's lines and the visit page's list loop over the same rows.
+    assert (
+        '<p class="when">{% for row in site.hours %}{{ row.days }} {{ row.times }}'
+        "{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>"
+    ) in base
+    visit = (templates / "visit.html").read_text()
+    assert (
+        '<dl class="times">{% for row in site.hours %}<dt>{{ row.days }}</dt>'
+        "<dd>{{ row.times }}</dd>{% if not forloop.last %}{% endif %}{% endfor %}</dl>"
+    ) in visit
+    assert "Tuesday to Saturday" not in visit and "{% editable" not in visit.split("<dl", 1)[1]
+    assert "opening hours: the layout shared by every page and visit.html:" in result.output
+    assert "The layout shared by every page wrote them another way" in result.output
+
+
+def test_opening_hours_that_differ_stay_text(project: Path, tmp_path: Path) -> None:
+    # A shop's hours in the footer, the phone line's on the visit page: two things.
+    design = _hours_design(
+        tmp_path,
+        "Mo&ndash;Fr 9&ndash;18 Uhr<br>Sa 9&ndash;14 Uhr",
+        '<h1>Telefon</h1><ul class="phone"><li>Mo&ndash;Fr 8&ndash;12 Uhr</li>'
+        "<li>Sa geschlossen</li></ul>",
+        lang="de",
+    )
+    result = ok("import", "design", str(design), "--app", "website", "--editable")
+    base = (project / "website" / "templates" / "website" / "base.html").read_text()
+    assert "hours=" not in base and "site.hours" not in base
+    assert "show different hours, so they stay text blocks" in result.output
+
+
 def test_the_designs_highlight_becomes_the_setting(project: Path, tmp_path: Path) -> None:
     design = tmp_path / "studio"
     design.mkdir()
