@@ -285,7 +285,8 @@ def project_facts() -> dict[str, Any]:
     }
 
 
-def _count(model: type[models.Model], alias: str, request: Mapping[str, Any]) -> int:
+def _count(model: type[models.Model], alias: str, request: Mapping[str, Any]) -> int | None:
+    """The count ``request`` asks for, ``None`` for a kind that does not apply to the field."""
     from django.db.models import Q
     from django.db.models.functions import Length
 
@@ -300,7 +301,7 @@ def _count(model: type[models.Model], alias: str, request: Mapping[str, Any]) ->
             return int(field.remote_field.through._base_manager.using(alias).count())
         if kind == "empty":
             return int(rows.filter(**{f"{name}__isnull": True}).count())
-        raise ValueError(f"{kind} does not apply to a many-to-many field")
+        return None
     empty = Q(**{f"{name}__isnull": True})
     if field.empty_strings_allowed:
         empty |= Q(**{name: ""})
@@ -315,7 +316,7 @@ def _count(model: type[models.Model], alias: str, request: Mapping[str, Any]) ->
         return int(longer.count())
     if kind == "in":
         return int(rows.filter(**{f"{name}__in": list(request["arg"])}).count())
-    raise ValueError(f"unknown count kind {kind!r} (kinds: {', '.join(COUNT_KINDS)})")
+    return None
 
 
 def _unreachable(alias: str) -> str | None:
@@ -342,7 +343,7 @@ def count_rows(requests: list[Mapping[str, Any]]) -> dict[str, Any]:
     Each request is ``{"model": "app.Model"}``, plus ``"field"`` and
     ``"kind"`` to count part of the rows: ``all`` (every row), ``set`` (rows
     whose field holds a value: not null, and not blank where the column takes
-    text; for a many-to-many field, its links), ``empty`` (rows whose field is
+    text, or for a many-to-many field its links), ``empty`` (rows whose field is
     null or blank), ``longer`` (rows whose value is longer than ``"arg"``
     characters) or ``in`` (rows whose value is one of the list ``"arg"``).
     Counts read through each model's base manager, so soft-deleted rows and

@@ -7,7 +7,7 @@ from io import StringIO
 from typing import Any
 
 import pytest
-from django.core.management import CommandError, call_command
+from django.core.management import call_command
 from django.test import override_settings
 
 from karni.facts import count_rows, project_apps, project_facts
@@ -94,8 +94,11 @@ def test_karni_rows_prints_the_counts_and_refuses_bad_input() -> None:
     out = StringIO()
     call_command("karni_rows", '[{"model": "testapp.Shelf"}]', stdout=out)
     assert json.loads(out.getvalue()) == {"rows": [0], "unreachable": {}}
-    with pytest.raises(CommandError, match="JSON list of objects"):
-        call_command("karni_rows", '{"model": "testapp.Shelf"}')
+    for bad in ('{"model": "testapp.Shelf"}', "[nope"):
+        out = StringIO()
+        call_command("karni_rows", bad, stdout=out)
+        answer = json.loads(out.getvalue())
+        assert answer["rows"] == [] and answer["error"].startswith("The requests are not")
 
 
 def test_count_rows_reports_a_database_that_does_not_answer(tmp_path: Any) -> None:

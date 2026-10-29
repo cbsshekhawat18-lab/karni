@@ -4,7 +4,9 @@ Prints :func:`karni.facts.count_rows` for a JSON list of requests, each
 ``{"model": "app.Model", "field": ..., "kind": ..., "arg": ...}``, as
 ``{"rows": [...], "unreachable": {alias: why}}``. Only ``SELECT COUNT``
 queries run: nothing is written. A database that does not answer is
-reported, not raised, so ``karni plan`` can say why it shows no counts.
+reported, not raised, so ``karni plan`` can say why it shows no counts, and
+requests that are not a JSON list of objects print ``{"rows": [], "error":
+...}``.
 
 Override / escape hatch: :func:`karni.facts.count_rows` is the importable form.
 """
@@ -14,7 +16,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from django.core.management.base import BaseCommand, CommandError, CommandParser
+from django.core.management.base import BaseCommand, CommandParser
 
 from karni.facts import count_rows
 
@@ -31,7 +33,10 @@ class Command(BaseCommand):
         try:
             requests = json.loads(options["requests"])
         except json.JSONDecodeError as exc:
-            raise CommandError(f"The requests are not JSON: {exc}.") from None
+            requests = f"not JSON: {exc}"
         if not isinstance(requests, list) or not all(isinstance(r, dict) for r in requests):
-            raise CommandError('The requests must be a JSON list of objects: [{"model": ...}].')
-        self.stdout.write(json.dumps(count_rows(requests), sort_keys=True))
+            why = requests if isinstance(requests, str) else "not a JSON list of objects"
+            found: dict[str, Any] = {"rows": [], "error": f"The requests are {why}."}
+        else:
+            found = count_rows(requests)
+        self.stdout.write(json.dumps(found, sort_keys=True))
