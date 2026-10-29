@@ -138,7 +138,8 @@ def test_editable_texts_are_blocks_the_client_changes(rf: RequestFactory) -> Non
     html = Template(source).render(RequestContext(rf.get("/book/")))
     # The tag's texts are the defaults, stored as blocks under the prefix.
     assert ">Preferred day <span" in html and 'placeholder="you@clinic.example"' in html
-    assert ">Book now</button>" in html and 'data-karni-success="See you soon &amp; thanks."' in html
+    assert ">Book now</button>" in html
+    assert 'data-karni-success="See you soon &amp; thanks."' in html
     keys = set(Block.objects.filter(page="book").values_list("key", flat=True))
     assert {
         "book.appointment.name.label",
