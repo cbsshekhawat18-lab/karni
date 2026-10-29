@@ -1,15 +1,15 @@
 ## Public site (karni-site)
-- Runtime for a site app (rule K309). Templates `{% load static karni_site %}`.
-- Import a designer's pages with `karni import design <dir> --app <app> --editable`, never by
-  hand. A new design version: run it again (`--diff` first). Later pages: `karni make view`.
-- Never hard-code text or images a client may change: `{% editable "<page>.<name>" %}...{% endeditable %}`
-  and `{% editable_image "<page>.<name>" %}<img ...>{% endeditable_image %}`. The content is the default.
-- The site's details are `site` (`{{ site.name }}`, `site.phone_href`, `site.hours`, `site.social.<network>`),
-  their defaults `{% site_defaults name="..." %}` in base.html. No model or tag of your own for them.
-- Menus: `{% get_menu "header" as items %}` and a `{% for %}` in the design's markup (`item.url`,
-  `item.title`, `item.active`, `item.children`). No hand-written menu tag.
-- The current item outside a menu: `{% ifactive "<app>:<name>" %}` around the design's own class.
+- Templates `{% load static karni_site %}` (rule K309). A designer's pages, never by hand:
+  `karni import design <dir> --app <app> --editable`, again for a new version (`--diff` first).
+- Content that repeats (cards, detail pages, galleries): `karni rules --procedure site-from-design`
+  (analyze, models, extract, load). Never retype it. Later pages: `karni make view`.
+- Never hard-code what a client may change: `{% editable "<page>.<name>" %}...{% endeditable %}`,
+  `{% editable_image %}`, and `site` (`{{ site.name }}`, `site.phone_href`, `site.hours`).
+- Menus: `{% get_menu "header" as items %}` looped in the design's markup (`item.url`, `item.title`,
+  `item.active`, `item.children`). Outside a menu: `{% ifactive "<app>:<name>" %}`.
 - Inline scripts stay inside `{% csp_hash %}...{% endcsp_hash %}`, another origin is `{% csp_allow %}`.
-- Redirects, page titles and the `editor` role are in the admin. `{% karni_seo %}` in base.html writes
-  titles, share tags and JSON-LD. Uploads: `{% image obj.photo width=400 alt=... %}`, never a raw `<img>`.
-- `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008, `karni check --seo` SITE010 to SITE018.
+  Never add 'unsafe-inline' to KARNI_CSP for a site.
+- A public form: `karni make form <name> <field:type> ... [--notify SETTING]`, then
+  `{% karni_form "<name>" %}`. Never hand-write its view, throttle or script.
+- Redirects, page titles, the `editor` role: the admin. `{% karni_seo %}` in base.html. Uploads:
+  `{% image obj.photo width=400 alt=... %}`. `karni check --seo` renders every page (SITE010-SITE018).

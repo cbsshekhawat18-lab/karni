@@ -68,7 +68,8 @@ def _targets(
         raw = relation_name(spec)
         if is_user_target(raw):
             resolved[spec.name] = RelationTarget("settings.AUTH_USER_MODEL", True, "user")
-        elif raw in ("self", model):
+        elif raw in ("self", model, f"{app.label}.{model}"):
+            # The model itself (a course's related courses): Django's "self".
             resolved[spec.name] = RelationTarget(pystr("self"), False, "self")
         elif "." in raw:
             label, _, name = raw.partition(".")
@@ -127,8 +128,38 @@ def plan_images_extra(ws: Workspace, images: list[str]) -> None:
     ws.note(images_extra_note(images, edit.before, edit.after))
 
 
-def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
-    """Plan the model class in ``<app>/models.py``; returns the class name."""
+#: Fields every BaseModel has, which --order may name too.
+_BASE_FIELDS = ("created_at", "updated_at", "id")
+
+
+def _field_option(specs: list[FieldSpec], value: str, option: str) -> str:
+    """``--order``/``--key``: a field of the model (``-position`` for descending order)."""
+    name = value.lstrip("-") if option == "--order" else value
+    if name not in {s.name for s in specs} and name not in _BASE_FIELDS:
+        names = ", ".join(s.name for s in specs) or "none"
+        raise CliError(
+            f"{option} {value}: {name!r} is not a field of the model (fields: {names}). "
+            f"Declare it, e.g. {name}:int, or name another.",
+            code="C104",
+        )
+    return value
+
+
+def plan(
+    ws: Workspace,
+    app: App,
+    name: str,
+    field_tokens: list[str],
+    *,
+    order: str | None = None,
+    key: str | None = None,
+) -> str:
+    """Plan the model class in ``<app>/models.py``; returns the class name.
+
+    ``order`` writes ``Meta.ordering``, ``key`` writes ``Karni.import_key``: the
+    field ``karni load`` and imports match rows on (for rows nested under a
+    parent, the parent plus that field).
+    """
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
     path = models_file(ws, app)
@@ -144,6 +175,18 @@ def plan(ws: Workspace, app: App, name: str, field_tokens: list[str]) -> str:
     if body.inner:
         lines += [*body.inner, ""]
     lines += body.lines
+    if order is not None:
+        lines += [
+            "",
+            "    class Meta:",
+            f"        ordering = [{pystr(_field_option(specs, order, '--order'))}]",
+        ]
+    if key is not None:
+        lines += [
+            "",
+            "    class Karni:",
+            f"        import_key = {pystr(_field_option(specs, key, '--key'))}",
+        ]
     text_field = next((s.name for s in specs if s.is_text), None)
     if text_field is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{text_field}"]
@@ -244,6 +287,17 @@ def command(
     migrate: bool = typer.Option(
         False, "--migrate", help="Run `karni make migration` for the app afterwards."
     ),
+    order: str | None = typer.Option(
+        None,
+        "--order",
+        help="Order rows by this field (Meta.ordering), e.g. position or -created_at.",
+    ),
+    key: str | None = typer.Option(
+        None,
+        "--key",
+        help="The field karni load and imports match rows on (Karni.import_key). Rows nested "
+        "under a parent are matched on the parent plus this field, e.g. position.",
+    ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
@@ -264,7 +318,7 @@ def command(
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]
         ws.note("note: no frontend/ directory, so pages are skipped.")
-    model = plan(ws, target, name, fields or [])
+    model = plan(ws, target, name, fields or [], order=order, key=key)
     expand = [
         spec.name
         for spec in parse_fields(fields or [])

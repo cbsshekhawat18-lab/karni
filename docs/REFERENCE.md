@@ -30,6 +30,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/models.py) |
 | Realistic, connected seed data (`karni seed`, `<app>/seeds.py`) | `stable` | [seeds.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/seeds.py) |
 | Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
+| Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`) | `experimental` | Karni's own tests |
 | Model events and listeners, optionally queued to Celery (`@on_updated`) | `stable` | [listeners.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/listeners.py) |
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
@@ -116,7 +117,17 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 
 #### `karni new`
 
-Scaffold a project from templates/project
+Create a project: a public website, an app, or both.
+
+Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defaults and the production stack. A site (--kind site) also has a site app at / on the karni-site module, where the client edits every text, image, menu and page title in the admin, registration off and the roles staff and editor. An app (--kind app) has the React app in frontend/. A site+app has both.
+
+With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
+
+Example:
+
+```sh
+karni new "Crumb Bakery" --kind site --design ../design
+```
 
 ```
 karni new [OPTIONS] NAME
@@ -127,6 +138,10 @@ karni new [OPTIONS] NAME
 | `NAME` (required) |  | Project name (slug is derived from it) |
 | `--output-dir`, `-o` PATH | `.` |  |
 | `--domain` TEXT | `example.com` | Production domain for Caddy |
+| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users) or site+app. Asked when run in a terminal, else app (site with --design). |
+| `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
+| `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
+| `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 
 #### `karni add`
 
@@ -586,7 +601,7 @@ karni seed [OPTIONS] [ARGS...]
 
 Load real content from a JSON or YAML file. It wraps `manage.py karni_load FILE [ARGS]`.
 
-The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. `karni seed` is for demo data, `karni load` for real content.
+The file maps model labels to lists of rows. Each row is matched by its natural key (`slug`, `email`, or `Karni.natural_key`) and created or updated, so the same file loads again without duplicates and says when nothing changed. Relations name their targets by natural key, file and image fields hold paths relative to the content file (uploaded once, or again with --refresh-files), and a nested list holds a row's children (--prune deletes the ones it does not name). One transaction with the API's validation: an invalid row rolls everything back. --dry-run lists, per model, each row it would create or change with the fields that change. `karni seed` is for demo data, `karni load` for real content (`karni design extract` writes it from a designer's pages).
 
 Example:
 
@@ -751,6 +766,7 @@ component   Add a React component that claims a role (registerComponentRole).
 site        Create a public site app (Django views, urls, templates, static) mounted at "/".
 view        Add a page to a site app: a function view, its template and its URL.
 deploy      Write the production stack: docker-compose.prod.yml, the Caddyfile, .env.prod.example.
+form        Add a public form: model, viewset, notification, tests, staff pages ({% karni_form %}).
 module      Create a reusable module skeleton: modules/karni-<name>/ (docs/modules.md).
 ```
 
@@ -826,6 +842,8 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--access` TEXT |  | With viewset: granted\|authenticated\|public-read[:&lt;role&gt;]\|public-create[:&lt;role&gt;]\|owned:&lt;field&gt;\|staff\|role:&lt;name&gt;. public-read: anyone reads, only role 'staff' (or :&lt;role&gt;) writes. public-create: anyone creates (a public form), only that role reads and writes. |
 | `--search` TEXT (repeatable) |  | With viewset: search_fields (comma-separated). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
+| `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1155,6 +1173,34 @@ karni make deploy [OPTIONS] TARGET
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 
+##### `karni make form`
+
+Add a public form NAME with FIELDS: it works with and without JavaScript, safely.
+
+Writes the model (the visitor's fields, a status lifecycle and staff-only notes, hidden from visitors through field_roles, an admin inbox), a BaseViewSet with create=Public() (Karni's rate limit and honeypot apply by themselves), the tests, the staff app's pages when there is a frontend, and with --notify a queued email to the addresses in that setting. It wires karni-site and its form view. Put {% karni_form "NAME" %} in a site template: the output names the imported design's &lt;form&gt; it replaces, with the arguments that keep its markup.
+
+Example:
+
+```sh
+karni make form contact name:str email:email subject:str message:text --notify ENQUIRY_RECIPIENTS
+```
+
+```
+karni make form [OPTIONS] NAME [FIELDS...]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | The form's name, snake_case: contact, booking_request, newsletter. |
+| `FIELDS...` |  | The fields a visitor fills, as name:type[:arg][?] (karni make model's DSL): str text email url phone int float decimal bool date datetime choice:a\|b country file image fk:Model m2m:Model. A trailing ? makes a field optional. |
+| `--notify` TEXT |  | A Django setting (e.g. ENQUIRY_RECIPIENTS) holding the addresses each new submission is emailed to, by a queued listener. Without it nothing is sent. |
+| `--states` TEXT |  | The inbox lifecycle of the status field (default new&gt;replied\|new&gt;archived\|replied&gt;archived): a,b,c moves in order, and a&gt;b\|a&gt;c declares each move. The first state is where a submission starts. |
+| `--role` TEXT | `staff` | The role that reads, answers and deletes submissions (default staff). |
+| `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--app` TEXT |  | Target app label (default: the project's only local app). |
+| `--force` |  | Overwrite / replace existing targets. |
+| `--dry-run` |  | Print the files and diff it would write, but write nothing. |
+
 ##### `karni make module`
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
@@ -1190,6 +1236,8 @@ With --editable, every text becomes a block (`{% editable %}`), every image `{% 
 
 Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since, and every block keeps its key.
 
+With --map content/design-map.json (karni design analyze --map writes it), the content the map reads into rows gets no blocks: the cards, detail pages and galleries that become models are rendered from the rows, and the client edits the rows in the admin.
+
 ```
 karni import design [OPTIONS] DIRECTORY
 ```
@@ -1202,6 +1250,64 @@ karni import design [OPTIONS] DIRECTORY
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 | `--editable/--no-editable` |  | Make every text, image, menu and contact detail editable in the admin (karni-site blocks, menus and site settings). Remembered for later imports. |
+| `--map` PATH |  | The content map from karni design analyze --map: with --editable, the content it reads into rows (cards, detail pages, galleries) gets no blocks, because the templates render it from the rows. Remembered for later imports. |
+
+#### `karni design`
+
+Read a designer's pages: the models their content needs, and the content itself.
+
+```
+karni design COMMAND [ARGS]...
+```
+
+##### `karni design analyze`
+
+Find the content that repeats in a design and propose models for it.
+
+Reads every page, sets aside what every page shares (the header, the footer), and finds the structures that repeat within and across pages: cards, list items, a gallery inside each project, a page per doctor. For each it infers the fields from the markup (a heading with its highlighted words kept as ==words==, text, an image with its alt text, a link to another page, a list of tags, a date, a price, a number) and the relations between them (a card that links to a detail page is that page's model, a list of links to other items is a relation). Names come from the design's classes, headings and pages. It prints ready-to-run `karni make model` commands, models others point at first, the decisions the markup cannot settle (a hand-picked list, or one a query derives), and the KARNI_SITE_HIGHLIGHT that renders the highlighted words with `{{ value|highlight }}`.
+
+--map writes a draft content map: which structure is which model and which element is which field. Edit it, answer its decisions, then run `karni design extract`.
+
+Example:
+
+```sh
+karni design analyze ../design --map content/design-map.json
+```
+
+```
+karni design analyze [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages. |
+| `--app` TEXT |  | The app the models go in (default: the app karni import design used, else website). |
+| `--json` |  | Print the analysis as JSON. |
+| `--map` PATH |  | Write a draft content map to this file, for karni design extract. |
+| `--force` |  | Replace a map file that is there. |
+
+##### `karni design extract`
+
+Write the design's content as a `karni load` file, read with a content map.
+
+Each model's rows come from the pages the map names: a row per item (or per detail page), keyed so the same item read on several pages is one row, its fields read from the elements the map gives and parsed by the field's type. Relations name their rows by key, child rows (a gallery) nest under their parent, and image paths are relative to the output file, so `karni load` uploads the designer's own images. The map's open decisions must be answered first.
+
+Example:
+
+```sh
+karni design extract ../design --map content/design-map.json -o content/site.json
+```
+
+```
+karni design extract [OPTIONS] DIRECTORY
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `DIRECTORY` (required) |  | The folder with the design's HTML pages. |
+| `--map` PATH (required) |  | The content map (karni design analyze --map writes a draft). |
+| `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
+| `--dry-run` |  | Print what would be written and write nothing. |
 
 ### Debugging
 
@@ -1407,6 +1513,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
+| `KARNI_ADMIN_THEME` | `KARNI_ADMIN_THEME` | `"light"` | The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming). |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
 | `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
@@ -1516,7 +1623,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_SERVER_ERROR_TEMPLATES` |  | `["500.html", "karni_site/500.html"]` | The templates karni_site.views.server_error tries in order. The first that renders is the page. The last is this module's plain page, which needs nothing. |
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
 | `KARNI_SITE_SETTINGS_MODEL` |  | `"karni_site.SiteSettings"` | The model `site` is in every template: "app_label.ModelName". A project with fields of its own subclasses karni_site.models.AbstractSiteSettings and names its model here, before karni_site's first migrate (like AUTH_USER_MODEL). |
-| `KARNI_SITE_HIGHLIGHT` |  | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them in an editable block, and the element (with its class) the words render in. "" as the marker turns it off. |
+| `KARNI_SITE_HIGHLIGHT` |  | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them, in an editable block and in a field rendered with {{ value\|highlight }}, and the element (with its class) the words render in. A backslash before the marker keeps it as typed. An empty marker turns it off. |
 | `KARNI_SITE_INLINE_TAGS` |  | `{ "b": [], "strong": [], "i": [], "em": [], "br": [], "a": ["href", "title", "target", "rel"], }` | The inline markup an edited block keeps: element -&gt; the attributes it keeps. Everything else is removed, its text kept. The highlight element joins it. |
 | `KARNI_SITE_LINK_SCHEMES` |  | `["http", "https", "mailto", "tel"]` | The schemes a link in an edited block may use. A relative link always may. |
 | `KARNI_SITE_SANITIZER` |  | `"karni_site.sanitize.sanitize"` | The function that cleans a block's HTML: (html) -&gt; html. A dotted path. |
@@ -1528,6 +1635,38 @@ class Lead(BaseModel):
 | `KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
 | `KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
+| `KARNI_SITE_FORMS` |  | `{}` | Form name -&gt; the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |
+| `KARNI_SITE_FORM_CLASS` |  | `"karni_site.forms.SiteForm"` | The class that renders and submits a form. A dotted path to a karni_site.forms.SiteForm subclass, to change how fields are described or how a submission is saved. |
+| `KARNI_SITE_FORM_TEMPLATE` |  | `"karni_site/forms/form.html"` | The template {% karni_form %} renders. Each field renders karni_site/forms/field.html, or karni_site/forms/&lt;form&gt;/&lt;field&gt;.html or karni_site/forms/&lt;form&gt;/field.html when one exists. |
+| `KARNI_SITE_FORM_CLASSES` |  | `{}` | Class names on the form's markup, merged over the module's plain defaults: form, row, column, field, label, input, select, check, check_input, check_label, invalid, error, help, message, success, failure, button, required. |
+| `KARNI_SITE_FORM_PRESETS` |  | `{}` | Named sets of class names a tag picks with classes="&lt;name&gt;", merged over the shipped "bootstrap" preset (Bootstrap 5). {"salon": {"field": "field", "row": "form-row"}}. |
+| `KARNI_SITE_FORM_MESSAGES` |  | `{}` | The texts a form shows, merged over the defaults: success, invalid, throttled, refused, failed, choose (a select's empty option) and button. A tag's own success="..." wins. |
+| `KARNI_SITE_FORM_REQUIRED_MARK` |  | `"*"` | The text after a required field's label. |
+| `KARNI_SITE_FORM_SCRIPT` |  | `True` | Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors). False leaves the form working without JavaScript, and a site may load its own script. |
+| `KARNI_SITE_FORM_SENT_PARAM` |  | `"sent"` | The query parameter the page gets after a form was sent without JavaScript: ?sent=&lt;form&gt;. |
+| `KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
+| `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
+| `KARNI_SITE_URL` |  | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
+| `KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
+| `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
+| `KARNI_SITE_SITEMAPS` |  | `"karni_site.sitemaps.sitemaps"` | The function that lists the sitemap's sections: () -&gt; {name: Sitemap}. A dotted path. |
+| `KARNI_SITE_PUBLISHED_FIELDS` |  | `[ "published", "is_published", "is_public", "public", "visible", "is_visible", ]` | Boolean fields that mark a row as public, tried in order on a model in the sitemap without a filter of its own (class Karni: sitemap = {"filter": {...}}). |
+| `KARNI_SITE_SCHEMA_TYPE` |  | `"auto"` | The schema.org type of the site's JSON-LD: "auto" (LocalBusiness when the site has opening hours, else Organization), any schema.org type ("Bakery", "Dentist"), or None. |
+| `KARNI_SITE_JSONLD` |  | `"karni_site.jsonld.build"` | The function that builds the JSON-LD: (request, site) -&gt; dict or None. A dotted path. |
+| `KARNI_SITE_SEO_OBJECT` |  | `"karni_site.metadata.page_object"` | The function that finds the object a page is about: (context, request) -&gt; object or None. |
+| `KARNI_SITE_TITLE_FORMAT` |  | `"{title} \| {site}"` | How a title taken from the page's object is written. {title} and {site}. |
+| `KARNI_SITE_DESCRIPTION_LENGTH` |  | `160` | The longest description taken from the page's object, in characters. |
+| `KARNI_SITE_IMAGE_WIDTHS` |  | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths, in pixels, of the WebP copies made of each uploaded image (those below its own width, and its own width when it is not a WebP). [] makes none. |
+| `KARNI_SITE_IMAGE_QUALITY` |  | `80` | The WebP quality of those copies, 1 to 100. |
+| `KARNI_SITE_IMAGE_MAX_SIZE` |  | `2560` | An uploaded image wider or taller than this many pixels is scaled down to fit. None keeps it. |
+| `KARNI_SITE_QUEUE_RENDITIONS` |  | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
+| `KARNI_SITE_RENDITIONER` |  | `"karni_site.renditions.generate"` | The function that makes an image's copies: (name, storage) -&gt; manifest. A dotted path. |
+| `KARNI_SITE_IMAGE_STYLE` |  | `":where(img[data-karni-image]){height:auto}" ":where(img[data-karni-image=natural]){width:auto}"` | The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the design's CSS sets only its width or only its height. "" leaves it out. |
+| `KARNI_SITE_SEO_MAX_PAGES` |  | `500` | karni check --seo: at most this many pages are requested. |
+| `KARNI_SITE_SEO_IMAGE_BYTES` |  | `500_000` | karni check --seo: an image without smaller copies is oversized above this many bytes. |
+| `KARNI_SITE_SEO_PIXEL_RATIO` |  | `2` | karni check --seo: an image is oversized when wider than this many times its width. |
+| `KARNI_SITE_SEO_IGNORE` |  | `[]` | karni check --seo: regular expressions of paths it never requests. |
 
 ## Components and hooks
 
@@ -1684,7 +1823,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
-| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, redirects, the current page in a menu, and error pages that cannot fail. |
+| [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ## Error codes
@@ -1899,6 +2038,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE017`](errors.md#site017) | check | A link on the site leads nowhere |
 | [`SITE018`](errors.md#site018) | check | The sitemap and the site's pages disagree |
 | [`SITE019`](errors.md#site019) | exception | An SEO tag or declaration is written wrongly |
+| [`SITE020`](errors.md#site020) | check | {% karni_form %} names a form Karni cannot find |
+| [`SITE021`](errors.md#site021) | exception | {% karni_form %} is written wrongly |
+| [`SITE022`](errors.md#site022) | exception | The form view is not routed |
+| [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
 
 ### The `karni` command (`C`)
 
@@ -1928,6 +2071,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C109`](errors.md#c109) | cli | An explicit serializer needs a reason |
 | [`C110`](errors.md#c110) | cli | A project file cannot be parsed |
 | [`C111`](errors.md#c111) | cli | The design folder has nothing to import |
+| [`C112`](errors.md#c112) | cli | The project's kind is not one Karni knows |
+| [`C121`](errors.md#c121) | cli | The content map cannot be used |
+| [`C122`](errors.md#c122) | cli | The content map has decisions left |
+| [`C123`](errors.md#c123) | cli | A content map is there already |
 | [`C199`](errors.md#c199) | cli | Internal error in karni |
 | [`C201`](errors.md#c201) | cli | karni upgrade needs a clean git work tree |
 | [`C202`](errors.md#c202) | cli | karni upgrade does not downgrade |
@@ -2046,6 +2193,7 @@ One per routine task, written for each agent tool by `karni new` and `karni rule
 | `/new-page` | `<page purpose> [resource]` | Add a frontend page composing @karni/ui (50 lines or fewer) |
 | `/add-module` | `<module> (e.g. payments)` | Install an optional Karni module and wire it into settings |
 | `/new-module` | `<app_name>` | Create a new local Django app following Karni conventions |
+| `/site-from-design` | `<design folder> [site app]` | Build the public site from a designer's pages, with models and real content |
 
 | Tool | Written to |
 |---|---|

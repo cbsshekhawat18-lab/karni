@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import re
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import typer
@@ -732,10 +732,14 @@ def defaults(ws: Workspace, *, domain: str | None = None) -> Options:
     )
 
 
-def write_new_project(project: Path, *, domain: str) -> list[str]:
-    """``karni new``'s step: the default stack, written quietly. Returns the written paths."""
+def write_new_project(project: Path, *, domain: str, staff_app: bool = True) -> list[str]:
+    """``karni new``'s step: the default stack, written quietly. Returns the written paths.
+
+    ``staff_app=False`` (``karni new --no-staff-app``) serves no staff app, as ``--no-app``.
+    """
     ws = Workspace(project)
-    plan(ws, defaults(ws, domain=domain))
+    options = defaults(ws, domain=domain)
+    plan(ws, options if staff_app else replace(options, app_path=None, app_domain=None))
     written = []
     for path, _before, after in ws.changes():
         path.parent.mkdir(parents=True, exist_ok=True)

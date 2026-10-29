@@ -49,7 +49,9 @@ The file maps model labels to lists of rows::
   choices, ``clean()``, uniqueness), in one transaction. One invalid row
   rolls the whole load back, and the error names the file, the model, the
   row's key, the field and the problem. ``--dry-run`` runs everything,
-  reports and rolls back.
+  reports and rolls back. Its report is a diff per model: each row it would
+  create, each row it would change with the fields that change (old and new
+  value), each file it would upload and each child ``--prune`` would delete.
 * **Attribution.** Writes run as ``--as USER`` through
   :func:`karni.middleware.current_user`, so ``created_by``, ``updated_by``
   and owner fields are stamped with that user (or left empty without one),
@@ -96,10 +98,14 @@ __all__ = [
     "LoadReport",
     "ModelCounts",
     "Problem",
+    "RowChange",
     "find_user",
     "load_content",
     "read_content",
 ]
+
+#: Rows of one model a dry run lists before it says how many more there are.
+DIFF_ROWS: Final = 20
 
 #: Kinds of column a content row sets through the serializer (a relation to one row included).
 _SCALAR_KINDS: Final = frozenset(
@@ -144,15 +150,53 @@ class LoadError(KarniError):
         self.problems = list(problems or [])
 
 
+def _shown(value: Any) -> str:
+    """A value for the diff: short, one line."""
+    if isinstance(value, models.Model):
+        value = value.pk
+    if isinstance(value, list | set | tuple):
+        value = sorted(str(getattr(item, "pk", item)) for item in value)
+    text = repr(value) if not isinstance(value, str) else repr(value)
+    text = " ".join(text.split())
+    return text if len(text) <= 60 else text[:57] + "..."
+
+
+@dataclass
+class RowChange:
+    """One row in a load's diff: created, updated (with the fields that change) or pruned."""
+
+    row: str
+    status: str  # created | updated | pruned
+    fields: list[tuple[str, str, str]] = field(default_factory=list)  # (name, before, after)
+
+    def render(self) -> str:
+        mark = {"created": "+", "updated": "~", "pruned": "-"}.get(self.status, "?")
+        if not self.fields:
+            return f"{mark} {self.row}"
+        changes = ", ".join(
+            f"{name} {before} -> {after}" if before else (f"{name} -> {after}" if after else name)
+            for name, before, after in self.fields
+        )
+        return f"{mark} {self.row}: {changes}"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "row": self.row,
+            "status": self.status,
+            "fields": {name: [before, after] for name, before, after in self.fields},
+        }
+
+
 @dataclass
 class ModelCounts:
-    """What a load did (or would do) to one model."""
+    """What a load did (or would do) to one model, and the rows behind the numbers."""
 
     created: int = 0
     updated: int = 0
     unchanged: int = 0
     pruned: int = 0
     files: int = 0
+    changes: list[RowChange] = field(default_factory=list)
 
     def render(self) -> str:
         parts = [
@@ -166,13 +210,14 @@ class ModelCounts:
             parts.append(f"{self.files} file(s) uploaded")
         return ", ".join(parts)
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "created": self.created,
             "updated": self.updated,
             "unchanged": self.unchanged,
             "pruned": self.pruned,
             "files": self.files,
+            "changes": [change.to_dict() for change in self.changes],
         }
 
 
@@ -206,6 +251,11 @@ class LoadReport:
         width = max((len(label) for label in self.models), default=0)
         for label, counts in self.models.items():
             lines.append(f"  {label:<{width}}  {counts.render()}")
+            if self.dry_run:
+                shown = counts.changes[:DIFF_ROWS]
+                lines.extend(f"      {change.render()}" for change in shown)
+                if len(counts.changes) > len(shown):
+                    lines.append(f"      ... and {len(counts.changes) - len(shown)} more")
         if not self.changed:
             lines.append("Nothing would change." if self.dry_run else "Nothing changed.")
         return "\n".join(lines)
@@ -263,6 +313,34 @@ class ContentImporter(Importer):
 
     def _rows(self, slot: str, action: str, permission: str) -> Any:
         return True
+
+    #: The fields the last updated row changes: (name, before, after), for the diff.
+    last_changes: list[tuple[str, str, str]]
+
+    def _unchanged(self, instance: Any, validated: dict[str, Any]) -> bool:
+        self.last_changes = self.differences(instance, validated)
+        return not self.last_changes
+
+    def differences(self, instance: Any, validated: dict[str, Any]) -> list[tuple[str, str, str]]:
+        """Every field ``validated`` would change on ``instance``, with both values shown."""
+        found: list[tuple[str, str, str]] = []
+        for name, value in validated.items():
+            model_field = _model_field(self.model, name)
+            if model_field is None:
+                found.append((name, "", _shown(value)))
+            elif getattr(model_field, "many_to_many", False):
+                current = {str(pk) for pk in getattr(instance, name).values_list("pk", flat=True)}
+                wanted = {str(getattr(item, "pk", item)) for item in value}
+                if current != wanted:
+                    found.append((name, _shown(current), _shown(wanted)))
+            elif getattr(model_field, "is_relation", False):
+                before = getattr(instance, model_field.attname)
+                after = getattr(value, "pk", value)
+                if str(before) != str(after):
+                    found.append((name, _shown(before), _shown(after)))
+            elif getattr(instance, name) != value:
+                found.append((name, _shown(getattr(instance, name)), _shown(value)))
+        return found
 
     def get_serializer(
         self, instance: Any | None, data: dict[str, Any]
@@ -323,6 +401,7 @@ class _Row:
     status: str
     m2m: dict[str, Any]
     files: dict[str, Path]
+    changes: list[tuple[str, str, str]] = field(default_factory=list)
 
 
 def read_content(path: Path) -> Any:
@@ -612,7 +691,10 @@ class _Loader:
             if instance is None:
                 continue
             loaded.append(instance.pk)
-            self.rows.append(_Row(plan, label, index, key_values, instance, status, later, paths))
+            row = _Row(plan, label, index, key_values, instance, status, later, paths)
+            if status == "updated":
+                row.changes.extend(self.changes_of(plan))
+            self.rows.append(row)
             for accessor, child_rows in nested.items():
                 self.load_children(plan, label, instance, accessor, child_rows)
         return loaded
@@ -680,8 +762,13 @@ class _Loader:
             found[name] = full
         return found if ok else None
 
+    def changes_of(self, plan: _Plan) -> list[tuple[str, str, str]]:
+        return list(getattr(plan.importer, "last_changes", []) or [])
+
     def one(self, plan: _Plan, label: str, index: int, values: dict[str, Any]) -> tuple[str, Any]:
         """One row through the importer, its problems relabelled with the row's key."""
+        if isinstance(plan.importer, ContentImporter):
+            plan.importer.last_changes = []
         seen = len(plan.result.problems)
         errors = plan.result.errors
         status, instance = plan.importer._one(
@@ -717,8 +804,12 @@ class _Loader:
             ).exclude(pk__in=loaded)
             count = extra.count()
             if count:
+                counts = self.report.counts(child_plan.label)
+                counts.changes.extend(
+                    RowChange(f"{label} > {child}", "pruned") for child in extra[:DIFF_ROWS]
+                )
                 extra.delete()
-                self.report.counts(child_plan.label).pruned += count
+                counts.pruned += count
 
     def apply_m2m(self) -> None:
         """Pass two: optional many-to-many fields, now that every row of the file exists."""
@@ -727,8 +818,11 @@ class _Loader:
                 continue
             values = {**row.key_values, **row.m2m}
             status, _ = self.one(row.plan, row.label, row.index, values)
-            if status == "updated" and row.status == "unchanged":
-                row.status = "updated"
+            if status == "updated":
+                if row.status != "created":
+                    row.changes.extend(self.changes_of(row.plan))
+                if row.status == "unchanged":
+                    row.status = "updated"
 
     def attach_files(self) -> None:
         """Pass three: upload the files rows lack (every file with ``--refresh-files``).
@@ -760,6 +854,8 @@ class _Loader:
             return
         for row, name, path in uploads:
             self.report.counts(row.plan.label).files += 1
+            if row.status != "created":
+                row.changes.append((f"{name} (file)", "", repr(path.name)))
             if row.status == "unchanged":
                 row.status = "updated"
             if self.dry_run:
@@ -789,8 +885,10 @@ class _Loader:
             counts = self.report.counts(row.plan.label)
             if row.status == "created":
                 counts.created += 1
+                counts.changes.append(RowChange(row.label, "created"))
             elif row.status == "updated":
                 counts.updated += 1
+                counts.changes.append(RowChange(row.label, "updated", list(row.changes)))
             else:
                 counts.unchanged += 1
 

@@ -77,10 +77,12 @@ from django.template.base import FilterExpression, Node, NodeList, Parser, Token
 from django.template.context import Context
 from django.utils.safestring import SafeString, mark_safe
 from karni.errorcodes import docs_url
+from karni.exceptions import KarniValueError
 from karni.security import extend_request_csp, script_hash
 
 from karni_site import blocks, menus, sitesettings
 from karni_site.navigation import any_active
+from karni_site.text import highlight
 
 register = template.Library()
 
@@ -105,6 +107,20 @@ def _flatten(values: Iterable[Any]) -> list[str]:
         elif value is not None and value != "":
             found.append(str(value))
     return found
+
+
+@register.filter("highlight")
+def highlight_filter(value: Any, spec: str | None = None) -> str:
+    """``{{ heading|highlight }}``: ``==marked==`` words in ``KARNI_SITE_HIGHLIGHT``'s markup.
+
+    ``{{ heading|highlight:"span.accent" }}`` names another markup, ``""``
+    none. See :mod:`karni_site.text`. A spec that is not a tag with classes
+    fails the render with ``SITE003``.
+    """
+    try:
+        return highlight(value, spec)
+    except KarniValueError as exc:
+        raise _syntax_error(exc.message) from None
 
 
 # {% ifactive %}
@@ -485,6 +501,14 @@ def do_get_menu(parser: Parser, token: Token) -> GetMenuNode:
             raise _syntax_error(usage)
         seed = parser.compile_filter(bits[2].removeprefix("seed="))
     return GetMenuNode(parser.compile_filter(bits[1]), seed, bits[-1])
+
+
+# {% karni_form %}: public forms. The tag lives in karni_site.templatetags.karni_forms and is
+# part of this library too, so one {% load karni_site %} gives a page every site tag.
+
+from karni_site.templatetags.karni_forms import register as _forms  # noqa: E402
+
+register.tags.update(_forms.tags)
 
 
 # {% karni_seo %} and {% image %}: the page's search and share tags, and sized images

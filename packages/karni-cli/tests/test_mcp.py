@@ -48,7 +48,10 @@ def test_context_tool(generated_project: Path, monkeypatch) -> None:
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=backend, stderr=""),
     )
     # The scaffold ships one page (frontend/src/pages/home.tsx), read statically.
-    expected = "MODELS: Event(title)\nPAGES: home\nBASES: BaseModel BaseViewSet"
+    expected = (
+        "KIND: app (API + React app in frontend/)\n"
+        "MODELS: Event(title)\nPAGES: home\nBASES: BaseModel BaseViewSet"
+    )
     assert mcp_server.context_tool() == expected
 
 

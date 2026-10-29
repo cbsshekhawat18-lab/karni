@@ -5,6 +5,28 @@ Celery, configured almost entirely by `karni_settings(globals())` in
 `config/settings.py`. Every Karni default can be overridden from that file.
 Anything you assign after the call wins.
 
+## What this project is
+
+{% if cookiecutter.kind == "site" -%}
+A public website (`kind = "site"` in pyproject.toml): a site app of Django views
+and templates on the [karni-site](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+module, at `/`. The client changes every text, image, menu, contact detail and
+page title in the admin, as staff or with the `editor` role. Nobody signs up:
+staff create the accounts.
+{%- if cookiecutter.staff_app == "yes" %} The staff app in `frontend/` is for staff, such as the
+requests a public form collects.
+{%- else %} There is no React staff app: staff work in the admin.
+{%- endif %}
+{%- elif cookiecutter.kind == "site+app" -%}
+A public website and an app (`kind = "site+app"` in pyproject.toml): a site app
+of Django views and templates on the [karni-site](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+module at `/`, edited in the admin, and a REST API with the React app in
+`frontend/` for signed-in users.
+{%- else -%}
+An app (`kind = "app"` in pyproject.toml): a REST API and the React app in
+`frontend/` for signed-in users. `karni add site` adds a public website.
+{%- endif %}
+
 ## Quickstart
 
 ```sh
@@ -21,7 +43,9 @@ This boots:
 | `redis`    | redis:7 (Celery broker + cache)                 | internal (`redis:6379`)|
 | `worker`   | Celery worker                                   | none                   |
 | `beat`     | Celery beat (django-celery-beat DB scheduler)   | none                   |
+{%- if cookiecutter.staff_app == "yes" %}
 | `frontend` | Vite dev server (React + TS), proxies `/api` and `/health` to django | http://localhost:5173 |
+{%- endif %}
 
 Verify the stack (Postgres, Redis and Celery all checked):
 
@@ -32,6 +56,7 @@ curl http://localhost:8000/health/ready/
 
 Other endpoints: liveness at `/health/`, admin at `/admin/`, OpenAPI schema at
 `/api/schema/`, Swagger UI at `/api/docs/`.
+{%- if cookiecutter.staff_app == "yes" %}
 
 ## Frontend
 
@@ -64,6 +89,7 @@ compose publishes Django on it. For its container, docker compose sets
 `KARNI_API_PROXY=http://django:8000`, which wins over `KARNI_DEV_PORT`.
 `karni serve --local --port 8030` prints how to point the dev server at that
 port: `cd frontend && KARNI_API_PROXY=http://127.0.0.1:8030 npm run dev`.
+{%- endif %}
 
 ## Using a local Karni checkout
 

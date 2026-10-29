@@ -161,8 +161,8 @@ RULES: tuple[Rule, ...] = (
         summary="Procedures: karni rules --procedure NAME.",
         rule=(
             "Prefer the standard procedures for routine work: new-model, new-page, add-module, "
-            "new-module. Run one with `karni rules --procedure <name>`, or with the matching "
-            "slash command where your tool has one."
+            "new-module, site-from-design. Run one with `karni rules --procedure <name>`, or "
+            "with the matching slash command where your tool has one."
         ),
         rationale="The procedures encode the shortest correct path for routine work.",
     ),
@@ -401,9 +401,13 @@ RULES: tuple[Rule, ...] = (
             "`{% ifactive %}`, `{% csp_hash %}`, the error pages, redirects) is the karni-site "
             "module, never project code. Views read content through each "
             "model's default manager (`Model.objects`, so model scopes apply and soft-deleted "
-            "rows stay hidden) and filter drafts themselves. A public form posts to a "
-            "`BaseViewSet` declared `Access(read=..., write=..., create=Public())` and sends "
-            "the CSRF token, never to a hand-written form view. The site's page test, "
+            "rows stay hidden) and filter drafts themselves. A public form (a contact form, a "
+            "booking request, a sign-up) is `karni make form <name> <field:type> ... "
+            '[--notify SETTING]` and `{% karni_form "<name>" %}` in the page: it saves '
+            "through a `BaseViewSet` with `create=Public()`, works without JavaScript, carries "
+            "the CSRF token and a honeypot, and its script, rate limit and email come from "
+            "Karni. Never write a form view, a throttle or a form script for it. The site's "
+            "page test, "
             "`<app>/tests/test_pages.py`, passes every page's URL to `assert_pages`: give a "
             "page whose path has a capture a real URL there. The React rules (K201, K202, "
             "K206) apply to app screens only."
@@ -416,7 +420,8 @@ RULES: tuple[Rule, ...] = (
         fix=(
             "Run `karni make site <app>`, then `karni import design <dir> --app <app> "
             "--editable` for a designer's pages or `karni make view <name> --app <app>` per "
-            "page. Karni's docs page public-site covers editable content, SEO and public forms."
+            "page, and `karni make form` for each form. Karni's docs page public-site covers "
+            "editable content, SEO and public forms."
         ),
     ),
     # backend
@@ -821,7 +826,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "its viewset (`-a` also adds list/detail/form pages). Field types: "
             "`karni make model --help`. `--access`: granted (default), public-read (anyone "
             "reads, staff write), public-create (a public form that anyone may send and staff "
-            "read, rate-limited by Karni), owned:<fk to user>, staff, role:<name>, authenticated. "
+            "read, rate-limited by Karni; `karni make form` writes a whole public form with its "
+            "tests, email and page tag), owned:<fk to user>, staff, role:<name>, authenticated. "
             "Edit the generated `access` for anything "
             "richer (`Owned(...) | HasRole(...)`, `Where(...)`). Do NOT write an admin, "
             "serializer or router. The auto-router registers it, and the admin, filters and "
@@ -912,6 +918,83 @@ PROCEDURES: tuple[Procedure, ...] = (
             "`karni make module <name>`, not in this project. Say so instead of building it.",
         ),
         rules=("K009", "K305", "K307"),
+    ),
+    Procedure(
+        name="site-from-design",
+        description="Build the public site from a designer's pages, with models and real content",
+        argument_hint="<design folder> [site app]",
+        intro="Build the public site from the design: {arguments}",
+        steps=(
+            "Run `karni context` to see the kind, the apps, the models and whether a site app "
+            "exists.",
+            "`karni design analyze <design folder> --app <site app> --map "
+            "content/design-map.json` lists the content that repeats (cards, detail pages, "
+            "galleries, lists of links), the models and relations it proposes as `karni make "
+            "model` commands, and the decisions the markup cannot settle, and writes a draft "
+            "content map. Read it first: rename a model or field in its command and in the map "
+            "together, and delete from both what should stay in a template.",
+            "`karni import design <design folder> --app <site app> --editable --map "
+            "content/design-map.json` turns the pages into the site app: `base.html` with the "
+            "shared header and footer, a template, view and route per page, the files under "
+            "`static/<site app>/`, `{% ifactive %}` on the menu. Every text, image, menu and "
+            "contact detail the client sees becomes editable in the admin, except what the map "
+            "reads into rows: the loops render that from the rows, never from blocks. The "
+            "report names each `<form>`. Then `karni migrate` and `karni test`: the page test "
+            "covers every page. Change which structures the map holds later? Import again "
+            "before you edit the templates.",
+            "Answer every decision in the map. A hand-picked list or flag: keep the value, "
+            "remove its `decide` and add the field the decision names to that model's command. "
+            "One a query derives (every project of this service, the newest three): delete the "
+            "value from the map and query it in the view.",
+            "Run the `karni make model` commands in the order printed (models others point at "
+            "come first), then `karni make migration && karni migrate`. Staff edit the rows in "
+            "the admin as it is: write no viewset, serializer or admin class for them.",
+            "`karni design extract <design folder> --map content/design-map.json -o "
+            "content/site.json` writes the pages' real content, with image paths relative to "
+            "the file. Fix what it reports (a missing image, two pages that disagree on a value, "
+            "a required field without one) in the map or the models, then extract again.",
+            "`karni load content/site.json --dry-run` shows what changes per model, row by row. "
+            "Then `karni load content/site.json`, and once more: the second run must say "
+            "Nothing changed. Commit `content/`. Never fill these tables with `karni seed` (it "
+            "refuses tables that hold real rows) or with content you type in.",
+            "Turn the repeated markup into loops. The view reads `Model.objects` (filter what "
+            "is not published, `select_related`/`prefetch_related` what the template loops "
+            "over). The template keeps one copy of the item's markup inside `{% for %}` with "
+            "`{{ row.field }}` where the map reads a value, `{% image row.image width=<its "
+            "width in the card> alt=row.title %}` for an image "
+            "and `{{ row.heading|highlight }}` for highlighted words (`==words==`, the "
+            "site's one convention: set `KARNI_SITE_HIGHLIGHT` to the markup the analysis "
+            "names, unless `karni import design --editable` already did). A model's detail "
+            "pages become one view and template with a `<slug:slug>` capture, keeping each "
+            "page's URL (the slug is the page's file name).",
+            "For those detail pages: `karni make view <model> --app <site app> --path "
+            '"/<folder>/<slug:slug>/"` writes the view, its template and its route. Build the '
+            "template from one detail page's template (its blocks stay, their keys start with the "
+            "model's name), read the row with `get_object_or_404(Model.objects, slug=slug)`, "
+            "delete the old pages' views, routes and templates, and point every link at "
+            "`{% url '<site app>:<model>' row.slug %}`.",
+            "For each `<form>` the import named: `karni make form <name> <field:type> ...` with "
+            "the design's fields (`--notify <SETTING>` for the email that tells staff) writes "
+            "the model, its viewset, the tests and the email, and prints the `{% karni_form %}` "
+            "tag that keeps the form's classes, labels and button. Put the tag where the "
+            "`<form>` was, then `karni make migration && karni migrate`. Never write a form "
+            "view, a form template or a throttle.",
+            "`{% karni_seo %}` in `base.html` writes each page's title, description, canonical "
+            "link, share tags and JSON-LD, a detail page takes them from its row (`class Karni: "
+            'seo = {"title": "name", "description": "intro"}` when its fields have other '
+            "names), `{% image %}` serves a card's picture at the card's size, and karni-site "
+            "answers `/sitemap.xml` and `/robots.txt`: write none of them by hand. Give a model "
+            'whose rows are not all public `class Karni: sitemap = {"filter": {...}}`, then run '
+            "`karni check --seo` and fix each SITE010 to SITE018 it reports.",
+            "`karni test`: give each detail page a real URL in the page test's `PAGES` and load "
+            'the content first in that test (`call_command("karni_load", "content/site.json")` '
+            "in a fixture), so every page renders real rows. Then `karni check`.",
+        ),
+        outro=(
+            "Nothing is retyped and nothing is invented: every value comes from the design "
+            "through extract and load, and a new version of the design is extract and load again."
+        ),
+        rules=("K009", "K309", "K003", "K301"),
     ),
 )
 

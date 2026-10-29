@@ -213,6 +213,68 @@ mechanical = false
 migration = "migrations/0.4.1.md#the-staff-app-follows-vites-base-path"
 
 [[change]]
+id = "agent-files-public-forms"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+Rule K309 and the new-model procedure now name `karni make form` for a public \
+form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, \
+or `karni rules sync --check` reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-name-karni-make-form"
+
+[[change]]
+id = "agent-files-site-from-design"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, site-from-design, takes an agent from a designer's pages to models, \
+the pages' real content (karni design analyze and extract, then karni load) and \
+templates that loop over the rows. `karni rules sync` writes its slash command files \
+and lists it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
+
+[[change]]
+id = "admin-light-only"
+kind = "behaviour"
+symbol = "KARNI_ADMIN_THEME"
+summary = """\
+The admin is light only by default: KARNI_ADMIN_THEME (default "light") sets \
+UNFOLD["THEME"], which pins unfold's light palette and hides its light / dark / \
+system switch. Set KARNI_ADMIN_THEME = "auto" for the switch, or "dark". A \
+project that sets UNFOLD["THEME"] itself keeps its value."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-admin-is-light-only"
+
+[[change]]
+id = "project-kind"
+kind = "project-files"
+symbol = "pyproject.toml [tool.karni] kind"
+summary = """\
+`karni new` records the project's kind (site, app or site+app) as `kind` under \
+[tool.karni] in pyproject.toml, and `karni context` and the agent files state it. \
+A project without the line is read as the kind its files show: karni_site in the \
+apps block makes a site, frontend/ a staff app. Add the line to say it, or run \
+`karni add site` to turn an app into a site+app."""
+mechanical = false
+migration = "migrations/0.4.1.md#projects-have-a-kind"
+
+[[change]]
+id = "agent-files-project-kind"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The adapters open with the project's kind and its stack, so an agent never asks \
+which technology to use. The site-from-design procedure analyzes before it imports \
+(`karni import design --editable --map`, so the content that becomes rows has no \
+blocks), adds the forms and ends with `karni check`. Run `karni rules sync`. Until \
+then `karni rules sync --check` (and make check) reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-state-the-kind-run-karni-rules-sync"
+
+[[change]]
 id = "site-head-karni-seo"
 kind = "project-files"
 symbol = "<app>/templates/<app>/base.html"
@@ -251,4 +313,3 @@ static/<app>/ with a srcset and sizes. Importing a design again changes the \
 templates the project has not edited. An edited one is kept, as before."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-designs-images-are-sized"
-

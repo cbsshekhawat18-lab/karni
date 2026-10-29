@@ -1,0 +1,12 @@
+{% load static %}{# The form {% karni_form %} renders. Override it in a project's templates/karni_site/forms/form.html, or per tag with template="...". Each field renders field.html. #}
+<form id="{{ form.id }}"{% if form.classes.form %} class="{{ form.classes.form }}"{% endif %} action="{{ form.action }}" method="post"{% if form.multipart %} enctype="multipart/form-data"{% endif %}{{ form.data_attrs }}>
+  {% csrf_token %}<input type="hidden" name="karni-next" value="{{ form.next }}">
+  <p{% if form.message_class %} class="{{ form.message_class }}"{% endif %} role="status" aria-live="polite" data-karni-form-message{% if not form.message %} hidden{% endif %}>{{ form.message }}{% for error in form.errors %} {{ error }}{% endfor %}</p>
+  {% for item in form.items %}{% if item.is_row %}<div{% if form.classes.row %} class="{{ form.classes.row }}"{% endif %}>
+    {% for field in item.fields %}{% include field.template %}{% endfor %}
+  </div>
+  {% else %}{% include item.template with field=item %}{% endif %}{% endfor %}
+  {% if form.honeypot %}<div class="karni-hp" aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden"><label for="{{ form.id }}-{{ form.honeypot }}">Leave this field empty</label><input type="text" id="{{ form.id }}-{{ form.honeypot }}" name="{{ form.honeypot }}" tabindex="-1" autocomplete="off" value=""></div>{% endif %}
+  <button type="submit"{% if form.classes.button %} class="{{ form.classes.button }}"{% endif %}>{{ form.messages.button }}</button>
+</form>{% if form.script %}
+<script src="{% static 'karni_site/forms.js' %}" defer></script>{% endif %}

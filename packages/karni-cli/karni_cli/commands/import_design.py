@@ -18,13 +18,19 @@ them). ``--diff`` reports and writes nothing.
 
 ``--editable`` makes every text, image, menu and contact detail editable in
 the admin (:mod:`karni_cli.design.editable`). The record remembers it, so a
-later import stays editable until ``--no-editable``.
+later import stays editable until ``--no-editable``. ``--map <file>`` names
+the content map ``karni design analyze`` wrote: what it reads into rows gets
+no blocks (:mod:`karni_cli.design.regions`), and the record remembers it too.
+
+:func:`run` is the command's work on any workspace (``karni new --design``
+calls it).
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -47,7 +53,14 @@ from karni_cli.generators.core import (
     project_workspace,
 )
 from karni_cli.generators.naming import require_snake
-from karni_cli.generators.pysource import Import, ensure_imports, parse, pystr, top_level
+from karni_cli.generators.pysource import (
+    Import,
+    call,
+    ensure_imports,
+    parse,
+    pystr,
+    top_level,
+)
 from karni_cli.project import CliError
 from karni_cli.urls_edit import add_route, routes
 
@@ -175,6 +188,18 @@ def _add_views(ws: Workspace, app: App, plan: SitePlan) -> None:
         tree = parse(ws, ws.rel(path), text)
 
 
+def _redirect_entry(route: str, target: str, name: str, line_length: int) -> str:
+    """The redirect's ``path(...)`` entry, split the way ruff format splits it (no indent)."""
+    view_args = [target, "permanent=True", "query_string=True"]
+    view = f"RedirectView.as_view({', '.join(view_args)})"
+    flat = call("path", [route, view, f"name={name}"], "    ", line_length, tail=",")
+    if all(len(line) <= line_length for line in flat.splitlines()):
+        return "\n".join(line.removeprefix("    ") for line in flat.splitlines())
+    nested = call("RedirectView.as_view", view_args, " " * 8, line_length, tail=",")
+    lines = ["path(", f"    {route},", *(line[4:] for line in nested.splitlines())]
+    return "\n".join([*lines, f"    name={name},", "),"])
+
+
 def _add_redirects(ws: Workspace, app: App, plan: SitePlan) -> None:
     if not plan.redirects:
         return
@@ -191,10 +216,7 @@ def _add_redirects(ws: Workspace, app: App, plan: SitePlan) -> None:
             if redirect.external
             else f"pattern_name={pystr(f'{app.label}:{redirect.to}')}"
         )
-        entry = (
-            f"path({pystr(redirect.route)}, RedirectView.as_view({target}, permanent=True, "
-            f"query_string=True), name={pystr(redirect.name)}),"
-        )
+        entry = _redirect_entry(pystr(redirect.route), target, pystr(redirect.name), ws.line_length)
         text = ws.read(path) or ""
         clash = next(
             (
@@ -227,13 +249,15 @@ def _theme_from_css(ws: Workspace, plan: SitePlan, *, dry_run: bool) -> None:
     css = [path for name, path in plan.assets.items() if name.lower().endswith(".css")]
     if not css:
         return
+    # A project without a staff app themes only its admin (KARNI_THEME_CSS).
+    what = "staff app theme" if ws.is_dir("frontend") else "admin theme"
     try:
         outcome = ui.detect_from_css(ws.root, css, dry_run=dry_run)
     except CliError as exc:
-        ws.note(f"staff app theme: not detected ({exc.message}). Run `karni ui detect --css`.")
+        ws.note(f"{what}: not detected ({exc.message}). Run `karni ui detect --css`.")
         return
     if outcome:
-        ws.note(f"staff app theme: {outcome}")
+        ws.note(f"{what}: {outcome}")
 
 
 def _write_image_copies(
@@ -353,6 +377,155 @@ def _report(plan: SitePlan, writer: _Writer, copied: int, diff: list[str]) -> li
     return lines
 
 
+def _content_map(ws: Workspace, given: Path | None, record: dict[str, Any] | None) -> Path | None:
+    """The content map to follow: ``--map``, else the one the last import followed."""
+    if given is not None:
+        path = given if given.is_absolute() else Path.cwd() / given
+        if not path.is_file():
+            raise CliError(
+                f"{given}: no such file. Write the content map first: karni design analyze "
+                f"<design folder> --map {given}.",
+                code="C121",
+            )
+        return path.resolve()
+    recorded = ((record or {}).get("editable") or {}).get("map")
+    if not recorded:
+        return None
+    path = ws.path(str(recorded))
+    if not path.is_file():
+        ws.note(
+            f"{recorded}: the content map the last import followed is gone, so every part of "
+            "every page is editable again."
+        )
+        return None
+    return path
+
+
+def _read_content_map(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CliError(f"{path}: not a JSON content map ({exc}).", code="C121") from None
+    if not isinstance(data, dict) or not isinstance(data.get("models"), list):
+        raise CliError(
+            f'{path}: a content map is an object with a "models" list (karni design analyze '
+            "--map writes one).",
+            code="C121",
+        )
+    return data
+
+
+def run(
+    ws: Workspace,
+    directory: Path,
+    app: str | None,
+    *,
+    diff: bool = False,
+    dry_run: bool = False,
+    editable: bool | None = None,
+    content_map: Path | None = None,
+    guidance: bool = True,
+) -> None:
+    """Import the design folder ``directory`` into the project ``ws`` is over.
+
+    The command's whole work, for any workspace: ``karni new --design`` runs it
+    on the project it just made, with ``guidance=False`` (it writes the agent
+    files itself, after the import).
+    """
+    source = _design_dir(directory)
+    label = Path(os.path.relpath(source, ws.root)).as_posix()
+    existing_text = ws.read(DESIGN_RECORD)
+    record: dict[str, Any] | None = None
+    if existing_text is not None:
+        try:
+            record = json.loads(existing_text)
+        except json.JSONDecodeError as exc:
+            raise CliError(
+                f"{DESIGN_RECORD.as_posix()} is not valid JSON ({exc}). Fix or remove it.",
+                code="C110",
+            ) from None
+    app_label = app or (record or {}).get("app")
+    if editable is None:
+        editable = bool(((record or {}).get("editable") or {}).get("enabled"))
+    map_path = _content_map(ws, content_map, record)
+    spec = _read_content_map(map_path) if map_path is not None else None
+    if spec is not None and not editable:
+        ws.note(
+            "--map changes only an editable import (--editable): without blocks, nothing is "
+            "left out."
+        )
+        spec, map_path = None, None
+    try:
+        plan = design_site.plan(
+            source,
+            app_label or "website",
+            source_label=label,
+            editable=editable,
+            previous=record,
+            content_map=spec,
+        )
+    except ValueError as exc:
+        raise CliError(str(exc), code="C111") from None
+    changes = compare.diff(record, plan.design) if record else []
+    if diff:
+        if record is None:
+            typer.echo(f"no {DESIGN_RECORD.as_posix()} yet: nothing to compare with.")
+        for line in _report(plan, _Writer(ws, App("", "", ws.root), record), 0, changes):
+            typer.echo(line)
+        typer.echo("(--diff: nothing written)")
+        return
+    site_app = _site_app(ws, app_label)
+    if site_app.label != plan.app:
+        plan = design_site.plan(
+            source,
+            site_app.label,
+            source_label=label,
+            editable=editable,
+            previous=record,
+            content_map=spec,
+        )
+        changes = compare.diff(record, plan.design) if record else []
+    writer = _Writer(ws, site_app, record)
+    for app_rel, content in plan.templates.items():
+        writer.template(app_rel, content)
+    _add_views(ws, site_app, plan)
+    for route, name in plan.routes:
+        site_gen.register_route(ws, site_app, route, name)
+    _add_redirects(ws, site_app, plan)
+    for url in plan.page_urls:
+        site_gen.add_page_to_test(ws, site_app, url)
+    copies = [
+        copy for path, file in plan.assets.items() if (copy := writer.asset(path, file)) is not None
+    ]
+    _highlight_setting(ws, plan)
+    _theme_from_css(ws, plan, dry_run=dry_run)
+    record_out = {**plan.design, "files": dict(sorted(writer.hashes.items()))}
+    if map_path is not None and isinstance(record_out.get("editable"), dict):
+        record_out["editable"] = {
+            **record_out["editable"],
+            "map": Path(os.path.relpath(map_path, ws.root)).as_posix(),
+        }
+    ws.write(DESIGN_RECORD, json.dumps(record_out, indent=2, ensure_ascii=False) + "\n")
+    for line in _report(plan, writer, len(copies), changes):
+        ws.note(line)
+    ws.note("next: karni test (the page test covers every page), then karni serve.")
+    ws.commit(dry_run=dry_run)
+    if dry_run:
+        for source_file, target in copies:
+            typer.echo(f"would copy {ws.rel(target)}")
+        count = sum(len(widths) for widths in plan.copies.values())
+        if count:
+            typer.echo(f"would write {count} smaller WebP copies of the design's images")
+        return
+    for source_file, target in copies:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_file, target)
+        typer.echo(f"copied   {ws.rel(target)}")
+    _write_image_copies(ws, site_app, plan, record)
+    if guidance:
+        site_gen.record_site_guidance(ws)
+
+
 @import_app.command("design")
 def design(
     directory: Path = typer.Argument(
@@ -370,6 +543,15 @@ def design(
         help=(
             "Make every text, image, menu and contact detail editable in the admin "
             "(karni-site blocks, menus and site settings). Remembered for later imports."
+        ),
+    ),
+    content_map: Path | None = typer.Option(
+        None,
+        "--map",
+        help=(
+            "The content map from karni design analyze --map: with --editable, the content it "
+            "reads into rows (cards, detail pages, galleries) gets no blocks, because the "
+            "templates render it from the rows. Remembered for later imports."
         ),
     ),
 ) -> None:
@@ -401,76 +583,18 @@ def design(
     Writes .karni/design.json. A second run with a new version of the design
     reports the changes and keeps every file the project edited since, and
     every block keeps its key.
+
+    With --map content/design-map.json (karni design analyze --map writes
+    it), the content the map reads into rows gets no blocks: the cards,
+    detail pages and galleries that become models are rendered from the
+    rows, and the client edits the rows in the admin.
     """
-    ws = project_workspace(force)
-    source = _design_dir(directory)
-    try:
-        label = str(source.relative_to(ws.root))
-    except ValueError:
-        label = str(source)
-    existing_text = ws.read(DESIGN_RECORD)
-    record: dict[str, Any] | None = None
-    if existing_text is not None:
-        try:
-            record = json.loads(existing_text)
-        except json.JSONDecodeError as exc:
-            raise CliError(
-                f"{DESIGN_RECORD.as_posix()} is not valid JSON ({exc}). Fix or remove it.",
-                code="C110",
-            ) from None
-    app_label = app or (record or {}).get("app")
-    if editable is None:
-        editable = bool(((record or {}).get("editable") or {}).get("enabled"))
-    try:
-        plan = design_site.plan(
-            source, app_label or "website", source_label=label, editable=editable, previous=record
-        )
-    except ValueError as exc:
-        raise CliError(str(exc), code="C111") from None
-    changes = compare.diff(record, plan.design) if record else []
-    if diff:
-        if record is None:
-            typer.echo(f"no {DESIGN_RECORD.as_posix()} yet: nothing to compare with.")
-        for line in _report(plan, _Writer(ws, App("", "", ws.root), record), 0, changes):
-            typer.echo(line)
-        typer.echo("(--diff: nothing written)")
-        return
-    site_app = _site_app(ws, app_label)
-    if site_app.label != plan.app:
-        plan = design_site.plan(
-            source, site_app.label, source_label=label, editable=editable, previous=record
-        )
-        changes = compare.diff(record, plan.design) if record else []
-    writer = _Writer(ws, site_app, record)
-    for app_rel, content in plan.templates.items():
-        writer.template(app_rel, content)
-    _add_views(ws, site_app, plan)
-    for route, name in plan.routes:
-        site_gen.register_route(ws, site_app, route, name)
-    _add_redirects(ws, site_app, plan)
-    for url in plan.page_urls:
-        site_gen.add_page_to_test(ws, site_app, url)
-    copies = [
-        copy for path, file in plan.assets.items() if (copy := writer.asset(path, file)) is not None
-    ]
-    _highlight_setting(ws, plan)
-    _theme_from_css(ws, plan, dry_run=dry_run)
-    record_out = {**plan.design, "files": dict(sorted(writer.hashes.items()))}
-    ws.write(DESIGN_RECORD, json.dumps(record_out, indent=2, ensure_ascii=False) + "\n")
-    for line in _report(plan, writer, len(copies), changes):
-        ws.note(line)
-    ws.note("next: karni test (the page test covers every page), then karni serve.")
-    ws.commit(dry_run=dry_run)
-    if dry_run:
-        for source_file, target in copies:
-            typer.echo(f"would copy {ws.rel(target)}")
-        count = sum(len(widths) for widths in plan.copies.values())
-        if count:
-            typer.echo(f"would write {count} smaller WebP copies of the design's images")
-        return
-    for source_file, target in copies:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source_file, target)
-        typer.echo(f"copied   {ws.rel(target)}")
-    _write_image_copies(ws, site_app, plan, record)
-    site_gen.record_site_guidance(ws)
+    run(
+        project_workspace(force),
+        directory,
+        app,
+        diff=diff,
+        dry_run=dry_run,
+        editable=editable,
+        content_map=content_map,
+    )

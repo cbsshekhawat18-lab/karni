@@ -103,8 +103,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
-        "Real content from a JSON or YAML file, created or updated by natural key "
-        "(`karni load`)",
+        "Real content from a JSON or YAML file, created or updated by natural key (`karni load`)",
+    ),
+    Capability(
+        "models",
+        "Models and real rows from a designer's pages: the repeated content, its fields and "
+        "relations (`karni design analyze`, `karni design extract`)",
     ),
     Capability(
         "models",
@@ -160,7 +164,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "admin",
         "Every model registered with derived columns, filters and search, with no `admin.py`",
-        ((f"{EH}/config/urls.py", 'path(settings.KARNI_ADMIN_PATH, admin.site.urls)'),),
+        ((f"{EH}/config/urls.py", "path(settings.KARNI_ADMIN_PATH, admin.site.urls)"),),
     ),
     Capability(
         "admin",
@@ -719,9 +723,11 @@ def _module_settings(module_dir: Path) -> list[tuple[str, str, str, str]]:
     tree = ast.parse(source)
     rows = []
     for node in ast.walk(tree):
-        if not (isinstance(node, ast.AnnAssign | ast.Assign)):
+        if not (isinstance(node, ast.AnnAssign | ast.Assign | ast.AugAssign)):
             continue
-        targets = [node.target] if isinstance(node, ast.AnnAssign) else node.targets
+        if isinstance(node, ast.AugAssign) and not isinstance(node.op, ast.BitOr):
+            continue  # DEFAULTS |= {...} adds a block of settings; nothing else does
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
         if not any(isinstance(t, ast.Name) and t.id == "DEFAULTS" for t in targets):
             continue
         if not isinstance(node.value, ast.Dict):

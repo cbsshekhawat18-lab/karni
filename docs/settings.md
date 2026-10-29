@@ -82,6 +82,7 @@ reads it on every request.
 | `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
 | **Admin (karni.admin + django-unfold)** | | | |
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
+| `KARNI_ADMIN_THEME` | `KARNI_ADMIN_THEME` | `"light"` | The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming). |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
 | `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
 | `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |

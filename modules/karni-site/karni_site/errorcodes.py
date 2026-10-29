@@ -6,6 +6,8 @@ from typing import Final
 
 from karni.errorcodes import ErrorCode
 
+from karni_site.form_errorcodes import FORM_CODES
+
 __all__ = ["CODES"]
 
 _SOURCE = "karni_site"
@@ -56,7 +58,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
             'take a block key ("home.intro": lowercase words joined by dots, the page first), '
             "{% site_image %} a file field of the site's settings, {% site_defaults %} "
             'name="value" pairs, and {% get_menu %} a name and `as <variable>`. The template '
-            "does not compile otherwise."
+            "does not compile otherwise. The highlight filter takes a tag with optional "
+            'classes ("span.accent", "em", or "" for none) and fails the render otherwise.'
         ),
         fix="Write the tag as the message shows. The karni-site README has an example of each.",
     ),
@@ -156,6 +159,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
             "for karni_site.SiteSettings."
         ),
     ),
+    *FORM_CODES,
 )
 
 #: SEO and images (SITE010 to SITE019): `karni check --seo`, {% karni_seo %}, {% image %} and

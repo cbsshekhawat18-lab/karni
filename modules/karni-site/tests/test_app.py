@@ -60,6 +60,18 @@ def test_settings_fragment_is_import_light_and_read_through_get() -> None:
         "KARNI_SITE_MENU_ROWS_LIMIT",
         "KARNI_SITE_REDIRECTS_BEFORE_VIEWS",
         "KARNI_SITE_EDITOR_ROLE",
+        # public forms
+        "KARNI_SITE_FORMS",
+        "KARNI_SITE_FORM_CLASS",
+        "KARNI_SITE_FORM_TEMPLATE",
+        "KARNI_SITE_FORM_CLASSES",
+        "KARNI_SITE_FORM_PRESETS",
+        "KARNI_SITE_FORM_MESSAGES",
+        "KARNI_SITE_FORM_REQUIRED_MARK",
+        "KARNI_SITE_FORM_SCRIPT",
+        "KARNI_SITE_FORM_SENT_PARAM",
+        "KARNI_SITE_FORM_PAGE_TEMPLATE",
+        "KARNI_SITE_NOTIFY_FROM",
     }
     assert conf.get("KARNI_SITE_SERVER_ERROR_TEMPLATES")[-1] == "karni_site/500.html"
 
@@ -84,4 +96,8 @@ def test_entry_points_register_codes_and_checks() -> None:
     }
     assert all("site" in names for names in groups.values()), groups
     codes = {code for code in registry() if code.startswith("SITE")}
-    assert codes == {f"SITE00{n}" for n in range(1, 10)} | {f"SITE01{n}" for n in range(10)}
+    assert codes == (
+        {f"SITE00{n}" for n in range(1, 10)}
+        | {f"SITE01{n}" for n in range(10)}
+        | {f"SITE02{n}" for n in range(4)}
+    )

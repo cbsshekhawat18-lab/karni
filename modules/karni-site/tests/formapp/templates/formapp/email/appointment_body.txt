@@ -1,0 +1,4 @@
+{% autoescape off %}{{ submission.name }} asks for an appointment on {{ submission.day|date:"j M Y" }}.
+Reason: {{ submission.get_reason_display }}
+{% for label, value in fields %}{{ label }}: {{ value }}
+{% endfor %}In the admin: {{ admin_path }}{% endautoescape %}

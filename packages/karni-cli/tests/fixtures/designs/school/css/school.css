@@ -1,5 +1,2 @@
-body { font-family: system-ui, sans-serif; margin: 0; color: #222; }
-.brand img { height: 40px; }
-.hero img { width: 100%; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
-.card img { width: 100%; }
+.course__tagline em { color: #c60; }
+.course-list__item { margin-bottom: 1rem; }

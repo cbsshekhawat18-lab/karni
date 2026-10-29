@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Atelier Nord — Architecture and interiors</title>
+  <meta name="description" content="A small studio for houses, libraries and the spaces in between.">
+  <link rel="stylesheet" href="css/studio.css">
+  <script src="js/studio.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar__logo" href="index.html">Atelier Nord</a>
+    <nav><a href="index.html" class="is-here">Work</a> <a href="about.html">Studio</a></nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" data-slider>
+    <div class="hero__slides">
+      <img class="is-shown" src="img/slide-1.jpg" alt="A timber house by a lake" data-caption="Lake house, 2024">
+      <img src="img/slide-2.jpg" alt="A reading room with tall windows" data-caption="Town library, 2023">
+      <img src="img/slide-3.jpg" alt="A kiosk lit at night" data-caption="Harbour kiosk, 2022">
+    </div>
+    <div class="hero__captions">
+      <div class="hero__caption is-shown">
+        <h1>Houses that <em>listen</em> to their site</h1>
+        <p>Timber, daylight and very little concrete.</p>
+        <a class="hero__button" href="#work">See the work</a>
+      </div>
+      <div class="hero__caption">
+        <h2>Rooms for <em>reading</em></h2>
+        <p>Public buildings people want to stay in.</p>
+        <a class="hero__button" href="#p-library">The library</a>
+      </div>
+      <div class="hero__caption">
+        <h2>Small <em>and</em> useful</h2>
+        <p>Kiosks, sheds and pavilions.</p>
+        <a class="hero__button" href="about.html">About the studio</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORK -->
+  <section class="work" id="work">
+    <h2>Selected work</h2>
+    <div class="filters" aria-label="Project types">
+      <button class="filter" type="button" data-filter="houses">Houses</button>
+      <button class="filter" type="button" data-filter="public">Public buildings</button>
+      <button class="filter" type="button" data-filter="interiors">Interiors</button>
+    </div>
+    <div class="projects">
+      <article class="project" id="p-lakehouse" data-types="houses interiors">
+        <img src="img/lakehouse.jpg" alt="The lake house from the jetty">
+        <h3>Lake house</h3>
+        <p class="project__place">Lakeside, 2024</p>
+        <div class="project__more">
+          <div class="project__gallery">
+            <img src="img/lakehouse-2.jpg" alt="The kitchen at noon">
+            <img src="img/lakehouse-3.jpg" alt="The bedroom under the eaves">
+          </div>
+          <dl class="project__facts">
+            <dt>Area</dt><dd>140 m²</dd>
+            <dt>Year</dt><dd>2024</dd>
+          </dl>
+          <p>A family house on stilts, built from spruce felled two valleys away.</p>
+          <p>The jetty doubles as a terrace in summer.</p>
+        </div>
+      </article>
+      <article class="project" id="p-loft" data-types="interiors">
+        <img src="img/loft.jpg" alt="A converted loft with a long table">
+        <h3>Printer's loft</h3>
+        <p class="project__place">Old town, 2023</p>
+        <div class="project__more">
+          <div class="project__gallery">
+            <img src="img/loft-2.jpg" alt="Shelves made from the old type cases">
+          </div>
+          <dl class="project__facts">
+            <dt>Area</dt><dd>95 m²</dd>
+            <dt>Year</dt><dd>2023</dd>
+            <dt>Client</dt><dd>A bookbinder</dd>
+          </dl>
+          <p>A print shop's top floor turned into a flat and a workshop.</p>
+        </div>
+      </article>
+      <article class="project" id="p-library" data-types="public">
+        <img src="img/library.jpg" alt="The library's reading room">
+        <h3>Town library</h3>
+        <p class="project__place">Market square, 2023</p>
+        <div class="project__more">
+          <div class="project__gallery">
+            <img src="img/library-2.jpg" alt="The children's corner">
+            <img src="img/library-3.jpg" alt="The stair to the gallery">
+          </div>
+          <dl class="project__facts">
+            <dt>Area</dt><dd>1,200 m²</dd>
+            <dt>Year</dt><dd>2023</dd>
+          </dl>
+          <p>A reading room under one roof of glulam beams.</p>
+        </div>
+      </article>
+      <article class="project" id="p-kiosk" data-types="public">
+        <img src="img/kiosk.jpg" alt="The kiosk at dusk">
+        <h3>Harbour kiosk</h3>
+        <p class="project__place">Harbour, 2022</p>
+        <div class="project__more">
+          <div class="project__gallery">
+            <img src="img/kiosk-2.jpg" alt="The kiosk's shutters open">
+          </div>
+          <dl class="project__facts">
+            <dt>Area</dt><dd>12 m²</dd>
+          </dl>
+          <p>Coffee and tickets from a copper box that closes like a shell.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <footer class="bottombar"><p>Atelier Nord &middot; <a href="about.html">The studio</a></p></footer>
+</body>
+</html>

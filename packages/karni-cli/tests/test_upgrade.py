@@ -125,6 +125,11 @@ def test_selection_between_versions() -> None:
         "karni-theme-light-colours-scoped",
         "production-stack",
         "staff-app-base-path",
+        "agent-files-public-forms",
+        "agent-files-site-from-design",
+        "admin-light-only",
+        "project-kind",
+        "agent-files-project-kind",
         "site-head-karni-seo",
         "site-urls-include",
         "import-design-sizes-images",
@@ -244,7 +249,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.1: 53 change(s), 6 mechanical, 47 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 58 change(s), 6 mechanical, 52 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

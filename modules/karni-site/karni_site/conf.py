@@ -27,8 +27,10 @@ DEFAULTS: dict[str, Any] = {
     # fields of its own subclasses karni_site.models.AbstractSiteSettings and names
     # its model here, before karni_site's first migrate (like AUTH_USER_MODEL).
     "KARNI_SITE_SETTINGS_MODEL": "karni_site.SiteSettings",
-    # What a client types around words to highlight them in an editable block, and
-    # the element (with its class) the words render in. "" as the marker turns it off.
+    # What a client types around words to highlight them, in an editable block and in a
+    # field rendered with {{ value|highlight }}, and the element (with its class) the
+    # words render in. A backslash before the marker keeps it as typed. An empty marker
+    # turns it off.
     "KARNI_SITE_HIGHLIGHT": {"marker": "==", "tag": "mark", "class": ""},
     # The inline markup an edited block keeps: element -> the attributes it keeps.
     # Everything else is removed, its text kept. The highlight element joins it.
@@ -72,6 +74,43 @@ DEFAULTS: dict[str, Any] = {
 def get(name: str) -> Any:
     """``settings.<name>`` if the project defines it, else the module default."""
     return getattr(settings, name, DEFAULTS[name])
+
+
+# --- Public forms ({% karni_form %}, karni_site.forms, karni_site.notify) -------
+# Kept as one block at the end of the file: each key is read through get() like the ones above.
+DEFAULTS |= {
+    # Form name -> the dotted path of the BaseViewSet that saves it, or a model label
+    # ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name.
+    "KARNI_SITE_FORMS": {},
+    # The class that renders and submits a form. A dotted path to a karni_site.forms.SiteForm
+    # subclass, to change how fields are described or how a submission is saved.
+    "KARNI_SITE_FORM_CLASS": "karni_site.forms.SiteForm",
+    # The template {% karni_form %} renders. Each field renders karni_site/forms/field.html, or
+    # karni_site/forms/<form>/<field>.html or karni_site/forms/<form>/field.html when one exists.
+    "KARNI_SITE_FORM_TEMPLATE": "karni_site/forms/form.html",
+    # Class names on the form's markup, merged over the module's plain defaults:
+    # form, row, column, field, label, input, select, check, check_input, check_label,
+    # invalid, error, help, message, success, failure, button, required.
+    "KARNI_SITE_FORM_CLASSES": {},
+    # Named sets of class names a tag picks with classes="<name>", merged over the shipped
+    # "bootstrap" preset (Bootstrap 5). {"salon": {"field": "field", "row": "form-row"}}.
+    "KARNI_SITE_FORM_PRESETS": {},
+    # The texts a form shows, merged over the defaults: success, invalid, throttled, refused,
+    # failed, choose (a select's empty option) and button. A tag's own success="..." wins.
+    "KARNI_SITE_FORM_MESSAGES": {},
+    # The text after a required field's label.
+    "KARNI_SITE_FORM_REQUIRED_MARK": "*",
+    # Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors).
+    # False leaves the form working without JavaScript, and a site may load its own script.
+    "KARNI_SITE_FORM_SCRIPT": True,
+    # The query parameter the page gets after a form was sent without JavaScript: ?sent=<form>.
+    "KARNI_SITE_FORM_SENT_PARAM": "sent",
+    # The page that shows a form with its errors when the page it was sent from cannot be
+    # rendered again (no page, a page that needs a POST, a page that fails).
+    "KARNI_SITE_FORM_PAGE_TEMPLATE": "karni_site/forms/page.html",
+    # The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL.
+    "KARNI_SITE_NOTIFY_FROM": "",
+}
 
 
 # SEO and images: {% karni_seo %}, {% image %}, the sitemap, robots.txt, karni check --seo.

@@ -30,7 +30,10 @@ printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=lo
 `karni new` wrote a Django project configured by one call
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
 docker-compose stack with a Makefile, and the guidance files AI coding
-agents read. `docker compose up -d --wait db` starts the project's
+agents read. Run in a terminal, `karni new` first asks what kind of project
+it is: Enter takes `app`, this page's kind, and `--kind app` skips the
+question (`--kind site` makes a public website, see
+[start a site project](public-site.md#start-a-site-project)). `docker compose up -d --wait db` starts the project's
 PostgreSQL 16 from that stack, published on localhost only (set
 `KARNI_DB_PORT` in `.env` when port 5432 is taken). The four `.env` lines point
 the app at it, at an in-process cache instead of Redis, and at a local media

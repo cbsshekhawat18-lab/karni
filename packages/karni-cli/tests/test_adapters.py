@@ -34,7 +34,7 @@ ADAPTER_FILES = {
     "CONVENTIONS.md",
     ".junie/AGENTS.md",
 }
-PROCEDURES = ("new-model", "new-page", "add-module", "new-module")
+PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design")
 COMMAND_FILES = {
     f"{directory}/{name}{suffix}"
     for directory, suffix in (
@@ -74,7 +74,7 @@ def new_project(runner, tmp_path: Path, monkeypatch) -> Path:
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     result = runner.invoke(app, ["new", "Acme Board", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    assert "24 agent adapter files" in result.output
+    assert "28 agent adapter files" in result.output
     project = tmp_path / "acme_board"
     monkeypatch.chdir(project)
     return project
@@ -154,7 +154,9 @@ def test_every_adapter_says_the_same_thing(new_project: Path) -> None:
     assert len(set(bodies.values())) == 1, sorted(bodies)
     body = next(iter(bodies.values()))
     assert "`karni context`" in body and "`karni rules`" in body
-    assert 15 <= body.count("\n") <= 25  # thin: ~15 lines of guidance
+    # Thin: ~15 lines of guidance, and the project's kind and stack in a paragraph.
+    assert 15 <= body.count("\n") <= 30
+    assert "The stack is set, so never ask which technology" in body
 
 
 def test_registry_records_verified_sources() -> None:
@@ -349,7 +351,7 @@ COVERAGE = [
         "AGENTS.md",
         "/add-module, /new-module) encode the standard procedures — prefer them.",
         "K006",
-        "new-model, new-page, add-module, new-module",
+        "new-model, new-page, add-module, new-module, site-from-design",
     ),
     (
         "AGENTS.md",

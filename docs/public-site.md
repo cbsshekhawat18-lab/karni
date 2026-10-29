@@ -1,5 +1,5 @@
 ---
-description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, every text, image, menu and contact detail editable in the admin, the karni-site runtime, content read through the default manager, SEO by default (titles, share tags, JSON-LD, sitemap.xml, robots.txt, sized images, karni check --seo), a page test with assert_pages, and public forms that post to a BaseViewSet."
+description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, every text, image, menu and contact detail editable in the admin, the karni-site runtime, content read through the default manager, SEO by default (titles, share tags, JSON-LD, sitemap.xml, robots.txt, sized images, karni check --seo), a page test with assert_pages, and public forms from karni make form and the karni_form tag."
 ---
 
 # Public server-rendered pages
@@ -31,6 +31,65 @@ signed-in users is an app screen, even when it looks like a web page.
 
 A project can have both. The site answers `/`, the admin stays at
 `KARNI_ADMIN_PATH`, and the React app keeps its own routes.
+
+## Start a site project
+
+`karni new` asks what kind of project it is, and `--kind` says it without
+the question:
+
+```bash
+karni new "Crumb Bakery" --kind site                    # a public website
+karni new "Crumb Bakery" --kind site --design ../design # built from a designer's pages
+karni new "Field Notes" --kind app                      # an API and a React app
+karni new "Bake Club" --kind site+app                   # both
+```
+
+| Kind | What `karni new` sets up |
+|---|---|
+| `site` | the site app `website` at `/` on the [`karni-site` module](#the-karni-site-module), the admin as the place the client edits every text, image, menu and page title, registration off (`KARNI_ACCOUNTS_REGISTRATION = False`, staff create the accounts), the roles `staff` and `editor`, and the staff app in `frontend/` for staff (`--no-staff-app` leaves it out, and staff work in the admin) |
+| `app` | the API and the React app in `frontend/` for signed-in users, as `karni new` always made |
+| `site+app` | both: the site app and karni-site, and the app with its registration and roles |
+
+Every kind has the same security defaults (the
+[Content-Security-Policy and headers](security.md#security-headers), the
+public-create throttle, `karni check --deploy`) and the production stack. Run
+in a terminal, `karni new` asks for the kind. Run by a script or an agent, it
+makes an app, or a site with `--design`. `--site-app` names the site app
+something other than `website`.
+
+The kind is recorded in pyproject.toml, next to the release the project was
+made for:
+
+```toml
+[tool.karni]
+baseline = "0.4.1"
+kind = "site"
+```
+
+`karni context` prints it first (`KIND: site (...)`), and the agent files
+(`AGENTS.md` and the others, [Karni for AI agents](agents.md)) open with the
+kind and its stack, so an agent never asks which technology to use. A
+project made before kinds has none recorded, and Karni infers it:
+`karni_site` installed makes a site, `frontend/` a staff app.
+
+`--design <folder>` runs, on the new project, the first steps of the
+[site-from-design procedure](design-content.md): `karni design analyze`
+writes the draft content map `content/design-map.json` and prints the models
+it proposes, then `karni import design --editable --map
+content/design-map.json` builds the site app, makes everything the client
+sees editable and themes the staff app and the admin from the design's
+stylesheets. It prints the rest of the procedure as the next steps, with the
+project's own paths: the decisions, the models, the content and the loops.
+
+### An app that gets a site
+
+`karni add site` turns an app into a site+app: it wires karni-site into the
+project and sets `kind = "site+app"`, then `karni make site website` (or
+`karni import design`) makes the site app. `karni make site` and `karni
+import design` change the kind the same way when they wire the module. To go
+back, set `kind = "app"` again and run `karni rules sync`. The site's files
+stay until you delete them: the site app and its include in
+`config/urls.py`, and karni-site in pyproject.toml and config/settings.py.
 
 ## Create the site
 
@@ -81,9 +140,10 @@ never by hand. For a site written from scratch, put the client's files under
 `templates/website/partials/` once they grow. Text and images the client may
 change are [blocks](#everything-the-client-edits), menus are
 `{% get_menu %}`, and the site's details are `site`: no project writes a
-template tag, a filter or a model for them. A command that loads the
-client's other content is project code (`karni make command`, or
-`karni load`).
+template tag, a filter or a model for them. The client's other content goes
+in models and comes from the design with [`karni design analyze` and
+`karni design extract`](design-content.md), then [`karni load`](content-loading.md):
+never a hand-written loading command.
 
 ## Import a design
 
@@ -94,7 +154,8 @@ kept as written:
 
 ```bash
 karni make site website                       # optional: import design runs it when needed
-karni import design ../design --app website --editable
+karni design analyze ../design --map content/design-map.json   # the content that repeats
+karni import design ../design --app website --editable --map content/design-map.json
 karni migrate
 karni test
 ```
@@ -103,6 +164,19 @@ With `--editable`, every text, image, menu and contact detail becomes
 editable in the admin, with the design's own as the defaults (see
 [Everything the client edits](#everything-the-client-edits)). Without it the
 pages are plain templates.
+
+With `--map`, the content map `karni design analyze` wrote, the content that
+becomes rows has no blocks: the items of each list the map holds (the cards,
+the list of courses) and the values of a model's detail pages (a title, an
+image, a gallery). The templates render those from the rows once they loop
+over them ([Load, then loop](design-content.md#load-then-loop)), and the
+client edits the rows in the admin. A block over the same text would be a
+copy that the page never shows. The rest of each page (its headings, its
+own text) stays a block, and the copy a model's detail pages share has one
+key on all of them, which starts with the model's name (`course.`), so the
+one template that replaces them keeps it. The record remembers the
+map. Delete a source from the map and import again, and its markup is
+editable again.
 
 What it does, page by page:
 
@@ -212,10 +286,12 @@ template, and the diff says so. The import never deletes anything.
 ### What stays yours
 
 `karni make view` adds a page later. It extends the imported `base.html`
-and passes the same page test. Models for the client's own content (the
-services, the team, the projects) are project code, read as below. The
-import is a starting point that runs again, not a build step: edit the
-templates freely, and the next import keeps your edits.
+and passes the same page test. The content that repeats in the pages (cards,
+detail pages, galleries) becomes models and rows with
+[`karni design analyze`, `karni design extract` and `karni load`](design-content.md),
+and the templates loop over the rows. The import is a starting point that
+runs again, not a build step: edit the templates freely, and the next import
+keeps your edits.
 
 ## Everything the client edits
 
@@ -244,7 +320,8 @@ tags work in a template written by hand:
   changes it. Once they change it, their version stays.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
-  highlight. Bold, emphasis and links are kept, and everything else is
+  highlight (a backslash before the marker keeps it as typed). Model fields
+  rendered with `{{ value|highlight }}` read the same markers. Bold, emphasis and links are kept, and everything else is
   removed when it is saved: scripts, styles, event attributes, `javascript:`
   links.
 - **Images** are uploaded in place of the design's. The `<img>` keeps its
@@ -313,11 +390,20 @@ karni_site %}` at the top of a template gives it:
 - `{% csp_hash %}` and `{% csp_allow %}`, below.
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
+- `{{ value|highlight }}` renders the words a field keeps between the
+  highlight markers (`==marked words==`) in `KARNI_SITE_HIGHLIGHT`'s tag and
+  class, everything else escaped: the same convention an editable block
+  uses, so a client types `==words==` everywhere. `karni design extract`
+  keeps the words a heading sets apart that way. `|highlight:"em"` names
+  another markup for one value, `|highlight:""` drops the marks, and a
+  backslash before the marker (`\==`) keeps it as typed.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu
   and policy tags work there too, and fall back to the module's plain page
   when the site's page fails to render.
+- `{% karni_form "<name>" %}`, a public form that works with and without
+  JavaScript (see [Public forms](#public-forms)).
 
 The module's README lists its settings and escape hatches:
 `KARNI_SITE_IS_ACTIVE` swaps the rule for the current page, and the two
@@ -513,62 +599,125 @@ broken internal links, and pages missing from the sitemap (`SITE010` to
 `SITE018`). The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
 lists every setting.
 
-## Public forms post to a BaseViewSet
+## Public forms
 
-A contact form does not need a form view. Its submissions are rows of a
-model, so they get an admin, an API and access rules like every other model.
-Declare who may create them with `create=Public()`:
+A contact form, a booking request, a newsletter sign-up and a job application
+are the same thing: rows of a model that anyone may create and only staff
+read. One command writes the project's side of any of them, and one tag puts
+the form in a page:
+
+```bash
+karni make form contact name:str email:email subject:str message:text \
+    --notify ENQUIRY_RECIPIENTS --app website
+karni make form newsletter email:email --app website
+karni make form booking_request name:str email:email day:date "service:choice:cut|colour" \
+    "phone:phone?" --states "requested>confirmed|requested>declined" --app website
+karni make migration --app website && karni test
+```
+
+```django
+{% load karni_site %}
+{% karni_form "contact" %}
+```
+
+`karni make form <name> <field:type> ...` takes the fields a visitor fills,
+in `karni make model`'s field DSL, and writes:
+
+| File | What |
+|---|---|
+| `<app>/models.py` | the model: the visitor's fields, a `status` [StateField](models.md) for the inbox (`--states`, by default new moves to replied or archived, and replied to archived), staff-only `notes`, `class Karni` (`field_roles` hides both from visitors, `audit`, `dashboard`), `class AdminMeta` (the admin inbox: newest first, filtered by status, searchable) and a `SearchField` for the search |
+| `<app>/viewsets.py` | a `BaseViewSet` with `Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())` (`--role` names another role) |
+| `<app>/listeners.py` | with `--notify SETTING`: a queued listener that emails each new row to the addresses in that setting |
+| `<app>/templates/<app>/email/<name>_subject.txt`, `_body.txt` | with `--notify`: the email, yours to edit |
+| `config/settings.py`, `.env.example` | with `--notify`: `SETTING = env.list("SETTING", default=[])` and the line to fill |
+| `<app>/tests/test_<name>_form.py` | anonymous submit, the form without JavaScript, the email (or none), the staff-only fields, the rate limit, staff-only reading, and `assert_crud` for the role |
+| `frontend/src/pages/` | the staff app's list, detail (with the lifecycle buttons) and form pages |
+| `config/urls.py` | `path("", include("karni_site.urls"))`: the view every form posts to |
+
+A form without `--notify` sends nothing. No throttle is written: Karni limits
+each visitor's creates on a public `create` (`KARNI_PUBLIC_CREATE_RATE`,
+default 10 an hour) and gives it a honeypot field
+([security](security.md#what-karni-does-by-default)).
+
+### The tag
+
+`{% karni_form "contact" %}` renders the fields a visitor fills (the writable
+fields of the viewset's create serializer, as an anonymous visitor sees them)
+with their labels, required marks, limits, choices and help text, the CSRF
+token and the honeypot field. It works without JavaScript:
+
+- The browser posts to karni-site's view, which saves through the viewset's
+  own `create`. The access declaration, the rate limit, the honeypot,
+  validation and change history are the API's.
+- A sent form redirects back to the page with `?sent=contact`, where the tag
+  shows the success message. A filled honeypot looks sent and saves nothing.
+- A refused form renders the page again, by its own view, with the values
+  kept and the error under each field: `400` when a value is wrong, `429`
+  with the rate-limit message, `403` when the visitor may not send it.
+
+With JavaScript, `karni_site/forms.js` (loaded once per page) posts the same
+data in place and shows the same messages and inline errors. It is a static
+file with no inline code, so the enforced Content-Security-Policy lets it
+run as it is.
+
+A design's own CSS applies through the tag's arguments, the settings and the
+templates:
+
+```django
+{% karni_form "contact" classes="bootstrap" button="Send message" %}
+{% karni_form "booking_request" rows="name,email" labels="day: Preferred day"
+   placeholders="name: Jane Doe" widgets="service: radios" field_class="field"
+   row_class="form-row" required_class="req" button_class="btn btn-accent" %}
+```
+
+`classes="bootstrap"` uses Bootstrap 5's form classes.
+`KARNI_SITE_FORM_CLASSES` sets the classes of every form,
+`KARNI_SITE_FORM_PRESETS` adds named sets, and
+`templates/karni_site/forms/form.html` or `field.html` in the project (or
+`karni_site/forms/<form>/<field>.html` for one field) replaces the markup.
+The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-site/README.md)
+lists every argument and setting.
+
+When the site came from `karni import design`, the import lists each
+`<form>` of the design (it is in `.karni/design.json` too), and `karni make
+form` names the template and the line of the form it replaces, with the tag
+that keeps that form's class names, rows, labels, placeholders and button:
+
+```text
+design: website/templates/website/home.html:8: <form action="book.php"> with name, email, day, service (the fields of booking_request)
+replace: in website/templates/website/home.html, replace that <form> ... </form> (line 8) with:
+    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" %}
+```
+
+### The email
 
 ```python
-from karni.api import Access, BaseViewSet, HasRole, Public
-from rest_framework.throttling import BaseThrottle, ScopedRateThrottle
-
-from website.models import Enquiry
-
-
-class EnquiryViewSet(BaseViewSet):
-    model = Enquiry
-    # Anyone may send the form. Only staff read and answer it.
-    access = Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())
-    throttle_scope = "enquiries"
-
-    def get_throttles(self) -> list[BaseThrottle]:
-        # Limit anonymous submissions, not the staff's own requests.
-        if self.action == "create":
-            return [ScopedRateThrottle()]
-        return super().get_throttles()
+@on_created(Contact, queued=True)
+def notify_contact(contact: Contact) -> None:
+    """Emails each new contact to settings.ENQUIRY_RECIPIENTS (after commit)."""
+    notify_recipients(
+        contact,
+        setting="ENQUIRY_RECIPIENTS",
+        template="website/email/contact",
+        reply_to=contact.email,
+    )
 ```
 
-Set the rate in `config/settings.py`:
-`REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["enquiries"] = "5/hour"`.
-A throttled request gets a 429.
+The listener runs in a Celery worker once the row is committed
+([queued listeners](events.md#queued-listeners-shouldqueue)), so the
+visitor never waits for the mail server. `notify_recipients` from
+`karni_site.notify` renders the two templates, sets `Reply-To` to the
+visitor's address so staff answer by replying, and sends to every address in
+`ENQUIRY_RECIPIENTS` (a list in settings, comma-separated in `.env`). An
+empty setting sends nothing and logs a warning.
 
-The page posts to the endpoint with `fetch` and sends the CSRF token.
-`SessionAuthentication` enforces CSRF for a signed-in user, so a staff
-member who views the site while signed in to the admin would get a 403
-without it:
+### The API stays the same
 
-```html
-<form action="/api/enquiries/" method="post" data-enquiry-form>
-  {% csrf_token %}
-  ...
-</form>
-```
-
-```js
-fetch(form.action, {
-  method: "POST",
-  credentials: "same-origin",
-  headers: {
-    "Content-Type": "application/json",
-    "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value,
-  },
-  body: JSON.stringify(Object.fromEntries(new FormData(form))),
-});
-```
-
-A 201 means the row was created. A 400 carries `{"field": ["message"]}` for
-each invalid field.
+The form is an ordinary resource: `/api/contacts/` takes the same create, as
+JSON or multipart, for a mobile app or another site. A `201` means the row
+was created, a `400` carries `{"field": ["message"]}`, a `429` means the
+visitor sent too many. The staff app's pages and the admin read and answer
+the submissions.
 
 ## Check it
 
@@ -577,6 +726,7 @@ each invalid field.
 site app like any other app, runs `karni-site`'s checks (`SITE001`: the
 templates get the request, `SITE002`: every `{% ifactive %}` names a URL
 that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
-middleware is installed, `SITE008`: no block key has two defaults), and
-`karni test` runs its page test. `karni check --seo` renders every page
+middleware is installed, `SITE008`: no block key has two defaults, `SITE020`:
+every `{% karni_form %}` names a form that exists), and `karni test` runs its
+page test and each form's test. `karni check --seo` renders every page
 and checks what search engines read ([SEO by default](#seo-by-default)).

@@ -188,7 +188,7 @@ export default function VenuesPage() {
 The commands you use every day:
 
 ```sh
-karni new "Shop"      # scaffold a project
+karni new "Shop"      # scaffold a project: --kind site, app or site+app, --design <folder>
 karni add payments    # wire an installed module into settings and the agent files
 karni types           # TypeScript types and hooks from the OpenAPI document
 karni context         # the project inventory an agent reads first
@@ -228,7 +228,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 <!-- generated:commands -->
 | Command | What it does |
 |---|---|
-| [`karni new`](docs/REFERENCE.md#karni-new) | Scaffold a project from templates/project |
+| [`karni new`](docs/REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
 | [`karni add`](docs/REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
 | [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
 | [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |
@@ -257,8 +257,9 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni manage`](docs/REFERENCE.md#karni-manage) | Run any management command |
 | [`karni why`](docs/REFERENCE.md#karni-why) | Explain an access decision: why a row, field or action is refused or missing |
 | [`karni why-empty`](docs/REFERENCE.md#karni-why-empty) | Explain an empty list: which step removes the rows, and the fix |
-| [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [deploy](docs/REFERENCE.md#karni-make-deploy), [module](docs/REFERENCE.md#karni-make-module) |
+| [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [deploy](docs/REFERENCE.md#karni-make-deploy), [form](docs/REFERENCE.md#karni-make-form), [module](docs/REFERENCE.md#karni-make-module) |
 | [`karni import`](docs/REFERENCE.md#karni-import) | Import a designer's files into the project: [design](docs/REFERENCE.md#karni-import-design) |
+| [`karni design`](docs/REFERENCE.md#karni-design) | Read a designer's pages: the models their content needs, and the content itself: [analyze](docs/REFERENCE.md#karni-design-analyze), [extract](docs/REFERENCE.md#karni-design-extract) |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -278,6 +279,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `stable` `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by`
 - `stable` Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)
 - `experimental` Real content from a JSON or YAML file, created or updated by natural key (`karni load`)
+- `experimental` Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`)
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
@@ -376,7 +378,7 @@ A module is a separate package for anything with its own service or a real memor
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
-- `experimental` `karni add site`: Every text, image and menu editable in the admin, redirects, the current page in a menu, and error pages that cannot fail
+- `experimental` `karni add site`: Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->
 
@@ -396,7 +398,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`.
+Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`.
 <!-- /generated:agents -->
 
 Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).

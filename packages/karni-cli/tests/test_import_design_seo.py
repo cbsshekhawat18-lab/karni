@@ -1,6 +1,6 @@
 """``karni import design``: {% karni_seo %} where the design's head tags were, and sized images.
 
-The school design has share tags in its head (one shared by every page, one
+The college design has share tags in its head (one shared by every page, one
 a page has of its own), a hero image loaded at once, cards loaded lazily, an
 image with only a width, a picture with its own sources, a small badge and
 an SVG logo. The bakery's images are not real image files.
@@ -21,7 +21,7 @@ from karni_cli.design import images, site
 from .test_import_design import BAKERY, DESIGNS, project  # noqa: F401
 from .test_make import ok
 
-SCHOOL = DESIGNS / "school"
+COLLEGE = DESIGNS / "college"
 
 
 def img(markup: str, src: str) -> str:
@@ -33,7 +33,7 @@ def img(markup: str, src: str) -> str:
 
 
 def test_karni_seo_takes_the_place_of_the_designs_head_tags() -> None:
-    plan = site.plan(SCHOOL, "website")
+    plan = site.plan(COLLEGE, "website")
     base = plan.templates["templates/website/base.html"]
     assert (
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
@@ -66,7 +66,7 @@ def test_a_design_without_share_tags_gets_the_tag_around_its_title() -> None:
 
 
 def test_images_get_their_size_and_smaller_copies() -> None:
-    plan = site.plan(SCHOOL, "website")
+    plan = site.plan(COLLEGE, "website")
     home = plan.templates["templates/website/home.html"]
     hero = img(home, "img/hero.jpg")
     assert 'width="1600" height="900" data-karni-image="natural"' in hero
@@ -107,7 +107,7 @@ def test_images_get_their_size_and_smaller_copies() -> None:
 
 def test_without_pillow_images_are_sized_without_copies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(images, "pillow_available", lambda: False)
-    plan = site.plan(SCHOOL, "website")
+    plan = site.plan(COLLEGE, "website")
     home = plan.templates["templates/website/home.html"]
     assert "srcset=\"{% static 'website/img/hero" not in home
     assert 'width="1600" height="900" data-karni-image="natural"' in img(home, "img/hero.jpg")
@@ -129,7 +129,7 @@ def test_an_image_whose_size_cannot_be_read_is_reported() -> None:
 def test_the_import_writes_the_copies_once(project: Path) -> None:  # noqa: F811
     from PIL import Image
 
-    result = ok("import", "design", str(SCHOOL), "--app", "website")
+    result = ok("import", "design", str(COLLEGE), "--app", "website")
     assert "wrote    21 smaller WebP image copies under website/static/website/" in result.output
     static = project / "website" / "static" / "website" / "img"
     copy = Image.open(BytesIO((static / "hero.jpg.640w.webp").read_bytes()))
@@ -142,7 +142,7 @@ def test_the_import_writes_the_copies_once(project: Path) -> None:  # noqa: F811
     assert (full.format, full.size) == ("WEBP", (1600, 900))
     stamp = (static / "hero.jpg.640w.webp").stat().st_mtime_ns
     os.utime(static / "hero.jpg.640w.webp", ns=(stamp - 10**9, stamp - 10**9))
-    again = ok("import", "design", str(SCHOOL), "--app", "website")
+    again = ok("import", "design", str(COLLEGE), "--app", "website")
     assert "smaller WebP image copies" not in again.output
     assert (static / "hero.jpg.640w.webp").stat().st_mtime_ns == stamp - 10**9
     # The page's head is the tag's: the base template renders it.

@@ -1,0 +1,12 @@
+body { font-family: "Helvetica Neue", Arial, sans-serif; margin: 0; }
+.form-row { display: flex; gap: 1rem; }
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-weight: 600; }
+.field input, .field select, .field textarea { display: block; width: 100%; }
+.req { color: #b0413e; }
+.btn { padding: 0.6rem 1.2rem; border: 0; }
+.btn-accent { background: #2f6f4f; color: #fff; }
+.form-note { padding: 0.75rem; }
+.form-note.is-success { background: #e3f4ea; }
+.form-note.is-error { background: #fbe9e7; }
+.field-error { color: #b0413e; }

@@ -213,7 +213,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C106",
         "An option value is invalid",
-        "karni make, karni types, karni ui detect",
+        "karni make, karni new, karni types, karni ui detect",
         "The option accepts specific values (the message lists them).",
         "Use one of the values shown, e.g. --access owned:organizer or --every 15m.",
     ),
@@ -257,6 +257,46 @@ CODES: Final[tuple[CliCode, ...]] = (
         "(a meta-refresh stub is a redirect), and every other file is copied as an asset.",
         "Pass the folder that holds the design's index.html and the other pages, with its "
         "css/, js/ and image folders inside it.",
+    ),
+    _c(
+        "C112",
+        "The project's kind is not one Karni knows",
+        "karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)",
+        "`karni new` records the project's kind in pyproject.toml: site, app or site+app. The "
+        "agent files and `karni context` state it with its stack, so a value Karni cannot "
+        "read stops them instead of guessing.",
+        'Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove '
+        "the line, and Karni infers the kind from the project), then run `karni rules sync`.",
+    ),
+    _c(
+        "C121",
+        "The content map cannot be used",
+        "karni design extract --map, karni import design --map",
+        "The map says which structure of the design is which model and which element is which "
+        "field. Extract follows it exactly, so a model, a field, a relation's target or a "
+        "selector it cannot follow stops it before anything is written.",
+        "Fix each problem the message lists in the map (the field names come from the map's "
+        '"fields", the selectors are CSS with an optional @attribute), or write a fresh draft '
+        "with karni design analyze <design> --map <file> --force.",
+    ),
+    _c(
+        "C122",
+        "The content map has decisions left",
+        "karni design extract --map",
+        "karni design analyze marks what the markup cannot settle with a decide entry: a list "
+        "on a detail page or a few items on the home page may be hand-picked or derived by a "
+        "query. Extract will not guess either way.",
+        'For each one: keep the value (remove its "decide", and add the field to the model\'s '
+        "karni make model command) or delete the value from the map and query the rows in the "
+        "view.",
+    ),
+    _c(
+        "C123",
+        "A content map is there already",
+        "karni design analyze --map",
+        "The map is a file the agent edits: names, decisions, selectors. Writing a new draft "
+        "over it would lose those edits.",
+        "Write the draft to another file, or pass --force to replace the map.",
     ),
     _c(
         "C199",

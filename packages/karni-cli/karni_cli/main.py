@@ -11,6 +11,7 @@ from karni_cli.commands.check import check
 from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
 from karni_cli.commands.createsuperuser import createsuperuser
+from karni_cli.commands.design import design_app
 from karni_cli.commands.doctor import doctor
 from karni_cli.commands.explain import explain
 from karni_cli.commands.import_design import import_app
@@ -39,9 +40,15 @@ from karni_cli.commands.why import why, why_empty
 from karni_cli.commands.worker import worker
 from karni_cli.project import PASSTHROUGH, CliError
 
+ROOT_HELP = (
+    'The Karni framework CLI. Start a project with `karni new "Name"`: --kind site (a public '
+    "website), app or site+app, and --design <folder> to build the site from a designer's "
+    "pages. Inside a project, AGENTS.md, `karni context` and `karni rules` say what to do next."
+)
+
 app = typer.Typer(
     name="karni",
-    help="The Karni framework CLI.",
+    help=ROOT_HELP,
     no_args_is_help=True,
     add_completion=False,
 )
@@ -67,7 +74,8 @@ def _root(
     """The Karni framework CLI."""
 
 
-app.command(help="Scaffold a project from templates/project")(new)
+# `karni new --help` is its docstring: the kinds, --design, examples.
+app.command()(new)
 app.command(help="Install an optional module and wire it into settings")(add)
 app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(types)
 app.add_typer(ui_app, name="ui")
@@ -119,6 +127,8 @@ app.add_typer(make_app, name="make")
 register_aliases(app)
 # Imports: `karni import design <dir>`.
 app.add_typer(import_app, name="import")
+# A design's content: `karni design analyze <dir>`, `karni design extract <dir> --map <file>`.
+app.add_typer(design_app, name="design")
 
 
 def run() -> None:

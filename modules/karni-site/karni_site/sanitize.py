@@ -12,7 +12,10 @@ needs no sanitising dependency.
 A client never edits HTML they cannot read. :func:`to_editing` shows a
 block with its line breaks as new lines and the highlight element as the
 marker (``==fresh every morning==``), and :func:`from_editing` turns the edited text
-back into clean HTML.
+back into clean HTML. A backslash before the marker (``\\==``) keeps it as
+typed. The same marker and the same escape hold for a model field rendered
+with the ``highlight`` filter (:mod:`karni_site.text`): one convention for
+the whole site.
 
 Override / escape hatch: ``KARNI_SITE_SANITIZER`` names another
 ``(html) -> html`` function (a library such as nh3 behind it, for example),
@@ -36,6 +39,9 @@ __all__ = [
     "Highlight",
     "allowed_tags",
     "apply_highlight",
+    "apply_marks",
+    "escape_marks",
+    "mark_pattern",
     "clean",
     "from_editing",
     "highlight",
@@ -226,13 +232,35 @@ def clean(html: str) -> str:
     return function(html)
 
 
+def mark_pattern(marker: str) -> re.Pattern[str]:
+    """The words between two markers that no backslash escapes: ``==words==``."""
+    escaped = re.escape(marker)
+    return re.compile(rf"(?<!\\){escaped}(.+?)(?<!\\){escaped}", re.S)
+
+
+def apply_marks(text: str, marker: str, opening: str, closing: str) -> str:
+    """Each ``==words==`` as ``opening + words + closing``, then each ``\\==`` as ``==``.
+
+    With ``opening`` and ``closing`` empty the marks are dropped. An empty
+    ``marker`` (the convention turned off) leaves ``text`` as it is.
+    """
+    if not marker:
+        return text
+    wrapped = mark_pattern(marker).sub(lambda m: opening + m.group(1) + closing, text)
+    return wrapped.replace("\\" + marker, marker)
+
+
+def escape_marks(text: str, marker: str) -> str:
+    """Each marker in ``text`` written ``\\==``: text, not a highlight, when read back."""
+    return text.replace(marker, "\\" + marker) if marker else text
+
+
 def apply_highlight(text: str) -> str:
-    """``==words==`` (the configured marker) as the highlight element."""
+    """``==words==`` (the configured marker) as the highlight element, ``\\==`` as ``==``."""
     mark = highlight()
     if not mark.marker or not mark.tag:
         return text
-    pattern = re.compile(re.escape(mark.marker) + r"(.+?)" + re.escape(mark.marker), re.S)
-    return pattern.sub(lambda m: mark.start_tag() + m.group(1) + mark.end_tag(), text)
+    return apply_marks(text, mark.marker, mark.start_tag(), mark.end_tag())
 
 
 def _highlight_pattern(mark: Highlight) -> re.Pattern[str]:
@@ -262,6 +290,7 @@ def to_editing(html: str) -> str:
     text = re.sub(r"\s*<br\s*/?>\s*", "\n", text, flags=re.I)
     mark = highlight()
     if mark.marker and mark.tag:
+        text = escape_marks(text, mark.marker)
         text = _highlight_pattern(mark).sub(
             lambda m: mark.marker + m.group("inner") + mark.marker, text
         )

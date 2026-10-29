@@ -12,6 +12,11 @@ needs and no project should write again lives here:
 * :func:`karni_site.views.server_error` and :func:`~karni_site.views.page_not_found`
   render the site's own ``500.html`` and ``404.html`` with the request, and
   fall back to this module's plain pages when those fail to render.
+* ``{% karni_form "<name>" %}`` renders a public form from its viewset, posts
+  to :func:`karni_site.form_views.submit` (it works without JavaScript) and
+  is enhanced by ``karni_site/forms.js`` (:mod:`karni_site.forms`).
+  :func:`karni_site.notify.notify_recipients` emails a new submission to the
+  addresses a setting names. ``karni make form`` writes the project's side.
 * ``{% karni_seo %}`` writes a page's title, description, canonical link,
   share tags and the site's JSON-LD (:mod:`karni_site.metadata`), and
   ``{% image %}`` an uploaded image through its WebP copies

@@ -84,7 +84,10 @@ counters would live in a per-process cache in production. A public form of
 your own (`create=Public()`) is limited to 10 creates an hour per caller
 (`KARNI_PUBLIC_CREATE_RATE`), has a honeypot field
 (`KARNI_PUBLIC_CREATE_HONEYPOT_FIELD`) and accepts no anonymous imports, with
-nothing declared ([rate limits](api.md#rate-limits)). Registration is open by
+nothing declared ([rate limits](api.md#rate-limits)). `karni make form` writes
+such a form, and the page's `{% karni_form %}` posts through Django's CSRF
+check for signed-in and anonymous visitors alike
+([public forms](public-site.md#public-forms)). Registration is open by
 default. While it is, `karni.W102` warns for every viewset that lets any
 signed-in user change and delete every row, and
 `KARNI_ACCOUNTS_REGISTRATION = False` closes it

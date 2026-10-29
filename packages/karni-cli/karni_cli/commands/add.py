@@ -144,6 +144,7 @@ def record_guidance(project: Path, module: str) -> bool:
             f"{app_name} is not importable yet. Run `karni add {module}` again "
             "after installing to record its agent guidance."
         )
+        _refresh_adapters(project)  # the rest of what they say may have changed (the kind)
         return False
     if record_module_fragment(project, module, fragment):
         typer.echo(f"{(MODULES_DIR / f'{module}.md').as_posix()}: recorded agent guidance")
@@ -172,7 +173,27 @@ def _wire_site(settings_path: Path) -> None:
         return
     if wired is not None:
         urls_path.write_text(wired)
-        typer.echo(f"{SITE_URLS}: included in config/urls.py (robots.txt, sitemap.xml)")
+        typer.echo(
+            f"{SITE_URLS}: included in config/urls.py (robots.txt, sitemap.xml, the form view)"
+        )
+
+
+def _adopt_site(project: Path) -> None:
+    """The project's kind gets its site: an app becomes a site+app (and says how to go back)."""
+    from karni_cli import kinds
+
+    pyproject = project / "pyproject.toml"
+    adopted = kinds.adopt_site_text(pyproject.read_text(encoding="utf-8"), project)
+    if adopted is not None:
+        pyproject.write_text(adopted[0], encoding="utf-8")
+        typer.echo(kinds.adoption_note(adopted[1], adopted[2]))
+    from karni_cli.commands.context import site_line
+
+    if site_line(project) is None:
+        typer.echo(
+            "Next, the site app: karni make site website, or for a designer's pages the "
+            "site-from-design procedure (karni rules --procedure site-from-design)."
+        )
 
 
 def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
@@ -189,6 +210,7 @@ def add(module: str = typer.Argument(..., help='Module short name, e.g. "payment
     typer.echo(f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS")
     if module == "site":
         _wire_site(project / "config" / "settings.py")
+        _adopt_site(project)
 
     record_guidance(project, module)
 

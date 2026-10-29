@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-site"
 version = "0.4.0"
-description = "Public websites for Karni: every text, image and menu editable in the admin, redirects, the current page in a menu, and error pages that cannot fail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+description = "Public websites for Karni: every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-keywords = ["django", "karni", "website", "templates", "navigation", "csp", "seo", "cms", "menus", "redirects"]
+keywords = ["django", "karni", "website", "templates", "navigation", "csp", "seo", "cms", "menus", "redirects", "forms"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
@@ -65,11 +65,11 @@ dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5", "Pillow>=10.3"]
 [tool.hatch.build.targets.wheel]
 packages = ["karni_site"]
 # `karni add` reads the agent guidance through importlib.resources after install.
-artifacts = ["karni_site/AGENTS.fragment.md", "karni_site/templates/**"]
+artifacts = ["karni_site/AGENTS.fragment.md", "karni_site/templates/**", "karni_site/static/**"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["tests/"]
-artifacts = ["karni_site/AGENTS.fragment.md", "karni_site/templates/**"]
+artifacts = ["karni_site/AGENTS.fragment.md", "karni_site/templates/**", "karni_site/static/**"]
 
 [tool.ruff]
 target-version = "py312"

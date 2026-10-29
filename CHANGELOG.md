@@ -36,6 +36,12 @@ apply codemods and list the manual steps. This file is the human summary.
   design` puts the tag where the design's head tags were and gives the
   design's images their width and height and smaller WebP copies in a
   `srcset`. [docs/public-site.md](docs/public-site.md#seo-by-default).
+- **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
+  `"light"`) pins unfold's light palette and hides its light / dark / system
+  switch, read on every request. `"auto"` brings the switch back and
+  `"dark"` pins the dark palette. See
+  [docs/admin.md](docs/admin.md#theming) and the
+  [migration note](docs/migrations/0.4.1.md#the-admin-is-light-only).
 - **Everything a client sees on a public site is edited in the admin.**
   The karni-site module now holds the site's own details (`SiteSettings`:
   name, tagline, logo, favicon, the default share image, address, phone,
@@ -88,6 +94,85 @@ apply codemods and list the manual steps. This file is the human summary.
   (`--force` replaces them). The parsing, comparison and rewriting live in
   `karni_cli.design` for the later `karni design` commands.
   [docs/public-site.md](docs/public-site.md#import-a-design).
+- **The content that repeats in a design becomes models and rows: `karni
+  design analyze` and `karni design extract`.** `analyze <dir>` reads a
+  designer's pages and finds the structures repeated within and across them
+  (cards, list items, a gallery inside each project, a page per doctor). It
+  infers the fields from the markup (a heading with its highlighted words,
+  text, an image and its alt, a link, a list of tags, a date, a price, a
+  number), merges the places that show the same items (a card that links to
+  a detail page, an anchor that is an item's `id`, a shared key or title),
+  finds the relations (a list of links to another model's items, an
+  attribute holding its keys, items nested in another model's items) and
+  prints ready-to-run `karni make model` commands, models others point at
+  first. Names come from the design's classes, headings, labels, pages and
+  folders. What the markup cannot settle (a list on a detail page that may
+  be hand-picked or derived, a few items shown on the home page, a card
+  styled on its own that holds a list item's values) is a decision for the
+  agent, with the evidence. The report also gives the `KARNI_SITE_HIGHLIGHT`
+  that renders the design's highlighted words, or says that `karni import
+  design --editable` already wrote it. `--json` prints it all as stable
+  JSON, and `--map <file>` writes a draft content map. `extract <dir> --map
+  <file>` reads the pages with the map and writes their content in the
+  `karni load` format: values parsed by type, highlighted words between the
+  site's marker (`==words==`, the map's `"marker"`), relations by key,
+  children nested, image paths relative to the output file. It refuses
+  while a decision is open (C122) or the map cannot be followed (C121).
+  [docs/design-content.md](docs/design-content.md).
+- **`karni load --dry-run` shows a diff per model.** Each row it would create,
+  each row it would change with the fields that change (old and new value),
+  each file it would upload and each child `--prune` would delete, the first
+  20 rows of a model listed and the rest counted. `--json` carries the same
+  rows under `"changes"`. [docs/content-loading.md](docs/content-loading.md#validation-and-errors).
+- **`karni make model --order <field> --key <field>`** writes `Meta.ordering`
+  and `Karni.import_key`, the field `karni load` matches rows on (a child
+  row: its parent plus that field, such as `position`).
+- **One convention for highlighted words: `{{ value|highlight }}` in
+  karni-site.** A model field keeps highlighted words the way an editable
+  block does, between `KARNI_SITE_HIGHLIGHT`'s marker (`==words==`), and the
+  filter renders them in the setting's tag and class, everything else
+  escaped. `|highlight:"span.dot"` names another markup for one value,
+  `|highlight:""` drops the marks. A backslash before the marker (`\==`)
+  keeps it as typed, in a field and in an editable block alike.
+- **New agent procedure `site-from-design`**: import, analyze, models,
+  extract, load, then templates that loop over the rows. Run `karni rules
+  sync` for its slash command files.
+- **Projects have a kind: `karni new --kind site|app|site+app`.** `karni new`
+  asks what the project is (an app when nobody can answer) and sets it up
+  for that kind. A site gets the site app at `/` on karni-site, the admin as
+  the place the client edits it, registration off and the roles staff and
+  editor, with the staff app optional (`--no-staff-app`). An app is what
+  `karni new` always made, and a site+app has both. The kind is recorded as
+  `kind` under `[tool.karni]` in pyproject.toml, `karni context` prints it
+  first, and the agent files open with it and its stack, so an agent never
+  asks which technology to use. `karni add site` turns an app into a
+  site+app and says how to go back. The root `karni --help` says how to
+  start.
+- **`karni new --design <dir>` builds the site from a designer's pages.** It
+  runs `karni design analyze` (the draft content map `content/design-map.json`)
+  and `karni import design --editable --map` (the site app, everything the
+  client sees editable, the staff app and the admin themed from the design),
+  then prints the rest of the site-from-design procedure with the project's
+  paths. A kind with a site is implied.
+- **`karni import design --editable --map <file>`: no blocks over rows.** The
+  content a content map reads into rows (a list's items, a model's detail
+  page values, galleries) is imported without blocks, because the loops
+  render it from the rows and the client edits the rows. The copy a model's
+  detail pages share has one key on all of them. The record remembers the
+  map. Without a staff app, the import themes the admin from the file
+  `KARNI_THEME_CSS` names.
+- **The site-from-design procedure is the whole flow**: analyze, import with
+  `--editable --map`, decisions, models, extract, load, loops, the one view
+  for a model's detail pages (`karni make view <model> --path
+  "/<folder>/<slug:slug>/"`), `karni make form` for each `<form>`, the page
+  test and `karni check`. Its models step no longer runs `karni types`, which
+  a site whose models have no API refused. `karni context` prints a `DESIGN:`
+  line: the designer's pages the project imported, and the content map.
+- **`karni make model` takes the model's own name for a relation to itself**,
+  app-qualified too (`related:m2m:website.Course?`, as `karni design analyze`
+  proposes it), as `"self"`. A many-to-many to itself is
+  `symmetrical=False`: a hand-picked list goes one way, so `karni load` sets
+  each row's own list and a second load changes nothing.
 - **New module `karni-site`: the runtime of a public site.** `{% ifactive
   "<app>:<name>" %}` marks the current page in a menu around whatever markup
   the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's
@@ -102,6 +187,41 @@ apply codemods and list the manual steps. This file is the human summary.
   one response from code that runs while it is built, and a hash added next
   to `'unsafe-inline'` is left out, because a browser would otherwise ignore
   the `'unsafe-inline'`. [docs/modules.md](docs/modules.md).
+- **Public forms in one command: `karni make form`.** `karni make form
+  contact name:str email:email subject:str message:text --notify
+  ENQUIRY_RECIPIENTS` writes a contact form, a booking request, a newsletter
+  sign-up or a job application alike: the model (the visitor's fields from
+  the field DSL, a `status` StateField for the inbox from `--states`,
+  staff-only `notes`, both hidden from visitors through `field_roles`,
+  `audit`, `dashboard`, an admin inbox and an indexed search), a
+  `BaseViewSet` with `create=Public()` read by `--role` (Karni's rate limit
+  and honeypot apply, no throttle is written), the project's tests
+  (anonymous submit, without JavaScript, the email, the protected fields,
+  the rate limit, staff-only reading, `assert_crud`), the staff app's pages,
+  and with `--notify` a queued listener, its email templates and the
+  recipients setting. Without `--notify` nothing is sent. When the site came
+  from `karni import design`, the command names the template and line of
+  the design's `<form>` it replaces and prints the tag with the arguments
+  that keep that form's class names, rows, labels and button. The import
+  now records each page's forms in `.karni/design.json` and lists them in
+  its report. [docs/public-site.md](docs/public-site.md#public-forms).
+- **karni-site: `{% karni_form "<name>" %}` and its view.** The tag renders
+  the fields a visitor fills from the form viewset's create serializer, with
+  labels, required marks, limits, choices, the CSRF token and the honeypot.
+  It works without JavaScript: the browser posts to `karni_site:form`, which
+  saves through the viewset's own `create` (access, rate limit, honeypot,
+  validation and history are the API's), then redirects back with
+  `?sent=<name>` or renders the page again, by its own view, with the
+  errors next to each field (400, 429, 403). `karni_site/forms.js` submits
+  in place with inline errors and the rate-limit message, and runs under
+  the enforced Content-Security-Policy because it is a static file with no
+  inline code. Class names and markup come from the tag's arguments
+  (`classes="bootstrap"`, `field_class`, `rows`, `labels`, ...), the
+  `KARNI_SITE_FORM_*` settings and overridable templates.
+  `karni_site.notify.notify_recipients` emails a row to the addresses a
+  setting names, from the project's templates, with `Reply-To`. New codes:
+  SITE020 (a check: a tag names a form that does not exist), SITE021 to
+  SITE023. Rule K309 and the `new-model` procedure name `karni make form`.
 - **A new project's staff app is ready to hand over.** The scaffold's
   `layout.tsx` wraps every page but a sign-in page in `<AuthGuard explain>`,
   so a visitor who is not signed in gets the sign-in prompt in place of a
