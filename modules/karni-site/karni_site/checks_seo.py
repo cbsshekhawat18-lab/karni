@@ -29,7 +29,10 @@ Findings, one line each:
   an error;
 * ``SITE018`` sitemap.xml missing, a page the site links to that it leaves
   out, or an address in it that does not answer 200 or asks not to be
-  indexed.
+  indexed;
+* ``SITE007`` a menu item whose page, row or model is gone (a view that was
+  renamed or replaced): the menu leaves it out, so the site loses the link
+  without a word.
 
 Duplicates are counted among the pages search engines may index (no
 ``noindex``, a canonical link to themselves).
@@ -64,6 +67,7 @@ SIZE_CODE = "SITE015"
 WEIGHT_CODE = "SITE016"
 LINK_CODE = "SITE017"
 SITEMAP_CODE = "SITE018"
+MENU_CODE = "SITE007"
 _HTML = ("text/html", "application/xhtml+xml")
 _WEB = ("", "http", "https")
 _MAX_HOPS = 10
@@ -504,7 +508,26 @@ class SeoCrawl:
             self.check_images(page)
             self.check_links(page)
         self.check_sitemap(listed)
+        self.check_menus()
         return self.failures
+
+    def check_menus(self) -> None:
+        """Each shown menu item that points at a page, row or model that is gone."""
+        from karni_site import menus
+        from karni_site.models import MenuItem
+
+        items = MenuItem.objects.filter(enabled=True).select_related("menu", "content_type")
+        for item in items.order_by("menu__name", "order"):
+            try:
+                menus.target(item)
+            except menus.NoTarget as exc:
+                label = item.title or item.route or item.url or f"item {item.pk}"
+                self.fail(
+                    MENU_CODE,
+                    f"menu {item.menu.name!r}, item {label!r}: {exc}, so the menu leaves it out. "
+                    "Choose its page again in the admin's Menus (a renamed or replaced view, "
+                    "such as detail pages that became one view), or delete the item.",
+                )
 
 
 def run_checks() -> list[str]:

@@ -45,6 +45,7 @@ from karni_site.navigation import any_active
 __all__ = [
     "Link",
     "MenuEntry",
+    "NoTarget",
     "entries",
     "item_fields",
     "menu_rows",
@@ -93,8 +94,11 @@ def _path_patterns(url: str) -> list[str]:
     return [parts.path]
 
 
-class _NoTarget(LookupError):
+class NoTarget(LookupError):
     """An item whose page, row or model is gone: it is left out of the menu."""
+
+
+_NoTarget = NoTarget
 
 
 def _row(model: type[Any], pk: str) -> Any | None:

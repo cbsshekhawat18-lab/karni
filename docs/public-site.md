@@ -130,7 +130,10 @@ files, and its `views.py` and `urls.py` are extended in place.
 `base.html`, the URL at the marker in the site's `urls.py`, and the same URL
 in the page test (see [The page test](#the-page-test)). Its path defaults to
 `/<name>/`. A capture such as `<slug:slug>` becomes a view parameter and a
-template variable. Both commands take `--dry-run`, and `--no-route` when you
+template variable. A view with a capture usually replaces the pages of one
+folder (a model's detail pages becoming one view): an `{% ifactive %}` that
+named those pages' views gets the folder's path instead (`"/services/*"`),
+so the menu item stays marked on every page of the folder. Both commands take `--dry-run`, and `--no-route` when you
 want to wire the URL yourself.
 
 A designer's static pages go in with [`karni import design`](#import-a-design),
@@ -746,4 +749,5 @@ that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
 middleware is installed, `SITE008`: no block key has two defaults, `SITE020`:
 every `{% karni_form %}` names a form that exists), and `karni test` runs its
 page test and each form's test. `karni check --seo` renders every page
-and checks what search engines read ([SEO by default](#seo-by-default)).
+and checks what search engines read ([SEO by default](#seo-by-default)), and
+names a menu item whose page is gone (`SITE007`).

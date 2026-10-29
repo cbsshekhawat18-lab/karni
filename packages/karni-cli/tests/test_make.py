@@ -860,6 +860,47 @@ def test_view_adds_the_view_its_template_and_the_url(project: Path) -> None:
     assert (project / "config" / "urls.py").read_text().count(INCLUDE) == 1
 
 
+def test_a_capture_view_keeps_the_current_page_marked_on_the_pages_it_replaces(
+    project: Path,
+) -> None:
+    # A portfolio's project pages, one view each, then one view with a capture.
+    ok("make", "site", "website")
+    for name, path in (
+        ("work", "/work/"),
+        ("work_lakehouse", "/work/lakehouse/"),
+        ("work_loft", "/work/loft/"),
+        ("about", "/about/"),
+    ):
+        ok("make", "view", name, "--path", path)
+    templates = project / "website" / "templates" / "website"
+    (templates / "menus").mkdir()
+    nav = templates / "menus" / "header.html"
+    nav.write_text(
+        '<a href="/work/"{% ifactive "website:work" "website:work_lakehouse" '
+        '"website:work_loft" %} class="is-current"{% endifactive %}>Work</a>\n'
+        '<a href="/about/"{% ifactive "website:about" %} class="is-current"{% endifactive %}>'
+        "About</a>\n"
+    )
+    footer = templates / "footer.html"
+    footer.write_text('<li{% ifactive "website:work_*" %} class="on"{% endifactive %}>Work</li>\n')
+    result = ok("make", "view", "project", "--path", "/work/<slug:slug>/")
+    assert nav.read_text().startswith(
+        '<a href="/work/"{% ifactive "website:work" "/work/*" %} class="is-current"'
+    )
+    assert '{% ifactive "website:about" %}' in nav.read_text()  # outside the folder: kept
+    assert (
+        footer.read_text() == '<li{% ifactive "/work/*" %} class="on"{% endifactive %}>Work</li>\n'
+    )
+    assert "named website:work_lakehouse, website:work_loft, the pages /work/<slug:slug>/" in (
+        result.output
+    )
+    # A view without a capture changes nothing, and neither does a second run.
+    before = nav.read_text()
+    ok("make", "view", "project", "--path", "/work/<slug:slug>/", "--force")
+    ok("make", "view", "team")
+    assert nav.read_text() == before
+
+
 def test_view_validation(project: Path) -> None:
     ok("make", "app", "events")
     fails("make", "view", "about", "--app", "events", match="karni make site events")

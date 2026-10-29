@@ -8,11 +8,21 @@ checks the new page. A path capture such as ``/services/<slug:slug>/``
 becomes a view parameter and a template variable. Such a page is left out
 of the test with a note, because only the project knows a real URL for it.
 The app must be a site app (``karni make site``).
+
+A view with a capture usually replaces the per-page views of one folder (a
+model's detail pages becoming one view). A ``{% ifactive %}`` that names
+those views (``"website:services_web"``, ``"website:services_*"``) would mark
+nothing once they are gone, so the command rewrites it to the folder's
+path pattern (``"/services/*"``), which covers the new view's pages and the
+old ones alike, and says where. ``karni check`` (``SITE002``) names any
+``{% ifactive %}`` left naming a view that no longer exists.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
+from fnmatch import fnmatchcase
 
 import typer
 
@@ -28,6 +38,7 @@ from karni_cli.generators.core import (
 )
 from karni_cli.generators.naming import humanize, require_snake
 from karni_cli.project import CliError
+from karni_cli.urls_edit import routes
 
 NAME = "view"
 SUMMARY = "Add a page to a site app: a function view, its template and its URL."
@@ -39,6 +50,8 @@ _CAPTURE = re.compile(r"<(?:([a-z]+):)?([A-Za-z_][A-Za-z0-9_]*)>")
 _PARAM_TYPES = {"int": "int", "uuid": "uuid.UUID"}
 #: Names the views module already uses.
 _RESERVED = frozenset({"render", "request", "views", "urlpatterns", "app_name"})
+_IFACTIVE = re.compile(r"\{%-?\s*ifactive\s+(?P<args>.*?)\s*-?%\}", re.DOTALL)
+_ARG = re.compile(r"\"([^\"]*)\"|'([^']*)'|(\S+)")
 
 
 def route_for(name: str, path: str | None) -> tuple[str, list[tuple[str, str]]]:
@@ -91,6 +104,7 @@ def plan(
     if register:
         site_gen.register_route(ws, app, route, name)
         site_gen.add_page_to_test(ws, app, f"/{route}")
+        keep_current_marking(ws, app, route)
     else:
         ws.note(
             f"route not registered (--no-route): add path({route!r}, views.{name}, "
@@ -99,6 +113,82 @@ def plan(
         )
     ws.note(f"view: /{route} -> {app.module}.views.{name} ({app.label}:{name})")
     return f"/{route}"
+
+
+def _folder(route: str) -> str:
+    """``services/`` for ``services/<slug:slug>/``: the static part before the first capture."""
+    if "<" not in route:
+        return ""
+    head = route.split("<", 1)[0]
+    return head if head.endswith("/") and head != "/" else ""
+
+
+def keep_current_marking(ws: Workspace, app: App, route: str) -> None:
+    """Rewrite ``{% ifactive %}`` names of the views a capture view replaces to its folder.
+
+    The replaced views are the app's routes inside the new route's folder
+    without a capture (``services/web/`` for ``services/<slug:slug>/``). A
+    name of one of them, or a wildcard that matches only them, becomes the
+    folder's path pattern ``"/services/*"``. Every template of the app is
+    read, the menus' seed templates too.
+    """
+    folder = _folder(route)
+    if not folder:
+        return
+    found = routes(ws.read(app.file("urls.py")) or "")
+    names = {f"{app.label}:{n}" for _r, n, include in found if n and include is None}
+    replaced = {
+        f"{app.label}:{n}"
+        for r, n, include in found
+        if n and include is None and r.startswith(folder) and r != folder and "<" not in r
+    }
+    if not replaced:
+        return
+    pattern = f"/{folder}*"
+
+    def stale(value: str) -> bool:
+        if value in replaced:
+            return True
+        if any(char in value for char in "*?["):
+            hits = {candidate for candidate in names if fnmatchcase(candidate, value)}
+            return bool(hits) and hits <= replaced
+        return False
+
+    templates = app.file("templates")
+    for path in sorted(templates.rglob("*.html")) if templates.is_dir() else []:
+        text = ws.read(path)
+        if text is None or "ifactive" not in text:
+            continue
+        updated, dropped = _rewrite_markers(text, stale, pattern)
+        if updated != text:
+            ws.write(path, updated)
+            ws.note(
+                f"current page: {{% ifactive %}} in {ws.rel(path)} named "
+                f"{', '.join(sorted(set(dropped)))}, the pages /{route} replaces: now "
+                f'"{pattern}", which marks them all. Delete those views and karni check '
+                "(SITE002) names any {% ifactive %} still naming them."
+            )
+
+
+def _rewrite_markers(
+    text: str, stale: Callable[[str], bool], pattern: str
+) -> tuple[str, list[str]]:
+    """``text`` with each stale pattern of its ``{% ifactive %}`` tags replaced by ``pattern``."""
+    dropped: list[str] = []
+
+    def rewrite(match: re.Match[str]) -> str:
+        bits = list(_ARG.finditer(match.group("args")))
+        values = [next(g for g in b.groups() if g is not None) for b in bits]
+        gone = [value for value in values if stale(value)]
+        if not gone:
+            return match.group(0)
+        dropped.extend(gone)
+        kept = [b.group(0) for b, value in zip(bits, values, strict=True) if not stale(value)]
+        if pattern not in values:
+            kept.append(f'"{pattern}"')
+        return "{% ifactive " + " ".join(kept) + " %}"
+
+    return _IFACTIVE.sub(rewrite, text), dropped
 
 
 def command(

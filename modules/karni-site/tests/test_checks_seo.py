@@ -154,6 +154,22 @@ def with_a_gone_page() -> dict[str, Any]:
     return {**sitemaps(), "gone": Gone()}
 
 
+def test_a_menu_item_whose_page_is_gone(projects: list[Project]) -> None:
+    from karni_site.models import Menu, MenuItem
+
+    menu = Menu.objects.create(name="footer")
+    MenuItem.objects.create(menu=menu, title="About", route="website:about", order=0)
+    # Seeded while a project had a page of its own, before they became one view.
+    MenuItem.objects.create(menu=menu, title="The cake", route="website:project_wedding", order=1)
+    MenuItem.objects.create(menu=menu, title="Off", route="website:gone", enabled=False, order=2)
+    failures = checks_seo.SeoCrawl().run()
+    (menu_failure,) = [f for f in failures if f.startswith("SITE007")]
+    assert "menu 'footer', item 'The cake': no page is named 'website:project_wedding'" in (
+        menu_failure
+    )
+    assert "Choose its page again in the admin's Menus" in menu_failure
+
+
 def test_a_site_without_the_sitemap(settings: Settings) -> None:
     urlconf = ModuleType("seo_urls_without_karni_site")
     urlconf.urlpatterns = [path("", include(seo_urls.seo))]  # type: ignore[attr-defined]

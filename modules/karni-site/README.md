@@ -184,7 +184,10 @@ entry. When the database cannot be read, the template's default is shown.
 ```
 
 Each item has `title`, `url`, `new_tab`, `current` (this page), `active`
-(this page or one under it) and `children`. An item in the admin goes to
+(this page, a page under the item's own path, or one of its children:
+*Treatments* at `/treatments/` stays active on `/treatments/whitening/`, and
+the home page `/` stands for no section) and `children`.
+`KARNI_SITE_MENU_SECTIONS = False` leaves out the pages under the path. An item in the admin goes to
 one of the site's pages (its URL name, so a changed path follows), a row's
 own page (its `get_absolute_url()`), or an address (`https://...`,
 `#section`, `mailto:`), with an optional `#section` or `?query` after it.
@@ -364,6 +367,7 @@ as a first visit would. It reports:
 | `SITE016` | an image without smaller copies that is wider than `KARNI_SITE_SEO_PIXEL_RATIO` times its `width`, wider than the widest copy, or heavier than `KARNI_SITE_SEO_IMAGE_BYTES` |
 | `SITE017` | a link, image, stylesheet or script of the site that answers an error |
 | `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
+| `SITE007` | a menu item whose page, row or model is gone (a view renamed or replaced since the menu was seeded), which the menu leaves out |
 
 `KARNI_SITE_SEO_IGNORE` lists paths it never requests.
 
@@ -395,7 +399,11 @@ a path (`"/about/"`, `"/blog/*"`). A variable holding a name or a list works
 too. Without the request in the context nothing is current.
 
 `karni import design` writes these tags from the design itself: on each
-link, the pages where the designer marked it current.
+link, the pages where the designer marked it current. When a model's detail
+pages become one view (`karni make view project --path
+"/work/<slug:slug>/"`), the command rewrites each `{% ifactive %}` that named
+the old pages' views to the folder's path (`"/work/*"`), and `karni check`
+(`SITE002`) names any left naming a view that is gone.
 
 ### `{% csp_hash %}` and `{% csp_allow %}`: the design under the Content-Security-Policy
 
@@ -565,6 +573,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_SEED_ON_RENDER` | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). |
 | `KARNI_SITE_MENU_ROWS` | `"karni_site.menus.menu_rows"` | The `(model, item) -> rows` function a *children from* item lists. The default is the model's default manager, so its scopes apply. |
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
+| `KARNI_SITE_MENU_SECTIONS` | `True` | Whether a menu item is active on every page under its own path too (`/services/` on `/services/web/`). The home page never is. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
 | `KARNI_SITE_FORMS` | `{}` | Form name to a viewset's dotted path or a model label, for a name that is not a model's. |
