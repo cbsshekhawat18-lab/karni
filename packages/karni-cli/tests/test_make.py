@@ -776,7 +776,9 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     assert "<img" not in base
     # The page test runs assert_pages over a list that `karni make view` extends.
     test = (site / "tests" / "test_pages.py").read_text()
-    assert "from karni.testing import assert_pages\n" in test
+    assert "from karni.testing import assert_pages, load_content\n" in test
+    # It loads the site's real content first, read from the project root (BASE_DIR).
+    assert '    load_content("content/site.json", missing_ok=True)\n' in test
     assert 'PAGES = [\n    "/",\n    # karni:pages\n]\n' in test
     assert "    assert_pages(client, PAGES)\n" in test
     assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()
