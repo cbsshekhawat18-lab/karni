@@ -17,7 +17,10 @@ with karni-site's tags (``karni_site.templatetags.karni_site``):
 * **The site's details.** The site's name wherever a text is exactly the
   name, the first phone number (``tel:``), email address (``mailto:``) and
   map link, and links to social profiles come from ``site``. Their values
-  are the defaults of one ``{% site_defaults %}`` at the top of base.html.
+  are the defaults of one ``{% site_defaults %}`` at the top of base.html,
+  with the logo, the favicon and the share image as static paths: the
+  ``og:image`` every page has, or else an image no page uses that is named
+  for sharing (``share.jpg``, ``og-image.png``).
 * **Menus.** A navigation whose items share one markup (a list of links,
   nested lists for submenus, or bare links side by side) becomes
   ``{% get_menu %}`` and a ``{% for %}`` loop in that markup, seeded from
@@ -123,6 +126,11 @@ _HAS_WORD = re.compile(r"[^\W_]")
 _STATIC = re.compile(r"\{% static (['\"])(?P<path>[^'\"]+)\1 %\}")
 _WORDS = re.compile(r"[a-z0-9]+")
 _TEMPLATE = re.compile(r"\{%|%\}|\{\{|\}\}|\{#|#\}")
+#: The head tags that name a page's share image.
+_SHARE_TAGS: Final = frozenset({"og:image", "og:image:url", "og:image:secure_url", "twitter:image"})
+#: A file name that says the image is for sharing: share.jpg, og-image.png, social-card.webp.
+_SHARE_NAME = re.compile(r"(?:^|[-_.\s])(?:share|og|opengraph|social)(?:[-_.\s]|$)", re.IGNORECASE)
+_RASTER: Final = (".jpg", ".jpeg", ".png", ".webp")
 
 
 # keys
@@ -425,6 +433,50 @@ class Editable:
     def _seed(self, name: str) -> str:
         return f"{self.app}/menus/{name}.html"
 
+    # the share image
+
+    def share_default(self, page: Any, node: Node) -> bool:
+        """Take a shared ``og:image`` of a design file as the site's default share image.
+
+        ``True`` when ``node`` is one: base.html then leaves it out of
+        ``{% karni_seo %}``, which writes the site's share image instead.
+        """
+        if node.tag != "meta":
+            return False
+        attrs = node.attrs(page.text)
+        key = (attrs.get("property") or attrs.get("name") or "").strip().lower()
+        if key not in _SHARE_TAGS:
+            return False
+        ref = self.mapped.resolve(unescape(attrs.get("content") or ""), page.dir)
+        if ref.kind != "asset":
+            return False
+        if "share_image" not in self.defaults:
+            self.defaults["share_image"] = f"{self.app}/{ref.path}"
+            self.report.notes.append(
+                f"share image: the {key} every page has ({ref.path}) is the site's default "
+                "(share_image in {% site_defaults %}). The client replaces it in Site settings."
+            )
+        return True
+
+    def share_fallback(self, unused: Iterable[str]) -> None:
+        """Without an ``og:image``, the one image no page uses that is named for sharing."""
+        if "share_image" in self.defaults:
+            return
+        named = [
+            path
+            for path in unused
+            if path.lower().endswith(_RASTER)
+            and _SHARE_NAME.search(posixpath.basename(path).rsplit(".", 1)[0])
+        ]
+        if len(named) != 1:
+            return
+        self.defaults["share_image"] = f"{self.app}/{named[0]}"
+        self.report.notes.append(
+            f"share image: no page has an og:image, and {named[0]}, which no page uses, is named "
+            "for sharing: it is the site's default (share_image in {% site_defaults %}). "
+            "Remove it there if it is not."
+        )
+
     # the current-page markers the import found, so menu items compare without them
 
     def _find_markers(self, layout: compare.Layout, by_key: Mapping[str, Any]) -> None:
@@ -453,6 +505,7 @@ class Editable:
                     found[ref.path] += 1
         if found:
             self.logo_src = found.most_common(1)[0][0]
+            self.defaults.setdefault("logo", f"{self.app}/{self.logo_src}")
 
     def _links_home(self, node: Node, page: Any) -> bool:
         parent = node.parent
@@ -784,6 +837,7 @@ class Editable:
             if node.tag == "link" and "icon" in rels:
                 ref = self.mapped.resolve(node.attr(reference.text, "href") or "", reference.dir)
                 if ref.kind == "asset":
+                    self.defaults.setdefault("favicon", f"{self.app}/{ref.path}")
                     reference.overlay.tag_transform(
                         node.start,
                         lambda text: _wrap_attribute(

@@ -10,6 +10,12 @@ a field the template gives a default for is filled the first time, and
 keeps following the template's value until someone changes it in the
 admin. ``seeded`` on the row records what each template gave.
 
+An image field (``logo``, ``favicon``, ``share_image``, or any file field of
+the settings model) takes a static path as its default:
+``{% site_defaults share_image="website/img/share.jpg" %}``. The file field
+stays empty, and :func:`image_url` gives the uploaded file's address, else
+that static file's, until the client uploads one.
+
 Override / escape hatch: ``KARNI_SITE_SETTINGS_MODEL`` swaps the model,
 ``KARNI_SITE_SEED_ON_RENDER = False`` stores nothing while a page renders.
 """
@@ -28,8 +34,10 @@ from karni_site import caching, conf
 
 __all__ = [
     "SEEDABLE",
+    "file_fields",
     "forget",
     "get_site_settings",
+    "image_url",
     "seed",
     "settings_model",
     "social_name",
@@ -78,6 +86,40 @@ def settings_model() -> type[models.Model]:
         ) from exc
 
 
+def file_fields() -> set[str]:
+    """The file fields of the settings model: ``logo``, ``favicon``, ``share_image`` and any own."""
+    model = settings_model()
+    return {f.name for f in model._meta.get_fields() if isinstance(f, models.FileField)}
+
+
+def image_url(site: Any, field: str) -> str:
+    """The address of the site's ``field`` image: the upload, else the template's default.
+
+    The default is the static path ``{% site_defaults %}`` gave (through
+    ``static()``, so a hashed name in production), else the address the
+    design's markup showed (``{% site_image %}``). ``""`` when there is none.
+    """
+    stored = getattr(site, field, None)
+    try:
+        if stored:
+            return str(stored.url)
+    except ValueError:
+        pass
+    seeded = getattr(site, "seeded", None) or {}
+    path = str((seeded.get("static") or {}).get(field) or "")
+    if path:
+        if path.startswith(("/", "http://", "https://")):
+            return path
+        from django.templatetags.static import static
+
+        try:
+            return str(static(path))
+        except ValueError:  # not in the manifest yet (collectstatic not run)
+            logger.warning("karni_site: the default %s %r is not a static file", field, path)
+            return ""
+    return str((seeded.get("images") or {}).get(field) or "")
+
+
 def social_name(slug: str) -> str:
     """``"linkedin"`` as ``"LinkedIn"``: the name a seeded social link gets."""
     return _SOCIAL_NAMES.get(slug, slug.replace("_", " ").title())
@@ -120,7 +162,12 @@ def _plan(current: Any, defaults: Mapping[str, str]) -> tuple[dict[str, Any], di
     """The field changes and the new ``seeded`` record ``defaults`` call for."""
     seeded: dict[str, Any] = dict(current.seeded or {})
     changes: dict[str, Any] = {}
+    files = file_fields()
+    static = dict(seeded.get("static") or {})
     for field, value in defaults.items():
+        if field in files:
+            static[field] = value  # a default address only: the file field stays the client's
+            continue
         if field.startswith("social_") or field == "images":
             continue
         now = getattr(current, field, "") or ""
@@ -144,6 +191,8 @@ def _plan(current: Any, defaults: Mapping[str, str]) -> tuple[dict[str, Any], di
         images.update(given)
     if images:
         seeded["images"] = images
+    if static:
+        seeded["static"] = static
     return changes, seeded
 
 

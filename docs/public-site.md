@@ -335,7 +335,9 @@ tags work in a template written by hand:
   follows the services the client adds.
 - **The site's details** (`site`): name, tagline, logo, favicon, the default
   share image, address, phone, email, map link, opening hours and social
-  links.
+  links. `{% site_defaults %}` gives the logo, the favicon and the share
+  image as static paths (`share_image="website/img/share.jpg"`), used until
+  the client uploads their own.
 - **Redirects** for old addresses, and **page titles and descriptions** per
   page.
 
@@ -352,6 +354,11 @@ What the import marks:
   `<link rel="icon">` its favicon.
 - the first `tel:`, `mailto:` and map link and every link to a social
   profile take their addresses from `site`.
+- an `og:image` every page has becomes the site's default share image
+  (`share_image` in `{% site_defaults %}`, with the logo and the favicon),
+  so the client replaces it in *Site settings*. Without one, the one image
+  no page uses that is named for sharing (`share.jpg`, `og-image.png`) is
+  taken, and the report says so.
 - a navigation whose items share one markup (a list of links, nested lists
   for a submenu, or links side by side) becomes `{% get_menu %}` and a
   loop, seeded from `templates/<app>/menus/<name>.html`. One whose items

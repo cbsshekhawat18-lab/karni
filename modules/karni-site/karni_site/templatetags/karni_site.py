@@ -438,17 +438,21 @@ class SiteDefaultsNode(Node):
 
 @register.tag("site_defaults")
 def do_site_defaults(parser: Parser, token: Token) -> SiteDefaultsNode:
-    """``{% site_defaults name="..." phone="..." social_<network>="https://..." %}``."""
+    """``{% site_defaults name="..." share_image="<static path>" social_<network>="..." %}``."""
     from django.template.base import kwarg_re
 
     values: dict[str, FilterExpression] = {}
+    images = sorted(sitesettings.file_fields())
     for bit in token.split_contents()[1:]:
         match = kwarg_re.match(bit)
         name = match.group(1) if match else None
-        if not name or (name not in sitesettings.SEEDABLE and not name.startswith("social_")):
+        known = name in sitesettings.SEEDABLE or name in images
+        if not name or (not known and not name.startswith("social_")):
             raise _syntax_error(
                 "{% site_defaults %} takes name=value pairs for "
-                f"{', '.join(sitesettings.SEEDABLE)}, or social_<network>=<address>. Got {bit}."
+                f"{', '.join(sitesettings.SEEDABLE)}, a static path for "
+                f'{", ".join(images)} (share_image="website/img/share.jpg"), or '
+                f"social_<network>=<address>. Got {bit}."
             )
         values[name] = parser.compile_filter(bit.split("=", 1)[1])
     if not values:

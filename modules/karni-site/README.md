@@ -111,6 +111,13 @@ The design's values are the defaults, given once at the top of the layout:
 {% load static karni_site %}{% site_defaults name="Crumb & Co" phone="01234 567890" email="hello@example.com" social_instagram="https://www.instagram.com/crumb" %}
 ```
 
+The logo, the favicon and the default share image take a static path
+(`share_image="website/img/share.jpg"`, or any file field of the settings
+model): the field stays empty, and `{% karni_seo %}` (the share image and
+the JSON-LD's logo) and the admin's preview use that file until the client
+uploads one. `karni_site.sitesettings.image_url(site, "share_image")` gives
+the address the same way for your own code.
+
 A field is filled the first time and follows the template until someone
 changes it in the admin. A field the client empties stays empty, and a
 social link they delete is not added again. `{% site_image "logo" %}<img

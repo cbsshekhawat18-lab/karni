@@ -126,6 +126,39 @@ def test_the_sites_settings_are_the_last_default() -> None:
     assert meta(page, "twitter:card") == "summary"
 
 
+def test_the_templates_share_image_and_logo_are_defaults_until_one_is_uploaded(
+    django_capture_on_commit_callbacks: Any,
+) -> None:
+    source = (
+        '{% site_defaults name="Elm Street Clinic" share_image="website/img/share.jpg" '
+        'logo="website/img/logo.png" favicon="/favicon.ico" %}{% karni_seo %}{% endkarni_seo %}'
+    )
+    page = render(source)
+    assert meta(page, "og:image") == "http://testserver/static/website/img/share.jpg"
+    assert meta(page, "twitter:card") == "summary_large_image"
+    who = script(page)["@graph"][1]
+    assert who["logo"] == "http://testserver/static/website/img/logo.png"
+    assert who["image"] == "http://testserver/static/website/img/share.jpg"
+    row = SiteSettings.objects.get()
+    # The file fields stay the client's: empty until an upload.
+    assert not row.share_image and not row.logo and not row.favicon
+    assert row.seeded["static"] == {
+        "share_image": "website/img/share.jpg",
+        "logo": "website/img/logo.png",
+        "favicon": "/favicon.ico",
+    }
+    with django_capture_on_commit_callbacks(execute=True):
+        row.share_image = upload("summer.jpg", 1600, 900)
+        row.save()
+    page = render(source)
+    assert "/media/" in (meta(page, "og:image") or "") and "summer" in (
+        meta(page, "og:image") or ""
+    )
+    assert script(page)["@graph"][1]["logo"].endswith("/static/website/img/logo.png")
+    with pytest.raises(TemplateSyntaxError, match="a static path for favicon, logo, share_image"):
+        Template('{% load karni_site %}{% site_defaults banner="x.jpg" %}')
+
+
 def test_a_view_passes_its_own_values() -> None:
     page = render(
         "{% karni_seo %}<title>Template title</title>{% endkarni_seo %}",
