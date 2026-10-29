@@ -406,10 +406,9 @@ def pytest_generate_tests(metafunc: Any) -> None:
     """Parametrise the scaling test with :func:`scaling_cases` (empty without Django)."""
     if "karni_scaling_case" not in metafunc.fixturenames:
         return
+    import pytest
     from django.apps import apps
     from django.conf import settings
-
-    import pytest
 
     cases = scaling_cases() if settings.configured and apps.ready else []
     metafunc.parametrize(
