@@ -1,25 +1,59 @@
 """Render docs/settings.md from karni.conf.base — the settings reference is generated.
 
     python -m karni.conf.reference > docs/settings.md
+    python -m karni.conf.reference --explain KARNI_SITE_HIGHLIGHT [--json]
 
 Every ``KARNI_*`` setting ``karni_settings()`` defines is read out of
 ``karni/conf/base.py`` (its default, and the environment variable it is read
 from) and paired with the one-line description in :data:`DESCRIPTIONS`.
-``tests/test_settings_reference.py`` fails when the page is stale or a
-setting has no description, so the reference cannot drift from the code.
+Each module's settings are read out of its ``conf.py`` the same way
+(:func:`module_settings`), with the comment above each one as its
+description. ``tests/test_settings_reference.py`` fails when the page is
+stale or a setting has no description, so the reference cannot drift from
+the code. ``karni explain <SETTING>`` reads the same source (:func:`lookup`).
+
+Stdlib only, and nothing is imported to be read: karni-cli loads this file
+by path, so ``karni explain`` works without Django or a project.
 """
 
 # ruff: noqa: E501  (the descriptions are prose rows of a table)
 from __future__ import annotations
 
+import ast
+import importlib.util
+import json
 import re
-from dataclasses import dataclass
+import sys
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
+from importlib.metadata import entry_points
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
-__all__ = ["DESCRIPTIONS", "Setting", "render", "settings"]
+__all__ = [
+    "DESCRIPTIONS",
+    "DOCS_PAGE",
+    "Setting",
+    "anchor",
+    "lookup",
+    "module_conf_files",
+    "module_settings",
+    "render",
+    "settings",
+]
 
 BASE_SOURCE: Final = Path(__file__).with_name("base.py")
+#: The docs page every setting has a row on (``docs/settings.md``).
+DOCS_PAGE: Final = "settings"
+
+
+def _checkout_modules() -> Path | None:
+    """The monorepo's ``modules/`` folder, when this file is ``packages/karni/karni/conf``'s."""
+    parents = Path(__file__).resolve().parents
+    if len(parents) > 4 and parents[3].name == "packages" and parents[2].name == "karni":
+        return parents[4] / "modules"
+    return None
+
 
 #: One line per setting: what it does, and the values it takes.
 DESCRIPTIONS: Final[dict[str, str]] = {
@@ -106,11 +140,26 @@ _ENV = re.compile(
 
 @dataclass(frozen=True)
 class Setting:
+    """One setting: its name, where it is listed, its default, its variable and what it does.
+
+    ``module`` is the distribution of a module's setting (``karni-site``), ``""`` for
+    Karni's own.
+    """
+
     name: str
     section: str
     default: str
     env: str | None
     description: str
+    module: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {**asdict(self), "anchor": anchor(self.name)}
+
+
+def anchor(name: str) -> str:
+    """The id of a setting's row on the settings page: ``karni_site_highlight``."""
+    return name.lower()
 
 
 def _literal_default(lines: list[str], start: int) -> str:
@@ -170,6 +219,116 @@ def settings(source: str | None = None) -> list[Setting]:
     return found
 
 
+def module_settings(path: Path, module: str) -> list[Setting]:
+    """The settings a module's ``conf.py`` declares in ``DEFAULTS``, read without importing it.
+
+    Each entry of a ``DEFAULTS = {...}`` (or ``DEFAULTS |= {...}``) dict, with
+    the comment lines above it as its description (an entry without one shares
+    the one above), its default as written, and the variable an ``env(...)``
+    call reads it from.
+    """
+    source = path.read_text(encoding="utf-8")
+    lines = source.splitlines()
+    found: list[Setting] = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.AnnAssign | ast.Assign | ast.AugAssign):
+            continue
+        if isinstance(node, ast.AugAssign) and not isinstance(node.op, ast.BitOr):
+            continue  # DEFAULTS |= {...} adds a block of settings; nothing else does
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        if not any(isinstance(t, ast.Name) and t.id == "DEFAULTS" for t in targets):
+            continue
+        if not isinstance(node.value, ast.Dict):
+            continue
+        for key, value in zip(node.value.keys, node.value.values, strict=True):
+            if not isinstance(key, ast.Constant):
+                continue
+            comments: list[str] = []
+            index = key.lineno - 2
+            while index >= 0 and lines[index].strip().startswith("#"):
+                comments.insert(0, lines[index].strip().lstrip("#").strip())
+                index -= 1
+            description = " ".join(comments) or (found[-1].description if found else "")
+            env, default = None, ""
+            if isinstance(value, ast.Call):
+                if value.args and isinstance(value.args[0], ast.Constant):
+                    env = str(value.args[0].value)
+                for keyword in value.keywords:
+                    if keyword.arg == "default":
+                        default = ast.get_source_segment(source, keyword.value) or ""
+            else:
+                default = ast.get_source_segment(source, value) or ""
+            found.append(Setting(str(key.value), module, _flat(default), env, description, module))
+    return sorted(found, key=lambda setting: _line_of(source, setting.name))
+
+
+def _flat(text: str) -> str:
+    """A literal written over several lines, on one: ``["a", "b"]``, not ``[ "a", "b", ]``."""
+    text = " ".join(text.split())
+    text = re.sub(r",\s*([}\])])", r"\1", text)
+    return re.sub(r"([\[{(])\s+|\s+([\]})])", lambda m: m.group(1) or m.group(2), text)
+
+
+def _line_of(source: str, name: str) -> int:
+    return source.find(f'"{name}"')
+
+
+def module_conf_files() -> list[tuple[str, Path]]:
+    """``(distribution, conf.py)`` of each module: the checkout's ``modules/``, else installed.
+
+    Installed modules are found by their ``karni.settings`` entry point
+    (``karni_site.conf:DEFAULTS``) and located without being imported.
+    """
+    checkout = _checkout_modules()
+    if checkout is not None and checkout.is_dir():
+        local = [
+            (folder.name, folder / folder.name.replace("-", "_") / "conf.py")
+            for folder in sorted(checkout.iterdir())
+            if (folder / "pyproject.toml").is_file()
+        ]
+        return [(name, path) for name, path in local if path.is_file()]
+    found: dict[str, Path] = {}
+    for point in entry_points(group="karni.settings"):
+        package = point.value.split(":", 1)[0].split(".", 1)[0]
+        try:
+            spec = importlib.util.find_spec(package)
+        except (ImportError, ValueError):
+            continue
+        if spec is None or not spec.origin:
+            continue
+        conf = Path(spec.origin).with_name("conf.py")
+        name = point.dist.name if point.dist is not None else package.replace("_", "-")
+        if conf.is_file():
+            found.setdefault(name, conf)
+    return sorted(found.items())
+
+
+def _all_module_settings(files: Iterable[tuple[str, Path]] | None = None) -> list[Setting]:
+    found: list[Setting] = []
+    for module, path in files if files is not None else module_conf_files():
+        try:
+            found += module_settings(path, module)
+        except (OSError, SyntaxError):  # a broken install must not break the reference
+            continue
+    return found
+
+
+def lookup(name: str, files: Iterable[tuple[str, Path]] | None = None) -> Setting | None:
+    """The setting ``name`` (``KARNI_SITE_HIGHLIGHT``): Karni's own, else a module's."""
+    wanted = name.strip().upper()
+    for setting in settings():
+        if setting.name == wanted:
+            return setting
+    for setting in _all_module_settings(files):
+        if setting.name == wanted:
+            return setting
+    return None
+
+
+def _cell(text: str) -> str:
+    return text.replace("|", "\\|")
+
+
 def _call_time_section() -> list[str]:
     """The settings ``karni_settings()`` reads during the call, from ``CALL_TIME_SETTINGS``."""
     from karni.conf import CALL_TIME_SETTINGS
@@ -194,8 +353,9 @@ def _call_time_section() -> list[str]:
     return lines
 
 
-def render(found: list[Setting] | None = None) -> str:
+def render(found: list[Setting] | None = None, modules: list[Setting] | None = None) -> str:
     rows = found if found is not None else settings()
+    module_rows = modules if modules is not None else _all_module_settings()
     out = [
         "---",
         "description: Every setting karni_settings() provides, with its default, "
@@ -230,22 +390,63 @@ def render(found: list[Setting] | None = None) -> str:
         if row.section != section:
             section = row.section
             out.append(f"| **{section}** | | | |")
-        env = f"`{row.env}`" if row.env else ""
-        default = f"`{row.default}`" if row.default and row.default != "—" else ""
-        out.append(f"| `{row.name}` | {env} | {default} | {row.description} |")
+        out.append(_row(row))
     out += [
         "",
         "Settings listed as computed derive from others. The defaults of env-backed",
         "settings are what an absent variable yields. `KARNI_VALIDATE` checks the merged",
         "values at startup and reports every bad one at once (error `E504`).",
         "",
-        "Modules add their own settings through the `karni.settings` entry point and",
-        "document them in their README. karni-payments' settings are listed above",
-        "because the reference app installs it.",
+        "## Module settings",
+        "",
+        "Each module adds its own settings through the `karni.settings` entry point, read",
+        "from its `conf.py`. They apply once the module is installed (`karni add <module>`).",
+        "Assign them in `config/settings.py`. A module's README says more about each.",
+        "`karni explain <SETTING>` prints any setting on this page.",
         "",
     ]
+    module = None
+    for row in module_rows:
+        if row.module != module:
+            if module is not None:
+                out.append("")
+            module = row.module
+            out += [
+                f"### {module}",
+                "",
+                "| Setting | Env | Default | What it does |",
+                "|---|---|---|---|",
+            ]
+        out.append(_row(row))
+    out.append("")
     return "\n".join(out)
 
 
+def _row(row: Setting) -> str:
+    env = f"`{row.env}`" if row.env else ""
+    default = f"`{_cell(row.default)}`" if row.default and row.default != "—" else ""
+    name = f'<a id="{anchor(row.name)}"></a>`{row.name}`'
+    return f"| {name} | {env} | {default} | {_cell(row.description)} |"
+
+
+def _explain(name: str, as_json: bool) -> int:
+    """``--explain NAME``: one setting, for ``karni explain`` (the project interpreter's)."""
+    found = lookup(name)
+    if found is None:
+        sys.stderr.write(f"No setting {name}.\n")
+        return 1
+    data = found.to_dict()
+    try:
+        from karni.links import docs_page
+
+        data["url"] = docs_page(DOCS_PAGE, anchor(found.name))
+    except ImportError:  # pragma: no cover - this file outside karni
+        data["url"] = ""
+    print(json.dumps(data, indent=2) if as_json else data)
+    return 0
+
+
 if __name__ == "__main__":
+    if len(sys.argv) > 2 and sys.argv[1] == "--explain":
+        raise SystemExit(_explain(sys.argv[2], "--json" in sys.argv[3:]))
     print(render(), end="")

@@ -45,91 +45,188 @@ reads it on every request.
 | Setting | Env | Default | What it does |
 |---|---|---|---|
 | **Accounts & auth** | | | |
-| `KARNI_AUTH_MODE` | `KARNI_AUTH_MODE` | `"jwt"` | `jwt` (SimpleJWT token pairs) or `session` (cookie auth + CSRF bootstrap). See [accounts](accounts.md#auth-modes). |
-| `KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`). |
-| `KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`, session mode only). |
-| `KARNI_SOCIAL_PROVIDERS` | `KARNI_SOCIAL_PROVIDERS` | `[]` | Comma-separated allauth providers to enable, e.g. `google,github`. |
-| `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
-| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
-| `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
-| `KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
-| `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
-| `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
-| `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
-| `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
-| `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
-| `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
-| `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
+| <a id="karni_auth_mode"></a>`KARNI_AUTH_MODE` | `KARNI_AUTH_MODE` | `"jwt"` | `jwt` (SimpleJWT token pairs) or `session` (cookie auth + CSRF bootstrap). See [accounts](accounts.md#auth-modes). |
+| <a id="karni_2fa"></a>`KARNI_2FA` | `KARNI_2FA` | `False` | Enable TOTP two-factor auth with `django-otp` (needs `karni[2fa]`). |
+| <a id="karni_social_auth"></a>`KARNI_SOCIAL_AUTH` | `KARNI_SOCIAL_AUTH` | `False` | Enable social login through django-allauth (`karni[social]`, session mode only). |
+| <a id="karni_social_providers"></a>`KARNI_SOCIAL_PROVIDERS` | `KARNI_SOCIAL_PROVIDERS` | `[]` | Comma-separated allauth providers to enable, e.g. `google,github`. |
+| <a id="karni_frontend_url"></a>`KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
+| <a id="karni_accounts_email_backend"></a>`KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
+| <a id="karni_accounts_auto_login"></a>`KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
+| <a id="karni_accounts_registration"></a>`KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
+| <a id="karni_accounts_default_roles"></a>`KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
+| <a id="karni_accounts_honeypot_field"></a>`KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
+| <a id="karni_roles"></a>`KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
+| <a id="karni_roles_autosync"></a>`KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
+| <a id="karni_accounts_token_ttl"></a>`KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
+| <a id="karni_accounts_links"></a>`KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
+| <a id="karni_auth_throttle_rates"></a>`KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
 | **Database & cache** | | | |
-| `KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
+| <a id="karni_cache"></a>`KARNI_CACHE` | `KARNI_CACHE` | `"redis"` | `redis` (the default cache at `REDIS_URL`) or `locmem`, an in-process cache for a host run without Redis (development only: throttle counters are then per process). |
 | **Files & storage** | | | |
-| `KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
+| <a id="karni_storage"></a>`KARNI_STORAGE` | `KARNI_STORAGE` | `"local"` | `local` (filesystem) or `s3` (any S3-compatible service, needs `karni[s3]`). |
 | **API (karni.api)** | | | |
-| `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider"` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
-| `KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
-| `KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
-| `KARNI_PUBLIC_CREATE_RATE` | `KARNI_PUBLIC_CREATE_RATE` | `"10/hour"` | The limit on each caller (the user, else the client IP) of a `create` anyone may call (`create=Public()`), unless the viewset declares `throttle = Throttle(create=...)`. `None` or `""` turns this default off. See [rate limits](api.md#rate-limits). |
-| `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `"homepage"` | Name of the hidden form field on a public `create`. A request that fills it is answered 202 and nothing is saved. Off for a model that has a field of that name. `""` turns it off. See [rate limits](api.md#rate-limits). |
+| <a id="karni_search_provider"></a>`KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider"` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
+| <a id="karni_api_max_expand_depth"></a>`KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
+| <a id="karni_api_router"></a>`KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
+| <a id="karni_public_create_rate"></a>`KARNI_PUBLIC_CREATE_RATE` | `KARNI_PUBLIC_CREATE_RATE` | `"10/hour"` | The limit on each caller (the user, else the client IP) of a `create` anyone may call (`create=Public()`), unless the viewset declares `throttle = Throttle(create=...)`. `None` or `""` turns this default off. See [rate limits](api.md#rate-limits). |
+| <a id="karni_public_create_honeypot_field"></a>`KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `"homepage"` | Name of the hidden form field on a public `create`. A request that fills it is answered 202 and nothing is saved. Off for a model that has a field of that name. `""` turns it off. See [rate limits](api.md#rate-limits). |
 | **Performance (ADR 0001 Decision 3)** | | | |
-| `KARNI_MAX_PAGE_SIZE` | `KARNI_MAX_PAGE_SIZE` | `100` | Hard cap on `?page_size=` for every Karni paginator. |
-| `KARNI_MAX_PAGE_SIZE_FLOOR` | `KARNI_MAX_PAGE_SIZE_FLOOR` | `25` | The lowest value `KARNI_MAX_PAGE_SIZE` may take (the frontend's page size). |
-| `KARNI_QUERY_BUDGET` |  | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other), merged over the defaults. Set it per viewset with `query_budget = Budget(...)`. |
-| `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
-| `KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
-| `KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
-| `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
-| `KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
-| `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
+| <a id="karni_max_page_size"></a>`KARNI_MAX_PAGE_SIZE` | `KARNI_MAX_PAGE_SIZE` | `100` | Hard cap on `?page_size=` for every Karni paginator. |
+| <a id="karni_max_page_size_floor"></a>`KARNI_MAX_PAGE_SIZE_FLOOR` | `KARNI_MAX_PAGE_SIZE_FLOOR` | `25` | The lowest value `KARNI_MAX_PAGE_SIZE` may take (the frontend's page size). |
+| <a id="karni_query_budget"></a>`KARNI_QUERY_BUDGET` |  | `{ "list": 8, "retrieve": 8, "create": 12, "update": 12, "partial_update": 12, "destroy": 10, "*": 15}` | Queries allowed per `BaseViewSet` action (`"*"` for any other), merged over the defaults. Set it per viewset with `query_budget = Budget(...)`. |
+| <a id="karni_query_budget_mode"></a>`KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
+| <a id="karni_query_log"></a>`KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
+| <a id="karni_seed_logins"></a>`KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
+| <a id="karni_api_cache"></a>`KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
+| <a id="karni_api_cache_ttl"></a>`KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
+| <a id="karni_api_cache_alias"></a>`KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
 | **Admin (karni.admin + django-unfold)** | | | |
-| `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
-| `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |
-| `KARNI_ADMIN_THEME` | `KARNI_ADMIN_THEME` | `"light"` | The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming). |
-| `KARNI_GENERATOR` | `KARNI_GENERATOR` | `"Karni"` | The `<meta name="generator">` value Karni's public pages carry (`{% karni_seo %}`), so tools that list a site's technologies see Karni. It names no version on purpose. `""` turns it off and keeps a design's own tag. |
-| `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
-| `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
-| `KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
-| `KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"]` | App labels or `app_label.ModelName` entries the admin leaves out. |
-| `KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |
-| `KARNI_ADMIN_LIST_FILTER_MAX` |  | `6` | Sidebar filters a derived admin shows at most. |
-| `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
-| `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
-| `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| <a id="karni_admin_autodiscover"></a>`KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
+| <a id="karni_admin_grants_open_pages"></a>`KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |
+| <a id="karni_admin_theme"></a>`KARNI_ADMIN_THEME` | `KARNI_ADMIN_THEME` | `"light"` | The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming). |
+| <a id="karni_generator"></a>`KARNI_GENERATOR` | `KARNI_GENERATOR` | `"Karni"` | The `<meta name="generator">` value Karni's public pages carry (`{% karni_seo %}`), so tools that list a site's technologies see Karni. It names no version on purpose. `""` turns it off and keeps a design's own tag. |
+| <a id="karni_admin_logo"></a>`KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
+| <a id="karni_theme_css"></a>`KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
+| <a id="karni_admin_path"></a>`KARNI_ADMIN_PATH` | `KARNI_ADMIN_PATH` | `"admin/"` | URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production. |
+| <a id="karni_admin_exclude"></a>`KARNI_ADMIN_EXCLUDE` | `KARNI_ADMIN_EXCLUDE` | `[ "sessions", "contenttypes", "admin", "auth.Permission", "django_celery_results.ChordCounter"]` | App labels or `app_label.ModelName` entries the admin leaves out. |
+| <a id="karni_admin_list_display_max"></a>`KARNI_ADMIN_LIST_DISPLAY_MAX` |  | `6` | Columns a derived admin changelist shows at most. |
+| <a id="karni_admin_list_filter_max"></a>`KARNI_ADMIN_LIST_FILTER_MAX` |  | `6` | Sidebar filters a derived admin shows at most. |
+| <a id="karni_admin_search_max"></a>`KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
+| <a id="karni_admin_site"></a>`KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
+| <a id="karni_admin_base"></a>`KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
+| <a id="karni_matrix_exclude"></a>`KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 | **Security headers (karni.security)** | | | |
-| `KARNI_CSP` | `KARNI_CSP` | `{}` | Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers). |
-| `KARNI_CSP_REPORT_ONLY` | `KARNI_CSP_REPORT_ONLY` | `None` | `True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`. |
-| `KARNI_PERMISSIONS_POLICY` | `KARNI_PERMISSIONS_POLICY` | `{}` | Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header. |
+| <a id="karni_csp"></a>`KARNI_CSP` | `KARNI_CSP` | `{}` | Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers). |
+| <a id="karni_csp_report_only"></a>`KARNI_CSP_REPORT_ONLY` | `KARNI_CSP_REPORT_ONLY` | `None` | `True` sends the policy as `Content-Security-Policy-Report-Only` (reported, not enforced), `False` enforces it. `None` follows `DEBUG`. |
+| <a id="karni_permissions_policy"></a>`KARNI_PERMISSIONS_POLICY` | `KARNI_PERMISSIONS_POLICY` | `{}` | Browser features merged into the `Permissions-Policy` header, each with the origins allowed to use it, e.g. `{"geolocation": ["self"]}`. `None` removes a feature. `None` as the whole value sends no header. |
 | **Karni knobs** | | | |
-| `KARNI_HEALTH_CHECKS` | `KARNI_HEALTH_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out. |
-| `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
-| `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
-| `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
-| `KARNI_PHONE_COUNTRY_CODE` | `KARNI_PHONE_COUNTRY_CODE` | `None` | The country code a national phone number gets in a `PhoneField` (digits, e.g. `"44"`): `"01234 000 111"` is stored as `+441234000111`. Unset, only international numbers (`+` or `00`) are accepted. See [fields](fields.md#phonefield). |
-| `KARNI_PHONE_TRUNK_PREFIX` | `KARNI_PHONE_TRUNK_PREFIX` | `"0"` | The prefix a national number loses before the country code goes in front (`"0"`, `"1"` in North America, `"8"` in Russia, `""` where the number is dialled as written, as in Italy). |
-| `KARNI_PHONE_NORMALIZER` |  | `"karni.fields.text.default_phone_normalizer"` | Dotted path of the function a `PhoneField`, its form field and its API field clean a number with: it takes the value as typed and returns E.164, or the value unchanged to reject it. `karni.fields.to_e164` holds Karni's rules for your own function. |
+| <a id="karni_health_checks"></a>`KARNI_HEALTH_CHECKS` | `KARNI_HEALTH_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out. |
+| <a id="karni_health_celery_timeout"></a>`KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
+| <a id="karni_thumbnailer"></a>`KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
+| <a id="karni_validate"></a>`KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
+| <a id="karni_phone_country_code"></a>`KARNI_PHONE_COUNTRY_CODE` | `KARNI_PHONE_COUNTRY_CODE` | `None` | The country code a national phone number gets in a `PhoneField` (digits, e.g. `"44"`): `"01234 000 111"` is stored as `+441234000111`. Unset, only international numbers (`+` or `00`) are accepted. See [fields](fields.md#phonefield). |
+| <a id="karni_phone_trunk_prefix"></a>`KARNI_PHONE_TRUNK_PREFIX` | `KARNI_PHONE_TRUNK_PREFIX` | `"0"` | The prefix a national number loses before the country code goes in front (`"0"`, `"1"` in North America, `"8"` in Russia, `""` where the number is dialled as written, as in Italy). |
+| <a id="karni_phone_normalizer"></a>`KARNI_PHONE_NORMALIZER` |  | `"karni.fields.text.default_phone_normalizer"` | Dotted path of the function a `PhoneField`, its form field and its API field clean a number with: it takes the value as typed and returns E.164, or the value unchanged to reject it. `karni.fields.to_e164` holds Karni's rules for your own function. |
 | **Import and export (karni.transfer)** | | | |
-| `KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress. |
-| `KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`). Split the file. |
-| `KARNI_EXPORT_MAX_ROWS` | `KARNI_EXPORT_MAX_ROWS` | `100_000` | An [export](import-export.md) with more rows than this is refused (`E803`). Narrow the filters. |
+| <a id="karni_import_inline_rows"></a>`KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress. |
+| <a id="karni_import_max_rows"></a>`KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`). Split the file. |
+| <a id="karni_export_max_rows"></a>`KARNI_EXPORT_MAX_ROWS` | `KARNI_EXPORT_MAX_ROWS` | `100_000` | An [export](import-export.md) with more rows than this is refused (`E803`). Narrow the filters. |
 | **Change history (karni.audit)** | | | |
-| `KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
-| `KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep. `None` (the default) keeps everything and schedules no pruning. |
-| `KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
+| <a id="karni_audit_async"></a>`KARNI_AUDIT_ASYNC` | `KARNI_AUDIT_ASYNC` | `False` | Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md). |
+| <a id="karni_audit_retention_days"></a>`KARNI_AUDIT_RETENTION_DAYS` | `KARNI_AUDIT_RETENTION_DAYS` | `None` | Days of change history to keep. `None` (the default) keeps everything and schedules no pruning. |
+| <a id="karni_audit_redact"></a>`KARNI_AUDIT_REDACT` | `KARNI_AUDIT_REDACT` | `["password", "token", "secret", "key"]` | Field-name substrings whose values are never recorded in change history, only that they changed (default `password,token,secret,key`). |
 | **Request ids and development capture (karni.tracing / karni.debug)** | | | |
-| `KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn it on only when the proxy in front overwrites the header on every request. It is ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
-| `KARNI_REQUEST_ID_EMAILS` |  | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
-| `KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off, and with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
-| `KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
-| `KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
+| <a id="karni_request_id_trust_header"></a>`KARNI_REQUEST_ID_TRUST_HEADER` | `KARNI_REQUEST_ID_TRUST_HEADER` | `False` | Accept a client's `X-Request-ID` as the request id with `DEBUG` off. Turn it on only when the proxy in front overwrites the header on every request. It is ignored when `NUM_PROXIES` is 0. See [capture](debugging/capture.md#request-ids). |
+| <a id="karni_request_id_emails"></a>`KARNI_REQUEST_ID_EMAILS` |  | `True` | Stamp `X-Karni-Request-ID` on every outgoing email (wraps `EmailMessage.send`) and trace the send in development. |
+| <a id="karni_debug_capture"></a>`KARNI_DEBUG_CAPTURE` | `KARNI_DEBUG_CAPTURE` | `True` | With `DEBUG` on, record requests, failures and a trace under `.karni/` for `karni trace`, `karni replay` and `karni explain --failure`. `False` turns it off, and with `DEBUG` off it never runs. See [capture](debugging/capture.md). |
+| <a id="karni_debug_capture_keep"></a>`KARNI_DEBUG_CAPTURE_KEEP` | `KARNI_DEBUG_CAPTURE_KEEP` | `200` | How many request records, and how many failure snapshots, `.karni/` keeps (the oldest go first). |
+| <a id="karni_debug_trace_days"></a>`KARNI_DEBUG_TRACE_DAYS` | `KARNI_DEBUG_TRACE_DAYS` | `7` | Days of `.karni/trace/` files to keep. |
 | **Events & schedules (karni.events / karni.schedule)** | | | |
-| `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
-| `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
-| `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
+| <a id="karni_events_autodiscover"></a>`KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
+| <a id="karni_schedules_autodiscover"></a>`KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| <a id="karni_architecture"></a>`KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 
 Settings listed as computed derive from others. The defaults of env-backed
 settings are what an absent variable yields. `KARNI_VALIDATE` checks the merged
 values at startup and reports every bad one at once (error `E504`).
 
-Modules add their own settings through the `karni.settings` entry point and
-document them in their README. karni-payments' settings are listed above
-because the reference app installs it.
+## Module settings
+
+Each module adds its own settings through the `karni.settings` entry point, read
+from its `conf.py`. They apply once the module is installed (`karni add <module>`).
+Assign them in `config/settings.py`. A module's README says more about each.
+`karni explain <SETTING>` prints any setting on this page.
+
+### karni-approvals
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_approvals_required"></a>`KARNI_APPROVALS_REQUIRED` | `KARNI_APPROVALS_REQUIRED` | `1` | Approvals a pending change needs before it is applied (per model: approvals_required). |
+| <a id="karni_approvals_approver_roles"></a>`KARNI_APPROVALS_APPROVER_ROLES` | `KARNI_APPROVALS_APPROVER_ROLES` | `[]` | Roles that may approve, on top of holding the approve permission. An empty list means any holder of `karni_approvals.pendingchange:approve` (per model: approver_roles). |
+| <a id="karni_approvals_timeout_hours"></a>`KARNI_APPROVALS_TIMEOUT_HOURS` | `KARNI_APPROVALS_TIMEOUT_HOURS` | `0` | Hours before a pending change times out, or 0 for never (per model: approval_timeout). |
+| <a id="karni_approvals_on_timeout"></a>`KARNI_APPROVALS_ON_TIMEOUT` | `KARNI_APPROVALS_ON_TIMEOUT` | `"expire"` | What a timeout does: "expire" the change, or "escalate" (notify the escalation roles and extend by the same timeout). Per model: approval_on_timeout. |
+| <a id="karni_approvals_escalation_roles"></a>`KARNI_APPROVALS_ESCALATION_ROLES` | `KARNI_APPROVALS_ESCALATION_ROLES` | `[]` | Roles notified on escalation (per model: approval_escalation_roles). |
+| <a id="karni_approvals_notify"></a>`KARNI_APPROVALS_NOTIFY` | `KARNI_APPROVALS_NOTIFY` | `"karni_approvals.notify.email_checkers"` | Dotted path called as fn(pending_change) from the Celery task to notify the checkers. The default emails them. "" turns notification off. |
+| <a id="karni_approvals_from_email"></a>`KARNI_APPROVALS_FROM_EMAIL` | `KARNI_APPROVALS_FROM_EMAIL` | `""` | Sender address for the default notifier, or "" to use DEFAULT_FROM_EMAIL. |
+
+### karni-impersonation
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_impersonation_max_minutes"></a>`KARNI_IMPERSONATION_MAX_MINUTES` | `KARNI_IMPERSONATION_MAX_MINUTES` | `60` | Hard limit on an impersonated session, which ends by itself after this. |
+| <a id="karni_impersonation_blocked"></a>`KARNI_IMPERSONATION_BLOCKED` | `KARNI_IMPERSONATION_BLOCKED` | `DEFAULT_BLOCKED` | Actions, models, permissions and paths blocked while impersonating. |
+| <a id="karni_impersonation_require_reason"></a>`KARNI_IMPERSONATION_REQUIRE_REASON` | `KARNI_IMPERSONATION_REQUIRE_REASON` | `True` | A reason string is required to start (default on: this is customer data). |
+| <a id="karni_impersonation_notify_target"></a>`KARNI_IMPERSONATION_NOTIFY_TARGET` | `KARNI_IMPERSONATION_NOTIFY_TARGET` | `True` | Email the impersonated user when a session starts (default on). |
+| <a id="karni_impersonation_from_email"></a>`KARNI_IMPERSONATION_FROM_EMAIL` | `KARNI_IMPERSONATION_FROM_EMAIL` | `""` | Sender address for that email, or "" to use DEFAULT_FROM_EMAIL. |
+| <a id="karni_impersonation_banner"></a>`KARNI_IMPERSONATION_BANNER` | `KARNI_IMPERSONATION_BANNER` | `True` | Inject the banner into every HTML page served to an impersonated session. |
+| <a id="karni_impersonation_landing"></a>`KARNI_IMPERSONATION_LANDING` | `KARNI_IMPERSONATION_LANDING` | `"/"` | Where the admin's Impersonate button sends the impersonator afterwards. |
+
+### karni-payments
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_payments_provider"></a>`KARNI_PAYMENTS_PROVIDER` | `KARNI_PAYMENTS_PROVIDER` | `"stripe"` | Active provider: "stripe", "razorpay", "test" or any dotted path to a karni_payments.providers.base.PaymentProvider subclass (the escape hatch for custom gateways). |
+| <a id="karni_payments_currency"></a>`KARNI_PAYMENTS_CURRENCY` | `KARNI_PAYMENTS_CURRENCY` | `"usd"` | Default ISO currency code used when create_checkout gets none. |
+| <a id="karni_payments_checkout_validator"></a>`KARNI_PAYMENTS_CHECKOUT_VALIDATOR` |  | `"karni_payments.services.default_checkout_validator"` | Dotted path called with (user=, amount=, currency=, metadata=) BEFORE a Payment is created. It is the server-side pricing authority. The default is a pass-through, and production projects should replace it (never trust client amounts). |
+| <a id="karni_payments_event_handler"></a>`KARNI_PAYMENTS_EVENT_HANDLER` |  | `"karni_payments.services.apply_event"` | Dotted path of the webhook state machine applied by the Celery task. |
+| <a id="karni_payments_allowed_redirects"></a>`KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `KARNI_PAYMENTS_ALLOWED_REDIRECTS` | `[]` | Extra URLs whose origins are allowed as checkout success/cancel redirects, on top of KARNI_FRONTEND_URL's origin. |
+| <a id="stripe_secret_key"></a>`STRIPE_SECRET_KEY` | `STRIPE_SECRET_KEY` | `""` | Provider credentials: blank by default, validated lazily at use. |
+| <a id="stripe_webhook_secret"></a>`STRIPE_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
+| <a id="razorpay_key_id"></a>`RAZORPAY_KEY_ID` | `RAZORPAY_KEY_ID` | `""` | Provider credentials: blank by default, validated lazily at use. |
+| <a id="razorpay_key_secret"></a>`RAZORPAY_KEY_SECRET` | `RAZORPAY_KEY_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
+| <a id="razorpay_webhook_secret"></a>`RAZORPAY_WEBHOOK_SECRET` | `RAZORPAY_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
+
+### karni-site
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_site_is_active"></a>`KARNI_SITE_IS_ACTIVE` |  | `"karni_site.navigation.is_active"` | The function {% ifactive %} asks whether a pattern names the current page: (request, pattern) -> bool. A dotted path, so a project can swap the rule. |
+| <a id="karni_site_server_error_templates"></a>`KARNI_SITE_SERVER_ERROR_TEMPLATES` |  | `["500.html", "karni_site/500.html"]` | The templates karni_site.views.server_error tries in order. The first that renders is the page. The last is this module's plain page, which needs nothing. |
+| <a id="karni_site_not_found_templates"></a>`KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
+| <a id="karni_site_settings_model"></a>`KARNI_SITE_SETTINGS_MODEL` |  | `"karni_site.SiteSettings"` | The model `site` is in every template: "app_label.ModelName". A project with fields of its own subclasses karni_site.models.AbstractSiteSettings and names its model here, before karni_site's first migrate (like AUTH_USER_MODEL). |
+| <a id="karni_site_highlight"></a>`KARNI_SITE_HIGHLIGHT` |  | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them, in an editable block and in a field rendered with {{ value\|highlight }}, and the element (with its class) the words render in. A backslash before the marker keeps it as typed. An empty marker turns it off. |
+| <a id="karni_site_inline_tags"></a>`KARNI_SITE_INLINE_TAGS` |  | `{"b": [], "strong": [], "i": [], "em": [], "br": [], "a": ["href", "title", "target", "rel"]}` | The inline markup an edited block keeps: element -> the attributes it keeps. Everything else is removed, its text kept. The highlight element joins it. |
+| <a id="karni_site_link_schemes"></a>`KARNI_SITE_LINK_SCHEMES` |  | `["http", "https", "mailto", "tel"]` | The schemes a link in an edited block may use. A relative link always may. |
+| <a id="karni_site_sanitizer"></a>`KARNI_SITE_SANITIZER` |  | `"karni_site.sanitize.sanitize"` | The function that cleans a block's HTML: (html) -> html. A dotted path. |
+| <a id="karni_site_image_types"></a>`KARNI_SITE_IMAGE_TYPES` |  | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The file types an image upload may be (by extension, checked against the file's own bytes). SVG is left out on purpose: an SVG file can carry script. |
+| <a id="karni_site_cache"></a>`KARNI_SITE_CACHE` |  | `"default"` | The cache alias blocks, menus, redirects, page SEO entries and the settings live in. |
+| <a id="karni_site_cache_timeout"></a>`KARNI_SITE_CACHE_TIMEOUT` |  | `3600` | Seconds a cached entry lives. Every save clears what it changed, so this is a backstop. |
+| <a id="karni_site_seed_on_render"></a>`KARNI_SITE_SEED_ON_RENDER` |  | `True` | Whether the first render of a template stores its defaults (blocks, a menu's seed, the site's details). False: nothing is written while a page renders. |
+| <a id="karni_site_menu_rows"></a>`KARNI_SITE_MENU_ROWS` |  | `"karni_site.menus.menu_rows"` | The rows a menu item's "children from" model contributes: (model, item) -> iterable of rows with get_absolute_url(). A dotted path. |
+| <a id="karni_site_menu_rows_limit"></a>`KARNI_SITE_MENU_ROWS_LIMIT` |  | `100` | At most this many rows per "children from" item. |
+| <a id="karni_site_menu_sections"></a>`KARNI_SITE_MENU_SECTIONS` |  | `True` | True: a menu item is active (item.active) on every page under its own path too, so "Services" at /services/ stays marked on /services/web/. The home page (/) never is. False: an item is active on its own page and when one of its children is. |
+| <a id="karni_site_redirects_before_views"></a>`KARNI_SITE_REDIRECTS_BEFORE_VIEWS` |  | `False` | False: an admin redirect answers only where the site has no page (a 404), and a request for a page that exists costs nothing. True: every request is looked up before the view runs, one cache read each. |
+| <a id="karni_site_editor_role"></a>`KARNI_SITE_EDITOR_ROLE` |  | `"editor"` | The slug of the content editor role this module declares (karni.roles), or None to declare none. A role of the same slug in KARNI_ROLES replaces it. |
+| <a id="karni_site_forms"></a>`KARNI_SITE_FORMS` |  | `{}` | Form name -> the dotted path of the BaseViewSet that saves it, or a model label ("shop.Enquiry"). Without an entry, {% karni_form "enquiry" %} finds the model by name. |
+| <a id="karni_site_form_class"></a>`KARNI_SITE_FORM_CLASS` |  | `"karni_site.forms.SiteForm"` | The class that renders and submits a form. A dotted path to a karni_site.forms.SiteForm subclass, to change how fields are described or how a submission is saved. |
+| <a id="karni_site_form_template"></a>`KARNI_SITE_FORM_TEMPLATE` |  | `"karni_site/forms/form.html"` | The template {% karni_form %} renders. Each field renders karni_site/forms/field.html, or karni_site/forms/<form>/<field>.html or karni_site/forms/<form>/field.html when one exists. |
+| <a id="karni_site_form_classes"></a>`KARNI_SITE_FORM_CLASSES` |  | `{}` | Class names on the form's markup, merged over the module's plain defaults: form, row, column, field, label, input, select, check, check_input, check_label, invalid, error, help, message, success, failure, button, required. |
+| <a id="karni_site_form_presets"></a>`KARNI_SITE_FORM_PRESETS` |  | `{}` | Named sets of class names a tag picks with classes="<name>", merged over the shipped "bootstrap" preset (Bootstrap 5). {"salon": {"field": "field", "row": "form-row"}}. |
+| <a id="karni_site_form_messages"></a>`KARNI_SITE_FORM_MESSAGES` |  | `{}` | The texts a form shows, merged over the defaults: success, invalid, throttled, refused, failed, choose (a select's empty option) and button. A tag's own success="..." wins. |
+| <a id="karni_site_form_required_mark"></a>`KARNI_SITE_FORM_REQUIRED_MARK` |  | `"*"` | The text after a required field's label. |
+| <a id="karni_site_form_script"></a>`KARNI_SITE_FORM_SCRIPT` |  | `True` | Whether {% karni_form %} adds karni_site/forms.js (submit in place, inline errors). False leaves the form working without JavaScript, and a site may load its own script. |
+| <a id="karni_site_form_sent_param"></a>`KARNI_SITE_FORM_SENT_PARAM` |  | `"sent"` | The query parameter the page gets after a form was sent without JavaScript: ?sent=<form>. |
+| <a id="karni_site_form_page_template"></a>`KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
+| <a id="karni_site_notify_from"></a>`KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
+| <a id="karni_site_url"></a>`KARNI_SITE_URL` |  | `None` | The site's own address, "https://www.example.com". Canonical links, share tags, the sitemap and robots.txt use it. None: the address each request came to. |
+| <a id="karni_site_allow_indexing"></a>`KARNI_SITE_ALLOW_INDEXING` |  | `None` | Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a development or staging copy is never indexed. True or False decides for every environment. |
+| <a id="karni_site_robots_disallow"></a>`KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
+| <a id="karni_site_sitemap_exclude"></a>`KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
+| <a id="karni_site_sitemaps"></a>`KARNI_SITE_SITEMAPS` |  | `"karni_site.sitemaps.sitemaps"` | The function that lists the sitemap's sections: () -> {name: Sitemap}. A dotted path. |
+| <a id="karni_site_published_fields"></a>`KARNI_SITE_PUBLISHED_FIELDS` |  | `["published", "is_published", "is_public", "public", "visible", "is_visible"]` | Boolean fields that mark a row as public, tried in order on a model in the sitemap without a filter of its own (class Karni: sitemap = {"filter": {...}}). |
+| <a id="karni_site_schema_type"></a>`KARNI_SITE_SCHEMA_TYPE` |  | `"auto"` | The schema.org type of the site's JSON-LD: "auto" (LocalBusiness when the site has opening hours, else Organization), any schema.org type ("Bakery", "Dentist"), or None. |
+| <a id="karni_site_jsonld"></a>`KARNI_SITE_JSONLD` |  | `"karni_site.jsonld.build"` | The function that builds the JSON-LD: (request, site) -> dict or None. A dotted path. |
+| <a id="karni_site_seo_object"></a>`KARNI_SITE_SEO_OBJECT` |  | `"karni_site.metadata.page_object"` | The function that finds the object a page is about: (context, request) -> object or None. |
+| <a id="karni_site_title_format"></a>`KARNI_SITE_TITLE_FORMAT` |  | `"{title} \| {site}"` | How a title taken from the page's object is written. {title} and {site}. |
+| <a id="karni_site_description_length"></a>`KARNI_SITE_DESCRIPTION_LENGTH` |  | `160` | The longest description taken from the page's object, in characters. |
+| <a id="karni_site_image_widths"></a>`KARNI_SITE_IMAGE_WIDTHS` |  | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths, in pixels, of the WebP copies made of each uploaded image (those below its own width, and its own width when it is not a WebP). [] makes none. |
+| <a id="karni_site_image_quality"></a>`KARNI_SITE_IMAGE_QUALITY` |  | `80` | The WebP quality of those copies, 1 to 100. |
+| <a id="karni_site_image_max_size"></a>`KARNI_SITE_IMAGE_MAX_SIZE` |  | `2560` | An uploaded image wider or taller than this many pixels is scaled down to fit. None keeps it. |
+| <a id="karni_site_queue_renditions"></a>`KARNI_SITE_QUEUE_RENDITIONS` |  | `True` | Whether an upload, and the first page that shows an image without copies, queue the copies (a Celery task). False: make them yourself (karni_site.renditions.make). |
+| <a id="karni_site_renditioner"></a>`KARNI_SITE_RENDITIONER` |  | `"karni_site.renditions.generate"` | The function that makes an image's copies: (name, storage) -> manifest. A dotted path. |
+| <a id="karni_site_image_style"></a>`KARNI_SITE_IMAGE_STYLE` |  | `":where(img[data-karni-image]){height:auto}" ":where(img[data-karni-image=natural]){width:auto}"` | The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the design's CSS sets only its width or only its height. "" leaves it out. |
+| <a id="karni_site_seo_max_pages"></a>`KARNI_SITE_SEO_MAX_PAGES` |  | `500` | karni check --seo: at most this many pages are requested. |
+| <a id="karni_site_seo_image_bytes"></a>`KARNI_SITE_SEO_IMAGE_BYTES` |  | `500_000` | karni check --seo: an image without smaller copies is oversized above this many bytes. |
+| <a id="karni_site_seo_pixel_ratio"></a>`KARNI_SITE_SEO_PIXEL_RATIO` |  | `2` | karni check --seo: an image is oversized when wider than this many times its width. |
+| <a id="karni_site_seo_ignore"></a>`KARNI_SITE_SEO_IGNORE` |  | `[]` | karni check --seo: regular expressions of paths it never requests. |
+| <a id="karni_site_seo_quiet"></a>`KARNI_SITE_SEO_QUIET` |  | `["django_structlog", "django.request", "django.server", "karni.queries"]` | karni check --seo: the loggers held back while it requests the pages (one or more lines per request). Their errors are counted, and the first is shown. [] keeps them. |

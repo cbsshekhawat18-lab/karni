@@ -344,7 +344,7 @@ karni explain [OPTIONS] [CODE]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106. Pass - to read a traceback or log line from stdin. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, or a setting such as KARNI_SITE_HIGHLIGHT. Pass - to read a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 | `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
@@ -1198,6 +1198,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 | `--states` TEXT |  | The inbox lifecycle of the status field (default new&gt;replied\|new&gt;archived\|replied&gt;archived): a,b,c moves in order, and a&gt;b\|a&gt;c declares each move. The first state is where a submission starts. |
 | `--role` TEXT | `staff` | The role that reads, answers and deletes submissions (default staff). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--tag` |  | Write nothing: print the {% karni_form %} tag of a form made already, with the arguments that keep the imported design's &lt;form&gt;. Its fields are read from the model unless FIELDS are given. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1409,6 +1410,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
 | `client_as` | function | A client authenticated as a new user holding `roles` (`None` alone: anonymous). | `client_as(*roles: str \| None, user: Any = None) -> KarniAPIClient` |
+| `load_content` | function | Load the content file at `path` into the test database and return the report. | `load_content(path: str \| Path = 'content/site.json', *, missing_ok: bool = False, **options: Any) -> Any` |
 | `query_budget` | function | Fail with the grouped duplicate report if the block runs more than `limit` queries. | `query_budget(limit: int, *, label: str = 'block', using: str \| None = None) -> Iterator[QueryRecorder]` |
 | `user_with_roles` | function | A new user (generated factory, or the explicit one) holding `roles` (Django groups). | `user_with_roles(*roles: str, **fields: Any) -> Any` |
 
@@ -1632,7 +1634,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_NOT_FOUND_TEMPLATES` |  | `["404.html", "karni_site/404.html"]` | The same for karni_site.views.page_not_found. |
 | `KARNI_SITE_SETTINGS_MODEL` |  | `"karni_site.SiteSettings"` | The model `site` is in every template: "app_label.ModelName". A project with fields of its own subclasses karni_site.models.AbstractSiteSettings and names its model here, before karni_site's first migrate (like AUTH_USER_MODEL). |
 | `KARNI_SITE_HIGHLIGHT` |  | `{"marker": "==", "tag": "mark", "class": ""}` | What a client types around words to highlight them, in an editable block and in a field rendered with {{ value\|highlight }}, and the element (with its class) the words render in. A backslash before the marker keeps it as typed. An empty marker turns it off. |
-| `KARNI_SITE_INLINE_TAGS` |  | `{ "b": [], "strong": [], "i": [], "em": [], "br": [], "a": ["href", "title", "target", "rel"], }` | The inline markup an edited block keeps: element -&gt; the attributes it keeps. Everything else is removed, its text kept. The highlight element joins it. |
+| `KARNI_SITE_INLINE_TAGS` |  | `{"b": [], "strong": [], "i": [], "em": [], "br": [], "a": ["href", "title", "target", "rel"]}` | The inline markup an edited block keeps: element -&gt; the attributes it keeps. Everything else is removed, its text kept. The highlight element joins it. |
 | `KARNI_SITE_LINK_SCHEMES` |  | `["http", "https", "mailto", "tel"]` | The schemes a link in an edited block may use. A relative link always may. |
 | `KARNI_SITE_SANITIZER` |  | `"karni_site.sanitize.sanitize"` | The function that cleans a block's HTML: (html) -&gt; html. A dotted path. |
 | `KARNI_SITE_IMAGE_TYPES` |  | `["jpg", "jpeg", "png", "gif", "webp", "avif", "ico"]` | The file types an image upload may be (by extension, checked against the file's own bytes). SVG is left out on purpose: an SVG file can carry script. |
@@ -1660,7 +1662,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_ROBOTS_DISALLOW` |  | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"]. |
 | `KARNI_SITE_SITEMAP_EXCLUDE` |  | `[]` | URL names and paths the sitemap leaves out, shell wildcards allowed: ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it. |
 | `KARNI_SITE_SITEMAPS` |  | `"karni_site.sitemaps.sitemaps"` | The function that lists the sitemap's sections: () -&gt; {name: Sitemap}. A dotted path. |
-| `KARNI_SITE_PUBLISHED_FIELDS` |  | `[ "published", "is_published", "is_public", "public", "visible", "is_visible", ]` | Boolean fields that mark a row as public, tried in order on a model in the sitemap without a filter of its own (class Karni: sitemap = {"filter": {...}}). |
+| `KARNI_SITE_PUBLISHED_FIELDS` |  | `["published", "is_published", "is_public", "public", "visible", "is_visible"]` | Boolean fields that mark a row as public, tried in order on a model in the sitemap without a filter of its own (class Karni: sitemap = {"filter": {...}}). |
 | `KARNI_SITE_SCHEMA_TYPE` |  | `"auto"` | The schema.org type of the site's JSON-LD: "auto" (LocalBusiness when the site has opening hours, else Organization), any schema.org type ("Bakery", "Dentist"), or None. |
 | `KARNI_SITE_JSONLD` |  | `"karni_site.jsonld.build"` | The function that builds the JSON-LD: (request, site) -&gt; dict or None. A dotted path. |
 | `KARNI_SITE_SEO_OBJECT` |  | `"karni_site.metadata.page_object"` | The function that finds the object a page is about: (context, request) -&gt; object or None. |
@@ -1676,6 +1678,7 @@ class Lead(BaseModel):
 | `KARNI_SITE_SEO_IMAGE_BYTES` |  | `500_000` | karni check --seo: an image without smaller copies is oversized above this many bytes. |
 | `KARNI_SITE_SEO_PIXEL_RATIO` |  | `2` | karni check --seo: an image is oversized when wider than this many times its width. |
 | `KARNI_SITE_SEO_IGNORE` |  | `[]` | karni check --seo: regular expressions of paths it never requests. |
+| `KARNI_SITE_SEO_QUIET` |  | `["django_structlog", "django.request", "django.server", "karni.queries"]` | karni check --seo: the loggers held back while it requests the pages (one or more lines per request). Their errors are counted, and the first is shown. [] keeps them. |
 
 ## Components and hooks
 
@@ -1929,6 +1932,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W517`](errors.md#w517) | warning | CORS allows every origin |
 | [`W518`](errors.md#w518) | warning | No enforced Content-Security-Policy |
 | [`W519`](errors.md#w519) | warning | The Content-Security-Policy lets any script run |
+| [`W520`](errors.md#w520) | warning | Production email is not set up |
 | [`E520`](errors.md#e520) | exception | The deploy checks failed when the container started |
 | [`E521`](errors.md#e521) | exception | A backup failed |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
@@ -2111,6 +2115,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C370`](errors.md#c370) | cli | A state field spec is invalid |
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
+| [`C373`](errors.md#c373) | cli | No such setting |
 
 ### Agent rules (`K`)
 

@@ -263,7 +263,7 @@ karni explain [OPTIONS] [CODE]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106. Pass - to read a traceback or log line from stdin. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, or a setting such as KARNI_SITE_HIGHLIGHT. Pass - to read a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 | `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
@@ -1117,6 +1117,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 | `--states` TEXT |  | The inbox lifecycle of the status field (default new&gt;replied\|new&gt;archived\|replied&gt;archived): a,b,c moves in order, and a&gt;b\|a&gt;c declares each move. The first state is where a submission starts. |
 | `--role` TEXT | `staff` | The role that reads, answers and deletes submissions (default staff). |
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
+| `--tag` |  | Write nothing: print the {% karni_form %} tag of a form made already, with the arguments that keep the imported design's &lt;form&gt;. Its fields are read from the model unless FIELDS are given. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |

@@ -715,51 +715,16 @@ def options_section() -> list[str]:
 
 
 def _module_settings(module_dir: Path) -> list[tuple[str, str, str, str]]:
+    """A module's settings, read from its conf.py as docs/settings.md reads them."""
+    from karni.conf.reference import module_settings
+
     path = module_dir / _package_of(module_dir) / "conf.py"
     if not path.is_file():
         return []
-    source = path.read_text(encoding="utf-8")
-    lines = source.splitlines()
-    tree = ast.parse(source)
-    rows = []
-    for node in ast.walk(tree):
-        if not (isinstance(node, ast.AnnAssign | ast.Assign | ast.AugAssign)):
-            continue
-        if isinstance(node, ast.AugAssign) and not isinstance(node.op, ast.BitOr):
-            continue  # DEFAULTS |= {...} adds a block of settings; nothing else does
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        if not any(isinstance(t, ast.Name) and t.id == "DEFAULTS" for t in targets):
-            continue
-        if not isinstance(node.value, ast.Dict):
-            continue
-        for key, value in zip(node.value.keys, node.value.values, strict=True):
-            if not isinstance(key, ast.Constant):
-                continue
-            comments = []
-            index = key.lineno - 2
-            while index >= 0 and lines[index].strip().startswith("#"):
-                comments.insert(0, lines[index].strip().lstrip("#").strip())
-                index -= 1
-            if not comments and rows:
-                comments = [rows[-1][3]]
-            env, default = "", ""
-            if isinstance(value, ast.Call):
-                if value.args and isinstance(value.args[0], ast.Constant):
-                    env = str(value.args[0].value)
-                for keyword in value.keywords:
-                    if keyword.arg == "default":
-                        default = ast.get_source_segment(source, keyword.value) or ""
-            else:
-                default = ast.get_source_segment(source, value) or ""
-            rows.append(
-                (
-                    f"`{key.value}`",
-                    f"`{env}`" if env else "",
-                    f"`{' '.join(default.split())}`",
-                    " ".join(comments),
-                )
-            )
-    return rows
+    return [
+        (f"`{s.name}`", f"`{s.env}`" if s.env else "", f"`{s.default}`", s.description)
+        for s in module_settings(path, module_dir.name)
+    ]
 
 
 def settings_section() -> list[str]:

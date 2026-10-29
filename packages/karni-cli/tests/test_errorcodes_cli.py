@@ -137,3 +137,62 @@ def test_the_core_registry_loads_without_django() -> None:
     core = errorcodes.core_module()
     assert core is not None and core.__name__ == "karni_cli._bundled_karni_errorcodes"
     assert any(entry.code == "E101" for entry in core.CODES)
+
+
+# settings: karni explain KARNI_SITE_HIGHLIGHT
+
+
+def test_explain_a_modules_setting() -> None:
+    require_modules("karni-site")
+    result = runner.invoke(app, ["explain", "KARNI_SITE_HIGHLIGHT"])
+    assert result.exit_code == 0, result.output
+    out = result.output
+    assert out.startswith("KARNI_SITE_HIGHLIGHT  (a setting of karni-site)")
+    assert 'Default:  {"marker": "==", "tag": "mark", "class": ""}' in out
+    assert "Set it:   in config/settings.py (no environment variable reads it)" in out
+    assert "What:     What a client types around words to highlight them" in out
+    assert "Docs:     " in out and out.rstrip().endswith("/settings/#karni_site_highlight")
+
+
+def test_explain_a_core_setting_and_its_variable() -> None:
+    result = runner.invoke(app, ["explain", "karni_phone_country_code", "--json"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["name"] == "KARNI_PHONE_COUNTRY_CODE" and data["env"] == "KARNI_PHONE_COUNTRY_CODE"
+    assert data["module"] == "" and data["default"] == "None"
+    assert '"44"' in data["description"]
+    assert data["url"].endswith("/settings/#karni_phone_country_code")
+
+
+def test_explain_an_unknown_setting_names_the_fix() -> None:
+    result = runner.invoke(app, ["explain", "KARNI_NO_SUCH_THING"])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, CliError) and result.exception.code == "C373"
+    assert "docs/settings.md" in str(result.exception)
+
+
+def test_the_settings_reference_loads_from_the_wheels_copy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside a checkout: the bundled reference.py and base.py, modules by their entry points."""
+    import shutil
+    import sys
+
+    from karni_cli import settingref
+
+    require_modules("karni-site")
+    bundled = tmp_path / "karni_cli" / "_settings"
+    bundled.mkdir(parents=True)
+    conf = REPO_ROOT / "packages" / "karni" / "karni" / "conf"
+    for name in ("reference.py", "base.py"):
+        shutil.copy2(conf / name, bundled / name)
+    monkeypatch.setattr(settingref, "_reference_file", lambda: bundled / "reference.py")
+    monkeypatch.delitem(sys.modules, settingref._MODULE_NAME, raising=False)
+    try:
+        module = settingref.reference_module()
+        assert module is not None and Path(module.__file__).parent == bundled
+        assert dict(module.module_conf_files())["karni-site"].name == "conf.py"
+        assert settingref.lookup("KARNI_AUTH_MODE")["env"] == "KARNI_AUTH_MODE"
+        assert settingref.lookup("KARNI_SITE_SEO_QUIET")["module"] == "karni-site"
+    finally:
+        sys.modules.pop(settingref._MODULE_NAME, None)

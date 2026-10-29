@@ -967,7 +967,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "first, not lazily) "
             "and `{{ row.heading|highlight }}` for highlighted words (`==words==`, the "
             "site's one convention: set `KARNI_SITE_HIGHLIGHT` to the markup the analysis "
-            "names, unless `karni import design --editable` already did). A model's detail "
+            "names, unless `karni import design --editable` already did. `karni explain "
+            "<SETTING>` prints any setting's format and default). A model's detail "
             "pages become one view and template with a `<slug:slug>` capture, keeping each "
             "page's URL (the slug is the page's file name).",
             "For those detail pages: `karni make view <model> --app <site app> --path "

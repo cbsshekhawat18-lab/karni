@@ -4,6 +4,7 @@
     karni explain C101        a karni command error (C codes)
     karni explain PAY004      an installed module's code (asks the project interpreter)
     karni explain K106        an agent rule (same as karni rules --explain K106)
+    karni explain KARNI_SITE_HIGHLIGHT   a setting: its default, variable and docs link
     karni explain --failure last   a captured failure as a brief (in a project, DEBUG on)
     karni explain -           a pasted traceback, test failure or log line (stdin)
 
@@ -21,7 +22,7 @@ import sys
 
 import typer
 
-from karni_cli import agent_data
+from karni_cli import agent_data, settingref
 from karni_cli import explain_text as explain_text_mod
 from karni_cli.errorcodes import lookup
 from karni_cli.project import CliError, find_project
@@ -77,8 +78,8 @@ def _stdin_text() -> str:
 def explain(
     code: str | None = typer.Argument(
         None,
-        help="An error code such as E104, W101, C101, PAY004 or K106. Pass - to read a "
-        "traceback or log line from stdin.",
+        help="An error code such as E104, W101, C101, PAY004 or K106, or a setting such as "
+        "KARNI_SITE_HIGHLIGHT. Pass - to read a traceback or log line from stdin.",
         show_default=False,
     ),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output."),
@@ -89,8 +90,8 @@ def explain(
         "print it as a brief (development, DEBUG on).",
     ),
 ) -> None:
-    """Explain an error code, a captured failure (--failure), or the failure in a pasted
-    traceback or log line (-)."""
+    """Explain an error code, a setting (its default, environment variable and docs), a
+    captured failure (--failure), or the failure in a pasted traceback or log line (-)."""
     if failure is not None:
         _explain_failure(code, failure, as_json)
         return
@@ -106,6 +107,17 @@ def explain(
         if rule is None:
             raise CliError(f"No rule {wanted!r}. `karni rules` lists the codes.", code="C204")
         typer.echo(json.dumps(rule, indent=2) if as_json else render_explain(rule))
+        return
+    if settingref.SETTING.match(wanted):
+        setting = settingref.lookup(wanted)
+        if setting is None:
+            raise CliError(
+                f"No setting {wanted}: neither Karni nor a module installed here or in the "
+                "project declares it. docs/settings.md lists every setting, module settings "
+                "included. A project's own settings are in config/settings.py.",
+                code="C373",
+            )
+        typer.echo(json.dumps(setting, indent=2) if as_json else settingref.render(setting))
         return
     entry = lookup(wanted)
     if entry is None:

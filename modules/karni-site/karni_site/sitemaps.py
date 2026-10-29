@@ -90,7 +90,7 @@ class SiteSitemap(Sitemap):
     """
 
     @cached_property
-    def paginator(self) -> Paginator:  # type: ignore[override]
+    def paginator(self) -> Paginator:
         return Paginator(self._items(), self.limit)
 
     def _configured(self) -> Any:

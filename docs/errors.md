@@ -2162,7 +2162,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni_cli (bundled templates, agent rules, changelog, error codes)`
 
-**Why Karni objects.** The wheel bundles the project template, agent rules, changelog and error codes. One is missing, so the install is broken.
+**Why Karni objects.** The wheel bundles the project template, agent rules, changelog, error codes and the settings reference. One is missing, so the install is broken.
 
 **Fix.** Reinstall karni-cli (pipx reinstall karni-cli, or pip install --force-reinstall karni-cli).
 
@@ -2665,6 +2665,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A capacity counter can name the integer field holding the total, which must be declared in the same command. The counter is never optional.
 
 **Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
+
+<a id="c373"></a>
+
+### C373: No such setting
+
+*karni command* · from `karni explain <SETTING>`
+
+**Why Karni objects.** karni explain reads Karni's settings and every module's from the source docs/settings.md is generated from: Karni's karni/conf/base.py, each module's conf.py (installed next to karni-cli, or in the project), never Django.
+
+**Fix.** Check the name against docs/settings.md, and run it inside the project so the project's modules are found. A setting the project defines itself is in config/settings.py.
 
 ## Agent rules (`K`)
 
