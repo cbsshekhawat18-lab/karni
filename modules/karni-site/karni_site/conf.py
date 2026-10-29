@@ -72,3 +72,68 @@ DEFAULTS: dict[str, Any] = {
 def get(name: str) -> Any:
     """``settings.<name>`` if the project defines it, else the module default."""
     return getattr(settings, name, DEFAULTS[name])
+
+
+# SEO and images: {% karni_seo %}, {% image %}, the sitemap, robots.txt, karni check --seo.
+DEFAULTS |= {
+    # The site's own address, "https://www.example.com". Canonical links, share tags, the
+    # sitemap and robots.txt use it. None: the address each request came to.
+    "KARNI_SITE_URL": None,
+    # Whether search engines may index the site. None: only when DJANGO_ENV is "prod", so a
+    # development or staging copy is never indexed. True or False decides for every environment.
+    "KARNI_SITE_ALLOW_INDEXING": None,
+    # Paths robots.txt asks crawlers to stay out of while indexing is allowed: ["/search/"].
+    "KARNI_SITE_ROBOTS_DISALLOW": [],
+    # URL names and paths the sitemap leaves out, shell wildcards allowed:
+    # ["website:thanks", "/drafts/*"]. The admin, the API and redirects are never in it.
+    "KARNI_SITE_SITEMAP_EXCLUDE": [],
+    # The function that lists the sitemap's sections: () -> {name: Sitemap}. A dotted path.
+    "KARNI_SITE_SITEMAPS": "karni_site.sitemaps.sitemaps",
+    # Boolean fields that mark a row as public, tried in order on a model in the sitemap
+    # without a filter of its own (class Karni: sitemap = {"filter": {...}}).
+    "KARNI_SITE_PUBLISHED_FIELDS": [
+        "published",
+        "is_published",
+        "is_public",
+        "public",
+        "visible",
+        "is_visible",
+    ],
+    # The schema.org type of the site's JSON-LD: "auto" (LocalBusiness when the site has
+    # opening hours, else Organization), any schema.org type ("Bakery", "Dentist"), or None.
+    "KARNI_SITE_SCHEMA_TYPE": "auto",
+    # The function that builds the JSON-LD: (request, site) -> dict or None. A dotted path.
+    "KARNI_SITE_JSONLD": "karni_site.jsonld.build",
+    # The function that finds the object a page is about: (context, request) -> object or None.
+    "KARNI_SITE_SEO_OBJECT": "karni_site.metadata.page_object",
+    # How a title taken from the page's object is written. {title} and {site}.
+    "KARNI_SITE_TITLE_FORMAT": "{title} | {site}",
+    # The longest description taken from the page's object, in characters.
+    "KARNI_SITE_DESCRIPTION_LENGTH": 160,
+    # The widths, in pixels, of the WebP copies made of each uploaded image (those below its own
+    # width, and its own width when it is not a WebP). [] makes none.
+    "KARNI_SITE_IMAGE_WIDTHS": [320, 480, 640, 800, 960, 1280, 1600, 1920],
+    # The WebP quality of those copies, 1 to 100.
+    "KARNI_SITE_IMAGE_QUALITY": 80,
+    # An uploaded image wider or taller than this many pixels is scaled down to fit. None keeps it.
+    "KARNI_SITE_IMAGE_MAX_SIZE": 2560,
+    # Whether an upload, and the first page that shows an image without copies, queue the
+    # copies (a Celery task). False: make them yourself (karni_site.renditions.make).
+    "KARNI_SITE_QUEUE_RENDITIONS": True,
+    # The function that makes an image's copies: (name, storage) -> manifest. A dotted path.
+    "KARNI_SITE_RENDITIONER": "karni_site.renditions.generate",
+    # The CSS {% karni_seo %} puts in the head so an image Karni sized keeps its shape when the
+    # design's CSS sets only its width or only its height. "" leaves it out.
+    "KARNI_SITE_IMAGE_STYLE": (
+        ":where(img[data-karni-image]){height:auto}"
+        ":where(img[data-karni-image=natural]){width:auto}"
+    ),
+    # karni check --seo: at most this many pages are requested.
+    "KARNI_SITE_SEO_MAX_PAGES": 500,
+    # karni check --seo: an image without smaller copies is oversized above this many bytes.
+    "KARNI_SITE_SEO_IMAGE_BYTES": 500_000,
+    # karni check --seo: an image is oversized when wider than this many times its width.
+    "KARNI_SITE_SEO_PIXEL_RATIO": 2,
+    # karni check --seo: regular expressions of paths it never requests.
+    "KARNI_SITE_SEO_IGNORE": [],
+}

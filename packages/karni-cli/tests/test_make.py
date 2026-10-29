@@ -707,7 +707,7 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
         "]  # karni:context_processors\n"
     )
     # The site's runtime is the karni-site module, wired as `karni add site` does.
-    assert '"karni-site"' in (project / "pyproject.toml").read_text()
+    assert '"karni-site[images]"' in (project / "pyproject.toml").read_text()
     assert "karni-site: added to pyproject.toml and INSTALLED_APPS" in result.output
     assert "Run `karni add site` again after installing" in result.output
     views = (site / "views.py").read_text()
@@ -723,7 +723,16 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     base = (site / "templates" / "website" / "base.html").read_text()
     assert base.startswith("{% load static karni_site %}{# The site's details are `site`")
     assert '{% site_defaults name="Website" %}<!DOCTYPE html>' in base
-    assert '<link rel="canonical"' in base and "{% static 'website/site.css' %}" in base
+    # {% karni_seo %} writes the canonical link, share tags and JSON-LD around the defaults.
+    assert (
+        "  {% karni_seo %}<title>{% block title %}{{ site.name }}{% endblock %}</title>\n"
+        '  <meta name="description" content="{% block description %}{% endblock %}">'
+        "{% block seo %}{% endblock %}{% endkarni_seo %}\n"
+    ) in base
+    assert "{% static 'website/site.css' %}" in base
+    # Its robots.txt and sitemap.xml, before the site's own include.
+    site_urls = '    path("", include("karni_site.urls")),\n'
+    assert config.index(site_urls) < config.index(INCLUDE) < marker
     assert (
         '<a href="{% url \'website:home\' %}"{% ifactive "website:home" %} aria-current="page"'
         "{% endifactive %}>Home</a>"

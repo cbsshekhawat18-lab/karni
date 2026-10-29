@@ -142,7 +142,7 @@ def test_upgrade_honours_the_baseline(
     assert "mandatory-access" not in result.output and "23 change(s)" not in result.output
     # --from still wins over the baseline.
     result = runner.invoke(app, ["upgrade", "--from", "0.1.0", "--dry-run"])
-    assert "karni 0.1.0 -> 0.4.1: 50 change(s)" in result.output
+    assert "karni 0.1.0 -> 0.4.1: 53 change(s)" in result.output
 
 
 def test_baseline_reads_pyproject(tmp_path: Path) -> None:

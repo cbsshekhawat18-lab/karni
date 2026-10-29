@@ -236,6 +236,7 @@ karni check [OPTIONS]
 | `--frontend/--no-frontend` | on |  |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
+| `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
 
 ### `karni explain`
 
@@ -1103,7 +1104,7 @@ karni import COMMAND [ARGS]...
 
 Build the public site from a folder of static pages, keeping the design as written.
 
-Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
+Copies the CSS, JavaScript and images into APP/static/APP/ unchanged, puts the header, navigation and footer every page shares into APP/templates/APP/base.html (a block shared by some pages becomes a partial), turns each page into a template extending it with a view and a route (index.html answers "/", about.html "/about/", a folder a nested route), rewrites links to `{% url %}` and asset paths to `{% static %}` (anchors and query strings kept), turns a meta-refresh stub into a permanent redirect, marks the current menu item with `{% ifactive %}` wherever the design marked it, wraps inline scripts in `{% csp_hash %}` so they run under the Content-Security-Policy, and adds every page to the page test. base.html's title, description and share tags go inside `{% karni_seo %}`. Every image of the design gets its width and height, and, with Pillow installed, smaller WebP copies and a srcset. It reports the files it did not see used and anything it could not map. The app is created with `karni make site` when needed.
 
 With --editable, every text becomes a block (`{% editable %}`), every image `{% editable_image %}`, each navigation a menu (`{% get_menu %}`) seeded from the design's links, and the site's name, logo, favicon, phone, email, map and social links come from the site's settings: the client changes all of it in the admin, and the templates hold the design's text as the defaults.
 

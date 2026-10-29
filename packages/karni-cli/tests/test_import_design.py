@@ -746,7 +746,8 @@ def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: 
     ) in base
     assert (
         '{% site_image "logo" %}<img src="{% static \'website/img/logo.svg\' %}" '
-        'alt="{{ site.name }}">{% endsite_image %}'
+        'alt="{{ site.name }}" width="10" height="10" data-karni-image="natural">'
+        "{% endsite_image %}"
     ) in base
     # The navigation is a menu, looping over the design's own markup.
     assert (

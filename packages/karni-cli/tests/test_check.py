@@ -32,6 +32,20 @@ def test_deploy_passes_through_to_the_backend_check(runner, tmp_path, monkeypatc
     assert result.exit_code == 1 and "karni check: FAILED" in result.output
 
 
+def test_seo_passes_through_to_the_backend_check(runner, tmp_path, monkeypatch) -> None:
+    (tmp_path / "manage.py").write_text("")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(check_mod, "_frontend_duplication", lambda p: 0)
+    monkeypatch.setattr(check_mod, "_frontend_lint", lambda p: 0)
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(1, ["karni_check", "--seo"]))
+    result = runner.invoke(app, ["check", "--seo"])
+    assert result.exit_code == 1 and "karni check: FAILED" in result.output
+    both = ["karni_check", "--deploy", "--seo"]
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(0, both))
+    result = runner.invoke(app, ["check", "--seo", "--deploy"])
+    assert result.exit_code == 0 and "karni check: ok" in result.output
+
+
 def test_check_help_documents_deploy(runner) -> None:
     result = runner.invoke(app, ["check", "--help"])
     assert result.exit_code == 0

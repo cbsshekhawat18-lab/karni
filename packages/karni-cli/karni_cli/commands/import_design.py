@@ -32,6 +32,7 @@ from typing import Any
 import typer
 
 from karni_cli.design import compare
+from karni_cli.design import images as design_images
 from karni_cli.design import site as design_site
 from karni_cli.design.site import DESIGN_RECORD, SitePlan
 from karni_cli.generators import site as site_gen
@@ -235,6 +236,36 @@ def _theme_from_css(ws: Workspace, plan: SitePlan, *, dry_run: bool) -> None:
         ws.note(f"staff app theme: {outcome}")
 
 
+def _write_image_copies(
+    ws: Workspace, app: App, plan: SitePlan, record: dict[str, Any] | None
+) -> None:
+    """The WebP copies the plan's srcsets name, next to each image under static/<app>/.
+
+    A copy is made again only when its image changed since the last import
+    (or the copy is missing). Needs Pillow, which the plan checked.
+    """
+    if not plan.copies:
+        return
+    before = ((record or {}).get("assets") or {}).get("files") or {}
+    now = (plan.design.get("assets") or {}).get("files") or {}
+    static = app.file("static", app.label)
+    made = 0
+    for path, width, target in design_images.copy_targets(static, plan.copies):
+        unchanged = (before.get(path) or {}).get("sha256") == (now.get(path) or {}).get("sha256")
+        if unchanged and target.is_file():
+            continue
+        try:
+            data = design_images.make_copy(plan.assets[path].read_bytes(), width)
+        except Exception as exc:  # noqa: BLE001 - one unreadable image does not stop the import
+            typer.echo(f"copy of {path} at {width}w not written: {exc}", err=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        made += 1
+    if made:
+        typer.echo(f"wrote    {made} smaller WebP image copies under {ws.rel(static)}/")
+
+
 HIGHLIGHT_SETTING = "KARNI_SITE_HIGHLIGHT"
 
 
@@ -354,8 +385,11 @@ def design(
     permanent redirect, marks the current menu item with `{% ifactive %}`
     wherever the design marked it, wraps inline scripts in `{% csp_hash %}`
     so they run under the Content-Security-Policy, and adds every page to
-    the page test. It reports the files it did not see used and anything it
-    could not map. The app is created with `karni make site` when needed.
+    the page test. base.html's title, description and share tags go inside
+    `{% karni_seo %}`. Every image of the design gets its width and height,
+    and, with Pillow installed, smaller WebP copies and a srcset. It reports
+    the files it did not see used and anything it could not map. The app is
+    created with `karni make site` when needed.
 
     With --editable, every text becomes a block (`{% editable %}`), every
     image `{% editable_image %}`, each navigation a menu (`{% get_menu %}`)
@@ -430,9 +464,13 @@ def design(
     if dry_run:
         for source_file, target in copies:
             typer.echo(f"would copy {ws.rel(target)}")
+        count = sum(len(widths) for widths in plan.copies.values())
+        if count:
+            typer.echo(f"would write {count} smaller WebP copies of the design's images")
         return
     for source_file, target in copies:
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source_file, target)
         typer.echo(f"copied   {ws.rel(target)}")
+    _write_image_copies(ws, site_app, plan, record)
     site_gen.record_site_guidance(ws)

@@ -10,5 +10,6 @@
   `item.title`, `item.active`, `item.children`). No hand-written menu tag.
 - The current item outside a menu: `{% ifactive "<app>:<name>" %}` around the design's own class.
 - Inline scripts stay inside `{% csp_hash %}...{% endcsp_hash %}`, another origin is `{% csp_allow %}`.
-- Redirects, page titles and descriptions and the `editor` role are in the admin already.
-- `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008.
+- Redirects, page titles and the `editor` role are in the admin. `{% karni_seo %}` in base.html writes
+  titles, share tags and JSON-LD. Uploads: `{% image obj.photo width=400 alt=... %}`, never a raw `<img>`.
+- `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008, `karni check --seo` SITE010 to SITE018.

@@ -211,3 +211,44 @@ it. Add the line to a project's routes.tsx before serving the staff app under a 
 path. In development the base is /, and nothing changes."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-staff-app-follows-vites-base-path"
+
+[[change]]
+id = "site-head-karni-seo"
+kind = "project-files"
+symbol = "<app>/templates/<app>/base.html"
+summary = """\
+`karni make site` and `karni import design` now write base.html's head as \
+`{% karni_seo %}<title>...</title><meta name="description" ...>{% block seo %}\
+{% endblock %}{% endkarni_seo %}`, which renders the title, description, \
+canonical link, share tags and JSON-LD. A site app created earlier keeps its \
+head: wrap its <title> and description in the tag and remove its canonical \
+link, or import the design again."""
+mechanical = false
+migration = "migrations/0.4.1.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+
+[[change]]
+id = "site-urls-include"
+kind = "project-files"
+symbol = "config/urls.py (karni_site.urls)"
+summary = """\
+`karni make site` and `karni add site` include karni_site's URLs, \
+`path("", include("karni_site.urls"))`, before the site's own include: \
+robots.txt (closed outside production) and sitemap.xml. A project wired \
+earlier gets it from `karni add site` or `karni make site <app> --force`, or \
+adds the line by hand."""
+mechanical = false
+migration = "migrations/0.4.1.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+
+[[change]]
+id = "import-design-sizes-images"
+kind = "behaviour"
+symbol = "karni import design (<img> width, height, srcset)"
+summary = """\
+`karni import design` now writes width and height on every <img> of the \
+design that lacks them (with data-karni-image), and, where Pillow is \
+installed, smaller WebP copies of each large JPEG, PNG or WebP under \
+static/<app>/ with a srcset and sizes. Importing a design again changes the \
+templates the project has not edited. An edited one is kept, as before."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-designs-images-are-sized"
+

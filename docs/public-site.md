@@ -1,5 +1,5 @@
 ---
-description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, every text, image, menu and contact detail editable in the admin, the karni-site runtime, content read through the default manager, SEO basics, a page test with assert_pages, and public forms that post to a BaseViewSet."
+description: "Where a client's public website goes in a Karni project: a Django site app with views, templates and static files at /, a designer's static pages imported with the design kept as written, every text, image, menu and contact detail editable in the admin, the karni-site runtime, content read through the default manager, SEO by default (titles, share tags, JSON-LD, sitemap.xml, robots.txt, sized images, karni check --seo), a page test with assert_pages, and public forms that post to a BaseViewSet."
 ---
 
 # Public server-rendered pages
@@ -46,7 +46,7 @@ karni make view service --app website --path "/services/<slug:slug>/"
 website/
   views.py                    home(request), and every view `karni make view` adds
   urls.py                     app_name = "website", a `# karni:urls` marker
-  templates/website/base.html the layout: title, description, canonical link, header, footer
+  templates/website/base.html the layout: {% karni_seo %} (title, description, share tags), header, footer
   templates/website/home.html
   templates/404.html          shown for unknown URLs while DEBUG is off
   templates/500.html          shown when a view fails while DEBUG is off
@@ -60,9 +60,10 @@ the views of the [`karni-site` module](#the-karni-site-module), which it
 wires into the project as `karni add site` would (the dependency in
 `pyproject.toml`, `karni_site` in the `# karni:apps` block, its redirect
 middleware in the `# karni:middleware` block and its `site` context
-processor). Install it afterwards and run `karni migrate`. The generated
+processor), and includes its URLs (robots.txt and sitemap.xml) before the
+site's own. Install it afterwards and run `karni migrate`. The generated
 `base.html` shows the site's name from `site`, which the client changes in
-the admin. A new app first gets the `karni make app` skeleton and its
+the admin, and its `<head>` is [`{% karni_seo %}`](#seo-by-default). A new app first gets the `karni make app` skeleton and its
 `# karni:apps` entry. An existing local app gets only the missing site
 files, and its `views.py` and `urls.py` are extended in place.
 
@@ -124,9 +125,27 @@ What it does, page by page:
   template extends `base.html`, fills `{% block title %}` and
   `{% block description %}` from the page's `<title>` and `<meta
   name="description">`, puts the `<head>` elements only this page has into
-  `{% block head %}`, and its body into `{% block content %}`. A `<link
-  rel="canonical">` becomes one built from the request. Every page joins
-  `PAGES` in the page test. A `404.html` or `500.html` in the design becomes
+  `{% block head %}`, and its body into `{% block content %}`. Every page
+  joins `PAGES` in the page test.
+- **Puts `{% karni_seo %}` where the design's head tags were.** In
+  `base.html` it takes the place of the design's first title, description,
+  canonical link or share tag, with the title and description blocks inside
+  as the defaults, and any share tag every page has (an `og:image`, a
+  `twitter:card`). The tags it writes from each page's title, description
+  and address (`og:title`, `og:url` and the like) are dropped, and a share
+  tag only one page has goes into that page's `{% block seo %}`. Every other
+  head tag stays where it was. See [SEO by default](#seo-by-default).
+- **Sizes the design's images.** An `<img>` of the design without `width`
+  and `height` gets them from its file, so the page does not jump while it
+  loads. A JPEG, PNG or WebP wider than 320 pixels, without a `srcset` of
+  its own, gets smaller WebP copies next to it under `static/<app>/`
+  (`hero.jpg.640w.webp`) and a `srcset` and `sizes`. A lazily loaded image
+  gets `sizes="auto, ..."`, so the browser loads the copy that fits the
+  layout: a card's picture at the card's size. The copies need Pillow where
+  `karni` runs (`pip install pillow`). Without it the import writes the
+  sizes only and says how many images could have copies. The images keep
+  their shape whatever the design's CSS sets: `{% karni_seo %}` gives them
+  `height: auto`. A `404.html` or `500.html` in the design becomes
   `templates/404.html` or `500.html`, extending the layout, with no route.
 - **Rewrites links and paths.** A link to another page becomes `{% url %}`
   with its anchor and query string kept (`menu.html#cakes` becomes
@@ -268,7 +287,7 @@ attached when the designer changes the text, and the record keeps the
 import editable until `--no-editable`. Left as written: `<pre>` (its
 whitespace is its meaning), text in attributes (a form field's
 placeholder, an `aria-label`), images in stylesheets, and the `<title>` and
-description, which are the page's [SEO entry](#seo-basics).
+description, which are the page's [SEO entry](#seo-by-default).
 
 The client needs the admin and a role. The module declares `editor`:
 staff status and the role let a person change the site's content, menus,
@@ -436,29 +455,63 @@ The scaffold's Caddyfile serves `/static/` and `/media/` from disk and sends
 every other path to Django, so the site at `/` works in production with no
 change. `collectstatic` copies `static/website/` into `STATIC_ROOT`.
 
-## SEO basics
+## SEO by default
 
-- **Title and description.** Every page fills `{% block title %}` and
-  `{% block description %}`. The generated `base.html` puts them in
-  `<title>` and `<meta name="description">`. The title falls back to the
-  site's name, and the description to nothing, so the page test fails a
-  page that forgets its description. The admin's *Page titles and
-  descriptions* hold a title, description, share image and *hide from
-  search engines* per page (by URL name or path), which
-  `karni_site.seo.page_seo(request)` looks up.
-- **Canonical link.** `base.html` writes
-  `<link rel="canonical">` from the request's scheme, host and path, without
-  the query string. Set `ALLOWED_HOSTS` to the real domain in production.
-- **Sitemap.** Add `"django.contrib.sitemaps"` to the `# karni:apps` block
-  and route a [sitemap](https://docs.djangoproject.com/en/5.2/ref/contrib/sitemaps/)
-  in the site's `urls.py`. Without `django.contrib.sites`, Django takes the
-  domain from the request.
-- **robots.txt.** Serve it from a template:
-  `path("robots.txt", TemplateView.as_view(template_name="website/robots.txt", content_type="text/plain"))`,
-  and name the sitemap's URL in it.
+A site built with `karni make site` or `karni import design` is ready for
+search engines without project code:
+
+- **The head.** `base.html` has `{% karni_seo %}` around the design's title
+  and description. It writes the page's `<title>`, description, canonical
+  link, `noindex` for a hidden page, the Open Graph and Twitter tags and the
+  site's JSON-LD (an `Organization`, or a `LocalBusiness` with its address,
+  phone, opening hours, logo and social profiles, from the site's
+  settings). Each value is the first of: the admin's *Page titles and
+  descriptions* for the page, `seo` in the view's context, the row the page
+  is about, the template's own tags, the site's settings.
+
+  ```django
+  {% karni_seo %}<title>{% block title %}{{ site.name }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{% endblock %}">{% block seo %}{% endblock %}{% endkarni_seo %}
+  ```
+
+- **Detail pages.** A row in the context whose `get_absolute_url()` is the
+  page's path gives the page its title ("Wedding cake | Crumb & Co"), its
+  description and its share image. `class Karni: seo` names the fields when
+  their names are not the usual ones:
+
+  ```python
+  class Project(BaseModel):
+      class Karni:
+          seo = {"title": "name", "description": "intro", "image": "photo"}
+  ```
+
+- **sitemap.xml** lists the site's pages and every model's rows that have a
+  page, honouring scopes, soft deletes and a published flag (`class Karni:
+  sitemap = {"filter": {...}}` to choose).
+- **robots.txt** closes the site outside production (`DJANGO_ENV` other
+  than `prod`) and names the sitemap in production.
+  `KARNI_SITE_ALLOW_INDEXING` decides otherwise.
+- **Images.** `{% image project.photo width=400 alt=project.title %}`
+  writes `srcset`, `sizes`, `width`, `height` and lazy loading from WebP
+  copies made in the background when the image is uploaded (Celery,
+  through the project's storage, local or S3). Uploads larger than
+  `KARNI_SITE_IMAGE_MAX_SIZE` are scaled down. Until the copies exist the
+  original is shown. Pillow is the `karni-site[images]` extra, which `karni
+  make site` adds. Without it images are shown as uploaded.
 - **404 and 500 pages.** `templates/404.html` and `500.html` extend the
-  site's layout, and `karni_site`'s handlers render them with the request
-  while `DEBUG` is off. With `DEBUG` on you see Django's debug page.
+  site's layout, `karni_site`'s handlers render them with the request while
+  `DEBUG` is off, and they are never indexed. With `DEBUG` on you see
+  Django's debug page.
+- **Set the address in production.** `KARNI_SITE_URL =
+  "https://www.example.com"` puts canonical links, share tags and the
+  sitemap on the real domain whatever host a request came to.
+
+`karni check --seo` renders every page through Django's test client and
+reports titles and descriptions missing or shared between pages, images
+without alt text, without width and height or much larger than shown,
+broken internal links, and pages missing from the sitemap (`SITE010` to
+`SITE018`). The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+lists every setting.
 
 ## Public forms post to a BaseViewSet
 
@@ -525,4 +578,5 @@ site app like any other app, runs `karni-site`'s checks (`SITE001`: the
 templates get the request, `SITE002`: every `{% ifactive %}` names a URL
 that exists, `SITE004`: the templates get `site`, `SITE005`: the redirect
 middleware is installed, `SITE008`: no block key has two defaults), and
-`karni test` runs its page test.
+`karni test` runs its page test. `karni check --seo` renders every page
+and checks what search engines read ([SEO by default](#seo-by-default)).

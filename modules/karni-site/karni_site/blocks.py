@@ -44,6 +44,8 @@ class Stored:
     alt: str
     default_alt: str
     default_src: str
+    #: The uploaded file's name in its storage: its smaller copies are found by it.
+    image_name: str = ""
 
     @property
     def text_edited(self) -> bool:
@@ -71,6 +73,7 @@ def _stored(block: Any) -> Stored:
         alt=block.alt,
         default_alt=block.default_alt,
         default_src=block.default_src,
+        image_name=str(block.image.name or "") if block.image else "",
     )
 
 
@@ -210,7 +213,19 @@ def image(key: str, default: str, request: Any = None, *, url: bool = False) -> 
             return escape(new_src) if new_src else default
         if new_src is None and new_alt is None:
             return default
-        return replace_image(default, new_src, new_alt)
+        return replace_image(default, new_src, new_alt, _uploaded(stored, default))
     except DatabaseError:
         logger.exception("karni_site: block %s could not be read, the default is shown", key)
         return default
+
+
+def _uploaded(stored: Stored, default: str) -> dict[str, str | None] | None:
+    """The uploaded picture's srcset, sizes, width and height for the design's tag."""
+    if not stored.image_url or not stored.image_name:
+        return None
+    from karni_site.models import Block
+    from karni_site.renditions import Source, replacement
+
+    storage = Block._meta.get_field("image").storage
+    source = Source(stored.image_name, storage, "karni_site.Block.image", stored.image_url)
+    return replacement(source, img_attributes(default))

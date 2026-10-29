@@ -35,6 +35,10 @@ from karni_cli.settings_edit import add_app
 def add_dependency_text(text: str, distribution: str) -> str | None:
     """``pyproject.toml`` text with ``distribution`` in [project].dependencies, ``None`` if there.
 
+    ``distribution`` may name extras (``karni-site[images]``). A requirement
+    for the same distribution already listed, with or without them, is left
+    as it is.
+
     Parsed with tomlkit, never string-matched. ``karni make site`` uses it
     through the generators' workspace, ``karni add`` on the file.
     """
@@ -47,7 +51,7 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
             "karni add only manages that table, so add the dependency manually.",
             code="C207",
         ) from None
-    target = canonicalize_name(distribution)
+    target = canonicalize_name(Requirement(distribution).name)
     for dep in deps:
         try:
             if canonicalize_name(Requirement(str(dep)).name) == target:
@@ -148,8 +152,9 @@ def record_guidance(project: Path, module: str) -> bool:
 
 
 def _wire_site(settings_path: Path) -> None:
-    """karni-site also needs its redirect middleware and its ``site`` context processor."""
-    from karni_cli.generators.site import wire_site_settings
+    """karni-site also needs its redirect middleware, its ``site`` context processor and its
+    URLs (robots.txt, sitemap.xml) in config/urls.py."""
+    from karni_cli.generators.site import SITE_URLS, wire_site_settings, with_site_urls
 
     text = settings_path.read_text()
     updated, notes = wire_site_settings(text, "config/settings.py")
@@ -157,14 +162,27 @@ def _wire_site(settings_path: Path) -> None:
         settings_path.write_text(updated)
     for note in notes:
         typer.echo(note)
+    urls_path = settings_path.parent / "urls.py"
+    if not urls_path.is_file():
+        return
+    try:
+        wired = with_site_urls(urls_path.read_text(), "config/urls.py")
+    except CliError as exc:
+        typer.echo(f"robots.txt and sitemap.xml: {exc.message}")
+        return
+    if wired is not None:
+        urls_path.write_text(wired)
+        typer.echo(f"{SITE_URLS}: included in config/urls.py (robots.txt, sitemap.xml)")
 
 
 def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
     project = require_project()
     app_name = f"karni_{module.replace('-', '_')}"
     distribution = f"karni-{module.replace('_', '-')}"
+    # karni-site's images extra (Pillow) makes the smaller copies of uploaded images.
+    requirement = f"{distribution}[images]" if module == "site" else distribution
 
-    dep_added = _add_dependency(str(project), distribution)
+    dep_added = _add_dependency(str(project), requirement)
     app_added = add_app(project / "config" / "settings.py", app_name)
 
     typer.echo(f"{distribution}: {'added to' if dep_added else 'already in'} pyproject.toml")
@@ -174,8 +192,9 @@ def add(module: str = typer.Argument(..., help='Module short name, e.g. "payment
 
     record_guidance(project, module)
 
-    typer.echo("If the module ships URLs, add the include to config/urls.py:")
-    typer.echo(f'  path("{module}/", include("{app_name}.urls"))')
+    if module != "site":  # karni-site's URLs are included above
+        typer.echo("If the module ships URLs, add the include to config/urls.py:")
+        typer.echo(f'  path("{module}/", include("{app_name}.urls"))')
     typer.echo("Install it, then migrate:")
     typer.echo("  docker compose build        # container workflow")
     typer.echo("  uv pip install -r pyproject.toml   # host venv workflow")

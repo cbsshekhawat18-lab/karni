@@ -475,8 +475,9 @@ def test_a_site_app_replaces_the_welcome_page(
     tests = page_test()
     assert tests.returncode == 0, tests.stdout[-3000:] + tests.stderr[-3000:]
 
-    # It fails, naming the page and the problem, when a page loses its title, its
-    # description or an image's alt text, or links to a page that does not exist.
+    # It fails, naming the page and the problem, when a page loses its description or an
+    # image's alt text, or links to a page that does not exist. A page that loses its title
+    # gets the site's name from {% karni_seo %}.
     site = project / "website"
     (site / "static" / "website" / "team.svg").write_text("<svg></svg>\n")
     about = site / "templates" / "website" / "about.html"
@@ -496,9 +497,8 @@ def test_a_site_app_replaces_the_welcome_page(
     output = tests.stdout + tests.stderr
     assert tests.returncode == 1, output[-3000:]
     for line in (
-        "E618: assert_pages: 4 problem(s) (2 page(s) and 5 link(s) checked)",
-        '  - /: a <meta name="description"> with an empty content attribute. ',
-        "  - /about/: an empty <title>. ",
+        "E618: assert_pages: 3 problem(s) (2 page(s) and 5 link(s) checked)",
+        '  - /: no <meta name="description">. ',
         "  - /about/: 1 <img> without an alt attribute: /static/website/team.svg (line ",
         "  - /: links to /x/ (line ",
     ):
@@ -609,7 +609,7 @@ with override_settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
     # The first render is the design, unchanged.
     assert '<a href="/" class="active">Home</a>' in page, page
     assert '<a href="/about/">About</a>' in page
-    assert '<a class="brand" href="/"><img src="/static/website/img/logo.svg" alt="Crumb &amp; Co"></a>' in page
+    assert '<a class="brand" href="/"><img src="/static/website/img/logo.svg" alt="Crumb &amp; Co" width="10" height="10" data-karni-image="natural"></a>' in page
     assert '<h1>Bread worth the walk</h1>' in page
     assert '<a href="https://maps.example.com/crumb">Find us</a>' in page
     # The client changes a text, a menu entry, the site's name, logo and map link.
@@ -630,7 +630,8 @@ with override_settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
     page = client.get("/").content.decode()
     assert "<h1>Fresh <b>bread</b></h1>" in page, page
     assert '<a href="/about/">Our story</a>' in page
-    assert f'<img src="{site.logo.url}" alt="Crumb and Co">' in page
+    # The upload is not a real picture: its size is unknown, so the design's goes.
+    assert f'<img src="{site.logo.url}" alt="Crumb and Co" data-karni-image="natural">' in page
     assert '<a href="https://maps.example.com/new">Find us</a>' in page
     assert f"url(&quot;{hero.image.url}&quot;)" in page
     assert '<a href="/about/" class="active">Our story</a>' in client.get("/about/").content.decode()

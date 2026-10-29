@@ -1,0 +1,13 @@
+{% load static karni_site %}{% site_defaults name="Crumb & Co" tagline="Bread from our own oven." %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  {% karni_seo %}<title>{% block title %}Crumb &amp; Co{% endblock %}</title>
+  <meta name="description" content="{% block description %}{% endblock %}">{% block seo %}{% endblock %}{% endkarni_seo %}
+  <meta name="theme-color" content="#f5efe6">
+</head>
+<body>
+  <nav><a href="{% url 'seo:home' %}">Home</a> <a href="{% url 'seo:about' %}">About us</a> <a href="{% url 'seo:projects' %}">Our projects</a></nav>
+  {% block content %}{% endblock %}
+</body>
+</html>

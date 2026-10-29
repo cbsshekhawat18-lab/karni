@@ -372,7 +372,10 @@ class SiteImageNode(Node):
             return mark_safe(default)  # noqa: S308 - the design's own markup
         if self.url:
             return mark_safe(html.escape(address))  # noqa: S308 - escaped
-        return mark_safe(replace_image(default, address))  # noqa: S308 - escaped address
+        from karni_site.renditions import replacement
+
+        changes = replacement(stored, img_attributes(default))
+        return mark_safe(replace_image(default, address, None, changes))  # noqa: S308 - escaped
 
 
 @register.tag("site_image")
@@ -482,3 +485,10 @@ def do_get_menu(parser: Parser, token: Token) -> GetMenuNode:
             raise _syntax_error(usage)
         seed = parser.compile_filter(bits[2].removeprefix("seed="))
     return GetMenuNode(parser.compile_filter(bits[1]), seed, bits[-1])
+
+
+# {% karni_seo %} and {% image %}: the page's search and share tags, and sized images
+# (karni_site.seo_tags).
+from karni_site.seo_tags import register_tags  # noqa: E402
+
+register_tags(register)

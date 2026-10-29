@@ -25,3 +25,6 @@ class KarniSiteConfig(AppConfig):
         from karni_site.signals import connect
 
         connect()
+        from karni_site.renditions import connect as connect_renditions
+
+        connect_renditions()

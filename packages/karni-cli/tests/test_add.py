@@ -78,9 +78,17 @@ def test_add_site_wires_its_middleware_and_context_processor(
         "]  # karni:context_processors\n"
     )
     assert "karni_site.middleware.RedirectMiddleware: added to MIDDLEWARE" in result.output
+    # With its images extra: Pillow makes the smaller copies of uploaded images.
+    assert '"karni-site[images]"' in (generated_project / "pyproject.toml").read_text()
+    # robots.txt and sitemap.xml: karni_site's URLs, at the marker, before any site.
+    urls = (generated_project / "config" / "urls.py").read_text()
+    assert '    path("", include("karni_site.urls")),\n    # karni:urls\n' in urls
+    assert "karni_site.urls: included in config/urls.py" in result.output
+    assert 'path("site/"' not in result.output
     again = runner.invoke(app, ["add", "site"])
     assert again.exit_code == 0, again.output
     assert (generated_project / "config" / "settings.py").read_text() == settings
+    assert (generated_project / "config" / "urls.py").read_text() == urls
 
 
 def test_add_prints_the_urls_include_line(
@@ -220,3 +228,12 @@ def test_unrecognized_shape_errors(tmp_path: Path) -> None:
     settings.write_text("WEIRD = 1  # karni:apps\n")
     with pytest.raises(CliError, match="manually"):
         add_app(settings, "karni_payments")
+
+
+def test_a_listed_distribution_is_not_added_again_with_extras() -> None:
+    from karni_cli.commands.add import add_dependency_text
+
+    text = '[project]\nname = "x"\ndependencies = ["karni", "karni-site>=0.4"]\n'
+    assert add_dependency_text(text, "karni-site[images]") is None
+    added = add_dependency_text('[project]\nname = "x"\ndependencies = []\n', "karni-site[images]")
+    assert added is not None and '"karni-site[images]"' in added

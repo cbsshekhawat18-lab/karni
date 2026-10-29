@@ -178,3 +178,38 @@ def test_karni_check_hook_failures(monkeypatch) -> None:
         call_command("karni_check", stderr=err)
     text = err.getvalue()
     assert "boom: exploded" in text and "layers: fat model detected" in text
+
+
+def test_karni_check_seo_runs_the_seo_hooks_only_when_asked(monkeypatch) -> None:
+    """--seo adds the karni.checks.seo group: its findings fail the run like any hook's."""
+    import karni.management.commands.karni_check as cmd_mod
+
+    class FakeEP:
+        def __init__(self, name, fn):
+            self.name = name
+            self._fn = fn
+
+        def load(self):
+            return self._fn
+
+    asked: list[str] = []
+
+    def groups(group):
+        asked.append(group)
+        if group == "karni.checks.seo":
+            return [FakeEP("site", lambda: ["SITE010: / has no <title>."])]
+        return []
+
+    monkeypatch.setattr(cmd_mod, "entry_points", groups)
+    out = StringIO()
+    call_command("karni_check", stdout=out)
+    assert asked == ["karni.checks"]
+    assert "backend checks: ok" in out.getvalue()
+
+    from django.core.management.base import CommandError
+
+    err = StringIO()
+    with pytest.raises(CommandError, match=r"E702: karni check found 1 problem"):
+        call_command("karni_check", seo=True, stderr=err)
+    assert asked[1:] == ["karni.checks", "karni.checks.seo"]
+    assert "site: SITE010: / has no <title>." in err.getvalue()

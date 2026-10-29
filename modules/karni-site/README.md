@@ -9,10 +9,14 @@ such site needs, and no project should write again, lives here. See
 ## Install
 
 ```sh
-pip install karni-site
+pip install "karni-site[images]"
 karni add site
 karni migrate
 ```
+
+The `images` extra is Pillow. Without it everything works, and uploaded
+images are shown as uploaded: no smaller copies and no upload cap (see
+`{% image %}` below).
 
 `karni make site <app>` and `karni import design` do the `karni add site`
 step for you when the project does not have the module yet. Then install it
@@ -33,6 +37,13 @@ config/settings.py:
 TEMPLATES[0]["OPTIONS"]["context_processors"] += [  # noqa: F821
     "karni_site.context_processors.site",
 ]  # karni:context_processors
+```
+
+and into config/urls.py, before the site's own include, the module's URLs
+(robots.txt and sitemap.xml):
+
+```python
+path("", include("karni_site.urls")),
 ```
 
 `karni make site` also sets the error handlers in `config/urls.py`:
@@ -63,7 +74,7 @@ The same tags work in a template written by hand:
 | a menu | Site, Menus | `{% get_menu "header" as items %}{% for item in items %}...{% endfor %}` |
 | the name, logo, contact details, opening hours, social links | Site, Site settings | `{{ site.name }}`, `{% site_image "logo" %}...{% endsite_image %}`, `{{ site.phone }}` |
 | an old address | Site, Redirects | nothing: the middleware answers it |
-| a page's title and description | Site, Page titles and descriptions | read through `karni_site.seo.page_seo(request)` |
+| a page's title, description and share image | Site, Page titles and descriptions | `{% karni_seo %}` in base.html |
 
 The template holds the design's text and images as the defaults. The first
 time a template renders, they are stored. A block nobody changed follows
@@ -203,7 +214,151 @@ description, share image and *hide from search engines*, for one of the
 site's pages by URL name (every page of that view) or for one path. The
 lookup is `karni_site.seo.page_seo(request)`: the entry for the exact path
 first, then the one for the URL name, or `None`. Answers are cached, and a
-save clears them.
+save clears them. `{% karni_seo %}` renders them.
+
+### `{% karni_seo %}`: what search engines and sharing sites read
+
+In base.html's `<head>`, around the design's own title and description:
+
+```django
+{% karni_seo %}<title>{% block title %}{{ site.name }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{% endblock %}">{% block seo %}{% endblock %}{% endkarni_seo %}
+```
+
+It renders the page's `<title>`, `<meta name="description">`, a canonical
+link (the page's address without its query string, on `KARNI_SITE_URL`
+when it is set), `<meta name="robots" content="noindex">` for a page hidden
+from search engines, the Open Graph tags (`og:type`, `og:site_name`,
+`og:title`, `og:description`, `og:url`, `og:locale`, `og:image` with its
+size and alt text) and the Twitter card, the site's JSON-LD, and one CSS
+rule that keeps the images Karni sized in proportion. Each value is the
+first of:
+
+1. the page's entry in the admin's *Page titles and descriptions*;
+2. `seo` in the template's context, a dict a view passes:
+   `render(request, "website/search.html", {"seo": {"noindex": True}})`
+   (`title`, `description`, `image`, `image_alt`, `type`, `noindex`, and
+   `canonical`, `None` for none);
+3. the row the page is about: `seo` or `object` in the context when it is
+   a row, else the row in the context whose `get_absolute_url()` is the
+   page's path. Its fields are what `class Karni: seo` names
+   (`seo = {"title": "name", "description": "intro", "image": "photo"}`),
+   else a title in `seo_title`, `title` or `name`, a description in
+   `seo_description`, `description`, `summary`, `excerpt`, `intro` (and the
+   like), an image in `seo_image`, `image`, `photo` (and the like). A
+   title from a row is written `KARNI_SITE_TITLE_FORMAT` (`"{title} |
+   {site}"`) unless it names the site, and a description from a row loses
+   its HTML and is cut at `KARNI_SITE_DESCRIPTION_LENGTH` characters;
+4. the tags written inside the tag: the design's `<title>`, its
+   description, an `og:image`, `twitter:card` or `og:type` (a page's own
+   go in `{% block seo %}`);
+5. the site's settings: its name, its tagline, its default share image.
+
+A share image is absolute, the copy closest above 1200 pixels wide when the
+image is an upload with copies. A tag inside that the tag does not write
+(`theme-color`, `twitter:site`, a design's own JSON-LD) stays where it is.
+The tag never fails a page: if anything goes wrong, the tags inside are
+rendered as written. The error views pass `seo={"noindex": True,
+"canonical": None}`, so a 404 page is never indexed.
+
+The JSON-LD is a `WebSite` and an `Organization`, or a `LocalBusiness` when
+the site has opening hours (`KARNI_SITE_SCHEMA_TYPE`, which also takes any
+schema.org type, `"Bakery"`, or `None` for none), from the site's
+settings: name, tagline, address, phone, email, map link, logo, share
+image, social profiles (`sameAs`) and, for a business, its opening hours.
+Hours are written as the site shows them ("Mon to Fri", "9:00 to 17:00",
+"9am - 5.30pm", "Closed"). English day names and these time forms are
+read. A line it cannot read is left out rather than guessed.
+`KARNI_SITE_JSONLD` names your own `(request, site) -> dict` function for
+anything else.
+
+### sitemap.xml and robots.txt
+
+`/sitemap.xml` lists the site's pages (every named URL without arguments,
+except the admin's, the API's, the static files', karni_site's own and
+redirects) and the rows of every model with a page of its own
+(`get_absolute_url()`), from its default manager, so scopes apply and
+soft-deleted rows stay out. A model chooses its public rows:
+
+```python
+class Karni:
+    sitemap = {"filter": {"status": "live"}, "lastmod": "edited_at", "changefreq": "weekly"}
+```
+
+Without a filter, the first boolean field `KARNI_SITE_PUBLISHED_FIELDS`
+names (`published`, `is_published`, `is_public`, `public`, `visible`,
+`is_visible`) must be true, a `status` with a `published` choice must be
+`published`, and a `published_at` must have passed. `sitemap = False`
+leaves a model out. A page or row hidden from search engines in the admin
+is left out, and so is what `KARNI_SITE_SITEMAP_EXCLUDE` names (URL names
+or paths, wildcards allowed). `lastmod` is `updated_at` by default. Past
+50,000 addresses in a section, sitemap.xml becomes an index of
+`/sitemap-<section>.xml?p=<page>`.
+
+`/robots.txt` closes the site to every crawler unless indexing is allowed:
+by default only where `DJANGO_ENV` is `prod`, so a development or staging
+copy is never indexed. `KARNI_SITE_ALLOW_INDEXING = True` or `False`
+decides for every environment. While indexing is allowed it names the
+sitemap and asks crawlers to stay out of `KARNI_SITE_ROBOTS_DISALLOW`.
+A `karni_site/robots.txt` template of the project's own replaces it.
+
+### `{% image %}`: uploads at the size the page shows them
+
+```django
+{% image project.photo width=400 alt=project.title class="card-img" %}
+{% image page.hero alt="" loading="eager" fetchpriority="high" %}
+```
+
+renders an `<img>` with `srcset` and `sizes` from the image's WebP copies,
+`width` and `height` in its proportions, `loading="lazy"` and
+`decoding="async"`. `width` is the width the page shows it at (its own
+without one). `alt` is required, `alt=""` for an image that only
+decorates. Any other `name=value` is an attribute, an underscore a hyphen
+in `data_` and `aria_` names. A lazy image's `sizes` starts with `auto`,
+so the browser loads the copy that fits the layout: a photo in a card at
+the card's size. An empty field renders nothing.
+
+The copies are made when a save uploads an image (an `ImageField`, or one
+of this module's image fields), by a Celery task, through the field's own
+storage, local or S3: a WebP copy at each of `KARNI_SITE_IMAGE_WIDTHS`
+below the image's width (`[320, 480, 640, 800, 960, 1280, 1600, 1920]`)
+and one at its own width unless it is a WebP already, at
+`KARNI_SITE_IMAGE_QUALITY` (80), named `<name>.<width>w.webp` next to the
+original, and a manifest, `<name>.renditions.json`. An original wider or
+taller than `KARNI_SITE_IMAGE_MAX_SIZE` (2560) is scaled down first, turned
+upright from its EXIF orientation and without its EXIF data. A page that
+shows an image without copies (uploaded before the module, or loaded in
+bulk) shows the original, never an error, and queues them, once per ten
+minutes per image. `{% editable_image %}` and `{% site_image %}` use the
+copies of an uploaded picture the same way, keeping the design's width.
+
+Without Pillow nothing is scaled or copied: the original is shown as
+uploaded, with its `width` and `height`, which are read from the file's
+first bytes and need no Pillow.
+
+### `karni check --seo`
+
+`karni check --seo` renders every page of the site through Django's test
+client, against the project's database: `/`, the sitemap's addresses, the
+named URLs without arguments and every page they link to, up to
+`KARNI_SITE_SEO_MAX_PAGES`. A page's title, description and images come
+from the database and from template inheritance, so only a rendered page
+shows what a search engine reads. Rendering stores a template's defaults,
+as a first visit would. It reports:
+
+| Code | Finding |
+| --- | --- |
+| `SITE010` | a page without a title |
+| `SITE011` | a title two pages search engines may index share |
+| `SITE012` | a page without a description |
+| `SITE013` | a description two such pages share |
+| `SITE014` | an `<img>` without `alt` |
+| `SITE015` | an `<img>` without `width` and `height` |
+| `SITE016` | an image without smaller copies that is wider than `KARNI_SITE_SEO_PIXEL_RATIO` times its `width`, wider than the widest copy, or heavier than `KARNI_SITE_SEO_IMAGE_BYTES` |
+| `SITE017` | a link, image, stylesheet or script of the site that answers an error |
+| `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
+
+`KARNI_SITE_SEO_IGNORE` lists paths it never requests.
 
 ### The editor role
 
@@ -297,6 +452,27 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_MENU_ROWS_LIMIT` | `100` | At most this many rows per *children from* item. |
 | `KARNI_SITE_REDIRECTS_BEFORE_VIEWS` | `False` | `True` looks every request up before its view, so a redirect also replaces a page that exists. |
 | `KARNI_SITE_EDITOR_ROLE` | `"editor"` | The slug of the role this module declares, or `None` for none. |
+| `KARNI_SITE_URL` | `None` | The site's address, `"https://www.example.com"`, for canonical links, share tags, the sitemap and robots.txt. `None`: the address each request came to. |
+| `KARNI_SITE_ALLOW_INDEXING` | `None` | Whether search engines may index the site. `None`: only where `DJANGO_ENV` is `prod`. |
+| `KARNI_SITE_ROBOTS_DISALLOW` | `[]` | Paths robots.txt asks crawlers to stay out of while indexing is allowed. |
+| `KARNI_SITE_SITEMAP_EXCLUDE` | `[]` | URL names and paths the sitemap leaves out, wildcards allowed. |
+| `KARNI_SITE_SITEMAPS` | `"karni_site.sitemaps.sitemaps"` | The `() -> {name: Sitemap}` function that lists the sitemap's sections. |
+| `KARNI_SITE_PUBLISHED_FIELDS` | `["published", "is_published", ...]` | Boolean fields that mark a row public, for a model in the sitemap without a filter. |
+| `KARNI_SITE_SCHEMA_TYPE` | `"auto"` | The JSON-LD type: `"auto"` (`LocalBusiness` with opening hours, else `Organization`), any schema.org type, or `None`. |
+| `KARNI_SITE_JSONLD` | `"karni_site.jsonld.build"` | The `(request, site) -> dict` function that builds the JSON-LD. |
+| `KARNI_SITE_SEO_OBJECT` | `"karni_site.metadata.page_object"` | The `(context, request) -> object` function that finds the row a page is about. |
+| `KARNI_SITE_TITLE_FORMAT` | `"{title} \| {site}"` | How a title from the page's row is written. |
+| `KARNI_SITE_DESCRIPTION_LENGTH` | `160` | The longest description taken from a row, in characters. |
+| `KARNI_SITE_IMAGE_WIDTHS` | `[320, 480, 640, 800, 960, 1280, 1600, 1920]` | The widths of an upload's WebP copies (and its own width). `[]` makes none. |
+| `KARNI_SITE_IMAGE_QUALITY` | `80` | Their WebP quality. |
+| `KARNI_SITE_IMAGE_MAX_SIZE` | `2560` | An upload wider or taller is scaled down to fit. `None` keeps it. |
+| `KARNI_SITE_QUEUE_RENDITIONS` | `True` | Whether an upload, and a page that shows an image without copies, queue them. |
+| `KARNI_SITE_RENDITIONER` | `"karni_site.renditions.generate"` | The `(name, storage) -> Manifest` function that makes the copies. |
+| `KARNI_SITE_IMAGE_STYLE` | `height: auto` for `img[data-karni-image]` | The CSS `{% karni_seo %}` writes for the images Karni sized. `""` leaves it out. |
+| `KARNI_SITE_SEO_MAX_PAGES` | `500` | `karni check --seo` requests at most this many pages. |
+| `KARNI_SITE_SEO_IMAGE_BYTES` | `500000` | An image without smaller copies above this size is oversized (`SITE016`). |
+| `KARNI_SITE_SEO_PIXEL_RATIO` | `2` | An image wider than this many times its `width` is oversized. |
+| `KARNI_SITE_SEO_IGNORE` | `[]` | Regular expressions of paths `karni check --seo` never requests. |
 
 ## Checks
 
@@ -313,7 +489,10 @@ Every setting arrives through the module's settings fragment
   template and an image in another), which would store the block again on
   every render.
 
-A tag written wrongly fails when the template compiles, with `SITE003`. A
+`karni check --seo` runs `SITE010` to `SITE018` (see above). A tag written
+wrongly fails when the template compiles, with `SITE003`, or `SITE019` for
+`{% karni_seo %}`, `{% image %}` and a wrong `class Karni: sitemap` or
+`seo`. A
 redirect in a circle is refused with `SITE006`, a menu item that points
 nowhere with `SITE007`, and a `KARNI_SITE_SETTINGS_MODEL` that names no
 installed model fails with `SITE009`.
@@ -341,5 +520,19 @@ installed model fails with `SITE009`.
 - `KARNI_CSP` adds sources site-wide, and `@csp_extend` per view, instead of
   the tags. `karni.security.extend_request_csp(request, {...})` is what the
   tags call, for your own tag or view code.
+- `{% karni_seo %}`: `seo` in a view's context, `KARNI_SITE_SEO_OBJECT`,
+  `class Karni: seo`, `KARNI_SITE_TITLE_FORMAT`, `KARNI_SITE_JSONLD` and
+  `KARNI_SITE_SCHEMA_TYPE`. `karni_site.metadata.resolve()` returns the
+  values for a tag of your own.
+- The sitemap: `class Karni: sitemap`, `KARNI_SITE_SITEMAP_EXCLUDE`,
+  `KARNI_SITE_PUBLISHED_FIELDS`, or `KARNI_SITE_SITEMAPS`. robots.txt:
+  `KARNI_SITE_ALLOW_INDEXING`, `KARNI_SITE_ROBOTS_DISALLOW` or a
+  `karni_site/robots.txt` template. Or a route of your own for either path
+  before the include.
+- Images: `KARNI_SITE_IMAGE_WIDTHS`, `KARNI_SITE_IMAGE_QUALITY`,
+  `KARNI_SITE_IMAGE_MAX_SIZE`, `KARNI_SITE_RENDITIONER`, and
+  `KARNI_SITE_QUEUE_RENDITIONS = False` with `karni_site.renditions.make()`
+  where you choose. `karni_site.seo_tags.image_tag()` builds the markup in
+  Python.
 - `KarniSiteConfig`: subclass it and point `INSTALLED_APPS` at the subclass.
   Keep the label `karni_site`.

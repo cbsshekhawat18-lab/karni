@@ -46,12 +46,21 @@ site = "karni_site.errorcodes:CODES"
 [project.entry-points."karni.checks"]
 site = "karni_site.checks:run_checks"
 
+# `karni check --seo`: every page rendered and checked (karni_site.checks_seo).
+[project.entry-points."karni.checks.seo"]
+site = "karni_site.checks_seo:run_checks"
+
 # The content editor role (karni.accounts roles): merged under KARNI_ROLES.
 [project.entry-points."karni.roles"]
 site = "karni_site.roles:declared"
 
+[project.optional-dependencies]
+# Pillow: the smaller WebP copies of uploaded images and the upload cap. Without it images
+# are shown as uploaded, with their width and height.
+images = ["Pillow>=10.3"]
+
 [dependency-groups]
-dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
+dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5", "Pillow>=10.3"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["karni_site"]

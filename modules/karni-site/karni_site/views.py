@@ -36,6 +36,8 @@ __all__ = ["page_not_found", "render_first", "server_error"]
 
 logger = logging.getLogger("karni_site")
 
+#: What ``{% karni_seo %}`` writes on an error page: hidden from search engines, no canonical.
+_ERROR_SEO = {"noindex": True, "canonical": None}
 #: What is sent when no template renders at all.
 PLAIN_404 = "<!doctype html><title>Not found</title><h1>Not found</h1>"
 PLAIN_500 = "<!doctype html><title>Server error</title><h1>Server error (500)</h1>"
@@ -75,7 +77,7 @@ def page_not_found(
     """``handler404``: the site's ``404.html`` with the request, or a fallback."""
     message: Any = exception.args[0] if exception is not None and exception.args else None
     reason = message if isinstance(message, str) else type(exception).__name__
-    context = {"request_path": quote(request.path), "exception": reason}
+    context = {"request_path": quote(request.path), "exception": reason, "seo": _ERROR_SEO}
     names = _names(template_name, "KARNI_SITE_NOT_FOUND_TEMPLATES")
     content = render_first(request, names, context)
     return HttpResponseNotFound(content if content is not None else PLAIN_404)
@@ -84,7 +86,7 @@ def page_not_found(
 @requires_csrf_token
 def server_error(request: HttpRequest, template_name: str | None = None) -> HttpResponse:
     """``handler500``: the site's ``500.html`` with the request, or a fallback."""
-    context = {"request_path": quote(request.path)}
+    context = {"request_path": quote(request.path), "seo": _ERROR_SEO}
     content = render_first(
         request, _names(template_name, "KARNI_SITE_SERVER_ERROR_TEMPLATES"), context
     )

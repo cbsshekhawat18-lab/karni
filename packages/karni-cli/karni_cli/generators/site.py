@@ -70,6 +70,8 @@ PYPROJECT = Path("pyproject.toml")
 SITE_MODULE = "site"
 SITE_APP = "karni_site"
 SITE_DISTRIBUTION = "karni-site"
+#: What pyproject.toml lists: the images extra (Pillow) makes the copies of uploaded images.
+SITE_REQUIREMENT = "karni-site[images]"
 #: The error views karni_site ships, set as Django's handlers in config/urls.py.
 HANDLERS = (
     ("handler404", "karni_site.views.page_not_found"),
@@ -87,6 +89,8 @@ PROCESSORS_BLOCK = (
     f'    "{SITE_PROCESSOR}",\n'
     f"]  {PROCESSORS_MARKER}\n"
 )
+#: karni_site's own URLs (robots.txt, sitemap.xml, the form view), included at "" before the site.
+SITE_URLS = "karni_site.urls"
 #: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
 PAGES_MARKER = "# karni:pages"
 _APP_NAME = re.compile(r"""^app_name\s*=\s*["']([^"']+)["']""", re.MULTILINE)
@@ -170,11 +174,11 @@ def base_source(app: App) -> str:
         "<head>\n"
         '  <meta charset="utf-8">\n'
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "  <title>{% block title %}{{ site.name }}{% endblock %}</title>\n"
-        "  {# One sentence per page for search results. The page test fails an empty one. #}\n"
-        '  <meta name="description" content="{% block description %}{% endblock %}">\n'
-        "  {# The page's address without its query string, so ?utm_ links do not count twice. #}\n"
-        '  <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">\n'
+        "  {# The title, description, canonical link, share tags and JSON-LD (karni-site). The #}\n"
+        "  {# tags inside are the defaults. The page test fails an empty description. #}\n"
+        "  {% karni_seo %}<title>{% block title %}{{ site.name }}{% endblock %}</title>\n"
+        '  <meta name="description" content="{% block description %}{% endblock %}">'
+        "{% block seo %}{% endblock %}{% endkarni_seo %}\n"
         f'  <link rel="stylesheet" href="{{% static \'{app.label}/site.css\' %}}">\n'
         "  {% block head %}{% endblock %}\n"
         "</head>\n"
@@ -391,7 +395,8 @@ def wire_config_urls(ws: Workspace, app: App) -> None:
     if text is None:
         raise CliError(f"{rel} not found. Run inside a Karni project.", code="C001")
     for route, _, include in routes(text):
-        if route == "" and include not in (None, f"{app.module}.urls"):
+        # karni_site's own URLs (the form view) live at "" next to the site's.
+        if route == "" and include not in (None, f"{app.module}.urls", "karni_site.urls"):
             raise CliError(
                 f'{rel} already includes {include!r} at "". One app answers the root. Remove '
                 "that include, or add the site's pages to that app instead.",
@@ -405,6 +410,58 @@ def wire_config_urls(ws: Workspace, app: App) -> None:
     updated = add_route(text, entry, filename=rel, manual=manual)
     if updated is not None:
         ws.write(CONFIG_URLS, updated)
+
+
+def with_site_urls(text: str, filename: str) -> str | None:
+    """config/urls.py ``text`` including karni_site's URLs before the site's own, ``None`` if it does.
+
+    The include goes before the first ``path("", include(...))`` above the
+    ``# karni:urls`` marker (the site), else at the marker, so a site's
+    catch-all pattern never shadows robots.txt or sitemap.xml.
+
+    :raises CliError: when the file has no marker (``C108``).
+    """
+    if any(include == SITE_URLS for _route, _name, include in routes(text)):
+        return None
+    entry = f'path("", include({pystr(SITE_URLS)})),'
+    lines = text.splitlines()
+    marker = marker_line(lines)
+    if marker is None:
+        raise CliError(
+            f"No `{URLS_MARKER}` marker in {filename}. Add `{entry}` to urlpatterns before the "
+            "site's own include yourself, or run `karni upgrade` to add the marker.",
+            code="C108",
+        )
+    target = next(
+        (
+            index
+            for index, line in enumerate(lines[:marker])
+            if re.search(r"""path\(\s*["']{2}\s*,\s*include\(""", line)
+        ),
+        marker,
+    )
+    indent = lines[marker][: len(lines[marker]) - len(lines[marker].lstrip())]
+    lines.insert(target, indent + entry)
+    return "\n".join(lines) + "\n"
+
+
+def wire_site_urls(ws: Workspace) -> None:
+    """``path("", include("karni_site.urls"))`` in config/urls.py: robots.txt and sitemap.xml.
+
+    A file without the ``# karni:urls`` marker gets a note naming the line to add.
+    """
+    rel = CONFIG_URLS.as_posix()
+    text = ws.read(CONFIG_URLS)
+    if text is None:
+        raise CliError(f"{rel} not found. Run inside a Karni project.", code="C001")
+    try:
+        updated = with_site_urls(text, rel)
+    except CliError as exc:
+        ws.note(f"robots.txt and sitemap.xml: {exc.message}")
+        return
+    if updated is not None:
+        ws.write(CONFIG_URLS, ensure_imports(ws, rel, updated, [Import("django.urls", "include")]))
+        ws.note(f"{SITE_URLS}: included in {rel} (robots.txt, sitemap.xml)")
 
 
 def wire_site_settings(text: str, filename: str) -> tuple[str, list[str]]:
@@ -480,7 +537,7 @@ def wire_site_module(ws: Workspace) -> bool:
         ws.note(note)
     pyproject = ws.read(PYPROJECT)
     if pyproject is not None:
-        updated = add_dependency_text(pyproject, SITE_DISTRIBUTION)
+        updated = add_dependency_text(pyproject, SITE_REQUIREMENT)
         if updated is not None:
             ws.write(PYPROJECT, updated)
             added = True
@@ -519,13 +576,17 @@ def set_error_handlers(ws: Workspace) -> None:
 
 
 def ensure_runtime(ws: Workspace, app: App) -> None:
-    """What every site app needs from karni-site: the module, the handlers, a 500 page.
+    """What every site app needs from karni-site: the module, the handlers, its URLs, the
+    404 and 500 pages in the site's layout.
 
     Idempotent, so an app created before this existed gets the missing pieces
     (``karni make site <app> --force``, or ``karni import design``).
     """
     wire_site_module(ws)
     set_error_handlers(ws)
+    wire_site_urls(ws)
+    if not ws.exists(app.file("templates", "404.html")):
+        ws.create(app.file("templates", "404.html"), not_found_source(app))
     if not ws.exists(app.file("templates", "500.html")):
         ws.create(app.file("templates", "500.html"), server_error_source(app))
 

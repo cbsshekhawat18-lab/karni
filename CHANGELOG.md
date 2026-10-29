@@ -11,6 +11,31 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **A public site is ready for search engines by default.** karni-site's
+  `{% karni_seo %}` in base.html writes each page's title, description,
+  canonical link, `noindex`, Open Graph and Twitter tags and the site's
+  JSON-LD (`Organization`, or `LocalBusiness` with address, phone, opening
+  hours, logo and social profiles, `KARNI_SITE_SCHEMA_TYPE`), from the
+  admin's entry for the page, then `seo` in the view's context, then the row
+  the page is about (`class Karni: seo`), then the template's own tags, then
+  the site's settings. `/sitemap.xml` lists the site's pages and the public
+  rows of every model with a page (`class Karni: sitemap`, published flags,
+  scopes and soft deletes honoured), and `/robots.txt` closes the site
+  outside production (`DJANGO_ENV`, `KARNI_SITE_ALLOW_INDEXING`). `{% image
+  obj.photo width=400 alt=... %}` writes `srcset`, `sizes`, `width`,
+  `height` and lazy loading from WebP copies a Celery task makes next to
+  each upload through the project's storage (`KARNI_SITE_IMAGE_WIDTHS`,
+  `KARNI_SITE_IMAGE_QUALITY`, the upload cap `KARNI_SITE_IMAGE_MAX_SIZE`),
+  and shows the original until they exist. Pillow is the `karni-site[images]`
+  extra. `karni check --seo` (the new `karni.checks.seo` entry-point group)
+  renders every page through the test client and reports SITE010 to SITE018:
+  missing or shared titles and descriptions, images without alt, size or
+  smaller copies, broken internal links and pages missing from the sitemap.
+  `karni make site` and `karni add site` include `karni_site.urls`, `karni
+  make site` writes `{% karni_seo %}` and the images extra, and `karni import
+  design` puts the tag where the design's head tags were and gives the
+  design's images their width and height and smaller WebP copies in a
+  `srcset`. [docs/public-site.md](docs/public-site.md#seo-by-default).
 - **Everything a client sees on a public site is edited in the admin.**
   The karni-site module now holds the site's own details (`SiteSettings`:
   name, tagline, logo, favicon, the default share image, address, phone,

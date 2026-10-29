@@ -157,3 +157,166 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         ),
     ),
 )
+
+#: SEO and images (SITE010 to SITE019): `karni check --seo`, {% karni_seo %}, {% image %} and
+#: the sitemap.
+SEO_CODES: Final[tuple[ErrorCode, ...]] = (
+    ErrorCode(
+        code="SITE010",
+        title="A page has no title",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "Search results and browser tabs show a page's <title>. A page without one, or with "
+            "an empty one, is listed under its address or a title the search engine makes up."
+        ),
+        fix=(
+            "Give the page a title: {% block title %} in its template, the title of its row "
+            "(class Karni: seo), or its entry in the admin's Page titles and descriptions. "
+            "base.html needs {% karni_seo %} around its <title>."
+        ),
+    ),
+    ErrorCode(
+        code="SITE011",
+        title="Two pages have the same title",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "Search engines treat pages with the same title as copies of one another and may "
+            "show only one. Visitors cannot tell the results apart either. It usually means a "
+            "template's title was written once for every page of a kind."
+        ),
+        fix=(
+            "Give each page its own title. For pages of one view, let the row name it "
+            '(class Karni: seo = {"title": "name"}, or {% block title %}{{ object.title }}'
+            "{% endblock %}), or set it per page in the admin."
+        ),
+    ),
+    ErrorCode(
+        code="SITE012",
+        title="A page has no description",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            'Search results show the <meta name="description"> under the title. Without one '
+            "the search engine picks a fragment of the page, often the menu or a cookie notice."
+        ),
+        fix=(
+            "Write one sentence about the page: {% block description %} in its template, the "
+            'description of its row (class Karni: seo = {"description": "summary"}), its entry '
+            "in the admin, or the site's tagline as the last default."
+        ),
+    ),
+    ErrorCode(
+        code="SITE013",
+        title="Two pages have the same description",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "A description shared by several pages says nothing about any one of them, and "
+            "search engines may ignore it. A detail page that repeats its card's text, or a "
+            "layout's default left in place, is the usual cause."
+        ),
+        fix=(
+            "Write a description per page, or let each row give its own "
+            '(class Karni: seo = {"description": "intro"}).'
+        ),
+    ),
+    ErrorCode(
+        code="SITE014",
+        title="An image has no alt text",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "Screen readers read an image's alt text, and search engines index it. An <img> "
+            "without an alt attribute is announced by its file name."
+        ),
+        fix=(
+            'Describe the image in alt="...", or write alt="" when it only decorates. '
+            "{% image %} requires alt, and an image a client uploads takes its alt text in "
+            "the admin."
+        ),
+    ),
+    ErrorCode(
+        code="SITE015",
+        title="An image has no width and height",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "Without width and height the browser does not know how much room an image takes "
+            "until it loads, so the text below it jumps when it does (layout shift, which "
+            "search engines measure)."
+        ),
+        fix=(
+            "Render uploaded images with {% image %}, which writes both. For a design's own "
+            "image, write its pixel width and height (karni import design does). CSS still "
+            "sizes it: {% karni_seo %} keeps such images in proportion."
+        ),
+    ),
+    ErrorCode(
+        code="SITE016",
+        title="An image is much larger than the page shows it",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "A visitor downloads every pixel of an image, however small the page shows it. A "
+            "photo thousands of pixels wide in a small card makes the page slow on a phone, "
+            "and page speed counts in search rankings."
+        ),
+        fix=(
+            "Give it smaller copies: {% image %} for uploads (with Pillow installed, "
+            "pip install karni-site[images], and a Celery worker running), a srcset for a "
+            "design's image (karni import design writes one when Pillow is installed where "
+            "karni runs), or a smaller file. KARNI_SITE_SEO_IMAGE_BYTES and "
+            "KARNI_SITE_SEO_PIXEL_RATIO set the limits."
+        ),
+    ),
+    ErrorCode(
+        code="SITE017",
+        title="A link on the site leads nowhere",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "A link, image, stylesheet or script on one of the site's own pages points at an "
+            "address that answers an error. Visitors land on a dead end, and search engines "
+            "count broken links against the site."
+        ),
+        fix=(
+            "Point it at a page that exists ({% url %} for the site's pages, {% static %} for "
+            "its files), add a redirect for an address that moved, or remove it."
+        ),
+    ),
+    ErrorCode(
+        code="SITE018",
+        title="The sitemap and the site's pages disagree",
+        kind="check",
+        source=f"{_SOURCE}.checks_seo",
+        why=(
+            "sitemap.xml tells search engines which pages exist. A page the site links to that "
+            "the sitemap leaves out is found late or not at all, and an address in the sitemap "
+            "that does not answer 200 (or asks not to be indexed) wastes the crawl."
+        ),
+        fix=(
+            'Include karni_site\'s URLs (path("", include("karni_site.urls")) in config/urls.py, '
+            "which karni make site writes). Give a model's rows get_absolute_url() and the "
+            "public filter they need (class Karni: sitemap), and leave out an address that is "
+            "not a page with KARNI_SITE_SITEMAP_EXCLUDE."
+        ),
+    ),
+    ErrorCode(
+        code="SITE019",
+        title="An SEO tag or declaration is written wrongly",
+        kind="exception",
+        source=f"{_SOURCE}.seo_tags",
+        why=(
+            "{% karni_seo %} takes nothing and ends with {% endkarni_seo %}. {% image %} takes "
+            "the image, then name=value pairs, alt among them. class Karni: sitemap is True, "
+            "False or a dict of filter, exclude, lastmod, changefreq and priority, on a model "
+            "with get_absolute_url(). class Karni: seo maps title, description, image and type "
+            "to fields."
+        ),
+        fix="Write it as the message shows. The karni-site README has an example of each.",
+    ),
+)
+
+CODES = (*CODES, *SEO_CODES)  # type: ignore[misc]  # CODES is Final: extended once, here

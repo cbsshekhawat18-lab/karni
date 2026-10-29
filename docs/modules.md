@@ -185,6 +185,15 @@ runs:
 payments = "karni_payments.checks:run_checks"   # () -> list[str] of failures
 ```
 
+Checks that are slow, or that need the database and content, go in the
+`karni.checks.seo` group instead, the same kind of hook. They run only with
+`karni check --seo` (karni-site's renders every page of the site):
+
+```toml
+[project.entry-points."karni.checks.seo"]
+site = "karni_site.checks_seo:run_checks"       # () -> list[str] of failures
+```
+
 ### 7b. Optional `karni.scopes`: model scopes
 
 A module can add a **scope**, a named filter that every Karni default
@@ -358,7 +367,7 @@ one dependency line, one `INSTALLED_APPS` entry, one optional include line.
 |---|---|---|
 | `karni-payments` (`modules/karni-payments/`) | hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider. UI package: `@karni/payments-ui` | `pip install karni-payments && karni add payments` |
 | `karni-approvals` (`modules/karni-approvals/`) | maker-checker approvals. A model opts in with `class Karni: requires_approval = [...]`, and a guarded change becomes a pending change that a second person applies or rejects. It comes with a queue in the admin, `/api/pending-changes/`, notifications, timeouts, and every decision in `karni.audit`. UI package: `@karni/approvals-ui` | `pip install karni-approvals && karni add approvals` |
-| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): everything the client sees edited in the admin, with the template's text as the default (`{% editable %}` and `{% editable_image %}` blocks with history, `{% get_menu %}` menus in the design's own markup, the site's name, logo and contact details as `site`, redirects, page titles and descriptions) and an `editor` role for it. `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, and its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails. `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008. No UI package. | `pip install karni-site && karni add site` (`karni make site` does this for you) |
+| `karni-site` (`modules/karni-site/`) | the runtime of a public website (a site app from `karni make site` or `karni import design`): everything the client sees edited in the admin, with the template's text as the default (`{% editable %}` and `{% editable_image %}` blocks with history, `{% get_menu %}` menus in the design's own markup, the site's name, logo and contact details as `site`, redirects, page titles and descriptions) and an `editor` role for it. `{% ifactive %}` marks the current page in a menu around whatever markup the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's inline scripts and other origins pass the Content-Security-Policy for that response only, and its error views render the site's own 404 and 500 pages with the request and fall back to a plain page when one fails. `{% karni_seo %}` writes each page's title, description, canonical link, share tags and the site's JSON-LD, `{% image %}` serves uploads through WebP copies at the size the page shows them, and it answers robots.txt and sitemap.xml. `karni check` runs SITE001, SITE002, SITE004, SITE005 and SITE008, and `karni check --seo` renders every page (SITE010 to SITE018). Pillow is its `images` extra. No UI package. | `pip install karni-site[images] && karni add site` (`karni make site` does this for you) |
 | `karni-impersonation` (`modules/karni-impersonation/`) | "log in as user" for support, done safely: an explicit `impersonate` permission (never implied by staff), no privilege escalation, a banner naming both identities with a one-click exit, a session record, every write attributed to both identities in `karni.audit`, a time limit and a hard block on deleting, exporting and payment changes. The threat model is in its README. UI package: `@karni/impersonation-ui` | `pip install karni-impersonation && karni add impersonation` |
 
 Each module's README is its reference (settings table, wiring, escape

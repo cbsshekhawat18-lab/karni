@@ -33,8 +33,10 @@ from html import escape, unescape
 from pathlib import Path
 from typing import Any, Final
 
-from karni_cli.design import compare, rewrite
+from karni_cli.design import compare, rewrite, seo
 from karni_cli.design.compare import Block, Group, Layout, Variation
+from karni_cli.design.images import WIDTHS as _COPY_WIDTHS
+from karni_cli.design.images import Sizer
 from karni_cli.design.parse import Document, Node, parse
 from karni_cli.design.rewrite import Mapped, Policy, Rewriter
 
@@ -138,6 +140,8 @@ class SitePlan:
     design: dict[str, Any] = field(default_factory=dict)
     #: What ``--editable`` made editable (:class:`karni_cli.design.editable.Report`), or ``None``.
     editable: Any = None
+    #: design path -> the widths of its WebP copies (karni_cli.design.images).
+    copies: dict[str, list[int]] = field(default_factory=dict)
 
 
 # reading
@@ -243,7 +247,15 @@ def _read_structure(page: PageSource, mapped: Mapped) -> None:
 
 
 class _Renderer:
-    def __init__(self, pages: list[PageSource], mapped: Mapped, app: str) -> None:
+    def __init__(
+        self,
+        pages: list[PageSource],
+        mapped: Mapped,
+        app: str,
+        files: dict[str, Path] | None = None,
+    ) -> None:
+        #: Sizes the design's <img> tags (karni_cli.design.images), when given its files.
+        self.sizer = Sizer(app, files) if files is not None else None
         self.pages = pages
         self.by_key = {page.path: page for page in pages}
         self.mapped = mapped
@@ -320,6 +332,8 @@ class _Renderer:
                 node = page.nodes_by_start[token.start]
                 index += 1
                 text = page.rewriter.tag(node, page.text)
+                if node.tag == "img" and self.sizer is not None:
+                    text = self._sized(page, node, text)
                 if variations and index in variations:
                     text, problems = compare.generalize_tag(text, variations[index], self.patterns)
                     self.problems.extend(
@@ -353,6 +367,13 @@ class _Renderer:
                 out.append(overlay.after(tokens[i].end))
             i += 1
         return "".join(out)
+
+    def _sized(self, page: PageSource, node: Node, text: str) -> str:
+        assert self.sizer is not None
+        ref = self.mapped.resolve(node.attr(page.text, "src") or "", page.dir)
+        path = ref.path if ref.kind == "asset" else None
+        where = f"{page.path}:{page.line(node.start)}"
+        return self.sizer.tag(node, page.text, text, path, where)
 
     def group(self, group: Group) -> str:
         """The markup of a shared block, from its reference page, markers generalized."""
@@ -427,7 +448,7 @@ def plan(
     pages, mapped = _read_pages(texts, files, app)
     for page in pages:
         _read_structure(page, mapped)
-    renderer = _Renderer(pages, mapped, app)
+    renderer = _Renderer(pages, mapped, app, files)
     content_pages = [page for page in pages if page.redirect is None]
     reference = content_pages[0] if content_pages else None
     if reference is None:
@@ -480,10 +501,15 @@ def plan(
         own_head = [
             (lead, node)
             for lead, node, sig in page.head_items
+            if sig not in shared_head and not seo.covered(node, page.text)
+        ]
+        own_seo = [
+            node
+            for _, node, sig in page.head_items
             if sig not in shared_head
-            and node is not page.title
-            and node is not page.description
-            and node is not page.canonical
+            and seo.covered(node, page.text)
+            and not seo.derived(node, page.text)
+            and node not in (page.title, page.description, page.canonical)
         ]
         plan_for = layout.pages[page.path]
         parts = [f'{{% extends "{base_name}" %}}{{% load static karni_site %}}']
@@ -503,6 +529,12 @@ def plan(
             result.problems.append(
                 f'{page.path}: no <meta name="description">. The page test fails until the '
                 "page's template fills {% block description %}."
+            )
+        if own_seo:
+            pieces.append(
+                "{% block seo %}"
+                + "".join(renderer.span(page, node.start, node.end) for node in own_seo)
+                + "{% endblock %}"
             )
         if own_head:
             head_markup = "".join(
@@ -665,8 +697,39 @@ def plan(
     if editor is not None:
         result.design["editable"] = editor.finish(result.templates, base_name, renderer)
         result.editable = editor.report
+    _image_notes(result, renderer.sizer)
     _notes(result, layout, content_pages)
     return result
+
+
+def _image_notes(result: SitePlan, sizer: Sizer | None) -> None:
+    """The design's images: the copies to make, and what could not be sized."""
+    if sizer is None:
+        return
+    result.copies = dict(sizer.planned)
+    result.design["images"] = {
+        "copies": {path: widths for path, widths in sorted(sizer.planned.items())},
+        "unsized": list(sizer.unsized),
+    }
+    if sizer.planned:
+        count = sum(len(widths) for widths in sizer.planned.values())
+        images = len(sizer.planned)
+        result.notes.append(
+            f"images: {count} smaller WebP {'copy' if count == 1 else 'copies'} of {images} "
+            f"{'image' if images == 1 else 'images'} for their srcset, and width and height on "
+            "every image of the design."
+        )
+    if sizer.without_pillow:
+        result.notes.append(
+            f"images: {len(sizer.without_pillow)} image(s) are wider than "
+            f"{min(_COPY_WIDTHS)} pixels and could load smaller copies. Install Pillow where "
+            "karni runs (pip install pillow) and import again to write them."
+        )
+    if sizer.unsized:
+        result.notes.append(
+            f"images: the size of {len(sizer.unsized)} could not be read from its file, so "
+            "it has no width and height (karni check --seo reports it): " + ", ".join(sizer.unsized)
+        )
 
 
 def _block_id(name: str) -> str:
@@ -692,39 +755,47 @@ def _render_base(
     out: list[str] = []
     title_block = "<title>{% block title %}" + escape(site, quote=False) + "{% endblock %}</title>"
     description_block = '<meta name="description" content="{% block description %}{% endblock %}">'
-    canonical_block = (
-        '<link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}'
-        '{{ request.path }}">'
-    )
     container = doc.body_or_root()
     body_start = body.start if body is not None else container.inner[0]
+
+    def seo_block(indent: str, defaults: list[str]) -> str:
+        """{% karni_seo %} around the design's title, description and shared share tags."""
+        inside = [title_block, description_block, *defaults]
+        return (
+            "{% karni_seo %}"
+            + indent.join(inside)
+            + "{% block seo %}{% endblock %}{% endkarni_seo %}"
+        )
+
     if head is not None:
         out.append(esc(text[: head.start]))
         out.append(reference.rewriter.tag(head, text))
         inner_start, inner_end = head.inner
-        has_title = has_description = False
+        first = reference.head_items[0][1].start if reference.head_items else inner_end
+        indent = _indent(text, inner_start, first)
+        seo_at: int | None = None
+        defaults: list[str] = []
         last_end = inner_start
         for lead, node, sig in reference.head_items:
             lead_text = esc(text[lead : node.start])
-            if node is reference.title:
-                out.append(lead_text + title_block)
-                has_title = True
-            elif node is reference.description:
-                out.append(lead_text + description_block)
-                has_description = True
-            elif node is reference.canonical:
-                out.append(lead_text + canonical_block)
+            if seo.covered(node, text):
+                if seo_at is None:
+                    out.append(lead_text)
+                    seo_at = len(out)
+                    out.append("")
+                if (
+                    sig in shared_head
+                    and not seo.derived(node, text)
+                    and node not in (reference.title, reference.description, reference.canonical)
+                ):
+                    defaults.append(renderer.span(reference, node.start, node.end))
             elif sig in shared_head:
                 out.append(lead_text + renderer.span(reference, node.start, node.end))
             last_end = node.end
-        first = reference.head_items[0][1].start if reference.head_items else inner_end
-        indent = _indent(text, inner_start, first)
-        if not has_title:
-            out.append(indent + title_block)
-        if not has_description:
-            out.append(indent + description_block)
-        if reference.canonical is None and any(p.canonical is not None for p in pages):
-            out.append(indent + canonical_block)
+        if seo_at is None:
+            out.append(indent + seo_block(indent, defaults))
+        else:
+            out[seo_at] = seo_block(indent, defaults)
         out.append("{% block head %}{% endblock %}")
         out.append(esc(text[last_end:inner_end]))
         if head.close_token is not None:
@@ -737,9 +808,7 @@ def _render_base(
         )
         out.append(
             '<!DOCTYPE html>\n<html>\n<head>\n  <meta charset="utf-8">\n  '
-            + title_block
-            + "\n  "
-            + description_block
+            + seo_block("\n  ", [])
             + "\n{% block head %}{% endblock %}</head>\n"
         )
         out.append(esc(text[:body_start]) if body is not None else "")

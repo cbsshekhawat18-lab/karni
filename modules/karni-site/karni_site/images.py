@@ -19,6 +19,7 @@ everyone who uploads is trusted with script on the site's origin.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from html import escape, unescape
 from typing import Any
 
@@ -27,7 +28,14 @@ from django.utils.deconstruct import deconstructible
 
 from karni_site import conf
 
-__all__ = ["ImageValidator", "image_kind", "img_attributes", "replace_image", "validate_image"]
+__all__ = [
+    "ImageValidator",
+    "image_kind",
+    "img_attributes",
+    "replace_image",
+    "set_attributes",
+    "validate_image",
+]
 
 _IMG = re.compile(r"<img\b[^>]*>", re.I)
 _SOURCE = re.compile(r"[ \t]*<source\b[^>]*>[ \t]*\n?", re.I)
@@ -146,16 +154,53 @@ def _rewrite_tag(tag: str, src: str | None, alt: str | None) -> str:
     return head + "".join(pieces) + (" />" if end == "/>" else ">")
 
 
-def replace_image(markup: str, src: str | None, alt: str | None = None) -> str:
+def set_attributes(tag: str, changes: Mapping[str, str | None]) -> str:
+    """One start tag with attributes set (a value) or removed (``None``), the rest as written."""
+    head = tag[: 1 + len(tag[1:].split(None, 1)[0].rstrip("/>"))]
+    body = tag[len(head) :]
+    end = "/>" if body.rstrip().endswith("/>") else ">"
+    body = body.rstrip()[: -len(end)]
+    pieces: list[str] = []
+    done: set[str] = set()
+    for attr in _ATTR.finditer(body):
+        name = attr.group("name").lower()
+        if name in changes:
+            if name in done:
+                continue
+            done.add(name)
+            value = changes[name]
+            if value is not None:
+                written = f'="{escape(value)}"' if value else ""
+                pieces.append(f"{attr.group('space')}{attr.group('name')}{written}")
+            continue
+        pieces.append(attr.group(0))
+    for name, value in changes.items():
+        if name not in done and value is not None:
+            pieces.append(f' {name}="{escape(value)}"' if value else f" {name}")
+    return head + "".join(pieces) + (" />" if end == "/>" else ">")
+
+
+def replace_image(
+    markup: str,
+    src: str | None,
+    alt: str | None = None,
+    attributes: Mapping[str, str | None] | None = None,
+) -> str:
     """The design's image markup showing ``src`` (and ``alt``), every other byte kept.
 
     ``None`` keeps the design's value. When ``markup`` has no ``<img>`` (a
     ``url`` block holds a bare address), the address itself is replaced.
+    ``attributes`` sets (or, as ``None``, removes) more of the ``<img>``'s
+    attributes: the uploaded picture's ``srcset``, ``sizes``, ``width`` and
+    ``height`` (:func:`karni_site.renditions.replacement`).
     """
     match = _IMG.search(markup)
     if match is None:
         return escape(src) if src is not None else markup
-    out = markup[: match.start()] + _rewrite_tag(match.group(0), src, alt) + markup[match.end() :]
+    tag = _rewrite_tag(match.group(0), src, alt)
+    if attributes:
+        tag = set_attributes(tag, attributes)
+    out = markup[: match.start()] + tag + markup[match.end() :]
     if src is not None:
         out = _SOURCE.sub("", out)
     return out

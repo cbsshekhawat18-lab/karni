@@ -11,6 +11,11 @@ checks fail or any hook reports failures.
 deployment with ``DEBUG`` on or the scaffold's ``SECRET_KEY`` does not pass.
 A Django deploy warning that a Karni check covers is hidden then, so each
 problem is printed once, with the Karni code and fix.
+
+``--seo`` also runs the hooks of the ``karni.checks.seo`` entry-point group,
+the same zero-argument callables returning failure messages. They may be
+slow (karni-site's renders every page of the site), so they run only when
+asked for.
 """
 
 from __future__ import annotations
@@ -51,6 +56,13 @@ class Command(BaseCommand):
             help="Also run the deploy checks, and fail on warnings too. Run it with the "
             "production environment (DJANGO_ENV=prod, DEBUG=False, the real SECRET_KEY).",
         )
+        parser.add_argument(
+            "--seo",
+            action="store_true",
+            help="Also run the SEO checks of installed modules (karni.checks.seo hooks), such "
+            "as karni-site's: every page rendered and its titles, images, links and sitemap "
+            "checked.",
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         deploy = bool(options.get("deploy"))
@@ -76,12 +88,14 @@ class Command(BaseCommand):
                 else "django: system checks failed (see output above)"
             )
 
-        for ep in sorted(entry_points(group="karni.checks"), key=lambda e: e.name):
-            try:
-                messages = ep.load()()
-                failures.extend(f"{ep.name}: {message}" for message in messages)
-            except Exception as exc:  # noqa: BLE001 - a broken hook is a failure, not a crash
-                failures.append(f"{ep.name}: {exc}")
+        groups = ["karni.checks", *(["karni.checks.seo"] if options.get("seo") else [])]
+        for group in groups:
+            for ep in sorted(entry_points(group=group), key=lambda e: e.name):
+                try:
+                    messages = ep.load()()
+                    failures.extend(f"{ep.name}: {message}" for message in messages)
+                except Exception as exc:  # noqa: BLE001 - a broken hook is a failure, not a crash
+                    failures.append(f"{ep.name}: {exc}")
 
         # Row-scope exemptions are not failures, but they are printed on every
         # run so they never accumulate quietly (ADR 0002, P2).
@@ -101,4 +115,8 @@ class Command(BaseCommand):
             )
         # A stage of `karni check`, which prints the overall verdict once every
         # stage (this one, ESLint, duplication) has run.
-        self.stdout.write("backend checks: ok" + (" (deploy checks included)" if deploy else ""))
+        included = [name for name, on in (("deploy", deploy), ("SEO", options.get("seo"))) if on]
+        self.stdout.write(
+            "backend checks: ok"
+            + (f" ({' and '.join(included)} checks included)" if included else "")
+        )

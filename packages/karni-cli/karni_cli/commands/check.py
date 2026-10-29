@@ -12,6 +12,11 @@ ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, HSTS, secure cookies, the admin path,
 CORS, the content security policy), each finding printed with its code and
 fix, and a warning fails the run. Run it with the production environment.
 
+``--seo`` passes through to ``karni_check --seo``: the modules' SEO checks
+run too. karni-site's renders every page of the site through Django's test
+client and reports titles, descriptions, images, links and the sitemap
+(``SITE010`` to ``SITE018``).
+
 Outside CI, a clean run may end with one tip on stderr (:mod:`karni_cli.tips`,
 at most once per project); ``-q`` suppresses it.
 """
@@ -95,9 +100,16 @@ def check(
         help="Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, "
         "CORS, CSP) and fail on warnings. Run it with the production environment.",
     ),
+    seo: bool = typer.Option(
+        False,
+        "--seo",
+        help="Also run the SEO checks: every page of the public site rendered, and missing or "
+        "shared titles and descriptions, images without alt, size or smaller copies, broken "
+        "links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018).",
+    ),
 ) -> None:
     project = require_project()
-    args = ["karni_check", "--deploy"] if deploy else ["karni_check"]
+    args = ["karni_check", *(["--deploy"] if deploy else []), *(["--seo"] if seo else [])]
     try:
         backend = project_mod.run_manage(
             project, args, docker=docker, service=service, capture=False
