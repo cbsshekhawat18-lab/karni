@@ -286,6 +286,7 @@ With the scaffold's development values it fails, one code per problem:
 | [karni.W517](errors.md#w517-cors-allows-every-origin) | CORS allows every origin |
 | [karni.W518](errors.md#w518-no-enforced-content-security-policy) | no Content-Security-Policy, or only a report-only one |
 | [karni.W519](errors.md#w519-the-content-security-policy-lets-any-script-run) | `script-src` allows `*`, `http:`, `https:`, `data:`, `'unsafe-eval'` or `'unsafe-inline'` |
+| [karni.W520](errors.md#w520-production-email-is-not-set-up) | `EMAIL_BACKEND` is the console, locmem, dummy or file backend, or `DEFAULT_FROM_EMAIL` is an address at localhost (Django's `webmaster@localhost`) |
 
 The checks are Django system checks registered for deployment
 (`@register(Tags.security, deploy=True)`), so `python manage.py check

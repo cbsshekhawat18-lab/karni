@@ -100,6 +100,15 @@ def test_a_contact_form_with_a_notification(project: Path) -> None:
     )
     assert '"karni_site",' in settings
     assert "# ENQUIRY_RECIPIENTS=team@example.com" in (project / ".env.example").read_text()
+    # Production needs the recipients too: an empty value to fill, above the database's.
+    production = (project / ".env.prod.example").read_text()
+    section = production.split("# --- Forms (karni make form)", 1)[1]
+    assert "\nENQUIRY_RECIPIENTS=\n" in section.split("# --- Database and Redis", 1)[0]
+    ok("make", "form", "callback", "phone:phone", "--notify", "CALLBACK_RECIPIENTS")
+    production = (project / ".env.prod.example").read_text()
+    assert production.count("# --- Forms (karni make form)") == 1
+    assert production.index("ENQUIRY_RECIPIENTS=") < production.index("CALLBACK_RECIPIENTS=")
+    assert production.index("CALLBACK_RECIPIENTS=") < production.index("# --- Database")
     assert "karni-site" in (project / "pyproject.toml").read_text()
     urls = (project / "config" / "urls.py").read_text()
     assert '    path("", include("karni_site.urls")),\n    # karni:urls' in urls

@@ -1,4 +1,4 @@
-"""Deploy checks karni.W510 to W519: ``manage.py check --deploy`` and ``karni check --deploy``.
+"""Deploy checks karni.W510 to W520: ``manage.py check --deploy`` and ``karni check --deploy``.
 
 Each check is tested both ways: silent with production values, and
 reporting its code with the scaffold's development values.
@@ -33,6 +33,8 @@ PRODUCTION: dict[str, Any] = {
     "CORS_ALLOWED_ORIGINS": ["https://example.com"],
     "KARNI_CSP": {},
     "KARNI_CSP_REPORT_ONLY": None,
+    "EMAIL_BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+    "DEFAULT_FROM_EMAIL": "Example Site <noreply@example.com>",
     # The admin at staff-area/ (tests.urls mounts it at admin/).
     "ROOT_URLCONF": "tests.security.urls",
 }
@@ -46,8 +48,12 @@ DEVELOPMENT: dict[str, Any] = {
     "SESSION_COOKIE_SECURE": False,
     "CSRF_COOKIE_SECURE": False,
     "CORS_ALLOW_ALL_ORIGINS": True,
+    "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend",
+    "DEFAULT_FROM_EMAIL": "webmaster@localhost",
     "ROOT_URLCONF": "tests.urls",
 }
+
+UNSENT = "django.core.mail.backends."
 
 Check = Callable[..., list[checks.CheckMessage]]
 CHECKS: list[Check] = [
@@ -61,6 +67,7 @@ CHECKS: list[Check] = [
     deploy.check_cors,
     deploy.check_csp_present,
     deploy.check_csp_scripts,
+    deploy.check_email,
 ]
 
 
@@ -113,6 +120,12 @@ def test_production_values_pass(check: Check) -> None:
             {"KARNI_CSP": {"script-src": None, "default-src": None}},
             "karni.W519",
         ),
+        (deploy.check_email, {"EMAIL_BACKEND": UNSENT + "console.EmailBackend"}, "karni.W520"),
+        (deploy.check_email, {"EMAIL_BACKEND": UNSENT + "locmem.EmailBackend"}, "karni.W520"),
+        (deploy.check_email, {"EMAIL_BACKEND": UNSENT + "dummy.EmailBackend"}, "karni.W520"),
+        (deploy.check_email, {"DEFAULT_FROM_EMAIL": "webmaster@localhost"}, "karni.W520"),
+        (deploy.check_email, {"DEFAULT_FROM_EMAIL": "Site <site@app.localhost>"}, "karni.W520"),
+        (deploy.check_email, {"DEFAULT_FROM_EMAIL": ""}, "karni.W520"),
     ],
 )
 def test_each_finding_reports_its_code(check: Check, values: dict[str, Any], code: str) -> None:
@@ -147,6 +160,20 @@ def test_the_middleware_missing_is_reported() -> None:
         assert _ids(deploy.check_csp_present()) == ["karni.W518"]
 
 
+@override_settings(**PRODUCTION)
+def test_production_email_names_each_problem() -> None:
+    with override_settings(EMAIL_BACKEND=UNSENT + "console.EmailBackend"):
+        (message,) = deploy.check_email()
+    assert "the console backend, which prints each email to the log" in message.msg
+    assert "DEFAULT_FROM_EMAIL" not in message.msg
+    with override_settings(
+        EMAIL_BACKEND=UNSENT + "locmem.EmailBackend", DEFAULT_FROM_EMAIL="webmaster@localhost"
+    ):
+        (message,) = deploy.check_email()
+    assert "locmem backend" in message.msg and "'webmaster@localhost'" in message.msg
+    assert "EMAIL_URL" in str(message.hint) and "karni.W520" in str(message.hint)
+
+
 def test_weak_secret_key_follows_djangos_rule() -> None:
     assert deploy.weak_secret_key(STRONG_KEY) is None
     assert deploy.weak_secret_key("") == "SECRET_KEY is empty"
@@ -156,7 +183,7 @@ def test_weak_secret_key_follows_djangos_rule() -> None:
 def test_every_deploy_code_is_registered() -> None:
     from karni.errorcodes import get
 
-    for number in range(510, 520):
+    for number in range(510, 521):
         entry = get(f"W{number}")
         assert entry is not None and entry.kind == "warning"
         assert "(deploy)" in entry.source
@@ -178,7 +205,7 @@ def _run(*args: str, **settings: Any) -> tuple[str, str, BaseException | None]:
 
 def test_manage_py_check_deploy_runs_karnis_checks() -> None:
     _out, err, _raised = _run("check", "--deploy", **DEVELOPMENT)
-    for code in ("W510", "W511", "W512", "W513", "W514", "W515", "W516", "W517", "W518"):
+    for code in ("W510", "W511", "W512", "W513", "W514", "W515", "W516", "W517", "W518", "W520"):
         assert f"karni.{code}" in err
     assert "security.W018" in err  # plain check --deploy keeps Django's own too
 
@@ -192,7 +219,7 @@ def test_karni_check_deploy_fails_on_the_development_values() -> None:
     _out, err, raised = _run("karni_check", "--deploy", **DEVELOPMENT)
     assert isinstance(raised, KarniCommandError)
     assert "deploy checks failed" in err
-    for code in ("W510", "W511", "W512", "W513", "W514", "W515", "W516", "W517", "W518"):
+    for code in ("W510", "W511", "W512", "W513", "W514", "W515", "W516", "W517", "W518", "W520"):
         assert f"karni.{code}" in err
     # Each problem once: the Django warnings the Karni checks cover are hidden.
     for django_id in ("security.W018", "security.W009", "security.W004", "security.W012"):

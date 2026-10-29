@@ -151,8 +151,21 @@ secret:
 - `DOMAIN`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` and `KARNI_FRONTEND_URL`,
   already set from the domain `karni new` was given.
 
+Then uncomment the email lines and fill them in. Password resets, account
+emails and the notifications of a site's forms go through them, and the
+containers refuse to start without them (`karni.W520`):
+
+- `EMAIL_URL`: the mail server, host, port, user and password in one URL,
+  `smtp+tls://user:password@smtp.example.com:587` (`smtps://` for SSL on port
+  465). Write an `@` in the user or password as `%40`.
+- `DEFAULT_FROM_EMAIL`: the sender, an address of the site's domain such as
+  `noreply@example.com`. The mail server must accept it as a sender.
+
+A project that sends no email at all adds `"karni.W520"` to
+`SILENCED_SYSTEM_CHECKS` in `config/settings.py` instead.
+
 Copy any other setting the project changed in `.env` (registration, roles,
-`KARNI_CSP` for a font host, email, Sentry). Avoid `$` in values: Compose reads
+`KARNI_CSP` for a font host, `KARNI_PHONE_COUNTRY_CODE`, Sentry). Avoid `$` in values: Compose reads
 it as a variable. Never commit `.env.prod`. The scaffold's `.gitignore` and
 `.dockerignore` list it, so it is neither committed nor copied into the image.
 

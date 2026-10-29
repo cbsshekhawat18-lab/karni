@@ -5,7 +5,7 @@
   response (:mod:`karni.security.headers`). ``karni_settings()`` puts it in
   ``MIDDLEWARE`` right after Django's ``SecurityMiddleware``.
 * :mod:`karni.security.checks` holds the deploy checks ``karni.W510`` to
-  ``karni.W519`` that ``manage.py check --deploy`` and
+  ``karni.W520`` that ``manage.py check --deploy`` and
   ``karni check --deploy`` run.
 
 Override / escape hatch: the settings ``KARNI_CSP``,

@@ -18,8 +18,8 @@ runtime is the ``karni-site`` module:
 * With ``--notify SETTING``: a queued listener in ``<app>/listeners.py``
   that calls ``karni_site.notify.notify_recipients``, the email's subject
   and body templates under ``<app>/templates/<app>/email/``, the setting
-  in config/settings.py and a line in .env.example. Without it nothing is
-  sent.
+  in config/settings.py and a line in .env.example and .env.prod.example.
+  Without it nothing is sent.
 * ``<app>/tests/test_<name>_form.py``: anonymous submit, the form without
   JavaScript, the email, the protected fields, the rate limit and
   staff-only reading.
@@ -113,6 +113,9 @@ FORM_TYPES = (
 #: The fields the command adds to every form's model.
 STATUS, NOTES, SEARCH = "status", "notes", "search"
 ENV_EXAMPLE = Path(".env.example")
+ENV_PROD_EXAMPLE = Path(".env.prod.example")
+#: The section of .env.prod.example the recipients go above (karni make deploy compose).
+ENV_PROD_BEFORE = "# --- Database and Redis"
 ENV_SECTION = "# --- Forms (karni make form) ----------------------------------------------"
 _SETTING = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _NAME = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -418,7 +421,7 @@ def plan_listener(
 
 
 def plan_setting(ws: Workspace, name: str, setting: str) -> None:
-    """``SETTING = env.list("SETTING", default=[])`` in config/settings.py, and .env.example."""
+    """``SETTING = env.list("SETTING", default=[])`` in settings.py, the two env examples."""
     rel = SETTINGS.as_posix()
     text = ws.read(SETTINGS)
     if text is None:
@@ -434,16 +437,52 @@ def plan_setting(ws: Workspace, name: str, setting: str) -> None:
             + f"\n{setting} = env.list({pystr(setting)}, default=[])  # noqa: F821\n"
         )
         ws.write(SETTINGS, append(text, block))
-    example = ws.read(ENV_EXAMPLE)
-    if example is not None and not re.search(rf"^#?\s*{setting}=", example, re.MULTILINE):
-        lines = example.rstrip("\n").split("\n")
-        if ENV_SECTION not in lines:
-            lines += ["", ENV_SECTION]
-        lines += [
-            f"# Who is emailed each new {humanize(name).lower()} form submission, comma-separated.",
+    verbose = humanize(name).lower()
+    _env_lines(
+        ws,
+        ENV_EXAMPLE,
+        setting,
+        [
+            f"# Who is emailed each new {verbose} form submission, comma-separated.",
             f"# {setting}=team@example.com",
-        ]
-        ws.write(ENV_EXAMPLE, "\n".join(lines) + "\n")
+        ],
+    )
+    _env_lines(
+        ws,
+        ENV_PROD_EXAMPLE,
+        setting,
+        [
+            f"# Who is emailed each new {verbose} form submission, comma-separated. Empty",
+            "# sends nothing: the submissions still wait in the admin.",
+            f"{setting}=",
+        ],
+        before=ENV_PROD_BEFORE,
+    )
+
+
+def _env_lines(
+    ws: Workspace, path: Path, setting: str, added: list[str], *, before: str | None = None
+) -> None:
+    """``added`` in the forms section of an env file, unless it names ``setting`` already.
+
+    The section goes at the end, or above the line starting with ``before``.
+    """
+    text = ws.read(path)
+    if text is None or re.search(rf"^#?\s*{setting}=", text, re.MULTILINE):
+        return
+    lines = text.rstrip("\n").split("\n")
+    if ENV_SECTION in lines:
+        index = lines.index(ENV_SECTION) + 1
+        while index < len(lines) and lines[index].strip():
+            index += 1
+        lines[index:index] = added
+    else:
+        at = next((i for i, line in enumerate(lines) if before and line.startswith(before)), None)
+        if at is None:
+            lines += ["", ENV_SECTION, *added]
+        else:
+            lines[at:at] = [ENV_SECTION, *added, ""]
+    ws.write(path, "\n".join(lines) + "\n")
 
 
 # the site

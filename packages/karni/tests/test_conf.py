@@ -179,6 +179,39 @@ def test_profile_read_from_django_env(monkeypatch: pytest.MonkeyPatch, make_sett
     assert ns["SECURE_SSL_REDIRECT"] is True
 
 
+def test_email_settings_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    import environ
+
+    from karni.conf.base import _email
+    from karni.conf.dev import CONSOLE_EMAIL, console_email
+
+    for name in ("EMAIL_URL", "DEFAULT_FROM_EMAIL", "SERVER_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    reader = environ.Env()
+    # Unset: Django's own defaults, and development prints to the console.
+    assert _email(reader) == {
+        "DEFAULT_FROM_EMAIL": "webmaster@localhost",
+        "SERVER_EMAIL": "root@localhost",
+    }
+    assert console_email(reader) == {"EMAIL_BACKEND": CONSOLE_EMAIL}
+    monkeypatch.setenv("EMAIL_URL", "smtp+tls://mailer%40example.com:s3cret@smtp.example.com:587")
+    monkeypatch.setenv("DEFAULT_FROM_EMAIL", "Example <noreply@example.com>")
+    found = _email(reader)
+    assert found["EMAIL_BACKEND"] == "django.core.mail.backends.smtp.EmailBackend"
+    assert (found["EMAIL_HOST"], found["EMAIL_PORT"], found["EMAIL_USE_TLS"]) == (
+        "smtp.example.com",
+        587,
+        True,
+    )
+    assert (found["EMAIL_HOST_USER"], found["EMAIL_HOST_PASSWORD"]) == (
+        "mailer@example.com",
+        "s3cret",
+    )
+    assert found["DEFAULT_FROM_EMAIL"] == "Example <noreply@example.com>"
+    # A mail server named in development is used there too.
+    assert console_email(reader) == {}
+
+
 def test_profile_dicts_do_not_leak_into_each_other() -> None:
     assert "SECURE_SSL_REDIRECT" not in DEV
     assert "EMAIL_BACKEND" not in PROD

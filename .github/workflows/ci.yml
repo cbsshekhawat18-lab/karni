@@ -513,8 +513,12 @@ jobs:
         working-directory: ${{ env.PROJECT }}
         run: |
           set -euo pipefail
+          # A mail server and a sender, which the deploy gate requires (karni.W520).
+          # Nothing here sends mail.
           python "$SMOKE" env .env.prod.example \
-            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz > .env.prod
+            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz \
+            --set EMAIL_URL=smtp://mail.invalid:25 --set DEFAULT_FROM_EMAIL=noreply@example.com \
+            > .env.prod
           grep -E "^(DJANGO_ENV|DOMAIN|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS)=" .env.prod
           echo "ADMIN_PATH=$(grep '^KARNI_ADMIN_PATH=' .env.prod | cut -d= -f2)" >> "$GITHUB_ENV"
           $COMPOSE config --quiet

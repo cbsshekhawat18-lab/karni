@@ -7,9 +7,9 @@ Celery worker and beat, and the one-shot release step, first runs::
     python manage.py karni_check --deploy
 
 which is Django's ``check --deploy`` plus Karni's deploy checks (``karni.W510``
-to ``karni.W519``: DEBUG, SECRET_KEY, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS,
-HSTS, secure cookies, the admin path, CORS, the content security policy) and
-the project's ``karni.checks`` hooks. When they pass, the process is replaced
+to ``karni.W520``: DEBUG, SECRET_KEY, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS,
+HSTS, secure cookies, the admin path, CORS, the content security policy, email)
+and the project's ``karni.checks`` hooks. When they pass, the process is replaced
 by ``<command>`` (``os.execvp``, so signals reach it directly). When they fail,
 the command never starts and the container exits with status 1, after the
 findings and one ``E520`` line saying what to do.
