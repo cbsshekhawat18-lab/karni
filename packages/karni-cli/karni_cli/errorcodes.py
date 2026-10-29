@@ -553,6 +553,27 @@ CODES: Final[tuple[CliCode, ...]] = (
         "project's modules are found. A setting the project defines itself is in "
         "config/settings.py.",
     ),
+    _c(
+        "C374",
+        "No such template tag",
+        "karni explain <tag>",
+        "karni explain reads the karni-site module's tags and filters from the source "
+        "docs/public-site.md's table is rendered from (karni_site/tagref.py): in this "
+        "checkout, installed next to karni-cli, or in the project.",
+        "Check the name against the table in docs/public-site.md (karni_seo, image, editable, "
+        "get_menu ...), and run it inside a project that installs karni-site. A tag of "
+        "Django's own ({% if %}, {% url %}) is in Django's documentation.",
+    ),
+    _c(
+        "C375",
+        "No such content map key",
+        "karni explain map.<key>",
+        "A content map key is written at one level of the map (the map, a model, a source, "
+        "a key, a value), and karni explain reads them from karni_cli/design/mapref.py, the "
+        "source of docs/design-content.md's tables.",
+        "Run `karni explain map` for every key by level, then `karni explain map.<key>` or "
+        "`map.<level>.<key>` (map.source.key, map.value.by).",
+    ),
 )
 
 

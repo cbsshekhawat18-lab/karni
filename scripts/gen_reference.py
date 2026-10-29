@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Karni's reference from the source: docs/REFERENCE.md and README.md's generated blocks.
+"""Generate Karni's reference from the source: docs/REFERENCE.md and the generated blocks.
 
     python scripts/gen_reference.py           # rewrite both files
     python scripts/gen_reference.py --check   # exit 1 with a diff when either is stale (CI)
@@ -26,6 +26,9 @@ Everything is read from this checkout, never typed from memory:
 
 README.md keeps hand-written prose; only the regions between
 ``<!-- generated:NAME -->`` and ``<!-- /generated:NAME -->`` are replaced.
+Two docs pages have such a block too: docs/public-site.md the karni-site
+template tags (``karni_site.tagref``) and docs/design-content.md the content
+map's keys (``karni_cli.design.mapref``), the sources ``karni explain`` reads.
 Every README link into docs/REFERENCE.md is checked against the anchors
 GitHub generates for its headings.
 
@@ -57,6 +60,8 @@ REFERENCE = ROOT / "docs" / "REFERENCE.md"
 README = ROOT / "README.md"
 REF_LINK = "docs/REFERENCE.md"
 SCAFFOLD = ROOT / "templates" / "project" / "{{cookiecutter.project_slug}}"
+SITE_DOCS = ROOT / "docs" / "public-site.md"
+CONTENT_DOCS = ROOT / "docs" / "design-content.md"
 
 
 # --- status ------------------------------------------------------------------
@@ -1160,12 +1165,23 @@ def readme_blocks(exports: list[dict[str, Any]]) -> dict[str, list[str]]:
     return blocks
 
 
-def apply_blocks(readme: str, blocks: dict[str, list[str]]) -> str:
+def docs_blocks() -> dict[Path, dict[str, list[str]]]:
+    """The docs pages' generated blocks: what ``karni explain`` reads, as tables."""
+    from karni_cli.design import mapref
+    from karni_site import tagref
+
+    return {
+        SITE_DOCS: {"site-tags": tagref.markdown()},
+        CONTENT_DOCS: {"map-keys": mapref.markdown()},
+    }
+
+
+def apply_blocks(readme: str, blocks: dict[str, list[str]], page: str = "README.md") -> str:
     for name, lines in blocks.items():
         start, end = f"<!-- generated:{name} -->", f"<!-- /generated:{name} -->"
         pattern = re.compile(rf"{re.escape(start)}\n.*?{re.escape(end)}", re.S)
         if not pattern.search(readme):
-            raise SystemExit(f"README.md has no {start} block")
+            raise SystemExit(f"{page} has no {start} block")
         block = start + "\n" + "\n".join(lines) + "\n" + end
         readme = pattern.sub(lambda _m, block=block: block, readme)
     return readme
@@ -1215,8 +1231,12 @@ def main(argv: list[str] | None = None) -> int:
     if problems:
         print("\n".join(problems), file=sys.stderr)
         return 1
+    pages = [(REFERENCE, reference), (README, readme)]
+    for path, blocks in docs_blocks().items():
+        page = apply_blocks(path.read_text(encoding="utf-8"), blocks, path.name)
+        pages.append((path, page))
     stale = []
-    for path, text in ((REFERENCE, reference), (README, readme)):
+    for path, text in pages:
         current = path.read_text(encoding="utf-8") if path.is_file() else ""
         if current == text:
             continue
