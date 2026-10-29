@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +11,7 @@ import pytest
 import yaml
 
 from karni_cli import scaffold, toolchain
+from karni_cli.commands import new as new_mod
 from karni_cli.main import app
 from karni_cli.project import CliError
 from karni_cli.scaffold import (
@@ -342,3 +344,75 @@ def test_new_warns_about_a_stale_ui_dist(runner, tmp_path: Path, monkeypatch) ->
     assert result.exit_code == 0, result.output
     assert "dist is older than its sources" in result.output
     assert "Building @karni/ui" not in result.output
+
+
+def _isolated_git(monkeypatch, tmp_path: Path, *, hooks: Path | None = None) -> None:
+    """git with no user or system config of this machine, and a fixed identity."""
+    config = tmp_path / "gitconfig"
+    config.write_text(f"[core]\n\thooksPath = {hooks}\n" if hooks else "")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    for role in ("AUTHOR", "COMMITTER"):
+        monkeypatch.setenv(f"GIT_{role}_NAME", "Karni Test")
+        monkeypatch.setenv(f"GIT_{role}_EMAIL", "test@example.com")
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+
+
+def _git_out(project: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(project), *args], capture_output=True, text=True, check=True
+    ).stdout
+
+
+def test_new_makes_a_git_repository_with_a_first_commit(runner, tmp_path, monkeypatch) -> None:
+    _isolated_git(monkeypatch, tmp_path)
+    out = tmp_path / "out"
+    result = runner.invoke(app, ["new", "Bakery", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+    project = out / "bakery"
+    assert (project / ".git").is_dir()
+    assert "a git repository with a first commit" in result.output
+    assert _git_out(project, "log", "--format=%s").splitlines() == [new_mod.FIRST_COMMIT]
+    assert _git_out(project, "status", "--porcelain") == ""  # everything is committed
+    tracked = _git_out(project, "ls-files").splitlines()
+    assert "manage.py" in tracked and ".env.example" in tracked and ".env" not in tracked
+
+
+def test_no_git_and_an_existing_repository_leave_git_alone(runner, tmp_path, monkeypatch) -> None:
+    _isolated_git(monkeypatch, tmp_path)
+    skipped = runner.invoke(app, ["new", "Plain", "-o", str(tmp_path / "a"), "--no-git"])
+    assert skipped.exit_code == 0, skipped.output
+    assert not (tmp_path / "a" / "plain" / ".git").exists()
+    outer = tmp_path / "monorepo"
+    outer.mkdir()
+    subprocess.run(["git", "init", "-q", str(outer)], check=True)
+    inside = runner.invoke(app, ["new", "Inner", "-o", str(outer / "apps")])
+    assert inside.exit_code == 0, inside.output
+    assert not (outer / "apps" / "inner" / ".git").exists()
+    assert f"inside the git repository at {outer.resolve()}" in inside.output
+
+
+def test_a_refused_first_commit_says_how_to_finish(runner, tmp_path, monkeypatch) -> None:
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    (hooks / "pre-commit").write_text("#!/bin/sh\necho 'refused by policy' >&2\nexit 1\n")
+    (hooks / "pre-commit").chmod(0o755)
+    _isolated_git(monkeypatch, tmp_path, hooks=hooks)
+    result = runner.invoke(app, ["new", "Refused", "-o", str(tmp_path / "out")])
+    assert result.exit_code == 0, result.output
+    project = tmp_path / "out" / "refused"
+    assert (project / ".git").is_dir()
+    assert "the first commit failed (refused by policy)" in result.output
+    assert f"git add -A && git commit -m '{new_mod.FIRST_COMMIT}'" in result.output
+
+
+def test_without_git_on_path_the_project_is_still_made(runner, tmp_path, monkeypatch) -> None:
+    _isolated_git(monkeypatch, tmp_path)
+    real_which = shutil.which
+    monkeypatch.setattr(
+        new_mod.shutil, "which", lambda cmd, *a, **k: None if cmd == "git" else real_which(cmd)
+    )
+    result = runner.invoke(app, ["new", "No Git", "-o", str(tmp_path / "out")])
+    assert result.exit_code == 0, result.output
+    assert "git is not installed, so the project is not a git repository" in result.output
+    assert not (tmp_path / "out" / "no_git" / ".git").exists()

@@ -32,12 +32,19 @@ when missing — package.json ``exports`` point into dist/. The build writes onl
 git-ignored paths (``npm ci`` never rewrites package-lock.json), so scaffolding
 from a checkout leaves its working tree clean. A project without a staff app
 needs none of it.
+
+Last, the project becomes a git repository with one commit of everything
+``karni new`` wrote (:func:`init_repository`), so the procedures' "commit
+content/" and ``karni upgrade``'s clean-tree rule work from the start.
+``--no-git`` skips it, and a project made inside an existing repository is
+left to that repository, as before.
 """
 
 from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -59,6 +66,56 @@ CONTENT_MAP = Path("content") / "design-map.json"
 PROCEDURE = "site-from-design"
 #: The procedure's steps ``karni new --design`` runs itself (1-based).
 DONE_STEPS = (2, 3)
+
+
+#: The message of the commit ``karni new`` makes.
+FIRST_COMMIT = "Create the project with karni new"
+
+
+def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(project), *args], capture_output=True, text=True, check=False
+    )
+
+
+def init_repository(project: Path) -> str:
+    """Make ``project`` a git repository with a first commit, and say what happened.
+
+    Nothing is done inside an existing repository (the project is part of
+    it), or without git on PATH. When the commit cannot be made (no
+    ``user.name`` or ``user.email``, a hook refusing it), the repository
+    stays, with the files unstaged, and the message says how to finish.
+    """
+    if shutil.which("git") is None:
+        return (
+            "git is not installed, so the project is not a git repository. Install git, then "
+            f"run `git init && git add -A && git commit -m {FIRST_COMMIT!r}` in it."
+        )
+    outer = _git(project, "rev-parse", "--show-toplevel")
+    if outer.returncode == 0:
+        return (
+            f"The project is inside the git repository at {outer.stdout.strip()}: no new "
+            "repository. Commit it there."
+        )
+    init = _git(project, "init", "-q")
+    if init.returncode != 0:
+        return f"git init failed in {project}: {init.stderr.strip()}"
+    _git(project, "add", "-A")
+    commit = _git(project, "commit", "-q", "-m", FIRST_COMMIT)
+    if commit.returncode != 0:
+        _git(project, "reset", "-q")
+        reason = (commit.stderr or commit.stdout).strip().splitlines()
+        return (
+            f"Made {project} a git repository, but the first commit failed ("
+            f"{reason[-1] if reason else 'no reason given'}). Set your name and email "
+            "(`git config --global user.name ...` and `user.email ...`), then run "
+            f"`git add -A && git commit -m {FIRST_COMMIT!r}` there."
+        )
+    sha = _git(project, "rev-parse", "--short", "HEAD").stdout.strip()
+    return (
+        f"Made {project} a git repository with a first commit ({sha}) of everything karni new "
+        "wrote. --no-git skips it."
+    )
 
 
 def write_agent_adapters(project: Path) -> int:
@@ -309,6 +366,12 @@ def new(
     site_app: str = typer.Option(
         SITE_APP, "--site-app", help="The label of the site app a kind with a site gets."
     ),
+    git: bool = typer.Option(
+        True,
+        "--git/--no-git",
+        help="Make the project a git repository with a first commit of what karni new wrote. "
+        "Skipped inside an existing repository and when git is not installed.",
+    ),
 ) -> None:
     """Create a project: a public website, an app, or both.
 
@@ -369,6 +432,8 @@ def new(
         f"{adapters} agent adapter files, and the production stack in {deploy.COMPOSE_FILE} "
         "(docs/deploy.md)."
     )
+    if git:
+        typer.echo(init_repository(project))
     if not with_staff_app:
         typer.echo("No staff app (frontend/): staff work in the admin.")
     elif ui_source is not None:
