@@ -327,3 +327,17 @@ changes is_superuser or a superuser's account. \
 KARNI_ADMIN_GRANTS_OPEN_PAGES = False restores Django's permissions only."""
 mechanical = false
 migration = "migrations/0.4.1.md#grants-open-admin-pages"
+
+[[change]]
+id = "tests-get-a-local-memory-cache"
+kind = "behaviour"
+symbol = "karni.testing.pytest_plugin (karni_test_cache)"
+summary = """\
+Karni's pytest plugin runs every test on an empty local-memory cache: each \
+alias in CACHES becomes a LocMemCache for the test, so throttle counters and \
+cached values never pass between tests, runs or the development server's \
+Redis. A test that needs the project's own cache takes \
+@pytest.mark.karni_project_cache, and `karni_test_cache = project` in the \
+pytest ini file keeps it for every test."""
+mechanical = false
+migration = "migrations/0.4.1.md#tests-run-on-an-empty-local-memory-cache"

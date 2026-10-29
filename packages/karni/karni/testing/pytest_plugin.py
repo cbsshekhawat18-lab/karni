@@ -15,11 +15,19 @@ configured Django project it only reseeds factory randomness:
   a ``BaseViewSet`` action over its query budget fails with the grouped
   duplicate report (:mod:`karni.performance`). ``override_settings`` still
   changes it per test.
+* **A cache of their own.** Every cache alias in ``CACHES`` is a
+  local-memory cache for the test, empty at its start, so nothing a test
+  caches (rate-limit counters, "already queued" flags, cached pages) reaches
+  another test, a later run or the development server sharing Redis. A
+  ``DummyCache`` alias stays as it is. ``@pytest.mark.karni_project_cache``
+  keeps the project's own ``CACHES`` for one test (one that needs Redis),
+  and ``karni_test_cache = project`` in the pytest ini file for every test.
 * **Fresh rate limits per test.** DRF's throttles keep their counters in a
   cache of their own for each test, empty at its start, so tests that post
   to a public form (``KARNI_PUBLIC_CREATE_RATE``) or log in many times do
   not use up each other's limits, and a run never inherits the counters of
   an earlier run from Redis. A test that checks a limit still sees it work.
+  This holds with the project's own cache too.
 * **Fixture** ``query_budget`` — :func:`karni.testing.performance.query_budget`::
 
       def test_report(client, query_budget):
@@ -36,7 +44,8 @@ Override / escape hatches: ``pytest --karni-query-budget=warn`` (or ``off``)
 for one run, ``karni_query_budget_mode = warn`` in the pytest ini file for the
 project, ``-p no:karni`` to disable the plugin entirely. Define a fixture
 named ``_karni_fresh_throttles`` in ``conftest.py`` to replace the per-test
-throttle cache (an empty one that does nothing keeps the shared cache).
+throttle cache (an empty one that does nothing keeps the shared cache), or
+one named ``_karni_test_cache`` to replace the per-test cache.
 """
 
 from __future__ import annotations
@@ -49,6 +58,11 @@ import pytest
 from karni.errorcodes import docs_url
 
 _MODES = ("raise", "warn", "off")
+_CACHE_MODES = ("locmem", "project")
+_PROJECT_CACHE_MARK = "karni_project_cache"
+_DUMMY_CACHE = "django.core.cache.backends.dummy.DummyCache"
+#: What a test's local-memory cache keeps of the project's alias.
+_CACHE_KEYS_KEPT = ("KEY_PREFIX", "VERSION", "KEY_FUNCTION", "TIMEOUT")
 _UNSET = object()
 
 
@@ -57,6 +71,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "karni_query_budget_mode",
         "KARNI_QUERY_BUDGET_MODE for the test session: raise (default), warn or off.",
         default="raise",
+    )
+    parser.addini(
+        "karni_test_cache",
+        "The cache tests use: locmem (default, one empty local-memory cache per test) or "
+        "project (the project's own CACHES).",
+        default="locmem",
     )
     parser.addini(
         "karni_seed",
@@ -87,6 +107,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        f"{_PROJECT_CACHE_MARK}: keep the project's own CACHES for this test "
+        "(Karni's plugin gives every other test an empty local-memory cache).",
+    )
     if config.getoption("karni_update_snapshots", default=False):
         from karni.testing import schema
 
@@ -124,6 +149,66 @@ def _karni_query_budget_mode(request: pytest.FixtureRequest) -> Iterator[None]:
             del settings.KARNI_QUERY_BUDGET_MODE
         else:
             settings.KARNI_QUERY_BUDGET_MODE = previous
+
+
+def _cache_mode(config: pytest.Config) -> str:
+    mode = str(config.getini("karni_test_cache")).strip().lower() or "locmem"
+    if mode not in _CACHE_MODES:
+        raise pytest.UsageError(
+            f"karni_test_cache = {mode!r} is not valid. Set it to locmem (an empty "
+            "local-memory cache per test) or project (the project's own CACHES)."
+        )
+    return mode
+
+
+def _local_caches(configured: dict[str, Any]) -> dict[str, Any]:
+    """The ``CACHES`` a test runs with: each alias a local-memory cache of its own.
+
+    ``KEY_PREFIX``, ``VERSION``, ``KEY_FUNCTION`` and ``TIMEOUT`` are kept, so
+    keys look as they do in the project. A ``DummyCache`` alias is kept as
+    it is, since it already stores nothing.
+    """
+    found: dict[str, Any] = {}
+    for alias, options in configured.items():
+        if options.get("BACKEND") == _DUMMY_CACHE:
+            found[alias] = dict(options)
+            continue
+        found[alias] = {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": f"karni-test-{alias}",
+            **{key: options[key] for key in _CACHE_KEYS_KEPT if key in options},
+        }
+    return found
+
+
+@pytest.fixture(autouse=True)
+def _karni_test_cache(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Run the test on an empty local-memory cache per alias (``karni_test_cache``)."""
+    try:
+        from django.conf import settings
+    except ImportError:  # pragma: no cover - Django is a karni dependency
+        yield
+        return
+    if (
+        not settings.configured
+        or request.node.get_closest_marker(_PROJECT_CACHE_MARK) is not None
+        or _cache_mode(request.config) == "project"
+    ):
+        yield
+        return
+    from django.core.cache import caches
+    from django.test.utils import override_settings
+
+    override = override_settings(CACHES=_local_caches(dict(settings.CACHES)))
+    override.enable()
+    try:
+        for alias in settings.CACHES:
+            caches[alias].clear()
+        yield
+    finally:
+        for alias in settings.CACHES:
+            caches[alias].clear()
+        override.disable()
 
 
 @pytest.fixture(autouse=True)
