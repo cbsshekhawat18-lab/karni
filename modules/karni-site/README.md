@@ -376,7 +376,13 @@ as a first visit would. It reports:
 | `SITE018` | no sitemap.xml, a page the site links to that it leaves out, or an address in it that does not answer 200 or asks not to be indexed |
 | `SITE007` | a menu item whose page, row or model is gone (a view renamed or replaced since the menu was seeded), which the menu leaves out |
 
-`KARNI_SITE_SEO_IGNORE` lists paths it never requests.
+An upload a page shows without its smaller copies gets them first, made in
+the check's own process, and the check names those images: in development
+no Celery worker may have made them yet, and the check judges what the site
+serves once one has. The site itself always queues the copies (in a project
+with `CELERY_TASK_ALWAYS_EAGER = True` the first page that shows the image
+makes them and uses them). `KARNI_SITE_QUEUE_RENDITIONS = False` makes none
+in the check either. `KARNI_SITE_SEO_IGNORE` lists paths it never requests.
 
 ### The editor role
 

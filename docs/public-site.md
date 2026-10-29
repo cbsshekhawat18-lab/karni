@@ -606,7 +606,9 @@ search engines without project code:
 reports titles and descriptions missing or shared between pages, images
 without alt text, without width and height or much larger than shown,
 broken internal links, and pages missing from the sitemap (`SITE010` to
-`SITE018`). The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
+`SITE018`). It makes the smaller copies of the uploads the pages show that
+have none yet, in its own process, and names them, so it passes in
+development without a Celery worker. The site keeps queueing them. The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site)
 lists every setting.
 
 ## Public forms

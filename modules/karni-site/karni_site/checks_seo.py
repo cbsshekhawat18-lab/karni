@@ -37,6 +37,13 @@ Findings, one line each:
 Duplicates are counted among the pages search engines may index (no
 ``noindex``, a canonical link to themselves).
 
+An upload the pages show without its smaller copies gets them first, made
+in this process (:func:`karni_site.renditions.made_inline`), and the run
+names those images: in development no Celery worker may have made them yet,
+and the check judges the copies the site serves once one has. The site
+itself keeps queueing them. ``KARNI_SITE_QUEUE_RENDITIONS = False`` makes
+none here either.
+
 Override / escape hatch: the settings above, ``KARNI_SITE_SITEMAP_EXCLUDE``
 for a page deliberately left out of the sitemap, or :class:`SeoCrawl` with
 another client, for a test: ``SeoCrawl(client).run()``.
@@ -45,6 +52,7 @@ another client, for a test: ``SeoCrawl(client).run()``.
 from __future__ import annotations
 
 import re
+import sys
 import xml.etree.ElementTree as ElementTree
 from collections import deque
 from dataclasses import dataclass, field
@@ -54,7 +62,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 from django.conf import settings
 from karni.testing.pages import PageParser
 
-from karni_site import conf, imagesize
+from karni_site import conf, imagesize, renditions
 
 __all__ = ["Img", "SeoCrawl", "SeoParser", "run_checks"]
 
@@ -165,6 +173,8 @@ class SeoCrawl:
             client = Client(raise_request_exception=False)
         self.client = client
         self.failures: list[str] = []
+        #: The uploads whose smaller copies the crawl made, because none were there.
+        self.made: list[str] = []
         self.pages: dict[str, Page] = {}
         self.outcomes: dict[str, str | None] = {}
         self.sizes: dict[str, tuple[tuple[int, int] | None, int]] = {}
@@ -487,6 +497,12 @@ class SeoCrawl:
     # the run
 
     def run(self) -> list[str]:
+        with renditions.made_inline() as made:
+            failures = self._run()
+        self.made = list(dict.fromkeys(made))
+        return failures
+
+    def _run(self) -> list[str]:
         from karni_site.routes import site_pages
 
         self._pending: deque[str] = deque(["/"])
@@ -538,5 +554,14 @@ def run_checks() -> list[str]:
     if not apps.is_installed("karni_site"):
         return []
     hosts = [*getattr(settings, "ALLOWED_HOSTS", []), "testserver"]
+    crawl = SeoCrawl()
     with override_settings(ALLOWED_HOSTS=hosts):
-        return SeoCrawl().run()
+        failures = crawl.run()
+    if crawl.made:
+        sys.stdout.write(
+            f"karni check --seo: made the smaller copies of {len(crawl.made)} upload(s) the "
+            f"pages show, which had none because no Celery worker had made them yet: "
+            f"{', '.join(crawl.made[:10])}{' ...' if len(crawl.made) > 10 else ''}. In "
+            "production a worker makes them when an image is uploaded.\n"
+        )
+    return failures
