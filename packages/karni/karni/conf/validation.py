@@ -114,6 +114,9 @@ class KarniSettingsModel(BaseModel):
     KARNI_HEALTH_CHECKS: list[str] = Field(default_factory=list)
     KARNI_HEALTH_CELERY_TIMEOUT: float = 1.0
     KARNI_THUMBNAILER: str = "karni.storage.thumbnails.make_thumbnail"
+    KARNI_PHONE_COUNTRY_CODE: str | int | None = None
+    KARNI_PHONE_TRUNK_PREFIX: str = "0"
+    KARNI_PHONE_NORMALIZER: str = "karni.fields.text.default_phone_normalizer"
     KARNI_AUDIT_ASYNC: bool = False
     KARNI_AUDIT_RETENTION_DAYS: int | None = None
     KARNI_AUDIT_REDACT: list[str] = Field(default_factory=list)
@@ -480,6 +483,25 @@ class KarniSettingsModel(BaseModel):
         if "." not in self.KARNI_THUMBNAILER:
             errors.append(
                 f"KARNI_THUMBNAILER {self.KARNI_THUMBNAILER!r} is not a dotted import path"
+            )
+        code = str(self.KARNI_PHONE_COUNTRY_CODE or "").strip().lstrip("+")
+        if self.KARNI_PHONE_COUNTRY_CODE not in (None, "") and not (
+            code.isdigit() and 1 <= len(code) <= 3 and not code.startswith("0")
+        ):
+            errors.append(
+                f"KARNI_PHONE_COUNTRY_CODE = {self.KARNI_PHONE_COUNTRY_CODE!r} is not a "
+                'country calling code: give its 1 to 3 digits, e.g. "44" or "1", or None '
+                "for international numbers only"
+            )
+        if self.KARNI_PHONE_TRUNK_PREFIX and not self.KARNI_PHONE_TRUNK_PREFIX.isdigit():
+            errors.append(
+                f"KARNI_PHONE_TRUNK_PREFIX = {self.KARNI_PHONE_TRUNK_PREFIX!r} must be digits "
+                '("0", "1", "8") or "" for none'
+            )
+        if "." not in self.KARNI_PHONE_NORMALIZER:
+            errors.append(
+                f"KARNI_PHONE_NORMALIZER {self.KARNI_PHONE_NORMALIZER!r} is not a dotted "
+                "import path"
             )
         return errors
 

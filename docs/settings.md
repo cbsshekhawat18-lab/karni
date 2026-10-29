@@ -103,6 +103,9 @@ reads it on every request.
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
 | `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
+| `KARNI_PHONE_COUNTRY_CODE` | `KARNI_PHONE_COUNTRY_CODE` | `None` | The country code a national phone number gets in a `PhoneField` (digits, e.g. `"44"`): `"01234 000 111"` is stored as `+441234000111`. Unset, only international numbers (`+` or `00`) are accepted. See [fields](fields.md#phonefield). |
+| `KARNI_PHONE_TRUNK_PREFIX` | `KARNI_PHONE_TRUNK_PREFIX` | `"0"` | The prefix a national number loses before the country code goes in front (`"0"`, `"1"` in North America, `"8"` in Russia, `""` where the number is dialled as written, as in Italy). |
+| `KARNI_PHONE_NORMALIZER` |  | `"karni.fields.text.default_phone_normalizer"` | Dotted path of the function a `PhoneField`, its form field and its API field clean a number with: it takes the value as typed and returns E.164, or the value unchanged to reject it. `karni.fields.to_e164` holds Karni's rules for your own function. |
 | **Import and export (karni.transfer)** | | | |
 | `KARNI_IMPORT_INLINE_ROWS` | `KARNI_IMPORT_INLINE_ROWS` | `500` | Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress. |
 | `KARNI_IMPORT_MAX_ROWS` | `KARNI_IMPORT_MAX_ROWS` | `100_000` | An upload with more rows than this is refused (`E803`). Split the file. |

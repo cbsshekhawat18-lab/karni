@@ -74,7 +74,15 @@ from karni.fields.numbers import PercentField, QuantityField
 from karni.fields.search import SearchField
 from karni.fields.state import StateField
 from karni.fields.structured import JSONField
-from karni.fields.text import E164Format, EmailField, PhoneField, SlugField, normalize_phone
+from karni.fields.text import (
+    E164Format,
+    EmailField,
+    PhoneField,
+    PhoneFormField,
+    SlugField,
+    normalize_phone,
+    to_e164,
+)
 
 # ArrayField and the range fields are lazy re-exports (module __getattr__
 # below): they need a PostgreSQL driver, and karni.fields must import without one.
@@ -97,6 +105,7 @@ __all__ = [  # noqa: F822
     "MoneyField",
     "PercentField",
     "PhoneField",
+    "PhoneFormField",
     "QuantityField",
     "SchemaNote",
     "SearchField",
@@ -114,6 +123,7 @@ __all__ = [  # noqa: F822
     "quantize",
     "schema_notes",
     "split",
+    "to_e164",
 ]
 
 #: The range fields: karni.fields.ranges raises E501 itself without psycopg.
