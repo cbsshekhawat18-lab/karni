@@ -601,3 +601,58 @@ def test_the_human_report_lists_models_decisions_and_commands() -> None:
         "  karni make model Menu title:str:80 slug:slug:title",
     ):
         assert line in text, line
+
+
+def test_an_empty_lists_placeholder_is_page_copy_not_a_field(tmp_path: Path) -> None:
+    """A detail page whose list of linked rows is empty shows a placeholder: no field for it."""
+    design = tmp_path / "workshop"
+    (design / "classes").mkdir(parents=True)
+    tutors = {
+        "ann-lee": ("Ann Lee", "Potter", "Throwing pots since 2001, and teaching since 2010."),
+        "raj-patel": ("Raj Patel", "Weaver", "Weaves rugs on a floor loom he built himself."),
+        "eva-novak": ("Eva Novak", "Glassblower", "Blows glass in the old forge by the river."),
+    }
+    articles = "".join(
+        f'<article class="tutor" id="{slug}"><h3>{name}</h3><p class="role">{role}</p>'
+        f"<p>{about}</p></article>"
+        for slug, (name, role, about) in tutors.items()
+    )
+    (design / "tutors.html").write_text(
+        "<!doctype html><html><head><title>Tutors</title></head><body><main>"
+        f'<h1>Our tutors</h1><div class="tutor-list">{articles}</div></main></body></html>'
+    )
+    classes = {
+        "pottery": ("Pottery", "Shape clay by hand.", "ann-lee"),
+        "weaving": ("Weaving", "Warp, weft and patience.", "raj-patel"),
+        "glass": ("Glass", "Heat, breath and colour.", "eva-novak"),
+        "woodwork": ("Woodwork", "Joints that last a lifetime.", None),
+    }
+    links = ""
+    for slug, (title, lead, tutor) in classes.items():
+        item = (
+            f'<li><a href="../tutors.html#{tutor}">{tutors[tutor][0]}</a></li>'
+            if tutor
+            else "<li>Tutor to be announced</li>"
+        )
+        (design / "classes" / f"{slug}.html").write_text(
+            f"<!doctype html><html><head><title>{title}</title></head><body><main>"
+            f'<h1>{title}</h1><p class="lead">{lead}</p>'
+            f'<section class="tutors"><h2>Your tutor</h2><ul>{item}</ul></section>'
+            "</main></body></html>"
+        )
+        links += f'<li><a href="classes/{slug}.html">{title}</a></li>'
+    (design / "index.html").write_text(
+        f"<!doctype html><html><head><title>Workshop</title></head><body><ul>{links}</ul>"
+        '<a href="tutors.html">Tutors</a></body></html>'
+    )
+    analysis = analyze(design, "website")
+    assert {model.name for model in analysis.models} >= {"Tutor"}
+    for model in analysis.models:
+        for field in model.fields:
+            values = {str(v) for v in field.values.values()}
+            assert "Tutor to be announced" not in values, (model.name, field.name)
+    notes = " ".join(note for model in analysis.models for note in model.notes)
+    assert (
+        "'Tutor to be announced' on classes/woodwork.html is what the list of linked rows" in notes
+    )
+    assert "page copy" in notes
