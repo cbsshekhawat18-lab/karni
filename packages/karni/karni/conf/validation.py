@@ -99,6 +99,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_EXPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_ADMIN_LOGO: Any = None
     KARNI_ADMIN_THEME: Literal["light", "dark", "auto"] = "light"
+    KARNI_GENERATOR: str | None = "Karni"
     KARNI_THEME_CSS: str | None = "frontend/src/karni-theme.css"
     KARNI_ADMIN_PATH: str = "admin/"
     KARNI_ACCOUNTS_HONEYPOT_FIELD: str = "website"

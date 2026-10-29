@@ -57,6 +57,7 @@ from karni_site import conf, renditions
 
 __all__ = [
     "COVERED",
+    "generator",
     "Head",
     "PageMeta",
     "absolute",
@@ -179,9 +180,14 @@ def _attributes(tag: str) -> dict[str, str]:
     return found
 
 
-@lru_cache(maxsize=512)
 def parse_head(markup: str) -> Head:
     """Read the template's head tags: what they set, and the markup to keep."""
+    return _parse_head(markup, bool(generator()))
+
+
+@lru_cache(maxsize=512)
+def _parse_head(markup: str, generator_covered: bool) -> Head:
+    """:func:`parse_head`, cached per markup and per whether Karni writes the generator tag."""
     head = Head()
     cursor = 0
     for match in _TOKEN.finditer(markup):
@@ -196,7 +202,7 @@ def parse_head(markup: str) -> Head:
         elif text[:5].lower() == "<meta":
             attrs = _attributes(text)
             key = (attrs.get("property") or attrs.get("name") or "").strip().lower()
-            if key in COVERED:
+            if key in COVERED or (key == "generator" and generator_covered):
                 covered = True
                 head.meta.setdefault(key, (attrs.get("content") or "").strip())
         elif text[:5].lower() == "<link":
@@ -355,6 +361,7 @@ class PageMeta:
             lines.append(f'<link rel="canonical" href="{escape(self.canonical)}">')
         if self.noindex:
             lines.append('<meta name="robots" content="noindex">')
+        lines.append(meta("name", "generator", generator()))
         lines += [
             meta("property", "og:type", self.type),
             meta("property", "og:site_name", self.site_name),
@@ -373,6 +380,21 @@ class PageMeta:
             meta("name", "twitter:image:alt", self.image_alt if self.image else None),
         ]
         return [line for line in lines if line]
+
+
+def generator() -> str:
+    """``settings.KARNI_GENERATOR``: the ``<meta name="generator">`` value, ``""`` for none.
+
+    ``"Karni"`` by default, so tools that list a site's technologies (BuiltWith,
+    Wappalyzer and the like) can tell the site runs on Karni. It names no
+    version on purpose: a version tells an attacker which known flaws to try.
+    A design's own generator tag is replaced while this is set and kept as it
+    is when it is ``None`` or ``""``.
+    """
+    from django.conf import settings
+
+    value = getattr(settings, "KARNI_GENERATOR", "Karni")
+    return str(value).strip() if value else ""
 
 
 def _text(value: Any) -> str:

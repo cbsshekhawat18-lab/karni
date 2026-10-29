@@ -513,6 +513,9 @@ BASE: dict[str, Any] = {
     # "dark", or "auto" (unfold's light/dark/system switch). Wired into
     # UNFOLD["THEME"] by karni_settings(), read per request.
     "KARNI_ADMIN_THEME": env("KARNI_ADMIN_THEME", default="light"),
+    # <meta name="generator"> on Karni's public pages ({% karni_seo %}), so tools
+    # that list a site's technologies see Karni. No version on purpose. "" turns it off.
+    "KARNI_GENERATOR": env("KARNI_GENERATOR", default="Karni"),
     # Logo for the admin header and login screen: "" (none, the default),
     # "karni" (Karni's own mark) or {"light": <static path>, "dark": ..., "icon": ...}.
     # Wired into UNFOLD by karni_settings(); see docs/admin.md#theming.

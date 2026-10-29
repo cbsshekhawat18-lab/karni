@@ -304,3 +304,42 @@ def test_days_are_read(days: str, expected: list[str] | None) -> None:
 )
 def test_times_are_read(times: str, expected: list[tuple[str, str]] | None) -> None:
     assert jsonld.parse_times(times) == expected
+
+
+# <meta name="generator">: tools that list a site's technologies see Karni
+
+
+def test_every_page_says_it_runs_on_karni() -> None:
+    page = Client().get("/").content.decode()
+    assert head(page).count('name="generator"') == 1
+    assert meta(page, "generator") == "Karni"
+
+
+def test_the_generator_names_no_version() -> None:
+    page = render("{% karni_seo %}<title>Shop</title>{% endkarni_seo %}")
+    assert meta(page, "generator") == "Karni"
+    assert not re.search(r'name="generator" content="[^"]*\d', page)
+
+
+def test_a_designs_own_generator_is_replaced(settings: Settings) -> None:
+    source = (
+        "{% karni_seo %}<title>Shop</title>"
+        '<meta name="generator" content="Site Builder 7">{% endkarni_seo %}'
+    )
+    page = render(source)
+    assert page.count('name="generator"') == 1 and meta(page, "generator") == "Karni"
+    settings.KARNI_GENERATOR = "Karni, the Acme build"
+    assert meta(render(source), "generator") == "Karni, the Acme build"
+
+
+def test_an_empty_setting_leaves_the_designs_tag_alone(settings: Settings) -> None:
+    settings.KARNI_GENERATOR = ""
+    source = (
+        "{% karni_seo %}<title>Shop</title>"
+        '<meta name="generator" content="Site Builder 7">{% endkarni_seo %}'
+    )
+    page = render(source)
+    assert meta(page, "generator") == "Site Builder 7"
+    assert 'content="Karni"' not in page
+    settings.KARNI_GENERATOR = None
+    assert 'name="generator"' not in render("{% karni_seo %}<title>Shop</title>{% endkarni_seo %}")

@@ -11,6 +11,12 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Karni sites say they run on Karni.** `{% karni_seo %}` writes
+  `<meta name="generator" content="Karni">` on every public page, and the
+  scaffold's `frontend/index.html` carries the same line, so tools that list
+  a site's technologies can detect Karni. It names no version. A design's own
+  generator tag is replaced. `KARNI_GENERATOR` changes the text, and `""`
+  turns it off. See [docs/public-site.md](docs/public-site.md#seo-by-default).
 - **A public site is ready for search engines by default.** karni-site's
   `{% karni_seo %}` in base.html writes each page's title, description,
   canonical link, `noindex`, Open Graph and Twitter tags and the site's

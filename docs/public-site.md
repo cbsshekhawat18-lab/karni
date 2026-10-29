@@ -560,6 +560,14 @@ search engines without project code:
   <meta name="description" content="{% block description %}{% endblock %}">{% block seo %}{% endblock %}{% endkarni_seo %}
   ```
 
+- **Built with Karni.** The head also carries
+  `<meta name="generator" content="Karni">`, so tools that list a site's
+  technologies (BuiltWith, Wappalyzer and the like) can tell what it runs
+  on. The staff app's `frontend/index.html` carries the same line. It names
+  no version on purpose, because a version tells an attacker which known
+  flaws to try. `KARNI_GENERATOR` changes the text, and `""` turns it off and
+  keeps a design's own generator tag (delete the line from `index.html` too).
+
 - **Detail pages.** A row in the context whose `get_absolute_url()` is the
   page's path gives the page its title ("Wedding cake | Crumb & Co"), its
   description and its share image. `class Karni: seo` names the fields when
