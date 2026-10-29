@@ -23,7 +23,8 @@ which needs nothing in ``INSTALLED_APPS`` here):
 ``updated_at`` when the model has it), ``changefreq`` and ``priority``.
 
 Addresses are absolute: on ``KARNI_SITE_URL`` when it is set, else on the
-request's host.
+request's host. One request reads each section's rows once (a section keeps
+its paginator) and the admin's hidden pages once for every section.
 
 Override / escape hatch: ``KARNI_SITE_SITEMAP_EXCLUDE``,
 ``KARNI_SITE_PUBLISHED_FIELDS``, ``class Karni: sitemap``, or
@@ -40,9 +41,11 @@ from urllib.parse import urlsplit
 
 from django.contrib.sitemaps import Sitemap
 from django.core.exceptions import FieldDoesNotExist
+from django.core.paginator import Paginator
 from django.db import models
 from django.urls import Resolver404, resolve
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.views.generic.base import RedirectView
 from karni.exceptions import KarniImproperlyConfigured
 from karni.meta import karni_option
@@ -50,6 +53,7 @@ from karni.meta import karni_option
 from karni_site import conf
 
 __all__ = [
+    "HiddenPages",
     "ModelSitemap",
     "PagesSitemap",
     "SiteSitemap",
@@ -64,8 +68,30 @@ _SPEC_KEYS = frozenset({"filter", "exclude", "lastmod", "changefreq", "priority"
 _OWN_NAMESPACES = ("karni_site:", "admin:", "karni:")
 
 
+class HiddenPages:
+    """The pages the admin hides from search engines, read once for every section that asks."""
+
+    def __init__(self) -> None:
+        self._found: tuple[set[str], set[str]] | None = None
+
+    def get(self) -> tuple[set[str], set[str]]:
+        """``(URL names, paths)``: :func:`_hidden`, the first time only."""
+        if self._found is None:
+            self._found = _hidden()
+        return self._found
+
+
 class SiteSitemap(Sitemap):
-    """A sitemap section whose addresses are on ``KARNI_SITE_URL`` when it is set."""
+    """A sitemap section whose addresses are on ``KARNI_SITE_URL`` when it is set.
+
+    It keeps its paginator, so the rows are counted and read once however
+    often the view asks how many pages the section has. Django's own builds a
+    new one, and queries again, each time.
+    """
+
+    @cached_property
+    def paginator(self) -> Paginator:  # type: ignore[override]
+        return Paginator(self._items(), self.limit)
 
     def _configured(self) -> Any:
         url = conf.get("KARNI_SITE_URL")
@@ -114,10 +140,13 @@ def _hidden() -> tuple[set[str], set[str]]:
 class PagesSitemap(SiteSitemap):
     """The site's own pages: named URLs without arguments."""
 
+    def __init__(self, hidden: HiddenPages | None = None) -> None:
+        self.hidden = hidden or HiddenPages()
+
     def items(self) -> list[str]:
         from karni_site.routes import site_pages
 
-        hidden_routes, hidden_paths = _hidden()
+        hidden_routes, hidden_paths = self.hidden.get()
         found: list[str] = []
         for name, path in site_pages():
             if name.startswith(_OWN_NAMESPACES) or path in found:
@@ -208,9 +237,15 @@ def _hidden_row(row: Any, routes: set[str], paths: set[str]) -> bool:
 class ModelSitemap(SiteSitemap):
     """The rows of one model that have a page of their own."""
 
-    def __init__(self, model: type[models.Model], spec: Mapping[str, Any]) -> None:
+    def __init__(
+        self,
+        model: type[models.Model],
+        spec: Mapping[str, Any],
+        hidden: HiddenPages | None = None,
+    ) -> None:
         self.model = model
         self.spec = dict(spec)
+        self.hidden = hidden or HiddenPages()
         self.changefreq = self.spec.get("changefreq")
         self.priority = self.spec.get("priority")
         self._lastmod = self.spec.get("lastmod") or (
@@ -219,7 +254,7 @@ class ModelSitemap(SiteSitemap):
 
     def items(self) -> Any:
         rows = public_rows(self.model, self.spec)
-        hidden_routes, hidden_paths = _hidden()
+        hidden_routes, hidden_paths = self.hidden.get()
         if not hidden_routes and not hidden_paths:
             return rows
         return [row for row in rows if not _hidden_row(row, hidden_routes, hidden_paths)]
@@ -235,18 +270,22 @@ def _section(model: type[models.Model]) -> str:
     return f"{model._meta.app_label}-{model._meta.model_name}"
 
 
-def model_sitemaps(models_: Iterable[type[models.Model]] | None = None) -> dict[str, Sitemap]:
+def model_sitemaps(
+    models_: Iterable[type[models.Model]] | None = None, hidden: HiddenPages | None = None
+) -> dict[str, Sitemap]:
     """One section per model whose rows have pages, ``app_label-model`` by name."""
     from karni_site.routes import linkable_models
 
+    shared = hidden or HiddenPages()
     found: dict[str, Sitemap] = {}
     for model in models_ if models_ is not None else linkable_models():
         spec = model_spec(model)
         if spec is not None:
-            found[_section(model)] = ModelSitemap(model, spec)
+            found[_section(model)] = ModelSitemap(model, spec, shared)
     return found
 
 
 def sitemaps() -> dict[str, Sitemap]:
     """``KARNI_SITE_SITEMAPS``'s default: the site's pages, then each model's rows."""
-    return {"pages": PagesSitemap(), **model_sitemaps()}
+    hidden = HiddenPages()
+    return {"pages": PagesSitemap(hidden), **model_sitemaps(hidden=hidden)}

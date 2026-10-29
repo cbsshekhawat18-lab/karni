@@ -179,4 +179,12 @@ DEFAULTS |= {
     "KARNI_SITE_SEO_PIXEL_RATIO": 2,
     # karni check --seo: regular expressions of paths it never requests.
     "KARNI_SITE_SEO_IGNORE": [],
+    # karni check --seo: the loggers held back while it requests the pages (one or more
+    # lines per request). Their errors are counted, and the first is shown. [] keeps them.
+    "KARNI_SITE_SEO_QUIET": [
+        "django_structlog",
+        "django.request",
+        "django.server",
+        "karni.queries",
+    ],
 }

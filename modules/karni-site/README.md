@@ -398,6 +398,12 @@ with `CELERY_TASK_ALWAYS_EAGER = True` the first page that shows the image
 makes them and uses them). `KARNI_SITE_QUEUE_RENDITIONS = False` makes none
 in the check either. `KARNI_SITE_SEO_IGNORE` lists paths it never requests.
 
+The crawl's own requests are not logged (`KARNI_SITE_SEO_QUIET` names the
+loggers held back: the request log, the query log, Django's request
+warnings), so the findings are not buried, and the development capture under
+`.karni/` keeps the developer's requests. An error a page's request logs is
+counted, and one line names the first of them.
+
 ### The editor role
 
 The module declares a role, `editor`, through Karni's role system (the
@@ -642,6 +648,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_SEO_IMAGE_BYTES` | `500000` | An image without smaller copies above this size is oversized (`SITE016`). |
 | `KARNI_SITE_SEO_PIXEL_RATIO` | `2` | An image wider than this many times its `width` is oversized. |
 | `KARNI_SITE_SEO_IGNORE` | `[]` | Regular expressions of paths `karni check --seo` never requests. |
+| `KARNI_SITE_SEO_QUIET` | `["django_structlog", "django.request", "django.server", "karni.queries"]` | The loggers `karni check --seo` holds back while it requests the pages. Their errors are counted and the first is shown. `[]` keeps every line. |
 
 ## Checks
 
