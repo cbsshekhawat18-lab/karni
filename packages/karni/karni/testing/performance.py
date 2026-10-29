@@ -409,8 +409,25 @@ def pytest_generate_tests(metafunc: Any) -> None:
     from django.apps import apps
     from django.conf import settings
 
+    import pytest
+
     cases = scaling_cases() if settings.configured and apps.ready else []
-    metafunc.parametrize("karni_scaling_case", cases, ids=[case.id for case in cases])
+    metafunc.parametrize(
+        "karni_scaling_case",
+        [pytest.param(case, id=case.id, marks=_database_marks(case)) for case in cases],
+    )
+
+
+def _database_marks(case: ScalingCase) -> list[Any]:
+    """A model on another database (``Karni.database``) is measured on that alias too."""
+    import pytest
+    from django.db import router
+
+    model = getattr(case.viewset, "model", None)
+    alias = router.db_for_read(model) if model is not None else "default"
+    if alias in (None, "default"):
+        return []
+    return [pytest.mark.django_db(databases=["default", alias])]
 
 
 def test_list_and_retrieve_queries_do_not_grow_with_rows(
