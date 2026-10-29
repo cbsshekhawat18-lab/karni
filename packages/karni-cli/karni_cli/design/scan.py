@@ -65,8 +65,10 @@ class Slot:
 
     Kinds: ``text`` (an element's text), ``image`` (an ``<img>`` or a CSS
     ``url()``), ``alt``, ``link`` (an ``href``), ``datetime``, ``data`` (a
-    ``data-*`` attribute), ``id``, ``pairs`` (a definition list) and ``flag``
-    (a class token some items of a collection have).
+    ``data-*`` attribute), ``id``, ``pairs`` (a definition list), ``term`` (one
+    definition of a list whose terms every item shares, ``attr`` its term:
+    :func:`karni_cli.design.builder.split_terms`) and ``flag`` (a class token
+    some items of a collection have).
     """
 
     path: tuple[str, ...]

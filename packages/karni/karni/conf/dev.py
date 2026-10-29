@@ -11,7 +11,9 @@ budgets that warn instead of raising (``KARNI_QUERY_BUDGET_MODE = "warn"``)
 and the per-request query log (``KARNI_QUERY_LOG``), and uploads and static
 files under the project (``MEDIA_ROOT = "data/media"``, ``STATIC_ROOT =
 "data/static"``, read from the project root), so a run on the host stores
-files without a ``/data`` folder.
+files without a ``/data`` folder, and broker reads that give up after
+:data:`BROKER_SOCKET_TIMEOUT` seconds (``CELERY_BROKER_TRANSPORT_OPTIONS``),
+so a stopping worker cannot wait for good on a Redis that does not answer.
 
 Override / escape hatch: every key obeys the same setdefault semantics as
 ``BASE`` — define it in your settings module before calling
@@ -29,6 +31,10 @@ import environ
 from karni.conf.base import env
 
 CONSOLE_EMAIL = "django.core.mail.backends.console.EmailBackend"
+
+#: Seconds a development process waits for the broker to answer a read. It is
+#: longer than the 1 second BRPOP Celery's Redis transport polls with.
+BROKER_SOCKET_TIMEOUT = 5
 
 
 def console_email(reader: environ.Env) -> dict[str, str]:
@@ -51,5 +57,11 @@ DEV: dict[str, Any] = {
     # /data/static, and production keeps BASE's /data defaults.
     "MEDIA_ROOT": env("MEDIA_ROOT", default="data/media"),
     "STATIC_ROOT": env("STATIC_ROOT", default="data/static"),
+    # A read from the broker gives up after BROKER_SOCKET_TIMEOUT seconds. A
+    # stopping worker reads the answer to its last BRPOP without a timeout of
+    # its own, so a Redis that never sends it (one whose timers stalled, as a
+    # long-running Redis on a Mac can) would hold the warm shutdown for good.
+    # Production keeps Celery's default.
+    "CELERY_BROKER_TRANSPORT_OPTIONS": {"socket_timeout": BROKER_SOCKET_TIMEOUT},
 }
 """Development overrides merged over ``BASE`` for the ``"dev"`` profile."""

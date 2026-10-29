@@ -12,84 +12,10 @@ the project holds everything ``karni load`` reads even when the design
 folder is elsewhere. ``copy_files=False`` (``--keep-paths``) points at the
 design's own files instead.
 
-The map (JSON)::
-
-    {
-      "version": 1,
-      "design": "../design",            # the design folder, relative to the map file
-      "app": "website",                 # rows go to "<app>.<Model>"
-      "marker": "==",                   # around highlighted words: KARNI_SITE_HIGHLIGHT's marker
-      "decimal": ",",                   # optional: the decimal mark, else each page's <html lang>
-      "models": [
-        {
-          "name": "Course",
-          "fields": {"slug": "slug:title", "title": "str:80", "price": "money:USD", ...},
-          "key": "slug",                # the field each row is matched on
-          "highlight": {"tagline": "em"},  # fields that keep ==marked== words
-          "sources": [
-            {
-              "pages": ["courses/pottery.html", ...],  # or "page": "courses.html"
-              "items": "li.course-list__item",          # absent: the page is the item
-              "within": "section.menu",                 # items are inside these parents
-              "parent": {"field": "menu", "key": {...}},  # ...and the row points at its parent
-              "key": {"from": "page"},                  # how each item's key is read
-              "position": true,                         # write the item's place in its list
-              "create": false,                          # only add values to rows made elsewhere
-              "set": {"page": "home"},                  # constant values ({page}: the page's key)
-              "values": {"title": "h1", "image": "img@src", ...}
-            }
-          ]
-        },
-        {"name": "CourseImage", "parent": "Course", "accessor": "courseimage_set",
-         "fields": {...}, "key": "position"}
-      ]
-    }
-
-A *place* is a CSS selector relative to the item, with ``@attribute`` for an
-attribute's value (``img@src``), ``@data-tags`` for the item's own attribute
-and ``:scope`` for the item's own text (:mod:`karni_cli.design.select`).
-
-Keys (``"key"``):
-
-* ``{"from": "page"}``: the page's file name (``courses/pottery.html`` →
-  ``pottery``).
-* ``{"from": "link", "select": place, "strip": "p-"}``: the page or
-  ``#anchor`` a link points at.
-* ``{"from": "attr", "name": "id", "strip": "p-"}``: an attribute of the item.
-* ``{"from": "field", "field": "title"}``: a field's value as a slug.
-* ``{"from": "position", "prefix": "home"}``: ``home-1``, ``home-2`` and so on
-  (``{page}`` in the prefix is the page's key).
-
-The same item read from two sources gets one key, so its values merge into
-one row: the first source that has a value wins.
-
-A value is a place, or an object with ``select`` (the place) and one of:
-
-* ``all``: every match's text, joined by blank lines (paragraphs).
-* ``list``: a JSON list, one entry per match (``true``: the match's text,
-  a place: that place inside each match).
-* ``fields``: a list of objects, ``{name: place}`` inside each match.
-* ``pairs``: a definition list as ``[term, definition]`` pairs.
-* ``to``: a relation to that model. The place names the row by a link (an
-  ``href``), by its key (``"by": "key"``, an attribute such as
-  ``data-type="houses"``) or by its title (``"by": "title"``). ``many`` makes
-  it a list, ``split`` reads an attribute that holds several keys
-  (``data-tags="a b"``).
-* ``rows``: child rows, ``{field: place}`` inside each match (the value's
-  name is the parent's accessor, ``courseimage_set``).
-* ``present``: ``true`` when the place matches anything.
-* ``drop``: markup left out of the text (``["span.arrow"]``).
-* ``pattern``: a regular expression whose last group is the value
-  (``01 — Design`` → ``Design``).
-* ``link``: ``"path"`` writes a link to a page of the design as its URL path.
-* ``decide``: a question the analysis left for the agent. Extract refuses to
-  run until every ``decide`` is answered (removed, or the value deleted).
-
-The value is parsed by the field's type: a number from ``"12 weeks"`` (and
-``"4,000"`` as 4000, ``"1.234,5"`` where the page's ``<html lang>`` writes a
-decimal comma, or the map's ``"decimal"`` says so), an amount from
-``"€4.50"``, a date from ``"14 March 2026"`` or a ``datetime`` attribute, a
-path for an image.
+The map's keys, what each one reads and how a value is parsed by its
+field's type: :mod:`karni_cli.design.mapref` (``karni explain map``), the
+source of the tables in docs/design-content.md. A source or value key that
+is not listed there is refused.
 
 Override / escape hatch: :func:`extract` takes ``reader=``, a
 :class:`Reader` subclass, to read values another way.
@@ -107,6 +33,7 @@ from html import unescape
 from pathlib import Path
 from typing import Any, Final
 
+from karni_cli.design import mapref
 from karni_cli.design import site as design_site
 from karni_cli.design.analyze import attr_key, link_key, page_slug, parse_value
 from karni_cli.design.parse import Document, Node, collapse, parse
@@ -126,28 +53,8 @@ __all__ = ["FILES_DIR", "ExtractResult", "MapError", "Reader", "extract", "read_
 FILES_DIR: Final = "files"
 
 MAP_VERSION: Final = 1
-_SOURCE_KEYS: Final = frozenset(
-    {"page", "pages", "items", "within", "parent", "key", "position", "create", "set", "values"}
-)
-_VALUE_KEYS: Final = frozenset(
-    {
-        "select",
-        "all",
-        "list",
-        "fields",
-        "pairs",
-        "to",
-        "many",
-        "split",
-        "by",
-        "rows",
-        "present",
-        "drop",
-        "pattern",
-        "link",
-        "decide",
-    }
-)
+_SOURCE_KEYS: Final = mapref.names("source")
+_VALUE_KEYS: Final = mapref.names("value")
 
 
 #: The values some options take: a relation's ``by``, a key's ``from``, a value's ``link``.
@@ -171,6 +78,11 @@ class MapError(ValueError):
         super().__init__(message)
         self.pending = list(pending or [])
         self.code = code
+
+
+def _term(text: str) -> str:
+    """A definition list's term as compared: spaces collapsed, case ignored."""
+    return " ".join(text.split()).casefold()
 
 
 def _choice(value: Any, allowed: tuple[str, ...], what: str, where: str) -> str | None:
@@ -559,7 +471,7 @@ class _Extractor:
                 str(options.get("by", "")),
                 bool(options.get("split")),
             )
-        if options.get("pairs"):
+        if options.get("pairs") or "term" in options:
             pairs: list[list[str]] = []
             for node in nodes:
                 term = ""
@@ -573,7 +485,11 @@ class _Extractor:
                         term = ""
                 if term:
                     pairs.append([term, ""])
-            return pairs
+            if "term" not in options:
+                return pairs
+            wanted = _term(str(options["term"]))
+            definition = next((d for t, d in pairs if _term(t) == wanted), "")
+            return parse_value("text", kind.rstrip("?"), definition, self.reader.decimal_mark(page))
         if "list" in options:
             inner = options["list"]
             found: list[str] = []

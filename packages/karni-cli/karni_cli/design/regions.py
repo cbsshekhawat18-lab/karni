@@ -27,6 +27,10 @@ with a slug, so what stays a block on them (the copy every detail page
 shares, "From past classes") gets one key per place, named after the model,
 on every one of those pages: the template that replaces them keeps it.
 
+:func:`detail_rows` gives each such page its row's model and title, as the
+page shows it: a navigation whose links are exactly one model's detail
+pages, by their titles, becomes a menu of that model's rows.
+
 Override / escape hatch: edit the map (delete a source, and the import makes
 its markup editable again), or import without ``--map``.
 """
@@ -39,7 +43,7 @@ from typing import Any
 from karni_cli.design.parse import Document, Node
 from karni_cli.design.select import SelectorError, parse_place
 
-__all__ = ["detail_pages", "row_regions"]
+__all__ = ["detail_pages", "detail_rows", "row_regions"]
 
 #: Elements that are the whole page: a value read from one leaves nothing out.
 _WHOLE_PAGE = frozenset({"html", "head", "body"})
@@ -117,4 +121,36 @@ def detail_pages(spec: Mapping[str, Any]) -> dict[str, str]:
                 continue
             for page in pages:
                 found.setdefault(page, str(model["name"]))
+    return found
+
+
+def detail_rows(
+    spec: Mapping[str, Any], docs: Mapping[str, tuple[str, Document]]
+) -> dict[str, tuple[str, str]]:
+    """Detail page path → (``"<app>.<Model>"``, the row's title as the page shows it).
+
+    The title is the text the detail source's ``title`` value reads, ``""``
+    when the source has no title value or the page lacks it.
+    """
+    app = str(spec.get("app") or "")
+    pages = detail_pages(spec)
+    found: dict[str, tuple[str, str]] = {}
+    for model in spec.get("models", []) or []:
+        if not isinstance(model, Mapping) or str(model.get("name")) not in pages.values():
+            continue
+        name = str(model["name"])
+        for source in model.get("sources", []) or []:
+            if not isinstance(source, Mapping) or source.get("items"):
+                continue
+            rule = (source.get("values") or {}).get("title")
+            place = str(rule.get("select", ":scope")) if isinstance(rule, Mapping) else rule
+            for page in [str(p) for p in source.get("pages", []) or []]:
+                if pages.get(page) != name or page in found:
+                    continue
+                title = ""
+                if place and page in docs:
+                    text, doc = docs[page]
+                    hits = _nodes(str(place), doc.root, text)
+                    title = hits[0].plain_text(text) if hits else ""
+                found[page] = (f"{app}.{name}" if app else name, title)
     return found

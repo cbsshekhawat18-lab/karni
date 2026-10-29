@@ -381,7 +381,10 @@ What the import marks:
   for a submenu, or links side by side) becomes `{% get_menu %}` and a
   loop, seeded from `templates/<app>/menus/<name>.html`. One whose items
   differ keeps its markup and its link texts become blocks, and the report
-  says where.
+  says where. With `--map`, a list whose links are exactly one model's
+  detail pages, each once and by its title (a footer's list of every
+  treatment, or a submenu), is seeded as that model's rows, so a treatment
+  the client adds appears in it by itself. The report names each one.
 - headings that highlight words with the same element and class
   (`<span class="highlight">`), or the same element without one (`<em>`),
   set `KARNI_SITE_HIGHLIGHT` in config/settings.py once, so the client
@@ -407,34 +410,38 @@ has the settings and every escape hatch.
 
 A site app loads its runtime from the `karni-site` module
 ([modules](modules.md)), never from project code. `{% load static
-karni_site %}` at the top of a template gives it:
+karni_site %}` at the top of a template gives it every tag and filter below.
+`karni explain <tag>` prints one of them (`karni explain image`), from the
+same source as this table.
 
-- `{% ifactive "website:about" %}...{% else %}...{% endifactive %}` renders
-  its content when one of its patterns names the current page: a URL name,
-  with wildcards (`"website:service_*"`), or a path (`"/blog/*"`). Put it
-  around whatever the design uses for the current page, a class, a token
-  inside a class, or a whole attribute. `karni check` reports a name no URL
-  has (`SITE002`).
-- `{% editable %}`, `{% editable_image %}`, `{% site_image %}`,
-  `{% site_defaults %}` and `{% get_menu %}`, and `site` in every template:
-  [everything the client edits](#everything-the-client-edits).
-- `{% csp_hash %}` and `{% csp_allow %}`, below.
+<!-- generated:site-tags -->
+| Tag | Write | What it does |
+| --- | --- | --- |
+| `{% karni_seo %}` | `{% karni_seo %}<title>...</title><meta name="description" content="...">{% endkarni_seo %}` | In base.html's &lt;head&gt;, around the design's own title and description. It writes the page's title, description, canonical link, robots for a hidden page, the Open Graph and Twitter tags and the site's JSON-LD. Each value is the first of: the admin's entry for the page (Page titles and descriptions), `seo` in the view's context (a dict), the page's row, the tags written inside, the site's settings. The page's row is `seo` or `object` in the context when it is a row, else the row in the context whose get_absolute_url() is the page's path. Its fields are the ones `class Karni: seo` names, else seo_title, seo_description and seo_image, else a title, description or image field by a usual name. A detail page that has its row in the context needs no title of its own. |
+| `{% image %}` | `{% image obj.photo alt=obj.title width=800 %}` | An &lt;img&gt; of an uploaded image: src, srcset and sizes from its WebP copies, width and height in its proportions, lazy loading. alt is required (alt="" for an image that only decorates). eager=True, or eager=forloop.first in a loop, for the image at the top of a page. sizes="..." replaces the one worked out from width. Any other name=value becomes an attribute, an underscore a hyphen (data_index=1 is data-index="1"). An empty field renders nothing, and the original is shown until its copies exist. |
+| `{% editable %}` | `{% editable "home.intro" %}<default HTML>{% endeditable %}` | Text the client edits in the admin. The content is the default: the first render stores it under the key, and the block follows the template until someone edits it. An edited block shows the edited HTML, cleaned to the inline markup KARNI_SITE_INLINE_TAGS allows. The key's first part is the page the admin groups it under. |
+| `{% editable_image %}` | `{% editable_image "home.hero" %}<img src="..." alt="...">{% endeditable_image %}` | An image the client replaces. The design's markup stays: an upload changes the &lt;img&gt;'s src (its srcset and &lt;source&gt; elements go), an edited alternative text its alt. With url after the key, it holds a bare address instead, for a style="background-image: url(...)". |
+| `{% site_image %}` | `{% site_image "logo" %}<img src="..." alt="...">{% endsite_image %}` | An image from a file field of the site's settings (logo, favicon, share_image): the design's image until one is uploaded in the admin. |
+| `{% site_defaults %}` | `{% site_defaults name="Crumb & Co" phone="01234 567890" %}` | The design's values for the site's details (`site` in every template), stored the first time and followed until someone changes them in the admin. It renders nothing. Put it at the top of the layout, before anything reads `site`. |
+| `{% get_menu %}` | `{% get_menu "header" seed="website/menus/header.html" as items %}` | A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way. |
+| `{% ifactive %}` | `{% ifactive "website:about" %} class="active"{% else %}...{% endifactive %}` | Renders its content when one of its patterns names the current page, else the {% else %} part. A pattern is a URL name, wildcards allowed ("website:service_*"), or a path ("/about/", "/blog/*"). Put it where the design marks the current page: a class, a token inside a class, or a whole attribute. It needs the request in the context. karni check reports a name no URL has (SITE002). |
+| `{% karni_form %}` | `{% karni_form "contact" button="Send" classes="bootstrap" %}` | A public form that works with and without JavaScript: the fields a visitor fills (the writable fields of the form viewset's create serializer) with labels, limits and errors, the CSRF token and the honeypot. It posts through the viewset's own create, so the access declaration, rate limit and validation are the API's. Options such as fields, rows, labels, widgets, classes, button and editable fit it to the design. Also {% load karni_forms %}. |
+| `{% csp_hash %}` | `<script>{% csp_hash %}...{% endcsp_hash %}</script>` | Renders its content unchanged and adds its SHA-256 hash to the script-src of this response's Content-Security-Policy, so the design's inline script runs under Karni's policy. {% csp_hash attribute %} is for an event handler attribute (onclick="..."). |
+| `{% csp_allow %}` | `{% csp_allow "style-src https://fonts.googleapis.com" "font-src https://fonts.gstatic.com" %}` | Adds sources to this response's Content-Security-Policy, one directive per argument, next to the markup that loads from that origin. It renders nothing. KARNI_CSP adds them site-wide instead. |
+| `|highlight` | `{{ value|highlight }}` | The words a field keeps between the highlight markers (==marked words==), in KARNI_SITE_HIGHLIGHT's tag and class, everything else escaped. \|highlight:"em" names another markup for one value, \|highlight:"" drops the marks, and a backslash before a marker (\==) keeps it as typed. |
+<!-- /generated:site-tags -->
+
+The module also gives a site:
+
+- `site` in every template: the site's details from the admin
+  ([everything the client edits](#everything-the-client-edits)).
 - the redirect middleware, which answers the admin's redirects where the
   site has no page.
-- `{{ value|highlight }}` renders the words a field keeps between the
-  highlight markers (`==marked words==`) in `KARNI_SITE_HIGHLIGHT`'s tag and
-  class, everything else escaped: the same convention an editable block
-  uses, so a client types `==words==` everywhere. `karni design extract`
-  keeps the words a heading sets apart that way. `|highlight:"em"` names
-  another markup for one value, `|highlight:""` drops the marks, and a
-  backslash before the marker (`\==`) keeps it as typed.
 - `karni_site.views.page_not_found` and `server_error`, which `karni make
   site` sets as `handler404` and `handler500`: they render the site's own
   `404.html` and `500.html` with the request, so the layout's links, menu
   and policy tags work there too, and fall back to the module's plain page
   when the site's page fails to render.
-- `{% karni_form "<name>" %}`, a public form that works with and without
-  JavaScript (see [Public forms](#public-forms)).
 
 The module's README lists its settings and escape hatches:
 `KARNI_SITE_IS_ACTIVE` swaps the rule for the current page, and the two

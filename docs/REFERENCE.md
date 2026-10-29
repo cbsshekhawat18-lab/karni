@@ -344,7 +344,7 @@ karni explain [OPTIONS] [CODE]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, or a setting such as KARNI_SITE_HIGHLIGHT. Pass - to read a traceback or log line from stdin. |
+| `CODE` |  | An error code such as E104, W101, C101, PAY004 or K106, a setting such as KARNI_SITE_HIGHLIGHT, a template tag such as image, or a content map key such as map.items. Pass - to read a traceback or log line from stdin. |
 | `--json` |  | Machine-readable output. |
 | `--failure` TEXT |  | A captured failure id (.karni/failures/), a failed request's id, or `last`: print it as a brief (development, DEBUG on). |
 
@@ -504,7 +504,7 @@ karni schema [OPTIONS] [LABELS...]
 
 Run a Celery worker. It wraps `python -m celery -A config worker -l info [ARGS]`.
 
-A host worker on macOS gets `--pool=solo` (the prefork pool cannot run tasks there).
+A worker on a Mac runs the threads pool (Celery's prefork pool fails every task there).
 
 ```
 karni worker [OPTIONS] [ARGS...]
@@ -515,6 +515,7 @@ karni worker [OPTIONS] [ARGS...]
 | `ARGS...` |  | Passed to celery worker: -Q QUEUES, --concurrency N … |
 | `--app`, `-A` TEXT | `config` | Celery app module. Env: `KARNI_CELERY_APP`. |
 | `--loglevel`, `-l` TEXT | `info` |  |
+| `--pool`, `-P` TEXT |  | Celery's pool: threads, solo or prefork (or eventlet, gevent). Default: threads for a worker on a Mac, else Celery's prefork. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
@@ -2116,6 +2117,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
 | [`C373`](errors.md#c373) | cli | No such setting |
+| [`C374`](errors.md#c374) | cli | No such template tag |
+| [`C375`](errors.md#c375) | cli | No such content map key |
 
 ### Agent rules (`K`)
 

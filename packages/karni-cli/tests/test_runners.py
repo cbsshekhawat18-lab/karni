@@ -84,14 +84,61 @@ def _linux_host(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("karni_cli.commands.worker.sys.platform", "linux")
 
 
-def test_host_pool_args_adds_solo_on_macos_only() -> None:
-    from karni_cli.commands.worker import host_pool_args
+def test_pool_args_give_a_mac_host_the_threads_pool_only() -> None:
+    from karni_cli.commands.worker import pool_args
 
-    assert host_pool_args(None, platform="darwin") == ["--pool=solo"]
-    assert host_pool_args(["-Q", "high"], platform="darwin") == ["-Q", "high", "--pool=solo"]
-    assert host_pool_args(["--pool=threads"], platform="darwin") == ["--pool=threads"]
-    assert host_pool_args(["-P", "gevent"], platform="darwin") == ["-P", "gevent"]
-    assert host_pool_args(["-Q", "high"], platform="linux") == ["-Q", "high"]
+    assert pool_args(None, platform="darwin") == ["--pool=threads"]
+    assert pool_args(["-Q", "high"], platform="darwin") == ["-Q", "high", "--pool=threads"]
+    assert pool_args(["--pool=solo"], platform="darwin") == ["--pool=solo"]
+    assert pool_args(["-P", "gevent"], platform="darwin") == ["-P", "gevent"]
+    assert pool_args(["-Q", "high"], platform="linux") == ["-Q", "high"]
+    assert pool_args(None, on_host=False, platform="darwin") == []  # docker runs Linux
+    # --pool goes last, so it wins over a -P among the arguments, on every platform
+    assert pool_args(["-P", "solo"], pool="threads", platform="linux") == [
+        "-P",
+        "solo",
+        "--pool=threads",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("platform", "argv", "tail"),
+    [
+        ("darwin", ["worker"], ["--pool=threads"]),
+        ("darwin", ["worker", "--pool", "solo"], ["--pool=solo"]),
+        ("darwin", ["worker", "-P", "prefork"], ["--pool=prefork"]),
+        ("linux", ["worker"], []),
+        ("linux", ["worker", "--pool", "threads"], ["--pool=threads"]),
+    ],
+)
+def test_worker_pool_flag_and_mac_default(
+    runner: CliRunner,
+    project: Path,
+    run: Recorder,
+    monkeypatch: pytest.MonkeyPatch,
+    platform: str,
+    argv: list[str],
+    tail: list[str],
+) -> None:
+    monkeypatch.setattr("karni_cli.commands.worker.sys.platform", platform)
+    result = _invoke(runner, *argv)
+    assert result.exit_code == 0, result.output
+    assert run.cmd == [_py(project), "-m", "celery", "-A", "config", "worker", "-l", "info", *tail]
+
+
+def test_worker_says_prefork_fails_on_a_mac(
+    runner: CliRunner, project: Path, run: Recorder, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("karni_cli.commands.worker.sys.platform", "darwin")
+    result = _invoke(runner, "worker", "--pool", "prefork")
+    assert result.exit_code == 0, result.output
+    assert "prefork pool fails every task on macOS" in result.output
+
+
+def test_worker_rejects_an_unknown_pool(runner: CliRunner, project: Path, run: Recorder) -> None:
+    result = _invoke(runner, "worker", "--pool", "fork")
+    assert result.exit_code != 0
+    assert not run.calls
 
 
 VENV_CASES: list[tuple[list[str], list[str]]] = [

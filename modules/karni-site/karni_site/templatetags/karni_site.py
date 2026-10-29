@@ -1,60 +1,9 @@
 """Template tags for a public site: ``{% load karni_site %}``.
 
-``{% ifactive "website:about" %} class="active"{% endifactive %}``
-    Renders its content when one of the patterns names the current page, and
-    the ``{% else %}`` part otherwise. A pattern is a URL name
-    (``"website:about"``, wildcards allowed: ``"website:service_*"``) or a
-    path (``"/about/"``, ``"/services/*"``). The tag knows nothing about the
-    markup, so it works with any design: put it where the design marks the
-    current page, around a class (``class="nav-link{% ifactive ... %}
-    active{% endifactive %}"``) or a whole attribute (``{% ifactive ... %}
-    aria-current="page"{% endifactive %}``). It needs the ``request`` in the
-    context. Without one (an e-mail, a plain ``Template.render``) nothing is
-    active.
-
-``<script>{% csp_hash %}...{% endcsp_hash %}</script>``
-    Renders its content unchanged and adds the content's SHA-256 hash to the
-    ``script-src`` of the Content-Security-Policy of this response only
-    (``karni.security.extend_request_csp``). The design's inline script runs
-    under Karni's policy, and an edited script is hashed again on the next
-    render. ``{% csp_hash attribute %}`` is for an event handler attribute
-    (``onclick="{% csp_hash attribute %}...{% endcsp_hash %}"``): it adds
-    ``'unsafe-hashes'`` and the hash of the attribute's decoded value.
-
-``{% csp_allow "style-src https://fonts.googleapis.com" "font-src https://fonts.gstatic.com" %}``
-    Adds sources to the policy of this response only, one directive per
-    argument. A template that loads something from another origin says so
-    next to the markup that loads it. It renders nothing.
-
-``{% editable "home.intro" %}<default HTML>{% endeditable %}``
-    Text a client edits in the admin. The content is the default: the first
-    render stores it under the key, and while nobody changes it the block
-    follows the template. An edited block shows the edited HTML, cleaned to
-    the inline markup ``KARNI_SITE_INLINE_TAGS`` allows. The key's first part
-    is the page the admin groups it under (:mod:`karni_site.blocks`).
-
-``{% editable_image "home.hero" %}<img src="..." alt="...">{% endeditable_image %}``
-    An image a client replaces. The design's markup stays: an uploaded
-    picture changes the ``<img>``'s ``src`` (and ``srcset`` and ``<source>``
-    go), an edited alternative text its ``alt``. ``{% editable_image "key"
-    url %}{% static '...' %}{% endeditable_image %}`` holds a bare address,
-    for a ``style="background-image: url(...)"``.
-
-``{% site_image "logo" %}<img ...>{% endsite_image %}``
-    The same, from a file field of the site's settings (``logo``,
-    ``favicon``, ``share_image``): the design's image until one is uploaded.
-
-``{% site_defaults name="Crumb & Co" phone="01234 567890" social_instagram="https://..." %}``
-    The design's values for the site's details: stored the first time,
-    followed until someone changes them in the admin. Renders nothing. Put
-    it at the top of the layout, before anything reads ``site``.
-
-``{% get_menu "header" as items %}`` (``seed="<template>"`` optional)
-    The items of a menu for a ``{% for %}`` loop that keeps the design's
-    markup: ``item.title``, ``item.url``, ``item.new_tab``, ``item.current``
-    (this page), ``item.active`` (this page or one under it),
-    ``item.children``. With ``seed``, a menu the database does not have yet
-    is created from the links in that template (:mod:`karni_site.menus`).
+How each tag and filter is written and what it does is in one place,
+:mod:`karni_site.tagref`: ``karni explain <tag>`` prints an entry, and the
+table in docs/public-site.md is rendered from it. ``tests/test_tagref.py``
+fails when this library and that list disagree.
 
 Override / escape hatch: ``KARNI_SITE_IS_ACTIVE`` replaces the rule that
 decides the current page. ``KARNI_CSP`` adds sources site-wide instead of

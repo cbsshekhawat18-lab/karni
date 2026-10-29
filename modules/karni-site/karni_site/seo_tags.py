@@ -1,29 +1,8 @@
 """``{% karni_seo %}`` and ``{% image %}``: part of ``{% load karni_site %}``.
 
-``{% karni_seo %}<title>...</title><meta name="description" ...>{% endkarni_seo %}``
-    In base.html's ``<head>``, around the design's own title and
-    description. Renders the page's title, description, canonical link,
-    ``robots`` when it is hidden, Open Graph and Twitter tags, the site's
-    JSON-LD and one CSS rule for images Karni sized. Each value comes from
-    the admin's entry for the page, then ``seo`` in the context, then the
-    page's object, then the tags written inside, then the site's settings
-    (:mod:`karni_site.metadata`). A tag inside that it does not cover is
-    kept. If anything fails, the tags inside are rendered as written.
-
-``{% image obj.photo width=800 alt=obj.title %}``
-    An ``<img>`` of an uploaded image: ``src``, ``srcset`` and ``sizes``
-    from its WebP copies (:mod:`karni_site.renditions`), ``width`` and
-    ``height`` in its proportions, ``loading="lazy"`` and
-    ``decoding="async"``. ``alt`` is required (``alt=""`` for a decorative
-    image). Any other ``name=value`` becomes an attribute, an underscore in
-    the name a hyphen (``data_index=1`` is ``data-index="1"``).
-    ``eager=True`` for the image at the top of a page, the one that paints
-    largest: ``loading="eager"`` and ``fetchpriority="high"``. In a loop,
-    ``eager=forloop.first`` makes only the first one eager (a hero slider).
-    ``loading="eager"`` or ``fetchpriority="high"`` alone work too.
-    ``sizes="..."`` replaces the one worked out from
-    ``width``. An empty field renders nothing. Before the copies exist the
-    original is shown.
+What each writes, and where ``{% karni_seo %}`` finds a value:
+:mod:`karni_site.tagref` (``karni explain karni_seo``) and
+:mod:`karni_site.metadata`.
 
 Both are registered on the ``karni_site`` library by
 :func:`register_tags`. Override / escape hatch: :func:`image_tag` builds

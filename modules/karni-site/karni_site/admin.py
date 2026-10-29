@@ -327,7 +327,10 @@ class MenuItemForm(forms.ModelForm):
     children = forms.ChoiceField(
         label=_("children from"),
         required=False,
-        help_text=_("Adds one item per row, kept in step with the rows."),
+        help_text=_(
+            "Adds one item per row, kept in step with the rows. With no title and no address, "
+            "the rows take this item's place."
+        ),
     )
 
     class Meta:

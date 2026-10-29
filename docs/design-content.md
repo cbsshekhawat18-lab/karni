@@ -72,7 +72,9 @@ import reads, and works from the markup alone:
    statistics is the page's copy, never a model, and never the other half
    of a slider next to it. A list inside an
    item without pictures becomes a JSON field (a list of strings, of pairs for
-   a `<dl>`, of objects), and one with pictures a child model. A section only
+   a `<dl>`, of objects), and one with pictures a child model. A `<dl>` with
+   the same terms on every item (Duration, Price, Visits on each detail page)
+   is one field per term instead, typed by its definitions. A section only
    some detail pages have stays in those pages' templates. A structure found
    on several pages with different items each time (a slider) is one model
    with a `page` field, and a foreign key to the detail page's model when it
@@ -95,10 +97,11 @@ folder name. Rename anything in the map.
 | An image | `image`, and its `alt` as `<name>_alt` |
 | A link to a page of the design that is not a row | `str:200`, the page's URL path |
 | A list of short texts | `json`, a list of strings |
-| A definition list | `json`, `[term, definition]` pairs |
+| A definition list with the same terms on every item | one field per term, named after it and typed by its definitions (`"term"` in the map) |
+| A definition list whose terms differ between items | `json`, `[term, definition]` pairs |
 | `<time datetime="...">` or a date written out ("14 March 2026") | `date` |
 | A price ("€4.50", "From $12") | `decimal:10:2`, the symbol left in the template |
-| A number with the same words around it ("12 weeks", "4,000 patients") | `int`, the words left in the template |
+| A number with the same words around it ("12 weeks", "4,000 patients", or "1 visit" and "3 visits") | `int`, the words left in the template (with Django's `pluralize` filter for a plural) |
 | `01`, `02`, `03` before the items | the rows' `position`, not a field |
 | `01 — Design` | `position`, and `Design` as the field |
 | A badge only some items have ("New", "Vegan") | `bool` |
@@ -243,60 +246,83 @@ overwrites it (`C123`) unless you pass `--force`.
 }
 ```
 
-Numbers are read in the page's language. A separator between groups of
-three digits is dropped (`4,000`, `1 234`, `1'234`). Where the page's `<html
-lang>` writes a decimal comma (`de`, `fr`, `es` and most of Europe), `4.000` is
-4000 and `1.234,5` is 1234.5. Without a language a number is read the English
-way. The map's top-level `"decimal": ","` (or `"."`) decides for every page.
+`karni explain map` lists every key of the map, and `karni explain
+map.<key>` says what one does (`map.items`, `map.source.key`). The tables
+below come from the same source, and extract refuses a source or value key
+they do not list.
 
-The top-level `"marker"` is what extract writes around highlighted words:
-`"=="` by default, `KARNI_SITE_HIGHLIGHT`'s default. Change it only together
-with the setting's `"marker"`, so the site keeps one convention.
+<!-- generated:map-keys -->
+**The map itself, the top-level object.**
 
-A **source** is where a model's items are: `page` (or `pages`, for detail
-pages and lists on them), `items` (a selector for the items, absent when the
-page itself is the item), `within` and `parent` (items inside parents, each
-row pointing at its parent), `key` (how an item's key is read), `position`
-(write the item's place in its list), `create: false` (only add values to rows
-another source makes) and `set` (constant values, `{page}` being the page's
-key).
-
-A **key** is read `{"from": "page"}` (the page's file name),
-`{"from": "link", "select": "...", "strip": "p-"}` (the page or `#anchor`
-a link points at), `{"from": "attr", "name": "id", "strip": "p-"}`,
-`{"from": "field", "field": "title"}` (the title as a slug) or
-`{"from": "position", "prefix": "home"}` (`home-1`, `home-2`). An item read
-from several sources gets one key everywhere, and its values merge into one
-row: the first source with a value wins, and extract says where two pages
-disagree.
-
-A **value** is a place: a CSS selector relative to the item, `@attribute`
-for an attribute (`img@src`, `@data-tags` for the item's own), `:scope` for
-the item's own text. Selectors support types, classes, ids, attributes,
-`:nth-of-type()`, `:first-of-type`, `:last-of-type`, `:has()`, `:not()` of one
-compound (`p:not(.role)`), the child and descendant combinators and comma
-groups. A value can also be an object with
-`select` and one of: `all` (every match's text, joined), `list` (a list),
-`fields` (a list of objects), `pairs` (a definition list), `to` (a
-relation, see below), `rows` (child rows), `present` (true when the place
-matches), `drop` (markup to leave out), `pattern` (a regular expression
-whose last group is the value), `link: "path"` (a page's URL path) and
-`decide` (an open decision).
-
-A **relation** is `{"select": ..., "to": "<Model>"}`, and `"by"` says how
-the place names the related row:
-
-| `"by"` | The place holds | Example |
+| Key | Write | What it does |
 | --- | --- | --- |
-| absent (or `"link"`) | a link to the row's page or `#anchor` | `"a.teacher@href"` |
-| `"key"` | the row's key, as text or an attribute (`data-type="houses"`) | a tag `<li>whitening</li>` for the row keyed `whitening` |
-| `"title"` | the row's title, as text | `<p>Mia Chen</p>` for the teacher of that name |
+| `version` | `"version": 1` | The map's format. This karni reads version 1. |
+| `design` | `"design": "../design"` | The design folder, relative to the map file. |
+| `app` | `"app": "website"` | The Django app the rows go to, as &lt;app&gt;.&lt;Model&gt;. |
+| `marker` | `"marker": "=="` | What extract writes around highlighted words: "==" by default, KARNI_SITE_HIGHLIGHT's default. Change it only together with the setting's marker, so the site keeps one convention. |
+| `decimal` | `"decimal": ","` | The decimal mark every page writes, "," or ".". Left out, each page's &lt;html lang&gt; decides: 4.000 is 4000 and 1.234,5 is 1234.5 where the language writes a decimal comma (de, fr, es and most of Europe), and a page without a language is read the English way. A separator between groups of three digits is dropped (4,000, 1 234). |
+| `models` | `"models": [{"name": "Course", ...}]` | One object per model: its name, fields, key and sources. |
 
-`"many": true` makes it a list (a many-to-many field), and `"split": true`
-reads an attribute that holds several keys (`data-tags="a b"`). Analyze
-writes `"by"` when a text names the row. Any other value of `"by"`, of a
-key's `"from"` or of `"link"` is refused with `C124`, because extract would
-otherwise read the place another way without a word.
+**A model, each object in "models".**
+
+| Key | Write | What it does |
+| --- | --- | --- |
+| `name` | `"name": "Course"` | The model's class name. Rename it here and in every relation's "to" that names it. |
+| `fields` | `"fields": {"title": "str:80", "slug": "slug:title", "teacher": "fk:Teacher?"}` | The model's fields, in karni make model's field types. A value reads into the field of its name, parsed by the field's type: a number from "12 weeks", an amount from "€4.50", a date from "14 March 2026" or a datetime attribute, a path for an image. |
+| `key` | `"key": "slug"` | The field each row is matched on, so a second load updates the rows instead of adding new ones. |
+| `order` | `"order": "position"` | The field the rows are ordered by. |
+| `highlight` | `"highlight": {"tagline": "em"}` | Fields that keep the words a heading sets apart, as ==marked== words, with the markup the design wrote them in. |
+| `parent` | `"parent": "Course"` | A child model: each row belongs to a row of the parent, read by a value named after "accessor" (see "rows"). |
+| `accessor` | `"accessor": "courseimage_set"` | The name a child model's rows are read under in the parent's values. |
+| `sources` | `"sources": [{"pages": [...], "values": {...}}]` | Where the model's items are: one object per page or list that shows them. |
+
+**Where a model's items are, each object in a model's "sources".**
+
+| Key | Write | What it does |
+| --- | --- | --- |
+| `page` | `"page": "courses.html"` | The page the items are on. |
+| `pages` | `"pages": ["courses/pottery.html", "courses/drawing.html"]` | Several pages read the same way: the detail pages, or lists that repeat on every page. |
+| `items` | `"items": "li.course-list__item"` | A selector for the items on the page. Left out, the page itself is the item (a detail page). |
+| `within` | `"within": "section.menu"` | Items inside these parents: with "parent", each row points at the parent it is in. |
+| `parent` | `"parent": {"field": "menu", "key": {"from": "attr", "name": "id"}}` | With "within": the field that points at the parent, and how the parent's key is read. |
+| `key` | `"key": {"from": "page"}` | How each item's key is read, an object whose "from" says from what (karni explain map.key.from). An item read from several sources gets one key everywhere, so its values merge into one row: the first source with a value wins, and extract says where two pages disagree. |
+| `position` | `"position": true` | Write each item's place in its list into the model's order field. |
+| `create` | `"create": false` | Only add values to rows another source makes, never a row of its own. |
+| `set` | `"set": {"page": "{page}"}` | Constant values for every item. {page} is the page's key. |
+| `values` | `"values": {"title": "h1", "image": "img@src", "topics": {"select": "ul > li", "list": true}}` | What each field reads. A value is a place: a CSS selector relative to the item, @attribute for an attribute (img@src, @data-tags for the item's own), :scope for the item's own text. Or an object with "select" and the options of the value level. |
+
+**How an item's key is read, a source's "key" (or its parent's).**
+
+| Key | Write | What it does |
+| --- | --- | --- |
+| `from` | `"from": "link"` | What the key is read from: "page" (the page's file name, courses/pottery.html is pottery), "link" (the page or #anchor a link points at, with "select"), "attr" (an attribute of the item, with "name"), "field" (a field's value as a slug, with "field") or "position" (home-1, home-2, with "prefix"). Any other value is refused with C124. |
+| `select` | `"select": "a.course-list__link@href"` | With "from": "link": the place of the link. |
+| `name` | `"name": "id"` | With "from": "attr": the attribute. |
+| `field` | `"field": "title"` | With "from": "field": the field whose value, as a slug, is the key. |
+| `prefix` | `"prefix": "home"` | With "from": "position": the text before the number. {page} is the page's key. |
+| `strip` | `"strip": "p-"` | Text taken off the front of the key read (p-whitening is whitening). |
+
+**A value given as an object, in a source's "values".**
+
+| Key | Write | What it does |
+| --- | --- | --- |
+| `select` | `"select": "ul.course__topics > li"` | The place, as in a value given as a string. Selectors support types, classes, ids, attributes, :nth-of-type(), :first-of-type, :last-of-type, :has(), :not() of one compound (p:not(.role)), the child and descendant combinators and comma groups. |
+| `all` | `"all": true` | Every match's text, joined by blank lines (paragraphs). |
+| `list` | `"list": true` | A list, one entry per match: true for the match's text, a place for that place inside each match. |
+| `fields` | `"fields": {"name": "dt", "price": "dd"}` | A list of objects, {name: place} inside each match. |
+| `pairs` | `"pairs": true` | A definition list as [term, definition] pairs, for a json field. |
+| `term` | `"term": "Duration"` | The definition of that term in a definition list (&lt;dt&gt;Duration&lt;/dt&gt;&lt;dd&gt;45 minutes&lt;/dd&gt; gives "45 minutes"), parsed by the field's type. Case and spaces do not matter. Analyze writes it when every item's list has the same terms, one field per term. |
+| `to` | `"to": "Teacher"` | A relation to that model of the map. "by" says how the place names the row. |
+| `by` | `"by": "key"` | How a relation's place names the row: "link" (the default: a link to the row's page or #anchor), "key" (the row's key, as text or an attribute such as data-type="houses") or "title" (the row's title as text, &lt;p&gt;Mia Chen&lt;/p&gt;). Analyze writes it when a text names the row. Any other value is refused with C124. |
+| `many` | `"many": true` | A relation to several rows: a many-to-many field. |
+| `split` | `"split": true` | A relation read from an attribute that holds several keys (data-tags="a b"). |
+| `rows` | `"rows": {"image": "img@src", "caption": "figcaption"}` | Child rows, {field: place} inside each match. The value's name is the child model's accessor (courseimage_set). |
+| `present` | `"present": true` | true when the place matches anything, else false. |
+| `drop` | `"drop": ["span.arrow"]` | Markup left out of the text. |
+| `pattern` | `"pattern": "^\\d+\\s+(.+)$"` | A regular expression whose last group is the value ("01 Design" gives "Design"). |
+| `link` | `"link": "path"` | A link to a page of the design, written as that page's URL path. Any other value is refused with C124. |
+| `decide` | `"decide": "Is the price per visit or per course?"` | A question the analysis left open. Extract refuses to run until every decide is answered: remove it to keep the value, or delete the value (and the field). |
+<!-- /generated:map-keys -->
 
 ## Extract
 

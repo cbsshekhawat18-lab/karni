@@ -495,13 +495,10 @@ def plan(
     editor = None
     if editable:
         from karni_cli.design.editable import Editable, detect_highlight
-        from karni_cli.design.regions import detail_pages, row_regions
+        from karni_cli.design.regions import detail_pages, detail_rows, row_regions
 
-        rows = (
-            row_regions(content_map, {page.path: (page.text, page.doc) for page in content_pages})
-            if content_map
-            else None
-        )
+        docs = {page.path: (page.text, page.doc) for page in content_pages}
+        rows = row_regions(content_map, docs) if content_map else None
         shared = detail_pages(content_map) if content_map else None
         editor = Editable(
             app,
@@ -511,6 +508,7 @@ def plan(
             previous=previous,
             rows=rows,
             shared=shared,
+            detail_rows=detail_rows(content_map, docs) if content_map else None,
         )
         editor.prepare(content_pages, layout, renderer.by_key)
     base = _render_base(

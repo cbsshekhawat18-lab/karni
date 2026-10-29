@@ -385,3 +385,30 @@ DEFAULT_FROM_EMAIL in .env.prod before the next deploy, or add karni.W520 to \
 SILENCED_SYSTEM_CHECKS in a project that sends no email."""
 mechanical = false
 migration = "migrations/0.4.1.md#production-email-email_url-and-karniw520"
+
+[[change]]
+id = "development-worker-pool-and-broker-timeout"
+kind = "behaviour"
+symbol = "karni worker --pool, CELERY_BROKER_TRANSPORT_OPTIONS (dev profile)"
+summary = """\
+`karni worker` on a Mac runs Celery's threads pool (solo before), and `--pool` picks \
+another. The dev profile sets CELERY_BROKER_TRANSPORT_OPTIONS to a 5 second socket \
+timeout, so a worker that stops while Redis does not answer its last BRPOP exits \
+instead of waiting for good. Production and a worker in Docker keep Celery's defaults. \
+A project that sets CELERY_BROKER_TRANSPORT_OPTIONS itself keeps its own value."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout"
+
+[[change]]
+id = "menus-of-rows"
+kind = "behaviour"
+symbol = "karni_site MenuItem.children_from, karni import design --editable --map"
+summary = """\
+A menu item with children from a model and neither a title nor an address now lists \
+the rows in its own place. Before, it rendered as an empty link with the rows as its \
+children. karni import design --editable --map seeds a list whose links are exactly \
+one model's detail pages as such an item (data-karni-children-from in the seed), so \
+a row the client adds appears in the menu. Menus already in the database keep their \
+items."""
+mechanical = false
+migration = "migrations/0.4.1.md#menus-that-list-a-models-rows"
