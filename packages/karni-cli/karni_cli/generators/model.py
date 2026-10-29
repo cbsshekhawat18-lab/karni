@@ -43,7 +43,7 @@ from karni_cli.generators.fields import (
     relation_name,
     render_model_body,
 )
-from karni_cli.generators.introspect import models_file, models_in
+from karni_cli.generators.introspect import models_file, models_in, viewset_for
 from karni_cli.generators.naming import default_route, kebab, require_pascal
 from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace_or_append
 from karni_cli.project import CliError
@@ -162,6 +162,12 @@ def plan(
     """
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
+    try:
+        served = viewset_for(ws, app, model) is not None
+    except CliError:  # viewsets.py does not parse: that is its own command's to report
+        served = False
+    if served:
+        ws.api_changed()  # its fields are the API's
     path = models_file(ws, app)
     rel = ws.rel(path)
     body = render_model_body(

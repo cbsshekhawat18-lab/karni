@@ -441,7 +441,10 @@ difference fails, listing breaking changes (removed and changed paths) first.
 A missing snapshot is written and the test passes, except under CI, where it
 fails, because a snapshot that was never committed protects nothing. To
 accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test`, then
-commit the file.
+commit the file. A `karni make` command that changes the API (`karni make
+viewset`, `karni make form`, `karni make serializer`, `karni make model` for
+a model a viewset serves, or with `--with viewset`) says so when the project
+has a snapshot, with that command.
 
 ## Automatic factories (`karni.testing.factories`)
 

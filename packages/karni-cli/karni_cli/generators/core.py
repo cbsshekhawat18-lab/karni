@@ -34,6 +34,14 @@ DEFAULT_LINE_LENGTH = 88
 
 SETTINGS = Path("config") / "settings.py"
 FRONTEND = Path("frontend")
+#: The API contract the scaffold's tests/test_api_schema.py compares the schema with.
+API_SNAPSHOT = Path("tests") / "openapi.snapshot.json"
+#: What a run that changes the API says when the project has a snapshot.
+API_SNAPSHOT_NOTE = (
+    f"api: this changes the API, so the snapshot test ({API_SNAPSHOT.as_posix()} in "
+    "tests/test_api_schema.py) fails on its next run and lists the changes. Read them, then "
+    f"accept them with KARNI_UPDATE_SNAPSHOTS=1 karni test and commit {API_SNAPSHOT.as_posix()}."
+)
 
 #: Import sections in ruff/isort order.
 FUTURE, STDLIB, THIRD_PARTY, FIRST_PARTY, LOCAL = range(5)
@@ -59,6 +67,7 @@ class Workspace:
         self.notes: list[str] = []
         self._files: dict[Path, _Entry] = {}
         self._line_length: int | None = None
+        self._api_changed = False
 
     # paths
 
@@ -142,6 +151,14 @@ class Workspace:
         if text not in self.notes:
             self.notes.append(text)
 
+    def api_changed(self) -> None:
+        """Say that the planned code changes the API (a viewset, a serializer, a model it serves).
+
+        :meth:`commit` then says that the project's committed schema snapshot
+        will differ, and the command that accepts the change.
+        """
+        self._api_changed = True
+
     def _record(self, path: Path, content: str) -> None:
         if path in self._files:
             self._files[path].after = content
@@ -209,6 +226,8 @@ class Workspace:
             typer.echo(f"{'created' if before is None else 'modified':<9}{rel}")
         if not self.changes():
             typer.echo("nothing to change")
+        if self._api_changed and self.changes() and self.exists(API_SNAPSHOT):
+            self.note(API_SNAPSHOT_NOTE)
         for note in self.notes:
             typer.echo(note)
         if dry_run:

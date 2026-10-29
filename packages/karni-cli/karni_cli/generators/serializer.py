@@ -68,6 +68,7 @@ def plan(ws: Workspace, app: App, model_name: str, reason: str) -> str:
             code="C109",
         )
     model = require_model(ws, app, model_name)
+    ws.api_changed()
     found = viewset_for(ws, app, model.name)
     if found is None:
         raise CliError(

@@ -155,6 +155,7 @@ def plan(
 ) -> str:
     """Plan ``<Model>ViewSet`` in the app's viewsets module; returns its route."""
     model = require_model(ws, app, model_name)
+    ws.api_changed()
     declaration, predicates = access_declaration(access or DEFAULT_ACCESS, model)
     for name in search:
         if not model.has_field(name):
