@@ -762,6 +762,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer sign-in with a code, or sign in with login/.
 
+<a id="e245"></a>
+
+#### E245: The signed-in user has not accepted the current terms
+
+*API 400 response* · from `karni.accounts.terms.TermsGateMiddleware`
+
+**Why Karni objects.** KARNI_TERMS requires every signed-in user to accept its current version before using the API. The gate answers 403 with this code, the version and the terms url to a signed-in user who has not accepted that version, on every request under KARNI_TERMS['paths'] (default ['/api/']) outside the auth mount and KARNI_TERMS['exempt']. Staff and superusers are gated like everyone. A new version makes everyone accept again.
+
+**Fix.** Show the terms at the url in the answer, then POST <auth mount>/terms/accept/ with {"version": "<the version in the answer>"}. @karni/ui's TermsGate does both. To keep a path open before acceptance, add its prefix to KARNI_TERMS['exempt'].
+
+<a id="e246"></a>
+
+#### E246: The accepted terms version is not the current one
+
+*API 400 response* · from `karni.accounts.terms.accept (POST <auth>/terms/accept/)`
+
+**Why Karni objects.** terms/accept/ records acceptance of KARNI_TERMS['version'] only. A client that sends another version showed the user other terms (an old copy, or the version changed after the page loaded), so nothing is recorded (400). The answer carries the current version and url.
+
+**Fix.** Show the terms at the url in the answer and send the version in the answer. GET terms/ returns the current version too.
+
+<a id="e247"></a>
+
+#### E247: A terms acceptance is a permanent record
+
+*exception* · from `karni.accounts.models.TermsAcceptance`
+
+**Why Karni objects.** Each TermsAcceptance row records that a user accepted a version of the terms, when, from which IP and with which client. The table is append-only: saving an existing row, deleting one (soft or hard) and update() or delete() on a queryset of them would rewrite that record, so each one raises.
+
+**Fix.** Record a new acceptance with karni.accounts.terms.accept(), or POST terms/accept/. To make everyone accept again, change KARNI_TERMS['version']. A user's rows go only with the user: user.hard_delete() deletes them.
+
+<a id="e248"></a>
+
+#### E248: The terms gate is not in MIDDLEWARE, or runs before authentication
+
+*system check (error)* · from `karni.checks.check_terms_middleware`
+
+**Why Karni objects.** KARNI_TERMS requires acceptance, but karni.accounts.terms.TermsGateMiddleware (or a subclass) is missing from MIDDLEWARE, so nothing is gated, or it comes before django.contrib.auth's AuthenticationMiddleware, so it cannot see the session user. karni_settings() lists it, so this happens when MIDDLEWARE is replaced after the call.
+
+**Fix.** Add 'karni.accounts.terms.TermsGateMiddleware' to MIDDLEWARE after 'django.contrib.auth.middleware.AuthenticationMiddleware', or extend MIDDLEWARE instead of replacing it.
+
+<a id="e249"></a>
+
+#### E249: Terms acceptance is turned off
+
+*API 400 response* · from `karni.accounts.api.views.TermsView; karni.accounts.api.views.TermsAcceptView`
+
+**Why Karni objects.** terms/ and terms/accept/ are mounted only while KARNI_TERMS is set. A URLconf built while it was set answers 404 with this code once it is unset.
+
+**Fix.** Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask users to accept terms, or remove the client's call.
+
 ### 3xx · Admin
 
 <a id="e301"></a>

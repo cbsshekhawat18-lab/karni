@@ -20,8 +20,9 @@ registration](#closing-registration)), `login/`, `logout/`, `refresh/`,
 `email/change/`, `email/change/confirm/`, `2fa/…` when `KARNI_2FA` is on,
 `social/<provider>/` for each provider in `KARNI_SOCIAL_TOKEN_PROVIDERS`
 ([sign-in with an ID token](#sign-in-with-an-id-token-google-microsoft-apple)),
-and `otp/send/` and `otp/verify/` when `KARNI_EMAIL_OTP` is on ([sign-in with
-a code](#sign-in-with-a-code-sent-by-email)).
+`otp/send/` and `otp/verify/` when `KARNI_EMAIL_OTP` is on ([sign-in with
+a code](#sign-in-with-a-code-sent-by-email)), and `terms/` and `terms/accept/`
+when `KARNI_TERMS` is set ([terms acceptance](#terms-acceptance)).
 
 ## Swapping the user model
 
@@ -933,6 +934,262 @@ change the answer: the user asks for a new code.
 - **Logs.** `accounts.otp.sent`, `.created`, `.verified`, `.2fa_required`,
   `.locked`, `.refused` (with the `reason`) and `.email_failed` carry an
   email fingerprint or the user id, never the address or the code.
+
+## Terms acceptance
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `terms/` and `terms/accept/` endpoints, the `KARNI_TERMS` setting,
+    `karni.accounts.terms` (with `TermsGateMiddleware`), the `TermsAcceptance`
+    model, the `terms` field of `me/`, and `TermsGate` and `useAuth()`'s
+    `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`. They may change
+    in a minor release, and each change is in the CHANGELOG. The error codes
+    keep their meaning.
+
+Ask every signed-in user to accept the current version of your terms (terms
+of service, an end-user licence agreement) before they use the API. Until they
+do, the API refuses them with a 403 that says which version to accept and
+where it is. Karni records who accepted which version, when, from which IP,
+with which user agent, and what the app said about itself. Change the version
+and everyone accepts again. It works in both auth modes and needs no extra
+package.
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_TERMS = {"version": "2026-11", "url": "/terms/", "required": True}
+```
+
+or `KARNI_TERMS={"version": "2026-11", "url": "/terms/"}` (JSON) in `.env`.
+Then `GET api/auth/terms/` and `POST api/auth/terms/accept/` exist, `me/`
+carries `terms`, and the gate runs. Unset (the default), there are no routes,
+no `terms` in `me/` and no gate, and the OpenAPI schema is the same as
+without the feature.
+
+### Settings for terms
+
+`KARNI_TERMS` is a dict with these keys:
+
+| Key | Default | What it does |
+|---|---|---|
+| `version` | required | The version every signed-in user must accept, e.g. `"2026-11"` (at most 100 characters). |
+| `url` | required | Where the terms are, for the client to show: a path or a full URL. |
+| `required` | `True` | `False` gates nothing: the routes and the record stay, and users may still accept. |
+| `paths` | `["/api/"]` | The URL path prefixes the gate covers. |
+| `exempt` | `[]` | More prefixes the gate leaves open. |
+
+Startup validation checks the value: a `version` that is empty or not a
+string, a `url` that is not a string, a `required` that is not a bool, or
+`paths` and `exempt` entries that are not strings starting with `/` fail with
+[`E504`](errors.md#e504), which names the key. So does an unknown key.
+
+### What is gated
+
+The gate is `karni.accounts.terms.TermsGateMiddleware`. `karni_settings()`
+lists it in `MIDDLEWARE` after Django's `AuthenticationMiddleware`, and it
+removes itself from the chain at startup unless `KARNI_TERMS` requires
+acceptance, so it costs nothing otherwise. It runs once the URL is resolved:
+
+- **Covered:** every request whose path starts with one of `paths`. With the
+  default, that is the whole API: your viewsets, plain DRF views, plain
+  Django views under `/api/`, and every module's endpoints there.
+- **Always open:** the auth mount and every route under it (`login/`,
+  `refresh/`, `logout/`, `me/`, `terms/`, `terms/accept/`, the password,
+  email, 2FA, social and code routes), Karni's account views wherever they
+  are mounted, drf-spectacular's schema and docs views (the schema is
+  metadata, and `@karni/ui` reads the auth mode from it), and the `exempt`
+  prefixes.
+- **Who:** the user of a Bearer token, validated by the JWT class DRF
+  authenticates with, else the session user. An anonymous request passes and
+  the view decides, so a view that needs a user still answers 401. A token
+  DRF would refuse passes too, and the view answers 401.
+- **Everyone signed in:** staff and superusers are gated like everyone. A
+  legal acceptance applies to every person who uses the service.
+- **Not gated by default:** the Django admin, a public site (`karni-site`),
+  `/health/` and media are not under `/api/`. Add `"/admin/"` to `paths` to
+  gate the admin too. A staff member who has not accepted then gets the 403
+  on admin pages, and accepts in the app first.
+
+To keep one endpoint open before acceptance (a status page your app calls
+before sign-in completes, for example), add its prefix to `exempt`:
+
+```python
+KARNI_TERMS = {
+    "version": "2026-11",
+    "url": "/terms/",
+    "exempt": ["/api/app-config/"],
+}
+```
+
+A project that replaces `MIDDLEWARE` after `karni_settings()` loses the gate.
+The system check [`karni.E248`](errors.md#e248) fails startup when
+`KARNI_TERMS` requires acceptance and the gate is missing, or listed before
+`AuthenticationMiddleware`.
+
+### Terms requests and answers
+
+```http
+GET /api/auth/terms/
+Authorization: Bearer <access>
+```
+
+```json
+{"version": "2026-11", "url": "/terms/", "required": true, "accepted": false, "accepted_at": null}
+```
+
+```http
+POST /api/auth/terms/accept/
+Authorization: Bearer <access>
+Content-Type: application/json
+
+{"version": "2026-11", "client": {"platform": "ios", "app_version": "2.4.0", "device": "iPhone15,2"}}
+```
+
+`client` is optional: a JSON object of at most 4096 bytes, stored with the
+acceptance. The IP is read the way the throttles read it, honouring
+`NUM_PROXIES`, and the `User-Agent` header is kept up to 1024 characters.
+
+| Answer | Status | Body |
+|---|---|---|
+| Accepted now | 201 | The `terms/` body, with `accepted: true` and `accepted_at` |
+| Accepted before (same version) | 200 | The same body. Nothing changes |
+| Another version | 400 | `{"code": "E246", "detail", "version", "url"}` with the current terms. Nothing is recorded |
+| Not signed in | 401 | DRF's answer |
+| `KARNI_TERMS` unset | 404 | `{"code": "E249", "detail"}` from a URLconf built while it was set |
+
+While the user has not accepted, every covered request answers:
+
+```json
+{
+  "code": "E245",
+  "detail": "E245: Accept the terms (version 2026-11) to continue. Read them at /terms/, then accept them with POST /api/auth/terms/accept/ and {\"version\": \"2026-11\"}. See …",
+  "version": "2026-11",
+  "url": "/terms/"
+}
+```
+
+with status 403 and `Cache-Control: no-store`. `me/` (and so `login/`, whose
+`user` is the same payload) carries the same facts, so a client knows before
+its first refused request:
+
+```json
+{"id": "…", "email": "ada@example.com", "roles": [], "terms": {"required": true, "version": "2026-11", "url": "/terms/", "accepted": false}}
+```
+
+### Terms in a web app
+
+`@karni/ui`'s `TermsGate` renders its children only once the user has
+accepted ([UI guide](ui.md)). The scaffold's frontend does not include it.
+Wrap the router in `frontend/src/App.tsx`, inside `AuthProvider`:
+
+```tsx
+import { AuthProvider, KarniProvider, TermsGate } from "@karni/ui";
+
+<KarniProvider client={client}>
+  <AuthProvider>
+    <TermsGate>
+      <RouterProvider router={router} />
+    </TermsGate>
+    <Toaster />
+  </AuthProvider>
+</KarniProvider>;
+```
+
+Until the user accepts, `TermsGate` shows the terms (a link to `url`, or the
+page in a frame with `embed`), the version, and an "Accept and continue"
+button. It knows from `me/`, and from the gate's 403 on any request the app
+makes through its client, so a version changed mid-session brings the gate
+back at the next request. If the version changed again before the user
+accepts, the server answers `E246` and the gate shows the new version.
+`client={{ platform: "web" }}` (or a function) sends what the app says about
+itself. `title`, `description`, `acceptLabel`, `loading` and the `Panel` slot
+change its look, and `useAuth()` gives `terms`, `termsRequired` and
+`acceptTerms(client)` for a gate of your own.
+
+`embed` needs a page that may be framed. Karni's own pages send
+`X-Frame-Options: DENY` and `frame-ancestors 'none'`, so a terms page served
+by the project (a `karni-site` page, for example) needs
+`X_FRAME_OPTIONS = "SAMEORIGIN"`, which makes the policy `frame-ancestors
+'self'` too. A terms page on another origin needs that origin in the
+app's `frame-src`.
+
+### Terms in a mobile app
+
+A native app signs in as usual, then checks `user.terms` in the answer (or
+`GET terms/`). When `required` is true and `accepted` false, or when any
+request answers 403 with `"code": "E245"`, it shows the terms at `url` and
+accepts the version it showed:
+
+```bash
+curl https://api.example.com/api/auth/terms/ \
+  -H "Authorization: Bearer $ACCESS"
+
+curl -X POST https://api.example.com/api/auth/terms/accept/ \
+  -H "Authorization: Bearer $ACCESS" \
+  -H "Content-Type: application/json" \
+  -d '{"version": "2026-11", "client": {"platform": "android", "app_version": "2.4.0", "device": "Pixel 9"}}'
+```
+
+The next request passes. An app that sends the version it showed, not the one
+it read last, never records acceptance of terms the user did not see: a
+version that moved on in between answers `E246` with the new one.
+
+### A new version
+
+Change `KARNI_TERMS["version"]` (in the settings or the environment) and
+deploy. At their next request every signed-in user gets the 403 again, until
+they accept the new version. Nothing needs clearing: the gate's cache is keyed
+by version. Earlier acceptances stay in the record, one row per version.
+
+### The record
+
+`TermsAcceptance` (table `karni_accounts_termsacceptance`, migration
+`karni_accounts.0008_terms_acceptance`) holds one row per user and version
+among live rows: `user`, `version`, `accepted_at`, `ip`, `user_agent` and
+`client`. It is append-only. Saving an existing row, `delete()`,
+`hard_delete()`, `restore()`, and `update()` or `delete()` on a queryset raise
+[`E247`](errors.md#e247). A user's rows go only with the user:
+`user.hard_delete()` deletes them, and a soft-deleted user keeps them.
+
+The admin lists the record read-only under *Terms acceptances*, with a filter
+by version, a search by email, and the changelist's *Export selected as CSV /
+XLSX* actions (there is no import). Each user's page shows their acceptances
+while `KARNI_TERMS` is set. The permission matrix leaves the table out.
+
+`ip` and `user_agent` are personal data. Say in your privacy policy that you
+keep them as the record of acceptance.
+
+### How it stays fast
+
+Whether a user accepted a version is cached per (user, version) in the
+default cache: for 7 days once they have, for 60 seconds while they have not.
+The gate runs one query for a user's first covered request and none for the
+next ones. A Bearer token is validated without a query (the user's id comes
+from its claim), and `me/` reads the same cache. A new acceptance clears the cached
+answer at once and stores it when its transaction commits, so a rolled-back
+acceptance is never cached.
+
+### Terms refusals and their codes
+
+| Code | Status | Meaning |
+|---|---|---|
+| [`E245`](errors.md#e245) | 403 | The signed-in user has not accepted the current version (the gate). |
+| [`E246`](errors.md#e246) | 400 | `terms/accept/` got another version than the current one. |
+| [`E247`](errors.md#e247) | exception | Code tried to change or delete a `TermsAcceptance` row. |
+| [`E248`](errors.md#e248) | system check | The gate is missing from `MIDDLEWARE`, or comes before authentication. |
+| [`E249`](errors.md#e249) | 404 | `KARNI_TERMS` is unset. |
+
+`karni explain E245` prints the fix for each one. Accepting logs
+`accounts.terms.accepted` (with `created`) and a refused version logs
+`accounts.terms.refused`, both with the user id.
+
+### Changing the gate
+
+Subclass `TermsGateMiddleware` and list the subclass in `MIDDLEWARE` in its
+place (`karni.E248` accepts a subclass). Each step is a method: `covers`
+(the paths), `is_exempt` (what stays open), `user_pk` (who is asking),
+`accepted` (the cached check) and `refuse` (the 403). To accept from a view of
+your own, call `karni.accounts.terms.accept(user, version, ip=..., user_agent=...,
+client=...)`, and `karni.accounts.terms.status(user)` for the `terms/` body.
 
 ## Admin
 

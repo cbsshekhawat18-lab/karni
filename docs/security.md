@@ -79,6 +79,18 @@ email](accounts.md#sign-in-with-a-code-sent-by-email) stores only an HMAC of
 each code, keyed by `SECRET_KEY`, and kills a code after one use, its TTL or
 `KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses. See [accounts](accounts.md).
 
+**Terms acceptance.** With `KARNI_TERMS` (experimental), the API refuses every
+signed-in user, staff and superusers included, with a 403 (`E245`) until
+they accept the current version of the terms
+([terms acceptance](accounts.md#terms-acceptance)). The record is
+append-only: each acceptance keeps the version, the time, the IP (read like
+the throttles read it, so `NUM_PROXIES` must be right here too) and the user
+agent, and code that tries to change or delete one gets `E247`. The IP and
+the user agent are personal data, so name them in your privacy policy. The
+gate covers `/api/` by default: the admin and a public site are not gated
+unless `KARNI_TERMS["paths"]` lists them. It is a legal record, not an
+access control: grant access with `access` and roles.
+
 **Abuse.** Every auth endpoint has per-IP throttles, and login has a
 per-account throttle as well (`KARNI_AUTH_THROTTLE_RATES`). Sign-in with a
 code adds a per-address throttle on the codes one address receives. `NUM_PROXIES` is

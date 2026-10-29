@@ -13,6 +13,7 @@ import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as otpLoginForm from "../src/auth/otp-login-form.stories";
 import * as socialButton from "../src/auth/social-button.stories";
+import * as termsGate from "../src/auth/terms-gate.stories";
 import * as karniMark from "../src/components/brand/karni-mark.stories";
 import * as chart from "../src/components/chart/data-chart.stories";
 import * as dashboard from "../src/components/dashboard/dashboard.stories";
@@ -47,6 +48,7 @@ const MODULES = {
   OtpLoginForm: composeStories(otpLoginForm),
   Page: composeStories(page),
   SocialButton: composeStories(socialButton),
+  TermsGate: composeStories(termsGate),
   Toast: composeStories(toast),
   Stat: composeStories(stat),
   ThemeToggle: composeStories(theme),
@@ -63,6 +65,8 @@ const MODULES = {
 };
 
 const OPTIONS: axe.RunOptions = {
+  // jsdom never loads a frame (TermsGate's embed): axe checks the frame element, not inside it.
+  iframes: false,
   runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] },
   rules: { "color-contrast": { enabled: false } },
 };

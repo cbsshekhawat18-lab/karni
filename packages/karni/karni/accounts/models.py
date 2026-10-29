@@ -17,10 +17,13 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import Group, PermissionsMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import Manager
 from django.utils import timezone
 
 from karni.accounts.managers import KarniUserManager
+from karni.accounts.terms import PermanentRecordError
 from karni.fields.constraints import LiveUniqueConstraint
+from karni.managers import BaseQuerySet, ScopedManagerMixin
 from karni.models import BaseModel
 
 if TYPE_CHECKING:
@@ -34,6 +37,8 @@ __all__ = [
     "Role",
     "RolePermission",
     "SocialIdentity",
+    "TermsAcceptance",
+    "TermsAcceptanceQuerySet",
     "User",
 ]
 
@@ -266,6 +271,143 @@ class LoginCode(BaseModel):
 
     def __str__(self) -> str:
         return f"login code {self.pk}"
+
+
+_PERMANENT_HINT = (
+    "Record a new acceptance with karni.accounts.terms.accept(). To make everyone accept "
+    'again, change KARNI_TERMS["version"].'
+)
+
+
+def _permanent(operation: str) -> PermanentRecordError:
+    return PermanentRecordError(
+        f"TermsAcceptance rows are permanent: {operation} would rewrite the record of who "
+        f"accepted which terms. {_PERMANENT_HINT}"
+    )
+
+
+class TermsAcceptanceQuerySet(BaseQuerySet):
+    """Experimental. The queryset of :class:`TermsAcceptance`: it reads, it never rewrites.
+
+    ``update()``, ``delete()``, ``hard_delete()`` and ``restore()`` raise
+    :class:`~karni.accounts.terms.PermanentRecordError` (``E247``), so a bulk
+    change cannot rewrite the record either. ``create()`` and
+    ``get_or_create()`` insert as usual.
+    """
+
+    def update(self, **kwargs: Any) -> int:
+        raise _permanent("update()")
+
+    update.alters_data = True  # type: ignore[attr-defined]
+
+    def delete(self) -> tuple[int, dict[str, int]]:
+        raise _permanent("delete()")
+
+    delete.queryset_only = True  # type: ignore[attr-defined]
+    delete.alters_data = True  # type: ignore[attr-defined]
+
+    def hard_delete(self) -> tuple[int, dict[str, int]]:
+        raise _permanent("hard_delete()")
+
+    hard_delete.queryset_only = True  # type: ignore[attr-defined]
+    hard_delete.alters_data = True  # type: ignore[attr-defined]
+
+    def restore(self) -> int:
+        raise _permanent("restore()")
+
+    restore.queryset_only = True  # type: ignore[attr-defined]
+    restore.alters_data = True  # type: ignore[attr-defined]
+
+
+class TermsAcceptanceManager(ScopedManagerMixin, Manager.from_queryset(TermsAcceptanceQuerySet)):  # type: ignore[misc]
+    """Experimental. The default manager of :class:`TermsAcceptance`: scoped, no rewrites."""
+
+
+class TermsAcceptance(BaseModel):
+    """Experimental. One user's acceptance of one version of the terms (``KARNI_TERMS``).
+
+    Written by :func:`karni.accounts.terms.accept` (``POST <auth
+    mount>/terms/accept/``): ``version`` is the ``KARNI_TERMS["version"]``
+    the user accepted, ``accepted_at`` when, ``ip`` the client's address as
+    Karni's throttles read it (honouring ``NUM_PROXIES``), ``user_agent`` its
+    ``User-Agent`` header, and ``client`` what the app sent about itself (a
+    mobile app's device and app version, for example). One row per user and
+    version among live rows.
+
+    The table is append-only. Saving an existing row, ``delete()``,
+    ``hard_delete()``, ``restore()``, and ``update()`` or ``delete()`` on a
+    queryset raise :class:`~karni.accounts.terms.PermanentRecordError`
+    (``E247``), also through ``objects.without(...)``. Only the alias every
+    model inherits from 0.2, deprecated and removed in 1.0, builds a plain
+    queryset. A new row clears the gate's cached answer for its user and
+    version, so the next request sees it.
+
+    Override / escape hatch: write rows with :func:`karni.accounts.terms.accept`
+    from a view of your own. A user's rows go only with the user:
+    ``user.hard_delete()`` deletes them with it. The admin lists them
+    read-only, with filters by version and an export.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="terms_acceptances",
+    )
+    version = models.CharField(max_length=100)
+    accepted_at = models.DateTimeField(default=timezone.now)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=1024, blank=True, default="")
+    client = models.JSONField(null=True, blank=True)
+
+    objects: ClassVar[TermsAcceptanceManager] = TermsAcceptanceManager()
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "terms acceptance"
+        verbose_name_plural = "terms acceptances"
+        ordering: ClassVar[list[str]] = ["-accepted_at"]
+        constraints: ClassVar[list[models.BaseConstraint]] = [
+            LiveUniqueConstraint(
+                fields=["user", "version"], name="karni_termsacceptance_user_version"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"terms {self.version} accepted by user {self.user_id}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Insert only: saving a row that exists raises ``E247``."""
+        if not self._state.adding:
+            raise _permanent("save() of an existing row")
+        super().save(*args, **kwargs)
+        from karni.accounts.terms import remember_acceptance
+
+        remember_acceptance(self.user_id, self.version, using=self._state.db)
+
+    def delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+    ) -> tuple[int, dict[str, int]]:
+        """Raises ``E247``: an acceptance is never deleted on its own."""
+        raise _permanent("delete()")
+
+    delete.alters_data = True  # type: ignore[attr-defined]
+
+    def hard_delete(
+        self,
+        using: str | None = None,
+        keep_parents: bool = False,
+    ) -> tuple[int, dict[str, int]]:
+        """Raises ``E247``: an acceptance is never deleted on its own."""
+        raise _permanent("hard_delete()")
+
+    hard_delete.alters_data = True  # type: ignore[attr-defined]
+
+    def restore(self, using: str | None = None) -> None:
+        """Raises ``E247``: an acceptance is never deleted, so it is never restored."""
+        raise _permanent("restore()")
+
+    restore.alters_data = True  # type: ignore[attr-defined]
 
 
 # roles as data

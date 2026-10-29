@@ -330,6 +330,7 @@ holds Karni's own, so a project can wrap one instead of rewriting it. Every
 | `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
 | `SocialButton`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
 | `OtpLoginForm`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `TermsGate`      | `Panel` (the terms and the accept button, with `accepting` and the `error` worded)       |
 
 Loading placeholders take the real layout from the start (ResourceDetail
 draws one row per field the schema declares, plus the title and action
@@ -800,6 +801,32 @@ back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
 in session mode, and resolves `{ ok, user }`, `{ requires2fa, ephemeralToken }`
 or `{ awaitingApproval, detail }`, like `useSocialLogin`. These names are
 experimental: they may change in a minor release.
+
+### Terms acceptance (experimental)
+
+`TermsGate` renders its children only once the signed-in user has accepted
+the current terms, against the backend's `KARNI_TERMS` ([accounts: terms
+acceptance](https://cbsshekhawat18-lab.github.io/karni/accounts/#terms-acceptance)).
+Wrap the part of the app that calls the API, inside `AuthProvider`:
+
+```tsx
+<AuthProvider>
+  <TermsGate client={{ platform: "web", app_version: "4.1.0" }}>
+    <RouterProvider router={router} />
+  </TermsGate>
+</AuthProvider>
+```
+
+Until the user accepts, it renders the terms in place of its children: a link
+to their url, or the page in a frame with `embed` (the page must allow being
+framed), and an "Accept and continue" button. Accepting posts
+`<authBasePath>/terms/accept/` with the version and the optional `client`
+object (or a function that returns it), then the children render. `useAuth()` carries `terms`, `termsRequired` and
+`acceptTerms(client)`: `termsRequired` comes from `/me/` and from the API
+gate's 403 (`E245`) on any request made through the client, so terms bumped
+mid-session bring the gate back. If the version changed again before the user
+accepts (`E246`), the gate shows the new one. The `Panel` slot replaces the
+whole panel. These names are experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your

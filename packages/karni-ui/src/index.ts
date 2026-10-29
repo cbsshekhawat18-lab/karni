@@ -313,6 +313,8 @@ export type {
   OtpSendResult,
   SocialLoginResult,
   SocialSignInOptions,
+  AuthTerms,
+  TermsClientInfo,
 } from "./auth/types";
 
 // sign-in with an ID token (experimental)
@@ -344,6 +346,10 @@ export type {
   OtpLoginFormErrorProps,
   OtpLoginFormApprovalProps,
 } from "./auth/OtpLoginForm";
+
+// terms acceptance (experimental)
+export { TermsGate, defaultTermsGateSlots } from "./auth/TermsGate";
+export type { TermsGateProps, TermsGateSlots, TermsGatePanelProps } from "./auth/TermsGate";
 
 // support components
 export { Page, defaultPageSlots } from "./components/page/page";

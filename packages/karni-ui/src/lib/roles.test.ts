@@ -129,6 +129,7 @@ describe("package self-registrations", () => {
       "resource-form": "ResourceForm",
       "social-sign-in": "SocialButton",
       stat: "Stat",
+      "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
     });

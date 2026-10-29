@@ -162,6 +162,11 @@ Experimental now:
   settings, the `auth.otp_*` throttle scopes, `karni.accounts.otp`, the
   `LoginCode` model, `karni.accounts.services.prove_address`, and
   `useOtpLogin`, `OtpLoginForm` and `LoginForm`'s `codeSignIn` in `@karni/ui`.
+- [Terms acceptance](accounts.md#terms-acceptance): the `terms/` and
+  `terms/accept/` endpoints, the `KARNI_TERMS` setting, `karni.accounts.terms`
+  (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
+  of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
+  `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
 
 ## Supported platforms
 

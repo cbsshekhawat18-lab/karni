@@ -18,6 +18,12 @@ listed read-only under *Login codes* so support can see that a code went out,
 when it expires and how many guesses it took. The code itself is not there:
 only its HMAC is stored, and the admin does not show even that.
 
+Terms acceptance (experimental) records each user's acceptance of a version
+of ``KARNI_TERMS`` in ``TermsAcceptance``: listed read-only under *Terms
+acceptances*, filtered by version, exported with the changelist's *Export
+selected* actions (there is no import), and shown read-only on each user's
+change page while ``KARNI_TERMS`` is set. The table is append-only.
+
 The role tables are registered here too: :class:`RoleAdmin` (editable, with
 the **Permission matrix** and **Effective permissions** pages as changelist
 buttons — ``admin:karni_accounts_role_permission_matrix`` and
@@ -150,6 +156,38 @@ def _build_identity_inline() -> type[Any]:
     return SocialIdentityInline
 
 
+#: The ``TermsAcceptance`` columns the admin shows, all read-only.
+_ACCEPTANCE_FIELDS = ("version", "accepted_at", "ip", "user_agent", "client")
+
+
+def _build_acceptance_inline() -> type[Any]:
+    """The read-only list of a user's terms acceptances (experimental)."""
+    from karni.accounts.models import TermsAcceptance
+
+    class TermsAcceptanceInline(_unfold_tabular_inline()):  # type: ignore[misc]
+        """The versions of the terms this user accepted. Read-only: the record is permanent."""
+
+        model = TermsAcceptance
+        fk_name = "user"
+        fields = _ACCEPTANCE_FIELDS
+        readonly_fields = _ACCEPTANCE_FIELDS
+        extra = 0
+        can_delete = False
+        show_change_link = False
+        verbose_name_plural = "terms acceptances"
+
+        def has_add_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+    return TermsAcceptanceInline
+
+
 def _build_user_admin() -> type[Any]:
     """Construct the concrete ``KarniUserAdmin`` class.
 
@@ -220,8 +258,17 @@ def _build_user_admin() -> type[Any]:
         add_fieldsets = (
             (None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),
         )
-        inlines = (_build_identity_inline(),)
+        inlines = (_build_identity_inline(), _build_acceptance_inline())
         actions_detail = ["effective_permissions"]
+
+        def get_inlines(self, request: Any, obj: Any = None) -> Any:
+            """The acceptances inline only while ``KARNI_TERMS`` is set (experimental)."""
+            from karni.accounts import terms
+
+            found = list(super().get_inlines(request, obj))
+            if terms.configured():
+                return found
+            return [inline for inline in found if inline.__name__ != "TermsAcceptanceInline"]
 
         @action(
             description="Effective permissions",
@@ -298,6 +345,37 @@ def _build_login_code_admin() -> type[Any]:
             return False
 
     return LoginCodeAdmin
+
+
+def _build_acceptance_admin() -> type[Any]:
+    """``TermsAcceptanceAdmin``: every terms acceptance, read-only, exportable (experimental)."""
+    from karni.admin import KarniModelAdmin
+
+    class TermsAcceptanceAdmin(KarniModelAdmin):
+        """Who accepted which version of the terms, when and from where. Nothing is editable.
+
+        The changelist's *Export selected as CSV / XLSX* actions export the
+        record. There is no import: a row is written only by accepting.
+        """
+
+        list_display = ("user", "version", "accepted_at", "ip")
+        list_select_related = ("user",)
+        list_filter = ("version",)
+        search_fields = ("user__email", "version", "ip")
+        date_hierarchy = "accepted_at"
+        fields = ("user", *_ACCEPTANCE_FIELDS)
+        readonly_fields = ("user", *_ACCEPTANCE_FIELDS)
+
+        def has_add_permission(self, request: Any) -> bool:
+            return False
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+    return TermsAcceptanceAdmin
 
 
 def _build_role_admins() -> tuple[type[Any], type[Any], type[Any]]:
@@ -447,8 +525,15 @@ def __getattr__(name: str) -> Any:
 
 
 def _register_role_admins() -> None:
-    """Register the role tables, linked identities and login codes (idempotent)."""
-    from karni.accounts.models import LoginCode, Permission, Role, RolePermission, SocialIdentity
+    """Register the role tables, identities, login codes and terms acceptances (idempotent)."""
+    from karni.accounts.models import (
+        LoginCode,
+        Permission,
+        Role,
+        RolePermission,
+        SocialIdentity,
+        TermsAcceptance,
+    )
 
     site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
     from karni.imports import import_setting
@@ -462,6 +547,8 @@ def _register_role_admins() -> None:
         site.register(SocialIdentity, _build_identity_admin())
     if not site.is_registered(LoginCode):
         site.register(LoginCode, _build_login_code_admin())
+    if not site.is_registered(TermsAcceptance):
+        site.register(TermsAcceptance, _build_acceptance_admin())
 
 
 def _register_default_user_admin() -> None:

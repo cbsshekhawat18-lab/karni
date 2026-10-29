@@ -26,6 +26,11 @@
  * provider invalidates the cached schema, so tables, forms and detail views
  * follow the new user's field set without any per-role component code.
  *
+ * Terms acceptance (experimental): `terms`, `termsRequired` and
+ * `acceptTerms(client?)` mirror the engine. `termsRequired` comes from `/me/`
+ * and from the terms gate's 403 (`E245`) on any request made through the
+ * client, so terms bumped mid-session are caught. `TermsGate` uses them.
+ *
  * Known limitations (D6): browser tabs do not coordinate refreshes. With
  * refresh-token rotation, a refresh in one tab can log another tab out on
  * its next refresh. Identity changes also do not auto-invalidate resource
@@ -49,12 +54,14 @@ import { AuthEngine } from "./engine";
 import { createLocalStorageTokenStorage, type TokenStorage } from "./storage";
 import type {
   AuthStatus,
+  AuthTerms,
   KarniUser,
   LoginResult,
   OtpLoginResult,
   OtpSendResult,
   SocialLoginResult,
   SocialSignInOptions,
+  TermsClientInfo,
 } from "./types";
 
 export interface AuthProviderProps {
@@ -109,6 +116,21 @@ export interface AuthContextValue {
    * <authBasePath>/otp/verify/`). Optional like `socialLogin`.
    */
   otpVerify?: (email: string, code: string) => Promise<OtpLoginResult>;
+  /**
+   * Experimental. The terms the server asks the signed-in user to accept
+   * (`KARNI_TERMS`), or null when it asks for none. Optional like `socialLogin`.
+   */
+  terms?: AuthTerms | null;
+  /**
+   * Experimental. True while the API refuses the user until they accept
+   * `terms`: from `/me/`, or from the terms gate's 403 (`E245`) on any request.
+   */
+  termsRequired?: boolean;
+  /**
+   * Experimental. Accepts `terms.version` (`POST <authBasePath>/terms/accept/`),
+   * with what the app says about itself as `client`. Use it through `TermsGate`.
+   */
+  acceptTerms?: (client?: TermsClientInfo) => Promise<AuthTerms>;
 }
 
 /**
@@ -179,6 +201,9 @@ export function AuthProvider({
       socialLogin: (provider, idToken, options) => engine.socialLogin(provider, idToken, options),
       otpSend: (email) => engine.otpSend(email),
       otpVerify: (email, code) => engine.otpVerify(email, code),
+      terms: snapshot.terms,
+      termsRequired: snapshot.termsRequired,
+      acceptTerms: (client) => engine.acceptTerms(client),
     }),
     [engine, snapshot],
   );

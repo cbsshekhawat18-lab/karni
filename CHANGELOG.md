@@ -62,6 +62,32 @@ apply codemods and list the manual steps. This file is the human summary.
   `@karni/ui` adds `useOtpLogin()`, `OtpLoginForm` and `LoginForm`'s
   `codeSignIn` switch.
   [docs/accounts.md](docs/accounts.md#sign-in-with-a-code-sent-by-email).
+- **A versioned terms acceptance gate (experimental).** With `KARNI_TERMS =
+  {"version": "2026-11", "url": "/terms/", "required": True}`, every
+  signed-in user must accept that version before using the API: until they
+  do, every request under `KARNI_TERMS["paths"]` (default `["/api/"]`)
+  answers 403 `E245` with the version and the url. Staff and superusers are
+  gated too. The auth mount (`login/`, `refresh/`, `me/` and the rest), the
+  OpenAPI schema and `KARNI_TERMS["exempt"]` stay open, anonymous requests
+  pass to the view, and the admin and a public site are not under `/api/`.
+  `GET api/auth/terms/` answers the terms and whether the user accepted them,
+  `POST api/auth/terms/accept/ {"version", "client"?}` records the acceptance
+  with the IP (read like the throttles, honouring `NUM_PROXIES`), the user
+  agent and the app's own `client` object, and another version is refused
+  with `E246`. `me/` (and so `login/`) carries `terms` while the setting is
+  set, and is unchanged otherwise. The record is the new append-only
+  `TermsAcceptance` model (run `karni migrate`): rewriting a row raises
+  `E247`, and the admin lists it read-only with a filter by version and an
+  export. The gate is `karni.accounts.terms.TermsGateMiddleware`, which
+  `karni_settings()` lists after authentication and which leaves the chain at
+  startup unless the setting requires acceptance. Its answer is cached per
+  (user, version), so a gated request costs no query after the first, and a
+  new version makes everyone accept again. `karni.E248` reports a gate
+  missing from `MIDDLEWARE`, `E249` the routes once the setting is unset.
+  `@karni/ui` adds `TermsGate` and `useAuth()`'s `terms`, `termsRequired`
+  (from `/me/` and from the gate's 403 on any request, through the client's
+  new `onError` hook) and `acceptTerms(client)`.
+  [docs/accounts.md](docs/accounts.md#terms-acceptance).
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and

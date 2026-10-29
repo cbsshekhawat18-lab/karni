@@ -518,6 +518,71 @@ def check_request_id_middleware(
     ]
 
 
+_TERMS_MIDDLEWARE = "karni.accounts.terms.TermsGateMiddleware"
+_AUTHENTICATION_MIDDLEWARE = "django.contrib.auth.middleware.AuthenticationMiddleware"
+
+
+def _is_terms_gate(entry: str) -> bool:
+    """Whether a ``MIDDLEWARE`` entry is the terms gate or a subclass of it."""
+    if entry == _TERMS_MIDDLEWARE:
+        return True
+    from django.utils.module_loading import import_string
+
+    from karni.accounts.terms import TermsGateMiddleware
+
+    try:
+        found = import_string(entry)
+    except ImportError:
+        return False
+    return isinstance(found, type) and issubclass(found, TermsGateMiddleware)
+
+
+@checks.register()
+def check_terms_middleware(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E248: while ``KARNI_TERMS`` requires acceptance, its gate runs after authentication.
+
+    ``karni_settings()`` lists ``TermsGateMiddleware`` in ``MIDDLEWARE``. A
+    project that replaces ``MIDDLEWARE`` after the call loses it, and the gate
+    then refuses nobody. Listed before ``AuthenticationMiddleware`` it cannot
+    see a session user. A subclass counts as the gate.
+    """
+    from django.conf import settings
+
+    from karni.accounts.terms import gate_on
+
+    if not gate_on():
+        return []
+    middleware = [str(entry) for entry in getattr(settings, "MIDDLEWARE", None) or []]
+    gate = next((index for index, entry in enumerate(middleware) if _is_terms_gate(entry)), None)
+    fix = (
+        f"Add '{_TERMS_MIDDLEWARE}' to MIDDLEWARE after '{_AUTHENTICATION_MIDDLEWARE}', or extend "
+        "MIDDLEWARE instead of replacing it."
+    )
+    if gate is None:
+        return [
+            check_error(
+                "E248",
+                "KARNI_TERMS requires acceptance, but MIDDLEWARE has no TermsGateMiddleware: "
+                "nobody is asked to accept the terms.",
+                hint=fix,
+                obj="MIDDLEWARE",
+            )
+        ]
+    if _AUTHENTICATION_MIDDLEWARE in middleware and gate < middleware.index(
+        _AUTHENTICATION_MIDDLEWARE
+    ):
+        return [
+            check_error(
+                "E248",
+                f"{middleware[gate]} comes before {_AUTHENTICATION_MIDDLEWARE} in MIDDLEWARE, so "
+                "the terms gate cannot see a user signed in by session.",
+                hint=f"Move {middleware[gate]} below {_AUTHENTICATION_MIDDLEWARE}.",
+                obj="MIDDLEWARE",
+            )
+        ]
+    return []
+
+
 @checks.register()
 def check_schedules(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E404 / E405 / E406: every ``<app>/schedules.py`` declaration, at boot.

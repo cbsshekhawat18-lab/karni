@@ -46,12 +46,20 @@ const GROUPS = [
   ],
   [
     "Auth",
-    ["AuthProvider", "AuthGuard", "LoginForm", "SocialButton", "OtpLoginForm", "KarniProvider"],
+    [
+      "AuthProvider",
+      "AuthGuard",
+      "LoginForm",
+      "SocialButton",
+      "OtpLoginForm",
+      "TermsGate",
+      "KarniProvider",
+    ],
   ],
 ];
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
-const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm"]);
+const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm", "TermsGate"]);
 
 const HOOKS = {
   useResourceList:
@@ -68,7 +76,8 @@ const HOOKS = {
   useSchema: "The parsed OpenAPI schema of one resource (fields, operations, access).",
   useKarniClient:
     "The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.",
-  useAuth: "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.",
+  useAuth:
+    "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.",
   usePermission: "`{ hasRole(...names), isAuthenticated }` for gating UI on roles.",
   useOtpLogin:
     "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",

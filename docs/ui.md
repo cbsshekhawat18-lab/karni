@@ -44,6 +44,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `LoginForm` (role `login-form`)
 - `SocialButton` (role `social-sign-in`, experimental)
 - `OtpLoginForm` (role `code-sign-in`, experimental)
+- `TermsGate` (role `terms-gate`, experimental)
 - `KarniProvider`
 
 ## Primitives
@@ -54,7 +55,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 
 ## Hooks
 
-- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.
+- `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDelayedFlag`: See the package README.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
@@ -101,5 +102,6 @@ role that another component holds (compose it instead), and `karni context` list
 | `resource-import` | `ResourceImport` |
 | `social-sign-in` | `SocialButton` |
 | `stat` | `Stat` |
+| `terms-gate` | `TermsGate` |
 | `theme-toggle` | `ThemeToggle` |
 | `toast` | `Toaster` |

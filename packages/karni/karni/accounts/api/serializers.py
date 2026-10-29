@@ -13,22 +13,26 @@ in your project URLconf — first match wins (amendment A11).
 
 from __future__ import annotations
 
+import json
 from typing import Any, ClassVar
 
 from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainSerializer
 
 from karni.accounts.permissions import user_roles
 
 __all__ = [
+    "CLIENT_MAX_BYTES",
     "CurrentPasswordMixin",
     "EmailChangeSerializer",
     "LoginSerializer",
     "LogoutSerializer",
     "MeSerializer",
+    "MeTermsSerializer",
     "OneTimeTokenSerializer",
     "OtpSendSerializer",
     "OtpVerifySerializer",
@@ -38,9 +42,27 @@ __all__ = [
     "RegisterSerializer",
     "SocialNameSerializer",
     "SocialTokenLoginSerializer",
+    "TermsAcceptSerializer",
+    "TermsStatusSerializer",
 ]
 
 _PASSWORD_STYLE: dict[str, str] = {"input_type": "password"}
+
+#: Experimental. The largest ``client`` object ``terms/accept/`` stores, in bytes of JSON.
+CLIENT_MAX_BYTES = 4096
+
+
+class MeTermsSerializer(serializers.Serializer):
+    """Experimental. The ``terms`` of ``me/`` while ``KARNI_TERMS`` is set.
+
+    ``required`` and ``accepted`` together say whether the API will refuse the
+    user (``E245``) until they accept ``version``, which is at ``url``.
+    """
+
+    required = serializers.BooleanField(read_only=True)
+    version = serializers.CharField(read_only=True)
+    url = serializers.CharField(read_only=True)
+    accepted = serializers.BooleanField(read_only=True)
 
 
 class MeSerializer(serializers.ModelSerializer):
@@ -82,9 +104,31 @@ class MeSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def get_fields(self) -> dict[str, serializers.Field]:
+        """The declared fields, plus ``terms`` while ``KARNI_TERMS`` is set (experimental).
+
+        ``terms`` is ``{"required", "version", "url", "accepted"}``
+        (:func:`karni.accounts.terms.me_status`). Unset, the field is absent
+        from the payload and from the OpenAPI schema, whose description of
+        this serializer stays the class docstring.
+        """
+        from karni.accounts import terms
+
+        fields: dict[str, serializers.Field] = super().get_fields()
+        if terms.configured():
+            fields["terms"] = serializers.SerializerMethodField()
+        return fields
+
     def get_roles(self, user: AbstractBaseUser) -> list[str]:
         """The user's role (Django group) names, read-only (amendment A15)."""
         return user_roles(user)
+
+    @extend_schema_field(MeTermsSerializer)
+    def get_terms(self, user: AbstractBaseUser) -> dict[str, Any] | None:
+        """Experimental. The terms the user must accept, and whether they have."""
+        from karni.accounts import terms
+
+        return terms.me_status(user)
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -262,3 +306,48 @@ class OtpVerifySerializer(serializers.Serializer):
 
     email = serializers.EmailField()
     code = serializers.CharField(max_length=32, trim_whitespace=True)
+
+
+class TermsStatusSerializer(serializers.Serializer):
+    """Experimental. The answer of ``terms/`` and ``terms/accept/``.
+
+    ``accepted_at`` is when the user accepted ``version``, ``null`` when they
+    have not. While ``required`` is true and ``accepted`` false, the API
+    refuses the user with ``E245``.
+    """
+
+    version = serializers.CharField(read_only=True)
+    url = serializers.CharField(read_only=True)
+    required = serializers.BooleanField(read_only=True)
+    accepted = serializers.BooleanField(read_only=True)
+    accepted_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+class TermsAcceptSerializer(serializers.Serializer):
+    """Experimental. Request body of ``terms/accept/``: the version shown, and the client.
+
+    ``version`` is the version the user read and accepted. ``client`` is an
+    optional JSON object the app sends about itself (a mobile app's device,
+    platform and app version, for example), stored with the acceptance. It
+    may be at most ``CLIENT_MAX_BYTES`` bytes of JSON.
+    """
+
+    version = serializers.CharField(max_length=100)
+    client = serializers.JSONField(required=False, allow_null=True)
+
+    def validate_client(self, value: Any) -> Any:
+        """A JSON object (or null) of at most ``CLIENT_MAX_BYTES`` bytes."""
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            raise serializers.ValidationError(
+                'Send a JSON object, e.g. {"platform": "ios", "app_version": "2.4.0"}.',
+                code="invalid",
+            )
+        size = len(json.dumps(value, separators=(",", ":")).encode("utf-8"))
+        if size > CLIENT_MAX_BYTES:
+            raise serializers.ValidationError(
+                f"The client object is {size} bytes of JSON. Send at most {CLIENT_MAX_BYTES}.",
+                code="max_length",
+            )
+        return value

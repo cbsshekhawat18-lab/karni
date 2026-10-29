@@ -3,11 +3,11 @@
 A Pydantic v2 model checks the values that most often break deployments
 (secret key, hosts, database, Redis URLs, storage selection, throttle rates,
 pagination that cannot be switched off, query budgets and API caching, auth
-mode and social/2FA extras, sign-in with an ID token or a code, API knobs,
-admin app ordering, health-check configuration) and :func:`validate_settings`
-turns any problem into a single ``ImproperlyConfigured`` error listing
-*every* failure, so a bad container config dies loudly at startup instead of
-at 3 a.m.
+mode and social/2FA extras, sign-in with an ID token or a code, terms
+acceptance, API knobs, admin app ordering, health-check configuration) and
+:func:`validate_settings` turns any problem into a single
+``ImproperlyConfigured`` error listing *every* failure, so a bad container
+config dies loudly at startup instead of at 3 a.m.
 """
 
 from __future__ import annotations
@@ -133,6 +133,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_EMAIL_OTP_LENGTH: Any = 6
     KARNI_EMAIL_OTP_MAX_ATTEMPTS: Any = 5
     KARNI_EMAIL_OTP_SIGNUP: Any = None
+    KARNI_TERMS: Any = None
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:
@@ -157,6 +158,7 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_accounts())
         errors.extend(self._check_social_token())
         errors.extend(self._check_email_otp())
+        errors.extend(self._check_terms())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
         errors.extend(self._check_karni_knobs())
@@ -502,6 +504,57 @@ class KarniSettingsModel(BaseModel):
                 f"KARNI_EMAIL_OTP_SIGNUP = {signup!r} must be 'open', 'approval', 'existing' or "
                 "None (None follows KARNI_ACCOUNTS_REGISTRATION)"
             )
+        return errors
+
+    def _check_terms(self) -> list[str]:
+        """Terms acceptance (experimental): ``KARNI_TERMS`` is None or a dict of known keys."""
+        from karni.accounts.terms import KNOWN_KEYS, VERSION_MAX_LENGTH
+
+        value = self.KARNI_TERMS
+        if value is None:
+            return []
+        example = '{"version": "2026-11", "url": "/terms/"}'
+        if not isinstance(value, Mapping) or not value:
+            return [
+                f"KARNI_TERMS = {value!r} must be a dict like {example}, or None to ask for no "
+                "terms"
+            ]
+        errors: list[str] = []
+        unknown = sorted(str(key) for key in value if key not in KNOWN_KEYS)
+        if unknown:
+            errors.append(
+                f"KARNI_TERMS has unknown keys {unknown} (known: {', '.join(sorted(KNOWN_KEYS))})"
+            )
+        version = value.get("version")
+        if not isinstance(version, str) or not version.strip():
+            errors.append(
+                f"KARNI_TERMS['version'] = {version!r} must be a non-empty string, e.g. '2026-11'"
+            )
+        elif len(version) > VERSION_MAX_LENGTH:
+            errors.append(
+                f"KARNI_TERMS['version'] is {len(version)} characters long: at most "
+                f"{VERSION_MAX_LENGTH} are stored"
+            )
+        url = value.get("url")
+        if not isinstance(url, str):
+            errors.append(
+                f"KARNI_TERMS['url'] = {url!r} must be a string: where the terms are, e.g. "
+                "'/terms/' or 'https://example.com/terms/'"
+            )
+        required = value.get("required", True)
+        if not isinstance(required, bool):
+            errors.append(f"KARNI_TERMS['required'] = {required!r} must be True or False")
+        for key, sample in (("paths", "['/api/']"), ("exempt", "['/api/public/']")):
+            if key not in value:
+                continue
+            entries = value[key]
+            if not isinstance(entries, list | tuple) or not all(
+                isinstance(entry, str) and entry.startswith("/") for entry in entries
+            ):
+                errors.append(
+                    f"KARNI_TERMS[{key!r}] = {entries!r} must be a list of URL path prefixes "
+                    f"that start with '/', e.g. {sample}"
+                )
         return errors
 
     def _check_api(self) -> list[str]:

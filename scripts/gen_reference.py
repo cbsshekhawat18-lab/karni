@@ -167,6 +167,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
+        "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
+        "Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
@@ -223,6 +229,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
         "`LoginForm`'s `codeSignIn` switch. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
+        "the user accepts the current terms. Experimental tier",
     ),
     Capability(
         "ui",

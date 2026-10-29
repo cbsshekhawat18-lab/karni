@@ -219,6 +219,10 @@ BASE: dict[str, Any] = {
         # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
         # so JWT users authenticated later inside DRF views are seen too.
         "karni.middleware.CurrentUserMiddleware",
+        # The terms gate (experimental): 403 E245 under KARNI_TERMS["paths"] until a
+        # signed-in user accepts the current version. Removed from the chain at
+        # startup unless KARNI_TERMS requires acceptance. After authentication.
+        "karni.accounts.terms.TermsGateMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "django.middleware.clickjacking.XFrameOptionsMiddleware",
         "django_structlog.middlewares.RequestMiddleware",
@@ -290,6 +294,10 @@ BASE: dict[str, Any] = {
     # Who an address without an account may become: "open", "approval" or "existing".
     # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
     "KARNI_EMAIL_OTP_SIGNUP": env("KARNI_EMAIL_OTP_SIGNUP", default=None),
+    # A versioned terms (EULA) acceptance gate (experimental): {"version": "2026-11",
+    # "url": "/terms/", "required": True}, plus "paths" (default ["/api/"]) and "exempt".
+    # Set, it mounts terms/ and terms/accept/. None (the default) gates nothing.
+    "KARNI_TERMS": env.json("KARNI_TERMS", default=None),
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,

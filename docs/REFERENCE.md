@@ -48,6 +48,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Response caching per viewset (`Cache`, `Uncached`) | `experimental` | Karni's own tests |
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
+| A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -71,6 +72,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
 | `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
+| `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -1472,6 +1474,7 @@ class Lead(BaseModel):
 | `KARNI_EMAIL_OTP_LENGTH` | `KARNI_EMAIL_OTP_LENGTH` | `6` | Experimental. Digits in a sign-in code (4 to 10). |
 | `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `5` | Experimental. Guesses a sign-in code takes before it dies (1 to 10). A wrong guess that reaches the cap kills the code. |
 | `KARNI_EMAIL_OTP_SIGNUP` | `KARNI_EMAIL_OTP_SIGNUP` | `None` | Experimental. What a code for an address without an account does: `open` creates the account when the code is verified, `approval` creates it inactive until an administrator activates it (`E224`), `existing` sends no code. `None` is `open` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `existing`. |
+| `KARNI_TERMS` | `KARNI_TERMS` | `None` | Experimental. A versioned terms acceptance gate, as a dict (JSON in the environment): `{"version": "2026-11", "url": "/terms/", "required": True}`, with optional `paths` (the URL prefixes it covers, default `["/api/"]`) and `exempt` (more prefixes it leaves open). Set, it mounts `terms/` and `terms/accept/` and adds `terms` to `me/`. While it requires acceptance, a signed-in user gets 403 `E245` under `paths` until they accept the current version, staff included. `None` gates nothing. See [terms acceptance](accounts.md#terms-acceptance). |
 | `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
 | `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends every account email: verification, password reset, email change and the sign-in code. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
@@ -1715,6 +1718,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
 | `OtpLoginForm` |  | Experimental. Passwordless sign-in: an email step, then a code step with one input for the code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `TermsGate` |  | Experimental. Renders its children once the signed-in user has accepted the current terms, and the terms with an accept button until then. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an `<h1>` title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `Layout` |  | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` |  | The Karni mark as inline SVG, so there is no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
@@ -1797,6 +1801,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `describeSocialError` | function | Experimental. A SocialButton failure in plain words, from the Karni code of the refusal (E215 to E227), never a status code. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
 | `defaultOtpLoginFormSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
 | `describeOtpError` | function | Experimental. A sign-in-by-code failure in plain words, from the Karni code of the refusal (E235, E226, E236), never a status code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `defaultTermsGateSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -1904,6 +1909,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E227`](errors.md#e227) | api | An account with this email exists and is not linked |
 | [`E235`](errors.md#e235) | api | The sign-in code is wrong or has expired |
 | [`E236`](errors.md#e236) | api | Sign-in with a code is turned off |
+| [`E245`](errors.md#e245) | api | The signed-in user has not accepted the current terms |
+| [`E246`](errors.md#e246) | api | The accepted terms version is not the current one |
+| [`E247`](errors.md#e247) | exception | A terms acceptance is a permanent record |
+| [`E248`](errors.md#e248) | check | The terms gate is not in MIDDLEWARE, or runs before authentication |
+| [`E249`](errors.md#e249) | api | Terms acceptance is turned off |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |

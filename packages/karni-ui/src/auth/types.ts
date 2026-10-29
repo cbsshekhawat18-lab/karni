@@ -71,3 +71,24 @@ export interface OtpSendResult {
  * three cases as `SocialLoginResult`.
  */
 export type OtpLoginResult = SocialLoginResult;
+
+/**
+ * Experimental. The terms the signed-in user is asked to accept (`KARNI_TERMS`
+ * on the server), from `/me/`'s `terms` or from the gate's 403 (`E245`).
+ */
+export interface AuthTerms {
+  /** The version the server asks for, e.g. "2026-11". */
+  version: string;
+  /** Where the terms are: a path on the site or a full URL. */
+  url: string;
+  /** Whether the API refuses the user until they accept `version`. */
+  required: boolean;
+  /** Whether the user accepted `version`. */
+  accepted: boolean;
+}
+
+/**
+ * Experimental. What the app sends about itself with an acceptance, stored
+ * with it as JSON: a device, a platform, an app version. At most 4096 bytes.
+ */
+export type TermsClientInfo = Record<string, unknown>;

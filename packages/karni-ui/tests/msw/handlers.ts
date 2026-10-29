@@ -20,6 +20,11 @@
  *   verify takes TEST_LOGIN_CODE and answers by address (TEST_USER signs in,
  *   TEST_2FA_USER gets the 2FA gate, TEST_OTP_EMAILS.pending awaits approval,
  *   TEST_OTP_EMAILS.inactive is E226). Any other code is E235
+ * - GET *\/api/auth/terms/, POST *\/api/auth/terms/accept/ and GET
+ *   *\/api/gated/ → terms acceptance, off until
+ *   `authTestControls.setTerms(...)`: then `/me/` carries `terms`, the gated
+ *   endpoint answers 403 E245 until the current version is accepted, and
+ *   accepting another version is a 400 E246
  *
  * State: module-level in-memory DB + token registry. Vitest isolates test
  * files, so state is fresh per file; within a file call `resetMswData()` in
@@ -232,6 +237,16 @@ const socialRequests: Array<{ provider: string; body: unknown }> = [];
 /** Every body posted to `otp/send/` and `otp/verify/`, for assertions. */
 const otpRequests: Array<{ step: "send" | "verify"; body: unknown }> = [];
 
+/** The terms the simulated server asks for (null: KARNI_TERMS unset), and what was accepted. */
+interface TermsState {
+  version: string;
+  url: string;
+  required: boolean;
+}
+let termsState: TermsState | null = null;
+const acceptedVersions = new Set<string>();
+const termsRequests: unknown[] = [];
+
 /** Hooks for auth suites to stage 401s and dead sessions deterministically. */
 export const authTestControls = {
   /** The bodies posted to `social/<provider>/` so far (cleared by resetMswData). */
@@ -241,6 +256,20 @@ export const authTestControls = {
   /** The bodies posted to `otp/send/` and `otp/verify/` so far (cleared by resetMswData). */
   otpRequests(): ReadonlyArray<{ step: "send" | "verify"; body: unknown }> {
     return otpRequests;
+  },
+  /**
+   * Set the terms the server asks for (null turns them off, the default).
+   * Keeps what was accepted, so a new version is a mid-session bump.
+   */
+  setTerms(terms: { version: string; url?: string; required?: boolean } | null): void {
+    termsState =
+      terms === null
+        ? null
+        : { version: terms.version, url: terms.url ?? "/terms/", required: terms.required ?? true };
+  },
+  /** The bodies posted to `terms/accept/` so far (cleared by resetMswData). */
+  termsRequests(): readonly unknown[] {
+    return termsRequests;
   },
   /** Expire every issued access token: next Bearer request 401s (D6 races). */
   invalidateAccessTokens(): void {
@@ -272,6 +301,9 @@ export function resetMswData(): void {
   authState.currentRefreshToken = null;
   socialRequests.length = 0;
   otpRequests.length = 0;
+  termsState = null;
+  acceptedVersions.clear();
+  termsRequests.length = 0;
 }
 
 // --- shared helpers ----------------------------------------------------------
@@ -713,7 +745,18 @@ const readOnlyHandlers = [
 
 // --- auth --------------------------------------------------------------------
 
+function meTerms(): Record<string, unknown> | null {
+  if (termsState === null) return null;
+  return {
+    required: termsState.required,
+    version: termsState.version,
+    url: termsState.url,
+    accepted: acceptedVersions.has(termsState.version),
+  };
+}
+
 function meUser(): Record<string, unknown> {
+  const terms = meTerms();
   return {
     id: TEST_USER.id,
     email: TEST_USER.email,
@@ -724,7 +767,29 @@ function meUser(): Record<string, unknown> {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     roles: TEST_USER.roles,
+    ...(terms !== null ? { terms } : {}),
   };
+}
+
+function termsStatus(state: TermsState): Record<string, unknown> {
+  const accepted = acceptedVersions.has(state.version);
+  return {
+    version: state.version,
+    url: state.url,
+    required: state.required,
+    accepted,
+    accepted_at: accepted ? "2026-11-02T09:30:00Z" : null,
+  };
+}
+
+/** The signed-in user's token, or the 401 DRF answers without one. */
+function requireUser(request: Request): Response | null {
+  const token = bearerToken(request);
+  if (token !== null && authState.validAccessTokens.has(token)) return null;
+  return HttpResponse.json(
+    { detail: "Authentication credentials were not provided." },
+    { status: 401 },
+  );
 }
 
 function bearerToken(request: Request): string | null {
@@ -887,6 +952,61 @@ const authHandlers = [
       default:
         return refusal(401, "E215", "The ID token is not a well-formed JWT.");
     }
+  }),
+
+  http.get("*/api/auth/terms/", ({ request }) => {
+    const refused = requireUser(request);
+    if (refused !== null) return refused;
+    if (termsState === null) {
+      return HttpResponse.json(
+        { code: "E249", detail: "E249: Terms acceptance is turned off." },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json(termsStatus(termsState));
+  }),
+
+  http.post("*/api/auth/terms/accept/", async ({ request }) => {
+    const refused = requireUser(request);
+    if (refused !== null) return refused;
+    const body: unknown = await request.json().catch(() => null);
+    termsRequests.push(body);
+    if (termsState === null) {
+      return HttpResponse.json(
+        { code: "E249", detail: "E249: Terms acceptance is turned off." },
+        { status: 404 },
+      );
+    }
+    const version = isRecord(body) && typeof body["version"] === "string" ? body["version"] : "";
+    if (version !== termsState.version) {
+      return HttpResponse.json(
+        {
+          code: "E246",
+          detail: `E246: Version '${version}' is not the current terms.`,
+          version: termsState.version,
+          url: termsState.url,
+        },
+        { status: 400 },
+      );
+    }
+    const created = !acceptedVersions.has(version);
+    acceptedVersions.add(version);
+    return HttpResponse.json(termsStatus(termsState), { status: created ? 201 : 200 });
+  }),
+
+  http.get("*/api/gated/", () => {
+    if (termsState !== null && termsState.required && !acceptedVersions.has(termsState.version)) {
+      return HttpResponse.json(
+        {
+          code: "E245",
+          detail: `E245: Accept the terms (version ${termsState.version}) to continue.`,
+          version: termsState.version,
+          url: termsState.url,
+        },
+        { status: 403 },
+      );
+    }
+    return HttpResponse.json({ ok: true });
   }),
 
   http.get(

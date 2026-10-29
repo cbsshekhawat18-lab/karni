@@ -67,6 +67,8 @@ from karni.accounts.api.serializers import (
     PasswordResetSerializer,
     RegisterSerializer,
     SocialTokenLoginSerializer,
+    TermsAcceptSerializer,
+    TermsStatusSerializer,
 )
 from karni.accounts.api.throttles import (
     AccountRateThrottle,
@@ -94,6 +96,8 @@ __all__ = [
     "RefreshView",
     "RegisterView",
     "SocialTokenLoginView",
+    "TermsAcceptView",
+    "TermsView",
     "auth_mode",
 ]
 
@@ -487,6 +491,96 @@ class OtpVerifyView(APIView):
         )
         data["user"] = MeSerializer(user, context={"request": request}).data
         return Response(data)
+
+
+@extend_schema(responses={200: TermsStatusSerializer, 404: OpenApiTypes.OBJECT})
+class TermsView(APIView):
+    """Experimental. ``GET terms/``: the current terms, and whether the user accepted them.
+
+    ``{"version", "url", "required", "accepted", "accepted_at"}``
+    (:func:`karni.accounts.terms.status`). 401 without a signed-in user. The
+    route exists while ``KARNI_TERMS`` is set, and a URLconf built earlier
+    answers 404 ``E249`` once it is unset. The terms gate never refuses it.
+
+    Override / escape hatch: subclass and declare ``path("api/auth/terms/",
+    ...)`` before the include.
+    """
+
+    permission_classes: ClassVar[list[type]] = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        from karni.accounts import terms
+
+        if not terms.configured():
+            refused = terms.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        return Response(TermsStatusSerializer(terms.status(request.user)).data)
+
+
+@extend_schema(
+    request=TermsAcceptSerializer,
+    responses={
+        200: TermsStatusSerializer,
+        201: TermsStatusSerializer,
+        400: OpenApiTypes.OBJECT,
+        404: OpenApiTypes.OBJECT,
+    },
+)
+class TermsAcceptView(APIView):
+    """Experimental. ``POST terms/accept/`` ``{version, client?}``: accept the current terms.
+
+    Records the acceptance (:func:`karni.accounts.terms.accept`) with the
+    client's IP (read like the throttles read it, honouring ``NUM_PROXIES``),
+    its ``User-Agent`` and the optional ``client`` object, and answers 201
+    with the ``terms/`` body. The same version again answers 200 and changes
+    nothing. Another version is a 400 ``E246`` carrying the current
+    ``version`` and ``url``, and nothing is recorded. 401 without a signed-in
+    user, 404 ``E249`` from a URLconf built while ``KARNI_TERMS`` was set.
+
+    Override / escape hatch: subclass and declare
+    ``path("api/auth/terms/accept/", ...)`` before the include, or call
+    :func:`karni.accounts.terms.accept` from a view of your own.
+    """
+
+    permission_classes: ClassVar[list[type]] = [IsAuthenticated]
+    serializer_class = TermsAcceptSerializer
+
+    def post(self, request: Request) -> Response:
+        from karni.accounts import terms
+
+        if not terms.configured():
+            refused = terms.turned_off()
+            return Response(refused.payload(), status=refused.status)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        body = serializer.validated_data
+        try:
+            _row, created = terms.accept(
+                request.user,
+                body["version"],
+                ip=terms.client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                client=body.get("client"),
+            )
+        except terms.TermsRefused as exc:
+            _log().warning(
+                "accounts.terms.refused",
+                user_id=str(request.user.pk),
+                code=exc.code,
+                sent=body["version"],
+                current=exc.version,
+            )
+            return Response(exc.payload(), status=exc.status)
+        _log().info(
+            "accounts.terms.accepted",
+            user_id=str(request.user.pk),
+            version=body["version"],
+            created=created,
+        )
+        return Response(
+            TermsStatusSerializer(terms.status(request.user)).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
 class LogoutView(APIView):
