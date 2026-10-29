@@ -635,7 +635,7 @@ class Editable:
         if parent is None or parent.kind != "element":
             return False
         for other in parent.iter_elements():
-            if other.tag != "a" or _inside(other, node):
+            if other.tag != "a" or _descends(other, node):
                 continue
             special = self._special(other.attr(page.text, "href") or "", page)
             if special is not None and special[0] in ("phone", "email", "map"):
@@ -1528,7 +1528,7 @@ def _has_break(node: Node) -> bool:
     return any(child.kind == "element" and child.tag == "br" for child in node.children)
 
 
-def _inside(node: Node, ancestor: Node) -> bool:
+def _descends(node: Node, ancestor: Node) -> bool:
     current: Node | None = node
     while current is not None:
         if current is ancestor:

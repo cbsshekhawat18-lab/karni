@@ -190,9 +190,10 @@ def test_the_settings_reference_loads_from_the_wheels_copy(
     monkeypatch.delitem(sys.modules, settingref._MODULE_NAME, raising=False)
     try:
         module = settingref.reference_module()
-        assert module is not None and Path(module.__file__).parent == bundled
+        assert module is not None and Path(str(module.__file__)).parent == bundled
         assert dict(module.module_conf_files())["karni-site"].name == "conf.py"
-        assert settingref.lookup("KARNI_AUTH_MODE")["env"] == "KARNI_AUTH_MODE"
-        assert settingref.lookup("KARNI_SITE_SEO_QUIET")["module"] == "karni-site"
+        core, site = settingref.lookup("KARNI_AUTH_MODE"), settingref.lookup("KARNI_SITE_SEO_QUIET")
+        assert core is not None and core["env"] == "KARNI_AUTH_MODE"
+        assert site is not None and site["module"] == "karni-site"
     finally:
         sys.modules.pop(settingref._MODULE_NAME, None)
