@@ -171,6 +171,9 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
     assert "karni types" not in models  # a site's models have no API to type
     detail = next(step for step in steps if "karni make view <model>" in step)
     assert "get_object_or_404(Model.objects, slug=slug)" in detail and "delete" in detail
+    # How {% karni_seo %} finds a detail page's row, so the title is set once: by the row.
+    assert "`get_absolute_url()` is the page's path" in detail and "`object`" in detail
+    assert "class Karni: " in detail and "writes no `{% block title %}`" in detail
     load = next(step for step in steps if "karni load" in step)
     assert "Nothing changed" in load and "karni seed" in load
     loops = next(step for step in steps if "{% for %}" in step)

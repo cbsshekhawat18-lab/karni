@@ -978,8 +978,16 @@ PROCEDURES: tuple[Procedure, ...] = (
             "template from one detail page's template (its blocks stay, their keys start with the "
             "model's name), read the row with `get_object_or_404(Model.objects, slug=slug)`, "
             "delete the old pages' views, routes and templates, and point every link at "
-            "`{% url '<site app>:<model>' row.slug %}`. `karni check` (SITE002) and `karni check "
-            "--seo` (SITE007, a menu item still pointing at an old page) name what is left.",
+            "`{% url '<site app>:<model>' row.slug %}`. Give the model `get_absolute_url()` "
+            "returning that URL. `{% karni_seo %}` finds the page's row by itself: `object` (or "
+            "`seo`) in the context when it is a row, else the row in the context whose "
+            "`get_absolute_url()` is the page's path. The row gives the page its title, "
+            "description and share image, and wins over the template's own, so the detail "
+            "template writes no `{% block title %}` or `{% block description %}`. `class Karni: "
+            'seo = {"title": "name", "description": "intro"}` names the fields when they are '
+            "not `title`, `description` and `image` (`karni explain karni_seo`). `karni check` "
+            "(SITE002) and `karni check --seo` (SITE007, a menu item still pointing at an old "
+            "page) name what is left.",
             "For each `<form>` the import named: `karni make form <name> <field:type> ...` with "
             "the design's fields (`--notify <SETTING>` for the email that tells staff) writes "
             "the model, its viewset, the tests and the email, and prints the `{% karni_form %}` "
@@ -988,9 +996,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "the tag where the `<form>` was, then `karni make migration && karni migrate`. "
             "Never write a form view, a form template or a throttle.",
             "`{% karni_seo %}` in `base.html` writes each page's title, description, canonical "
-            "link, share tags and JSON-LD, a detail page takes them from its row (`class Karni: "
-            'seo = {"title": "name", "description": "intro"}` when its fields have other '
-            "names), `{% image %}` serves a card's picture at the card's size, and karni-site "
+            "link, share tags and JSON-LD (a detail page's from its row, as above), "
+            "`{% image %}` serves a card's picture at the card's size, and karni-site "
             "answers `/sitemap.xml` and `/robots.txt`: write none of them by hand. Give a model "
             'whose rows are not all public `class Karni: sitemap = {"filter": {...}}`, then run '
             "`karni check --seo` and fix each SITE010 to SITE018 it reports.",
