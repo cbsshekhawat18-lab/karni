@@ -51,8 +51,9 @@ def test_cli_codes_are_unique_and_complete() -> None:
 def _calls() -> list[tuple[str, int, str | None]]:
     found = []
     for path in sorted(PACKAGE.rglob("*.py")):
-        if any(part.startswith("_") and part != "__init__.py" for part in path.parts[-2:-1]):
-            continue  # bundled copies (_templates, _agent, _changelog, _errorcodes)
+        folders = path.relative_to(PACKAGE).parts[:-1]
+        if any(part.startswith("_") for part in folders):
+            continue  # bundled copies (_templates, _agent, _changelog, _errorcodes), at any depth
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "CliError":
