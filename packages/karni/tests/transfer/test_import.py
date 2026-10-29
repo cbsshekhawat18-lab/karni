@@ -328,8 +328,8 @@ class TestHooksAndState:
     ) -> None:
         from celery import current_app
 
-        monkeypatch.setattr(current_app.conf, "task_always_eager", True)
-        monkeypatch.setattr(current_app.conf, "task_eager_propagates", True)
+        monkeypatch.setitem(current_app.conf, "task_always_eager", True)
+        monkeypatch.setitem(current_app.conf, "task_eager_propagates", True)
         settings.KARNI_IMPORT_INLINE_ROWS = 1
         staff = make_user("staff@example.com", "staff")
         job = _job(

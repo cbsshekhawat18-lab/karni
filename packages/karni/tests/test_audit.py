@@ -117,8 +117,8 @@ def test_async_writes_go_through_the_task(
     from celery import current_app
 
     # Karni's own suite configures no Celery app; run the task inline here.
-    monkeypatch.setattr(current_app.conf, "task_always_eager", True)
-    monkeypatch.setattr(current_app.conf, "task_eager_propagates", True)
+    monkeypatch.setitem(current_app.conf, "task_always_eager", True)
+    monkeypatch.setitem(current_app.conf, "task_eager_propagates", True)
     with (
         override_settings(KARNI_AUDIT_ASYNC=True),
         django_capture_on_commit_callbacks(execute=True),
