@@ -423,7 +423,7 @@ karni schema [OPTIONS] [LABELS...]
 
 Run a Celery worker. It wraps `python -m celery -A config worker -l info [ARGS]`.
 
-A host worker on macOS gets `--pool=solo` (the prefork pool cannot run tasks there).
+A worker on a Mac runs the threads pool (Celery's prefork pool fails every task there).
 
 ```
 karni worker [OPTIONS] [ARGS...]
@@ -434,6 +434,7 @@ karni worker [OPTIONS] [ARGS...]
 | `ARGS...` |  | Passed to celery worker: -Q QUEUES, --concurrency N … |
 | `--app`, `-A` TEXT | `config` | Celery app module. Env: `KARNI_CELERY_APP`. |
 | `--loglevel`, `-l` TEXT | `info` |  |
+| `--pool`, `-P` TEXT |  | Celery's pool: threads, solo or prefork (or eventlet, gevent). Default: threads for a worker on a Mac, else Celery's prefork. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
