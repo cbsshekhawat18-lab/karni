@@ -346,11 +346,15 @@ def render(keys: list[MapKey], url: str = "") -> str:
 
 
 def _cell(text: str) -> str:
-    """A table cell: ``<`` and ``>`` outside code spans as entities, every pipe escaped."""
+    """A table cell: ``<``, ``>`` and ``|`` escaped outside code spans.
+
+    A pipe inside a code span stays as written: the docs' Markdown keeps it in
+    its cell, and an escaped one would show its backslash.
+    """
     parts = text.split("`")
     for i in range(0, len(parts), 2):
-        parts[i] = parts[i].replace("<", "&lt;").replace(">", "&gt;")
-    return "`".join(parts).replace("|", "\\|")
+        parts[i] = parts[i].replace("<", "&lt;").replace(">", "&gt;").replace("|", "\\|")
+    return "`".join(parts)
 
 
 def markdown() -> list[str]:

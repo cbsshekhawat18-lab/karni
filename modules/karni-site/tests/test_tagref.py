@@ -5,13 +5,14 @@ from __future__ import annotations
 import json
 
 import pytest
-from django.template import engines
+from django.template import Library, engines
 
 from karni_site import tagref
 
 
-def _library(name: str) -> object:
-    return engines["django"].engine.template_libraries[name]
+def _library(name: str) -> Library:
+    library: Library = engines["django"].engine.template_libraries[name]
+    return library
 
 
 def test_every_registered_tag_and_filter_has_an_entry() -> None:
