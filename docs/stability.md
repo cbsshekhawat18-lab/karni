@@ -167,6 +167,11 @@ Experimental now:
   (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
   of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [Integer primary keys](models.md#choosing-the-key-type):
+  `karni.models.BigIntBaseModel` and `IntegerKeyModel`, the `KARNI_PK`
+  setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
+  import options `match_ids` and `keep_ids` (with the `ImportJob` fields of
+  the same names), and the `KEYS:` line of `karni context`.
 
 ## Supported platforms
 

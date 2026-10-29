@@ -134,6 +134,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_EMAIL_OTP_MAX_ATTEMPTS: Any = 5
     KARNI_EMAIL_OTP_SIGNUP: Any = None
     KARNI_TERMS: Any = None
+    KARNI_PK: Any = "uuid"
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:
@@ -159,6 +160,7 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_social_token())
         errors.extend(self._check_email_otp())
         errors.extend(self._check_terms())
+        errors.extend(self._check_pk())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
         errors.extend(self._check_karni_knobs())
@@ -505,6 +507,15 @@ class KarniSettingsModel(BaseModel):
                 "None (None follows KARNI_ACCOUNTS_REGISTRATION)"
             )
         return errors
+
+    def _check_pk(self) -> list[str]:
+        """The key type ``karni make model`` writes (experimental): ``uuid`` or ``bigint``."""
+        if self.KARNI_PK in ("uuid", "bigint"):
+            return []
+        return [
+            f"KARNI_PK = {self.KARNI_PK!r} must be 'uuid' (BaseModel) or 'bigint' "
+            "(BigIntBaseModel): the key type karni make model writes"
+        ]
 
     def _check_terms(self) -> list[str]:
         """Terms acceptance (experimental): ``KARNI_TERMS`` is None or a dict of known keys."""

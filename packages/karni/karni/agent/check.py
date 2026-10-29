@@ -31,9 +31,17 @@ from .rules import ENFORCEMENT_CODES, rules_by_code
 SQL_ALLOWED: tuple[str, ...] = ("*/sql/*", "*/migrations/*")
 HTTP_ALLOWED: tuple[str, ...] = ("*/services/*", "*/providers/*", "*/tests/*", "conftest.py")
 HTTP_BANNED: frozenset[str] = frozenset({"requests", "httpx", "urllib.request"})
-#: Any of these as a base satisfies model-base (BaseModel or its mixins).
+#: Any of these as a base satisfies model-base (BaseModel, BigIntBaseModel or their mixins).
 KARNI_MODEL_BASES: frozenset[str] = frozenset(
-    {"BaseModel", "UUIDModel", "TimestampedModel", "SoftDeleteModel", "AuditedModel"}
+    {
+        "BaseModel",
+        "BigIntBaseModel",
+        "UUIDModel",
+        "IntegerKeyModel",
+        "TimestampedModel",
+        "SoftDeleteModel",
+        "AuditedModel",
+    }
 )
 _DRF_VIEWSETS = frozenset({"GenericViewSet", "ModelViewSet", "ReadOnlyModelViewSet"})
 

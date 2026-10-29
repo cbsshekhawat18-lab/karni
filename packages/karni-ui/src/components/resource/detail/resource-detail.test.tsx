@@ -163,6 +163,16 @@ describe("ResourceDetail", () => {
     expect(screen.queryByText("Mystery")).not.toBeInTheDocument();
   });
 
+  it("shows an integer id as written and other integers grouped for the locale", () => {
+    mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
+    mockUseResourceItem.mockReturnValue(
+      queryResult<Row>({ ...auditedRecord, id: 1234567, capacity: 1234567 }),
+    );
+    render(<ResourceDetail resource="events" id={1234567} />);
+    expect(screen.getByText("1234567")).toBeInTheDocument();
+    expect(screen.getByText((1234567).toLocaleString())).toBeInTheDocument();
+  });
+
   it("renders domain fields first and the audit fields last in a muted Record group", () => {
     mockUseSchema.mockReturnValue({ data: auditedSchema, isLoading: false, error: undefined });
     mockUseResourceItem.mockReturnValue(queryResult<Row>(auditedRecord));

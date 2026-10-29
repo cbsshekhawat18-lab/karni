@@ -467,12 +467,26 @@ setting `karni_auto_filterset = True`) declares no `filterset_class`/
 | Char/Slug/Email | `exact`, `icontains` |
 | Int/Float/Decimal/Date/DateTime | `exact`, `gte`, `lte` |
 | Boolean | `exact` |
-| FK/O2O | `exact` (typed by the target pk, so UUID pks get a UUID filter) |
+| FK/O2O | `exact` (typed by the target pk: a UUID filter for UUID keys, `IntegerFilter` for integer keys) |
 | fields with `choices` | `exact` via `ChoiceFilter` (stays an enum) |
 
-Excluded from derivation: `TextField` (unindexed seq scans, so opt back in
-with explicit `filterset_fields`), File/Image/JSON/binary fields,
-`APIMeta.write_only`/excluded fields, and password-named fields. The
+Excluded from derivation: the model's own primary key, `TextField`
+(unindexed seq scans, so opt back in with explicit `filterset_fields`),
+File/Image/JSON/binary fields, `APIMeta.write_only`/excluded fields, and
+password-named fields. The primary key gets no `?id=`, `?id__gte=` or
+`?id__lte=` whatever its type: on [integer keys](models.md#choosing-the-key-type)
+a range would page through the table by key. Declare one where you want it:
+
+```python
+class ReadingViewSet(BaseViewSet):
+    model = Reading
+    access = Access(read=HasRole("analyst"), write=HasRole("analyst"))
+    filterset_fields = {"id": ["exact", "gte", "lte"], "sensor": ["exact"]}
+```
+
+`karni.api.filters.IntegerFilter` (experimental) is an exact filter that
+takes whole numbers only, so `?sensor=1.5` is refused (400) instead of
+matching row 1, and the schema documents an integer. The
 type→lookups map is the overridable `lookup_map` class attribute on
 `KarniFilterBackend`. Explicit `filterset_*` on the viewset always wins,
 untouched, except for one thing. A relation named in `filterset_fields`

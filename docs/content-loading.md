@@ -202,7 +202,11 @@ existing row or creates a new one. The key is, in order:
    a `UniqueConstraint` on fields), such as `(placement, service, position)`
    for `Slide` above. A nullable field in the key matches `null`.
 4. The primary key. The row then carries its `id`, and a created row keeps
-   that id, so the next run finds it.
+   that id, so the next run finds it. On an
+   [integer key](models.md#choosing-the-key-type) these are legacy ids: once
+   the load commits, the database sequence moves past the largest one
+   (PostgreSQL's `setval`), so the next row created without an id gets a
+   fresh one.
 
 A row is **unchanged** when every value in it already matches the database,
 many-to-many fields and files included. Nothing is saved for it, so
@@ -215,7 +219,9 @@ row the file still lists is restored.
 ## Relations
 
 A relation names its target by the target's natural key, or by its primary
-key: one value for a foreign key, a list for a many-to-many field.
+key when the target has no natural key: one value for a foreign key, a list
+for a many-to-many field. A target with a natural key is matched on it
+alone, so a numeric natural key is never read as an id.
 `Karni.import_lookup = {"service": "title"}` names a different target field,
 as it does for the importer.
 

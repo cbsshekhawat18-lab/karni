@@ -16,18 +16,47 @@ and admin need real reverse relations):
   and M2M, every primary key a UUID;
 * ``Review`` — ``SoftDeleteModel`` used alone (integer pk) as a ``CASCADE``
   child of the UUID-keyed ``Book``.
+
+``Part`` and ``Reading`` are integer-keyed whatever ``KARNI_TEST_PK`` says
+(no viewsets): legacy ids, sequences, seeding, and a natural key made of
+digits (``Part.number``).
+
+The API models (the trio, the slots, the field-role and audit models) inherit
+:data:`ApiBase`: ``BaseModel``, or ``BigIntBaseModel`` when the suite runs
+with ``KARNI_TEST_PK=bigint`` (CI runs it both ways). The model-layer set
+keeps the base it tests.
 """
 
 from __future__ import annotations
+
+import os
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from karni.models import AuditedModel, BaseModel, SoftDeleteModel, TimestampedModel, UUIDModel
+from karni.models import (
+    AuditedModel,
+    BaseModel,
+    BigIntBaseModel,
+    SoftDeleteModel,
+    TimestampedModel,
+    UUIDModel,
+)
+
+#: The key type of the API models: ``uuid`` (the default) or ``bigint``.
+TEST_PK = os.environ.get("KARNI_TEST_PK", "uuid")
+if TEST_PK not in ("uuid", "bigint"):
+    raise RuntimeError(f"KARNI_TEST_PK must be uuid or bigint, not {TEST_PK!r}.")
+
+if TYPE_CHECKING:
+    ApiBase = BaseModel
+else:
+    ApiBase = BigIntBaseModel if TEST_PK == "bigint" else BaseModel
 
 
-class Venue(BaseModel):
+class Venue(ApiBase):
     """Relation target with two searchable text fields and no relations."""
 
     name = models.CharField(max_length=200)
@@ -42,7 +71,7 @@ class Venue(BaseModel):
         return self.name
 
 
-class Tag(BaseModel):
+class Tag(ApiBase):
     """Minimal M2M target."""
 
     name = models.CharField(max_length=100)
@@ -56,7 +85,7 @@ class Tag(BaseModel):
         return self.name
 
 
-class Event(BaseModel):
+class Event(ApiBase):
     """The contract's target model: one of every interesting field shape."""
 
     class Status(models.TextChoices):
@@ -164,7 +193,7 @@ class Book(BaseModel):
         return self.title
 
 
-class Slot(BaseModel):
+class Slot(ApiBase):
     """A model whose invariant lives in clean(): the API runs it (karni.api.serializers)."""
 
     starts_at = models.DateTimeField()
@@ -175,7 +204,7 @@ class Slot(BaseModel):
             raise ValidationError({"ends_at": "ends_at must be after starts_at."})
 
 
-class LooseSlot(BaseModel):
+class LooseSlot(ApiBase):
     """Same rule, but APIMeta.validate = False keeps the API from running clean()."""
 
     starts_at = models.DateTimeField()
@@ -189,7 +218,7 @@ class LooseSlot(BaseModel):
             raise ValidationError({"ends_at": "ends_at must be after starts_at."})
 
 
-class Customer(BaseModel):
+class Customer(ApiBase):
     """Field-level visibility (tests/api/test_field_roles.py): roles see different fields."""
 
     name = models.CharField(max_length=100)
@@ -208,7 +237,7 @@ class Customer(BaseModel):
         return self.name
 
 
-class Ticket(BaseModel):
+class Ticket(ApiBase):
     """Points at ``Customer`` so ``?expand=customer`` is tested under field roles."""
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="tickets")
@@ -218,7 +247,7 @@ class Ticket(BaseModel):
         return self.subject
 
 
-class Price(BaseModel):
+class Price(ApiBase):
     """Change history (tests/test_audit.py): every field audited, ``note`` recorded redacted."""
 
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -246,3 +275,31 @@ class Review(SoftDeleteModel):
 
     def __str__(self) -> str:
         return f"{self.stars} stars"
+
+
+# integer keys whatever KARNI_TEST_PK says (tests/transfer/test_integer_keys.py)
+
+
+class Part(BigIntBaseModel):
+    """An integer key and a natural key made of digits: a part number is never read as an id."""
+
+    number = models.CharField(max_length=20, unique=True)
+    label = models.CharField(max_length=100, blank=True, default="")
+
+    class Karni:
+        natural_key = "number"
+
+    def __str__(self) -> str:
+        return self.number
+
+
+class Reading(BigIntBaseModel):
+    """An integer key and no natural key: rows are named by id only."""
+
+    part = models.ForeignKey(
+        Part, null=True, blank=True, on_delete=models.SET_NULL, related_name="readings"
+    )
+    value = models.IntegerField(default=0)
+
+    def __str__(self) -> str:
+        return f"reading {self.pk}"

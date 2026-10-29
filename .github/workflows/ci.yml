@@ -127,6 +127,22 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
+      # Integer keys (BigIntBaseModel, experimental): the core suite once more
+      # with the test app's API models on integer keys (KARNI_TEST_PK=bigint),
+      # on sqlite and on PostgreSQL. One Python is enough: the key type, not
+      # the interpreter, is what changes.
+      - name: Test packages/karni with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: packages/karni
+        env:
+          KARNI_TEST_PK: bigint
+          KARNI_REQUIRE_MODULES: "1"
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
+
       # The modules' suites pin sqlite the same way, and the same overlay
       # serves them: it imports the working directory's tests.settings.
       # karni-approvals and karni-impersonation have an unmigrated

@@ -273,3 +273,30 @@ blocks), adds the forms and ends with `karni check`. Run `karni rules sync`. Unt
 then `karni rules sync --check` (and make check) reports the files as stale."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-agent-files-state-the-kind-run-karni-rules-sync"
+
+[[change]]
+id = "pk-filters-not-derived"
+kind = "behaviour"
+symbol = "karni.api.filters.KarniFilterBackend (?id=, ?id__gte=, ?id__lte=)"
+summary = """\
+The derived filterset no longer filters on the model's own primary key, for UUID and \
+integer keys alike: an integer key range (?id__gte=) would page through the table by \
+key. A project whose clients send ?id=, ?id__gte= or ?id__lte= declares them, e.g. \
+filterset_fields = {"id": ["exact", "gte", "lte"]} on the viewset. A relation to an \
+integer-keyed model filters with IntegerFilter (whole numbers only) instead of \
+NumberFilter."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-primary-key-is-no-longer-a-derived-filter"
+
+[[change]]
+id = "import-ids-are-explicit"
+kind = "behaviour"
+symbol = "karni.transfer imports: the id column and relation cells"
+summary = """\
+An upload matches existing rows by its id column only with the new match_ids option \
+(it was implicit), so an export from one environment cannot update unrelated rows in \
+another. A relation cell names a target with a natural key by that key alone, never \
+also by its id. keep_ids creates rows with the file's ids. karni_transfer migration \
+0002 adds both options to ImportJob: run `karni migrate`."""
+mechanical = false
+migration = "migrations/0.4.1.md#imports-match-ids-only-when-asked"

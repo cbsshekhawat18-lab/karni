@@ -227,7 +227,7 @@ Every check compares the hidden row with a primary key that does not exist:
 | `search` | stay out of `?search=` with a word of it. With `search="<term>"` (a term only the row matches), the search must find nothing |
 | `ordering` | not change which rows or how many come back for any orderable response field (no row repeated or dropped). A model field the response does not show must not reorder the list |
 | `expand` | not be embedded by any resource relating to it, through `?expand=` or a list of primary keys, on a read or in a `PATCH` response |
-| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it |
+| `export` | not be written by `export/` in any format (also when filtered or searched for), nor named by its natural key in an export of a row pointing at it. A row is recognised by the exact value of the `id` column (without one, by a cell holding the id as a whole value), so a short integer id never matches `15` or a count of 5 |
 
 The admin counterpart checks that the changelist (and its search) leaves the
 row out, and that the change, history and delete views, read or posted to,
@@ -408,6 +408,17 @@ Escape hatches:
 - In an `APITestCase`, `self.assert_pages(PAGES)` uses `self.client`.
   `client=` passes another one, for example a signed-in client for pages
   behind a login.
+
+## Integer keys
+
+Every helper on this page works for models on
+[integer keys](models.md#choosing-the-key-type) (`BigIntBaseModel`) as for
+UUIDs: `assert_crud` probes a detail URL its route accepts (a numeric
+`lookup_value_regex` gets `0`), `assert_isolated` and `assert_row_hidden`
+compare a missing id of the model's own key type, and the leak checks match
+an id exactly. Karni's own suite runs these tests once per key type
+(`KARNI_TEST_PK=bigint` puts its test app's API models on integer keys), on
+SQLite and on PostgreSQL.
 
 ## Schema snapshot
 

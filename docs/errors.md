@@ -1148,6 +1148,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
 
+<a id="w530"></a>
+
+#### W530: Anyone may read a resource whose ids can be guessed
+
+*system check (warning)* · from `karni.checks.check_public_integer_keys`
+
+**Why Karni objects.** The model has an integer primary key (BigIntBaseModel or an AutoField), its detail route looks rows up by that key, and its read access admits anonymous callers. Integer ids are sequential, so a visitor learns how many rows there are and can walk the detail URLs one id after the other, including rows no list links to.
+
+**Fix.** Give the model a UUID key (inherit BaseModel) or look rows up by a slug (lookup_field = "slug" on the viewset). When the ids may be public, write `# karni: allow(public-integer-key): <reason>` above the viewset class, or add 'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>
@@ -1572,7 +1582,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.debug.replay; karni replay --as`
 
-**Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses.
+**Why Karni objects.** A replay runs as the captured user, or the user --as names (a primary key, an email or a username). That user must exist in the database the replay uses, and the captured id must still belong to the captured email: after a reset, integer ids are reused by other users.
 
 **Fix.** Pass --as with an existing user's email, username or primary key, or pass --anonymous. Do not pass both.
 
@@ -2934,11 +2944,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `model-base`
 
-**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only.
+**Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only. `BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per model in its class line; `karni context` shows each model's key type.
 
-**Why Karni objects.** The mixins supply uuid ids, timestamps, soft delete, audit stamping and the managers the derived API/admin rely on.
+**Why Karni objects.** The mixins supply the primary key (a UUID, or an integer with `BigIntBaseModel`), timestamps, soft delete, audit stamping and the managers the derived API/admin rely on.
 
-**Fix.** Inherit karni.models.BaseModel (or compose its mixins).
+**Fix.** Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).
 
 <a id="k102"></a>
 

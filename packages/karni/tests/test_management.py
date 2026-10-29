@@ -34,6 +34,7 @@ def test_context_command_shape() -> None:
     keys = [line.split(":", 1)[0] for line in out.getvalue().strip().split("\n")]
     order = (
         "MODELS",
+        "KEYS",
         "SCOPES",
         "VIEWSETS",
         "ROLES",
@@ -54,6 +55,8 @@ def test_bases_line_matches_real_exports() -> None:
     from karni.models import (  # noqa: F401
         AuditedModel,
         BaseModel,
+        BigIntBaseModel,
+        IntegerKeyModel,
         SoftDeleteModel,
         TimestampedModel,
         UUIDModel,
@@ -61,7 +64,9 @@ def test_bases_line_matches_real_exports() -> None:
 
     resolved = {
         "BaseModel",
+        "BigIntBaseModel",
         "UUIDModel",
+        "IntegerKeyModel",
         "TimestampedModel",
         "SoftDeleteModel",
         "AuditedModel",
@@ -102,6 +107,33 @@ def test_field_cap_and_declaration_order(settings) -> None:
     event_fields = models_line.split("Event(")[1].split(")")[0].split(",")
     assert 0 < len(event_fields) <= 4
     assert event_fields[0] == "title"
+
+
+@pytest.mark.django_db
+def test_keys_section_names_each_model_key_type(settings) -> None:
+    from karni.introspect import key_type, keys_section
+    from tests.testapp.models import TEST_PK, Event, Part, Stamp
+
+    others = {cfg.label for cfg in apps.get_app_configs() if cfg.label != "testapp"}
+    settings.KARNI_CONTEXT_SKIP_APPS = others
+    assert key_type(Stamp) == "uuid" and key_type(Part) == "bigint"
+    assert key_type(Event) == TEST_PK
+    keys = _sections(build_context())["KEYS"]
+    assert keys == keys_section().removeprefix("KEYS: ")  # type: ignore[union-attr]
+    # The most common type covers "the rest", every other type names its models.
+    # Entry, Remark and Review get DEFAULT_AUTO_FIELD (BigAutoField).
+    if TEST_PK == "uuid":
+        assert keys == "bigint(Entry,Part,Reading,Remark,Review) uuid(rest)"
+    else:
+        assert keys == "uuid(Book,Label,Shelf,Stamp) bigint(rest)"
+
+
+def test_keys_section_says_all_when_every_key_is_one_type(monkeypatch) -> None:
+    from karni import introspect
+    from tests.testapp.models import Shelf, Stamp
+
+    monkeypatch.setattr(introspect, "_domain_models", lambda: [("Shelf", Shelf), ("Stamp", Stamp)])
+    assert introspect.keys_section() == "KEYS: uuid(all)"
 
 
 @pytest.mark.django_db

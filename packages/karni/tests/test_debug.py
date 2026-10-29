@@ -579,6 +579,20 @@ def test_replay_unknown_user(karni_dir: Path, user: Any) -> None:
         call_command("karni_replay", response["X-Request-ID"], "--as", "nobody@example.com")
 
 
+def test_replay_refuses_when_the_captured_id_now_names_someone_else(
+    karni_dir: Path, user: Any
+) -> None:
+    """After a reset, integer ids are reused: the id must still belong to the captured email."""
+    response = _client(user).get("/debug/staff/")
+    captured_email = user.email
+    type(user)._default_manager.filter(pk=user.pk).update(email="someone-else@example.com")
+    with pytest.raises(CommandError, match="E924") as refused:
+        call_command("karni_replay", response["X-Request-ID"])
+    message = str(refused.value)
+    assert repr(captured_email) in message and "'someone-else@example.com'" in message
+    assert "a reset reuses integer ids" in message and f"--as {captured_email}" in message
+
+
 # --- the system check ------------------------------------------------------------------
 
 

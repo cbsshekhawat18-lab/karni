@@ -28,7 +28,7 @@ carries it, and `pytest
 
 | Rule id | Fails when | Fix |
 |---|---|---|
-| `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` / `SoftDeleteModel` |
+| `model-base` | a concrete model inherits `django.db.models.Model` directly | inherit `karni.models.BaseModel` (or `BigIntBaseModel`, or compose the mixins) |
 | `viewset-base` | a GenericViewSet subclass bypasses `BaseViewSet` | inherit `karni.api.BaseViewSet` |
 | `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` (inherited declarations and an overridden `get_access()` count) | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
@@ -108,6 +108,35 @@ KARNI_ARCHITECTURE = {
     "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]},
 }
 ```
+
+## Integer keys on a public resource
+
+!!! warning "Experimental"
+    `karni.W530` belongs to [integer keys](models.md#choosing-the-key-type),
+    which are [experimental](stability.md#experimental-names).
+
+`karni check` (and every `manage.py check`) warns with `karni.W530` for a
+routed `BaseViewSet` whose model has an integer primary key
+(`BigIntBaseModel`, an `AutoField`), whose detail route looks rows up by that
+key, and whose `read` access lets anonymous callers in (`Public()`, alone or
+in an `|`). Integer ids are sequential, so a visitor learns how many rows
+there are and can walk `/readings/1/`, `/readings/2/`, ..., including rows no
+list links to. It is a warning: `karni check` prints it and passes, and
+`karni check --deploy` fails on it.
+
+The fix is a UUID key (`BaseModel`) or a slug lookup
+(`lookup_field = "slug"`). When the ids may be public, say why above the
+viewset class, with the same marker as the rules above:
+
+```python
+# karni: allow(public-integer-key): order numbers are printed on every receipt
+class OrderViewSet(BaseViewSet):
+    model = Order
+    access = Access(read=Public(), write=HasRole("staff"))
+```
+
+A marker without a reason does not silence it. `'karni.W530'` in
+`SILENCED_SYSTEM_CHECKS` silences it for the whole project.
 
 ## Frontend rules
 

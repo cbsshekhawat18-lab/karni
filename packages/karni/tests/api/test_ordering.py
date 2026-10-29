@@ -41,7 +41,7 @@ def _listed_ids(query: dict[str, str] | None = None) -> list[str]:
     view = EventViewSet.as_view({"get": "list"})
     response = view(APIRequestFactory().get("/", query or {}))
     assert response.status_code == 200, response.data
-    return [row["id"] for row in response.data["results"]]
+    return [str(row["id"]) for row in response.data["results"]]
 
 
 def _default_ordering() -> list[str]:

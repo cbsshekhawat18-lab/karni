@@ -70,11 +70,17 @@ def _class_violation(cls: type, rule: str, message: str, hint: str = "") -> list
 
 
 def check_model_base() -> list[Violation]:
-    from karni.models import AuditedModel, SoftDeleteModel, TimestampedModel, UUIDModel
+    from karni.models import (
+        AuditedModel,
+        IntegerKeyModel,
+        SoftDeleteModel,
+        TimestampedModel,
+        UUIDModel,
+    )
 
-    # BaseModel or any composition of Karni's mixins counts; only a model
-    # built on django.db.models.Model alone is a violation.
-    karni_bases = (UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel)
+    # BaseModel, BigIntBaseModel or any composition of Karni's mixins counts;
+    # only a model built on django.db.models.Model alone is a violation.
+    karni_bases = (UUIDModel, IntegerKeyModel, TimestampedModel, SoftDeleteModel, AuditedModel)
 
     violations: list[Violation] = []
     for cfg in project_app_configs():

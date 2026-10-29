@@ -24,6 +24,7 @@ import { CheckIcon } from "../../primitives/icons";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
+import { formatNumberValue } from "../number-value";
 import { asRecord, enumLabel } from "./table-utils";
 
 /** Per-field override merged over the schema-derived column. */
@@ -153,7 +154,7 @@ export function renderFieldCell(
     case "integer":
       return (
         <span className="tabular-nums">
-          {typeof value === "number" ? value.toLocaleString() : String(value)}
+          {typeof value === "number" ? formatNumberValue(field, value) : String(value)}
         </span>
       );
     case "file":

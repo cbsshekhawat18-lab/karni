@@ -88,8 +88,9 @@ def test_unexpanded_relations_are_primary_keys(organizer: Any, venue: Venue) -> 
 def test_expand_venue_nests_the_object(organizer: Any, venue: Venue) -> None:
     _event(organizer=organizer, venue=venue)
     row = _only_row(_list({"expand": "venue"}))
+    assert str(row["venue"]["id"]) == str(venue.pk)
     assert row["venue"] == {
-        "id": str(venue.pk),
+        "id": row["venue"]["id"],
         "name": "Arena",
         "city": "Berlin",
         "created_at": row["venue"]["created_at"],

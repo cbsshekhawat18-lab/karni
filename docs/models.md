@@ -1,10 +1,10 @@
 ---
-description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), the managers, related lookups and what each mixin does alone."
+description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), BigIntBaseModel for integer keys, the managers, related lookups and what each mixin does alone."
 ---
 
 # Models
 
-Every project model inherits `karni.models.BaseModel`:
+Every project model inherits `karni.models.BaseModel`, or `BigIntBaseModel` for an integer key:
 
 ```python
 from django.db import models
@@ -18,7 +18,7 @@ class Event(BaseModel):
 
 | Mixin | Adds | Behaviour |
 |---|---|---|
-| `UUIDModel` | `id` (uuid4 primary key) | No sequential IDs to enumerate, safe in URLs |
+| `UUIDModel` | `id` (uuid4 primary key) | No sequential IDs to enumerate, safe in URLs. `IntegerKeyModel` puts an integer key in its place ([choosing the key type](#choosing-the-key-type)) |
 | `TimestampedModel` | `created_at` (indexed), `updated_at` | Maintained by Django (`auto_now_add` / `auto_now`) |
 | `SoftDeleteModel` | `deleted_at` | `delete()` hides the row, and `hard_delete()` removes it |
 | `AuditedModel` | `created_by`, `updated_by` | Stamped from the current user on save |
@@ -29,6 +29,97 @@ example, an append-only log should never be soft-deleted:
 ```python
 class AccessLog(UUIDModel, TimestampedModel): ...
 ```
+
+## Choosing the key type
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    `karni.models.BigIntBaseModel`, `karni.models.IntegerKeyModel`, the
+    `KARNI_PK` setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`,
+    the import options `match_ids` and `keep_ids`, and the `KEYS:` line of
+    `karni context`.
+
+`BaseModel` gives every row a random UUID. `BigIntBaseModel` is the same
+base with a 64-bit integer that the database counts up (`BigAutoField`):
+timestamps, soft delete, audit users, the guards, the managers and
+`pre_write` are identical. The key type shows in each model's class line,
+so one project can mix both:
+
+```python
+from karni.models import BaseModel, BigIntBaseModel
+
+class Sensor(BaseModel):            # id: a UUID
+    name = models.CharField(max_length=100)
+
+class Reading(BigIntBaseModel):     # id: 1, 2, 3, ...
+    sensor = models.ForeignKey(Sensor, on_delete=models.CASCADE)
+    value = models.FloatField()
+```
+
+`IntegerKeyModel` is the mixin on its own, next to `UUIDModel`, for a
+composition such as `class Tick(IntegerKeyModel, TimestampedModel)`.
+
+| | UUID (`BaseModel`) | Integer (`BigIntBaseModel`) |
+|---|---|---|
+| In a URL | Safe to show: nobody can guess the next one | Guessable: `/readings/1/`, `/readings/2/`, ... |
+| Size and joins | 16 bytes, random order | 8 bytes, insertion order |
+| Other systems | Generated anywhere, merges without clashes | Matches an existing system's integer ids |
+| Created when | At `Model()` (before the insert) | At the insert (`pk` is `None` until then) |
+
+Choose integers for a table that grows large, is joined a lot, or holds ids
+another system already uses. Keep UUIDs for anything a visitor reaches by
+URL. Integer keys can be guessed, so `karni check` warns (`karni.W530`) for
+a resource whose model has an integer key and whose read access lets
+anonymous callers in. Look such rows up by a slug (`lookup_field = "slug"`
+on the viewset), keep the model on UUIDs, or say why the ids may be public
+with `# karni: allow(public-integer-key): <reason>` above the viewset class
+(see [enforcement](enforcement.md#integer-keys-on-a-public-resource)).
+
+**Karni's own models keep their UUIDs.** The accounts, change history,
+imports and every module's models are on `BaseModel`, and their migrations
+do not change whatever your models use. Your models choose their key one
+by one.
+
+**`karni make model`** writes `BaseModel`. Set `KARNI_PK = "bigint"` in
+`config/settings.py` (a plain assignment, which the CLI reads without
+importing your project) to make it write `BigIntBaseModel`, and pass
+`--pk uuid` or `--pk bigint` to choose for one model. Nothing else reads the
+setting.
+
+**Ids stay JSON numbers.** The API writes an integer id as a number
+(`"id": 1234`), so mind two limits:
+
+- **JavaScript** holds integers exactly up to 2^53 - 1
+  (9 007 199 254 740 991). A sequence that starts at 1 stays far below it,
+  but an id from another system above it loses digits in the browser. Keep
+  such a value in a string field next to the key.
+- **Excel** keeps 15 significant digits. An exported id longer than that
+  comes back changed. Format the column as text before you edit and import
+  the file.
+
+**Switching an existing model's key type** while it holds data is out of
+scope. Every foreign key, many-to-many table, change-history row and import
+file that names those rows would have to be rewritten in one data migration,
+and Karni does not write it for you. Choose the key type when you create the
+model.
+
+### An integer-keyed user
+
+A project can give its own user model an integer key by redeclaring `id` on
+a subclass of `AbstractKarniUser`:
+
+```python
+from django.db import models
+from karni.accounts.models import AbstractKarniUser
+
+class User(AbstractKarniUser):
+    id = models.BigAutoField(primary_key=True)
+```
+
+Point `AUTH_USER_MODEL` at it before the first `migrate`, as for any custom
+user model. Login, JWT and session mode, `me/`, roles, the 2FA gate,
+sign-in with an ID token or a code, and the terms gate all work with it, and
+Karni's suite runs those flows with such a user.
 
 ## Soft delete
 

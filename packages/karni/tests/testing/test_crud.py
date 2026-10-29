@@ -388,3 +388,36 @@ def test_a_payload_value_that_replaces_an_upload_is_not_checked_as_a_file() -> N
     staff = user_with_roles("staff")
     body = build_payload(resolve_resource(crud_urls.PhotoViewSet), staff, payload={"image": ""})
     assert body.files == [] and not body.multipart
+
+
+@pytest.mark.parametrize(
+    ("accepts", "expected"),
+    [
+        (str.isdigit, "/probe/0/"),  # lookup_value_regex = r"[0-9]+"
+        (lambda value: "-" in value, "/probe/00000000-0000-0000-0000-000000000000/"),
+        (str.isalpha, "/probe/probe/"),  # a slug-like lookup
+    ],
+)
+def test_the_schema_probe_follows_the_route_lookup_regex(accepts: Any, expected: str) -> None:
+    """check_schema's detail probe is a value the route reverses, for either key type."""
+    from django.urls import NoReverseMatch
+
+    from karni.testing.api import _probe_detail_url
+    from tests.testapp.models import Part, Shelf
+
+    class Viewset:
+        lookup_field = "pk"
+
+    class Probe:
+        viewset = Viewset
+
+        def __init__(self, model: Any) -> None:
+            self.model = model
+
+        def detail_url(self, pk: Any) -> str:
+            if not accepts(str(pk)):
+                raise NoReverseMatch(str(pk))
+            return f"/probe/{pk}/"
+
+    for model in (Part, Shelf):
+        assert _probe_detail_url(Probe(model)) == expected  # type: ignore[arg-type]

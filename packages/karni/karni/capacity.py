@@ -227,6 +227,8 @@ def capacity_conflict(
     """The CHECK of a CapacityField refused a write: ``E985`` naming the resource and its count."""
     from karni.constraints import capacity_bound
 
+    # An unsaved instance (an integer key not drawn yet) has no id to show.
+    key = instance.pk if instance is not None else None
     for field in capacity_fields(model):
         bound = capacity_bound(model, field).name if field.total is not None else None
         over = bound is not None and (
@@ -238,14 +240,14 @@ def capacity_conflict(
         if over:
             return CapacityExceeded(
                 f"{model.__name__}"
-                + (f" {instance.pk}" if instance is not None else "")
+                + (f" {key}" if key is not None else "")
                 + f": the database refused {field.name} above {field.total} (constraint "
                 f"{bound}). Give capacity back only with karni.capacity.release(), once per "
                 "reservation.",
                 field=field.name,
                 details={
                     "resource": model._meta.label,
-                    "id": str(instance.pk) if instance is not None else None,
+                    "id": str(key) if key is not None else None,
                     "field": field.name,
                     "constraint": bound,
                 },
@@ -258,7 +260,7 @@ def capacity_conflict(
                 model._base_manager.using(alias).filter(pk=instance.pk).values(*names).first() or {}
             )
         remaining = current.get(field.attname)
-        what = f"{model.__name__} {instance.pk}" if instance is not None else model.__name__
+        what = f"{model.__name__} {key}" if key is not None else model.__name__
         if field.total is not None and instance is not None:
             total = getattr(instance, field.total_field().attname, None)  # type: ignore[union-attr]
             reserved = None
@@ -280,7 +282,7 @@ def capacity_conflict(
             field=field.total if field.total is not None and instance is not None else field.name,
             details={
                 "resource": model._meta.label,
-                "id": str(instance.pk) if instance is not None else None,
+                "id": str(key) if key is not None else None,
                 "field": field.name,
                 "remaining": remaining,
             },

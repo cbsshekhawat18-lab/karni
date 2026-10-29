@@ -98,6 +98,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_DEBUG_TRACE_DAYS": "Days of `.karni/trace/` files to keep.",
     "KARNI_EVENTS_AUTODISCOVER": "Import every app's `events.py` and `listeners.py` at startup.",
     "KARNI_SCHEDULES_AUTODISCOVER": "Import every app's `schedules.py` at startup.",
+    "KARNI_PK": 'Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model\'s class line decides its key. See [choosing the key type](models.md#choosing-the-key-type).',
     "KARNI_ARCHITECTURE": "Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md).",
     "KARNI_SCOPES": "The active model scopes in pipeline order. Leaving it unset runs every registered scope. See [models](models.md#scopes-the-filters-every-default-manager-applies).",
     "KARNI_PAYMENTS_PROVIDER": "karni-payments: `stripe`, `razorpay`, `test` or a dotted `PaymentProvider` path.",

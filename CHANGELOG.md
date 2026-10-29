@@ -88,6 +88,45 @@ apply codemods and list the manual steps. This file is the human summary.
   (from `/me/` and from the gate's 403 on any request, through the client's
   new `onError` hook) and `acceptTerms(client)`.
   [docs/accounts.md](docs/accounts.md#terms-acceptance).
+- **Integer primary keys, next to UUIDs (experimental).** `BigIntBaseModel`
+  is `BaseModel` on a 64-bit integer key (`BigAutoField`), with the same
+  timestamps, soft delete, audit users, guards, managers and `pre_write`.
+  Both bases share one private core, so they never drift. The key type is in
+  each model's class line, so one project mixes both, and Karni's own models
+  and the modules keep their UUIDs and their migrations. `IntegerKeyModel`
+  is the mixin on its own. `karni make model --pk bigint|uuid` picks it per
+  model, and `KARNI_PK = "bigint"` in `config/settings.py` makes it the
+  default. A project's own user model can redeclare `id` as a `BigAutoField`
+  on `AbstractKarniUser`: login, JWT and session mode, `me/`, roles, 2FA,
+  sign-in with an ID token or a code and the terms gate work with it.
+  Integer keys can be guessed: `karni.W530` warns for a resource on integer
+  keys that anyone may read (fix: a UUID key or a slug lookup; silence one
+  viewset with `# karni: allow(public-integer-key): <reason>`). Ids stay JSON
+  numbers. `karni context` prints each model's key type on a `KEYS:` line.
+  `karni seed --reset` restarts the sequences it wipes, so the same seed gives
+  the same integer ids. [docs/models.md](docs/models.md#choosing-the-key-type).
+- **The primary key is no longer a derived filter.** `?id=`, `?id__gte=` and
+  `?id__lte=` are not derived any more, for either key type. Declare them in
+  `filterset_fields` where clients need them. A relation to an integer-keyed
+  model filters with the new `IntegerFilter`, which refuses `1.5`.
+  [Migration note](docs/migrations/0.4.1.md#the-primary-key-is-no-longer-a-derived-filter).
+- **Imports match ids only when asked.** An upload's `id` column matches
+  existing rows only with the new `match_ids` option, so an export from one
+  environment cannot update unrelated rows in another, and `keep_ids` creates
+  rows with the file's ids (legacy data, for a role that may create rows
+  anywhere), then moves the PostgreSQL sequence past them. `karni load` moves
+  the sequence after writing integer ids too. A relation cell names a target
+  with a natural key by that key alone, so a numeric natural key is never
+  read as an id. A row outside the scope reads "not found or not in your
+  scope", whether it exists or not. The admin's map step has both options.
+  Migration `karni_transfer.0002_importjob_id_options`.
+  [docs/import-export.md](docs/import-export.md#ids).
+- **Smaller fixes for integer keys.** `assert_row_hidden`'s export checks
+  match an id exactly, never as a substring. `check_schema` probes a detail
+  URL a numeric `lookup_value_regex` accepts. `karni replay` refuses (`E924`)
+  when the captured id now belongs to another email. Ids show without
+  thousands separators in `ResourceDetail` and `ResourceTable`. A capacity,
+  overlap or state error on an unsaved row no longer names `None` as its id.
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and

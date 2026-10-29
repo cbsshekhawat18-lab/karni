@@ -20,6 +20,7 @@ from karni.api import Access, Authenticated, BaseViewSet, HasRole, Public
 from tests.testapp.models import Event, LooseSlot, Slot, Tag, Venue
 
 
+# karni: allow(public-integer-key): the test API is public on purpose, with either key type
 class EventViewSet(BaseViewSet):
     """The contract's target API: full CRUD from three declared attributes."""
 
@@ -28,6 +29,7 @@ class EventViewSet(BaseViewSet):
     search_fields = ["title"]
 
 
+# karni: allow(public-integer-key): the test API is public on purpose, with either key type
 class VenueViewSet(BaseViewSet):
     """Bare declaration — everything comes from conventions and settings."""
 
@@ -35,6 +37,7 @@ class VenueViewSet(BaseViewSet):
     access = Access(read=Public(), write=Authenticated())
 
 
+# karni: allow(public-integer-key): the test API is public on purpose, with either key type
 class TagViewSet(BaseViewSet):
     """Kept off the auto-router; tests register it explicitly when needed."""
 

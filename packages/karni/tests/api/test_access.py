@@ -40,6 +40,7 @@ from karni.api import (
 from karni.api.access import AnyOf, apply_rows, request_roles
 from karni.api.routers import KarniRouter
 from karni.api.serializers import build_serializer
+from tests.keys import missing_pk
 from tests.testapp.models import Event, Tag, Venue
 from tests.testapp.viewsets import EventViewSet
 
@@ -634,11 +635,12 @@ def test_relation_pk_outside_the_target_scope_is_invalid(alice: Any) -> None:
     assert _create_event(alice, venue=str(berlin.pk)).status_code == 201
     hidden = _create_event(alice, venue=str(rome.pk))
     assert hidden.status_code == 400
-    missing = _create_event(alice, venue="00000000-0000-0000-0000-000000000000")
+    absent = str(missing_pk(Venue))
+    missing = _create_event(alice, venue=absent)
     # Same error for "exists but unreadable" and "does not exist": no oracle.
     assert str(hidden.data["venue"][0]).replace(str(rome.pk), "<pk>") == str(
         missing.data["venue"][0]
-    ).replace("00000000-0000-0000-0000-000000000000", "<pk>")
+    ).replace(absent, "<pk>")
 
 
 @override_settings(KARNI_API_ROUTER=f"{ROUTER}.scoped_router")

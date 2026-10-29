@@ -122,3 +122,22 @@ def test_an_admin_can_opt_out() -> None:
     quiet = QuietAdmin(Venue, admin.site)
     assert "export_csv" not in quiet.actions
     assert not any("import" in str(pattern.pattern) for pattern in quiet.get_urls())
+
+
+def test_the_import_page_keeps_legacy_integer_ids_when_asked() -> None:
+    """The map step's id options: keep the file's ids, and the sequence moves past them."""
+    from tests.testapp.models import Part
+
+    if Part not in admin.site._registry:
+        pytest.skip("Part is not registered on the default admin site")
+    client = _client(_staff("root@example.com", superuser=True))
+    import_url = reverse("admin:testapp_part_import")
+    upload = io.BytesIO(b"id,number\n700,P-700\n")
+    upload.name = "parts.csv"
+    job_url = client.post(import_url, {"file": upload})["Location"]
+    body = client.get(job_url).content.decode()
+    assert 'name="match_ids"' in body and 'name="keep_ids"' in body
+    client.post(job_url, {"step": "map", "map:0": "id", "map:1": "number", "keep_ids": "on"})
+    client.post(job_url, {"step": "commit"})
+    assert Part.objects.get(number="P-700").pk == 700
+    assert Part.objects.create(number="P-next").pk == 701

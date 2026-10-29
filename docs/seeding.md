@@ -46,8 +46,9 @@ fresh project seeding without flags:
 
 To seed anyway:
 
-- `--reset` deletes the project models' rows first (users are kept), then
-  seeds. This is what a demo or end-to-end script runs every time.
+- `--reset` deletes the project models' rows first (users are kept),
+  restarts the id sequences of the tables it wiped, then seeds. This is what
+  a demo or end-to-end script runs every time.
 - `--force` adds demo rows on top of what is there.
 
 So a second plain `karni seed` on the same database refuses. Run
@@ -81,7 +82,11 @@ So a second plain `karni seed` on the same database refuses. Run
   or an end-to-end suite signs in with. Re-runs reuse them.
 - **Determinism.** `--seed` drives every random choice. The same seed and
   count give the same rows, including UUIDs and dates, which come from a
-  fixed anchor rather than "now".
+  fixed anchor rather than "now". [Integer keys](models.md#choosing-the-key-type)
+  come from the database's sequence, not the seed, so for them the promise
+  holds after `--reset`: it restarts the sequence of every table it wipes, so
+  the same seed gives ids 1, 2, 3, ... again. Without `--reset`, new rows
+  continue the sequence.
 
 Demo emails and URLs use the reserved `example.com/.org/.net` domains, so
 seeded data can never reach a real inbox.

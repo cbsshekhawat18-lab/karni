@@ -200,6 +200,30 @@ class Resource:
         return reverse(f"{self.basename}-detail", kwargs={self.lookup: str(pk)})
 
 
+def _probe_detail_url(resource: Resource) -> str:
+    """A detail URL of ``resource`` for a row that need not exist, as its route accepts it.
+
+    The probe value follows the lookup field's type (a zero UUID, ``0``, a
+    word), and the first one the route's ``lookup_value_regex`` accepts wins.
+    """
+    from django.urls import NoReverseMatch
+
+    try:
+        field = resource.model._meta.get_field(resource.viewset.lookup_field)
+    except Exception:  # noqa: BLE001 - "pk" and computed lookups: the primary key
+        field = resource.model._meta.pk
+    first: list[Any] = [uuid.UUID(int=0)]
+    if isinstance(field, models.AutoField | models.IntegerField):
+        first = [0]
+    candidates = [*first, uuid.UUID(int=0), 0, "probe"]
+    for value in candidates:
+        try:
+            return resource.detail_url(value)
+        except NoReverseMatch:
+            continue
+    return resource.detail_url(candidates[0])
+
+
 def resolve_resource(resource: Any) -> Resource:
     """A viewset class, a model class, a route prefix (``"events"``) or ``"app.Model"``."""
     from django.apps import apps
@@ -1126,7 +1150,7 @@ class _Crud:
 
         document = generate_schema(cached=True, user=self.user)
         list_path = self.resource.list_url()
-        probe = self.resource.detail_url(uuid.UUID(int=0))
+        probe = _probe_detail_url(self.resource)
         for method, path, action in (
             ("GET", list_path, "list"),
             ("POST", list_path, "create"),

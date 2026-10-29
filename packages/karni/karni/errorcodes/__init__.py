@@ -1357,6 +1357,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "e.g. https://js.example.com, and an inline script by its hash with "
         "karni.security.script_hash() on the one view that needs it (@csp_extend).",
     ),
+    # W53x integer primary keys (karni.models.BigIntBaseModel, experimental)
+    _e(
+        "W530",
+        "Anyone may read a resource whose ids can be guessed",
+        "warning",
+        "karni.checks.check_public_integer_keys",
+        "The model has an integer primary key (BigIntBaseModel or an AutoField), its detail "
+        "route looks rows up by that key, and its read access admits anonymous callers. "
+        "Integer ids are sequential, so a visitor learns how many rows there are and can walk "
+        "the detail URLs one id after the other, including rows no list links to.",
+        "Give the model a UUID key (inherit BaseModel) or look rows up by a slug "
+        '(lookup_field = "slug" on the viewset). When the ids may be public, write '
+        "`# karni: allow(public-integer-key): <reason>` above the viewset class, or add "
+        "'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.",
+    ),
     # E52x running in production (karni.deploy)
     _e(
         "E520",
@@ -1803,7 +1818,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.debug.replay; karni replay --as",
         "A replay runs as the captured user, or the user --as names (a primary key, an "
-        "email or a username). That user must exist in the database the replay uses.",
+        "email or a username). That user must exist in the database the replay uses, and "
+        "the captured id must still belong to the captured email: after a reset, integer "
+        "ids are reused by other users.",
         "Pass --as with an existing user's email, username or primary key, or pass --anonymous. "
         "Do not pass both.",
     ),

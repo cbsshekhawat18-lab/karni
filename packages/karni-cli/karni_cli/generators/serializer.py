@@ -49,9 +49,9 @@ def _field_lists(model: ModelInfo, owners: list[str]) -> tuple[list[str], list[s
     bases = model.bases
     head = ["id"]
     tail: list[str] = []
-    if bases & {"BaseModel", "TimestampedModel"}:
+    if bases & {"BaseModel", "BigIntBaseModel", "TimestampedModel"}:
         tail += ["created_at", "updated_at"]
-    if bases & {"BaseModel", "AuditedModel"}:
+    if bases & {"BaseModel", "BigIntBaseModel", "AuditedModel"}:
         tail += ["created_by", "updated_by"]
     fields = [*head, *model.fields, *tail]
     owned = dict.fromkeys(o for o in owners if o in model.fields)  # read + write may both name it

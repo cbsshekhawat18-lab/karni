@@ -739,7 +739,7 @@ karni make app [OPTIONS] NAME
 
 #### `karni make model`
 
-Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
 Example:
 
@@ -762,6 +762,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
 | `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
+| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). Default: KARNI_PK in config/settings.py, else uuid. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |

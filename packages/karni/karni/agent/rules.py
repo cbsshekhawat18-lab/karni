@@ -435,13 +435,16 @@ RULES: tuple[Rule, ...] = (
             "`SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a "
             "model should not have all four (e.g. an append-only log: "
             "`UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for "
-            "fields that must be hidden, read-only or write-only."
+            "fields that must be hidden, read-only or write-only. "
+            "`BigIntBaseModel` (experimental) is the same with an integer `id`, chosen per "
+            "model in its class line; `karni context` shows each model's key type."
         ),
         rationale=(
-            "The mixins supply uuid ids, timestamps, soft delete, audit stamping and the "
+            "The mixins supply the primary key (a UUID, or an integer with "
+            "`BigIntBaseModel`), timestamps, soft delete, audit stamping and the "
             "managers the derived API/admin rely on."
         ),
-        fix="Inherit karni.models.BaseModel (or compose its mixins).",
+        fix="Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).",
         enforced_by=("model-base",),
     ),
     Rule(

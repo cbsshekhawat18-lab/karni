@@ -240,7 +240,13 @@ class TransferAdminMixin(admin.ModelAdmin):
                         header: request.POST.get(f"map:{index}", "")
                         for index, header in enumerate(found.columns)
                     }
-                    set_mapping(found, request, mapping)
+                    set_mapping(
+                        found,
+                        request,
+                        mapping,
+                        match_ids=request.POST.get("match_ids") == "on",
+                        keep_ids=request.POST.get("keep_ids") == "on",
+                    )
                     start_stage(found, request, PREVIEW)
                 elif step == "commit":
                     start_stage(found, request, COMMIT)

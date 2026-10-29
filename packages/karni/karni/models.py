@@ -5,6 +5,10 @@ Four independent abstract mixins, each usable on its own, and
 inherits:
 
 * :class:`UUIDModel` — random UUID primary key (no sequential enumeration).
+* :class:`IntegerKeyModel` — a 64-bit auto-incrementing integer primary key
+  instead (experimental). :class:`BigIntBaseModel` is :class:`BaseModel` with
+  it: the key type shows in each model's class line, so one project can mix
+  both.
 * :class:`TimestampedModel` — ``created_at`` / ``updated_at``.
 * :class:`SoftDeleteModel` — ``deleted_at``; ``delete()`` hides instead of
   removing, the default manager excludes deleted rows (the ``soft_delete``
@@ -48,7 +52,9 @@ from karni.signals import pre_write
 __all__ = [
     "AuditedModel",
     "BaseModel",
+    "BigIntBaseModel",
     "GuardedModel",
+    "IntegerKeyModel",
     "SoftDeleteManager",
     "SoftDeleteModel",
     "SoftDeleteQuerySet",
@@ -68,6 +74,25 @@ class UUIDModel(models.Model):
     """Random UUID primary key, safe to expose in URLs (no enumeration)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class IntegerKeyModel(models.Model):
+    """Experimental. A 64-bit auto-incrementing integer primary key (``BigAutoField``).
+
+    The database numbers rows 1, 2, 3, ..., so a key is short and sorts by
+    insertion, and it can be guessed: a public detail URL lets anyone walk
+    the table, which ``karni.W530`` reports. Ids stay JSON numbers, exact in
+    JavaScript up to 2**53 - 1 and in a spreadsheet up to 15 digits.
+    :class:`BigIntBaseModel` combines it with the other mixins.
+
+    Override / escape hatch: redeclare ``id`` (an ``AutoField``, or a
+    ``UUIDField`` again) on the subclass.
+    """
+
+    id = models.BigAutoField(primary_key=True)
 
     class Meta:
         abstract = True
@@ -320,23 +345,12 @@ class GuardedModel(models.Model):
         return allowed_transitions(self, field)
 
 
-class BaseModel(GuardedModel, UUIDModel, TimestampedModel, SoftDeleteModel, AuditedModel):
-    """The base every Karni project model inherits: all four mixins (plus :class:`GuardedModel`).
+class _KarniModel(GuardedModel, TimestampedModel, SoftDeleteModel, AuditedModel):
+    """Everything :class:`BaseModel` and :class:`BigIntBaseModel` share, except the key.
 
-    UUID primary key, timestamps, soft delete and audit users. ``id``,
-    ``created_at``, ``updated_at``, ``created_by``, ``updated_by`` and
-    ``deleted_at`` are read-only to Karni's generated serializers and audit
-    fields to the derived admin; ``deleted_at`` is not exposed by the API.
-
-    Override / escape hatch: subclass and add fields; redeclare a field to
-    replace it; or compose the individual mixins instead. Changing these base
-    fields ripples migrations into every inheriting model, including a
-    swapped user model.
-
-    Every ``save()`` and ``delete()`` first sends :data:`karni.signals.pre_write`
-    (``action`` ``create`` / ``update`` / ``delete``); a receiver that raises
-    :class:`karni.exceptions.KarniWriteDeferred` stops the write before any
-    SQL — how ``karni-approvals`` holds a change for a second person.
+    The mixin list, the managers, ``Meta`` and the ``pre_write`` signal are
+    defined here once, so the two bases differ only in their ``id``. Private:
+    inherit one of the two bases.
     """
 
     objects: ClassVar[BaseManager] = BaseManager()
@@ -372,3 +386,46 @@ class BaseModel(GuardedModel, UUIDModel, TimestampedModel, SoftDeleteModel, Audi
             self._karni_in_delete = False
 
     delete.alters_data = True  # type: ignore[attr-defined]
+
+
+class BaseModel(_KarniModel, UUIDModel):
+    """The base every Karni project model inherits: all four mixins (plus :class:`GuardedModel`).
+
+    UUID primary key, timestamps, soft delete and audit users. ``id``,
+    ``created_at``, ``updated_at``, ``created_by``, ``updated_by`` and
+    ``deleted_at`` are read-only to Karni's generated serializers and audit
+    fields to the derived admin; ``deleted_at`` is not exposed by the API.
+
+    Override / escape hatch: subclass and add fields; redeclare a field to
+    replace it; or compose the individual mixins instead. Changing these base
+    fields ripples migrations into every inheriting model, including a
+    swapped user model. :class:`BigIntBaseModel` is the same with an integer
+    key.
+
+    Every ``save()`` and ``delete()`` first sends :data:`karni.signals.pre_write`
+    (``action`` ``create`` / ``update`` / ``delete``); a receiver that raises
+    :class:`karni.exceptions.KarniWriteDeferred` stops the write before any
+    SQL — how ``karni-approvals`` holds a change for a second person.
+    """
+
+    class Meta(_KarniModel.Meta):
+        abstract = True
+
+
+class BigIntBaseModel(_KarniModel, IntegerKeyModel):
+    """Experimental. :class:`BaseModel` with a 64-bit integer key (:class:`IntegerKeyModel`).
+
+    Everything else is the same: timestamps, soft delete, audit users, the
+    guards, the managers and ``pre_write``. Choose it per model, in the class
+    line (``class Reading(BigIntBaseModel)``), for a table that grows large,
+    is joined a lot or meets other systems' integer ids. Karni's own models
+    keep their UUIDs, and one project can mix both bases. Integer keys can be
+    guessed, so a resource anyone may read is reported by ``karni.W530``.
+
+    Override / escape hatch: the same as :class:`BaseModel`. Switching an
+    existing model's key type while it holds data is a data migration Karni
+    does not write for you.
+    """
+
+    class Meta(_KarniModel.Meta):
+        abstract = True

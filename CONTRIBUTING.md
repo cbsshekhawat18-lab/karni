@@ -109,6 +109,17 @@ The test database is `test_` followed by the name in `DATABASE_URL`. The
 extension in `template1`, or set `KARNI_TEST_DB_TEMPLATE` to a database that
 has it.
 
+The `packages/karni` suite also runs once per key type. `KARNI_TEST_PK=bigint`
+puts its test app's API models on integer keys (`BigIntBaseModel`), and CI
+runs the suite that way on SQLite and on PostgreSQL. The OpenAPI snapshot
+has a second file for it, `schema.testapp.bigint.json`, which the `@karni/ui`
+parser tests also use:
+
+```sh
+cd packages/karni
+KARNI_TEST_PK=bigint ../../.venv/bin/python -m pytest
+```
+
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for
 real users. Fix the framework, not the example.
@@ -135,8 +146,9 @@ The failure message gives the exact command to regenerate them:
   `python -m karni_cli.clidoc > docs/cli.md`
 - the procedures block in `docs/agents.md`, generated from the rules registry
   in `karni/agent/rules.py`: paste the output of `karni rules --prompts-doc`
-- the OpenAPI schema snapshot, `packages/karni/tests/api/fixtures/schema.testapp.json`,
-  which the `@karni/ui` parser tests also use
+- the OpenAPI schema snapshots, `packages/karni/tests/api/fixtures/schema.testapp.json`
+  and (with `KARNI_TEST_PK=bigint`) `schema.testapp.bigint.json`, which the
+  `@karni/ui` parser tests also use
 
 ## Breaking changes
 

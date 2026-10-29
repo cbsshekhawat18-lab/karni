@@ -654,6 +654,10 @@ BASE: dict[str, Any] = {
     # autodiscovered at startup; set False to wire them yourself.
     "KARNI_EVENTS_AUTODISCOVER": env.bool("KARNI_EVENTS_AUTODISCOVER", default=True),
     "KARNI_SCHEDULES_AUTODISCOVER": env.bool("KARNI_SCHEDULES_AUTODISCOVER", default=True),
+    # The key type `karni make model` writes (experimental): "uuid" (BaseModel) or
+    # "bigint" (BigIntBaseModel). Read by the CLI from config/settings.py, nothing
+    # else: each model's class line decides its key.
+    "KARNI_PK": "uuid",
     # Architecture-rule configuration (karni.testing); checks fall back to the
     # same defaults when this setting is absent, so non-karni.conf projects work.
     "KARNI_ARCHITECTURE": {

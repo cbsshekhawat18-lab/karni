@@ -131,6 +131,7 @@ reads it on every request.
 | **Events & schedules (karni.events / karni.schedule)** | | | |
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 
 Settings listed as computed derive from others. The defaults of env-backed

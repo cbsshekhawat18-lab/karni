@@ -98,6 +98,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "`BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model "
+        "(`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and "
+        "`karni load`, and `karni.W530` for a public resource. Experimental tier",
+    ),
+    Capability(
+        "models",
         "Realistic, connected seed data (`karni seed`, `<app>/seeds.py`)",
         ((f"{EH}/events/seeds.py", "Seeder"),),
     ),

@@ -28,6 +28,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Capability | Status | Evidence |
 |---|---|---|
 | `BaseModel`: UUID key, created and updated timestamps, soft delete, `created_by` and `updated_by` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/models.py) |
+| `BigIntBaseModel`: the same base on a 64-bit integer key, chosen per model (`karni make model --pk bigint`, `KARNI_PK`), with legacy ids in imports and `karni load`, and `karni.W530` for a public resource. Experimental tier | `experimental` | Karni's own tests |
 | Realistic, connected seed data (`karni seed`, `<app>/seeds.py`) | `stable` | [seeds.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/seeds.py) |
 | Real content from a JSON or YAML file, created or updated by natural key (`karni load`) | `experimental` | Karni's own tests |
 | Models and real rows from a designer's pages: the repeated content, its fields and relations (`karni design analyze`, `karni design extract`) | `experimental` | Karni's own tests |
@@ -826,7 +827,7 @@ karni make app [OPTIONS] NAME
 
 ##### `karni make model`
 
-Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
 Example:
 
@@ -849,6 +850,7 @@ karni make model [OPTIONS] NAME [FIELDS...]
 | `--migrate` |  | Run `karni make migration` for the app afterwards. |
 | `--order` TEXT |  | Order rows by this field (Meta.ordering), e.g. position or -created_at. |
 | `--key` TEXT |  | The field karni load and imports match rows on (Karni.import_key). Rows nested under a parent are matched on the parent plus this field, e.g. position. |
+| `--pk` TEXT |  | The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). Default: KARNI_PK in config/settings.py, else uuid. |
 | `--app` TEXT |  | Target app label (default: the project's only local app). |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1361,7 +1363,9 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `AuditedModel` | model | `created_by` / `updated_by`, stamped from the current user on save. | fields `created_by`, `updated_by` and managers `objects` (ManagerFromAuditedQuerySet) |
 | `BaseModel` | model | The base every Karni project model inherits: all four mixins (plus `GuardedModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by` and managers `objects` (BaseManager), `all_objects` |
+| `BigIntBaseModel` | model | Experimental. `BaseModel` with a 64-bit integer key (`IntegerKeyModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by` and managers `objects` (BaseManager), `all_objects` |
 | `GuardedModel` | model | The model half of `StateField`, `CapacityField` and `no_overlap`. |  |
+| `IntegerKeyModel` | model | Experimental. A 64-bit auto-incrementing integer primary key (`BigAutoField`). | fields `id` |
 | `SoftDeleteManager` | manager | Default manager of `karni.models.SoftDeleteModel`. |  |
 | `SoftDeleteModel` | model | Rows are hidden by `delete()` instead of removed. | fields `deleted_at` and managers `objects` (SoftDeleteManager), `all_objects` |
 | `SoftDeleteQuerySet` | queryset | QuerySet whose `delete()` soft-deletes by stamping `deleted_at`. | methods `delete`, `hard_delete`, `restore`, `alive`, `dead` |
@@ -1589,6 +1593,7 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_EVENTS_AUTODISCOVER` | `KARNI_EVENTS_AUTODISCOVER` | `True` | Import every app's `events.py` and `listeners.py` at startup. |
 | `KARNI_SCHEDULES_AUTODISCOVER` | `KARNI_SCHEDULES_AUTODISCOVER` | `True` | Import every app's `schedules.py` at startup. |
+| `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 
 ### Module: karni-approvals
@@ -1947,6 +1952,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W519`](errors.md#w519) | warning | The Content-Security-Policy lets any script run |
 | [`E520`](errors.md#e520) | exception | The deploy checks failed when the container started |
 | [`E521`](errors.md#e521) | exception | A backup failed |
+| [`W530`](errors.md#w530) | warning | Anyone may read a resource whose ids can be guessed |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |

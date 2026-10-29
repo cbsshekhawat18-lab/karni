@@ -43,7 +43,7 @@ from karni_cli.generators.fields import (
     relation_name,
     render_model_body,
 )
-from karni_cli.generators.introspect import models_file, models_in
+from karni_cli.generators.introspect import PK_BASES, declared_pk, models_file, models_in
 from karni_cli.generators.naming import default_route, kebab, require_pascal
 from karni_cli.generators.pysource import Import, ensure_imports, pystr, replace_or_append
 from karni_cli.project import CliError
@@ -153,13 +153,16 @@ def plan(
     *,
     order: str | None = None,
     key: str | None = None,
+    pk: str | None = None,
 ) -> str:
     """Plan the model class in ``<app>/models.py``; returns the class name.
 
     ``order`` writes ``Meta.ordering``, ``key`` writes ``Karni.import_key``: the
     field ``karni load`` and imports match rows on (for rows nested under a
-    parent, the parent plus that field).
+    parent, the parent plus that field). ``pk`` (``uuid`` or ``bigint``, else
+    ``KARNI_PK``) picks the base: ``BaseModel`` or ``BigIntBaseModel``.
     """
+    base = _base_class(ws, pk)
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
     path = models_file(ws, app)
@@ -171,7 +174,7 @@ def plan(
         resolve=_targets(ws, app, model, specs),
         line_length=ws.line_length,
     )
-    lines = [f"class {model}(BaseModel):"]
+    lines = [f"class {model}({base}):"]
     if body.inner:
         lines += [*body.inner, ""]
     lines += body.lines
@@ -193,13 +196,28 @@ def plan(
     if len(lines) == 1:
         lines.append("    pass")
     text = ws.read(path) or ""
-    text = ensure_imports(ws, rel, text, [Import("karni.models", "BaseModel"), *body.imports])
+    text = ensure_imports(ws, rel, text, [Import("karni.models", base), *body.imports])
     ws.write(path, replace_or_append(ws, rel, text, model, "\n".join(lines)))
     for note in body.notes:
         ws.note(note)
     if body.images:
         plan_images_extra(ws, body.images)
     return model
+
+
+def _base_class(ws: Workspace, pk: str | None) -> str:
+    """The base class for ``--pk`` (``uuid``/``bigint``), else for the project's ``KARNI_PK``."""
+    if pk is None:
+        pk, note = declared_pk(ws)
+        if note:
+            ws.note(note)
+    if pk not in PK_BASES:
+        raise CliError(
+            f"--pk {pk}: the key type is one of {', '.join(PK_BASES)} (uuid: BaseModel, "
+            "bigint: BigIntBaseModel).",
+            code="C106",
+        )
+    return PK_BASES[pk]
 
 
 def plan_chain(
@@ -298,11 +316,17 @@ def command(
         help="The field karni load and imports match rows on (Karni.import_key). Rows nested "
         "under a parent are matched on the parent plus this field, e.g. position.",
     ),
+    pk: str | None = typer.Option(
+        None,
+        "--pk",
+        help="The primary key: uuid (BaseModel) or bigint (BigIntBaseModel, experimental). "
+        "Default: KARNI_PK in config/settings.py, else uuid.",
+    ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
 ) -> None:
-    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py.
+    """Add `class NAME(BaseModel)` with FIELDS to APP/models.py (BigIntBaseModel with --pk bigint).
 
     Example: karni make model Event title:str:200 starts_at:datetime
     "status:choice:draft|live" organizer:fk:User 'venue:fk:Venue?' -a
@@ -318,7 +342,7 @@ def command(
     if all_ and not ws.is_dir("frontend"):
         chain = [item for item in chain if item != "page"]
         ws.note("note: no frontend/ directory, so pages are skipped.")
-    model = plan(ws, target, name, fields or [], order=order, key=key)
+    model = plan(ws, target, name, fields or [], order=order, key=key, pk=pk)
     expand = [
         spec.name
         for spec in parse_fields(fields or [])

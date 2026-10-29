@@ -22,6 +22,7 @@ import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
 import { humanizeValue } from "../form/prepare";
 import { singularNoun } from "../nouns";
+import { formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 import { evaluateAccess } from "../table/access";
 import {
@@ -258,7 +259,7 @@ function DefaultValue(props: {
       );
     case "number":
     case "integer":
-      return <>{typeof value === "number" ? value.toLocaleString() : String(value)}</>;
+      return <>{typeof value === "number" ? formatNumberValue(field, value) : String(value)}</>;
     case "array":
       return <>{Array.isArray(value) ? value.map(String).join(", ") : String(value)}</>;
     default:

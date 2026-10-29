@@ -33,7 +33,7 @@ cannot start before the item it names is done.
 | 1a | Social sign-in by ID token in JWT mode: a mobile or single-page client sends a Google, Microsoft or Apple ID token and gets Karni's token pair. | none | done |
 | 1b | Email one-time-code login: sign in with a six-digit code sent by email, no password. | none | done |
 | 1c | A versioned terms acceptance gate: the API refuses a signed-in user until they accept the current terms version. | none | done |
-| 2 | Integer primary keys as an option, next to UUIDs, working everywhere a key appears. | none | planned |
+| 2 | Integer primary keys as an option, next to UUIDs, working everywhere a key appears. | none | done |
 | 3 | External and read-only tables, SQL views and a second database, as models Karni accepts. | none | planned |
 
 ### Phase 2: data and access

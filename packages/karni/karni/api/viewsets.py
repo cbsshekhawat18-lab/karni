@@ -727,6 +727,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     ) -> Response:
         """``POST /<resource>/import/<job>/preview/``: the dry run, with ``{"mapping": …}``.
 
+        ``"match_ids": true`` matches existing rows by the file's id column, and
+        ``"keep_ids": true`` creates rows with the file's ids (both off by default).
+
         Every row is validated and written inside a transaction that is
         rolled back, so the counts and the per-row errors are exactly what
         the commit will do. Large files run in Celery: poll the job.
@@ -739,7 +742,13 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         body.is_valid(raise_exception=True)
         mapping = body.validated_data.get("mapping")
         try:
-            set_mapping(found, request, mapping if mapping is not None else found.mapping)
+            set_mapping(
+                found,
+                request,
+                mapping if mapping is not None else found.mapping,
+                match_ids=body.validated_data.get("match_ids"),
+                keep_ids=body.validated_data.get("keep_ids"),
+            )
             started = start_stage(found, request, PREVIEW)
         except KarniValueError as exc:
             return self._refused(exc)
