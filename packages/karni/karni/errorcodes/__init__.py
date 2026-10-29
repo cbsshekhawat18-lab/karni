@@ -963,7 +963,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_CACHE to `redis` (the default) or `locmem`. For anything else, define CACHES "
         "yourself in settings.py.",
     ),
-    # W51x deploy checks (manage.py check --deploy, karni check --deploy)
+    # W51x and W520 deploy checks (manage.py check --deploy, karni check --deploy)
     _e(
         "E508",
         "A setting is assigned where it cannot take effect",
@@ -1102,6 +1102,21 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "e.g. https://js.example.com, and an inline script by its hash with "
         "karni.security.script_hash() on the one view that needs it (@csp_extend).",
     ),
+    _e(
+        "W520",
+        "Production email is not set up",
+        "warning",
+        "karni.security.checks.check_email (deploy)",
+        "Password resets, account emails and the notifications of a site's forms go out by "
+        "email. The console, locmem, dummy and file backends deliver nothing, and a sender at "
+        "localhost (Django's default, webmaster@localhost) is refused by mail servers, so "
+        "every email is lost without an error.",
+        "Set EMAIL_URL to the mail server (smtp+tls://user:password@smtp.example.com:587, "
+        "smtps:// for SSL) and DEFAULT_FROM_EMAIL to an address of the site's domain "
+        '("Example Site <noreply@example.com>") in the production environment (.env.prod). '
+        ".env.prod.example lists them. A project that sends no email adds 'karni.W520' to "
+        "SILENCED_SYSTEM_CHECKS.",
+    ),
     # E52x running in production (karni.deploy)
     _e(
         "E520",
@@ -1111,7 +1126,7 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "The production image runs `karni check --deploy` before its command, so a "
         "container with DEBUG on, the scaffold's SECRET_KEY, open hosts or another unsafe "
         "value never serves a request. Each finding printed before the E520 line has its own "
-        "code (karni.W510 to karni.W519, a Django security warning, or a karni check hook).",
+        "code (karni.W510 to karni.W520, a Django security warning, or a karni check hook).",
         "Set the production values in the environment the container gets (.env.prod for "
         "docker-compose.prod.yml) and start it again: `karni explain W511` and the others "
         "say what each value must be. In an emergency KARNI_SKIP_DEPLOY_CHECK=1 starts it "

@@ -2,7 +2,8 @@
 
 Applied by ``karni_settings()`` on top of :data:`karni.conf.base.BASE` when
 the profile is ``"dev"`` (the ``DJANGO_ENV`` default). Development means:
-debug on, every host allowed, wide-open CORS, console email,
+debug on, every host allowed, wide-open CORS, console email (unless
+``EMAIL_URL`` names a mail server),
 human-readable console structlog output (``KARNI_JSON_LOGS = False`` — the
 actual ``LOGGING`` dict is built by
 :func:`karni.conf.logging.build_logging` inside ``karni_settings()``), query
@@ -23,13 +24,23 @@ from __future__ import annotations
 
 from typing import Any
 
+import environ
+
 from karni.conf.base import env
+
+CONSOLE_EMAIL = "django.core.mail.backends.console.EmailBackend"
+
+
+def console_email(reader: environ.Env) -> dict[str, str]:
+    """Development prints mail to the console, unless ``EMAIL_URL`` names a mail server."""
+    return {} if reader.str("EMAIL_URL", default="") else {"EMAIL_BACKEND": CONSOLE_EMAIL}
+
 
 DEV: dict[str, Any] = {
     "DEBUG": env.bool("DEBUG", default=True),
     "ALLOWED_HOSTS": env.list("ALLOWED_HOSTS", default=["*"]),
     "CORS_ALLOW_ALL_ORIGINS": True,
-    "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend",
+    **console_email(env),
     "KARNI_JSON_LOGS": False,
     # Over-budget requests log the grouped duplicate report (never raise);
     # every request's query count, duplicates and time are logged.

@@ -18,8 +18,8 @@ runtime is the ``karni-site`` module:
 * With ``--notify SETTING``: a queued listener in ``<app>/listeners.py``
   that calls ``karni_site.notify.notify_recipients``, the email's subject
   and body templates under ``<app>/templates/<app>/email/``, the setting
-  in config/settings.py and a line in .env.example. Without it nothing is
-  sent.
+  in config/settings.py and a line in .env.example and .env.prod.example.
+  Without it nothing is sent.
 * ``<app>/tests/test_<name>_form.py``: anonymous submit, the form without
   JavaScript, the email, the protected fields, the rate limit and
   staff-only reading.
@@ -30,16 +30,20 @@ runtime is the ``karni-site`` module:
 It prints the tag to put in a page, ``{% karni_form "<name>" %}``. When the
 project's site came from ``karni import design`` and one of its templates
 holds a ``<form>``, it names the template and the line, and prints the tag
-with the arguments that keep that form's own class names, labels, rows and
-button.
+with the arguments that keep that form's own class names, labels, rows,
+button and control attributes (a textarea's ``rows``, an input's ``min``,
+``max``, ``step`` or ``pattern``). ``karni make form <name> --tag`` prints
+the tag again later and writes nothing.
 """
 
 from __future__ import annotations
 
+import ast
 import json
 import re
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import typer
 
@@ -113,6 +117,9 @@ FORM_TYPES = (
 #: The fields the command adds to every form's model.
 STATUS, NOTES, SEARCH = "status", "notes", "search"
 ENV_EXAMPLE = Path(".env.example")
+ENV_PROD_EXAMPLE = Path(".env.prod.example")
+#: The section of .env.prod.example the recipients go above (karni make deploy compose).
+ENV_PROD_BEFORE = "# --- Database and Redis"
 ENV_SECTION = "# --- Forms (karni make form) ----------------------------------------------"
 _SETTING = re.compile(r"^[A-Z][A-Z0-9_]*$")
 _NAME = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -314,6 +321,16 @@ def plan_model(
 # the notification
 
 
+def _shown_when(spec: FieldSpec) -> str:
+    """The condition under which an optional field's line is in the email: it has a value."""
+    value = f"submission.{spec.name}"
+    if spec.kind == "m2m":
+        return f"{value}.exists"
+    if spec.kind in {"int", "float", "decimal", "bool"}:
+        return f"{value} is not None"  # 0 and no are values
+    return value
+
+
 def _email_line(spec: FieldSpec) -> str:
     label = humanize(spec.name)
     value = f"submission.{spec.name}"
@@ -350,8 +367,17 @@ def email_templates(
             else f"submission.{titled.name}"
         )
         subject = f"New {verbose}: {{{{ {shown} }}}}"
+        if titled.optional:
+            subject = (
+                f"New {verbose}{{% if submission.{titled.name} %}}: {{{{ {shown} }}}}{{% endif %}}"
+            )
     elif named is not None:
         subject = f"New {verbose} from {{{{ submission.{named.name} }}}}"
+        if named.optional:
+            subject = (
+                f"New {verbose}{{% if submission.{named.name} %}} from "
+                f"{{{{ submission.{named.name} }}}}{{% endif %}}"
+            )
     else:
         subject = f"New {verbose} from the website"
     ws.create(
@@ -363,23 +389,40 @@ def email_templates(
     body = [
         (
             f"{{# The email each new {verbose} sends to settings.{setting} (karni_site.notify). "
-            "Plain text, so autoescape is off. Edit it freely. #}"
+            "Plain text, so autoescape is off. A field the visitor left empty is left out. "
+            "Edit it freely. #}"
         ),
         f"{{% autoescape off %}}A new {verbose} arrived from the website.",
         "",
-        *(_email_line(spec) for spec in specs if spec.kind != "text"),
-        "",
     ]
+    # An optional field's line hangs off the line before it, inside {% if %}, so an empty
+    # value leaves no line and no blank line behind.
     for spec in specs:
         if spec.kind == "text":
+            continue
+        if spec.optional:
+            body[-1] += f"{{% if {_shown_when(spec)} %}}\n{_email_line(spec)}{{% endif %}}"
+        else:
+            body.append(_email_line(spec))
+    body.append("")
+    for spec in specs:
+        if spec.kind != "text":
+            continue
+        if spec.optional:
+            body[-1] += f"{{% if {_shown_when(spec)} %}}\n{_email_line(spec)}\n{{% endif %}}"
+        else:
             body += [_email_line(spec), ""]
     if email is not None:
-        body.append(f"Reply to this email to answer {{{{ submission.{email.name} }}}}.")
+        line = f"Reply to this email to answer {{{{ submission.{email.name} }}}}."
+        if email.optional:
+            body[-1] += f"{{% if submission.{email.name} %}}\n{line}{{% endif %}}"
+        else:
+            body.append(line)
     if ws.is_dir("frontend"):
         body.append(
             f"Staff app: {{{{ frontend_url }}}}/{default_route(pascal(name))}/{{{{ submission.pk }}}}"
         )
-    body += ["In the admin: {{ admin_path }}{% endautoescape %}", ""]
+    body += ["In the admin: {{ admin_url }}{% endautoescape %}", ""]
     ws.create(folder / f"{name}_body.txt", "\n".join(body))
     return stem
 
@@ -418,7 +461,7 @@ def plan_listener(
 
 
 def plan_setting(ws: Workspace, name: str, setting: str) -> None:
-    """``SETTING = env.list("SETTING", default=[])`` in config/settings.py, and .env.example."""
+    """``SETTING = env.list("SETTING", default=[])`` in settings.py, the two env examples."""
     rel = SETTINGS.as_posix()
     text = ws.read(SETTINGS)
     if text is None:
@@ -434,16 +477,52 @@ def plan_setting(ws: Workspace, name: str, setting: str) -> None:
             + f"\n{setting} = env.list({pystr(setting)}, default=[])  # noqa: F821\n"
         )
         ws.write(SETTINGS, append(text, block))
-    example = ws.read(ENV_EXAMPLE)
-    if example is not None and not re.search(rf"^#?\s*{setting}=", example, re.MULTILINE):
-        lines = example.rstrip("\n").split("\n")
-        if ENV_SECTION not in lines:
-            lines += ["", ENV_SECTION]
-        lines += [
-            f"# Who is emailed each new {humanize(name).lower()} form submission, comma-separated.",
+    verbose = humanize(name).lower()
+    _env_lines(
+        ws,
+        ENV_EXAMPLE,
+        setting,
+        [
+            f"# Who is emailed each new {verbose} form submission, comma-separated.",
             f"# {setting}=team@example.com",
-        ]
-        ws.write(ENV_EXAMPLE, "\n".join(lines) + "\n")
+        ],
+    )
+    _env_lines(
+        ws,
+        ENV_PROD_EXAMPLE,
+        setting,
+        [
+            f"# Who is emailed each new {verbose} form submission, comma-separated. Empty",
+            "# sends nothing: the submissions still wait in the admin.",
+            f"{setting}=",
+        ],
+        before=ENV_PROD_BEFORE,
+    )
+
+
+def _env_lines(
+    ws: Workspace, path: Path, setting: str, added: list[str], *, before: str | None = None
+) -> None:
+    """``added`` in the forms section of an env file, unless it names ``setting`` already.
+
+    The section goes at the end, or above the line starting with ``before``.
+    """
+    text = ws.read(path)
+    if text is None or re.search(rf"^#?\s*{setting}=", text, re.MULTILINE):
+        return
+    lines = text.rstrip("\n").split("\n")
+    if ENV_SECTION in lines:
+        index = lines.index(ENV_SECTION) + 1
+        while index < len(lines) and lines[index].strip():
+            index += 1
+        lines[index:index] = added
+    else:
+        at = next((i for i, line in enumerate(lines) if before and line.startswith(before)), None)
+        if at is None:
+            lines += ["", ENV_SECTION, *added]
+        else:
+            lines[at:at] = [ENV_SECTION, *added, ""]
+    ws.write(path, "\n".join(lines) + "\n")
 
 
 # the site
@@ -508,17 +587,17 @@ def _editable(ws: Workspace) -> bool:
     return bool((record.get("editable") or {}).get("enabled"))
 
 
-def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
+def design_notes(ws: Workspace, name: str, fields: Mapping[str, str]) -> None:
     """Which imported template holds the ``<form>`` this one replaces, and the tag that keeps it.
 
-    The design's controls are matched to the model's fields by name, then by
-    their label and type (:func:`karni_cli.design.forms.match_fields`), and
-    the notes say which control fills which field and which fill none.
+    ``fields`` maps the form's field names to their kinds (``"date"``). The
+    design's controls are matched to them by name, then by their label and
+    type (:func:`karni_cli.design.forms.match_fields`), and the notes say
+    which control fills which field and which fill none.
     """
     found = _design_forms(ws)
     if not found:
         return
-    fields = {spec.name: spec.kind for spec in specs}
     best = best_match([form for _, form, _page in found], fields)
     for template, form, _page in found:
         mark = form is best
@@ -544,7 +623,7 @@ def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
     )
     editable = f"{page}.{name}" if _editable(ws) else ""
     filled = {match.model for match in matches}
-    extra = [spec.name for spec in specs if spec.name not in filled]
+    extra = [field_name for field_name in fields if field_name not in filled]
     lines = [
         f"replace: in {template}, replace that <form> ... </form> (line {best.line}) with:",
         f"    {suggest_tag(name, best, fields, editable=editable)}",
@@ -564,7 +643,99 @@ def design_notes(ws: Workspace, name: str, specs: list[FieldSpec]) -> None:
             f'  editable="{editable}": the labels, placeholders, button and sent message are '
             f"blocks the client edits in the admin (Page content, {editable}.*)."
         )
+    if any(item.attrs for item in best.fields):
+        lines.append(
+            '  attrs="...": the design\'s own rows, min, max, step or pattern on those fields.'
+        )
+    lines.append(f"  `karni make form {name} --tag` prints this again, and writes nothing.")
     ws.note("\n".join(lines))
+
+
+#: Django field classes and the field DSL kind each one is, for ``--tag`` (no Django needed).
+_KINDS: Final[dict[str, str]] = {
+    "CharField": "str",
+    "SlugField": "str",
+    "TextField": "text",
+    "EmailField": "email",
+    "URLField": "url",
+    "PhoneField": "phone",
+    "IntegerField": "int",
+    "SmallIntegerField": "int",
+    "BigIntegerField": "int",
+    "PositiveIntegerField": "int",
+    "PositiveSmallIntegerField": "int",
+    "FloatField": "float",
+    "DecimalField": "decimal",
+    "BooleanField": "bool",
+    "DateField": "date",
+    "DateTimeField": "datetime",
+    "CountryField": "country",
+    "FileField": "file",
+    "ImageField": "image",
+    "ForeignKey": "fk",
+    "ManyToManyField": "m2m",
+}
+
+
+def model_fields(ws: Workspace, app: App, model: str) -> dict[str, str]:
+    """The visitor's fields of the form's model in ``<app>/models.py``: name -> DSL kind.
+
+    Read from the source, as ``karni make form`` wrote them. The inbox's own
+    fields (status, notes, search) are left out, and so is anything a visitor
+    does not fill.
+
+    :raises CliError: ``C105`` when the app has no such model yet.
+    """
+    path = models_file(ws, app)
+    rel = ws.rel(path)
+    text = ws.read(path) or ""
+    cls = next(
+        (
+            node
+            for node in (parse(ws, rel, text).body if text else [])
+            if isinstance(node, ast.ClassDef) and node.name == model
+        ),
+        None,
+    )
+    if cls is None:
+        raise CliError(
+            f"{rel} has no class {model}, so there is no form to print a tag for. Make it "
+            f"first: karni make form {snake(model)} <field:type> ... (--tag prints the tag of a "
+            "form made already).",
+            code="C105",
+        )
+    found: dict[str, str] = {}
+    for stmt in cls.body:
+        if not (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1):
+            continue
+        target, value = stmt.targets[0], stmt.value
+        if not isinstance(target, ast.Name) or not isinstance(value, ast.Call):
+            continue
+        if target.id in {STATUS, NOTES, SEARCH}:
+            continue
+        called = value.func
+        name = called.attr if isinstance(called, ast.Attribute) else getattr(called, "id", "")
+        kind = _KINDS.get(name)
+        if kind is None:
+            continue
+        if kind == "str" and any(keyword.arg == "choices" for keyword in value.keywords):
+            kind = "choice"
+        found[target.id] = kind
+    return found
+
+
+def print_tag(ws: Workspace, app: App, raw_name: str, tokens: list[str]) -> None:
+    """``--tag``: the tag and the design notes again, for a form made already. Writes nothing."""
+    name = form_name(raw_name)
+    fields = (
+        {spec.name: spec.kind for spec in form_fields(tokens)}
+        if tokens
+        else model_fields(ws, app, pascal(name))
+    )
+    ws.note(f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template')
+    design_notes(ws, name, fields)
+    for note in ws.notes:
+        typer.echo(note)
 
 
 # the tests
@@ -813,8 +984,11 @@ def plan(
             f"role: declare {role!r} in KARNI_ROLES (config/settings.py): field_roles and the "
             "viewset name it, and karni check refuses a role nobody declared (E212)."
         )
-    ws.note(f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template')
-    design_notes(ws, name, specs)
+    ws.note(
+        f'tag: {{% load karni_site %}} then {{% karni_form "{name}" %}} in a site template '
+        f"(karni make form {name} --tag prints it again)"
+    )
+    design_notes(ws, name, {spec.name: spec.kind for spec in specs})
     return name
 
 
@@ -856,6 +1030,15 @@ def command(
     migrate: bool = typer.Option(
         False, "--migrate", help="Run `karni make migration` for the app afterwards."
     ),
+    tag: bool = typer.Option(
+        False,
+        "--tag",
+        help=(
+            "Write nothing: print the {% karni_form %} tag of a form made already, with the "
+            "arguments that keep the imported design's <form>. Its fields are read from the "
+            "model unless FIELDS are given."
+        ),
+    ),
     app: str | None = APP_OPTION,
     force: bool = FORCE_OPTION,
     dry_run: bool = DRY_RUN_OPTION,
@@ -877,7 +1060,19 @@ def command(
     """
     ws = project_workspace(force)
     target = resolve_app(ws, app)
-    form = plan(ws, target, name, fields or [], notify=notify, states=states, role=role)
+    if tag:
+        print_tag(ws, target, name, fields or [])
+        return
+    try:
+        form = plan(ws, target, name, fields or [], notify=notify, states=states, role=role)
+    except CliError as exc:
+        if exc.code != "C101":
+            raise
+        raise CliError(
+            f"{exc.message} To print the form's tag again without writing anything: "
+            f"karni make form {form_name(name)} --tag",
+            code="C101",
+        ) from exc
     if not migrate:
         ws.note(f"next: karni make migration --app {target.label}, then karni test")
     ws.commit(dry_run=dry_run)
@@ -888,4 +1083,7 @@ def command(
         code = migration_gen.run(ws.root, target.label)
         if code != 0:
             raise typer.Exit(code)
-    typer.echo(f'done: {{% karni_form "{form}" %}} is ready for a page.')
+    typer.echo(
+        f'done: {{% karni_form "{form}" %}} is ready for a page. '
+        f"karni make form {form} --tag prints the tag again."
+    )

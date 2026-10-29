@@ -141,6 +141,15 @@ def test_a_new_project_gets_the_production_stack(project: Path) -> None:
     ):
         assert f"\n{line}\n" in env, line
     assert "DEBUG" not in re.sub(r"^#.*$", "", env, flags=re.MULTILINE)
+    # Email and phone numbers: commented, with the format of each value.
+    for line in (
+        "# KARNI_PHONE_COUNTRY_CODE=44",
+        "# EMAIL_URL=smtp+tls://user:password@smtp.example.com:587",
+        "# DEFAULT_FROM_EMAIL=noreply@example.com",
+        "# SERVER_EMAIL=server@example.com",
+    ):
+        assert f"\n{line}\n" in env, line
+    assert '"44" for the UK (not "GB")' in env and "(karni.W520)" in env
     assert ".env.prod" in (project / ".gitignore").read_text().split()
     assert ".env.prod" in (project / ".dockerignore").read_text().split()
 
@@ -330,6 +339,8 @@ def test_the_ci_job_boots_this_stack_without_secrets() -> None:
             in stack
         )
     runs = "\n".join(step.get("run", "") for step in job["steps"])
+    # The deploy gate refuses a stack whose email goes nowhere (karni.W520).
+    assert "--set EMAIL_URL=" in runs and "--set DEFAULT_FROM_EMAIL=" in runs
     for needed in (
         '"$SMOKE" env',
         '"$SMOKE" wait',

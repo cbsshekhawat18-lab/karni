@@ -233,3 +233,51 @@ def test_the_page_limit_and_ignored_paths(settings: Settings, projects: list[Pro
     crawl = checks_seo.SeoCrawl()
     crawl.run()
     assert not any(page.startswith("/projects/") for page in crawl.pages)
+
+
+def test_the_crawls_request_logs_are_held_back(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    with caplog.at_level(logging.INFO), checks_seo.quiet_requests() as errors:
+        logging.getLogger("django_structlog.middlewares.request").info("request_started")
+        logging.getLogger("karni.queries").warning("GET / 200: 7 queries, 6 duplicated")
+        logging.getLogger("django.request").warning("Not Found: /old/")
+        logging.getLogger("django.request").error("Internal Server Error: /broken/")
+        logging.getLogger("karni_site").warning("a module's own warning still shows")
+    shown = [record.getMessage() for record in caplog.records]
+    assert shown == ["a module's own warning still shows"]
+    assert errors == ["Internal Server Error: /broken/"]
+    # Afterwards every logger is as it was.
+    with caplog.at_level(logging.INFO):
+        logging.getLogger("django_structlog.middlewares.request").info("request_finished")
+    assert caplog.records[-1].getMessage() == "request_finished"
+
+
+def test_the_hook_summarises_the_errors_the_pages_logged(
+    settings: Settings,
+    projects: list[Project],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import logging
+
+    real = checks_seo.SeoCrawl.get
+    logged: list[str] = []
+
+    def get(self: checks_seo.SeoCrawl, path: str) -> Any:
+        if path == "/about/" and not logged:
+            logged.append(path)
+            logging.getLogger("django.request").error("Internal Server Error: /about/")
+        return real(self, path)
+
+    monkeypatch.setattr(checks_seo.SeoCrawl, "get", get)
+    assert checks_seo.run_checks() == []
+    out = capsys.readouterr().out
+    assert (
+        "karni check --seo: the pages' requests logged 1 error(s), not shown here, the first: "
+        "Internal Server Error: /about/."
+    ) in out
+    # Nothing logged: nothing said.
+    monkeypatch.setattr(checks_seo.SeoCrawl, "get", real)
+    checks_seo.run_checks()
+    assert "logged" not in capsys.readouterr().out

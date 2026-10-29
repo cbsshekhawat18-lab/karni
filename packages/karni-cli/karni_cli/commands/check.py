@@ -7,9 +7,9 @@ exists, jscpd via the project's own pinned binary driven solely by
 both and each step's output is shown.
 
 ``--deploy`` passes through to ``karni_check --deploy``: Django's and Karni's
-deploy checks run too (``karni.W510`` to ``karni.W519``: DEBUG, SECRET_KEY,
+deploy checks run too (``karni.W510`` to ``karni.W520``: DEBUG, SECRET_KEY,
 ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, HSTS, secure cookies, the admin path,
-CORS, the content security policy), each finding printed with its code and
+CORS, the content security policy, email), each finding printed with its code and
 fix, and a warning fails the run. Run it with the production environment.
 
 ``--seo`` passes through to ``karni_check --seo``: the modules' SEO checks

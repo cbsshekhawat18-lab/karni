@@ -162,3 +162,21 @@ def test_a_row_hidden_in_the_admin_is_left_out() -> None:
     assert "http://testserver/projects/wedding/" not in found
     PageSeo.objects.create(route="seo:project", noindex=True)
     assert not any("/projects/m" in url for url in listed())
+
+
+def test_the_sitemap_reads_each_section_once(django_assert_max_num_queries: Any) -> None:
+    """One query for the admin's hidden pages, a count and a read per model: no repeats."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    for index in range(3):
+        Project.objects.create(title=f"Project {index}", slug=f"p{index}")
+    PageSeo.objects.create(path="/about/", noindex=True)
+    listed()  # the first request stores what rendering stores
+    with CaptureQueriesContext(connection) as queries:
+        found = listed()
+    assert "http://testserver/projects/p2/" in found
+    statements = [query["sql"] for query in queries.captured_queries]
+    hidden = [sql for sql in statements if "karni_site_pageseo" in sql and "noindex" in sql]
+    assert len(hidden) == 1, hidden
+    assert len(statements) == len(set(statements)), statements

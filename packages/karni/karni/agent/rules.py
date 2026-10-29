@@ -962,10 +962,13 @@ PROCEDURES: tuple[Procedure, ...] = (
             "is not published, `select_related`/`prefetch_related` what the template loops "
             "over). The template keeps one copy of the item's markup inside `{% for %}` with "
             "`{{ row.field }}` where the map reads a value, `{% image row.image width=<its "
-            "width in the card> alt=row.title %}` for an image "
+            "width in the card> alt=row.title %}` for an image (with `eager=forloop.first` in "
+            "a list at the top of the page, such as a hero slider: the first picture loads "
+            "first, not lazily) "
             "and `{{ row.heading|highlight }}` for highlighted words (`==words==`, the "
             "site's one convention: set `KARNI_SITE_HIGHLIGHT` to the markup the analysis "
-            "names, unless `karni import design --editable` already did). A model's detail "
+            "names, unless `karni import design --editable` already did. `karni explain "
+            "<SETTING>` prints any setting's format and default). A model's detail "
             "pages become one view and template with a `<slug:slug>` capture, keeping each "
             "page's URL (the slug is the page's file name).",
             "For those detail pages: `karni make view <model> --app <site app> --path "
@@ -991,9 +994,13 @@ PROCEDURES: tuple[Procedure, ...] = (
             "answers `/sitemap.xml` and `/robots.txt`: write none of them by hand. Give a model "
             'whose rows are not all public `class Karni: sitemap = {"filter": {...}}`, then run '
             "`karni check --seo` and fix each SITE010 to SITE018 it reports.",
-            "`karni test`: give each detail page a real URL in the page test's `PAGES` and load "
-            'the content first in that test (`call_command("karni_load", "content/site.json")` '
-            "in a fixture), so every page renders real rows. Then `karni check`.",
+            "`karni test`: give each detail page a real URL in the page test's `PAGES`. The "
+            'test loads the content first (`load_content("content/site.json")` from '
+            "`karni.testing`, which reads the path from the project root, in an autouse "
+            "fixture: the page test the import wrote has it), so every page renders real rows. "
+            "Then `karni check`. Nobody can sign in to the admin yet: `karni createsuperuser` "
+            "makes the first account, and the client's own is a user the admin gives the staff "
+            "role (or the editor role, to change only the content).",
         ),
         outro=(
             "Nothing is retyped and nothing is invented: every value comes from the design "

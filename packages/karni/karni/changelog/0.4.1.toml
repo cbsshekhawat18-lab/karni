@@ -370,3 +370,18 @@ three in frontend/package.json to clear the audit, after moving code of your \
 own off Zod 3's required_error and invalid_type_error."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-frontend-moves-to-zod-4"
+
+[[change]]
+id = "production-email"
+kind = "behaviour"
+symbol = "EMAIL_URL, DEFAULT_FROM_EMAIL (karni.W520)"
+summary = """\
+karni_settings() reads EMAIL_URL (smtp+tls://user:password@host:587), \
+DEFAULT_FROM_EMAIL and SERVER_EMAIL from the environment. `karni check --deploy`, \
+which the production containers run before they start, reports karni.W520 while \
+production email goes nowhere: the console, locmem, dummy or file backend, or a \
+sender at localhost (Django's webmaster@localhost). Set EMAIL_URL and \
+DEFAULT_FROM_EMAIL in .env.prod before the next deploy, or add karni.W520 to \
+SILENCED_SYSTEM_CHECKS in a project that sends no email."""
+mechanical = false
+migration = "migrations/0.4.1.md#production-email-email_url-and-karniw520"

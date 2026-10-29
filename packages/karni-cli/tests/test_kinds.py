@@ -122,6 +122,20 @@ def test_a_site(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert (project / "AGENTS.md").read_text().count("\n") <= 100
 
 
+def test_a_new_site_says_how_to_make_the_first_admin_account(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nobody signs up on a site, so the next steps make the account the admin needs."""
+    result = _new(tmp_path, monkeypatch, "Corner Shop", "--kind", "site", "--no-staff-app")
+    assert result.exit_code == 0, result.output
+    steps = result.output.split("Next steps:")[1]
+    assert "  karni migrate\n  karni createsuperuser  # the first admin account: nobody " in steps
+    assert "the staff role" in steps
+    both = _new(tmp_path, monkeypatch, "Club House", "--kind", "site+app")
+    assert both.exit_code == 0, both.output
+    assert "  karni createsuperuser  # the first admin account\n" in both.output
+
+
 def test_a_site_without_the_staff_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = _new(tmp_path, monkeypatch, "Quiet Clinic", "--kind", "site", "--no-staff-app")
     assert result.exit_code == 0, result.output
@@ -327,13 +341,14 @@ def test_design_builds_the_site_from_each_fixture(
     # The next steps: set up, then the procedure from step 4 with the project's own paths.
     steps = out.split("Next steps:")[1]
     assert "  cd made_from_design\n" in steps and "karni migrate && karni test" in steps
+    assert "\n  karni createsuperuser  # the first admin account: " in steps
     assert "it goes on at step 4:\n  4. Answer every decision in the map." in steps
     assert "  2. " not in steps and "  3. " not in steps
     assert "`karni design extract ../design --map content/design-map.json -o" in steps
     assert "<design folder>" not in steps and "<site app>" not in steps
     assert "  8. Turn the repeated markup into loops." in steps
     assert "`karni make form <name> <field:type> ...`" in steps
-    assert steps.rstrip().endswith("Then `karni check`.")
+    assert "Then `karni check`." in steps and "`karni createsuperuser`" in steps
     # The staff app and the admin wear the design's brand.
     assert "staff app theme: " in out
     # karni context says where the site from the design stands.

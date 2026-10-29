@@ -20,6 +20,9 @@ Arguments (every one optional, each a string or a variable):
 * ``rows="name,email|phone,company"``: fields that share a row element.
 * ``labels="name: Your name"``, ``placeholders="email: you@example.com"``,
   ``widgets="topic: radios"`` (input, textarea, select, radios, checkboxes).
+* ``attrs="message: rows=4 | guests: min=1 max=8"``: attributes of a field's
+  control as the design sets them (rows, cols, min, max, step, pattern,
+  size, inputmode, autocomplete), single quotes around a value with spaces.
 * ``button``, and the texts ``success``, ``invalid``, ``throttled``,
   ``refused``, ``failed``, ``choose``.
 * ``next="/thanks/"``: the page to go to once sent (default: this page).
@@ -71,6 +74,7 @@ OPTIONS: Final[frozenset[str]] = frozenset(
         "labels",
         "placeholders",
         "widgets",
+        "attrs",
         "next",
         "id",
         "classes",

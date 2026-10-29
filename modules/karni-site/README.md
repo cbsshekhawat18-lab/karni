@@ -332,7 +332,8 @@ A `karni_site/robots.txt` template of the project's own replaces it.
 
 ```django
 {% image project.photo width=400 alt=project.title class="card-img" %}
-{% image page.hero alt="" loading="eager" fetchpriority="high" %}
+{% image page.hero alt="" eager=True %}
+{% for slide in slides %}{% image slide.image width=1920 alt=slide.title eager=forloop.first %}{% endfor %}
 ```
 
 renders an `<img>` with `srcset` and `sizes` from the image's WebP copies,
@@ -342,7 +343,11 @@ without one). `alt` is required, `alt=""` for an image that only
 decorates. Any other `name=value` is an attribute, an underscore a hyphen
 in `data_` and `aria_` names. A lazy image's `sizes` starts with `auto`,
 so the browser loads the copy that fits the layout: a photo in a card at
-the card's size. An empty field renders nothing.
+the card's size. An empty field renders nothing. `eager=True` is for the
+picture at the top of a page, the one that paints largest: it loads first
+(`loading="eager"` and `fetchpriority="high"`), and in a loop
+`eager=forloop.first` does that for the first item only, such as the first
+slide of a hero slider.
 
 The copies are made when a save uploads an image (an `ImageField`, or one
 of this module's image fields), by a Celery task, through the field's own
@@ -392,6 +397,12 @@ serves once one has. The site itself always queues the copies (in a project
 with `CELERY_TASK_ALWAYS_EAGER = True` the first page that shows the image
 makes them and uses them). `KARNI_SITE_QUEUE_RENDITIONS = False` makes none
 in the check either. `KARNI_SITE_SEO_IGNORE` lists paths it never requests.
+
+The crawl's own requests are not logged (`KARNI_SITE_SEO_QUIET` names the
+loggers held back: the request log, the query log, Django's request
+warnings), so the findings are not buried, and the development capture under
+`.karni/` keeps the developer's requests. An error a page's request logs is
+counted, and one line names the first of them.
 
 ### The editor role
 
@@ -500,6 +511,7 @@ under the enforced Content-Security-Policy as it is.
 | `fields="name,email"` | which fields, in this order (default: every one a visitor fills) |
 | `rows="name,email\|phone,company"` | fields that share a row element |
 | `labels`, `placeholders`, `widgets` | `"field: text \| field: text"`. Widgets: input, textarea, select, radios, checkboxes |
+| `attrs="message: rows=4 \| guests: min=1 max=8"` | attributes of a field's control, as the design sets them: `rows`, `cols`, `min`, `max`, `step`, `pattern`, `size`, `inputmode`, `autocomplete` (single quotes around a value with spaces). The form's own `name`, `type`, `value`, `required` and `class` cannot be replaced (`SITE021`) |
 | `button`, `success`, `invalid`, `throttled`, `refused`, `failed`, `choose` | the texts |
 | `next="/thanks/"` | where a sent form goes (default: back to this page) |
 | `id` | the form's id (default `karni-form-<name>`) |
@@ -516,9 +528,11 @@ name to a viewset. A name no form has fails `karni check` (`SITE020`).
 When the site came from `karni import design`, `karni make form` names the
 template and line of the design's `<form>` it replaces and prints the tag
 with the arguments that keep that form's own class names, rows, labels,
-placeholders and button. It matches the design's controls to the form's
-fields by name, then by label and type, says which control fills which
-field, and adds `editable=` after an editable import.
+placeholders, button and control attributes (`attrs=`). It matches the
+design's controls to the form's fields by name, then by label and type, says
+which control fills which field, and adds `editable=` after an editable
+import. `karni make form <name> --tag` prints the tag again and writes
+nothing.
 
 ### `notify_recipients`: the email a new submission sends
 
@@ -539,8 +553,12 @@ Celery worker after the row is committed. `notify_recipients` reads the
 addresses from the setting (a list, or one comma-separated string), renders
 the project's `<template>_subject.txt` and `<template>_body.txt` (and
 `_body.html` when it exists) with `submission`, `fields`, `verbose_name`,
-`admin_path` and `frontend_url`, collapses the subject to one line and sets
-`Reply-To`. An empty setting sends nothing and logs a warning. A missing one
+`admin_url`, `admin_path` and `frontend_url`, collapses the subject to one
+line and sets `Reply-To`. `admin_url` is the row's admin page as a full
+address: on `KARNI_SITE_URL` when it is set, else on the host the visitor's
+request came to, which the queued task carries (`karni.tracing.get_origin`).
+The body `karni make form` writes leaves out each optional field the visitor
+left empty. An empty setting sends nothing and logs a warning. A missing one
 raises `SITE023`.
 
 ### `highlight`: words the design sets apart
@@ -630,6 +648,7 @@ Every setting arrives through the module's settings fragment
 | `KARNI_SITE_SEO_IMAGE_BYTES` | `500000` | An image without smaller copies above this size is oversized (`SITE016`). |
 | `KARNI_SITE_SEO_PIXEL_RATIO` | `2` | An image wider than this many times its `width` is oversized. |
 | `KARNI_SITE_SEO_IGNORE` | `[]` | Regular expressions of paths `karni check --seo` never requests. |
+| `KARNI_SITE_SEO_QUIET` | `["django_structlog", "django.request", "django.server", "karni.queries"]` | The loggers `karni check --seo` holds back while it requests the pages. Their errors are counted and the first is shown. `[]` keeps every line. |
 
 ## Checks
 

@@ -94,6 +94,8 @@ PROCESSORS_BLOCK = (
 SITE_URLS = "karni_site.urls"
 #: The line in tests/test_pages.py that `karni make view` inserts page URLs above.
 PAGES_MARKER = "# karni:pages"
+#: The content file the page test loads (karni design extract -o, karni.testing.load_content).
+SITE_CONTENT = "content/site.json"
 _APP_NAME = re.compile(r"""^app_name\s*=\s*["']([^"']+)["']""", re.MULTILINE)
 #: What every page view needs.
 VIEW_IMPORTS = [
@@ -268,13 +270,15 @@ def tests_source(app: App, line_length: int) -> str:
             line_length,
         )
         + "\n\n"
+        "from pathlib import Path\n\n"
         "import pytest\n"
         "from django.test import Client\n"
-        "from karni.testing import assert_pages\n\n"
+        "from karni.testing import assert_pages, load_content\n"
+        "from pytest_django import Settings\n\n"
         + comment(
             "Every page of the site. `karni make view` adds each new URL above the marker. "
-            "A path with a capture, such as /services/<slug:slug>/, needs a real URL here, "
-            "and the test must create the content that page shows first.",
+            "A path with a capture, such as /services/<slug:slug>/, needs a real URL here: "
+            "one whose row content/site.json holds.",
             "",
             line_length,
         )
@@ -283,6 +287,17 @@ def tests_source(app: App, line_length: int) -> str:
         '    "/",\n'
         f"    {PAGES_MARKER}\n"
         "]\n\n\n"
+        "@pytest.fixture(autouse=True)\n"
+        "def site_content(db: None, settings: Settings, tmp_path: Path) -> None:\n"
+        + docstring(
+            "The site's real content, so every page renders real rows: content/site.json "
+            "(karni design extract), read from the project root. Nothing until it exists.",
+            "    ",
+            line_length,
+        )
+        + "\n"
+        "    settings.MEDIA_ROOT = str(tmp_path)  # its images go to a folder the test owns\n"
+        f'    load_content("{SITE_CONTENT}", missing_ok=True)\n\n\n'
         "@pytest.mark.django_db\n"
         "def test_every_page_passes_the_page_checks(client: Client) -> None:\n"
         "    assert_pages(client, PAGES)\n"

@@ -85,8 +85,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C005",
         "This karni-cli install is incomplete",
         "karni_cli (bundled templates, agent rules, changelog, error codes)",
-        "The wheel bundles the project template, agent rules, changelog and error codes. One is "
-        "missing, so the install is broken.",
+        "The wheel bundles the project template, agent rules, changelog, error codes and the "
+        "settings reference. One is missing, so the install is broken.",
         "Reinstall karni-cli (pipx reinstall karni-cli, or pip install --force-reinstall "
         "karni-cli).",
     ),
@@ -541,6 +541,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "in the same command. The counter is never optional.",
         "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
         "counter that starts at 0.",
+    ),
+    _c(
+        "C373",
+        "No such setting",
+        "karni explain <SETTING>",
+        "karni explain reads Karni's settings and every module's from the source "
+        "docs/settings.md is generated from: Karni's karni/conf/base.py, each module's conf.py "
+        "(installed next to karni-cli, or in the project), never Django.",
+        "Check the name against docs/settings.md, and run it inside the project so the "
+        "project's modules are found. A setting the project defines itself is in "
+        "config/settings.py.",
     ),
 )
 

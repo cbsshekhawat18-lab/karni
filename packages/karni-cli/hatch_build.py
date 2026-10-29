@@ -11,7 +11,9 @@ to Karni's machine-readable changelog (packages/karni/karni/changelog ->
 karni_cli/_changelog), which `karni upgrade` reads: the CLI must know every
 change up to its own release, whatever karni the project has installed.
 Likewise Karni's error code registry (packages/karni/karni/errorcodes ->
-karni_cli/_errorcodes), which `karni explain` and error messages read, and
+karni_cli/_errorcodes), which `karni explain` and error messages read, the
+settings reference (packages/karni/karni/conf/reference.py and the base.py it
+reads -> karni_cli/_settings), which `karni explain <SETTING>` reads, and
 @karni/ui's token stylesheet (packages/karni-ui/src/styles.css ->
 karni_cli/_ui/styles.css), whose defaults `karni ui detect` lists when a
 project has neither @karni/ui installed nor a monorepo checkout.
@@ -60,6 +62,17 @@ class TemplateBundleHook(BuildHookInterface):
             shutil.copy2(links, bundled_links)
         elif not bundled_links.is_file():
             raise RuntimeError("No karni/links.py to bundle into karni_cli/_errorcodes.")
+
+        # The settings reference (stdlib only) and the file it reads: `karni explain <SETTING>`.
+        settings_bundle = pkg_root / "karni_cli" / "_settings"
+        conf = pkg_root.parent / "karni" / "karni" / "conf"
+        if (conf / "reference.py").is_file():
+            settings_bundle.mkdir(parents=True, exist_ok=True)
+            for name in ("reference.py", "base.py"):
+                shutil.copy2(conf / name, settings_bundle / name)
+        elif not (settings_bundle / "reference.py").is_file():
+            raise RuntimeError("No karni/conf/reference.py to bundle into karni_cli/_settings.")
+        build_data["artifacts"].append("karni_cli/_settings/")
 
         styles = pkg_root.parent / "karni-ui" / "src" / "styles.css"
         bundled_styles = pkg_root / "karni_cli" / "_ui" / "styles.css"

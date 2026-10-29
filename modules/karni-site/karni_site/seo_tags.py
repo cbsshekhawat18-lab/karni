@@ -17,8 +17,11 @@
     ``decoding="async"``. ``alt`` is required (``alt=""`` for a decorative
     image). Any other ``name=value`` becomes an attribute, an underscore in
     the name a hyphen (``data_index=1`` is ``data-index="1"``).
-    ``loading="eager"`` (or ``fetchpriority="high"``) for the image at the
-    top of a page. ``sizes="..."`` replaces the one worked out from
+    ``eager=True`` for the image at the top of a page, the one that paints
+    largest: ``loading="eager"`` and ``fetchpriority="high"``. In a loop,
+    ``eager=forloop.first`` makes only the first one eager (a hero slider).
+    ``loading="eager"`` or ``fetchpriority="high"`` alone work too.
+    ``sizes="..."`` replaces the one worked out from
     ``width``. An empty field renders nothing. Before the copies exist the
     original is shown.
 
@@ -110,12 +113,20 @@ def image_tag(
     height: Any = None,
     sizes: str | None = None,
     loading: str | None = None,
+    eager: Any = None,
     **attrs: Any,
 ) -> str:
-    """The ``<img>`` markup ``{% image %}`` renders, or ``""`` for an empty field. Never raises."""
+    """The ``<img>`` markup ``{% image %}`` renders, or ``""`` for an empty field. Never raises.
+
+    A true ``eager`` loads the image first: ``loading="eager"`` and
+    ``fetchpriority="high"``, unless ``loading`` or ``fetchpriority`` say otherwise.
+    """
     source = renditions.source_of(value)
     if source is None:
         return ""
+    if eager:
+        loading = loading or "eager"
+        attrs.setdefault("fetchpriority", "high")
     fetch = str(attrs.get("fetchpriority") or "").lower()
     lazy = (loading or ("eager" if fetch == "high" else "lazy")).lower() == "lazy"
     found: dict[str, str | bool]
@@ -158,7 +169,7 @@ class ImageNode(Node):
 
 
 def do_image(parser: Parser, token: Token) -> ImageNode:
-    """``{% image <file field> alt="..." [width=800] [name=value ...] %}``."""
+    """``{% image <file field> alt="..." [width=800] [eager=forloop.first] [name=value ...] %}``."""
     bits = token.split_contents()
     usage = (
         '{% image %} is written {% image obj.photo alt="What it shows" width=800 %}: the image, '

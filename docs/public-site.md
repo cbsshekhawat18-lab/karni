@@ -356,6 +356,14 @@ What the import marks:
   `<link rel="icon">` its favicon.
 - the first `tel:`, `mailto:` and map link and every link to a social
   profile take their addresses from `site`.
+- the business's address becomes `site.address`, seeded with the design's
+  text: an `<address>` of text and line breaks, or a block that reads like a
+  postal address (a number, two to six parts parted by commas or line
+  breaks) beside the phone, email or map link or shown on another page too.
+  A block with line breaks renders `{{ site.address|linebreaksbr }}`, one
+  with commas `{{ site.address_lines|join:", " }}`, so each place keeps its
+  look and the client enters the address once. Places that show different
+  addresses stay text blocks, and the report says so.
 - opening hours a table, a definition list, a list or lines of text show
   (days, then times or a word for closed, in English, German, French,
   Spanish, Italian, Dutch or Portuguese) become a loop over `site.hours` in
@@ -614,7 +622,9 @@ search engines without project code:
   through the project's storage, local or S3). Uploads larger than
   `KARNI_SITE_IMAGE_MAX_SIZE` are scaled down. Until the copies exist the
   original is shown. Pillow is the `karni-site[images]` extra, which `karni
-  make site` adds. Without it images are shown as uploaded.
+  make site` adds. Without it images are shown as uploaded. The picture at
+  the top of a page loads first, not lazily: `eager=True`, or in a loop
+  `eager=forloop.first` (a hero slider's first slide).
 - **404 and 500 pages.** `templates/404.html` and `500.html` extend the
   site's layout, `karni_site`'s handlers render them with the request while
   `DEBUG` is off, and they are never indexed. With `DEBUG` on you see
@@ -662,7 +672,7 @@ in `karni make model`'s field DSL, and writes:
 | `<app>/viewsets.py` | a `BaseViewSet` with `Access(read=HasRole("staff"), write=HasRole("staff"), create=Public())` (`--role` names another role) |
 | `<app>/listeners.py` | with `--notify SETTING`: a queued listener that emails each new row to the addresses in that setting |
 | `<app>/templates/<app>/email/<name>_subject.txt`, `_body.txt` | with `--notify`: the email, yours to edit |
-| `config/settings.py`, `.env.example` | with `--notify`: `SETTING = env.list("SETTING", default=[])` and the line to fill |
+| `config/settings.py`, `.env.example`, `.env.prod.example` | with `--notify`: `SETTING = env.list("SETTING", default=[])` and the line to fill in each env file |
 | `<app>/tests/test_<name>_form.py` | anonymous submit, the form without JavaScript, the email (or none), the staff-only fields, the rate limit, staff-only reading, and `assert_crud` for the role |
 | `frontend/src/pages/` | the staff app's list, detail (with the lifecycle buttons) and form pages |
 | `config/urls.py` | `path("", include("karni_site.urls"))`: the view every form posts to |
@@ -723,7 +733,11 @@ sent message become blocks under that key (`home.booking.email.label`,
 When the site came from `karni import design`, the import lists each
 `<form>` of the design (it is in `.karni/design.json` too), and `karni make
 form` names the template and the line of the form it replaces, with the tag
-that keeps that form's class names, rows, labels, placeholders and button.
+that keeps that form's class names, rows, labels, placeholders, button and
+the attributes of its controls (a textarea's `rows`, an input's `min`, `max`,
+`step` or `pattern`, as `attrs="message: rows=4"`). `karni make form <name>
+--tag` prints that tag again later and writes nothing, so a form made
+already does not have to be made again to see it.
 It matches each of the design's controls to a field of the form: by its
 name, then by its label and its type (the design's `day` with the label
 *Preferred date* fills `preferred_date`), then by its type alone when one
@@ -759,7 +773,11 @@ visitor never waits for the mail server. `notify_recipients` from
 `karni_site.notify` renders the two templates, sets `Reply-To` to the
 visitor's address so staff answer by replying, and sends to every address in
 `ENQUIRY_RECIPIENTS` (a list in settings, comma-separated in `.env`). An
-empty setting sends nothing and logs a warning.
+empty setting sends nothing and logs a warning. The body lists the visitor's
+fields, leaving out an optional one they left empty, and links the row's
+admin page with a full address (`{{ admin_url }}`): on `KARNI_SITE_URL` when
+it is set, else on the host the visitor's request came to, which the queued
+task carries.
 
 ### The API stays the same
 

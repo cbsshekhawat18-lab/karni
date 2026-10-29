@@ -79,8 +79,8 @@ def project_app_configs(*, infer_root: bool = True) -> list[AppConfig]:
     """Installed apps whose code lives in the project tree (see module docstring).
 
     The tree is ``BASE_DIR`` when the settings define it, else
-    :func:`project_root`'s fallback (the parent of the settings package — a
-    Karni scaffold defines no ``BASE_DIR``), so every rule scans the project
+    :func:`project_root`'s fallback (the parent of the settings package, for a
+    project made before the scaffold defined ``BASE_DIR``), so every rule scans the project
     by default. ``infer_root=False`` keeps the strict ``BASE_DIR``-only
     behaviour and returns nothing without it.
     """

@@ -21,6 +21,14 @@ with karni-site's tags (``karni_site.templatetags.karni_site``):
   with the logo, the favicon and the share image as static paths: the
   ``og:image`` every page has, or else an image no page uses that is named
   for sharing (``share.jpg``, ``og-image.png``).
+* **The address.** An ``<address>`` of text and line breaks, or a block
+  that reads like a postal address (a number, two to six parts parted by
+  commas or line breaks) next to the phone, email or map link or repeated
+  on another page, becomes ``site.address``, seeded with the design's text
+  (``{% site_defaults address="12 Harbour Street\nEaston" %}``). A block
+  with line breaks renders ``{{ site.address|linebreaksbr }}``, one with
+  commas ``{{ site.address_lines|join:", " }}``. Addresses that differ stay
+  text blocks, and the report says so.
 * **Opening hours.** A table, list or lines of days and times
   (:mod:`karni_cli.design.hours`) become a loop over ``site.hours`` in the
   design's own markup, seeded once with ``{% site_defaults hours="..." %}``.
@@ -350,6 +358,8 @@ class Editable:
         self.keys: dict[str, str] = {}
         #: Page path → starts of the elements a loop over site.hours replaced (never walked).
         self.hours_parts: dict[str, set[int]] = {}
+        #: Page path → starts of the elements that render site.address (never walked).
+        self.address_parts: dict[str, set[int]] = {}
 
     # entry points
 
@@ -400,6 +410,7 @@ class Editable:
                         )
                     )
         self._plan_hours(regions)
+        self._plan_address(regions)
         for page, node, prefix, section, region, group in regions:
             in_layout = group is not None
             self._walk(
@@ -424,7 +435,9 @@ class Editable:
         if self.defaults and base.startswith(load):
             images = ("logo", "favicon", "share_image")  # the static paths go last
             ordered = sorted(self.defaults.items(), key=lambda item: item[0] in images)
-            pairs = " ".join(f'{name}="{_quoted(value)}"' for name, value in ordered)
+            pairs = " ".join(
+                f'{name}="{_quoted(value).replace(chr(10), _NEWLINE)}"' for name, value in ordered
+            )
             templates[base_rel] = load + "{% site_defaults " + pairs + " %}" + base[len(load) :]
         for menu in self.menus:
             original = menu.page.overlay
@@ -568,6 +581,82 @@ class Editable:
             parts.add(item.start)
         for pair in listed.cells:
             parts.update(cell.start for cell in pair)
+
+    # the address
+
+    def _plan_address(self, regions: list[tuple[Any, Node, str, str, str, Any]]) -> None:
+        """Make the design's address ``site.address``, when every place that shows it agrees."""
+        found: list[tuple[Any, Node, list[str], bool, bool]] = []
+        seen: set[tuple[str, int]] = set()
+        for page, root, _prefix, _section, _region, group in regions:
+            shared = group is not None and group != "override"
+            for node in root.iter_elements():
+                if (page.path, node.start) in seen or node.tag in SKIP or self._row(page, node):
+                    continue
+                if node.start in self.hours_parts.get(page.path, ()):
+                    continue
+                parts = _address_parts(node, page.text)
+                if parts is None:
+                    continue
+                seen.add((page.path, node.start))
+                found.append((page, node, parts, shared, _has_break(node)))
+        if not found:
+            return
+        counted = Counter(tuple(part.lower() for part in parts) for _p, _n, parts, _s, _b in found)
+        chosen = [
+            entry
+            for entry in found
+            if entry[1].tag == "address"
+            or counted[tuple(part.lower() for part in entry[2])] > 1
+            or self._beside_contact(entry[0], entry[1])
+        ]
+        if not chosen:
+            return
+        where = [self._address_where(page, node, shared) for page, node, _p, shared, _b in chosen]
+        addresses = {tuple(part.lower() for part in parts) for _p, _n, parts, _s, _b in chosen}
+        if len(addresses) > 1:
+            self.report.notes.append(
+                f"address: {' and '.join(where)} show different addresses, so they stay text "
+                "blocks. Put {{ site.address }} where the business's own address is."
+            )
+            return
+        seed = max(chosen, key=lambda entry: entry[4])  # line breaks keep the most
+        self.defaults["address"] = "\n".join(seed[2])
+        for page, node, _parts, _shared, broken in chosen:
+            self._render_address(page, node, broken)
+        self.report.notes.append(
+            f"address: {' and '.join(where)} now show site.address ({', '.join(seed[2])}): the "
+            "client enters it once, in Site settings."
+        )
+
+    def _beside_contact(self, page: Any, node: Node) -> bool:
+        """Whether the element's parent also holds a phone, email or map link."""
+        parent = node.parent
+        if parent is None or parent.kind != "element":
+            return False
+        for other in parent.iter_elements():
+            if other.tag != "a" or _descends(other, node):
+                continue
+            special = self._special(other.attr(page.text, "href") or "", page)
+            if special is not None and special[0] in ("phone", "email", "map"):
+                return True
+        return False
+
+    def _address_where(self, page: Any, node: Node, shared: bool) -> str:
+        if shared:
+            return "the layout shared by every page"
+        return f"{page.path}:{page.text.count(chr(10), 0, node.start) + 1}"
+
+    def _render_address(self, page: Any, node: Node, broken: bool) -> None:
+        begin, finish = node.inner
+        inner = page.text[begin:finish]
+        lead = inner[: len(inner) - len(inner.lstrip())]
+        tail = inner[len(inner.rstrip()) :]
+        shown = (
+            "{{ site.address|linebreaksbr }}" if broken else '{{ site.address_lines|join:", " }}'
+        )
+        page.overlay.replace[begin] = (finish, lead + shown + tail)
+        self.address_parts.setdefault(page.path, set()).add(node.start)
 
     # the share image
 
@@ -720,6 +809,8 @@ class Editable:
             return
         if node.start in self.hours_parts.get(page.path, ()):
             return  # a row of opening hours: rendered from site.hours
+        if node.start in self.address_parts.get(page.path, ()):
+            return  # the address: rendered from site.address
         if self._row(page, node):
             self.left_out[page.path] = self.left_out.get(page.path, 0) + 1
             return
@@ -1423,6 +1514,67 @@ def _same_number(shown: str, number: str) -> bool:
     written = _digits(shown).lstrip("0")
     dialled = _digits(number).lstrip("0")
     return len(written) >= 6 and dialled.endswith(written)
+
+
+#: How a line break of a ``{% site_defaults %}`` value is written (a tag is one line).
+_NEWLINE: Final = "\\n"
+#: An address part: a few words with a letter, at most 60 characters.
+_ADDRESS_PART = re.compile(r"^[^\W_][\w\s.'#/&-]{1,59}$")
+#: Elements an address is written in.
+_ADDRESS_TAGS: Final = frozenset({"address", "p", "div", "span", "li", "dd", "td", "small"})
+
+
+def _has_break(node: Node) -> bool:
+    return any(child.kind == "element" and child.tag == "br" for child in node.children)
+
+
+def _descends(node: Node, ancestor: Node) -> bool:
+    current: Node | None = node
+    while current is not None:
+        if current is ancestor:
+            return True
+        current = current.parent
+    return False
+
+
+def _address_parts(node: Node, source: str) -> list[str] | None:
+    """The lines of a postal address the element holds, or ``None`` when it is not one.
+
+    The element holds only text and ``<br>``. Its text has two to six parts,
+    parted by line breaks or commas, a digit (a number or a postcode), a word
+    of three letters or more, and no ``@``, ``:`` or sentence: an email, a time
+    or a paragraph is not an address.
+    """
+    if node.tag not in _ADDRESS_TAGS or not node.children:
+        return None
+    if not all(
+        child.kind == "text" or (child.kind == "element" and child.tag == "br")
+        for child in node.children
+    ):
+        return None
+    pieces: list[str] = [""]
+    for child in node.children:
+        if child.kind == "text":
+            pieces[-1] += unescape(child.text(source))
+        else:
+            pieces.append("")
+    lines = [collapse(piece) for piece in pieces if collapse(piece)]
+    if len(lines) > 1:
+        parts = lines
+    elif lines:
+        parts = [collapse(part) for part in lines[0].split(",") if collapse(part)]
+    else:
+        return None
+    text = " ".join(parts)
+    if not 2 <= len(parts) <= 6 or len(text) > 160 or any(c in text for c in "@:|="):
+        return None
+    if not re.search(r"\d", text) or not re.search(r"[^\W\d_]{3}", text):
+        return None
+    if re.search(r"[.!?]\s+[A-Z]", text) or len(text.split()) > 16:
+        return None  # a sentence
+    if not all(_ADDRESS_PART.match(part) for part in parts):
+        return None
+    return parts
 
 
 def _quoted(value: str) -> str:

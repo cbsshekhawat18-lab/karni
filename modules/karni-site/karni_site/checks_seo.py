@@ -44,17 +44,27 @@ and the check judges the copies the site serves once one has. The site
 itself keeps queueing them. ``KARNI_SITE_QUEUE_RENDITIONS = False`` makes
 none here either.
 
+The crawl's own requests are not logged: the request log, the query log
+and Django's request warnings of every page would bury the findings
+(:func:`quiet_requests`), and the development capture under ``.karni/``
+keeps the developer's requests, not the crawl's. An error a request logs is
+counted, and the run prints one line with the first of them.
+
 Override / escape hatch: the settings above, ``KARNI_SITE_SITEMAP_EXCLUDE``
-for a page deliberately left out of the sitemap, or :class:`SeoCrawl` with
-another client, for a test: ``SeoCrawl(client).run()``.
+for a page deliberately left out of the sitemap, ``KARNI_SITE_SEO_QUIET``
+for the loggers held back, or :class:`SeoCrawl` with another client, for a
+test: ``SeoCrawl(client).run()``.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from collections import deque
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import unquote, urljoin, urlsplit
@@ -64,7 +74,7 @@ from karni.testing.pages import PageParser
 
 from karni_site import conf, imagesize, renditions
 
-__all__ = ["Img", "SeoCrawl", "SeoParser", "run_checks"]
+__all__ = ["Img", "SeoCrawl", "SeoParser", "quiet_requests", "run_checks"]
 
 TITLE_CODE = "SITE010"
 SAME_TITLE_CODE = "SITE011"
@@ -546,6 +556,48 @@ class SeoCrawl:
                 )
 
 
+class _Held(logging.Handler):
+    """Keeps the errors the held-back loggers log, to count them, and prints nothing."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.ERROR)
+        self.errors: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = record.getMessage()
+        except Exception:  # noqa: BLE001 - a record that cannot format still counts
+            message = str(record.msg)
+        event = getattr(record, "msg", None)
+        if isinstance(event, dict):  # a structlog event dict
+            message = str(event.get("event") or message)
+        self.errors.append(" ".join(message.split())[:300])
+
+
+@contextmanager
+def quiet_requests() -> Iterator[list[str]]:
+    """Hold back the request logs of the loggers ``KARNI_SITE_SEO_QUIET`` names.
+
+    Below ``ERROR`` nothing they log is written. Errors are kept, not
+    written, in the list this yields, so the run can say how many there were.
+    """
+    held = _Held()
+    saved: list[tuple[logging.Logger, int, bool, list[logging.Handler]]] = []
+    for name in conf.get("KARNI_SITE_SEO_QUIET") or ():
+        logger = logging.getLogger(str(name))
+        saved.append((logger, logger.level, logger.propagate, list(logger.handlers)))
+        logger.setLevel(logging.ERROR)
+        logger.propagate = False
+        logger.handlers = [held]
+    try:
+        yield held.errors
+    finally:
+        for logger, level, propagate, handlers in saved:
+            logger.setLevel(level)
+            logger.propagate = propagate
+            logger.handlers = handlers
+
+
 def run_checks() -> list[str]:
     """The ``karni.checks.seo`` hook: every finding of :class:`SeoCrawl`, code first."""
     from django.apps import apps
@@ -555,8 +607,15 @@ def run_checks() -> list[str]:
         return []
     hosts = [*getattr(settings, "ALLOWED_HOSTS", []), "testserver"]
     crawl = SeoCrawl()
-    with override_settings(ALLOWED_HOSTS=hosts):
-        failures = crawl.run()
+    with override_settings(ALLOWED_HOSTS=hosts, KARNI_DEBUG_CAPTURE=False):
+        with quiet_requests() as errors:
+            failures = crawl.run()
+    if errors:
+        sys.stdout.write(
+            f"karni check --seo: the pages' requests logged {len(errors)} error(s), not "
+            f"shown here, the first: {errors[0]}. The findings below name the pages: open "
+            "one with `karni serve` to see the whole error.\n"
+        )
     if crawl.made:
         sys.stdout.write(
             f"karni check --seo: made the smaller copies of {len(crawl.made)} upload(s) the "

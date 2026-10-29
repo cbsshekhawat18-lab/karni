@@ -35,7 +35,7 @@ from karni_cli.design.forms import best_match, forms_in, match_fields, suggest_t
 from karni_cli.main import app
 
 from .conftest import REPO_ROOT, TEMPLATE, require_modules
-from .test_make import fails, ok
+from .test_make import fails, ok, snapshot
 from .test_make_gate import OVERLAY, _karni_importable
 
 DESIGNS = Path(__file__).parent / "fixtures" / "designs"
@@ -94,12 +94,22 @@ def test_a_contact_form_with_a_notification(project: Path) -> None:
     body = (email / "contact_body.txt").read_text()
     assert "{% autoescape off %}" in body and "Message:\n{{ submission.message }}" in body
     assert "Staff app: {{ frontend_url }}/contacts/{{ submission.pk }}" in body
+    assert "In the admin: {{ admin_url }}{% endautoescape %}" in body
     settings = (project / "config" / "settings.py").read_text()
     assert 'ENQUIRY_RECIPIENTS = env.list("ENQUIRY_RECIPIENTS", default=[])  # noqa: F821' in (
         settings
     )
     assert '"karni_site",' in settings
     assert "# ENQUIRY_RECIPIENTS=team@example.com" in (project / ".env.example").read_text()
+    # Production needs the recipients too: an empty value to fill, above the database's.
+    production = (project / ".env.prod.example").read_text()
+    section = production.split("# --- Forms (karni make form)", 1)[1]
+    assert "\nENQUIRY_RECIPIENTS=\n" in section.split("# --- Database and Redis", 1)[0]
+    ok("make", "form", "callback", "phone:phone", "--notify", "CALLBACK_RECIPIENTS")
+    production = (project / ".env.prod.example").read_text()
+    assert production.count("# --- Forms (karni make form)") == 1
+    assert production.index("ENQUIRY_RECIPIENTS=") < production.index("CALLBACK_RECIPIENTS=")
+    assert production.index("CALLBACK_RECIPIENTS=") < production.index("# --- Database")
     assert "karni-site" in (project / "pyproject.toml").read_text()
     urls = (project / "config" / "urls.py").read_text()
     assert '    path("", include("karni_site.urls")),\n    # karni:urls' in urls
@@ -214,11 +224,27 @@ def test_an_imported_design_records_its_forms_and_the_tag_that_keeps_them(
     assert "design: website/templates/website/admissions.html:" in out
     assert "(the fields of admission)" in out
     tag = out.split("replace: in website/templates/website/admissions.html", 1)[1]
-    assert (
+    printed = (
         '{% karni_form "admission" classes="bootstrap" rows="parent_name,email" '
         'labels="parent_name: Your name | visit: We would like to visit" '
-        'placeholders="email: you@example.com" button="Send enquiry" id="enquiry" %}'
-    ) in tag
+        'placeholders="email: you@example.com" attrs="message: rows=4" button="Send enquiry" '
+        'id="enquiry" %}'
+    )
+    assert printed in tag
+    assert "`karni make form admission --tag` prints this again" in tag
+    assert "karni make form admission --tag prints the tag again." in out
+    # Printed again, from the model's own fields, and nothing is written.
+    before = snapshot(project)
+    again = ok("make", "form", "admission", "--tag").output
+    assert snapshot(project) == before
+    assert printed in again and "created" not in again and "modified" not in again
+    assert "design: website/templates/website/admissions.html:" in again
+    # Made already: a second run refuses, and says how to print the tag.
+    fails(
+        "make", "form", "admission", "parent_name:str:120",
+        match="print the form's tag again without writing anything: karni make form admission --tag",
+    )  # fmt: skip
+    fails("make", "form", "brochure", "--tag", match="C105")
     # The footer's sign-up form is in the layout: a newsletter replaces that one.
     out = ok("make", "form", *NEWSLETTER).output
     assert "replace: in website/templates/website/" in out
@@ -239,6 +265,24 @@ def test_design_forms_are_read_from_plain_markup_too() -> None:
     )
     # A form that shares less than half its fields is not this form.
     assert best_match(forms, ["email"]) is None
+
+
+def test_the_tag_keeps_a_controls_own_attributes() -> None:
+    form = forms_in(
+        '<form><label for="m">Message</label><textarea id="m" name="message" rows="6" '
+        'cols="30"></textarea><label for="g">Guests</label><input id="g" name="guests" '
+        'type="number" min="1" max="8" step="1"><label for="z">Postcode</label><input id="z" '
+        'name="postcode" pattern="[A-Z0-9 ]+" inputmode="text"><label for="c">Code</label>'
+        '<input id="c" name="code" pattern="a|b" size="4"><button>Send</button></form>'
+    )[0]
+    fields = {"message": "text", "guests": "int", "postcode": "str", "code": "str"}
+    tag = suggest_tag("booking", form, fields)
+    assert _one_tag(tag), tag
+    assert (
+        'attrs="message: rows=6 cols=30 | guests: min=1 max=8 step=1 | postcode: '
+        "pattern='[A-Z0-9 ]+' inputmode=text | code: size=4\""
+    ) in tag  # a pattern with "|" would split the argument: it is left out
+    assert form.as_record()["fields"][0]["attrs"] == {"rows": "6", "cols": "30"}
 
 
 def _one_tag(text: str) -> bool:
@@ -479,6 +523,7 @@ FORMS = {
                   "service": "colour"},
         "to": ["desk@example.com", "owner@example.com"],
         "subject": "New booking request from Grace",
+        "empty": ["Phone"],
     },
 }
 with override_settings(
@@ -517,6 +562,14 @@ with override_settings(
             assert [m.to for m in mail.outbox] == [form["to"]], (name, mail.outbox)
             assert mail.outbox[0].subject == form["subject"], mail.outbox[0].subject
             assert mail.outbox[0].reply_to == [form["valid"]["email"]]
+            # The admin link is absolute: the host the visitor's request came to.
+            row = model.objects.get()
+            label = f"{model._meta.app_label}/{model._meta.model_name}"
+            admin = f"In the admin: http://testserver/admin/{label}/{row.pk}/change/"
+            assert admin in mail.outbox[0].body, mail.outbox[0].body
+            for left_out in form.get("empty", ()):  # an optional field the visitor left empty
+                assert f"\\n{left_out}:" not in mail.outbox[0].body, mail.outbox[0].body
+                assert "None" not in mail.outbox[0].body and "\\n\\n\\n" not in mail.outbox[0].body
         else:
             assert mail.outbox == [], name
 

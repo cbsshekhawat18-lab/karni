@@ -7,7 +7,7 @@ failure and never aborts the remaining hooks. Exit code is 1 when Django's
 checks fail or any hook reports failures.
 
 ``--deploy`` adds the deploy checks (Django's and Karni's ``karni.W510`` to
-``karni.W519``, :mod:`karni.security.checks`) and fails on warnings too, so a
+``karni.W520``, :mod:`karni.security.checks`) and fails on warnings too, so a
 deployment with ``DEBUG`` on or the scaffold's ``SECRET_KEY`` does not pass.
 A Django deploy warning that a Karni check covers is hidden then, so each
 problem is printed once, with the Karni code and fix.

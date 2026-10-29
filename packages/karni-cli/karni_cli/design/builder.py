@@ -762,7 +762,7 @@ class _Builder:
             s.node.tag == "time" and s.node.attr(e.page.text, "datetime") for e, s in present
         ):
             return  # the datetime attribute is the value, the text its formatting
-        if kind == "text" and self._around_link(source, key, present):
+        if kind == "text" and self._around_link(source, key, present, model):
             return
         options: dict[str, Any] = {}
         texts = {id(e): s.value for e, s in present}
@@ -896,8 +896,19 @@ class _Builder:
             return Slot(slot.path, slot.kind, slot.attr, slot.node, ref.path, slot.highlight)
         return slot
 
-    def _around_link(self, source: Source, key: SlotKey, present: list[tuple[Entry, Slot]]) -> bool:
-        """The text of a line whose link names another model's row: ``Taught by <a>Mia</a>``."""
+    def _around_link(
+        self,
+        source: Source,
+        key: SlotKey,
+        present: list[tuple[Entry, Slot]],
+        model: Model | None = None,
+    ) -> bool:
+        """The text of a line whose link names another model's row: ``Taught by <a>Mia</a>``.
+
+        A page whose line has no link, where the others link a row, shows the
+        list empty: its one text (``No stories yet``) is the list's placeholder,
+        page copy for an editable block, never a field. ``model`` gets a note.
+        """
         path = key[0]
         link_keys = [
             k
@@ -907,8 +918,10 @@ class _Builder:
         if not link_keys:
             return False
         pairs: list[tuple[str, str]] = []
+        empty: list[tuple[Entry, Slot]] = []
         for entry, slot in present:
             title = ""
+            unlinked = all(entry.value(link) is None for link in link_keys)
             for link in link_keys:
                 linked = entry.value(link)
                 if linked is None:
@@ -918,9 +931,27 @@ class _Builder:
                     title = self._title(found[1])
                     break
             if not title:
-                return False
+                if not unlinked:
+                    return False
+                empty.append((entry, slot))
+                continue
             pairs.append((slot.value, title))
-        return _derived(pairs)
+        if not pairs or not _derived(pairs):
+            return False
+        if empty:
+            placeholders = {slot.value for _entry, slot in empty}
+            if len(placeholders) != 1 or len(empty) > len(pairs):
+                return False  # a text of its own on many pages: content, not a placeholder
+            if model is not None:
+                pages = ", ".join(sorted({entry.page.path for entry, _slot in empty}))
+                note = (
+                    f"{next(iter(placeholders))!r} on {pages} is what the list of linked rows "
+                    "shows when it is empty: page copy (an editable block in the template's "
+                    "{% empty %}), not a field."
+                )
+                if note not in model.notes:
+                    model.notes.append(note)
+        return True
 
     def _same_values(self, model: Model, kind: str, by_entity: dict[int, Any]) -> Field | None:
         family = "image" if kind == "image" else ("pairs" if kind == "pairs" else "text")

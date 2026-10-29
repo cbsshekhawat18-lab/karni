@@ -11,6 +11,36 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Production email is set up, or the deploy check says so.** `karni_settings()`
+  reads the mail server from `EMAIL_URL` (`smtp+tls://user:password@host:587`)
+  and `DEFAULT_FROM_EMAIL` and `SERVER_EMAIL` from the environment, and
+  `karni check --deploy` reports `karni.W520` while production mail goes to the
+  console, locmem, dummy or file backend or comes from a localhost sender. A new
+  project's `.env.prod.example` lists the email settings, and both env examples
+  show `KARNI_PHONE_COUNTRY_CODE` with its format. See the
+  [migration note](docs/migrations/0.4.1.md#production-email-email_url-and-karniw520).
+- **`karni explain` explains settings.** `karni explain KARNI_SITE_HIGHLIGHT`
+  prints a setting's description, default, environment variable and docs link,
+  Karni's own and every module's, from the source
+  [docs/settings.md](docs/settings.md) is generated from, which now lists each
+  module's settings too, with an anchor per row.
+- **Fixes from the second end-to-end test.** `karni import design --editable`
+  makes the design's repeated address `site.address` and gives each page's
+  first large picture `fetchpriority="high"`, and `{% image ... eager=True %}`
+  (`eager=forloop.first` in a loop) loads a picture first. `karni design
+  analyze` leaves an empty list's placeholder text to the page. `karni make
+  form` keeps a control's `rows`, `min`, `max`, `step` and `pattern`
+  (`{% karni_form attrs=... %}`), prints its tag again with `--tag`, puts the
+  recipients in `.env.prod.example`, and writes an email that leaves out empty
+  optional fields and links the admin with a full address (`admin_url`, from
+  `KARNI_SITE_URL` or the request's origin, which queued tasks carry as
+  `karni.tracing.get_origin()`). A `karni make` command that changes the API
+  says how to accept the new snapshot. The scaffold's settings define
+  `BASE_DIR`, the site's page test loads `content/site.json` with
+  `karni.testing.load_content` (read from the project root), and `karni new`
+  and the site-from-design procedure name `karni createsuperuser`. `karni
+  check --seo` holds back the crawl's request logs, and `/sitemap.xml` reads
+  each section once.
 - **Karni sites say they run on Karni.** `{% karni_seo %}` writes
   `<meta name="generator" content="Karni">` on every public page, and the
   scaffold's `frontend/index.html` carries the same line, so tools that list

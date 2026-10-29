@@ -45,6 +45,7 @@ import copy
 import functools
 import html
 import re
+import shlex
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -73,6 +74,7 @@ from karni_site import conf
 __all__ = [
     "CLASS_KEYS",
     "DEFAULT_CLASSES",
+    "FIELD_ATTRIBUTES",
     "MESSAGE_KEYS",
     "PRESETS",
     "Choice",
@@ -194,6 +196,13 @@ AUTOCOMPLETE: Final[dict[str, str]] = {
     "country": "country-name",
     "website": "url",
 }
+
+#: The attributes a tag's ``attrs="message: rows=4 | guests: min=1 max=8"`` may give a
+#: field's control, as a design's own markup sets them. The name, type, value, required
+#: and class come from the form itself.
+FIELD_ATTRIBUTES: Final[frozenset[str]] = frozenset(
+    {"rows", "cols", "min", "max", "step", "pattern", "size", "inputmode", "autocomplete"}
+)
 
 _CODE = "SITE020"
 _ROUTE_CODE = "SITE022"
@@ -566,6 +575,50 @@ def _pairs(spec: Any, what: str) -> dict[str, str]:
     return found
 
 
+def _attributes(spec: Any) -> dict[str, dict[str, str]]:
+    """``"message: rows=4 | guests: min=1 max=8"`` as ``{field: {attribute: value}}``.
+
+    A value with spaces is written in single quotes: ``title='Five digits'``. A dict
+    passes through. Only :data:`FIELD_ATTRIBUTES` are taken.
+    """
+    found: dict[str, dict[str, str]] = {}
+    if isinstance(spec, Mapping):
+        for name, given in spec.items():
+            found[str(name)] = {str(key): str(value) for key, value in dict(given).items()}
+    else:
+        for name, text in _pairs(spec, "attrs").items():
+            try:
+                words = shlex.split(text)
+            except ValueError as exc:
+                raise KarniImproperlyConfigured(
+                    f'{{% karni_form %}} attrs="{spec}": {name}: {exc}. Write "field: rows=4 '
+                    "min=1 | field: pattern='[0-9]{5}'\" (single quotes around a value with "
+                    "spaces).",
+                    code="SITE021",
+                ) from exc
+            pairs: dict[str, str] = {}
+            for word in words:
+                key, equals, value = word.partition("=")
+                if not equals or not key:
+                    raise KarniImproperlyConfigured(
+                        f'{{% karni_form %}} attrs="{spec}": {name}: {word!r} is not '
+                        "attribute=value, such as rows=4.",
+                        code="SITE021",
+                    )
+                pairs[key.lower()] = value
+            found[name] = pairs
+    for name, pairs in found.items():
+        unknown = sorted(set(pairs) - FIELD_ATTRIBUTES)
+        if unknown:
+            raise KarniImproperlyConfigured(
+                f"{{% karni_form %}} attrs: {name}: {', '.join(unknown)} cannot be set here. "
+                f"attrs takes {', '.join(sorted(FIELD_ATTRIBUTES))}: the form sets the name, "
+                "type, value, required and class itself (class names: <part>_class).",
+                code="SITE021",
+            )
+    return found
+
+
 def _names(spec: Any) -> list[str]:
     if isinstance(spec, list | tuple):
         return [str(item).strip() for item in spec if str(item).strip()]
@@ -749,8 +802,13 @@ class SiteForm:
         label: str | None = None,
         placeholder: str | None = None,
         widget: str | None = None,
+        extra: Mapping[str, str] | None = None,
     ) -> FieldView:
-        """One serializer field as a :class:`FieldView` (values come from a re-render)."""
+        """One serializer field as a :class:`FieldView` (values come from a re-render).
+
+        ``extra`` holds the tag's ``attrs`` for this field (:data:`FIELD_ATTRIBUTES`),
+        set on its control over what the field itself gives (a design's ``rows="4"``).
+        """
         kind, input_type = self.widget(name, item)
         multiple = isinstance(item, serializers.ManyRelatedField | serializers.MultipleChoiceField)
         if widget:
@@ -826,6 +884,9 @@ class SiteForm:
             attributes["autocomplete"] = autofill
         if control and kind not in {"radios", "checkboxes"}:
             attributes["class"] = control
+        for attribute, given in (extra or {}).items():
+            if attribute in FIELD_ATTRIBUTES:
+                attributes[attribute] = given
         help_text = str(getattr(item, "help_text", "") or "")
         view = FieldView(
             name=name,
@@ -920,10 +981,12 @@ class SiteForm:
         labels = _pairs(options.get("labels"), "labels")
         hints = _pairs(options.get("placeholders"), "placeholders")
         widgets = _pairs(options.get("widgets"), "widgets")
+        extras = _attributes(options.get("attrs"))
         available = self.fields(request)
         chosen = _names(options.get("fields"))
         by_name = dict(available)
-        unknown = [name for name in [*chosen, *labels, *hints, *widgets] if name not in by_name]
+        named = [*chosen, *labels, *hints, *widgets, *extras]
+        unknown = [name for name in named if name not in by_name]
         for row in _rows(options.get("rows")):
             unknown += [name for name in row if name not in by_name]
         if unknown:
@@ -957,6 +1020,7 @@ class SiteForm:
                 label=labels.get(name),
                 placeholder=hints.get(name),
                 widget=widgets.get(name),
+                extra=extras.get(name),
             )
             view.template = self.field_template(name)
             views[name] = view

@@ -226,6 +226,33 @@ def test_viewset_access_choices(project: Path, access: str, declaration: str) ->
     assert f"access = {declaration}" in (project / "events" / "viewsets.py").read_text()
 
 
+def test_a_generator_that_changes_the_api_names_the_snapshot_command(project: Path) -> None:
+    """The scaffold's API snapshot test fails after a new endpoint: the output says how to accept it."""
+    ok("make", "app", "events")
+    ok("make", "model", "Event", "title:str")
+    snapshot_file = project / "tests" / "openapi.snapshot.json"
+    assert not snapshot_file.exists()  # before the first test run: nothing to accept yet
+    assert "KARNI_UPDATE_SNAPSHOTS" not in ok("make", "viewset", "Event").output
+    snapshot_file.write_text("{}\n")  # the first `karni test` wrote it
+    note = "accept them with KARNI_UPDATE_SNAPSHOTS=1 karni test and commit tests/openapi.snapshot.json"
+    # A model without a viewset is no change to the API.
+    assert note not in ok("make", "model", "Venue", "name:str").output
+    for args in (
+        ("make", "viewset", "Venue"),
+        ("make", "model", "Venue", "name:str", "city:str", "--force"),  # served: its fields change
+        ("make", "serializer", "Venue", "--reason", "a computed label"),
+        ("make", "model", "Room", "name:str", "--with", "viewset"),
+        ("make", "form", "enquiry", "email:email", "--app", "events"),
+    ):
+        assert note in ok(*args).output, args
+    # A dry run says it too, and a run that changes nothing says nothing.
+    assert (
+        note in ok("make", "viewset", "Event", "--access", "staff", "--force", "--dry-run").output
+    )
+    assert note not in ok("make", "viewset", "Event", "--force").output
+    assert snapshot_file.read_text() == "{}\n"  # the command never rewrites the snapshot
+
+
 def test_viewset_validation(project: Path) -> None:
     ok("make", "app", "events")
     fails("make", "viewset", "Event", match="Create it first: karni make model Event")
@@ -749,7 +776,9 @@ def test_site_creates_the_app_and_replaces_the_welcome_route(project: Path) -> N
     assert "<img" not in base
     # The page test runs assert_pages over a list that `karni make view` extends.
     test = (site / "tests" / "test_pages.py").read_text()
-    assert "from karni.testing import assert_pages\n" in test
+    assert "from karni.testing import assert_pages, load_content\n" in test
+    # It loads the site's real content first, read from the project root (BASE_DIR).
+    assert '    load_content("content/site.json", missing_ok=True)\n' in test
     assert 'PAGES = [\n    "/",\n    # karni:pages\n]\n' in test
     assert "    assert_pages(client, PAGES)\n" in test
     assert '{% extends "website/base.html" %}' in (site / "templates" / "404.html").read_text()

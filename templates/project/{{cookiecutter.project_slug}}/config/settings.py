@@ -17,7 +17,13 @@ Assigned below the call they change nothing, and startup fails with
 karni.E508. See docs/settings.md.
 """
 
+from pathlib import Path
+
 from karni.conf import karni_settings
+
+# The project folder. Karni reads relative paths from it (MEDIA_ROOT in
+# development, content/site.json in tests), whatever folder a command runs in.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 karni_settings(globals())
 

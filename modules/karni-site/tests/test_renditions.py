@@ -106,6 +106,25 @@ def test_an_image_at_the_top_of_a_page_loads_at_once(project: Project) -> None:
     assert 'loading="eager"' in html and "auto," not in html
 
 
+def test_eager_loads_the_first_picture_of_a_loop_first(project: Project) -> None:
+    html = render(
+        "{% for photo in photos %}{% image photo width=1200 alt='' eager=forloop.first %}"
+        "{% endfor %}",
+        photos=[project.photo, project.photo, project.photo],
+    )
+    first, *rest = html.split("<img ")[1:]
+    assert 'loading="eager"' in first and 'fetchpriority="high"' in first
+    assert "auto," not in first  # the layout's width is not waited for
+    for later in rest:
+        assert 'loading="lazy"' in later and "fetchpriority" not in later
+        assert "eager" not in later  # no stray attribute
+    # Its own loading or fetchpriority wins over what eager sets.
+    html = render(
+        '{% image project.photo alt="" eager=True fetchpriority="auto" %}', project=project
+    )
+    assert 'loading="eager"' in html and 'fetchpriority="auto"' in html
+
+
 def test_an_empty_field_renders_nothing() -> None:
     assert render('{% image project.photo alt="x" %}', project=Project(title="none")) == ""
 

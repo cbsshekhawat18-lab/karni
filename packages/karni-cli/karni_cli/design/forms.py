@@ -28,6 +28,7 @@ from typing import Any, Final
 from karni_cli.design.parse import Node, collapse, parse
 
 __all__ = [
+    "ATTRIBUTES",
     "DesignField",
     "DesignForm",
     "FieldMatch",
@@ -63,6 +64,19 @@ _FILLS: Final[dict[str, frozenset[str]]] = {
 _DISTINCT: Final = frozenset(
     {"email", "tel", "url", "date", "datetime-local", "time", "number", "file", "checkbox"}
 )
+#: The attributes of a control the tag keeps (karni_site.forms.FIELD_ATTRIBUTES): the
+#: design's ``rows="4"``, ``min``, ``max``, ``step``, ``pattern`` and the like.
+ATTRIBUTES: Final = (
+    "rows",
+    "cols",
+    "min",
+    "max",
+    "step",
+    "pattern",
+    "size",
+    "inputmode",
+    "autocomplete",
+)
 #: The class sets ``{% karni_form classes="..." %}`` ships (karni_site.forms.PRESETS).
 BOOTSTRAP: Final[dict[str, str]] = {
     "row": "row",
@@ -90,6 +104,8 @@ class DesignField:
     label: str
     placeholder: str
     line: int
+    #: The control's own :data:`ATTRIBUTES` (``{"rows": "4"}``), kept by the tag's ``attrs``.
+    attrs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -122,7 +138,12 @@ class DesignForm:
             "id": self.id,
             "class": self.classes,
             "fields": [
-                {"name": item.name, "type": item.type, "required": item.required}
+                {
+                    "name": item.name,
+                    "type": item.type,
+                    "required": item.required,
+                    **({"attrs": dict(item.attrs)} if item.attrs else {}),
+                }
                 for item in self.fields
             ],
             "markup": dict(sorted(self.markup.items())),
@@ -223,6 +244,25 @@ def _wrapper(control: Node, label: Node | None, form: Node, controls: list[Node]
     return None
 
 
+def _attributes(control: Node, source: str) -> dict[str, str]:
+    """The control's :data:`ATTRIBUTES` that a tag argument can hold as they are."""
+    found: dict[str, str] = {}
+    for name in ATTRIBUTES:
+        value = control.attr(source, name)
+        if value is None:
+            continue
+        value = plain_text(value)
+        # The tag argument is in double quotes, splits on "|" and quotes a value with
+        # spaces in single quotes: a value with one of them stays out.
+        if (
+            value
+            and not any(char in value for char in "\"|'")
+            and not _TEMPLATE_SYNTAX.search(value)
+        ):
+            found[name] = value
+    return found
+
+
 def _describe(form: Node, source: str) -> DesignForm:
     controls = _controls(form, source)
     fields: list[DesignField] = []
@@ -251,6 +291,7 @@ def _describe(form: Node, source: str) -> DesignForm:
                 label=_label_text(label, control, source),
                 placeholder=plain_text(control.attr(source, "placeholder") or ""),
                 line=_line(source, control.start),
+                attrs=_attributes(control, source),
             )
         )
         own = " ".join(control.classes(source))
@@ -472,6 +513,11 @@ def _argument(text: str) -> str:
     return plain_text(text).replace("|", "/")
 
 
+def _attribute(name: str, value: str) -> str:
+    """``rows=4``, or ``pattern='[0-9 ]+'`` for a value with spaces (karni_site reads both)."""
+    return f"{name}='{value}'" if re.search(r"\s", value) else f"{name}={value}"
+
+
 def _quote(value: str) -> str:
     return '"' + plain_text(value).replace('"', "'") + '"'
 
@@ -538,6 +584,14 @@ def suggest_tag(
     ]
     if hints:
         options.append(("placeholders", " | ".join(hints)))
+    kept = [
+        f"{rename[item.name]}: "
+        + " ".join(_attribute(key, value) for key, value in item.attrs.items())
+        for item in form.fields
+        if item.name in rename and item.attrs
+    ]
+    if kept:
+        options.append(("attrs", " | ".join(kept)))
     if form.button:
         options.append(("button", plain_text(form.button)))
     if form.id:

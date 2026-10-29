@@ -83,6 +83,30 @@ def test_new_stores_files_under_the_project_and_on_the_volume_in_containers(
     assert "/data/" in (project / ".gitignore").read_text().splitlines()
 
 
+def test_the_env_example_shows_the_phone_country_and_the_mail_server(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    """Both env files name the settings whose format a project cannot guess, commented."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    result = runner.invoke(
+        app, ["new", "Shop", "--domain", "shop.example.net", "-o", str(tmp_path)]
+    )
+    assert result.exit_code == 0, result.output
+    project = tmp_path / "shop"
+    example = (project / ".env.example").read_text()
+    for line in (
+        "# KARNI_PHONE_COUNTRY_CODE=44",
+        "# KARNI_PHONE_TRUNK_PREFIX=0",
+        "# EMAIL_URL=smtp://localhost:1025",
+        "# DEFAULT_FROM_EMAIL=noreply@shop.example.net",
+    ):
+        assert f"\n{line}\n" in example, line
+    assert '"44" for the UK (not "GB")' in example
+    production = (project / ".env.prod.example").read_text()
+    assert "\n# KARNI_PHONE_COUNTRY_CODE=44\n" in production
+    assert "\n# DEFAULT_FROM_EMAIL=noreply@shop.example.net\n" in production
+
+
 def test_the_frontend_has_no_known_vulnerable_zod(runner, tmp_path: Path, monkeypatch) -> None:
     """GHSA-mrhx-c7xc-m3w5: Zod before 4.6.6 (npm audit: high). The scaffold and @karni/ui agree."""
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))

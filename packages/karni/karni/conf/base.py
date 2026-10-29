@@ -152,6 +152,38 @@ def _caches(env: environ.Env, choice: str | None = None) -> dict[str, dict[str, 
     )
 
 
+#: Django's own sender addresses: ``karni check --deploy`` reports them (``karni.W520``).
+DJANGO_FROM_EMAIL = "webmaster@localhost"
+DJANGO_SERVER_EMAIL = "root@localhost"
+
+
+def _email(env: environ.Env) -> dict[str, Any]:
+    """Django's email settings from the environment.
+
+    ``EMAIL_URL`` names the mail server in django-environ's format, for
+    example ``smtp+tls://user:password@smtp.example.com:587`` (``smtps://``
+    for SSL, ``consolemail://`` to print each email). It sets
+    ``EMAIL_BACKEND``, ``EMAIL_HOST``, ``EMAIL_PORT``, ``EMAIL_HOST_USER``,
+    ``EMAIL_HOST_PASSWORD`` and ``EMAIL_USE_TLS`` or ``EMAIL_USE_SSL``.
+    Unset, Django's defaults stay (SMTP at localhost, port 25), and the dev
+    profile prints mail to the console. ``DEFAULT_FROM_EMAIL`` and
+    ``SERVER_EMAIL`` are read too, with Django's defaults, which
+    ``karni check --deploy`` reports (``karni.W520``).
+
+    Override / escape hatch: define any ``EMAIL_*`` setting in settings.py,
+    before or after ``karni_settings()``.
+    """
+    found: dict[str, Any] = {
+        "DEFAULT_FROM_EMAIL": env("DEFAULT_FROM_EMAIL", default=DJANGO_FROM_EMAIL),
+        "SERVER_EMAIL": env("SERVER_EMAIL", default=DJANGO_SERVER_EMAIL),
+    }
+    url = env.str("EMAIL_URL", default="")
+    if url:
+        config = environ.Env.email_url_config(url)
+        found.update({name: value for name, value in config.items() if value not in (None, "")})
+    return found
+
+
 def _primary_tint(percent: int) -> str:
     """CSS for ``percent`` of @karni/ui's primary over its background (an unfold scale step)."""
     return (
@@ -305,6 +337,9 @@ BASE: dict[str, Any] = {
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
     "CACHES": _caches(env),
+    # --- Email ----------------------------------------------------------------
+    # EMAIL_URL (smtp+tls://user:password@host:587), DEFAULT_FROM_EMAIL, SERVER_EMAIL.
+    **_email(env),
     # Django's default sends a direct /admin/login/ to /accounts/profile/ (a 404).
     "LOGIN_REDIRECT_URL": f"/{_ADMIN_PATH}",
     # --- DRF & API schema -------------------------------------------------

@@ -183,6 +183,30 @@ def test_a_choice_as_radios_keeps_the_choice_on_a_second_render(rf: RequestFacto
     assert "Pick one." in again
 
 
+def test_attrs_keep_the_designs_own_attributes_on_a_control(rf: RequestFactory) -> None:
+    template = Template(
+        '{% load karni_site %}{% karni_form "appointment_request" '
+        "attrs=\"message: rows=4 cols='40' | day: min=2030-01-01 | phone: pattern='[0-9 +]+'\" %}"
+    )
+    html = template.render(RequestContext(rf.get("/")))
+    message = field_block(html, "appointment_request", "message")
+    assert "<textarea" in message and ' rows="4"' in message and ' cols="40"' in message
+    day = field_block(html, "appointment_request", "day")
+    assert 'type="date"' in day and ' min="2030-01-01"' in day
+    assert ' pattern="[0-9 +]+"' in field_block(html, "appointment_request", "phone")
+    # The form's own attributes cannot be replaced, and every field named must be one.
+    for spec, found in (
+        ("message: name=other", "SITE021.*name cannot be set here"),
+        ("message: rows", "SITE021.*'rows' is not attribute=value"),
+        ("notes: rows=2", "SITE021.*notes"),
+    ):
+        bad = Template(
+            '{% load karni_site %}{% karni_form "appointment_request" attrs="' + spec + '" %}'
+        )
+        with pytest.raises(Exception, match=found):
+            bad.render(RequestContext(rf.get("/")))
+
+
 def test_wrong_tags_fail_when_the_template_compiles() -> None:
     for source in (
         "{% karni_form %}",
@@ -396,6 +420,31 @@ def test_the_recipients_are_emailed_after_commit(
     assert f"/admin/formapp/appointmentrequest/{row.pk}/change/" in message.body or (
         "In the admin: " in message.body
     )
+
+
+def test_the_admin_link_is_a_full_address(settings: Settings, rf: RequestFactory) -> None:
+    from karni.middleware import _current_request
+
+    from karni_site.notify import notification_context
+
+    row = AppointmentRequest.objects.create(
+        name="A", email="a@example.com", reason="other", day="2030-01-01"
+    )
+    path = f"/admin/formapp/appointmentrequest/{row.pk}/change/"
+    # No site address and no request (a shell, beat): the path is all there is.
+    assert notification_context(row)["admin_url"] == path
+    # Queued from a request: the host the visitor came to, which the task carries.
+    settings.ALLOWED_HOSTS = ["clinic.example"]
+    token = _current_request.set(rf.get("/", HTTP_HOST="clinic.example", secure=True))
+    try:
+        assert notification_context(row)["admin_url"] == f"https://clinic.example{path}"
+        # The site's own address wins over the request's.
+        settings.KARNI_SITE_URL = "https://www.clinic.example/"
+        context = notification_context(row)
+    finally:
+        _current_request.reset(token)
+    assert context["admin_url"] == f"https://www.clinic.example{path}"
+    assert context["admin_path"] == path
 
 
 def test_no_recipients_sends_nothing(

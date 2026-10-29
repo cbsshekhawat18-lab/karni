@@ -3,7 +3,7 @@
 Each check is a Django system check registered with
 ``@register(Tags.security, deploy=True)``, so it runs only when a deploy
 check is asked for, never on ``runserver`` or ``migrate``. Each has a code
-(``karni.W510`` to ``karni.W519``) whose entry in :mod:`karni.errorcodes`
+(``karni.W510`` to ``karni.W520``) whose entry in :mod:`karni.errorcodes`
 says why it matters and how to fix it. Run them with the production
 environment, for example ``DJANGO_ENV=prod DEBUG=False SECRET_KEY=...``.
 
@@ -30,7 +30,7 @@ from django.core.checks import Tags, register
 from karni.errorcodes import get as registry_entry
 from karni.exceptions import check_warning
 
-__all__ = ["SUPERSEDES", "weak_secret_key"]
+__all__ = ["SUPERSEDES", "UNSENT_BACKENDS", "weak_secret_key"]
 
 #: Django's deploy warnings each Karni check covers. ``karni check --deploy``
 #: silences them while the Karni check itself is not silenced.
@@ -279,4 +279,44 @@ def check_csp_scripts(app_configs: Any = None, **kwargs: Any) -> list[checks.Che
         "W519",
         f"script-src allows {' '.join(weak)}: an injected script would run, which is what "
         "the policy is there to stop.",
+    )
+
+
+#: Email backends that never deliver a message, and what each does with it instead.
+UNSENT_BACKENDS: Final[dict[str, str]] = {
+    "django.core.mail.backends.console.EmailBackend": "prints each email to the log",
+    "django.core.mail.backends.locmem.EmailBackend": "keeps each email in memory",
+    "django.core.mail.backends.dummy.EmailBackend": "drops each email",
+    "django.core.mail.backends.filebased.EmailBackend": "writes each email to a file",
+}
+
+
+def _local_sender(value: Any) -> bool:
+    """Whether ``value`` is an address no mail server accepts as a sender (``x@localhost``)."""
+    from email.utils import parseaddr
+
+    address = parseaddr(str(value or ""))[1]
+    if "@" not in address:
+        return True
+    domain = address.rsplit("@", 1)[1].lower().rstrip(".")
+    return domain in ("localhost", "localdomain") or domain.endswith(".localhost")
+
+
+@register(Tags.security, deploy=True)
+def check_email(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W520: production email never arrives (a backend that sends nothing, a local sender)."""
+    problems: list[str] = []
+    backend = str(getattr(settings, "EMAIL_BACKEND", "") or "")
+    if backend in UNSENT_BACKENDS:
+        name = backend.rsplit(".", 2)[-2]
+        problems.append(f"EMAIL_BACKEND is the {name} backend, which {UNSENT_BACKENDS[backend]}")
+    sender = getattr(settings, "DEFAULT_FROM_EMAIL", "")
+    if _local_sender(sender):
+        problems.append(f"DEFAULT_FROM_EMAIL is {str(sender)!r}, which mail servers refuse")
+    if not problems:
+        return []
+    return _warn(
+        "W520",
+        f"Production email is not set up: {' and '.join(problems)}. Password resets, account "
+        "emails and form notifications never reach anyone.",
     )
