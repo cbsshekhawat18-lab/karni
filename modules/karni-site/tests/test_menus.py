@@ -203,3 +203,58 @@ def test_get_menu_is_written_rightly() -> None:
         with pytest.raises(TemplateSyntaxError, match="SITE003"):
             Template("{% load karni_site %}" + bad)
     assert render(name="missing") == ""
+
+
+# A seed's list marked as a model's rows (karni import design marks one whose links
+# are that model's detail pages): the menu follows the rows.
+
+
+def _seeded(name: str, markup: str) -> str:
+    assert menus.seed_menu(name, markup)
+    return render(name=name)
+
+
+def test_a_marked_list_is_the_models_rows_in_its_place(services: list[Service]) -> None:
+    markup = (
+        '<ul data-karni-children-from="testapp.Service">'
+        '<li><a href="/services/websites/">Websites</a></li>'
+        '<li><a href="/services/shops/">Shops</a></li></ul>'
+    )
+    assert _seeded("footer", markup) == ("[Websites|/services/websites/][Shops|/services/shops/]")
+    item = MenuItem.objects.get(menu__name="footer")
+    assert menus.in_place(item) and item.children_from.model_class() is Service
+    Service.objects.create(title="Apps", slug="apps", order=3)
+    assert render(name="footer").endswith("[Apps|/services/apps/]")
+
+
+def test_a_marked_submenu_is_a_parent_with_children_from_the_model(
+    services: list[Service],
+) -> None:
+    markup = (
+        '<ul><li><a href="/">Home</a></li><li><a href="/about/">Services</a>'
+        '<ul data-karni-children-from="testapp.Service">'
+        '<li><a href="/services/websites/">Websites</a></li></ul></li></ul>'
+    )
+    assert _seeded("header", markup) == (
+        "[Home|/|current|active]"
+        "[Services|/about/(Websites|/services/websites/)(Shops|/services/shops/)]"
+    )
+    parent = MenuItem.objects.get(title="Services")
+    assert parent.children_from is not None and not parent.children.exists()
+
+
+def test_a_marked_list_without_its_model_keeps_the_designs_links() -> None:
+    markup = (
+        '<ul data-karni-children-from="testapp.Nothing">'
+        '<li><a href="/about/">About</a></li><li><a href="/contact/">Contact</a></li></ul>'
+    )
+    assert _seeded("footer", markup) == "[About|/about/][Contact|/contact/]"
+    assert list(MenuItem.objects.values_list("order", flat=True).order_by("order")) == [0, 1]
+
+
+def test_an_item_with_a_title_keeps_its_own_entry(services: list[Service]) -> None:
+    menu = Menu.objects.create(name="footer")
+    MenuItem.objects.create(
+        menu=menu, title="Our services", children_from=ContentType.objects.get_for_model(Service)
+    )
+    assert render(name="footer").startswith("[Our services|(Websites|")

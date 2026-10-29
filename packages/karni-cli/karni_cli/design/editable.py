@@ -39,7 +39,11 @@ with karni-site's tags (``karni_site.templatetags.karni_site``):
   nested lists for submenus, or bare links side by side) becomes
   ``{% get_menu %}`` and a ``{% for %}`` loop in that markup, seeded from
   the design's own links (``templates/<app>/menus/<name>.html``). One whose
-  items differ keeps its markup, and its link texts are blocks.
+  items differ keeps its markup, and its link texts are blocks. With a
+  content map, a list whose links are exactly one model's detail pages, each
+  once and by its row's title, is seeded as that model's rows
+  (``data-karni-children-from``, :mod:`karni_site.menus`), so a row the
+  client adds appears in the menu by itself, and the report says so.
 
 Keys are readable (the page, the section, the first words of the text) and
 stable: ``.karni/design.json`` records each key with where it was, and a
@@ -330,8 +334,12 @@ class Editable:
         previous: Mapping[str, Any] | None = None,
         rows: Mapping[str, set[int]] | None = None,
         shared: Mapping[str, str] | None = None,
+        detail_rows: Mapping[str, tuple[str, str]] | None = None,
     ) -> None:
         self.app = app
+        #: Detail page path → (``"<app>.<Model>"``, its row's title), from the content map
+        #: (:func:`karni_cli.design.regions.detail_rows`).
+        self.detail_rows: dict[str, tuple[str, str]] = dict(detail_rows or {})
         #: Page path → the key prefix of a model's detail pages (``course``), which
         #: share their blocks' keys (:func:`karni_cli.design.regions.detail_pages`).
         self.shared: dict[str, str] = {
@@ -454,6 +462,7 @@ class Editable:
                     markup = renderer.span(menu.page, menu.node.start, menu.node.end)
             finally:
                 menu.page.overlay = original
+            markup = _mark_rows(markup, menu, self._row_lists(menu))
             templates[f"templates/{self._seed(menu.name)}"] = load + "\n" + markup + "\n"
         self.report.site = dict(self.defaults)
         return {
@@ -468,6 +477,55 @@ class Editable:
 
     def _seed(self, name: str) -> str:
         return f"{self.app}/menus/{name}.html"
+
+    # menus of rows
+
+    def _row_lists(self, menu: _Menu) -> dict[int, str]:
+        """The lists of ``menu`` that are a model's rows: start of the list → its model."""
+        page = menu.page
+        lists: list[tuple[Node, list[Node]]] = []
+        if not menu.nested:
+            anchors = menu.items if menu.kind == "flat" else [li.elements()[0] for li in menu.items]
+            lists.append((menu.node, anchors))
+        else:
+            for sub in menu.nested.values():
+                lists.append((sub, [li.elements()[0] for li in sub.elements()]))
+        found: dict[int, str] = {}
+        for node, anchors in lists:
+            model = self._rows_of(page, anchors)
+            if model is None:
+                continue
+            found[node.start] = model
+            pages = sum(1 for m, _ in self.detail_rows.values() if m == model)
+            what = "its links" if node is menu.node else "the links under one of its items"
+            self.report.notes.append(
+                f"{page.path}:{page.line(node.start)}: menu {menu.name!r} lists the "
+                f"{model.rsplit('.', 1)[-1]} rows ({what} are the {pages} detail pages), so a "
+                "row the client adds appears in it by itself"
+            )
+        return found
+
+    def _rows_of(self, page: Any, anchors: list[Node]) -> str | None:
+        """The model whose detail pages ``anchors`` link to: every one, once, by its title."""
+        if len(anchors) < 2:
+            return None
+        targets: list[tuple[str, str]] = []
+        for a in anchors:
+            ref = self.mapped.resolve(unescape(a.attr(page.text, "href") or ""), page.dir)
+            if ref.kind != "page" or ref.query or ref.fragment:
+                return None
+            targets.append((ref.path, a.plain_text(page.text)))
+        models = {self.detail_rows.get(path, ("", ""))[0] for path, _ in targets}
+        if len(models) != 1 or "" in models:
+            return None
+        model = models.pop()
+        pages = [path for path, _ in targets]
+        every = {path for path, (m, _) in self.detail_rows.items() if m == model}
+        if len(set(pages)) != len(pages) or set(pages) != every:
+            return None
+        if any(title.casefold() != self.detail_rows[path][1].casefold() for path, title in targets):
+            return None
+        return model
 
     # opening hours
 
@@ -1278,6 +1336,40 @@ def _marker_offsets(source: str, start: int, end: int) -> list[int]:
         found.append(at)
         at = source.find(MARKER, at + len(MARKER), end)
     return found
+
+
+#: The opening of a list element in a menu's seed markup.
+_LIST_TAG: Final = re.compile(r"<(?:ul|ol)\b", re.IGNORECASE)
+_START_TAG: Final = re.compile(r"<[a-zA-Z][a-zA-Z0-9-]*")
+
+
+def _mark_rows(markup: str, menu: _Menu, rows: Mapping[int, str]) -> str:
+    """``markup`` (a menu's seed) with each list ``rows`` names marked as its model's rows.
+
+    The menu's own element is the seed's first tag. A nested list is found by
+    its place among the lists inside the menu, which the rendering keeps.
+    """
+    if not rows:
+        return markup
+    lists = [
+        n.start
+        for n in [menu.node, *menu.node.iter_elements()]
+        if n.kind == "element" and n.tag in ("ul", "ol")
+    ]
+    inserts: list[tuple[int, str]] = []
+    for start, model in rows.items():
+        attribute = f' data-karni-children-from="{model}"'
+        if start == menu.node.start:
+            match = _START_TAG.search(markup)
+        else:
+            ordinal = sorted(set(lists)).index(start)
+            found = list(_LIST_TAG.finditer(markup))
+            match = found[ordinal] if ordinal < len(found) else None
+        if match is not None:
+            inserts.append((match.end(), attribute))
+    for at, attribute in sorted(inserts, reverse=True):
+        markup = markup[:at] + attribute + markup[at:]
+    return markup
 
 
 def _menu_renderer(editable: Editable, menu: _Menu) -> Render:

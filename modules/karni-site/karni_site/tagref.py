@@ -89,7 +89,7 @@ TAGS: Final[tuple[Tag, ...]] = (
         "get_menu",
         "tag",
         '{% get_menu "header" seed="website/menus/header.html" as items %}',
-        "A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template. An item with children from a model lists that model's rows, so a new row appears in the menu by itself.",
+        "A menu's items for a {% for %} loop in the design's markup: item.title, item.url, item.new_tab, item.current (this page), item.active (this page or one under it) and item.children. With seed, a menu the database does not have yet is created from the links in that template. An item with children from a model lists that model's rows, so a new row appears in the menu by itself, and with no title or address of its own it lists them in its place. karni import design --editable --map seeds a list of a model's detail pages that way.",
         "everything-the-client-edits",
     ),
     Tag(

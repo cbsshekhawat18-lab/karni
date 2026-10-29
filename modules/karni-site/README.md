@@ -208,13 +208,20 @@ one of the site's pages (its URL name, so a changed path follows), a row's
 own page (its `get_absolute_url()`), or an address (`https://...`,
 `#section`, `mailto:`), with an optional `#section` or `?query` after it.
 *Children from* adds one child per row of a model, so a submenu of services
-follows the services the client adds. A menu is any name: header, footer,
+follows the services the client adds. An item with *children from* and
+neither a title nor an address lists the rows in its own place: a footer's
+list of every service is one such item. A menu is any name: header, footer,
 footer-services.
 
 `seed` names a template holding the design's own navigation. The first
 time the menu is asked for and the database has none of that name, the
 links in it (nested lists becoming children) become the menu, so the
-client starts with the designer's menu. A deleted menu is seeded again.
+client starts with the designer's menu. A deleted menu is seeded again. A
+list in the seed marked `data-karni-children-from="website.Service"` becomes
+an item with children from that model instead of its links (in its parent's
+place when it is the whole menu), and keeps its links when the project has no
+such model. `karni import design --editable --map` marks a list whose links
+are exactly one model's detail pages.
 
 A menu's tree is cached. Saving a menu or an item clears it, and so does
 saving a row of a model an item points at.

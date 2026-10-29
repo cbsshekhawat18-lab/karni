@@ -340,6 +340,8 @@ class MenuItem(BaseModel):
     ``mailto:``). ``suffix`` is added after the page's address (``#cakes``,
     ``?topic=order``). ``children_from`` adds one child per row of a model,
     so a submenu follows the rows (``KARNI_SITE_MENU_ROWS`` decides which).
+    An item with ``children_from`` and no title or target of its own stands
+    for the rows: they take its place in the menu.
     """
 
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE, related_name="items")

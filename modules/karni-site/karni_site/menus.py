@@ -12,6 +12,13 @@ A menu the database does not have yet can be seeded from markup
 (:func:`seed_menu`): the links of a design's navigation, nested lists
 becoming children. ``{% get_menu "header" seed="website/menus/header.html" %}``
 does that on the first render, so the client starts with the designer's menu.
+A list in the seed marked ``data-karni-children-from="<app>.<Model>"`` (as
+``karni import design`` marks one whose links are that model's detail pages)
+becomes an item with children from that model instead of its links.
+
+An item with children from a model and neither a title nor an address of its
+own lists the rows in its place: a footer's list of every service is one
+such item, and a service the client adds appears in it.
 
 Saving a menu or an item clears every cached menu. So does saving a row of
 a model a menu points at (an item's row, or its ``children_from`` model),
@@ -30,7 +37,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Any
+from typing import Any, Final
 from urllib.parse import urlsplit
 
 from django.core.exceptions import ValidationError
@@ -43,10 +50,12 @@ from karni_site import caching, conf
 from karni_site.navigation import any_active
 
 __all__ = [
+    "CHILDREN_FROM",
     "Link",
     "MenuEntry",
     "NoTarget",
     "entries",
+    "in_place",
     "item_fields",
     "menu_rows",
     "model_changed",
@@ -132,13 +141,30 @@ def target(item: Any) -> tuple[str, list[str], str]:
     return url + (item.suffix if url else ""), _path_patterns(url), url
 
 
+def in_place(item: Any) -> bool:
+    """An item with children from a model and no title or address: its rows stand in its place."""
+    return bool(item.children_from_id) and not (
+        item.title or item.route or item.content_type_id or item.object_id or item.url
+    )
+
+
+def _nodes(items: list[Any], children: dict[Any, list[Any]]) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    for item in items:
+        if in_place(item):
+            found.extend(_rows(item))
+        elif (node := _node(item, children)) is not None:
+            found.append(node)
+    return found
+
+
 def _node(item: Any, children: dict[Any, list[Any]]) -> dict[str, Any] | None:
     try:
         url, patterns, fallback = target(item)
     except _NoTarget as exc:
         logger.warning("karni_site: menu item %s is left out: %s", item.pk, exc)
         return None
-    kids = [node for child in children.get(item.pk, []) if (node := _node(child, children))]
+    kids = _nodes(children.get(item.pk, []), children)
     if item.children_from_id:
         kids.extend(_rows(item))
     return {
@@ -194,7 +220,7 @@ def _build(name: str) -> list[dict[str, Any]] | None:
     children: dict[Any, list[Any]] = defaultdict(list)
     for item in menu.items.filter(enabled=True).select_related("content_type", "children_from"):
         children[item.parent_id].append(item)
-    return [node for item in children.get(None, []) if (node := _node(item, children))]
+    return _nodes(children.get(None, []), children)
 
 
 def tree(name: str) -> list[dict[str, Any]] | None:
@@ -246,11 +272,21 @@ def entries(
 
 @dataclass
 class Link:
-    """A link of a design's navigation, with the links nested under it."""
+    """A link of a design's navigation, with the links nested under it.
+
+    ``children_from`` (``"website.Service"``) is the model a marked list stands
+    for: the item lists its rows, and ``children`` are the design's links, kept
+    for a project without that model.
+    """
 
     title: str
     href: str
     children: list[Link] = field(default_factory=list)
+    children_from: str = ""
+
+
+#: The attribute that marks a seed's list as a model's rows.
+CHILDREN_FROM: Final = "data-karni-children-from"
 
 
 @dataclass
@@ -322,10 +358,13 @@ def _links(element: _Element) -> list[Link]:
             anchor = _first(child, ("a",), stop=("ul", "ol"))
             nested = _first(child, ("ul", "ol"))
             kids = _links(nested) if nested is not None else []
+            rows = nested.attrs.get(CHILDREN_FROM, "").strip() if nested is not None else ""
             if anchor is not None and "href" in anchor.attrs:
-                found.append(Link(anchor.text(), anchor.attrs["href"], kids))
+                found.append(Link(anchor.text(), anchor.attrs["href"], kids, rows))
             else:
                 found.extend(kids)
+        elif child.attrs.get(CHILDREN_FROM, "").strip():
+            found.append(Link("", "", _links(child), child.attrs[CHILDREN_FROM].strip()))
         else:
             found.extend(_links(child))
     return found
@@ -383,22 +422,53 @@ def seed_menu(name: str, markup: str, *, source: str = "", title: str = "") -> b
                 seed=source,
             )
 
-            def add(found: list[Link], parent: Any) -> None:
-                for order, link in enumerate(found):
+            def add(found: list[Link], parent: Any, order: int = 0) -> int:
+                """Create ``found`` under ``parent`` from ``order`` on: the next order."""
+                for link in found:
+                    rows = _content_type(link.children_from)
+                    if link.children_from and rows is None:
+                        logger.warning(
+                            "karni_site: menu %r lists %s, which is not a model here: "
+                            "seeded with the design's links instead",
+                            name,
+                            link.children_from,
+                        )
+                    if rows is None and not link.href:  # a marked list without its model
+                        order = add(link.children, parent, order)
+                        continue
+                    fields = item_fields(link.href) if link.href else {}
                     item = MenuItem.objects.create(
                         menu=menu,
                         parent=parent,
                         title=link.title,
                         order=order,
-                        **item_fields(link.href),
+                        children_from=rows,
+                        **fields,
                     )
-                    add(link.children, item)
+                    order += 1
+                    if rows is None:
+                        add(link.children, item)
+                return order
 
             add(links, None)
     except IntegrityError:
         return False
     caching.bump("menus")
     return True
+
+
+def _content_type(label: str) -> Any | None:
+    """The content type of the model ``"<app>.<Model>"``, or ``None`` when there is none."""
+    if not label:
+        return None
+    from django.apps import apps
+    from django.contrib.contenttypes.models import ContentType
+
+    try:
+        model = apps.get_model(label)
+    except (LookupError, ValueError):
+        return None
+    return ContentType.objects.get_for_model(model)
 
 
 # validation and invalidation
