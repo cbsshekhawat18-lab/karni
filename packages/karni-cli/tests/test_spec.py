@@ -131,7 +131,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
-    ("C224", SHOP + "        pk: bigint\n", 7),
+    ("C224", SHOP + "        tree: true\n", 7),
     ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
@@ -148,6 +148,18 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C240", SHOP + "        fields: {name: str}\n        access: {read: 'owned:name'}\n", 8),
     ("C241", HEAD + "seed: {Product: 3}\n", 3),
     ("C242", SHOP + "        fields: {name: str}\npages:\n  - Product: list\n  - products: blank\n", 10),
+    ("C251", SHOP + "        external: true\n", 7),
+    ("C251", SHOP + "        table: sales\n", 7),
+    ("C251", SHOP + "        external: true\n        table: sales\n        pk: bigint\n", 9),
+    ("C251", SHOP + "        external: true\n        table: 'a.b.c'\n", 8),
+    ("C251", SHOP + "        {external: true, table: sales}\nseed: {Product: 5}\n", 8),
+    ("C252", SHOP + "        database: 'two words'\n", 7),
+    ("C253", HEAD + "apps:\n  shop:\n    entities:\n      Stock: {database: warehouse}\n"
+     "      Item: {fields: {stock: fk:Stock}}\n", 7),
+    ("C253", SHOP + "        fields: {buyer: fk:User}\n        database: warehouse\n", 7),
+    ("C254", SHOP + "        was: Product\n", 7),
+    ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
+    ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
 ]  # fmt: skip
 
 
@@ -162,7 +174,7 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    assert all(200 <= int(code[1:]) <= 249 for code in iter_codes())
+    assert all(200 <= int(code[1:]) <= 269 for code in iter_codes())
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
@@ -539,7 +551,7 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         ok("make", "app", label)
     for label, application in spec.apps.items():
         for name, entity in application.entities.items():
-            args = ["make", "model", name, *(f"{f}:{t}" for f, t in entity.fields.items())]
+            args = ["make", "model", name, *(f"{f}:{t}" for f, t in entity.tokens().items())]
             args += ["--app", label, "--with", "viewset"]
             if entity.key:
                 args += ["--key", entity.key]
@@ -635,3 +647,22 @@ def test_round_trip_build_export_compare(tmp_path: Path, monkeypatch: pytest.Mon
     again = validate_text(exported.text())
     assert again.ok and again.spec is not None, [i.render("export") for i in again.issues]
     assert normalise(again.spec) == normalise(original.spec)
+
+
+def test_was_pk_and_database_in_the_normal_form() -> None:
+    plain = check(SHOP + "        fields: {code: str}\n")
+    renamed = check(
+        SHOP + "        was: Item\n        fields: {code: {type: 'str:255', was: sku}}\n"
+    )
+    assert plain.spec is not None and renamed.spec is not None, renamed.issues
+    assert normalise(renamed.spec) == normalise(plain.spec)  # was says how, not what
+    assert renamed.spec.apps["shop"].entities["Product"].renamed() == {"code": "sku"}
+    product = normalise(plain.spec, pk="bigint")["apps"]["shop"]["entities"]["Product"]
+    assert product["pk"] == "bigint" and product["database"] is None
+    external = check(SHOP + "        {external: true, table: sales, database: default}\n")
+    assert external.spec is not None, external.issues
+    sale = normalise(external.spec)["apps"]["shop"]["entities"]["Product"]
+    assert sale["pk"] is None and sale["database"] is None and sale["table"] == "sales"
+    assert check(SHOP + "        {database: warehouse}\n").ok  # validate alone cannot tell
+    found = validate_text(SHOP + "        database: warehouse\n", databases=["default"]).issues
+    assert [issue.code for issue in found] == ["C252"]

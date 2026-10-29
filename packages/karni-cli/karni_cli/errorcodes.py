@@ -494,7 +494,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C224",
         "A key reserved for a later release",
         "karni spec validate (karni_cli.spec.validate)",
-        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, integer keys, external tables, a second database, cross-entity search, markdown fields), so a spec written today keeps its meaning.",
+        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.",
         "Remove the key, and write that part by hand in the project until the feature ships.",
     ),
     _c(
@@ -608,6 +608,41 @@ CODES: Final[tuple[CliCode, ...]] = (
         "karni spec export",
         "karni spec export does not overwrite a spec: it may hold edits of your own.",
         "Pass --force to replace it, or write to another file with -o.",
+    ),
+    _c(
+        "C250",
+        "karni plan cannot read the project",
+        "karni plan",
+        "The plan compares the spec with the project as karni spec export reads it: through manage.py karni_facts, run by the project's interpreter, which needs this karni.",
+        "Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.",
+    ),
+    _c(
+        "C251",
+        "An external entity's keys do not fit",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "external: true is a table another system owns, so it needs table, its key is the table's own column (no pk), and karni seed skips it. table and writable mean nothing without external.",
+        "Add table: <[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.",
+    ),
+    _c(
+        "C252",
+        "database names an alias the project does not have",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "database sends an entity's reads, writes and migrations to an alias of DATABASES (class Karni: database). karni plan checks the name against the project's DATABASES, and karni spec validate checks that it is an alias name.",
+        'Add the alias to config/settings.py (DATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")), or fix the name.',
+    ),
+    _c(
+        "C253",
+        "A relation joins two databases",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Django joins related tables in one database, so a fk, m2m or o2o between entities on different databases cannot work (karni.E276 at startup). The user and the modules' models are on the default database.",
+        "Keep both entities on one database, or store the other row's key in a plain field and look it up in code.",
+    ),
+    _c(
+        "C254",
+        "A rename (was) is not valid",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "was: <old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.",
+        "Write the old name once, on the field or entity that takes over the data, and remove the old declaration.",
     ),
     # C3xx karni ui
     _c(

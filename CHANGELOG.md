@@ -11,6 +11,33 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **`karni plan` (experimental): what `karni build` would change, writing
+  nothing.** `karni plan [--spec karni.yaml] [--json] [--offline]` validates
+  the spec, reads the project the way `karni spec export` does, compares
+  both in the spec's normal form and prints one line per change, grouped by
+  area (app, modules, features, roles, apps, entities, fields, access, pages,
+  migrations, seed, tests), with `+`, `~`, `-` and `!` for a risky change and
+  a summary line. Risky changes (a field or entity removed, a type changed,
+  a shorter length, a field that becomes required, a relation pointed
+  elsewhere, a module removed, a key type switched, an entity moved to
+  another database, access or a grant widened) name the rows they affect,
+  counted by the new `manage.py karni_rows` (`karni.facts.count_rows`, only
+  `SELECT COUNT`), and `karni build` will refuse them without
+  `--allow-destructive`. `--json` follows the published
+  `docs/assets/karni-plan.schema.json`. `C250` when the project cannot be
+  read. [docs/app-spec.md](docs/app-spec.md#karni-plan).
+- **The app spec's `pk`, `external`, `table`, `writable`, `database` and
+  `was` (experimental).** The entity keys reserved by `C224` are keys now:
+  `pk: uuid|bigint` (default: the project's `KARNI_PK`), `external: true`
+  with `table` and `writable`, and `database: <alias>`. `was: <old name>` on
+  an entity, or on a field written as `{type, was}`, makes a rename explicit
+  and keeps the data. New codes `C251` to `C254` check them, `karni spec
+  export` writes them back (a model on `BigIntBaseModel`, an external model,
+  a model Karni manages on another database), and `manage.py karni_facts`
+  adds each model's key type, table and `managed`, the database aliases and
+  `KARNI_PK`. Its `base_model` is now true for `BigIntBaseModel` too, and
+  the fields of Karni's model mixins are left out of every model's
+  `fields`, not only of `BaseModel`'s.
 - **The app spec, `karni.yaml` (experimental).** One small file describes an
   app in the terms `karni make`, `karni add` and the settings already use:
   `app` (name, kind), `modules` (each with its settings as options),

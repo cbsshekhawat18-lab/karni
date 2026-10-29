@@ -43,6 +43,7 @@ __all__ = [
     "AppInfo",
     "Entity",
     "Features",
+    "FieldEntry",
     "Role",
     "Spec",
     "Terms",
@@ -190,17 +191,72 @@ AuditValue = Annotated[
 ]
 
 
-class Entity(_Node):
-    """Experimental. One entity: a model on BaseModel, its viewset and its options."""
+class FieldEntry(_Node):
+    """Experimental. A field written as a mapping, to say what it was called before.
 
-    fields: dict[str, str] = Field(
+    ``title: {type: "str:200", was: name}`` is the field ``title`` of type
+    ``str:200``, which ``karni plan`` and ``karni build`` treat as the field
+    ``name`` renamed: the column keeps its rows.
+    """
+
+    type: str = Field(description="The field's type, as in the short form (str:200, fk:Studio).")
+    was: str | None = Field(
+        None, description="The field's old name: a rename that keeps the column and its rows."
+    )
+
+
+def _field_member(value: Any) -> str:
+    return "=type" if isinstance(value, str) else "=entry"
+
+
+FieldValue = Annotated[
+    Annotated[str, Tag("=type")] | Annotated[FieldEntry, Tag("=entry")],
+    Discriminator(_field_member),
+]
+
+
+class Entity(_Node):
+    """Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options."""
+
+    fields: dict[str, FieldValue] = Field(
         default_factory=dict,
         description=(
             "Field name -> type, in karni make model's syntax (types: "
             + " ".join(TYPES)
-            + "), a trailing ? for optional."
+            + "), a trailing ? for optional. Or {type, was} to rename a field and keep its rows."
         ),
         json_schema_extra=_names(FIELD_NAME),
+    )
+    was: str | None = Field(
+        None,
+        description="The entity's old name in the same app: a rename that keeps the table's rows.",
+    )
+    pk: Literal["uuid", "bigint"] | None = Field(
+        None,
+        description=(
+            "The key type: uuid (BaseModel) or bigint (BigIntBaseModel). Default: the "
+            "project's KARNI_PK."
+        ),
+    )
+    external: bool = Field(
+        False,
+        description=(
+            "A table or view another system owns: Meta.managed = False and class Karni: "
+            "external = True. No migration changes it, and it is read-only unless writable."
+        ),
+    )
+    table: str | None = Field(
+        None, description="With external: the table or view, as [schema.]table (Meta.db_table)."
+    )
+    writable: bool = Field(
+        False, description="With external: the API and the admin may write it (Karni.writable)."
+    )
+    database: str | None = Field(
+        None,
+        description=(
+            "The DATABASES alias its reads, writes and migrations go to (Karni.database). "
+            "Default: default."
+        ),
     )
     key: str | None = Field(
         None, description="The natural key imports match rows on (Karni.import_key)."
@@ -227,6 +283,21 @@ class Entity(_Node):
         default_factory=lambda: Access.model_validate({}),
         description="Who reads and writes: a mapping {read, write, create}, or code.",
     )
+
+    def tokens(self) -> dict[str, str]:
+        """Experimental. Field name -> type, for both forms of a field."""
+        return {
+            name: value if isinstance(value, str) else value.type
+            for name, value in self.fields.items()
+        }
+
+    def renamed(self) -> dict[str, str]:
+        """Experimental. New field name -> old name, for the fields written with ``was``."""
+        return {
+            name: value.was
+            for name, value in self.fields.items()
+            if isinstance(value, FieldEntry) and value.was is not None
+        }
 
 
 class App(_Node):

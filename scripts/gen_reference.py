@@ -321,8 +321,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         "agents",
         "The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` "
-        "(every problem with its code and line) and `karni spec export` (the spec of an "
-        "existing project). Experimental tier",
+        "(every problem with its code and line), `karni spec export` (the spec of an "
+        "existing project) and `karni plan` (what `karni build` would change, risky changes "
+        "with their row counts). Experimental tier",
     ),
     Capability(
         "agents",

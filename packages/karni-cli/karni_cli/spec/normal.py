@@ -4,13 +4,19 @@ Two specs that build the same project normalise to the same data: defaults
 written out, ``own:<field>`` read as ``own``, access rules sorted and their
 ``create`` dropped when it equals ``write``, field types in one spelling
 (``str`` for ``str:255``, ``choice:a|b`` for ``choice:a,b``, a lifecycle as
-its explicit moves), an entity's pages in list, detail, form order, and the
-site module listed whenever the kind has a site. What carries meaning in its
+its explicit moves), a field written as ``{type, was}`` as its type, an
+entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
+spec does not say, none for an external entity), ``database: default`` as
+no database, an entity's pages in list, detail, form order, and the site
+module listed whenever the kind has a site. What carries meaning in its
 order stays in order: fields, pages, search fields and the ordering.
 
+``was`` is dropped: it says how the project gets to the spec (a rename),
+not what the spec describes. ``karni plan`` reads it from the
+:class:`~karni_cli.spec.schema.Spec` itself.
+
 ``karni spec export``'s round-trip test compares through it, and
-``karni plan`` (app-builder item A2) will compare a spec with a project the
-same way.
+``karni plan`` compares a spec with a project the same way.
 
 Override / escape hatch: :func:`canonical_field` is the field part on its
 own, for a tool that compares single fields.
@@ -83,8 +89,11 @@ def _access(rule: Any) -> Any:
     return out
 
 
-def normalise(spec: Spec) -> dict[str, Any]:
-    """Experimental. The canonical data of ``spec`` (see the module docstring)."""
+def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
+    """Experimental. The canonical data of ``spec`` (see the module docstring).
+
+    ``pk``: the key type of an entity that does not say (the project's ``KARNI_PK``).
+    """
     data = spec.model_dump(mode="json")
     if data["app"].get("recipe") is None:
         data["app"].pop("recipe", None)
@@ -102,8 +111,13 @@ def normalise(spec: Spec) -> dict[str, Any]:
     for app in data["apps"].values():
         for entity in app["entities"].values():
             entity["fields"] = {
-                name: canonical_field(name, token) for name, token in entity["fields"].items()
+                name: canonical_field(name, value if isinstance(value, str) else value["type"])
+                for name, value in entity["fields"].items()
             }
+            entity.pop("was", None)
+            entity["pk"] = None if entity["external"] else (entity["pk"] or pk)
+            if entity["database"] == "default":
+                entity["database"] = None
             entity["access"] = _access(entity["access"])
             if isinstance(entity["audit"], list):
                 entity["audit"] = sorted(entity["audit"])

@@ -19,6 +19,12 @@ the spec's shapes (written ``access: code``), ``class Karni`` options the
 spec has no key for, hand-written pages and grants the spec cannot name. The
 list is printed, and written as comments at the top of the file.
 
+An entity is a model on ``BaseModel`` or ``BigIntBaseModel`` (its ``pk``
+written when it differs from the project's ``KARNI_PK``), an external model
+(``external``, ``table``, ``writable``, ``database``), or a model Karni
+manages on another database (``database``, on ``UUIDModel`` or
+``IntegerKeyModel``).
+
 Override / escape hatch: :func:`build` takes the facts and the project
 directory, so a tool with facts of its own (or a test) maps them without a
 project interpreter.
@@ -42,7 +48,15 @@ from karni_cli.spec import emit, schema
 from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS, module_setting
 from karni_cli.spec.normal import role_name
 
-__all__ = ["Exported", "build", "export_project", "read_facts"]
+__all__ = [
+    "Exported",
+    "build",
+    "export_project",
+    "is_entity",
+    "read_facts",
+    "roles_of",
+    "spec_table",
+]
 
 _MISSING: Final = object()
 #: Arguments that change the column (or its constraint or index): a difference leaves the field out.
@@ -157,24 +171,42 @@ class Exported:
         return emit.dump(self.data, header=header)
 
 
-def read_facts(root: Path, *, docker: bool | None = None, service: str = "django") -> Any:
-    """Experimental. ``manage.py karni_facts`` through the project's interpreter, parsed."""
+def read_facts(
+    root: Path,
+    *,
+    docker: bool | None = None,
+    service: str = "django",
+    command: str = "karni spec export",
+    code: str = "C245",
+) -> Any:
+    """Experimental. ``manage.py karni_facts`` through the project's interpreter, parsed.
+
+    ``command`` and ``code`` name the command that reads the project in the
+    error (``karni plan`` passes its own, ``C250``).
+    """
     proc = project_mod.run_manage(root, ["karni_facts"], docker=docker, service=service)
     if proc.returncode != 0:
         detail = (proc.stderr or proc.stdout or "").strip().splitlines()[-3:]
-        raise CliError(
-            "manage.py karni_facts failed, so karni spec export cannot read the project "
+        raise _unreadable(
+            f"manage.py karni_facts failed, so {command} cannot read the project "
             f"({' '.join(detail) or f'exit {proc.returncode}'}).",
-            code="C245",
+            code,
         )
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError:
-        raise CliError(
+        raise _unreadable(
             "manage.py karni_facts did not print JSON. Something in the project prints to "
             "stdout at startup.",
-            code="C245",
+            code,
         ) from None
+
+
+def _unreadable(message: str, code: str) -> CliError:
+    """The error of the command that could not read the project (``C250`` for karni plan)."""
+    if code == "C250":
+        return CliError(message, code="C250")
+    return CliError(message, code="C245")
 
 
 def export_project(root: Path, *, docker: bool | None = None, service: str = "django") -> Exported:
@@ -191,6 +223,23 @@ class _Ctx:
     #: model label -> how a relation in the spec names it, for every model the spec knows.
     names: dict[str, str]
     left_out: list[str]
+    #: the project's KARNI_PK: an entity's pk is written when it differs.
+    pk: str = "uuid"
+
+
+def is_entity(model: dict[str, Any]) -> bool:
+    """Experimental. Whether a model's facts make it an entity (see the module docstring)."""
+    if model.get("proxy"):
+        return False
+    karni = model.get("karni") or {}
+    if model.get("base_model") or karni.get("external") is True:
+        return True
+    return bool(karni.get("database")) and model.get("pk") in ("uuid", "bigint")
+
+
+def spec_table(db_table: str) -> str:
+    """Experimental. ``Meta.db_table`` as the spec's ``table``: ``reporting.sales`` for ``reporting"."sales``."""
+    return db_table.replace('"."', ".")
 
 
 def _expected(kind: str, optional: bool) -> dict[str, Any]:
@@ -452,8 +501,11 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
     entities: dict[str, dict[str, Any]] = {}
     for app in facts["apps"]:
         for model in app["models"]:
-            if not model["base_model"] or model["proxy"]:
-                left_out.append(f"{model['label']}: not on BaseModel, so not an entity")
+            if not is_entity(model):
+                left_out.append(
+                    f"{model['label']}: not on BaseModel or BigIntBaseModel and not external, "
+                    "so not an entity"
+                )
                 continue
             entities[model["label"]] = model
     names_count: dict[str, int] = {}
@@ -467,7 +519,7 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
             names[f"{known.app}.{model}"] = f"{known.app}.{model}"  # type: ignore[union-attr]
     for other in OTHER_MODELS:
         names[other] = other
-    ctx = _Ctx(facts, names, left_out)
+    ctx = _Ctx(facts, names, left_out, str(facts["settings"].get("KARNI_PK") or "uuid"))
     viewsets: dict[str, dict[str, Any]] = {}
     routes: dict[str, str] = {}
     for viewset in facts["viewsets"]:
@@ -545,6 +597,18 @@ def _entity(
         ctx.left_out.extend(notes)
     entity: dict[str, Any] = {"fields": fields}
     karni = dict(model["karni"])
+    external = karni.pop("external", None) is True
+    writable = karni.pop("writable", None) is True
+    database = karni.pop("database", None)
+    if external:
+        entity["external"] = True
+        entity["table"] = spec_table(str(model.get("db_table") or ""))
+        if writable:
+            entity["writable"] = True
+    elif model.get("pk") in ("uuid", "bigint") and model["pk"] != ctx.pk:
+        entity["pk"] = model["pk"]
+    if isinstance(database, str) and database and database != "default":
+        entity["database"] = database
     for option, key in KARNI_KEYS.items():
         if option in karni:
             value = karni.pop(option)
@@ -644,12 +708,24 @@ def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:
 
 
 def _roles(
-    facts: dict[str, Any], apps: dict[str, Any], modules: set[str]
+    facts: dict[str, Any],
+    apps: dict[str, Any],
+    modules: set[str],
+    *,
+    declared: dict[str, Any] | None = None,
+    defaults: list[str] | None = None,
 ) -> tuple[dict[str, Any], list[str]] | None:
-    declared = facts["settings"].get("KARNI_ROLES") or {}
-    if declared == facts.get("shipped_roles"):
-        return None
-    defaults = facts["settings"].get("KARNI_ACCOUNTS_DEFAULT_ROLES") or []
+    """The spec's roles from ``KARNI_ROLES`` (``None`` when it is Karni's shipped roles).
+
+    With ``declared`` (and ``defaults``), those roles instead, always:
+    :func:`roles_of` gives the shipped roles in the spec's form this way.
+    """
+    if declared is None:
+        declared = facts["settings"].get("KARNI_ROLES") or {}
+        if declared == facts.get("shipped_roles"):
+            return None
+    if defaults is None:
+        defaults = facts["settings"].get("KARNI_ACCOUNTS_DEFAULT_ROLES") or []
     roles: dict[str, Any] = {}
     notes = []
     for slug, spec in declared.items():
@@ -675,6 +751,19 @@ def _roles(
         if slug not in declared:
             notes.append(f"roles: the default role {slug}, which KARNI_ROLES does not declare")
     return roles, notes
+
+
+def roles_of(
+    facts: dict[str, Any], declared: dict[str, Any], defaults: list[str], apps: dict[str, Any]
+) -> dict[str, Any]:
+    """Experimental. ``declared`` (a ``KARNI_ROLES``) in the spec's form, whatever it holds.
+
+    ``karni plan`` reads the project's roles this way, also when they are the
+    shipped ones (which the export leaves out).
+    """
+    modules = {module["name"] for module in facts["modules"]}
+    found = _roles(facts, apps, modules, declared=declared, defaults=defaults)
+    return found[0] if found else {}
 
 
 def _pages(

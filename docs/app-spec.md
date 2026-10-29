@@ -1,5 +1,5 @@
 ---
-description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export and a published JSON Schema."
+description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and published JSON Schemas."
 ---
 
 # The app spec: `karni.yaml`
@@ -7,17 +7,19 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
 !!! warning "Experimental"
     Everything on this page is [experimental](stability.md#experimental-names):
     the `karni.yaml` format, `karni spec validate`, `karni spec export`,
-    `manage.py karni_facts`, `karni.facts`, the `karni_cli.spec` package and
-    the JSON Schema. They may change in a minor release, and each change is
-    in the CHANGELOG. The error codes keep their meaning.
+    `karni plan`, `manage.py karni_facts`, `manage.py karni_rows`,
+    `karni.facts`, the `karni_cli.spec` package and both JSON Schemas. They
+    may change in a minor release, and each change is in the CHANGELOG. The
+    error codes keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
 roles, built-in features, modules and pages. An AI agent turns a one-line
 request into a spec, and Karni turns the spec into code without a language
-model. This release reads and checks a spec (`karni spec validate`) and
-writes the spec of an existing project (`karni spec export`). `karni plan`
-and `karni build`, which turn a spec into code, come next on the
-[app-builder roadmap](roadmap/app-builder.md).
+model. This release reads and checks a spec (`karni spec validate`),
+writes the spec of an existing project (`karni spec export`) and shows
+what would change to make the project match a spec ([`karni
+plan`](#karni-plan)). `karni build`, which makes the change, comes next on
+the [app-builder roadmap](roadmap/app-builder.md).
 
 The spec describes only what `karni make`, `karni add` and the settings can
 already do. Each key maps to one of them. Anything it cannot express stays
@@ -193,7 +195,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 
 | Key | Takes | Maps to |
 |---|---|---|
-| `fields` | name to type | `karni make model <Entity> name:type ...` |
+| `fields` | name to type, or to `{type, was}` | `karni make model <Entity> name:type ...` |
 | `key` | a field | `karni make model --key` (`Karni.import_key`) |
 | `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`) |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |
@@ -202,6 +204,12 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `order` | a field or a list, `-` for descending | `karni make model --order` (`Meta.ordering`) |
 | `scope_paths` | key to lookup path | `Karni.scope_paths`, for the `related:<key>` scope |
 | `access` | `{read, write, create}`, or `code` | the viewset's `access` |
+| `pk` | `uuid` or `bigint` | `karni make model --pk`: `BaseModel` or `BigIntBaseModel` (default: the project's `KARNI_PK`) |
+| `external` | `true` / `false` | `karni make model --external`: `Meta.managed = False`, `Karni.external` |
+| `table` | `table` or `schema.table` | `karni make model --table` (`Meta.db_table`), with `external` only |
+| `writable` | `true` / `false` | `Karni.writable`, with `external` only |
+| `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
+| `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
 parser and renderer, so the spec and the generator can never disagree:
@@ -218,6 +226,23 @@ A relation points at an entity of the same app (`fk:Studio`), of another app
 (`fk:shop.Product`), at the user (`fk:User`), at itself (`fk:self`), or at a
 model of a module the spec adds (`fk:karni_payments.Payment`). A model of the
 project outside the spec cannot be named.
+
+A field written as a mapping says what it was called before:
+`title: {type: "str:200", was: name}` is the field `title`, renamed from
+`name`, and its column keeps its values. The short form `title: "str:200"`
+and the mapping form without `was` mean the same.
+
+`pk`, `external`, `table`, `writable` and `database` are the
+[key type](models.md#choosing-the-key-type) and the
+[external tables and second databases](models.md#external-tables-views-and-a-second-database)
+of the models page. An external entity needs `table`, takes no `pk` (the
+table's own primary key column is the key) and no seed count (`C251`).
+`database` must be an alias of the project's `DATABASES` (`C252`, which
+`karni plan` checks: `karni spec validate` cannot read the settings), and a
+relation between entities on different databases is refused (`C253`): the
+user and the modules' models are on `default`. A managed entity on another
+database is built without the audit users, whose relations would point at
+`default`.
 
 `groups` become the admin change form's fieldsets today. Field groups in the
 React forms and detail pages (item 12 of the
@@ -282,8 +307,6 @@ they arrive:
 
 | Key | Where | For |
 |---|---|---|
-| `pk: bigint` | entity | integer primary keys (large-apps item 2) |
-| `external: true`, `database: <alias>` | entity | external and read-only tables, a second database (large-apps item 3) |
 | `tree: true`, `taxonomies:` | entity | hierarchies and taxonomies |
 | `aggregate:` | entity | aggregation endpoints (large-apps item 8) |
 | `search:` | top level | a search block across entities |
@@ -335,6 +358,10 @@ means. `karni explain <code>` prints any code's entry.
 | [C240](errors.md#c240) | `owned:<path>` does not lead to the user |
 | [C241](errors.md#c241) | seed names an entity that does not exist |
 | [C242](errors.md#c242) | two pages share a route |
+| [C251](errors.md#c251) | an external entity's keys do not fit (`table`, `writable`, `pk`, seed) |
+| [C252](errors.md#c252) | `database` names an alias the project does not have |
+| [C253](errors.md#c253) | a relation joins two databases |
+| [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 
@@ -353,6 +380,11 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   behaviour (a `default`, an `on_delete`, a `related_name`) keeps the field
   and is listed. A field whose column no type makes (a `SearchField`,
   Django's own `EmailField`, a `MoneyField` with other digits) is left out.
+- **pk** is written when the model's key type differs from the project's
+  `KARNI_PK`. An external model (`Karni.external`) is an entity too, with
+  `external`, `table` (from `Meta.db_table`), `writable` and `database`,
+  and so is a model Karni manages on another database (`Karni.database`)
+  on `UUIDModel` or `IntegerKeyModel`.
 - **key, owner, audit, scope_paths** come from `class Karni`, **order** from
   `Meta.ordering`, **groups** from `AdminMeta`'s fieldsets, **search** from
   the viewset's `search_fields`.
@@ -377,4 +409,135 @@ in the code, unchanged. The exported spec always passes
 To compare two specs by what they mean, `karni_cli.spec.normal.normalise`
 gives one canonical form: defaults written out, `str:255` as `str`,
 `choice:a,b` as `choice:a|b`, a lifecycle as its explicit moves,
-`own:<field>` as `own`, and access rules sorted.
+`own:<field>` as `own`, the key type written out, and access rules sorted.
+`was` is left out: it says how the project gets to the spec, not what the
+spec describes.
+
+## `karni plan`
+
+!!! warning "Experimental"
+    `karni plan`, its output, `--json` and its schema, `manage.py
+    karni_rows` and `karni.facts.count_rows` are experimental.
+
+`karni plan` compares `karni.yaml` with the project and prints what
+`karni build` would change. It writes nothing: no file, no row.
+
+```sh
+karni plan                        # karni.yaml in the project root
+karni plan --spec other.yaml --json
+karni plan --offline              # no row counts: the database is not opened
+```
+
+It validates the spec first (the codes above, exit status 1 on a problem),
+reads the project the way `karni spec export` does, compares both in the
+normal form, and prints one line per change, grouped by area: `+` add, `~`
+change or rename, `-` remove, and `!` in front of a risky change. A fresh
+`karni new` project plans everything:
+
+```text
+modules
+  + payments: provider stripe
+  + site
+roles
+  + instructor: grants classes.booking custom:taught_by, classes.session own
+  - customer
+entities
+  + classes.Studio: (name str:120, slug slug:name, address text?) key slug, search name
+...
+27 changes, 0 risky.
+```
+
+The areas, in order: the app (kind, name), modules to add or remove,
+features with the setting each one sets, roles and their grants, apps,
+entities with their fields and options (key, search, owner, audit, groups,
+order, pk, external, table, writable, database), field changes of existing
+entities, access, pages and navigation, the apps that get migrations, seed
+counts, and the API tests `karni make test` writes for new entities. The
+plan of the example above on a fresh project is about 400 tokens.
+
+### Risky changes
+
+A change is risky when it can lose data or open it to more people.
+`karni build` refuses risky changes without `--allow-destructive`. Each one
+says what happens and, when the database answers, how many rows it
+affects:
+
+```text
+fields
+! - classes.Session.title: str:200, its values are lost (40 rows)
+! ~ classes.Studio.name: str:120 -> str:60, values longer than 60 do not fit (2 rows)
+2 changes, 2 risky.
+karni build refuses the risky (!) changes without --allow-destructive.
+```
+
+| Risky change | Rows counted |
+|---|---|
+| a field removed | rows whose field holds a value (a many-to-many: its links) |
+| a field whose type changes to another kind (`str` to `text` is safe) | rows whose field holds a value |
+| a shorter length (`str`, `url`, `slug`) | rows whose value is longer than the new length |
+| a field that becomes required | rows whose field is empty |
+| a choice or a state dropped | rows that hold one of the dropped values |
+| fewer digits, another currency, other array items, a field that becomes unique | rows whose field holds a value |
+| a relation pointed at another entity | rows whose relation is set |
+| an entity removed | its rows |
+| a module removed | the rows of its models |
+| a key type switched (`pk`) on an existing entity | its rows. Switching it is out of scope: `karni build` does not apply it ([why](models.md#choosing-the-key-type)) |
+| an entity moved to another database | its rows, which stay where they are |
+| access widened: reads to `public`, writes or creates from a role to `authenticated` or `public` | the entity's rows (none for creates) |
+| a grant's scope widened to `all` | the rows of the entity the grant names (none for a pattern with `*`) |
+
+An external table is never altered or dropped, so removing an external
+entity or one of its fields is not risky. An entity or a field the project
+already has in a form the spec cannot express (a model not on `BaseModel`,
+a field `karni spec export` leaves out) is marked risky too: `karni build`
+does not replace code it does not own.
+
+The counts come from `manage.py karni_rows`, which runs only `SELECT COUNT`
+queries through each model's base manager (soft-deleted rows count) on the
+database the router reads it from. A SQLite file that does not exist is not
+created. With `--offline`, or when a database does not answer, the plan says
+so on its last lines and shows no counts.
+
+### Renames
+
+`was: <old name>` on a field or an entity makes a rename explicit, and the
+data stays:
+
+```yaml
+Lesson:
+  was: Session
+  fields:
+    title: {type: "str:200", was: name}
+```
+
+```text
+entities
+  ~ classes.Lesson: from Session, rows kept
+fields
+  ~ classes.Lesson.title: from name
+```
+
+Relations, pages and seed counts that name the old entity follow the
+rename. Without `was`, a field removed and a field of the same type added
+to one entity are a removal (risky) and an addition, and the removal says
+it is probably a rename and how to write `was`. Once the rename is done,
+`was` changes nothing and may be removed.
+
+### `--json`
+
+`--json` prints `{version, file, valid, issues, changes, summary,
+row_counts}`: each change is `{area, action, target, detail, risky,
+reason, rows}`, `action` one of `add`, `change`, `rename` and `remove`,
+`rows` `null` when not counted, and `row_counts` is `{status, note}` with
+`status` one of `counted`, `offline`, `unreachable` and `not needed`. A spec
+with problems gives `valid: false` and its `issues`, as
+`karni spec validate --json` reports them. The schema is published as
+[`karni-plan.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-plan.schema.json)
+(in the repository, `docs/assets/karni-plan.schema.json`, regenerated with
+`python -m karni_cli.spec.plan > docs/assets/karni-plan.schema.json`).
+`version` moves only for a breaking change of the output.
+
+| Code | Problem |
+|---|---|
+| [C210](errors.md#c210) | no spec file |
+| [C250](errors.md#c250) | `karni plan` cannot read the project (`manage.py karni_facts` failed) |

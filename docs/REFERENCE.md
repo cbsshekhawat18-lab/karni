@@ -102,7 +102,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
-| The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line) and `karni spec export` (the spec of an existing project). Experimental tier | `experimental` | Karni's own tests |
+| The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -1364,6 +1364,22 @@ karni spec export [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+#### `karni plan`
+
+Compare karni.yaml with the project: what karni build would change
+
+```
+karni plan [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {version, file, valid, issues, changes: [{area, action, target, detail, risky, reason, rows}], summary, row_counts} (docs/assets/karni-plan.schema.json). |
+| `--offline` |  | Do not open the database: risky changes show no row counts. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### Debugging
 
 #### `karni trace`
@@ -2200,6 +2216,11 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C242`](errors.md#c242) | cli | Two pages share a route |
 | [`C245`](errors.md#c245) | cli | karni spec export cannot read the project |
 | [`C246`](errors.md#c246) | cli | The output file exists |
+| [`C250`](errors.md#c250) | cli | karni plan cannot read the project |
+| [`C251`](errors.md#c251) | cli | An external entity's keys do not fit |
+| [`C252`](errors.md#c252) | cli | database names an alias the project does not have |
+| [`C253`](errors.md#c253) | cli | A relation joins two databases |
+| [`C254`](errors.md#c254) | cli | A rename (was) is not valid |
 | [`C301`](errors.md#c301) | cli | No frontend found |
 | [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
 | [`C303`](errors.md#c303) | cli | A theme source cannot be read |

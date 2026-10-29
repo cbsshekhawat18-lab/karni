@@ -2862,7 +2862,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, integer keys, external tables, a second database, cross-entity search, markdown fields), so a spec written today keeps its meaning.
+**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.
 
 **Fix.** Remove the key, and write that part by hand in the project until the feature ships.
 
@@ -3025,6 +3025,56 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni spec export does not overwrite a spec: it may hold edits of your own.
 
 **Fix.** Pass --force to replace it, or write to another file with -o.
+
+<a id="c250"></a>
+
+### C250: karni plan cannot read the project
+
+*karni command* · from `karni plan`
+
+**Why Karni objects.** The plan compares the spec with the project as karni spec export reads it: through manage.py karni_facts, run by the project's interpreter, which needs this karni.
+
+**Fix.** Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.
+
+<a id="c251"></a>
+
+### C251: An external entity's keys do not fit
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** external: true is a table another system owns, so it needs table, its key is the table's own column (no pk), and karni seed skips it. table and writable mean nothing without external.
+
+**Fix.** Add table: <[schema.]table> to an external entity, remove pk and its seed count, or add external: true where table or writable is written.
+
+<a id="c252"></a>
+
+### C252: database names an alias the project does not have
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** database sends an entity's reads, writes and migrations to an alias of DATABASES (class Karni: database). karni plan checks the name against the project's DATABASES, and karni spec validate checks that it is an alias name.
+
+**Fix.** Add the alias to config/settings.py (DATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")), or fix the name.
+
+<a id="c253"></a>
+
+### C253: A relation joins two databases
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Django joins related tables in one database, so a fk, m2m or o2o between entities on different databases cannot work (karni.E276 at startup). The user and the modules' models are on the default database.
+
+**Fix.** Keep both entities on one database, or store the other row's key in a plain field and look it up in code.
+
+<a id="c254"></a>
+
+### C254: A rename (was) is not valid
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** was: <old name> on a field or an entity tells karni plan and karni build to rename it and keep its data. The old name must be a valid name, differ from the new one, no longer be declared, and be claimed by one field or entity only.
+
+**Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
 
 <a id="c301"></a>
 

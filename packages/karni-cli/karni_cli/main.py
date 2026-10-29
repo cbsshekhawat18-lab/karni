@@ -21,6 +21,7 @@ from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.migrate import migrate
 from karni_cli.commands.new import new
+from karni_cli.commands.plan import plan
 from karni_cli.commands.queries import queries
 from karni_cli.commands.replay import replay
 from karni_cli.commands.routes import routes
@@ -85,6 +86,7 @@ app.command(help="Run architecture and system checks")(check)
 app.command(help="Upgrade across Karni versions: codemods, diff, manual-change report")(upgrade)
 app.add_typer(rules_app, name="rules")
 app.add_typer(spec_app, name="spec")
+app.command(help="Compare karni.yaml with the project: what karni build would change")(plan)
 app.command(
     help="Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])"
 )(mcp)

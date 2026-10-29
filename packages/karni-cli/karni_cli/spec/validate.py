@@ -12,14 +12,18 @@ Three passes, each reporting every problem it finds:
 3. **Meaning**, once the shape is right: names (``C215``), each field through
    ``karni make model``'s own parser and renderer (``C216``), access rules,
    grants, features, pages, modules and seed counts, and every reference
-   between them (``C230`` to ``C242``).
+   between them (``C230`` to ``C242``), then the keys of external tables and
+   other databases (``C251`` to ``C253``) and the renames written with
+   ``was`` (``C254``). Whether a ``database`` is one of the project's
+   aliases is checked when the caller knows them (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
 path of the key, the message and the fix. ``karni explain <code>`` prints
 the code's entry.
 
 Override / escape hatch: :func:`validate_text` takes text, so a tool that
-writes a spec validates it before saving.
+writes a spec validates it before saving, and ``databases`` to check the
+aliases against a project's.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ from __future__ import annotations
 import fnmatch
 import keyword
 import re
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -62,9 +66,6 @@ RESERVED: Final[dict[str, dict[str, str]]] = {
         "tree": "trees (large-apps roadmap)",
         "taxonomies": "taxonomies (large-apps roadmap)",
         "aggregate": "aggregation endpoints (large-apps item 8)",
-        "pk": "integer primary keys (large-apps item 2)",
-        "external": "external and read-only tables (large-apps item 3)",
-        "database": "a second database (large-apps item 3)",
     },
 }
 #: Field types a later release adds.
@@ -82,6 +83,11 @@ TAKEN_LABELS: Final = frozenset(
     | {f"karni_{name}" for name in ("accounts", "admin", "audit", "transfer", *MODULES)}
 )
 _PATH: Final = re.compile(r"^[a-z_][a-z0-9_]*(__[a-z_][a-z0-9_]*)*$")
+#: ``table`` or ``schema.table``, as ``karni make model --table`` takes it.
+_TABLE: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*(\.[A-Za-z_][A-Za-z0-9_$]*)?$")
+_ALIAS: Final = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_-]*$")
+#: The database of the user, the modules' models and Django's: the project's default.
+DEFAULT_DATABASE: Final = "default"
 
 
 @dataclass(frozen=True)
@@ -254,6 +260,7 @@ def _known_keys(path: Loc) -> list[str]:
         (("roles", None), schema.Role),
         (("apps", None), schema.App),
         (("apps", None, "entities", None), schema.Entity),
+        (("apps", None, "entities", None, "fields", None), schema.FieldEntry),
         (("apps", None, "entities", None, "access"), schema.Access),
     ]
     parent = path[:-1]
@@ -338,9 +345,12 @@ class _Entity:
 
 
 class _Meaning:
-    def __init__(self, check: _Checker, spec: schema.Spec) -> None:
+    def __init__(
+        self, check: _Checker, spec: schema.Spec, databases: Collection[str] | None = None
+    ) -> None:
         self.check = check
         self.spec = spec
+        self.databases = databases
         self.entities: dict[str, _Entity] = {}  # label -> entity
         self.modules = set(spec.modules)
         if spec.app.kind in ("site", "site+app"):
@@ -357,6 +367,8 @@ class _Meaning:
         for entity in self.entities.values():
             self.options(entity)
             self.access(entity)
+            self.storage(entity)
+            self.renames(entity)
         self.roles()
         self.features()
         self.modules_()
@@ -407,8 +419,10 @@ class _Meaning:
             for name, entity in app.entities.items():
                 path: Loc = ("apps", label, "entities", name)
                 specs: dict[str, FieldSpec] = {}
-                for field_name, token in entity.fields.items():
-                    where = (*path, "fields", field_name)
+                for field_name, token in entity.tokens().items():
+                    where: Loc = (*path, "fields", field_name)
+                    if not isinstance(entity.fields[field_name], str):
+                        where = (*where, "type")
                     kind = token.split(":", 1)[0].rstrip("?").lower()
                     if kind in RESERVED_TYPES:
                         self.add(
@@ -441,6 +455,7 @@ class _Meaning:
             if target is not None:
                 entity.targets[spec.name] = target
                 keys.append(target)
+                self.same_database(entity, target, where)
         resolve = {
             spec.name: RelationTarget(pystr("x"), False, entity.targets.get(spec.name, spec.name))
             for spec in specs
@@ -530,6 +545,26 @@ class _Meaning:
             "spec cannot be named here: User and the modules' models can.",
         )
         return None
+
+    def database_of(self, label: str) -> str:
+        """The alias the entity ``label`` lives on (the user and modules' models: default)."""
+        found = self.entities.get(label)
+        return (found.entity.database if found else None) or DEFAULT_DATABASE
+
+    def same_database(self, entity: _Entity, target: str, where: Loc) -> None:
+        here, there = self.database_of(entity.label), self.database_of(target)
+        if here == there:
+            return
+        shown = "the user" if target == _USER_TARGET else target
+        self.add(
+            "C253",
+            where,
+            f"{entity.name}.{where[-1]} joins {entity.name} (database {here}) to {shown} "
+            f"(database {there}). Django joins related tables in one database, so Karni refuses "
+            "a relation across databases (karni.E276).",
+            "Keep both entities on one database, or store the other row's key in a plain field "
+            "(e.g. sku: str:20) and look it up in code.",
+        )
 
     def spec_token(self, entity: _Entity, field_name: Any, label: str) -> str:
         spec = entity.fields[str(field_name)]
@@ -689,6 +724,130 @@ class _Meaning:
                     "of them. For anything else write access: code and declare Access(...) in "
                     "the viewset.",
                 )
+
+    def storage(self, entity: _Entity) -> None:
+        """pk, external, table, writable and database (``C251``, ``C252``)."""
+        e, path = entity.entity, entity.path
+        if e.external:
+            if e.table is None:
+                self.add(
+                    "C251",
+                    (*path, "external"),
+                    f"{entity.name} is external but names no table: Karni reads a table it does "
+                    "not own, so it must know which one.",
+                    "Add table: <table> or table: <schema>.<table>, e.g. table: reporting.sales.",
+                    key=True,
+                )
+            if e.pk is not None:
+                self.add(
+                    "C251",
+                    (*path, "pk"),
+                    f"{entity.name} is external, so its key is the table's own primary key "
+                    "column, and pk does not apply.",
+                    "Remove pk. karni make model --external reads the key from the table.",
+                    key=True,
+                )
+        else:
+            for key in ("table", "writable"):
+                if getattr(e, key) not in (None, False):
+                    self.add(
+                        "C251",
+                        (*path, key),
+                        f"{entity.name}.{key} applies to an external entity only.",
+                        "Add external: true, or remove the key.",
+                        key=True,
+                    )
+        if e.table is not None and not _TABLE.match(e.table):
+            self.add(
+                "C251",
+                (*path, "table"),
+                f"{entity.name}.table {e.table!r} is not a table name: write table or "
+                "schema.table.",
+                "Write e.g. table: sales or table: reporting.sales.",
+            )
+        if e.database is None:
+            return
+        if not _ALIAS.match(e.database):
+            self.add(
+                "C252",
+                (*path, "database"),
+                f"{entity.name}.database {e.database!r} is not a database alias.",
+                "Name an alias of DATABASES, e.g. database: warehouse.",
+            )
+        elif self.databases is not None and e.database not in self.databases:
+            self.add(
+                "C252",
+                (*path, "database"),
+                f"{entity.name}.database is {e.database!r}, which the project's DATABASES does "
+                f"not have (aliases: {', '.join(sorted(self.databases))}).",
+                f'Add it in config/settings.py (DATABASES["{e.database}"] = '
+                'env.db_url("..._DATABASE_URL")), or name an alias it has.',
+            )
+
+    def renames(self, entity: _Entity) -> None:
+        """``was`` on the entity and its fields (``C254``)."""
+        e, path = entity.entity, entity.path
+        if e.was is not None:
+            siblings = self.spec.apps[entity.app].entities
+            others = [
+                name
+                for name, other in siblings.items()
+                if name != entity.name and other.was == e.was
+            ]
+            if not re.fullmatch(schema.ENTITY_NAME, e.was) or e.was == entity.name:
+                problem = "is its own name" if e.was == entity.name else "is not an entity name"
+                self.add(
+                    "C254",
+                    (*path, "was"),
+                    f"{entity.name}.was {problem} ({e.was!r}): was names the entity's old name.",
+                    "Write the old PascalCase name, e.g. was: Lesson, or remove was.",
+                )
+            elif e.was in siblings:
+                self.add(
+                    "C254",
+                    (*path, "was"),
+                    f"{entity.name}.was is {e.was}, which the app {entity.app} still declares: "
+                    "a rename leaves only the new name.",
+                    f"Remove the entity {e.was}, or remove was.",
+                )
+            elif others:
+                self.add(
+                    "C254",
+                    (*path, "was"),
+                    f"{entity.name} and {others[0]} both say was: {e.was}. One table can become "
+                    "one entity only.",
+                    "Keep was on the entity that takes over the rows.",
+                )
+        seen: dict[str, str] = {}
+        for name, old in e.renamed().items():
+            where = (*path, "fields", name, "was")
+            if not re.fullmatch(schema.FIELD_NAME, old) or old == name:
+                problem = "is its own name" if old == name else "is not a field name"
+                self.add(
+                    "C254",
+                    where,
+                    f"{entity.name}.{name}.was {problem} ({old!r}): was names the field's old "
+                    "name.",
+                    "Write the old snake_case name, e.g. was: title, or remove was.",
+                )
+            elif old in e.fields:
+                self.add(
+                    "C254",
+                    where,
+                    f"{entity.name}.{name}.was is {old}, which {entity.name} still declares: a "
+                    "rename leaves only the new name.",
+                    f"Remove the field {old}, or remove was.",
+                )
+            elif old in seen:
+                self.add(
+                    "C254",
+                    where,
+                    f"{entity.name}.{name} and {entity.name}.{seen[old]} both say was: {old}. "
+                    "One column can become one field only.",
+                    "Keep was on the field that takes over the column.",
+                )
+            else:
+                seen[old] = name
 
     def declared_roles(self) -> set[str]:
         roles = set(self.spec.roles) or set(SHIPPED_ROLES)
@@ -1021,6 +1180,15 @@ class _Meaning:
                     "Name an entity of the spec.",
                     key=True,
                 )
+            elif entity.entity.external and count:
+                self.add(
+                    "C251",
+                    ("seed", name),
+                    f"seed.{name} is {count}, but {name} is external: another system fills its "
+                    "table, so karni seed skips it.",
+                    f"Remove {name} from seed, or write 0.",
+                    key=True,
+                )
             if count < 0:
                 self.add(
                     "C223",
@@ -1057,8 +1225,12 @@ def _json_type(value: Any) -> str:
     return "object"
 
 
-def validate_text(text: str) -> Report:
-    """Experimental. Validate a spec's text: the parsed :class:`~schema.Spec` and every issue."""
+def validate_text(text: str, *, databases: Collection[str] | None = None) -> Report:
+    """Experimental. Validate a spec's text: the parsed :class:`~schema.Spec` and every issue.
+
+    ``databases``: the project's ``DATABASES`` aliases, when the caller knows
+    them, to check each entity's ``database`` against (``C252``).
+    """
     try:
         source = load(text)
     except YamlError as exc:
@@ -1085,7 +1257,7 @@ def validate_text(text: str) -> Report:
         except ValidationError as exc:
             _shape_issues(check, exc, data)
     if spec is not None and not any(issue.code == "C214" for issue in check.issues):
-        _Meaning(check, spec).run()
+        _Meaning(check, spec, databases).run()
     issues = sorted(check.issues, key=lambda issue: (issue.line or 0, issue.code))
     return Report(spec, issues, source)
 
@@ -1095,3 +1267,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C211", "C212", "C213", "C214", "C215", "C216", "C217", "C218", "C219")
     yield from ("C220", "C221", "C222", "C223", "C224", "C225")
     yield from (f"C{n}" for n in range(230, 243))
+    yield from ("C251", "C252", "C253", "C254")

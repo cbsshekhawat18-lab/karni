@@ -119,20 +119,85 @@
     },
     "Entity": {
       "additionalProperties": false,
-      "description": "Experimental. One entity: a model on BaseModel, its viewset and its options.",
+      "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "fields": {
           "additionalProperties": {
-            "type": "string"
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/FieldEntry"
+              }
+            ]
           },
-          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone country currency json array), a trailing ? for optional.",
+          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone country currency json array), a trailing ? for optional. Or {type, was} to rename a field and keep its rows.",
           "propertyNames": {
             "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
           },
           "type": "object"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The entity's old name in the same app: a rename that keeps the table's rows."
+        },
+        "pk": {
+          "anyOf": [
+            {
+              "enum": [
+                "uuid",
+                "bigint"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The key type: uuid (BaseModel) or bigint (BigIntBaseModel). Default: the project's KARNI_PK."
+        },
+        "external": {
+          "default": false,
+          "description": "A table or view another system owns: Meta.managed = False and class Karni: external = True. No migration changes it, and it is read-only unless writable.",
+          "type": "boolean"
+        },
+        "table": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "With external: the table or view, as [schema.]table (Meta.db_table)."
+        },
+        "writable": {
+          "default": false,
+          "description": "With external: the API and the admin may write it (Karni.writable).",
+          "type": "boolean"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The DATABASES alias its reads, writes and migrations go to (Karni.database). Default: default."
         },
         "key": {
           "anyOf": [
@@ -274,6 +339,34 @@
           "description": "KARNI_TERMS: the terms acceptance gate."
         }
       },
+      "type": "object"
+    },
+    "FieldEntry": {
+      "additionalProperties": false,
+      "description": "Experimental. A field written as a mapping, to say what it was called before.\n\n``title: {type: \"str:200\", was: name}`` is the field ``title`` of type\n``str:200``, which ``karni plan`` and ``karni build`` treat as the field\n``name`` renamed: the column keeps its rows.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "type": {
+          "description": "The field's type, as in the short form (str:200, fk:Studio).",
+          "type": "string"
+        },
+        "was": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The field's old name: a rename that keeps the column and its rows."
+        }
+      },
+      "required": [
+        "type"
+      ],
       "type": "object"
     },
     "Role": {

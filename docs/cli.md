@@ -29,7 +29,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec)
+- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
@@ -1271,6 +1271,22 @@ karni spec export [OPTIONS]
 | --- | --- | --- |
 | `-o`, `--output` PATH |  | Write the spec to this file. Default: print it. |
 | `--force` |  | Replace the output file if it exists. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni plan`
+
+Compare karni.yaml with the project: what karni build would change
+
+```
+karni plan [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {version, file, valid, issues, changes: [{area, action, target, detail, risky, reason, rows}], summary, row_counts} (docs/assets/karni-plan.schema.json). |
+| `--offline` |  | Do not open the database: risky changes show no row counts. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
