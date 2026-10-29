@@ -101,16 +101,27 @@ def test_karni_rows_prints_the_counts_and_refuses_bad_input() -> None:
         assert answer["rows"] == [] and answer["error"].startswith("The requests are not")
 
 
-def test_count_rows_reports_a_database_that_does_not_answer(tmp_path: Any) -> None:
+def test_count_rows_reports_a_database_that_does_not_answer(
+    tmp_path: Any, django_db_blocker: Any
+) -> None:
     from django.db import connections
 
     connection = connections["second"]
-    name = connection.settings_dict["NAME"]
-    connection.settings_dict["NAME"] = str(tmp_path / "missing.sqlite3")
+    saved = dict(connection.settings_dict)
+    if connection.vendor == "sqlite":
+        connection.settings_dict["NAME"] = str(tmp_path / "missing.sqlite3")
+        expected = "does not exist yet"
+    else:
+        connection.close()
+        connection.settings_dict["PORT"] = "1"  # nothing listens there
+        expected = "OperationalError"
     try:
-        found = count_rows([{"model": "externalapp.Stock"}])
+        with django_db_blocker.unblock():  # PostgreSQL: the refused connection is the test
+            found = count_rows([{"model": "externalapp.Stock"}])
     finally:
-        connection.settings_dict["NAME"] = name
+        connection.close()
+        connection.settings_dict.clear()
+        connection.settings_dict.update(saved)
     assert found["rows"] == [None]
-    assert "does not exist yet" in found["unreachable"]["second"]
+    assert expected in found["unreachable"]["second"]
     assert not (tmp_path / "missing.sqlite3").exists()  # counting never creates the file
