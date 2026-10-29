@@ -272,6 +272,19 @@ def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path
     code, out = _build()
     assert code == 0 and "continues" not in out, out
     assert not list((copy / "classes" / "migrations").glob("*karni_renames*"))[1:]
+    # an entity renamed: its table, its rows and the project's classes follow
+    _edit(
+        spec,
+        ("      Review:\n", "      Rating:\n        was: Review\n"),
+        ("Review: 5", "Rating: 5"),
+    )
+    code, out = _build()
+    assert code == 0 and "  ~ classes.Rating: from Review, rows kept" in out, out
+    assert _rows(copy, "select count(*) from classes_rating") == [(5,)]
+    assert "class Rating(karni.Rating):" in (copy / "classes" / "models.py").read_text()
+    assert "class RatingViewSet(karni.RatingViewSet):" in (copy / "classes/viewsets.py").read_text()
+    assert (copy / "classes/tests/karni/test_rating.py").is_file()
+    assert not (copy / "classes/tests/karni/test_review.py").exists()
 
 
 def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
