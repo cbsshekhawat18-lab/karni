@@ -27,7 +27,8 @@ npm install @karni/ui @tanstack/react-query @tanstack/react-table react-hook-for
 ```
 
 Peer dependencies: `react` / `react-dom` (18 or 19), `@tanstack/react-query` v5,
-`@tanstack/react-table` v8, `react-hook-form` v7, `@hookform/resolvers` and `zod` v3.
+`@tanstack/react-table` v8, `react-hook-form` v7, and `zod` 4.6.6 or later with
+`@hookform/resolvers` v5 (`zod` 3.23 or later with `@hookform/resolvers` v3 still works).
 The project also needs `tailwindcss` (v3.4+ or v4) as a build tool. It is a
 devDependency, which is how `karni new` sets it up. It compiles the classes the
 components use and is never imported at runtime, so it is not a peer.

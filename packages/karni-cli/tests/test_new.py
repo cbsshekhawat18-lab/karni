@@ -81,6 +81,21 @@ def test_new_stores_files_under_the_project_and_on_the_volume_in_containers(
     assert "/data/" in (project / ".gitignore").read_text().splitlines()
 
 
+def test_the_frontend_has_no_known_vulnerable_zod(runner, tmp_path: Path, monkeypatch) -> None:
+    """GHSA-mrhx-c7xc-m3w5: Zod before 4.6.6 (npm audit: high). The scaffold and @karni/ui agree."""
+    monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
+    assert runner.invoke(app, ["new", "Shop", "-o", str(tmp_path)]).exit_code == 0
+    frontend = json.loads((tmp_path / "shop" / "frontend" / "package.json").read_text())
+    assert frontend["dependencies"]["zod"] == "^4.6.6"
+    assert frontend["dependencies"]["@hookform/resolvers"].startswith("^5.")  # Zod 4 support
+    ui = json.loads((REPO_ROOT / "packages" / "karni-ui" / "package.json").read_text())
+    assert "^4.6.6" in ui["peerDependencies"]["zod"].split(" || ")
+    assert "^3.23.0" in ui["peerDependencies"]["zod"].split(
+        " || "
+    )  # projects on Zod 3 keep working
+    assert ui["devDependencies"]["zod"] == "^4.6.6"
+
+
 def test_slug_rules() -> None:
     assert derive_slug("My App") == "my_app"
     assert validate_name("acme-board") == "acme_board"

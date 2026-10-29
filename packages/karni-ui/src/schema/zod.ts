@@ -20,6 +20,9 @@
  * - json → z.unknown(), number/integer coerce (form inputs produce strings).
  * - datetime accepts datetime-local input ("YYYY-MM-DDTHH:mm[:ss]") and
  *   transforms it to full ISO-8601 with offset on submit (D3).
+ *
+ * Zod 4 (4.6.6 or later) and Zod 3 (3.23 or later) both work: only the API
+ * they share is used (`{ message }`, not Zod 3's `required_error`).
  */
 import { z } from "zod";
 import type { ZodObject, ZodRawShape, ZodTypeAny } from "zod";
@@ -76,13 +79,11 @@ function numberSchema(field: FieldDef, integer: boolean): ZodTypeAny {
 function relationValueSchema(field: FieldDef, coerce: boolean): ZodTypeAny {
   switch (field.relationValueType) {
     case "uuid":
-      return z.string({ required_error: REQUIRED_MESSAGE }).uuid();
+      return z.string({ message: REQUIRED_MESSAGE }).uuid();
     case "integer":
-      return coerce
-        ? z.coerce.number().int()
-        : z.number({ required_error: REQUIRED_MESSAGE }).int();
+      return coerce ? z.coerce.number().int() : z.number({ message: REQUIRED_MESSAGE }).int();
     default:
-      return z.string({ required_error: REQUIRED_MESSAGE }).min(1, REQUIRED_MESSAGE);
+      return z.string({ message: REQUIRED_MESSAGE }).min(1, REQUIRED_MESSAGE);
   }
 }
 
@@ -150,7 +151,8 @@ function baseSchemaFor(field: FieldDef, requireNonEmpty: boolean): ZodTypeAny {
 
 /** Builds a Zod validator for a resource's create or update payload from its schema. */
 export function zodFor(schema: ResourceSchema, mode: "create" | "update"): ZodObject<ZodRawShape> {
-  const shape: ZodRawShape = {};
+  // Built as a plain record: Zod 4's ZodRawShape is read-only.
+  const shape: Record<string, ZodTypeAny> = {};
 
   for (const field of schema.fields) {
     if (field.readOnly) continue; // writeOnly stays in (D3)

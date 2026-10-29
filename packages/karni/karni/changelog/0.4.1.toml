@@ -356,3 +356,17 @@ values. Add the two ENV lines to an earlier Dockerfile before removing them \
 from .env."""
 mechanical = false
 migration = "migrations/0.4.1.md#files-under-the-project-in-development"
+
+[[change]]
+id = "frontend-zod-4"
+kind = "project-files"
+symbol = "frontend/package.json (zod, @hookform/resolvers)"
+summary = """\
+npm audit reports Zod before 4.6.6 as high severity (GHSA-mrhx-c7xc-m3w5). \
+The scaffold's frontend now depends on zod ^4.6.6, @hookform/resolvers ^5.2.0 \
+and react-hook-form ^7.55.0, and @karni/ui accepts Zod 3 (3.23 or later) and \
+Zod 4 (4.6.6 or later). An earlier project keeps working on Zod 3. Bump the \
+three in frontend/package.json to clear the audit, after moving code of your \
+own off Zod 3's required_error and invalid_type_error."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-frontend-moves-to-zod-4"
