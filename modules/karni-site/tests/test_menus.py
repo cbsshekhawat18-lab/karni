@@ -84,6 +84,23 @@ def test_the_current_page_marks_the_item_and_its_parents(services: list[Service]
     )
 
 
+def test_an_item_stays_active_on_the_pages_under_its_path(
+    services: list[Service], settings: Any
+) -> None:
+    # A list page's item, with its rows' pages under it and no children in the menu: a
+    # model's detail pages that became one view keep their section marked.
+    menu = Menu.objects.create(name="header")
+    MenuItem.objects.create(menu=menu, title="Home", route="website:home", order=0)
+    MenuItem.objects.create(menu=menu, title="Services", url="/services/", order=1)
+    MenuItem.objects.create(menu=menu, title="About", route="website:about", order=2)
+    assert render("/services/shops/") == "[Home|/][Services|/services/|active][About|/about/]"
+    assert render("/services/web/") == "[Home|/][Services|/services/|active][About|/about/]"
+    # The home page stands for no section: it is current on / only.
+    assert render("/about/") == "[Home|/][Services|/services/][About|/about/|current|active]"
+    settings.KARNI_SITE_MENU_SECTIONS = False
+    assert render("/services/shops/") == "[Home|/][Services|/services/][About|/about/]"
+
+
 def test_rows_from_a_model_follow_the_rows(services: list[Service]) -> None:
     menu = Menu.objects.create(name="footer")
     MenuItem.objects.create(
