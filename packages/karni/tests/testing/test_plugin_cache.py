@@ -68,9 +68,41 @@ def test_the_ini_keeps_the_project_cache():
 """
 
 
-def _run(tmp_path: Path, tests: str, *args: str) -> subprocess.CompletedProcess[str]:
+#: A session fixture first set up during a test, as pytest-django's database setup is.
+SESSION_CONFTEST = """
+import pytest
+from django.conf import settings
+
+
+@pytest.fixture(scope="session")
+def _session_setting():
+    settings.MIGRATION_MODULES = {"auth": None}
+
+
+@pytest.fixture(autouse=True)
+def _lazy(request):
+    request.getfixturevalue("_session_setting")
+"""
+
+SESSION_TESTS = """
+from django.conf import settings
+
+
+def test_first_sets_it_up():
+    assert settings.MIGRATION_MODULES == {"auth": None}
+
+
+def test_a_later_test_still_sees_it():
+    assert settings.MIGRATION_MODULES == {"auth": None}
+"""
+
+
+def _run(
+    tmp_path: Path, tests: str, *args: str, conftest: str = ""
+) -> subprocess.CompletedProcess[str]:
     (tmp_path / "cache_settings.py").write_text(textwrap.dedent(SETTINGS))
     (tmp_path / "test_inner.py").write_text(textwrap.dedent(tests))
+    (tmp_path / "conftest.py").write_text(textwrap.dedent(conftest))
     env = {
         key: value
         for key, value in os.environ.items()
@@ -99,3 +131,10 @@ def test_the_ini_option_keeps_the_project_cache(tmp_path: Path) -> None:
     refused = _run(tmp_path, PROJECT_ONLY, "-o", "karni_test_cache=redis")
     assert refused.returncode != 0
     assert "karni_test_cache = 'redis' is not valid" in refused.stdout + refused.stderr
+
+
+def test_settings_a_session_fixture_sets_during_a_test_are_kept(tmp_path: Path) -> None:
+    """Only CACHES is put back after a test (pytest-django --no-migrations relies on it)."""
+    result = _run(tmp_path, SESSION_TESTS, conftest=SESSION_CONFTEST)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "2 passed" in result.stdout

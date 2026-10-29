@@ -197,10 +197,12 @@ def _karni_test_cache(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
         return
     from django.core.cache import caches
-    from django.test.utils import override_settings
 
-    override = override_settings(CACHES=_local_caches(dict(settings.CACHES)))
-    override.enable()
+    # Only CACHES is swapped and put back. override_settings would restore the
+    # whole settings object, and so drop what a session fixture set up during
+    # this test (pytest-django's --no-migrations sets MIGRATION_MODULES then).
+    previous = settings.CACHES
+    _swap_caches(settings, _local_caches(dict(previous)))
     try:
         for alias in settings.CACHES:
             caches[alias].clear()
@@ -208,7 +210,15 @@ def _karni_test_cache(request: pytest.FixtureRequest) -> Iterator[None]:
     finally:
         for alias in settings.CACHES:
             caches[alias].clear()
-        override.disable()
+        _swap_caches(settings, previous)
+
+
+def _swap_caches(settings: Any, value: Any) -> None:
+    """Set ``CACHES`` and tell Django, which then rebuilds its cache handlers."""
+    from django.test.signals import setting_changed
+
+    settings.CACHES = value
+    setting_changed.send(sender=type(settings._wrapped), setting="CACHES", value=value, enter=True)
 
 
 @pytest.fixture(autouse=True)
