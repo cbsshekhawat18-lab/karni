@@ -26,6 +26,7 @@ Karni's `MIDDLEWARE`). The id travels with everything the request causes:
 | The response | `X-Request-ID: <id>` header, which is what you hand to `karni trace` |
 | Celery tasks enqueued during the request | a `karni_request_id` message header (`before_task_publish`), restored in the worker (`task_prerun`) |
 | Their retries | a retry is published from inside the running task, so it carries the same id, minutes later too |
+| The request's origin | a `karni_origin` header next to the id: `karni.tracing.get_origin()` gives `https://<host>` in the request and in the tasks it queued, for an absolute link in an email a worker sends |
 | A task with no id (beat, a shell) | gets a fresh one, so its own email and changes still correlate |
 | Email | `X-Karni-Request-ID` on every `EmailMessage.send()` (`send_mail`, account emails, …) |
 | Outgoing HTTP (a webhook you send) | `karni.tracing.outgoing_headers()` gives `{"X-Request-ID": id}` for your call |

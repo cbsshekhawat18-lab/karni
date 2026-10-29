@@ -547,8 +547,12 @@ Celery worker after the row is committed. `notify_recipients` reads the
 addresses from the setting (a list, or one comma-separated string), renders
 the project's `<template>_subject.txt` and `<template>_body.txt` (and
 `_body.html` when it exists) with `submission`, `fields`, `verbose_name`,
-`admin_path` and `frontend_url`, collapses the subject to one line and sets
-`Reply-To`. An empty setting sends nothing and logs a warning. A missing one
+`admin_url`, `admin_path` and `frontend_url`, collapses the subject to one
+line and sets `Reply-To`. `admin_url` is the row's admin page as a full
+address: on `KARNI_SITE_URL` when it is set, else on the host the visitor's
+request came to, which the queued task carries (`karni.tracing.get_origin`).
+The body `karni make form` writes leaves out each optional field the visitor
+left empty. An empty setting sends nothing and logs a warning. A missing one
 raises `SITE023`.
 
 ### `highlight`: words the design sets apart

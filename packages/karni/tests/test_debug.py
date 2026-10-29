@@ -16,6 +16,7 @@ from django.core import mail
 from django.core.exceptions import MiddlewareNotUsed
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from karni import tracing
@@ -165,6 +166,52 @@ def test_the_publish_header_restores_the_id_in_the_worker() -> None:
     assert retry_headers[tracing.CELERY_HEADER] == "req-abc"
     tracing._task_postrun(task_id="t-1")
     assert tracing.get_request_id() is None
+
+
+def test_the_requests_origin_reaches_the_task_it_queued(rf: Any) -> None:
+    """An absolute link from a worker: the origin of the request that queued the task."""
+    from karni.middleware import _current_request
+
+    assert tracing.get_origin() is None  # no request, no task
+    request = rf.get("/", HTTP_HOST="shop.example.com", secure=True)
+    token = _current_request.set(request)
+    try:
+        assert tracing.get_origin() == "https://shop.example.com"
+        headers: dict[str, Any] = {}
+        tracing._before_task_publish(headers=headers)
+    finally:
+        _current_request.reset(token)
+    assert headers[tracing.ORIGIN_HEADER] == "https://shop.example.com"
+    # A host ALLOWED_HOSTS refuses is no origin.
+    token = _current_request.set(rf.get("/", HTTP_HOST="evil.example"))
+    try:
+        with override_settings(ALLOWED_HOSTS=["shop.example.com"]):
+            assert tracing.get_origin() is None
+    finally:
+        _current_request.reset(token)
+
+    class Request:
+        karni_origin = "https://shop.example.com"
+        retries = 0
+        is_eager = False
+
+    class Task:
+        name = "shop.listeners.notify_order"
+        request = Request()
+
+    tracing._task_prerun(task_id="t-3", task=Task())
+    try:
+        assert tracing.get_origin() == "https://shop.example.com"
+    finally:
+        tracing._task_postrun(task_id="t-3")
+    assert tracing.get_origin() is None
+    # A header that is not an origin is ignored.
+    Request.karni_origin = "javascript:alert(1)"
+    tracing._task_prerun(task_id="t-4", task=Task())
+    try:
+        assert tracing.get_origin() is None
+    finally:
+        tracing._task_postrun(task_id="t-4")
 
 
 def test_a_task_without_an_id_gets_its_own() -> None:

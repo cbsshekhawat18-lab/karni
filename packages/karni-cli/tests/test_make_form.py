@@ -94,6 +94,7 @@ def test_a_contact_form_with_a_notification(project: Path) -> None:
     body = (email / "contact_body.txt").read_text()
     assert "{% autoescape off %}" in body and "Message:\n{{ submission.message }}" in body
     assert "Staff app: {{ frontend_url }}/contacts/{{ submission.pk }}" in body
+    assert "In the admin: {{ admin_url }}{% endautoescape %}" in body
     settings = (project / "config" / "settings.py").read_text()
     assert 'ENQUIRY_RECIPIENTS = env.list("ENQUIRY_RECIPIENTS", default=[])  # noqa: F821' in (
         settings
@@ -522,6 +523,7 @@ FORMS = {
                   "service": "colour"},
         "to": ["desk@example.com", "owner@example.com"],
         "subject": "New booking request from Grace",
+        "empty": ["Phone"],
     },
 }
 with override_settings(
@@ -560,6 +562,14 @@ with override_settings(
             assert [m.to for m in mail.outbox] == [form["to"]], (name, mail.outbox)
             assert mail.outbox[0].subject == form["subject"], mail.outbox[0].subject
             assert mail.outbox[0].reply_to == [form["valid"]["email"]]
+            # The admin link is absolute: the host the visitor's request came to.
+            row = model.objects.get()
+            label = f"{model._meta.app_label}/{model._meta.model_name}"
+            admin = f"In the admin: http://testserver/admin/{label}/{row.pk}/change/"
+            assert admin in mail.outbox[0].body, mail.outbox[0].body
+            for left_out in form.get("empty", ()):  # an optional field the visitor left empty
+                assert f"\\n{left_out}:" not in mail.outbox[0].body, mail.outbox[0].body
+                assert "None" not in mail.outbox[0].body and "\\n\\n\\n" not in mail.outbox[0].body
         else:
             assert mail.outbox == [], name
 

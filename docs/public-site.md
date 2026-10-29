@@ -765,7 +765,11 @@ visitor never waits for the mail server. `notify_recipients` from
 `karni_site.notify` renders the two templates, sets `Reply-To` to the
 visitor's address so staff answer by replying, and sends to every address in
 `ENQUIRY_RECIPIENTS` (a list in settings, comma-separated in `.env`). An
-empty setting sends nothing and logs a warning.
+empty setting sends nothing and logs a warning. The body lists the visitor's
+fields, leaving out an optional one they left empty, and links the row's
+admin page with a full address (`{{ admin_url }}`): on `KARNI_SITE_URL` when
+it is set, else on the host the visitor's request came to, which the queued
+task carries.
 
 ### The API stays the same
 

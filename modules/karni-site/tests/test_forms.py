@@ -422,6 +422,31 @@ def test_the_recipients_are_emailed_after_commit(
     )
 
 
+def test_the_admin_link_is_a_full_address(settings: Settings, rf: RequestFactory) -> None:
+    from karni.middleware import _current_request
+
+    from karni_site.notify import notification_context
+
+    row = AppointmentRequest.objects.create(
+        name="A", email="a@example.com", reason="other", day="2030-01-01"
+    )
+    path = f"/admin/formapp/appointmentrequest/{row.pk}/change/"
+    # No site address and no request (a shell, beat): the path is all there is.
+    assert notification_context(row)["admin_url"] == path
+    # Queued from a request: the host the visitor came to, which the task carries.
+    settings.ALLOWED_HOSTS = ["clinic.example"]
+    token = _current_request.set(rf.get("/", HTTP_HOST="clinic.example", secure=True))
+    try:
+        assert notification_context(row)["admin_url"] == f"https://clinic.example{path}"
+        # The site's own address wins over the request's.
+        settings.KARNI_SITE_URL = "https://www.clinic.example/"
+        context = notification_context(row)
+    finally:
+        _current_request.reset(token)
+    assert context["admin_url"] == f"https://www.clinic.example{path}"
+    assert context["admin_path"] == path
+
+
 def test_no_recipients_sends_nothing(
     client: Client, settings: Settings, django_capture_on_commit_callbacks: Any
 ) -> None:

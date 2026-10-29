@@ -321,6 +321,16 @@ def plan_model(
 # the notification
 
 
+def _shown_when(spec: FieldSpec) -> str:
+    """The condition under which an optional field's line is in the email: it has a value."""
+    value = f"submission.{spec.name}"
+    if spec.kind == "m2m":
+        return f"{value}.exists"
+    if spec.kind in {"int", "float", "decimal", "bool"}:
+        return f"{value} is not None"  # 0 and no are values
+    return value
+
+
 def _email_line(spec: FieldSpec) -> str:
     label = humanize(spec.name)
     value = f"submission.{spec.name}"
@@ -357,8 +367,17 @@ def email_templates(
             else f"submission.{titled.name}"
         )
         subject = f"New {verbose}: {{{{ {shown} }}}}"
+        if titled.optional:
+            subject = (
+                f"New {verbose}{{% if submission.{titled.name} %}}: {{{{ {shown} }}}}{{% endif %}}"
+            )
     elif named is not None:
         subject = f"New {verbose} from {{{{ submission.{named.name} }}}}"
+        if named.optional:
+            subject = (
+                f"New {verbose}{{% if submission.{named.name} %}} from "
+                f"{{{{ submission.{named.name} }}}}{{% endif %}}"
+            )
     else:
         subject = f"New {verbose} from the website"
     ws.create(
@@ -370,23 +389,40 @@ def email_templates(
     body = [
         (
             f"{{# The email each new {verbose} sends to settings.{setting} (karni_site.notify). "
-            "Plain text, so autoescape is off. Edit it freely. #}"
+            "Plain text, so autoescape is off. A field the visitor left empty is left out. "
+            "Edit it freely. #}"
         ),
         f"{{% autoescape off %}}A new {verbose} arrived from the website.",
         "",
-        *(_email_line(spec) for spec in specs if spec.kind != "text"),
-        "",
     ]
+    # An optional field's line hangs off the line before it, inside {% if %}, so an empty
+    # value leaves no line and no blank line behind.
     for spec in specs:
         if spec.kind == "text":
+            continue
+        if spec.optional:
+            body[-1] += f"{{% if {_shown_when(spec)} %}}\n{_email_line(spec)}{{% endif %}}"
+        else:
+            body.append(_email_line(spec))
+    body.append("")
+    for spec in specs:
+        if spec.kind != "text":
+            continue
+        if spec.optional:
+            body[-1] += f"{{% if {_shown_when(spec)} %}}\n{_email_line(spec)}\n{{% endif %}}"
+        else:
             body += [_email_line(spec), ""]
     if email is not None:
-        body.append(f"Reply to this email to answer {{{{ submission.{email.name} }}}}.")
+        line = f"Reply to this email to answer {{{{ submission.{email.name} }}}}."
+        if email.optional:
+            body[-1] += f"{{% if submission.{email.name} %}}\n{line}{{% endif %}}"
+        else:
+            body.append(line)
     if ws.is_dir("frontend"):
         body.append(
             f"Staff app: {{{{ frontend_url }}}}/{default_route(pascal(name))}/{{{{ submission.pk }}}}"
         )
-    body += ["In the admin: {{ admin_path }}{% endautoescape %}", ""]
+    body += ["In the admin: {{ admin_url }}{% endautoescape %}", ""]
     ws.create(folder / f"{name}_body.txt", "\n".join(body))
     return stem
 

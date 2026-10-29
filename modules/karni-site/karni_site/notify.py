@@ -21,7 +21,12 @@ templates, ``<template>_subject.txt`` and ``<template>_body.txt`` (and
 * ``submission`` (also ``object``): the row.
 * ``verbose_name``: the model's name for people (``"enquiry"``).
 * ``fields``: ``(label, value)`` for each of the model's own fields.
-* ``admin_path``: the row's admin change page (a path), or ``""``.
+* ``admin_url``: the row's admin change page as a full address: on
+  ``KARNI_SITE_URL`` when it is set, else on the host the visitor's request
+  came to (:func:`karni.tracing.get_origin`, which the queued task carries).
+  Without either it is the path alone. ``""`` when the admin has no page for
+  the model.
+* ``admin_path``: the same page as a path, or ``""``.
 * ``frontend_url``: ``KARNI_FRONTEND_URL``, where the staff app runs.
 
 The subject is collapsed to one line (no header injection from a visitor's
@@ -39,6 +44,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -50,7 +56,7 @@ from karni.exceptions import KarniImproperlyConfigured
 
 from karni_site import conf
 
-__all__ = ["notification_context", "notify_recipients", "recipients"]
+__all__ = ["notification_context", "notify_recipients", "recipients", "site_origin"]
 
 logger = logging.getLogger("karni_site")
 
@@ -106,14 +112,29 @@ def notification_context(instance: models.Model) -> dict[str, Any]:
     except NoReverseMatch:
         admin_path = ""
     frontend = str(getattr(settings, "KARNI_FRONTEND_URL", "") or "").rstrip("/")
+    origin = site_origin()
     return {
         "submission": instance,
         "object": instance,
         "verbose_name": str(meta.verbose_name),
         "fields": fields,
+        "admin_url": f"{origin}{admin_path}" if admin_path and origin else admin_path,
         "admin_path": admin_path,
         "frontend_url": frontend,
     }
+
+
+def site_origin() -> str:
+    """``https://www.example.com``: ``KARNI_SITE_URL``, else the origin of the request that queued
+    the email (:func:`karni.tracing.get_origin`), else ``""``."""
+    configured = str(conf.get("KARNI_SITE_URL") or "").strip()
+    if configured:
+        parts = urlsplit(configured)
+        if parts.scheme and parts.netloc:
+            return f"{parts.scheme}://{parts.netloc}"
+    from karni.tracing import get_origin
+
+    return get_origin() or ""
 
 
 def notify_recipients(
