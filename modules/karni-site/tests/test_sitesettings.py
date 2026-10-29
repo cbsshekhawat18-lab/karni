@@ -77,6 +77,17 @@ def test_a_default_follows_the_template_until_someone_changes_it() -> None:
     assert row.seeded["name"] == "Elm Street Clinic"
 
 
+def test_an_address_default_keeps_its_lines() -> None:
+    template = Template(
+        '{% load karni_site %}{% site_defaults address="12 Harbour Street\\nEaston EA1 2BD" %}'
+        '<p>{{ site.address_lines|join:", " }}</p><p>{{ site.address|linebreaksbr }}</p>'
+    )
+    html = template.render(Context({}))
+    assert sitesettings.get_site_settings().address == "12 Harbour Street\nEaston EA1 2BD"
+    assert "<p>12 Harbour Street, Easton EA1 2BD</p>" in html
+    assert "<p>12 Harbour Street<br>Easton EA1 2BD</p>" in html
+
+
 def test_a_field_the_client_cleared_stays_cleared() -> None:
     render('{% site_defaults email="hi@example.com" %}')
     row = SiteSettings.objects.get()

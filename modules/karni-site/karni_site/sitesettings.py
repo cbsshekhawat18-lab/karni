@@ -10,6 +10,9 @@ a field the template gives a default for is filled the first time, and
 keeps following the template's value until someone changes it in the
 admin. ``seeded`` on the row records what each template gave.
 
+``address="12 Harbour Street\\nEaston EA1 2BD"`` seeds an address of two lines:
+``\\n`` parts them, as a template tag is written on one line.
+
 ``hours="Monday to Friday=8:00 to 18:00|Saturday=9:00 to 13:00|Sunday=Closed"``
 seeds the opening hours rows (``site.hours``): each ``|`` a row, its days
 before ``=`` and its times after. They are added when the site has none, and
@@ -40,6 +43,7 @@ from karni_site import caching, conf
 
 __all__ = [
     "HOURS",
+    "MULTILINE",
     "SEEDABLE",
     "hours_rows",
     "file_fields",
@@ -58,6 +62,8 @@ MODEL_CODE = "SITE009"
 SEEDABLE = ("name", "tagline", "address", "phone", "phone_link", "email", "map_url")
 #: ``{% site_defaults hours="..." %}``: the opening hours rows, not a field of the row.
 HOURS = "hours"
+#: The fields whose default has lines, parted by \\n in the tag (a tag is one line).
+MULTILINE = ("address",)
 #: How a social network's slug is written as a name.
 _SOCIAL_NAMES = {
     "facebook": "Facebook",

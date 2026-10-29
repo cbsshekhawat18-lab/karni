@@ -432,12 +432,18 @@ class SiteDefaultsNode(Node):
 
     def render(self, context: Context) -> str:
         defaults = {
-            name: str(expression.resolve(context) or "") for name, expression in self.values.items()
+            name: _lines(name, str(expression.resolve(context) or ""))
+            for name, expression in self.values.items()
         }
         fresh = sitesettings.seed(defaults)
         if fresh is not None:
             _replace_site(context, fresh)
         return ""
+
+
+def _lines(name: str, value: str) -> str:
+    """A multi-line default: ``\\n`` in the tag parts its lines (a tag is one line)."""
+    return value.replace("\\n", "\n") if name in sitesettings.MULTILINE else value
 
 
 @register.tag("site_defaults")

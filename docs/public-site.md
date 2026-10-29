@@ -356,6 +356,14 @@ What the import marks:
   `<link rel="icon">` its favicon.
 - the first `tel:`, `mailto:` and map link and every link to a social
   profile take their addresses from `site`.
+- the business's address becomes `site.address`, seeded with the design's
+  text: an `<address>` of text and line breaks, or a block that reads like a
+  postal address (a number, two to six parts parted by commas or line
+  breaks) beside the phone, email or map link or shown on another page too.
+  A block with line breaks renders `{{ site.address|linebreaksbr }}`, one
+  with commas `{{ site.address_lines|join:", " }}`, so each place keeps its
+  look and the client enters the address once. Places that show different
+  addresses stay text blocks, and the report says so.
 - opening hours a table, a definition list, a list or lines of text show
   (days, then times or a word for closed, in English, German, French,
   Spanish, Italian, Dutch or Portuguese) become a loop over `site.hours` in
