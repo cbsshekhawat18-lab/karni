@@ -74,6 +74,9 @@ AUTH_THROTTLE_DEFAULTS: dict[str, str | None] = {
     "auth.email_change": "5/hour",
     "auth.2fa": "10/min",
     "auth.social": "10/min",
+    "auth.otp_send": "10/hour",
+    "auth.otp_send_email": "5/hour",
+    "auth.otp_verify": "20/min",
 }
 """Default per-scope throttle rates for the ``karni.accounts`` endpoints.
 
@@ -275,6 +278,18 @@ BASE: dict[str, Any] = {
     "KARNI_SOCIAL_TOKEN_JWKS_TTL": env.int("KARNI_SOCIAL_TOKEN_JWKS_TTL", default=21600),
     # Dotted path of the function that fetches a key set: (url) -> dict.
     "KARNI_SOCIAL_TOKEN_JWKS_FETCHER": "karni.accounts.social_token.fetch_jwks",
+    # Sign-in with a code sent by email (experimental), in both auth modes: mounts
+    # otp/send/ and otp/verify/ while True. The code goes through the accounts email backend.
+    "KARNI_EMAIL_OTP": env.bool("KARNI_EMAIL_OTP", default=False),
+    # Seconds a code lives (60 to 3600).
+    "KARNI_EMAIL_OTP_TTL": env.int("KARNI_EMAIL_OTP_TTL", default=600),
+    # Digits in a code (4 to 10).
+    "KARNI_EMAIL_OTP_LENGTH": env.int("KARNI_EMAIL_OTP_LENGTH", default=6),
+    # Guesses a code takes before it dies (1 to 10).
+    "KARNI_EMAIL_OTP_MAX_ATTEMPTS": env.int("KARNI_EMAIL_OTP_MAX_ATTEMPTS", default=5),
+    # Who an address without an account may become: "open", "approval" or "existing".
+    # None follows KARNI_ACCOUNTS_REGISTRATION ("open" while it is on, else "existing").
+    "KARNI_EMAIL_OTP_SIGNUP": env("KARNI_EMAIL_OTP_SIGNUP", default=None),
     "KARNI_FRONTEND_URL": env("KARNI_FRONTEND_URL", default="http://localhost:5173"),
     "KARNI_ACCOUNTS_EMAIL_BACKEND": "karni.accounts.emails.DjangoEmailBackend",
     "KARNI_ACCOUNTS_AUTO_LOGIN": False,
@@ -577,6 +592,7 @@ BASE: dict[str, Any] = {
             "karni_accounts.OneTimeToken",
             "karni_accounts.Permission",
             "karni_accounts.SocialIdentity",
+            "karni_accounts.LoginCode",
         ],
     ),
     # --- Security headers (karni.security) ----------------------------------

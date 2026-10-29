@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AbstractKarniUser",
+    "LoginCode",
     "OneTimeToken",
     "Permission",
     "Role",
@@ -221,6 +222,50 @@ class SocialIdentity(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.provider} identity of user {self.user_id}"
+
+
+class LoginCode(BaseModel):
+    """Experimental. One sign-in code sent by email, stored as a keyed hash.
+
+    Written by sign-in with a code (:mod:`karni.accounts.otp`). ``email`` is
+    the address the code was sent to, lower-cased, and ``user`` the account
+    that had it at that moment (``None`` for an address without an account).
+    ``code_hash`` is an HMAC-SHA256 keyed by ``SECRET_KEY`` over the address
+    and the code: the code itself is never stored. A code is looked up by its
+    address, never by its hash, and dies when ``used_at`` is set, when
+    ``expires_at`` passes, or when ``attempts`` reaches
+    ``KARNI_EMAIL_OTP_MAX_ATTEMPTS``.
+
+    :class:`OneTimeToken` does not fit: it finds a token by the hash of the
+    secret alone, which needs a secret unique across every user, and it has
+    no attempt counter. A six-digit code is neither.
+
+    Override / escape hatch: rows are written only by
+    :func:`karni.accounts.otp.send_code` and :func:`karni.accounts.otp.verify_code`,
+    and the admin shows them read-only. ``karni.accounts.tasks.flush_login_codes``
+    removes the dead ones.
+    """
+
+    email = models.EmailField(db_index=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="login_codes",
+    )
+    code_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "login code"
+        verbose_name_plural = "login codes"
+        ordering: ClassVar[list[str]] = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"login code {self.pk}"
 
 
 # roles as data

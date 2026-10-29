@@ -112,6 +112,7 @@ describe("package self-registrations", () => {
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
+      "code-sign-in": "OtpLoginForm",
       "resource-import": "ResourceImport",
       chart: "DataChart",
       dashboard: "Dashboard",

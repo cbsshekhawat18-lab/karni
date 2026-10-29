@@ -329,6 +329,7 @@ holds Karni's own, so a project can wrap one instead of rewriting it. Every
 | `LoginForm`      | `Error` (+ `id` for `aria-describedby`, and `described`: the failure worded for sign-in) |
 | `AuthGuard`      | `Anonymous` (not signed in: a sign-in prompt), `Denied` (signed in, role lacks access)   |
 | `SocialButton`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
+| `OtpLoginForm`   | `Error` (+ `id` and `described`), `Approval` (a new account awaits approval)             |
 
 Loading placeholders take the real layout from the start (ResourceDetail
 draws one row per field the schema declares, plus the title and action
@@ -768,6 +769,37 @@ own state (`onAwaitingApproval`). For a button of your own, use the hook:
 user in session mode, and resolves `{ ok, user }`, `{ requires2fa,
 ephemeralToken }` (LoginForm's 2FA step) or `{ awaitingApproval, detail }`.
 Both names are experimental: they may change in a minor release.
+
+### Sign-in with a code sent by email (experimental)
+
+`OtpLoginForm` signs in without a password, against the backend's `POST
+<authBasePath>/otp/send/` and `otp/verify/` ([accounts: sign in with a code
+sent by email](https://cbsshekhawat18-lab.github.io/karni/accounts/#sign-in-with-a-code-sent-by-email)),
+which exist while `KARNI_EMAIL_OTP` is on.
+
+```tsx
+<OtpLoginForm
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>
+```
+
+The email step sends the code. The code step has one input for the whole
+code, sized to the length the server answered (`inputMode="numeric"`,
+`autocomplete="one-time-code"`, so a phone offers the code from the email), a
+"Send a new code" button that waits `resendCooldown` seconds (30 by default),
+and "Use another email" to go back. A wrong code is cleared and focused, an
+inactive account and throttling are worded plainly, and a new account that
+waits for an administrator is its own state (`onAwaitingApproval`). To offer
+it next to the password, pass `codeSignIn` to `LoginForm`: a "Sign in with a
+code" switch shows `OtpLoginForm` in place of the password fields.
+
+For a form of your own, use the hook: `const { step, send, verify, resend,
+back, status, error, cooldown, length } = useOtpLogin({ resendCooldown: 30 })`.
+`verify(code)` adopts the token pair in JWT mode, re-syncs the session user
+in session mode, and resolves `{ ok, user }`, `{ requires2fa, ephemeralToken }`
+or `{ awaitingApproval, detail }`, like `useSocialLogin`. These names are
+experimental: they may change in a minor release.
 
 In JWT mode the refresh token is stored through a pluggable `TokenStorage`.
 The default is `localStorage`, which is simple but readable by any XSS on your

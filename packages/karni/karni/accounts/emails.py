@@ -1,7 +1,8 @@
 """Email plumbing for :mod:`karni.accounts`.
 
 Every message the accounts app sends (verification, password reset, email
-change) goes through exactly one seam: :func:`get_email_backend` resolves the
+change, and the sign-in code of :mod:`karni.accounts.otp`) goes through
+exactly one seam: :func:`get_email_backend` resolves the
 ``KARNI_ACCOUNTS_EMAIL_BACKEND`` setting to an :class:`AccountsEmailBackend`
 and nothing in Karni sends account mail any other way.
 
@@ -70,10 +71,12 @@ class AccountsEmail:
     """One account email, independent of how it gets delivered.
 
     ``template`` names the message kind (``"verify_email"``,
-    ``"reset_password"`` or ``"change_email"``) and doubles as the template
-    stem for :class:`DjangoEmailBackend`. ``to`` is the recipient address and
-    ``context`` the template context (services always include ``user``,
-    ``token`` and ``link``).
+    ``"reset_password"``, ``"change_email"`` or ``"login_code"``) and doubles
+    as the template stem for :class:`DjangoEmailBackend`. ``to`` is the
+    recipient address and ``context`` the template context. The link flows
+    always include ``user``, ``token`` and ``link``. ``login_code`` (sign-in
+    with a code, experimental) has ``code``, ``ttl_minutes`` and ``user``,
+    which is ``None`` for an address without an account.
 
     Override / escape hatch: custom backends receive this object untouched,
     so services can put extra keys into ``context`` and a project backend can

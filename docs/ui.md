@@ -43,6 +43,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `AuthGuard` (role `auth-guard`)
 - `LoginForm` (role `login-form`)
 - `SocialButton` (role `social-sign-in`, experimental)
+- `OtpLoginForm` (role `code-sign-in`, experimental)
 - `KarniProvider`
 
 ## Primitives
@@ -62,6 +63,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useKarniClient`: The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives`: See the package README.
 - `useOnlineStatus`: See the package README.
+- `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
@@ -83,6 +85,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `auth-guard` | `AuthGuard` |
 | `change-history` | `ChangeHistory` |
 | `chart` | `DataChart` |
+| `code-sign-in` | `OtpLoginForm` |
 | `dashboard` | `Dashboard` |
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |

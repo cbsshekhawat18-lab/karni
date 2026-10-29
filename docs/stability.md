@@ -157,6 +157,11 @@ Experimental now:
   the `social/<provider>/` endpoint, the `KARNI_SOCIAL_TOKEN_*` settings,
   `karni.accounts.social_token`, the `SocialIdentity` model, and
   `useSocialLogin` and `SocialButton` in `@karni/ui`.
+- [Sign-in with a code sent by email](accounts.md#sign-in-with-a-code-sent-by-email):
+  the `otp/send/` and `otp/verify/` endpoints, the `KARNI_EMAIL_OTP*`
+  settings, the `auth.otp_*` throttle scopes, `karni.accounts.otp`, the
+  `LoginCode` model, `karni.accounts.services.prove_address`, and
+  `useOtpLogin`, `OtpLoginForm` and `LoginForm`'s `codeSignIn` in `@karni/ui`.
 
 ## Supported platforms
 

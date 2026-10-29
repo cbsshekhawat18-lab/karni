@@ -162,6 +162,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "Sign-in with a one-time code sent by email, in JWT and session mode "
+        "(`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
@@ -213,6 +218,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "
         "SDK. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
+        "`LoginForm`'s `codeSignIn` switch. Experimental tier",
     ),
     Capability(
         "ui",

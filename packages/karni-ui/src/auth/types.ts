@@ -49,3 +49,25 @@ export type SocialLoginResult =
   | { ok: true; user: KarniUser }
   | { requires2fa: true; ephemeralToken: string }
   | { awaitingApproval: true; detail: string };
+
+/**
+ * Experimental. What `POST <authBasePath>/otp/send/` answers. The server gives
+ * the same answer for every address, so it never says whether a code was
+ * sent: `length` and `expiresIn` come from its settings.
+ */
+export interface OtpSendResult {
+  /** Digits in the code (`KARNI_EMAIL_OTP_LENGTH`, 6 by default). */
+  length: number;
+  /** Seconds the code lives (`KARNI_EMAIL_OTP_TTL`, 600 by default). */
+  expiresIn: number;
+  /** The server's sentence about it. */
+  detail: string;
+}
+
+/**
+ * Experimental. The result of signing in with a code sent by email: signed in,
+ * the 2FA step (the same `ephemeralToken` LoginForm's `on2FA` receives), or a
+ * new account that waits for an administrator (nothing signed in). The same
+ * three cases as `SocialLoginResult`.
+ */
+export type OtpLoginResult = SocialLoginResult;

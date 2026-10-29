@@ -11,6 +11,7 @@ import { composeStories } from "@storybook/react";
 import { act, cleanup, render } from "@testing-library/react";
 import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as otpLoginForm from "../src/auth/otp-login-form.stories";
 import * as socialButton from "../src/auth/social-button.stories";
 import * as karniMark from "../src/components/brand/karni-mark.stories";
 import * as chart from "../src/components/chart/data-chart.stories";
@@ -43,6 +44,7 @@ const MODULES = {
   KarniMark: composeStories(karniMark),
   Layout: composeStories(layout),
   Modal: composeStories(modal),
+  OtpLoginForm: composeStories(otpLoginForm),
   Page: composeStories(page),
   SocialButton: composeStories(socialButton),
   Toast: composeStories(toast),

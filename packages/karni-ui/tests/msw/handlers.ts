@@ -15,6 +15,11 @@
  * - POST *\/api/auth/social/{google,microsoft,apple}/ → sign-in with an ID
  *   token: each of TEST_ID_TOKENS answers one way (signed in, the 2FA gate,
  *   awaiting approval, refusals with their Karni codes). Other providers 404
+ * - POST *\/api/auth/otp/{send,verify}/ → sign-in with a code sent by email:
+ *   send answers the same for every address (429 for TEST_OTP_EMAILS.throttled),
+ *   verify takes TEST_LOGIN_CODE and answers by address (TEST_USER signs in,
+ *   TEST_2FA_USER gets the 2FA gate, TEST_OTP_EMAILS.pending awaits approval,
+ *   TEST_OTP_EMAILS.inactive is E226). Any other code is E235
  *
  * State: module-level in-memory DB + token registry. Vitest isolates test
  * files, so state is fresh per file; within a file call `resetMswData()` in
@@ -186,6 +191,16 @@ export const TEST_ID_TOKENS = {
   unavailable: "id-token-keys-unavailable",
 } as const;
 
+/** The code the simulated `otp/verify/` accepts (any other is E235). */
+export const TEST_LOGIN_CODE = "246810";
+
+/** Addresses the simulated `otp/` endpoints answer their own way. */
+export const TEST_OTP_EMAILS = {
+  pending: "pending@example.com",
+  inactive: "inactive@example.com",
+  throttled: "throttled@example.com",
+} as const;
+
 export const TEST_OTP = "123456";
 export const TEST_EPHEMERAL_TOKEN = "ephemeral-2fa-token";
 export const TEST_CSRF_TOKEN = "test-csrf-token";
@@ -214,11 +229,18 @@ function issueTokens(): { access: string; refresh: string } {
 /** Every body posted to `social/<provider>/`, with the provider, for assertions. */
 const socialRequests: Array<{ provider: string; body: unknown }> = [];
 
+/** Every body posted to `otp/send/` and `otp/verify/`, for assertions. */
+const otpRequests: Array<{ step: "send" | "verify"; body: unknown }> = [];
+
 /** Hooks for auth suites to stage 401s and dead sessions deterministically. */
 export const authTestControls = {
   /** The bodies posted to `social/<provider>/` so far (cleared by resetMswData). */
   socialRequests(): ReadonlyArray<{ provider: string; body: unknown }> {
     return socialRequests;
+  },
+  /** The bodies posted to `otp/send/` and `otp/verify/` so far (cleared by resetMswData). */
+  otpRequests(): ReadonlyArray<{ step: "send" | "verify"; body: unknown }> {
+    return otpRequests;
   },
   /** Expire every issued access token: next Bearer request 401s (D6 races). */
   invalidateAccessTokens(): void {
@@ -249,6 +271,7 @@ export function resetMswData(): void {
   authState.validAccessTokens.clear();
   authState.currentRefreshToken = null;
   socialRequests.length = 0;
+  otpRequests.length = 0;
 }
 
 // --- shared helpers ----------------------------------------------------------
@@ -772,6 +795,61 @@ const authHandlers = [
       );
     }
     return HttpResponse.json(meUser());
+  }),
+
+  http.post("*/api/auth/otp/send/", async ({ request }) => {
+    const body: unknown = await request.json().catch(() => null);
+    otpRequests.push({ step: "send", body });
+    const email = isRecord(body) && typeof body["email"] === "string" ? body["email"] : "";
+    if (!email.includes("@")) {
+      return HttpResponse.json({ email: ["Enter a valid email address."] }, { status: 400 });
+    }
+    if (email === TEST_OTP_EMAILS.throttled) {
+      return HttpResponse.json(
+        { detail: "Request was throttled. Expected available in 42 seconds." },
+        { status: 429 },
+      );
+    }
+    return HttpResponse.json({
+      detail: "If this address may sign in, a sign-in code is on its way to it.",
+      length: 6,
+      expires_in: 600,
+    });
+  }),
+
+  http.post("*/api/auth/otp/verify/", async ({ request }) => {
+    const body: unknown = await request.json().catch(() => null);
+    otpRequests.push({ step: "verify", body });
+    const email = isRecord(body) && typeof body["email"] === "string" ? body["email"] : "";
+    const code = isRecord(body) && typeof body["code"] === "string" ? body["code"] : "";
+    if (code !== TEST_LOGIN_CODE) {
+      return HttpResponse.json(
+        { code: "E235", detail: "E235: The code is wrong or has expired. Ask for a new code." },
+        { status: 401 },
+      );
+    }
+    switch (email) {
+      case TEST_USER.email:
+        return HttpResponse.json({ ...issueTokens(), user: meUser() });
+      case TEST_2FA_USER.email:
+        return HttpResponse.json({ requires_2fa: true, ephemeral_token: TEST_EPHEMERAL_TOKEN });
+      case TEST_OTP_EMAILS.pending:
+        return HttpResponse.json(
+          {
+            code: "E224",
+            detail: "E224: The account was created and awaits an administrator's approval.",
+            awaiting_approval: true,
+          },
+          { status: 202 },
+        );
+      case TEST_OTP_EMAILS.inactive:
+        return HttpResponse.json(
+          { code: "E226", detail: "E226: This account is inactive." },
+          { status: 401 },
+        );
+      default:
+        return HttpResponse.json({ ...issueTokens(), user: { ...meUser(), email } });
+    }
   }),
 
   http.post("*/api/auth/social/:provider/", async ({ request, params }) => {

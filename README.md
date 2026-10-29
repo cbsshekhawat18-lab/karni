@@ -304,6 +304,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `stable` Import from CSV or XLSX with a mandatory preview (`/import/`)
 - `experimental` Response caching per viewset (`Cache`, `Uncached`)
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
+- `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -340,10 +341,11 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `stable` Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState`
 - `experimental` `ChangeHistory`, `DataChart` and `FileUpload`
 - `experimental` `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier
+- `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
 - `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives
 - `experimental` `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions
 
-60 components and 18 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useToast`.
+61 components and 19 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).

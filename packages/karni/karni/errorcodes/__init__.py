@@ -891,10 +891,12 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "E224",
         "The account awaits an administrator's approval",
         "api",
-        "karni.accounts.social_token.sign_in",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
         "With KARNI_SOCIAL_TOKEN_SIGNUP = 'approval', a token without an account creates an "
         "inactive one. The answer is a 202 with this code and no credentials, again on each "
-        "sign-in until an administrator activates the account.",
+        "sign-in until an administrator activates the account. With KARNI_EMAIL_OTP_SIGNUP = "
+        "'approval', the code that creates the account answers the same 202. A later code for "
+        "the inactive account answers E226.",
         "An administrator ticks 'Active' on the user's page in the admin. The next sign-in then "
         "succeeds.",
     ),
@@ -912,8 +914,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "E226",
         "The account is inactive",
         "api",
-        "karni.accounts.social_token.sign_in",
-        "An inactive user never signs in, by password or by token (401).",
+        "karni.accounts.social_token.sign_in; karni.accounts.otp.verify_code",
+        "An inactive user never signs in, by password, by token or by a code sent by email "
+        "(401). Sign-in by code says so only after a right code, so the answer tells nothing to "
+        "someone who does not read that mailbox.",
         "An administrator activates the account in the admin, if it should sign in.",
     ),
     _e(
@@ -926,6 +930,30 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Sign in with the password. Linking a provider from a signed-in session is not built "
         "yet. To link on a verified email, set KARNI_SOCIAL_TOKEN_LINK_VERIFIED = True (the "
         "default).",
+    ),
+    # E235-E236 sign-in with a code sent by email (karni.accounts.otp, experimental)
+    _e(
+        "E235",
+        "The sign-in code is wrong or has expired",
+        "api",
+        "karni.accounts.otp.verify_code (POST <auth>/otp/verify/)",
+        "One answer covers every failure of a code, so it tells nobody whether an address has an "
+        "account: a wrong code, one past KARNI_EMAIL_OTP_TTL, one already used, one replaced by a "
+        "newer code, one locked after KARNI_EMAIL_OTP_MAX_ATTEMPTS wrong guesses, an address no "
+        "code was sent to, and an address that may not sign up (KARNI_EMAIL_OTP_SIGNUP = "
+        "'existing'). The precise reason is only in the accounts.otp.refused log event (401).",
+        "Ask for a new code with POST otp/send/ and type the newest one. Only the latest code of "
+        "an address works. Check the reason in the log when one user keeps failing.",
+    ),
+    _e(
+        "E236",
+        "Sign-in with a code is turned off",
+        "api",
+        "karni.accounts.api.views.OtpSendView; karni.accounts.api.views.OtpVerifyView",
+        "otp/send/ and otp/verify/ are mounted only while KARNI_EMAIL_OTP is True. A URLconf "
+        "built while it was True answers 404 with this code once the setting is False.",
+        "Set KARNI_EMAIL_OTP = True (or KARNI_EMAIL_OTP=True in the environment) to offer "
+        "sign-in with a code, or sign in with login/.",
     ),
     # E3xx admin
     _e(

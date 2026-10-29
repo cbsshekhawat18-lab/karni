@@ -18,8 +18,10 @@ registration](#closing-registration)), `login/`, `logout/`, `refresh/`,
 `csrf/`, `me/`, `password/change/`, `password/reset/`,
 `password/reset/confirm/`, `email/verify/`, `email/verify/resend/`,
 `email/change/`, `email/change/confirm/`, `2fa/…` when `KARNI_2FA` is on,
-and `social/<provider>/` for each provider in `KARNI_SOCIAL_TOKEN_PROVIDERS`
-([sign-in with an ID token](#sign-in-with-an-id-token-google-microsoft-apple)).
+`social/<provider>/` for each provider in `KARNI_SOCIAL_TOKEN_PROVIDERS`
+([sign-in with an ID token](#sign-in-with-an-id-token-google-microsoft-apple)),
+and `otp/send/` and `otp/verify/` when `KARNI_EMAIL_OTP` is on ([sign-in with
+a code](#sign-in-with-a-code-sent-by-email)).
 
 ## Swapping the user model
 
@@ -117,8 +119,9 @@ All account mail goes through one interface:
   `outbox` for tests.
 - **Template override**: the backend renders
   `karni_accounts/email/<template>_subject.txt`, `<template>_body.txt` and
-  optionally `<template>_body.html` for `verify_email`, `reset_password` and
-  `change_email`. Put files at the same paths in your project's template
+  optionally `<template>_body.html` for `verify_email`, `reset_password`,
+  `change_email` and `login_code` ([sign-in with a
+  code](#sign-in-with-a-code-sent-by-email)). Put files at the same paths in your project's template
   dirs to replace them. Normal Django template resolution is the override
   mechanism.
 - **Links**: built from `KARNI_FRONTEND_URL` (env, default
@@ -135,9 +138,10 @@ your settings to opt out or reschedule.
 
 ## Enumeration posture
 
-Only `password/reset/` is enumeration-silent (always 200, mail sent only when
-the account exists). `email/verify/resend/` requires authentication and may
-respond honestly. `register/` and `email/change/` necessarily reveal address
+`password/reset/` is enumeration-silent (always 200, mail sent only when
+the account exists), and so is [sign-in with a
+code](#sign-in-with-a-code-sent-by-email) (`otp/send/` and `otp/verify/`).
+`email/verify/resend/` requires authentication and may respond honestly. `register/` and `email/change/` necessarily reveal address
 existence through unique-email 400s. This is documented and accepted.
 
 ## Bots and security events
@@ -167,7 +171,9 @@ Every auth outcome is a structlog event on the `karni.accounts` logger:
 `accounts.register.ok` / `.honeypot`, `accounts.email.verified`,
 `accounts.password_reset.requested` / `.confirmed`, and for sign-in with an
 ID token `accounts.social.ok` / `.created` / `.linked` / `.2fa_required` /
-`.refused` (with a `reason` and the `code`). Successes carry
+`.refused` (with a `reason` and the `code`), and for sign-in with a code
+`accounts.otp.sent` / `.created` / `.verified` / `.2fa_required` / `.locked` /
+`.refused` / `.email_failed`. Successes carry
 `user_id`. Failures carry `email`, a 16-character SHA-256 fingerprint of
 the address, so logs correlate without holding addresses. Alert on a burst
 of `accounts.login.failed` with one fingerprint (credential stuffing) or
@@ -449,6 +455,9 @@ the default cache, which is Redis in the Karni stack). Defaults:
 | `auth.email_change` | `5/hour` | change + confirm |
 | `auth.2fa` | `10/min` | 2FA endpoints |
 | `auth.social` | `10/min` | sign-in with an ID token (`social/<provider>/`) |
+| `auth.otp_send` | `10/hour` | sign-in with a code: `otp/send/` (per client IP) |
+| `auth.otp_send_email` | `5/hour` | `otp/send/`, keyed on the posted email |
+| `auth.otp_verify` | `20/min` | `otp/verify/` (per client IP) |
 
 Tune via `KARNI_AUTH_THROTTLE_RATES`, a partial dict (setting, or JSON env
 var) merged over the defaults before landing in
@@ -710,6 +719,220 @@ separate, and neither reads the other's links.
 - **Rate limit and logs.** The endpoint has its own throttle scope,
   `auth.social`. The log events carry the provider, the user id or an email
   fingerprint and the refusal's `reason`, never the token or the address.
+
+## Sign in with a code sent by email
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `otp/send/` and `otp/verify/` endpoints, the `KARNI_EMAIL_OTP*`
+    settings, the `auth.otp_*` throttle scopes, `karni.accounts.otp`, the
+    `LoginCode` model, `karni.accounts.services.prove_address`, and
+    `useOtpLogin`, `OtpLoginForm` and `LoginForm`'s `codeSignIn` in
+    `@karni/ui`. They may change in a minor release, and each change is in the
+    CHANGELOG. The error codes keep their meaning.
+
+The user types an address and gets a short numeric code by email. They type
+the code back and are signed in, with no password. Karni answers exactly like
+`login/`: a token pair in JWT mode, a session in session mode, or the 2FA
+gate. It works in both auth modes and needs no extra package.
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_EMAIL_OTP = True
+```
+
+or `KARNI_EMAIL_OTP=True` in `.env`. Then `POST api/auth/otp/send/` and
+`POST api/auth/otp/verify/` exist. While the setting is off, both answer 404
+and are absent from the OpenAPI schema and the generated TypeScript client,
+like `register/` when registration is closed.
+
+### Settings for codes
+
+| Setting | Default | What it does |
+|---|---|---|
+| `KARNI_EMAIL_OTP` | `False` | Mounts `otp/send/` and `otp/verify/`. |
+| `KARNI_EMAIL_OTP_TTL` | `600` | Seconds a code lives (60 to 3600). |
+| `KARNI_EMAIL_OTP_LENGTH` | `6` | Digits in a code (4 to 10). |
+| `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `5` | Guesses a code takes (1 to 10). A wrong guess that reaches the cap kills the code. |
+| `KARNI_EMAIL_OTP_SIGNUP` | `None` | `"open"`, `"approval"` or `"existing"` (see [who gets in](#who-gets-in)). `None` is `"open"` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `"existing"`. |
+
+Startup validation checks each one: a value that is not a bool, an integer
+outside its range, or a policy that is not one of the three fails with
+[`E504`](errors.md#e504), which names the setting.
+
+### The requests and the answers
+
+```http
+POST /api/auth/otp/send/
+Content-Type: application/json
+
+{"email": "ada@example.com"}
+```
+
+The answer is always the same 200, whether the address has an account, is
+inactive, or may not sign up:
+
+```json
+{"detail": "If this address may sign in, a sign-in code is on its way to it.", "length": 6, "expires_in": 600}
+```
+
+`length` and `expires_in` come from the settings, so a client can size its
+code input. Only an address that is not an address at all is a 400.
+
+```http
+POST /api/auth/otp/verify/
+Content-Type: application/json
+
+{"email": "ada@example.com", "code": "042917"}
+```
+
+Spaces inside the code are ignored.
+
+| Answer | Status | Body |
+|---|---|---|
+| Signed in, JWT mode | 200 | `{"access", "refresh", "user"}`, as `login/` |
+| Signed in, session mode | 200 | `{"user"}` and the session cookie |
+| The account has 2FA | 200 | `{"requires_2fa": true, "ephemeral_token"}`: finish at `2fa/login/` |
+| A new account awaits approval | 202 | `{"code": "E224", "detail", "awaiting_approval": true}`, nothing signed in |
+| The code is wrong or has expired | 401 | `{"code": "E235", "detail"}`, for every failure of the code |
+| The account is inactive | 401 | `{"code": "E226", "detail"}`, only after a right code |
+| The setting is off | 404 | `{"code": "E236", "detail"}` from a URLconf built while it was on |
+
+### Codes in a web app
+
+`@karni/ui` has the form and the hook ([UI guide](ui.md)):
+
+```tsx
+import { OtpLoginForm } from "@karni/ui";
+
+<OtpLoginForm
+  onSuccess={(user) => navigate("/")}
+  on2FA={(ephemeralToken) => navigate(`/2fa?token=${ephemeralToken}`)}
+/>;
+```
+
+The email step sends the code. The code step has one input for the whole code,
+sized to `length` (`inputMode="numeric"`, `autocomplete="one-time-code"`), a
+button for a new code that waits `resendCooldown` seconds (30 by default), and
+a way back to the email step. It says in plain words why a code was refused
+and shows a new account that waits for an administrator as its own state.
+
+To offer it next to the password, pass `codeSignIn` to `LoginForm`. A "Sign in
+with a code" switch then shows `OtpLoginForm` in place of the password fields.
+For a form of your own, `useOtpLogin()` returns `{ step, send(email),
+verify(code), resend, back, status, error, cooldown, length }`. `verify`
+adopts the token pair in JWT mode, re-syncs the session user in session mode,
+and hands a `requires_2fa` answer to the same 2FA step `LoginForm`'s `on2FA`
+uses.
+
+### Codes in a mobile app
+
+A native app calls the two endpoints directly:
+
+```bash
+curl -X POST https://api.example.com/api/auth/otp/send/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ada@example.com"}'
+
+curl -X POST https://api.example.com/api/auth/otp/verify/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ada@example.com", "code": "042917"}'
+```
+
+In JWT mode the second answer carries `access` and `refresh`. Send
+`Authorization: Bearer <access>` and rotate with `refresh/`, exactly as after
+`login/`.
+
+### Who gets in
+
+A right code proves that whoever typed it reads the mailbox. Then:
+
+1. **An account with the address signs in**, if it is active. Its address
+   becomes verified. An account whose address was never verified also loses
+   its password and its refresh tokens: whoever opened it may not own the
+   address, and the same rule applies to [sign-in with an ID
+   token](#sign-up-and-linking). Tick *Email verified* when you create an
+   account in the admin to keep its password.
+2. **An inactive account is refused** with [`E226`](errors.md#e226). It still
+   gets a code, so the refusal comes only after the right code and tells
+   nothing to someone who does not read that mailbox. A deleted account gets
+   no code.
+3. **An address without an account** follows `KARNI_EMAIL_OTP_SIGNUP`:
+    - `"open"` emails it a code. The account is created when the code is
+      verified, never when it is sent: verified, active, with no password and
+      the `KARNI_ACCOUNTS_DEFAULT_ROLES`.
+    - `"approval"` emails it a code. The verified code creates the account
+      inactive and answers 202 [`E224`](errors.md#e224) with no credentials.
+      An administrator ticks *Active* on the user's page, and the next code
+      signs in. Until then a code for the account answers `E226`.
+    - `"existing"` emails nothing. Only accounts that exist may sign in.
+      Staff create them first.
+
+### The code's email
+
+The code goes through `KARNI_ACCOUNTS_EMAIL_BACKEND`, like every account
+email, with the template `login_code`: `karni_accounts/email/login_code_subject.txt`,
+`login_code_body.txt` and `login_code_body.html`. Put files at the same paths
+in your project's template dirs to replace them. The context has `code`,
+`ttl_minutes` and `user`, which is `None` for an address without an account.
+A custom backend receives the same `AccountsEmail`.
+
+The email is sent after the transaction commits, as registration's is. A
+backend that raises is logged as `accounts.otp.email_failed` and does not
+change the answer: the user asks for a new code.
+
+### Refusals and their codes
+
+| Code | Status | Meaning |
+|---|---|---|
+| [`E235`](errors.md#e235) | 401 | The code is wrong, expired, used, replaced by a newer one or locked, or no code was sent to the address, or the address may not sign up. |
+| [`E226`](errors.md#e226) | 401 | The account is inactive (answered after a right code). |
+| [`E224`](errors.md#e224) | 202 | The new account awaits an administrator's approval. The same code sign-in with an ID token uses. |
+| [`E236`](errors.md#e236) | 404 | `KARNI_EMAIL_OTP` is off. |
+
+`karni explain E235` prints the fix for each one. The precise reason for an
+`E235` is in the `accounts.otp.refused` log event: `wrong_code`, `expired`,
+`used`, `locked`, `no_code`, `deleted` or `signup_closed`.
+
+### Security of codes
+
+- **Only a hash is stored.** `LoginCode` keeps an HMAC-SHA256, keyed by
+  `SECRET_KEY`, over the lower-cased address and the code. The code is never
+  stored or logged, and it is compared with `hmac.compare_digest`. A stolen
+  table is useless without `SECRET_KEY`. Changing `SECRET_KEY` invalidates the
+  codes in flight, which live minutes.
+- **The code is random and short-lived.** It comes from `secrets`, uniform
+  over every string of `KARNI_EMAIL_OTP_LENGTH` digits, and dies after
+  `KARNI_EMAIL_OTP_TTL` seconds, after one use, or after
+  `KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses. Each guess takes an attempt
+  before the code is compared, with a filtered `UPDATE`, so parallel guesses
+  cannot exceed the cap. A new code for an address deletes the earlier ones,
+  so only the newest works.
+- **Throttles on top of the cap.** `otp/send/` has a per-IP scope,
+  `auth.otp_send` (`10/hour`), and a per-address one, `auth.otp_send_email`
+  (`5/hour`), keyed on the hashed, lower-cased address, so nobody floods one
+  mailbox from many IPs. `otp/verify/` has `auth.otp_verify` (`20/min` per
+  IP). With the defaults, one address takes at most 25 guesses an hour, against
+  a million codes.
+- **Nothing says whether an address exists.** `otp/send/` gives the same
+  status and body on every path and does the same work: the account lookup,
+  the HMAC and one stored row (an address that gets no email gets a row
+  nobody has the code for, so `otp/verify/` behaves the same for it). Every
+  failure of a code is the same `E235`. With the default backend the email
+  itself is sent inside the request, so a slow mail server makes a send that
+  emails slower than one that does not. Use a backend that queues the mail
+  (a Celery task) when that matters.
+- **A code is as strong as the mailbox.** Whoever reads the user's email can
+  sign in as them, as with a password reset link. Turn on [2FA](#two-factor-auth-totp)
+  for accounts that need more.
+- **Dead codes are deleted.** Each send deletes the address's earlier codes
+  and every expired one. While `KARNI_EMAIL_OTP` is on, the schedule
+  `karni-flush-login-codes` (task `karni.accounts.tasks.flush_login_codes`)
+  deletes the rest every hour. The admin lists codes read-only under *Login
+  codes*, without the hash, and the permission matrix leaves them out.
+- **Logs.** `accounts.otp.sent`, `.created`, `.verified`, `.2fa_required`,
+  `.locked`, `.refused` (with the `reason`) and `.email_failed` carry an
+  email fingerprint or the user id, never the address or the code.
 
 ## Admin
 

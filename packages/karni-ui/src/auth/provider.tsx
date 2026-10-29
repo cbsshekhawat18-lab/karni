@@ -51,6 +51,8 @@ import type {
   AuthStatus,
   KarniUser,
   LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
   SocialLoginResult,
   SocialSignInOptions,
 } from "./types";
@@ -96,6 +98,17 @@ export interface AuthContextValue {
     idToken: string,
     options?: SocialSignInOptions,
   ) => Promise<SocialLoginResult>;
+  /**
+   * Experimental. Asks the server to email a sign-in code (`POST
+   * <authBasePath>/otp/send/`). Optional like `socialLogin`. Use it through
+   * `useOtpLogin` or `OtpLoginForm`.
+   */
+  otpSend?: (email: string) => Promise<OtpSendResult>;
+  /**
+   * Experimental. Signs in with the emailed code (`POST
+   * <authBasePath>/otp/verify/`). Optional like `socialLogin`.
+   */
+  otpVerify?: (email: string, code: string) => Promise<OtpLoginResult>;
 }
 
 /**
@@ -164,6 +177,8 @@ export function AuthProvider({
       refresh: () => engine.refresh(),
       adoptTokens: (access, refresh) => engine.adoptTokens(access, refresh),
       socialLogin: (provider, idToken, options) => engine.socialLogin(provider, idToken, options),
+      otpSend: (email) => engine.otpSend(email),
+      otpVerify: (email, code) => engine.otpVerify(email, code),
     }),
     [engine, snapshot],
   );

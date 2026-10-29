@@ -14,6 +14,11 @@ mode). Only the optional feature blocks are conditional at import time:
 * ``register/`` exists while ``KARNI_ACCOUNTS_REGISTRATION`` is ``True`` (the
   default). ``False`` leaves it out, so it answers 404 and is absent from the
   OpenAPI schema. Use it when staff create every account.
+* ``otp/send/`` and ``otp/verify/`` (experimental) exist while
+  ``KARNI_EMAIL_OTP`` is ``True`` (default ``False``): sign-in with a code
+  sent by email, in both modes (:class:`~karni.accounts.api.views.OtpSendView`,
+  :class:`~karni.accounts.api.views.OtpVerifyView`). Off, they answer 404 and
+  are absent from the OpenAPI schema, like ``register/``;
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;
@@ -106,6 +111,12 @@ _AUTH_PATTERNS: list[URLPattern | URLResolver] = [
 ]
 
 
+_OTP_PATTERNS: list[URLPattern | URLResolver] = [
+    path("otp/send/", views.OtpSendView.as_view(), name="karni-accounts-otp-send"),
+    path("otp/verify/", views.OtpVerifyView.as_view(), name="karni-accounts-otp-verify"),
+]
+
+
 def _social_urlpatterns() -> list[URLPattern | URLResolver]:
     """Build the allauth provider-flow patterns (amendment A2).
 
@@ -153,7 +164,8 @@ def build_urlpatterns() -> list[URLPattern | URLResolver]:
     """The auth URL patterns for the current settings (what ``urlpatterns`` holds).
 
     ``register/`` is present while ``KARNI_ACCOUNTS_REGISTRATION`` is true,
-    ``2fa/`` while ``KARNI_2FA`` is, ``social/<provider>/`` for each provider
+    ``otp/send/`` and ``otp/verify/`` while ``KARNI_EMAIL_OTP`` is, ``2fa/``
+    while ``KARNI_2FA`` is, ``social/<provider>/`` for each provider
     in ``KARNI_SOCIAL_TOKEN_PROVIDERS``, and allauth's ``social/`` while
     ``KARNI_SOCIAL_AUTH`` is.
     """
@@ -163,6 +175,8 @@ def build_urlpatterns() -> list[URLPattern | URLResolver]:
             path("register/", views.RegisterView.as_view(), name="karni-accounts-register")
         )
     patterns += _AUTH_PATTERNS
+    if getattr(settings, "KARNI_EMAIL_OTP", False):
+        patterns += _OTP_PATTERNS
     if getattr(settings, "KARNI_2FA", False):
         # karni.accounts.twofa exposes its own ``urlpatterns`` (setup/, confirm/,
         # disable/, login/). The dotted-path include keeps the import conditional.

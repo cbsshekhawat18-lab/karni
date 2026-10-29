@@ -49,6 +49,7 @@ __all__ = [
     "blacklist_user_refresh_tokens",
     "confirm_email_change",
     "confirm_password_reset",
+    "prove_address",
     "register",
     "request_email_change",
     "request_password_reset",
@@ -129,6 +130,35 @@ def blacklist_user_refresh_tokens(user: AbstractKarniUser) -> int:
         _, created = BlacklistedToken.objects.get_or_create(token=outstanding)
         blacklisted += int(created)
     return blacklisted
+
+
+def prove_address(user: AbstractKarniUser) -> bool:
+    """Experimental. Mark ``user``'s address verified: a sign-in just proved its owner controls it.
+
+    Sign-in with an ID token (a provider that verified the address) and
+    sign-in with a code sent by email both call this. An account whose address
+    was never verified may have been opened by someone else in that person's
+    name, with a password that someone knows. So such an account becomes
+    verified and loses its password and its refresh tokens. An account that
+    was already verified keeps both.
+
+    Returns whether a password was cleared. Override / escape hatch: call it
+    from a sign-in flow of your own, or replace the view that calls it.
+    """
+    if user.email_verified:
+        return False
+    cleared = False
+    with transaction.atomic():
+        user.email_verified = True
+        fields = ["email_verified", "updated_at"]
+        if user.has_usable_password():
+            user.set_unusable_password()
+            fields.append("password")
+            cleared = True
+        user.save(update_fields=fields)
+        if cleared:
+            blacklist_user_refresh_tokens(user)
+    return cleared
 
 
 def register(email: str, password: str, **fields: Any) -> AbstractKarniUser:

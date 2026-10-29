@@ -44,11 +44,14 @@ const GROUPS = [
       "KarniMark",
     ],
   ],
-  ["Auth", ["AuthProvider", "AuthGuard", "LoginForm", "SocialButton", "KarniProvider"]],
+  [
+    "Auth",
+    ["AuthProvider", "AuthGuard", "LoginForm", "SocialButton", "OtpLoginForm", "KarniProvider"],
+  ],
 ];
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
-const EXPERIMENTAL = new Set(["SocialButton"]);
+const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm"]);
 
 const HOOKS = {
   useResourceList:
@@ -67,6 +70,8 @@ const HOOKS = {
     "The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.",
   useAuth: "`{ user, status, login(email, password), logout, refresh }` from `AuthProvider`.",
   usePermission: "`{ hasRole(...names), isAuthenticated }` for gating UI on roles.",
+  useOtpLogin:
+    "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
   useSocialLogin:
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useToast: "Show a toast through the mounted `Toaster`.",

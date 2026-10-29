@@ -13,6 +13,11 @@ Sign-in with an ID token (experimental) links provider identities in
 inline) and in their own read-only changelist. Links are written only by the
 sign-in flow.
 
+Sign-in with a code (experimental) keeps each emailed code in ``LoginCode``,
+listed read-only under *Login codes* so support can see that a code went out,
+when it expires and how many guesses it took. The code itself is not there:
+only its HMAC is stored, and the admin does not show even that.
+
 The role tables are registered here too: :class:`RoleAdmin` (editable, with
 the **Permission matrix** and **Effective permissions** pages as changelist
 buttons — ``admin:karni_accounts_role_permission_matrix`` and
@@ -268,6 +273,33 @@ def _build_identity_admin() -> type[Any]:
     return SocialIdentityAdmin
 
 
+def _build_login_code_admin() -> type[Any]:
+    """``LoginCodeAdmin``: every stored sign-in code, read-only, without its hash (experimental)."""
+    from karni.admin import KarniModelAdmin
+
+    shown = ("email", "user", "created_at", "expires_at", "attempts", "used_at")
+
+    class LoginCodeAdmin(KarniModelAdmin):
+        """Sign-in codes sent by email. Nothing here is editable, and the hash is never shown."""
+
+        list_display = shown
+        list_select_related = ("user",)
+        search_fields = ("email", "user__email")
+        fields = shown
+        readonly_fields = shown
+
+        def has_add_permission(self, request: Any) -> bool:
+            return False
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            return False
+
+    return LoginCodeAdmin
+
+
 def _build_role_admins() -> tuple[type[Any], type[Any], type[Any]]:
     """Construct ``RoleAdmin``, ``PermissionAdmin`` and ``RolePermissionAdmin`` (ADR 0002, P5)."""
     from django.contrib.auth.models import Group
@@ -415,8 +447,8 @@ def __getattr__(name: str) -> Any:
 
 
 def _register_role_admins() -> None:
-    """Register the role tables and linked identities on the admin site (idempotent)."""
-    from karni.accounts.models import Permission, Role, RolePermission, SocialIdentity
+    """Register the role tables, linked identities and login codes (idempotent)."""
+    from karni.accounts.models import LoginCode, Permission, Role, RolePermission, SocialIdentity
 
     site_path: str = getattr(settings, "KARNI_ADMIN_SITE", "django.contrib.admin.site")
     from karni.imports import import_setting
@@ -428,6 +460,8 @@ def _register_role_admins() -> None:
             site.register(model, model_admin)
     if not site.is_registered(SocialIdentity):
         site.register(SocialIdentity, _build_identity_admin())
+    if not site.is_registered(LoginCode):
+        site.register(LoginCode, _build_login_code_admin())
 
 
 def _register_default_user_admin() -> None:

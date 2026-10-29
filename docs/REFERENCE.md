@@ -47,6 +47,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import from CSV or XLSX with a mandatory preview (`/import/`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Response caching per viewset (`Cache`, `Uncached`) | `experimental` | Karni's own tests |
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
+| Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -69,6 +70,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
 | `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
+| `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -1465,8 +1467,13 @@ class Lead(BaseModel):
 | `KARNI_SOCIAL_TOKEN_LEEWAY` | `KARNI_SOCIAL_TOKEN_LEEWAY` | `60` | Experimental. Seconds of clock skew allowed on a token's `exp`, `iat` and `nbf` (0 to 300). |
 | `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `KARNI_SOCIAL_TOKEN_JWKS_TTL` | `21600` | Experimental. Seconds a provider's signing keys (JWKS) stay in the default cache. An unknown key id fetches them again, at most once a minute per provider. |
 | `KARNI_SOCIAL_TOKEN_JWKS_FETCHER` |  | `"karni.accounts.social_token.fetch_jwks"` | Experimental. Dotted path of the function `(url) -> dict` that fetches a key set (HTTPS, 5 second timeout by default). |
+| `KARNI_EMAIL_OTP` | `KARNI_EMAIL_OTP` | `False` | Experimental. Sign-in with a code sent by email, in both auth modes: mounts `otp/send/` and `otp/verify/`. Off, both answer 404 and are absent from the OpenAPI schema. See [sign in with a code](accounts.md#sign-in-with-a-code-sent-by-email). |
+| `KARNI_EMAIL_OTP_TTL` | `KARNI_EMAIL_OTP_TTL` | `600` | Experimental. Seconds a sign-in code lives (60 to 3600). |
+| `KARNI_EMAIL_OTP_LENGTH` | `KARNI_EMAIL_OTP_LENGTH` | `6` | Experimental. Digits in a sign-in code (4 to 10). |
+| `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `KARNI_EMAIL_OTP_MAX_ATTEMPTS` | `5` | Experimental. Guesses a sign-in code takes before it dies (1 to 10). A wrong guess that reaches the cap kills the code. |
+| `KARNI_EMAIL_OTP_SIGNUP` | `KARNI_EMAIL_OTP_SIGNUP` | `None` | Experimental. What a code for an address without an account does: `open` creates the account when the code is verified, `approval` creates it inactive until an administrator activates it (`E224`), `existing` sends no code. `None` is `open` while `KARNI_ACCOUNTS_REGISTRATION` is on, else `existing`. |
 | `KARNI_FRONTEND_URL` | `KARNI_FRONTEND_URL` | `"http://localhost:5173"` | The SPA's origin. It is used in account emails and, in session mode, added to `CSRF_TRUSTED_ORIGINS`, so the browser's origin must match it. |
-| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends verification and reset emails. |
+| `KARNI_ACCOUNTS_EMAIL_BACKEND` |  | `"karni.accounts.emails.DjangoEmailBackend"` | Dotted path of the `AccountsEmailBackend` that sends every account email: verification, password reset, email change and the sign-in code. |
 | `KARNI_ACCOUNTS_AUTO_LOGIN` |  | `False` | Sign a user in right after registration (skips email verification as a gate). |
 | `KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
@@ -1528,7 +1535,7 @@ class Lead(BaseModel):
 | `KARNI_ADMIN_SEARCH_MAX` |  | `5` | Fields a derived admin searches at most. |
 | `KARNI_ADMIN_SITE` |  | `"django.contrib.admin.site"` | Dotted path of the admin site models are registered on. |
 | `KARNI_ADMIN_BASE` |  | `"unfold.admin.ModelAdmin"` | Dotted path of the `ModelAdmin` every derived admin is built on. |
-| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
+| `KARNI_MATRIX_EXCLUDE` | `KARNI_MATRIX_EXCLUDE` | `[ "admin", "auth", "contenttypes", "sessions", "sites", "django_celery_beat", "django_celery_results", "token_blacklist", "django_otp", "otp_totp", "otp_static", "account", "socialaccount", "karni_audit", "karni_transfer", "karni_accounts.OneTimeToken", "karni_accounts.Permission", "karni_accounts.SocialIdentity", "karni_accounts.LoginCode"]` | App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default). |
 
 ### Security headers (karni.security)
 
@@ -1707,6 +1714,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `AuthGuard` |  | Renders its children only for a signed-in user, optionally with one of the given roles, and otherwise says why. | [AuthGuard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/AuthGuard.tsx) |
 | `LoginForm` |  | Email and password sign-in form with inline errors and a callback for the two-factor step. | [LoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/LoginForm.tsx) |
 | `SocialButton` | `provider: string`, `getIdToken: () => Promise<string \| SocialIdToken \| null>` | Experimental. A "Continue with &lt;provider&gt;" button that signs in with the provider's ID token. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `OtpLoginForm` |  | Experimental. Passwordless sign-in: an email step, then a code step with one input for the code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an `<h1>` title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `Layout` |  | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` |  | The Karni mark as inline SVG, so there is no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
@@ -1742,6 +1750,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
 | `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
+| `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
 
 ### Functions and constants
@@ -1786,6 +1795,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `createMemoryTokenStorage` | function | In-memory adapter: most secure (nothing persisted anywhere), but a page reload logs the user out. | [storage.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/storage.ts) |
 | `defaultSocialButtonSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
 | `describeSocialError` | function | Experimental. A SocialButton failure in plain words, from the Karni code of the refusal (E215 to E227), never a status code. | [SocialButton.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/SocialButton.tsx) |
+| `defaultOtpLoginFormSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
+| `describeOtpError` | function | Experimental. A sign-in-by-code failure in plain words, from the Karni code of the refusal (E235, E226, E236), never a status code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -1891,6 +1902,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E225`](errors.md#e225) | api | This sign-in provider is not configured |
 | [`E226`](errors.md#e226) | api | The account is inactive |
 | [`E227`](errors.md#e227) | api | An account with this email exists and is not linked |
+| [`E235`](errors.md#e235) | api | The sign-in code is wrong or has expired |
+| [`E236`](errors.md#e236) | api | Sign-in with a code is turned off |
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |

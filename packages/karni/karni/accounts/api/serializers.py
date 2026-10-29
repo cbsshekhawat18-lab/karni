@@ -30,6 +30,8 @@ __all__ = [
     "LogoutSerializer",
     "MeSerializer",
     "OneTimeTokenSerializer",
+    "OtpSendSerializer",
+    "OtpVerifySerializer",
     "PasswordChangeSerializer",
     "PasswordResetConfirmSerializer",
     "PasswordResetSerializer",
@@ -244,3 +246,19 @@ class SocialTokenLoginSerializer(serializers.Serializer):
         max_length=512, required=False, allow_blank=True, trim_whitespace=True
     )
     name = SocialNameSerializer(required=False, allow_null=True)
+
+
+class OtpSendSerializer(serializers.Serializer):
+    """Experimental. Request body of ``otp/send/``: the address to send a sign-in code to."""
+
+    email = serializers.EmailField()
+
+
+class OtpVerifySerializer(serializers.Serializer):
+    """Experimental. Request body of ``otp/verify/``: the address and the code it received.
+
+    Whitespace inside the code is ignored, so ``"123 456"`` is ``"123456"``.
+    """
+
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=32, trim_whitespace=True)

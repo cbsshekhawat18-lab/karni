@@ -55,6 +55,8 @@ import type {
   AuthStatus,
   KarniUser,
   LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
   SocialLoginResult,
   SocialSignInOptions,
 } from "./types";
@@ -142,12 +144,25 @@ function read2fa(value: unknown): { ephemeralToken: string } | null {
     : null;
 }
 
-/** A 202 from `social/<provider>/` whose account awaits an administrator (code E224). */
+/** A 202 from `social/<provider>/` or `otp/verify/` whose new account awaits an administrator (code E224). */
 function readApproval(value: unknown): { detail: string } | null {
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
   if (record.awaiting_approval !== true && record.code !== "E224") return null;
   return { detail: typeof record.detail === "string" ? record.detail : "" };
+}
+
+/** The `otp/send/` answer, with the server defaults when a field is missing. */
+function readOtpSend(value: unknown): OtpSendResult {
+  const record =
+    typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const length = record.length;
+  const expiresIn = record.expires_in;
+  return {
+    length: typeof length === "number" && Number.isInteger(length) && length > 0 ? length : 6,
+    expiresIn: typeof expiresIn === "number" && expiresIn > 0 ? expiresIn : 600,
+    detail: typeof record.detail === "string" ? record.detail : "",
+  };
 }
 
 export class AuthEngine {
@@ -464,6 +479,52 @@ export class AuthEngine {
       body,
       skipAuthRefresh: true,
     });
+    return this.finishSignIn(path, data);
+  }
+
+  /**
+   * Experimental. Asks the server to email a sign-in code: `POST
+   * <authBasePath>/otp/send/`. The answer is the same for every address, so
+   * it never says whether a code went out. It carries the code's length and
+   * lifetime. A malformed address, a throttled request or the feature turned
+   * off (E236) rejects with the `KarniApiError`.
+   */
+  async otpSend(email: string): Promise<OtpSendResult> {
+    await this.ensureInitialized();
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(`${this.authBasePath}/otp/send/`, {
+      method: "POST",
+      body: { email },
+      skipAuthRefresh: true,
+    });
+    return readOtpSend(data);
+  }
+
+  /**
+   * Experimental. Signs in with the code the server emailed: `POST
+   * <authBasePath>/otp/verify/`. Exactly like `socialLogin`: JWT mode adopts
+   * the returned token pair, session mode re-syncs the session user from
+   * `/me/`, and a `requires_2fa` answer or a new account awaiting approval
+   * resolves without signing anyone in. A refused code rejects with the
+   * `KarniApiError` (its `data.code` is E235, or E226 for an inactive account).
+   */
+  async otpVerify(email: string, code: string): Promise<OtpLoginResult> {
+    await this.ensureInitialized();
+    const path = `${this.authBasePath}/otp/verify/`;
+    if (this.mode === "session") await this.ensureCsrfToken();
+    const data = await this.client.request<unknown>(path, {
+      method: "POST",
+      body: { email, code },
+      skipAuthRefresh: true,
+    });
+    return this.finishSignIn(path, data);
+  }
+
+  /**
+   * The answer of a sign-in that is not `login/` (an ID token, a code): the
+   * 2FA gate, a new account awaiting approval, or credentials to adopt.
+   */
+  private async finishSignIn(path: string, data: unknown): Promise<SocialLoginResult> {
     const twoFactor = read2fa(data);
     if (twoFactor !== null) {
       return { requires2fa: true, ephemeralToken: twoFactor.ephemeralToken };

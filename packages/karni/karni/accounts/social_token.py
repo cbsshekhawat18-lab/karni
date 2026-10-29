@@ -636,13 +636,16 @@ def verify_id_token(
 # the sign-up and linking policy
 
 
-def signup_policy() -> str:
-    """Experimental. ``KARNI_SOCIAL_TOKEN_SIGNUP``, with ``None`` resolved from registration.
+def signup_policy(setting: str = "KARNI_SOCIAL_TOKEN_SIGNUP") -> str:
+    """Experimental. A sign-up policy setting, with ``None`` resolved from registration.
 
-    ``"open"`` while ``KARNI_ACCOUNTS_REGISTRATION`` is on, ``"existing"`` when
-    it is off. Read per request, so a setting assigned anywhere works.
+    ``setting`` is ``KARNI_SOCIAL_TOKEN_SIGNUP`` (the default) or
+    ``KARNI_EMAIL_OTP_SIGNUP`` (sign-in with a code). Its value is one of
+    :data:`SIGNUP_POLICIES`. ``None`` means ``"open"`` while
+    ``KARNI_ACCOUNTS_REGISTRATION`` is on and ``"existing"`` when it is off.
+    Read per request, so a setting assigned anywhere works.
     """
-    value = getattr(settings, "KARNI_SOCIAL_TOKEN_SIGNUP", None)
+    value = getattr(settings, setting, None)
     if value:
         return str(value)
     return "open" if getattr(settings, "KARNI_ACCOUNTS_REGISTRATION", True) else "existing"
@@ -696,20 +699,10 @@ def _link(
     opened it may know (and its refresh tokens).
     """
     from karni.accounts.api.views import email_fingerprint
-    from karni.accounts.services import blacklist_user_refresh_tokens
+    from karni.accounts.services import prove_address
 
-    cleared = False
     with transaction.atomic():
-        if not user.email_verified:
-            user.email_verified = True
-            fields = ["email_verified", "updated_at"]
-            if user.has_usable_password():
-                user.set_unusable_password()
-                fields.append("password")
-                cleared = True
-            user.save(update_fields=fields)
-            if cleared:
-                blacklist_user_refresh_tokens(user)
+        cleared = prove_address(user)
         identity = _identity_model().objects.create(
             provider=provider.name, subject=subject, user=user, email_at_link=email
         )

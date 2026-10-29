@@ -83,7 +83,9 @@ environment without editing code. `karni schedule list` shows such a row as
 `settings.CELERY_BEAT_SCHEDULE (overrides shop.schedules)`.
 
 Karni's own daily `karni-flush-expired-tokens` entry lives in
-`CELERY_BEAT_SCHEDULE` (see `karni.conf`).
+`CELERY_BEAT_SCHEDULE` (see `karni.conf`). `karni.accounts` declares
+`karni-flush-login-codes` (hourly) in its own `schedules.py`, only while
+[sign-in with a code](accounts.md#sign-in-with-a-code-sent-by-email) is on.
 
 Removing a declaration does not delete its `PeriodicTask` row. Beat just
 stops refreshing it. Disable or delete the row in the admin

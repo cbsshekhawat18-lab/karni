@@ -309,6 +309,8 @@ export type {
   KarniUser,
   AuthStatus,
   LoginResult,
+  OtpLoginResult,
+  OtpSendResult,
   SocialLoginResult,
   SocialSignInOptions,
 } from "./auth/types";
@@ -325,6 +327,23 @@ export type {
   SocialButtonApprovalProps,
   SocialIdToken,
 } from "./auth/SocialButton";
+
+// sign-in with a code sent by email (experimental)
+export { useOtpLogin } from "./auth/useOtpLogin";
+export type {
+  OtpLoginStatus,
+  OtpLoginStep,
+  UseOtpLoginOptions,
+  UseOtpLoginResult,
+} from "./auth/useOtpLogin";
+
+export { OtpLoginForm, defaultOtpLoginFormSlots, describeOtpError } from "./auth/OtpLoginForm";
+export type {
+  OtpLoginFormProps,
+  OtpLoginFormSlots,
+  OtpLoginFormErrorProps,
+  OtpLoginFormApprovalProps,
+} from "./auth/OtpLoginForm";
 
 // support components
 export { Page, defaultPageSlots } from "./components/page/page";

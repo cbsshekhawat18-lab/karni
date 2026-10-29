@@ -3,10 +3,11 @@
 A Pydantic v2 model checks the values that most often break deployments
 (secret key, hosts, database, Redis URLs, storage selection, throttle rates,
 pagination that cannot be switched off, query budgets and API caching, auth
-mode and social/2FA extras, sign-in with an ID token, API knobs, admin app ordering, health-check
-configuration) and :func:`validate_settings` turns any problem
-into a single ``ImproperlyConfigured`` error listing *every* failure, so a
-bad container config dies loudly at startup instead of at 3 a.m.
+mode and social/2FA extras, sign-in with an ID token or a code, API knobs,
+admin app ordering, health-check configuration) and :func:`validate_settings`
+turns any problem into a single ``ImproperlyConfigured`` error listing
+*every* failure, so a bad container config dies loudly at startup instead of
+at 3 a.m.
 """
 
 from __future__ import annotations
@@ -127,6 +128,11 @@ class KarniSettingsModel(BaseModel):
     KARNI_SOCIAL_TOKEN_LEEWAY: Any = 60
     KARNI_SOCIAL_TOKEN_JWKS_TTL: Any = 21600
     KARNI_SOCIAL_TOKEN_JWKS_FETCHER: Any = "karni.accounts.social_token.fetch_jwks"
+    KARNI_EMAIL_OTP: Any = False
+    KARNI_EMAIL_OTP_TTL: Any = 600
+    KARNI_EMAIL_OTP_LENGTH: Any = 6
+    KARNI_EMAIL_OTP_MAX_ATTEMPTS: Any = 5
+    KARNI_EMAIL_OTP_SIGNUP: Any = None
 
     @model_validator(mode="after")
     def _cross_field_checks(self) -> KarniSettingsModel:
@@ -150,6 +156,7 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_performance())
         errors.extend(self._check_accounts())
         errors.extend(self._check_social_token())
+        errors.extend(self._check_email_otp())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
         errors.extend(self._check_karni_knobs())
@@ -466,6 +473,34 @@ class KarniSettingsModel(BaseModel):
             errors.append(
                 "KARNI_SOCIAL_TOKEN_PROVIDERS needs the cryptography package to verify RS256 and "
                 "ES256 signatures. Run: pip install 'karni[social-token]' (E509)"
+            )
+        return errors
+
+    def _check_email_otp(self) -> list[str]:
+        """Sign-in with a code sent by email (experimental): the switch, the code and the policy."""
+        from karni.accounts.otp import LENGTH_RANGE, MAX_ATTEMPTS_RANGE, TTL_RANGE
+        from karni.accounts.social_token import SIGNUP_POLICIES
+
+        errors: list[str] = []
+        if not isinstance(self.KARNI_EMAIL_OTP, bool):
+            errors.append(f"KARNI_EMAIL_OTP = {self.KARNI_EMAIL_OTP!r} must be True or False")
+        for name, (low, high), what in (
+            ("KARNI_EMAIL_OTP_TTL", TTL_RANGE, "seconds a code lives"),
+            ("KARNI_EMAIL_OTP_LENGTH", LENGTH_RANGE, "digits in a code"),
+            ("KARNI_EMAIL_OTP_MAX_ATTEMPTS", MAX_ATTEMPTS_RANGE, "guesses a code takes"),
+        ):
+            value = getattr(self, name)
+            if not (
+                isinstance(value, int) and not isinstance(value, bool) and low <= value <= high
+            ):
+                errors.append(
+                    f"{name} = {value!r} must be an integer from {low} to {high} ({what})"
+                )
+        signup = self.KARNI_EMAIL_OTP_SIGNUP
+        if signup is not None and signup not in SIGNUP_POLICIES:
+            errors.append(
+                f"KARNI_EMAIL_OTP_SIGNUP = {signup!r} must be 'open', 'approval', 'existing' or "
+                "None (None follows KARNI_ACCOUNTS_REGISTRATION)"
             )
         return errors
 

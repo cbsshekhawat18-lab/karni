@@ -40,6 +40,28 @@ apply codemods and list the manual steps. This file is the human summary.
   `useSocialLogin(provider)` and `SocialButton` (the app's own provider SDK
   supplies the token: Karni bundles none).
   [docs/accounts.md](docs/accounts.md#sign-in-with-an-id-token-google-microsoft-apple).
+- **Sign in with a code sent by email (experimental).** With
+  `KARNI_EMAIL_OTP = True`, `POST api/auth/otp/send/ {"email"}` emails a
+  numeric code and `POST api/auth/otp/verify/ {"email", "code"}` answers what
+  `login/` gives: a token pair in JWT mode, a session in session mode, or the
+  2FA gate. No password is involved. The send answer is the same 200 for
+  every address, and every failure of a code is the same `E235`, so neither
+  reveals whether an address has an account. Codes come from `secrets`, are
+  stored only as an HMAC-SHA256 keyed by `SECRET_KEY` in the new `LoginCode`
+  model (run `karni migrate`), and die after one use, `KARNI_EMAIL_OTP_TTL`
+  (600 seconds) or `KARNI_EMAIL_OTP_MAX_ATTEMPTS` wrong guesses (5). A new
+  code replaces the old one. `KARNI_EMAIL_OTP_SIGNUP` takes the same three
+  policies as sign-in with an ID token (`open`, `approval` with `E224`,
+  `existing`), an inactive account answers `E226`, and the routes answer
+  `E236` once the setting is off. New throttle scopes: `auth.otp_send` (per
+  IP), `auth.otp_send_email` (per address) and `auth.otp_verify`. The email
+  is the `login_code` template through `KARNI_ACCOUNTS_EMAIL_BACKEND`, and an
+  hourly schedule, `karni-flush-login-codes`, deletes expired codes. A code,
+  like an ID token, now also verifies an account's address, and an account
+  never verified loses its password (`karni.accounts.services.prove_address`).
+  `@karni/ui` adds `useOtpLogin()`, `OtpLoginForm` and `LoginForm`'s
+  `codeSignIn` switch.
+  [docs/accounts.md](docs/accounts.md#sign-in-with-a-code-sent-by-email).
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and
