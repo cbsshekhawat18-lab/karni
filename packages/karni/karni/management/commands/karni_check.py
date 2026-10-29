@@ -11,6 +11,12 @@ checks fail or any hook reports failures.
 deployment with ``DEBUG`` on or the scaffold's ``SECRET_KEY`` does not pass.
 A Django deploy warning that a Karni check covers is hidden then, so each
 problem is printed once, with the Karni code and fix.
+
+It also compares every external model (``class Karni: external = True``,
+experimental) with its table or view where the database answers
+(:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
+fail, ``karni.W540`` (a database that does not answer) is printed. Not with
+``--deploy``, which the production image runs before ``migrate``.
 """
 
 from __future__ import annotations
@@ -75,6 +81,16 @@ class Command(BaseCommand):
                 if deploy
                 else "django: system checks failed (see output above)"
             )
+
+        if not deploy:
+            # Not with --deploy: the production image runs it before migrate, and a
+            # view the release's own migration creates does not exist yet.
+            from karni.db.checks import external_check_failures
+
+            errors, warnings = external_check_failures()
+            for warning in warnings:
+                self.stdout.write(f"external tables: {warning}")
+            failures.extend(f"external tables: {error}" for error in errors)
 
         for ep in sorted(entry_points(group="karni.checks"), key=lambda e: e.name):
             try:

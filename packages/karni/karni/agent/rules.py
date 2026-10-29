@@ -442,7 +442,10 @@ RULES: tuple[Rule, ...] = (
         rationale=(
             "The mixins supply the primary key (a UUID, or an integer with "
             "`BigIntBaseModel`), timestamps, soft delete, audit stamping and the "
-            "managers the derived API/admin rely on."
+            "managers the derived API/admin rely on. The exception is a table or view another "
+            "system owns: a plain `models.Model` with `class Meta: managed = False` and `class "
+            "Karni: external = True` (experimental, `karni make model <Name> --external "
+            "--table <table>`), which Karni only reads unless `writable = True`."
         ),
         fix="Inherit karni.models.BaseModel or BigIntBaseModel (or compose its mixins).",
         enforced_by=("model-base",),

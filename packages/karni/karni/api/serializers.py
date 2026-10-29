@@ -229,10 +229,16 @@ class KarniModelSerializer(serializers.ModelSerializer):
         from karni.accounts.visibility import hidden_fields, protected_fields
 
         fields = super().get_fields()
+        model = self.Meta.model
+        pk = model._meta.pk.name
+        if self.instance is not None and pk in fields and not fields[pk].read_only:
+            # An entered key (an external table's, karni.db) is sent on create only:
+            # saving another value would insert a second row, not rename this one.
+            fields[pk].read_only = True
+            fields[pk].required = False
         user = self.visibility_user()
         if user is None:
             return fields
-        model = self.Meta.model
         hidden = hidden_fields(model, user)
         protected = protected_fields(model, user)
         for name in list(fields):
@@ -562,6 +568,28 @@ def _effective_field_names(model: type[Model], api_meta: Any) -> list[str]:
     return names
 
 
+def entered_key(model: type[Model]) -> bool:
+    """Whether the API takes ``model``'s primary key in a create (experimental).
+
+    True for an external model (``class Karni: external = True``,
+    :mod:`karni.db`) whose key the database does not generate: no
+    auto-increment and no default, like a code or an id another system
+    assigns. Every other primary key is read-only.
+    """
+    from django.db.models.fields import AutoFieldMixin
+
+    from karni.db import is_external
+
+    pk = model._meta.pk
+    return (
+        is_external(model)
+        and pk is not None
+        and not isinstance(pk, AutoFieldMixin)
+        and not pk.has_default()
+        and not pk.is_relation
+    )
+
+
 def _extra_kwargs(
     model: type[Model],
     api_meta: Any,
@@ -581,7 +609,7 @@ def _extra_kwargs(
                 code="E123",
             )
     always_read_only = {
-        model._meta.pk.name,
+        *(() if entered_key(model) else (model._meta.pk.name,)),
         "created_at",
         "updated_at",
         "created_by",

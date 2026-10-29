@@ -517,6 +517,7 @@ def test_trace_without_a_capture_says_how_to_enable_it(karni_dir: Path) -> None:
 # --- karni_replay ------------------------------------------------------------------
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_as_another_user_reports_the_change(karni_dir: Path, user: Any) -> None:
     denied = _client(user).get("/debug/staff/")
     assert denied.status_code == 403
@@ -535,6 +536,7 @@ def test_replay_as_another_user_reports_the_change(karni_dir: Path, user: Any) -
     assert replayed is not None and replayed["status"] == 403
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_rolls_writes_back_unless_committed(karni_dir: Path, user: Any) -> None:
     created = _client(user).post(
         "/debug/prices/", {"amount": "4.00", "mail_to": "ada@example.com"}, format="json"
@@ -551,6 +553,7 @@ def test_replay_rolls_writes_back_unless_committed(karni_dir: Path, user: Any) -
     assert Price.objects.count() == before + 1
 
 
+@pytest.mark.django_db(databases="__all__")  # replay rolls back every database
 def test_replay_refuses_redacted_values_until_supplied(karni_dir: Path, user: Any) -> None:
     response = _client(user).post(
         "/debug/prices/?token=abc-query-1", {"password": "x-secret-1"}, format="json"

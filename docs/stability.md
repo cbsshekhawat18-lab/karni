@@ -172,6 +172,14 @@ Experimental now:
   setting, `karni make model --pk`, `karni.api.filters.IntegerFilter`, the
   import options `match_ids` and `keep_ids` (with the `ImportJob` fields of
   the same names), and the `KEYS:` line of `karni context`.
+- [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
+  the `class Karni` options `external`, `writable` and `database`, `karni.db`
+  (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
+  `BaseViewSet.is_read_only` and `read_only_refused_actions`,
+  `KarniModelAdmin.is_read_only`, `assert_crud`'s `read_only`,
+  `karni.testing.create_external_tables`, the pytest option
+  `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
+  --external`.
 
 ## Supported platforms
 

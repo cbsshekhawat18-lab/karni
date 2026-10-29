@@ -326,7 +326,13 @@ class FactoryBuilder:
         return found
 
     def is_unique(self, model: type[models.Model], field: models.Field[Any, Any]) -> bool:
-        """True when ``field`` is unique or part of a unique constraint."""
+        """True when ``field`` is unique or part of a unique constraint, or the primary key.
+
+        A primary key the model does not generate (an external table's ``id``
+        column) reaches here, and must differ per row too.
+        """
+        if field.primary_key:
+            return True
         names = self._unique.get(model)
         if names is None:
             names = self._unique[model] = unique_field_names(model)

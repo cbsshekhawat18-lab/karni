@@ -365,6 +365,20 @@ downloadable template. The gate is the declaration's `create` **or** `write`
 either lets anonymous callers in, the gate also needs a signed-in user
 ([imports stay closed](#rate-limits)). See [import and export](import-export.md).
 
+## Read-only models
+
+!!! warning "Experimental"
+    `BaseViewSet.is_read_only` and `read_only_refused_actions` are
+    [experimental](stability.md#experimental-names).
+
+A viewset over an [external model](models.md#external-tables-views-and-a-second-database)
+that is not writable answers `create`, `update`, `partial_update`,
+`destroy` and the import actions with 405 to every caller, signed in or not,
+and leaves them out of the OpenAPI document and the `Allow` header. Reads,
+`?expand=`, filters and export work as usual. `read_only_refused_actions`
+lists the refused actions, and `is_read_only()` decides per viewset:
+override it to serve writes from one viewset.
+
 ## Deferred writes
 
 When a `karni.signals.pre_write` receiver defers a write (the

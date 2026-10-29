@@ -153,6 +153,10 @@ class KarniAdminMixin(admin.ModelAdmin):
       permissions still decide which screens exist. ``scope_exempt = True``
       with a ``scope_exempt_reason`` turns the row scope off for one admin
       (``karni check`` lists every exemption).
+    * **Read-only external models** (experimental): a model with ``class
+      Karni: external = True`` and no ``writable = True`` has no add, change
+      or delete permission here, so the admin lists it and shows its rows
+      read-only (:meth:`is_read_only`).
     * **Import and export** (ADR 0002, P6) come from
       :class:`karni.admin.transfer.TransferAdminMixin`, mixed into
       :class:`KarniModelAdmin`: the *Export selected* actions and the
@@ -262,19 +266,39 @@ class KarniAdminMixin(admin.ModelAdmin):
             within_scope(self, request, obj, "view") or within_scope(self, request, obj, "change")
         )
 
+    def is_read_only(self) -> bool:
+        """Experimental. Whether this admin only shows rows (:func:`karni.db.is_read_only`).
+
+        True for a model with ``class Karni: external = True`` that does not
+        declare ``writable = True``: no add, change or delete, the import
+        page is gone, and the change view shows every field read-only.
+
+        Override / escape hatch: return ``False`` to edit through this admin
+        alone, or ``True`` to make any admin read-only.
+        """
+        from karni.db import is_read_only
+
+        return is_read_only(self.model)
+
     def has_add_permission(self, request: HttpRequest) -> bool:
-        return super().has_add_permission(request) and self.vetoed(request, "add") is None
+        return (
+            not self.is_read_only()
+            and super().has_add_permission(request)
+            and self.vetoed(request, "add") is None
+        )
 
     def has_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         return (
-            super().has_change_permission(request, obj)
+            not self.is_read_only()
+            and super().has_change_permission(request, obj)
             and within_scope(self, request, obj, "change")
             and self.vetoed(request, "change") is None
         )
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         return (
-            super().has_delete_permission(request, obj)
+            not self.is_read_only()
+            and super().has_delete_permission(request, obj)
             and within_scope(self, request, obj, "delete")
             and self.vetoed(request, "delete") is None
         )

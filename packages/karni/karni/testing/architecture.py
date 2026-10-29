@@ -87,6 +87,8 @@ def check_model_base() -> list[Violation]:
         for model in cfg.get_models():
             if model._meta.auto_created or model._meta.proxy:
                 continue
+            if _is_external_table(model):
+                continue
             if issubclass(model, karni_bases):
                 continue
             violations += _class_violation(
@@ -96,6 +98,17 @@ def check_model_base() -> list[Violation]:
                 "inherit karni.models.BaseModel (or compose its mixins)",
             )
     return violations
+
+
+def _is_external_table(model: type) -> bool:
+    """A table or view another system owns (``karni.db``, experimental): model-base accepts it.
+
+    Both declarations are needed: ``class Karni: external = True`` and
+    ``Meta.managed = False`` (``karni.E270`` reports the first without the second).
+    """
+    from karni.db import is_external
+
+    return is_external(model) and not model._meta.managed  # type: ignore[attr-defined]
 
 
 # viewset-base

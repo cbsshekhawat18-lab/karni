@@ -127,6 +127,34 @@ apply codemods and list the manual steps. This file is the human summary.
   when the captured id now belongs to another email. Ids show without
   thousands separators in `ResourceDetail` and `ResourceTable`. A capacity,
   overlap or state error on an unsaved row no longer names `None` as its id.
+- **External tables, SQL views and a second database (experimental).** A
+  model over a table or view another system owns declares `class Karni:
+  external = True` with `Meta.managed = False`, on plain `models.Model`: the
+  `model-base` rule accepts it, Karni runs no DDL for it, its viewset answers
+  every write and the import endpoints with 405 (and the OpenAPI document
+  leaves them out), its admin is read-only, it keeps no change history, and
+  seeding and the query-scaling check skip it. `writable = True` lets the API
+  and the admin write it, with a primary key the database does not generate
+  sent on create. Access, role grants, row scope and field roles work as on
+  any model, and a PostgreSQL table in another schema is `db_table =
+  'reporting"."sales'`. `class Karni: database = "<alias>"` routes a model's
+  reads, writes and migrations to that alias through `karni.db.DatabaseRouter`,
+  which `karni_settings()` appends to `DATABASE_ROUTERS` after the project's
+  own routers. On such an alias only the models routed there migrate, and
+  relations across aliases are refused. Startup checks: `E270`, `E271`,
+  `E275`, `E276`, `W541`, `W542`. `karni check` compares each external model
+  with its table or view where the database answers: `E272` to `E274`, and
+  `W540` when it does not answer. Karni's pytest plugin creates the tables of
+  external models (and their PostgreSQL schema) in each test database
+  (`--karni-external-tables=off` turns it off), and `assert_crud` checks a
+  read-only model's refusals by itself (`read_only=`). `karni make model
+  <Name> --external --table <[schema.]table> [--database <alias>]
+  [--writable]` writes the model from the table's columns with Django's
+  `inspectdb` machinery (`manage.py karni_inspect`), and its viewset (`C140`
+  to `C142`). Generated factories now give a primary key the model does not
+  generate a distinct value per row, and the role sync after `migrate` skips
+  a database the role tables are not routed to.
+  [docs/models.md](docs/models.md#external-tables-views-and-a-second-database).
 - **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
   `"light"`) pins unfold's light palette and hides its light / dark / system
   switch, read on every request. `"auto"` brings the switch back and

@@ -20,6 +20,12 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
     },
+    # The second database of the external tables suite (tests.externalapp,
+    # class Karni: database = "second"). Created only for tests that ask for it.
+    "second": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    },
 }
 CACHES = {
     "default": {
@@ -62,6 +68,9 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "tests.uploadsapp",
     # Content loading (karni load): no viewsets, so the API never sees it.
     "tests.contentapp",
+    # External tables, a SQL view and a second database (karni.db): viewsets
+    # mounted by its own URLconf only.
+    "tests.externalapp",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that

@@ -341,6 +341,9 @@ BASE: dict[str, Any] = {
     "DATABASES": {
         "default": env.db_url("DATABASE_URL", default="postgres://karni:karni@db:5432/karni"),
     },
+    # Experimental: class Karni: database = "<alias>" sends a model to another alias. A
+    # project's own routers go before this one (karni_settings() appends it after them).
+    "DATABASE_ROUTERS": ["karni.db.DatabaseRouter"],
     # "redis" (the default cache at REDIS_URL) or "locmem" (a host run without Redis).
     "KARNI_CACHE": env("KARNI_CACHE", default="redis"),
     "CACHES": _caches(env),

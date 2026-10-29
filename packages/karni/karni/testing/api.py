@@ -55,6 +55,14 @@ When the declaration refuses every write to the requester, the run checks
 the refusals only, lists ``no write exercised`` in the report's ``skipped``
 and warns (``UserWarning``), so a suite that never writes is visible.
 
+**Read-only resources** (experimental). ``read_only=True`` checks a resource
+that only reads: ``list`` and ``retrieve`` as above, and ``POST``, ``PATCH``,
+``PUT`` and ``DELETE`` answer 405 to the requester, to anonymous callers and
+to a user without the role, change nothing, and are absent from the OpenAPI
+document. It is picked by itself for an external model that is not writable
+(``class Karni: external = True`` without ``writable = True``,
+:func:`karni.db.is_read_only`), and ``read_only=False`` turns it off.
+
 Override / escape hatches: ``values={...}`` (factory overrides for every row
 and the create payload), ``payload={...}`` (raw request fields, uploads
 included), ``expect={"destroy": 403}`` (pin a status, which also silences
@@ -646,6 +654,7 @@ class _Crud:
         payload: Mapping[str, Any],
         expect: Mapping[str, int],
         skip: Iterable[str],
+        read_only: bool = False,
     ) -> None:
         unknown = set(skip) - set(CHECKS)
         if unknown:
@@ -658,6 +667,7 @@ class _Crud:
         self.payload = dict(payload)
         self.expect = dict(expect)
         self.skip = set(skip)
+        self.read_only = read_only
         self.user = user if user is not None else user_with_roles(*([role] if role else []))
         self.report = CrudReport(resource.name, role)
         self.schema_errors: list[str] = []
@@ -798,7 +808,9 @@ class _Crud:
         if viewset().get_access() is None:
             self.fail(f"access: {missing_access_message(viewset)}")
             return False
-        actions = ("list", "retrieve", "create", "partial_update", "destroy")
+        actions: tuple[str, ...] = ("list", "retrieve", "create", "partial_update", "destroy")
+        if self.read_only:
+            actions = ("list", "retrieve")
         allowed = [
             action
             for action in actions
@@ -844,13 +856,23 @@ class _Crud:
             row = self.row()
             if not self.preflight(row):
                 return self.report
-            self.note_unexercised_writes(row)
-            for name, check in (
-                ("list", lambda: self.check_list(row)),
-                ("retrieve", lambda: self.check_retrieve(row)),
+            writes: tuple[tuple[str, Any], ...] = (
                 ("create", self.check_create),
                 ("update", lambda: self.check_update(row)),
                 ("delete", self.check_delete),
+            )
+            if self.read_only:
+                writes = (
+                    ("create", self.check_create_refused),
+                    ("update", lambda: self.check_update_refused(row)),
+                    ("delete", lambda: self.check_delete_refused(row)),
+                )
+            else:
+                self.note_unexercised_writes(row)
+            for name, check in (
+                ("list", lambda: self.check_list(row)),
+                ("retrieve", lambda: self.check_retrieve(row)),
+                *writes,
                 ("denials", lambda: self.check_denials(row)),
                 ("pagination", self.check_pagination),
                 ("filtering", self.check_filtering),
@@ -972,13 +994,74 @@ class _Crud:
         if after.status_code != 404:
             self.fail(f"delete: GET {url} after the delete answered {after.status_code}, not 404")
 
+    # a read-only resource (experimental)
+
+    def refused_writers(self) -> list[tuple[str, Any]]:
+        """Who must get 405 for every write: the requester, anonymous, a user without the role."""
+        found: list[tuple[str, Any]] = [("the requester", self.user), ("anonymous", None)]
+        if self.role:
+            found.append(("a user without the role", user_with_roles()))
+        return found
+
+    def refused(self, check: str, action: str, method: str, url: str, data: Any, fmt: str) -> None:
+        """``method url`` answers 405 to everyone :meth:`refused_writers` lists."""
+        model = self.resource.model
+        for who, user in self.refused_writers():
+            wanted = self.expect.get(action, 405) if user is self.user else 405
+            response = self.call(check, user, method, url, data, format=fmt)
+            if response.status_code != wanted:
+                self.fail(
+                    f"{check}: {method} {url} as {who} answered {response.status_code}, expected "
+                    f"{wanted}: {model.__name__} is read-only (class Karni: external = True "
+                    "without writable = True), so the API refuses every write"
+                )
+
+    def check_create_refused(self) -> None:
+        url = self.resource.list_url()
+        manager = self.resource.model._default_manager
+        try:
+            sent = build_payload(self.resource, self.user, values=self.values, payload=self.payload)
+            data, fmt = sent.data, sent.format
+        except Exception:  # noqa: BLE001 - any body will do, the method is what is refused
+            data, fmt = dict(self.payload), "json"
+        before = manager.count()
+        self.refused("create", "create", "POST", url, data, fmt)
+        if manager.count() != before:
+            self.fail(f"create: POST {url} wrote a row to a read-only resource")
+
+    def _snapshot(self, row: Any) -> dict[str, Any] | None:
+        stored = self.stored(row)
+        if stored is None:
+            return None
+        return {
+            field.attname: getattr(stored, field.attname)
+            for field in type(row)._meta.concrete_fields
+        }
+
+    def check_update_refused(self, row: Any) -> None:
+        url = self.resource.detail_url(row.pk)
+        before = self._snapshot(row)
+        self.refused("update", "partial_update", "PATCH", url, {}, "json")
+        self.refused("update", "update", "PUT", url, {}, "json")
+        if self._snapshot(row) != before:
+            self.fail(f"update: PATCH/PUT {url} changed a row of a read-only resource")
+
+    def check_delete_refused(self, row: Any) -> None:
+        url = self.resource.detail_url(row.pk)
+        self.refused("delete", "destroy", "DELETE", url, None, "json")
+        if self.stored(row) is None:
+            self.fail(f"delete: DELETE {url} removed a row of a read-only resource")
+
     def check_denials(self, row: Any) -> None:
         outsider = user_with_roles()
         manager = self.resource.model._default_manager
+        actions: tuple[str, ...] = ("list", "retrieve", "create", "partial_update", "destroy")
+        if self.read_only:
+            actions = ("list", "retrieve")  # the writes answer 405 to everyone (check_*_refused)
         for who, user in (("anonymous", None), ("a user without the role", outsider)):
             if user is outsider and not self.role:
                 continue  # without a role the requester already is such a user
-            for action in ("list", "retrieve", "create", "partial_update", "destroy"):
+            for action in actions:
                 target = row if action in {"retrieve", "partial_update", "destroy"} else None
                 expected = expectation(self.resource, action, user, target)
                 if expected.allowed:
@@ -1131,7 +1214,11 @@ class _Crud:
                 f"visibility: the serializer (and so the schema) for {who} still lists "
                 f"{', '.join(documented)}"
             )
-        if protected and self.expected("partial_update", self.user, row).allowed:
+        if (
+            protected
+            and not self.read_only
+            and self.expected("partial_update", self.user, row).allowed
+        ):
             name = sorted(protected)[0]
             current = getattr(row, name, None)
             sent = _json_value(current) if current is not None else ""
@@ -1164,7 +1251,15 @@ class _Crud:
                 continue
             if method.lower() not in viewset.http_method_names:
                 continue
-            if find_operation(document, path, method) is None:
+            documented = find_operation(document, path, method) is not None
+            if self.read_only and action not in {"list", "retrieve"}:
+                if documented:
+                    self.schema_errors.append(
+                        f"{method} {path} ({action}) is in the schema, but the resource is "
+                        "read-only and answers it with 405"
+                    )
+                continue
+            if not documented:
                 self.schema_errors.append(f"{method} {path} ({action}) is not in the schema")
         operation = find_operation(document, list_path, "GET") or {}
         names = {p.get("name") for p in operation.get("parameters", ()) if isinstance(p, dict)}
@@ -1256,6 +1351,7 @@ def assert_crud(
     payload: Mapping[str, Any] | None = None,
     expect: Mapping[str, int] | None = None,
     skip: Iterable[str] = (),
+    read_only: bool | None = None,
 ) -> CrudReport:
     """Assert the full CRUD surface of ``resource`` for ``role`` (see the module docstring).
 
@@ -1267,18 +1363,26 @@ def assert_crud(
     :param expect: pin the requester's status per action (``list``, ``retrieve``,
         ``create``, ``update``, ``partial_update``, ``destroy``).
     :param skip: checks to leave out (:data:`CHECKS`).
+    :param read_only: experimental. ``True`` checks that every write answers 405 and
+        changes nothing, ``False`` that writes work as ``access`` says. ``None``
+        (the default) picks ``True`` for an external model that is not writable
+        (:func:`karni.db.is_read_only`).
     :raises AssertionError: listing every failed check.
     :warns UserWarning: when the declaration refuses every write to the requester, so
         no create, update or delete was exercised (``report.skipped`` lists it too).
     """
+    from karni.db import is_read_only
+
+    resolved = resolve_resource(resource)
     run = _Crud(
-        resolve_resource(resource),
+        resolved,
         role,
         user=user,
         values=values or {},
         payload=payload or {},
         expect=expect or {},
         skip=skip,
+        read_only=is_read_only(resolved.model) if read_only is None else bool(read_only),
     )
     report = run.run()
     if report.failures:

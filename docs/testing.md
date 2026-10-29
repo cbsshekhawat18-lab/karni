@@ -149,6 +149,25 @@ role that may write, as the example above does with `"organizer"`. When the
 refusals are the point of the test, pin them with `expect={"create": 403,
 ...}` and the warning stays quiet.
 
+### A read-only resource
+
+!!! warning "Experimental"
+    `assert_crud`'s `read_only` argument is [experimental](stability.md#experimental-names).
+
+For an [external model](models.md#external-tables-views-and-a-second-database)
+that is not writable (`class Karni: external = True` without `writable =
+True`), `assert_crud` checks what the API promises for it: list, retrieve,
+pagination, filtering and field visibility as usual, and `POST`, `PUT`,
+`PATCH` and `DELETE` answering 405 to the role, to anonymous callers and to a
+user without the role, with nothing written, and absent from the OpenAPI
+document. It picks this by itself. `read_only=True` asks for it on any
+resource, and `read_only=False` checks writes instead.
+
+```python
+def test_sales(db):
+    assert_crud(SaleViewSet, "analyst")  # read-only: every write answers 405
+```
+
 ### Rows the role cannot see
 
 When the rows `assert_crud` creates for the role are missing from the list,
@@ -439,6 +458,36 @@ A missing snapshot is written and the test passes, except under CI, where it
 fails, because a snapshot that was never committed protects nothing. To
 accept an intended change, run `KARNI_UPDATE_SNAPSHOTS=1 karni test`, then
 commit the file.
+
+## External tables
+
+!!! warning "Experimental"
+    The table creation, `--karni-external-tables` and
+    `karni.testing.create_external_tables` are
+    [experimental](stability.md#experimental-names).
+
+An external model's table belongs to another system, so neither migrations
+nor `--no-migrations` create it in a test database. Karni's pytest plugin
+does, once each test database is migrated: every external model routed to
+that database whose table or view is missing gets a table built from its
+fields, and on PostgreSQL the schema its `'schema"."table'` name points at.
+A table or view that exists already, such as a view your own migration
+creates, is left alone. Factories and `assert_crud` then write rows to it as
+to any table. Test a model on another database with
+`@pytest.mark.django_db(databases=["default", "warehouse"])`.
+
+- Off for a run: `pytest --karni-external-tables=off`, or
+  `karni_external_tables = off` in the pytest ini file.
+- By hand: `create_external_tables(using="warehouse", models=[Stock])` from
+  `karni.testing`, outside a transaction (a session fixture), returns the
+  tables it created.
+- SQLite has no schemas, so a schema-qualified table is skipped there with a
+  warning. Run the tests that use it on PostgreSQL.
+- Rows a `transaction=True` test writes stay until the session ends: Django's
+  flush empties only the tables it manages.
+
+Seeding and the [scaling check](#3-the-scaling-check) leave external models
+out.
 
 ## Automatic factories (`karni.testing.factories`)
 
