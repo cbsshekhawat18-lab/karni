@@ -17,6 +17,13 @@ run too. karni-site's renders every page of the site through Django's test
 client and reports titles, descriptions, images, links and the sitemap
 (``SITE010`` to ``SITE018``).
 
+Without ``frontend/node_modules`` (a fresh project before ``npm install``),
+the frontend checks cannot run. Outside CI, ``karni check`` then says so,
+with the exact command, and runs the backend checks alone: the verdict is
+the backend's. In CI, or with ``--frontend``, the missing install fails the
+run, so a pipeline that forgot ``npm ci`` never passes unchecked.
+``--no-frontend`` skips the frontend checks everywhere.
+
 Outside CI, a clean run may end with one tip on stderr (:mod:`karni_cli.tips`,
 at most once per project); ``-q`` suppresses it.
 """
@@ -32,9 +39,26 @@ import typer
 
 from karni_cli import project as project_mod
 from karni_cli import tips, toolchain
+from karni_cli.environment import is_ci
 from karni_cli.project import CliError, require_project
 
 _BARE_IGNORE = re.compile(r"jscpd:ignore-start\s*$")
+
+
+def frontend_install_message() -> str:
+    """What to run when ``frontend/node_modules`` is missing: the folder and the command."""
+    return (
+        "the frontend checks (eslint and jscpd) need frontend/node_modules, which is "
+        "missing. Install it with `(cd frontend && npm install)`, which needs npm "
+        f"{toolchain.NPM_FLOOR} or later. On npm 10 (Node 20 and 22) run "
+        "`(cd frontend && npx --yes npm@11 install)` instead. `karni doctor` shows the "
+        "Node and npm on PATH"
+    )
+
+
+def _frontend_not_installed(project: Path) -> bool:
+    frontend = project / "frontend"
+    return frontend.is_dir() and not (frontend / "node_modules").is_dir()
 
 
 def _frontend_duplication(project: Path) -> int:
@@ -92,7 +116,13 @@ def _frontend_lint(project: Path) -> int:
 def check(
     docker: bool | None = typer.Option(None, "--docker/--no-docker"),
     service: str = typer.Option("django", "--service", envvar="KARNI_COMPOSE_SERVICE"),
-    frontend: bool = typer.Option(True, "--frontend/--no-frontend"),
+    frontend: bool | None = typer.Option(
+        None,
+        "--frontend/--no-frontend",
+        help="Run the frontend checks (eslint and jscpd in frontend/). By default they run "
+        "when frontend/node_modules is installed, and are skipped with a note when it is not, "
+        "except in CI. --frontend fails without it, --no-frontend skips them.",
+    ),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Do not print the optional tip."),
     deploy: bool = typer.Option(
         False,
@@ -119,8 +149,25 @@ def check(
         # say why, and still run the frontend checks.
         typer.echo(f"error: {exc}", err=True)
         backend = 1
-    dup = _frontend_duplication(project) if frontend else 0
-    lint = _frontend_lint(project) if frontend else 0
+    run_frontend = frontend is not False
+    dup = lint = 0
+    if run_frontend and _frontend_not_installed(project):
+        run_frontend = False
+        if frontend or is_ci():
+            typer.echo(
+                f"karni check: {frontend_install_message()}. Pass --no-frontend to skip them.",
+                err=True,
+            )
+            dup = 1
+        else:
+            typer.echo(
+                f"karni check: skipped: {frontend_install_message()}. They run once it is "
+                "installed, and a missing install fails in CI and with --frontend.",
+                err=True,
+            )
+    if run_frontend:
+        dup = _frontend_duplication(project)
+        lint = _frontend_lint(project)
     if backend or dup or lint:
         sys.stderr.write("karni check: FAILED\n")
     else:
