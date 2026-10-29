@@ -19,7 +19,13 @@ karni load content/site.json
 ```
 
 `karni rules --procedure site-from-design` gives an agent these steps in
-order, from the import to templates that loop over the rows.
+order: the analysis, the import (`karni import design --editable --map
+content/design-map.json`, where the content the map reads into rows gets no
+blocks, see [import a design](public-site.md#import-a-design)), the models,
+the content, templates that loop over the rows, the forms and the page test.
+`karni new "Name" --kind site --design ../design` runs the analysis and the
+import on a new project and prints the rest
+([start a site project](public-site.md#start-a-site-project)).
 
 ## What analyze reads
 
@@ -325,6 +331,15 @@ writes the `==marked words==` back in `KARNI_SITE_HIGHLIGHT`'s markup (here
 `{"marker": "==", "tag": "em", "class": ""}`), everything else escaped.
 `|highlight:"span.dot"` names another markup for one value, and
 `|highlight:""` drops the marks, for a `<title>` or an `alt`.
+
+An editable import with the map (`karni import design --editable --map
+content/design-map.json`) left these parts without blocks, so a loop needs
+none: the client edits a course in the admin's Courses, not in a block. What
+stays a block is the page's own copy around the loop, and on detail pages it
+has one key for all of them (`{% editable "course.course.from_past_classes" %}`),
+which the one template keeps. An import without the map made blocks of the
+items too: take the `{% editable %}` tags out of the markup you turn into a
+loop, because every row would show the first item's block.
 
 ## Limits and escape hatches
 

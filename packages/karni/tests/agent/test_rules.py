@@ -144,17 +144,29 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
     procedure = next(p for p in PROCEDURES if p.name == "site-from-design")
     steps = procedure.steps
     order = [
-        "`karni import design <design folder> --app <site app>`",
         "`karni design analyze <design folder> --app <site app> --map",
+        "`karni import design <design folder> --app <site app> --editable --map",
         "Answer every decision in the map",
         "Run the `karni make model` commands in the order printed",
         "`karni design extract <design folder> --map content/design-map.json -o",
         "`karni load content/site.json --dry-run`",
         "inside `{% for %}`",
+        "`karni make view <model> --app <site app> --path",
+        "`karni make form <name> <field:type> ...`",
         'call_command("karni_load", "content/site.json")',
     ]
     found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
     assert found == sorted(found), found
+    assert "inside `{% for %}`" in steps[7]  # step 8: karni new --design and other prompts name it
+    imported = next(step for step in steps if "karni import design" in step)
+    assert "except what the map reads into rows" in imported and "`<form>`" in imported
+    form = next(step for step in steps if "karni make form" in step)
+    assert "{% karni_form %}" in form and "--notify" in form
+    assert steps[-1].endswith("Then `karni check`.")
+    models = next(step for step in steps if "Run the `karni make model` commands" in step)
+    assert "karni types" not in models  # a site's models have no API to type
+    detail = next(step for step in steps if "karni make view <model>" in step)
+    assert "get_object_or_404(Model.objects, slug=slug)" in detail and "delete" in detail
     load = next(step for step in steps if "karni load" in step)
     assert "Nothing changed" in load and "karni seed" in load
     loops = next(step for step in steps if "{% for %}" in step)

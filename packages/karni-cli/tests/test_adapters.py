@@ -154,7 +154,9 @@ def test_every_adapter_says_the_same_thing(new_project: Path) -> None:
     assert len(set(bodies.values())) == 1, sorted(bodies)
     body = next(iter(bodies.values()))
     assert "`karni context`" in body and "`karni rules`" in body
-    assert 15 <= body.count("\n") <= 25  # thin: ~15 lines of guidance
+    # Thin: ~15 lines of guidance, and the project's kind and stack in a paragraph.
+    assert 15 <= body.count("\n") <= 30
+    assert "The stack is set, so never ask which technology" in body
 
 
 def test_registry_records_verified_sources() -> None:

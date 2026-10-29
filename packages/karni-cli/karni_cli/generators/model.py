@@ -68,7 +68,8 @@ def _targets(
         raw = relation_name(spec)
         if is_user_target(raw):
             resolved[spec.name] = RelationTarget("settings.AUTH_USER_MODEL", True, "user")
-        elif raw in ("self", model):
+        elif raw in ("self", model, f"{app.label}.{model}"):
+            # The model itself (a course's related courses): Django's "self".
             resolved[spec.name] = RelationTarget(pystr("self"), False, "self")
         elif "." in raw:
             label, _, name = raw.partition(".")

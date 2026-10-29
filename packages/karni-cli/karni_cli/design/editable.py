@@ -259,6 +259,8 @@ class _Item:
     short: str
     apply: Callable[[str], None]
     key: str = ""
+    #: The source the item holds: two detail pages share a key for the same text.
+    text: str = ""
 
 
 @dataclass
@@ -292,8 +294,19 @@ class Editable:
         site_name: str,
         highlight: tuple[str, str] | None,
         previous: Mapping[str, Any] | None = None,
+        rows: Mapping[str, set[int]] | None = None,
+        shared: Mapping[str, str] | None = None,
     ) -> None:
         self.app = app
+        #: Page path → the key prefix of a model's detail pages (``course``), which
+        #: share their blocks' keys (:func:`karni_cli.design.regions.detail_pages`).
+        self.shared: dict[str, str] = {
+            page: key_part(model, "page") for page, model in (shared or {}).items()
+        }
+        #: Page path → starts of the elements a content map reads into rows
+        #: (:mod:`karni_cli.design.regions`): rendered from the rows, so never a block.
+        self.rows: dict[str, set[int]] = {page: set(s) for page, s in (rows or {}).items()}
+        self.left_out: dict[str, int] = {}
         self.mapped = mapped
         self.site_name = collapse(unescape(site_name))
         self.highlight = highlight
@@ -331,7 +344,9 @@ class Editable:
             )
         for page in pages:
             plan = layout.pages[page.path]
-            prefix = key_part(page.name or f"error_{page.error}", "page")
+            prefix = self.shared.get(page.path) or key_part(
+                page.name or f"error_{page.error}", "page"
+            )
             for name, block in plan.overrides.items():
                 if block is not None:
                     regions.append(
@@ -450,11 +465,15 @@ class Editable:
 
     # the walk
 
+    def _row(self, page: Any, node: Node) -> bool:
+        """Whether ``node`` is content the map reads into rows (left without blocks)."""
+        return node.start in self.rows.get(page.path, ())
+
     def _inline(self, node: Node, page: Any) -> bool:
         """Whether ``node`` can be inside a text block as it is."""
         if node.kind == "text":
             return True
-        if node.kind != "element":
+        if node.kind != "element" or self._row(page, node):
             return False
         attrs = node.attrs(page.text)
         allowed = INLINE.get(node.tag)
@@ -509,6 +528,9 @@ class Editable:
         group: Any,
     ) -> None:
         if node.kind != "element" or node.tag in SKIP:
+            return
+        if self._row(page, node):
+            self.left_out[page.path] = self.left_out.get(page.path, 0) + 1
             return
         menu = self._menu(page, node, prefix, section, root, in_layout, group)
         if menu is not None:
@@ -568,7 +590,9 @@ class Editable:
         def apply(key: str) -> None:
             overlay.wrap(start, end, '{% editable "' + key + '" %}', "{% endeditable %}")
 
-        self.items.append(_Item(page, path, prefix, section, short_name(plain, "text"), apply))
+        self.items.append(
+            _Item(page, path, prefix, section, short_name(plain, "text"), apply, text=raw)
+        )
         self.report.blocks += 1
 
     def _image(
@@ -609,7 +633,15 @@ class Editable:
             )
 
         self.items.append(
-            _Item(page, f"{region}|{_path(root, node)}#img", prefix, section, short, apply)
+            _Item(
+                page,
+                f"{region}|{_path(root, node)}#img",
+                prefix,
+                section,
+                short,
+                apply,
+                text=page.text[node.start : node.end],
+            )
         )
         self.report.images += 1
 
@@ -648,6 +680,7 @@ class Editable:
                     section,
                     key_part(stem, "background"),
                     make_apply(position),
+                    text=asset,
                 )
             )
             self.report.images += 1
@@ -896,16 +929,35 @@ class Editable:
             if old and old not in used:
                 chosen[index] = old
                 used.add(old)
+        # A model's detail pages share a key for the same text in the same place: one
+        # block, shown on each of them and by the one template that replaces them.
+        shared: dict[tuple[str, str], list[tuple[str, set[str]]]] = {}
         for index, item in enumerate(self.items):
             if index in chosen:
                 continue
             base = f"{item.prefix}.{item.section}.{item.short}"[:140]
+            group = item.page.path in self.shared
+            if group:
+                taken = next(
+                    (
+                        entry
+                        for entry in shared.get((base, item.text), [])
+                        if item.page.path not in entry[1]
+                    ),
+                    None,
+                )
+                if taken is not None:
+                    chosen[index] = taken[0]
+                    taken[1].add(item.page.path)
+                    continue
             key, counter = base, 2
             while key in used:
                 key = f"{base}_{counter}"
                 counter += 1
             chosen[index] = key
             used.add(key)
+            if group:
+                shared.setdefault((base, item.text), []).append((key, {item.page.path}))
         for index, item in enumerate(self.items):
             item.key = chosen[index]
             self.keys[item.path] = item.key

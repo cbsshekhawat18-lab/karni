@@ -34,6 +34,7 @@ from pathlib import Path
 
 import typer
 
+from karni_cli import kinds
 from karni_cli.commands.add import add_dependency_text, record_guidance
 from karni_cli.generators import app as app_gen
 from karni_cli.generators.core import (
@@ -455,8 +456,10 @@ def wire_site_module(ws: Workspace) -> bool:
     """Wire karni-site the way ``karni add site`` does. Returns ``True`` when it was missing.
 
     The dependency goes into pyproject.toml and ``karni_site`` into the
-    ``# karni:apps`` block, both through the workspace. The command records
-    the module's agent guidance after the commit (:func:`record_site_guidance`).
+    ``# karni:apps`` block, both through the workspace, and the project's kind
+    gets its site (an app becomes a site+app, :func:`karni_cli.kinds.adopt_site_text`).
+    The command records the module's agent guidance after the commit
+    (:func:`record_site_guidance`).
     """
     settings_text = ws.read(SETTINGS)
     if settings_text is None:
@@ -485,6 +488,10 @@ def wire_site_module(ws: Workspace) -> bool:
         if updated is not None:
             ws.write(PYPROJECT, updated)
             added = True
+        adopted = kinds.adopt_site_text(ws.read(PYPROJECT) or pyproject, ws.root)
+        if adopted is not None:
+            ws.write(PYPROJECT, adopted[0])
+            ws.note(kinds.adoption_note(adopted[1], adopted[2]))
     if added:
         ws.note(
             f"{SITE_DISTRIBUTION}: added to pyproject.toml and INSTALLED_APPS (the site's "

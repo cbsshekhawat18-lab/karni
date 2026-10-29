@@ -188,7 +188,7 @@ export default function VenuesPage() {
 The commands you use every day:
 
 ```sh
-karni new "Shop"      # scaffold a project
+karni new "Shop"      # scaffold a project: --kind site, app or site+app, --design <folder>
 karni add payments    # wire an installed module into settings and the agent files
 karni types           # TypeScript types and hooks from the OpenAPI document
 karni context         # the project inventory an agent reads first
@@ -228,7 +228,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 <!-- generated:commands -->
 | Command | What it does |
 |---|---|
-| [`karni new`](docs/REFERENCE.md#karni-new) | Scaffold a project from templates/project |
+| [`karni new`](docs/REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
 | [`karni add`](docs/REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
 | [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
 | [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |

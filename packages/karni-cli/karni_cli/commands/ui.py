@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -249,20 +250,78 @@ def _write(outcome: Outcome) -> list[dict[str, str]]:
     return actions
 
 
+_THEME_SETTING = re.compile(
+    r"""^KARNI_THEME_CSS\s*=\s*(?P<q>["'])(?P<path>[^"'\n]+)(?P=q)\s*(?:#.*)?$""", re.MULTILINE
+)
+
+
+def admin_theme_file(root: Path) -> Path | None:
+    """The theme file a project without a staff app names for its admin, or ``None``.
+
+    Read from a plain ``KARNI_THEME_CSS = "<path>"`` line in config/settings.py
+    (``karni new --no-staff-app`` writes ``karni-theme.css``), relative to the
+    project root unless absolute. Nothing is imported.
+    """
+    settings = root / "config" / "settings.py"
+    try:
+        text = settings.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    found = None
+    for found in _THEME_SETTING.finditer(text):
+        pass  # the last assignment wins, as in Python
+    if found is None:
+        return None
+    path = Path(found.group("path"))
+    return path if path.is_absolute() else root / path
+
+
+def _admin_theme_only(root: Path, target: Path, css: list[Path], dry_run: bool) -> str:
+    """No staff app: write the design's theme where the admin reads it."""
+    today = dt.datetime.now().astimezone().date().isoformat()
+    detection = detect_css(css)
+    planned = render.Planned(target, detection.theme_css(today), render.state(target))
+    try:
+        rel = target.relative_to(root).as_posix()
+    except ValueError:
+        rel = str(target)
+    graded = (
+        f"{len(detection.found)} found, {len(detection.inferred)} inferred, "
+        f"{len(detection.defaulted)} defaulted"
+    )
+    if dry_run:
+        return f"would write {rel} ({graded})."
+    if planned.state == "modified" and not planned.unchanged:
+        return (
+            f"kept {rel}, edited since Karni wrote it. To replace it with the design's "
+            f"colours and fonts, run `karni ui detect --css <design dir> --output {rel} --force`."
+        )
+    verb = "unchanged" if planned.unchanged else "wrote"
+    if not planned.unchanged:
+        _save(target, planned.content)
+    return (
+        f"{verb} {rel} ({graded}), so the admin uses the design's colours and fonts "
+        "(KARNI_THEME_CSS). `karni ui detect --css <design dir> --dry-run` shows each token."
+    )
+
+
 def detect_from_css(root: Path, css: list[Path], *, dry_run: bool = False) -> str | None:
     """Theme a project's staff app and admin from a design's stylesheets.
 
     ``karni import design`` calls this with the design's CSS files. It writes the
     project's ``karni-theme.css`` as ``karni ui detect --css`` does, and returns one
-    line for the import's report (``None`` when the project has no frontend). A theme
-    file edited since Karni wrote it is kept: the line says how to replace it.
+    line for the import's report. A project without a staff app gets the file its
+    admin reads (``KARNI_THEME_CSS`` in config/settings.py, :func:`admin_theme_file`),
+    and ``None`` when it names none. A theme file edited since Karni wrote it is
+    kept: the line says how to replace it.
     """
     try:
         fe = frontend_mod.locate(root / "frontend")
     except CliError as exc:
         if exc.code != "C301":
             raise
-        return None
+        target = admin_theme_file(root)
+        return _admin_theme_only(root, target, css, dry_run) if target is not None else None
     today = dt.datetime.now().astimezone().date().isoformat()
     outcome = plan_css(fe, paths=list(css), output=None, today=today)
     assert outcome.css is not None

@@ -121,7 +121,7 @@ def test_context_prepends_apps_and_appends_pages(
     result = runner.invoke(app, ["context"])
     assert result.exit_code == 0, result.output
     keys = [line.split(":")[0] for line in result.output.strip().split("\n")]
-    assert keys == ["APPS", "MODELS", "VIEWSETS", "PAGES", "MODULES", "BASES"]
+    assert keys == ["KIND", "APPS", "MODELS", "VIEWSETS", "PAGES", "MODULES", "BASES"]
 
 
 def test_context_failure_exits_nonzero(runner, tmp_path: Path, monkeypatch) -> None:
@@ -186,3 +186,37 @@ def test_context_lists_the_site_after_the_pages(
     lines = result.output.strip().split("\n")
     assert [line.split(":")[0] for line in lines][-4:] == ["PAGES", "SITE", "MODULES", "BASES"]
     assert "SITE: website(/)" in lines
+
+
+def test_routes_read_calls_that_span_lines() -> None:
+    """ruff format splits a long path() call: its name is still its own."""
+    from karni_cli.urls_edit import add_route, routes
+
+    text = (
+        "urlpatterns = [\n"
+        '    path("", views.home, name="home"),\n'
+        "    path(\n"
+        '        "specials/",\n'
+        "        RedirectView.as_view(\n"
+        '            pattern_name="website:menu", permanent=True, query_string=True\n'
+        "        ),\n"
+        '        name="specials",\n'
+        "    ),\n"
+        '    # path("old/", views.old, name="old"),\n'
+        '    path("menu/", views.menu, name="menu"),  # the (menu)\n'
+        "    # karni:urls\n"
+        "]\n"
+    )
+    assert routes(text) == [
+        ("", "home", None),
+        ("specials/", "specials", None),
+        ("menu/", "menu", None),
+    ]
+    entry = 'path(\n    "a/",\n    views.a,\n    name="a",\n),'
+    added = add_route(text, entry, filename="urls.py", manual="")
+    assert added is not None
+    assert (
+        '    path(\n        "a/",\n        views.a,\n        name="a",\n    ),\n    # karni:urls'
+        in added
+    )
+    assert add_route(added, entry, filename="urls.py", manual="") is None

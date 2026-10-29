@@ -100,6 +100,7 @@ services:
         condition: service_healthy
       django:
         condition: service_healthy
+{%- if cookiecutter.staff_app == "yes" %}
 
   frontend:
     build:
@@ -124,8 +125,11 @@ services:
         target: {{ cookiecutter.karni_ui_mount | tojson }}
         read_only: true
 {%- endif %}
+{%- endif %}
 
 volumes:
   postgres_data:
   app_data:
+{%- if cookiecutter.staff_app == "yes" %}
   frontend_node_modules:
+{%- endif %}

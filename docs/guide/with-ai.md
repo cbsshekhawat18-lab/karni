@@ -37,6 +37,14 @@ run `karni rules --check <file>` on every file you write, and `karni check`
 before committing. The files are generated from one registry, so they never
 disagree, and `karni rules sync` refreshes them after an upgrade.
 
+They open with the project's kind and its stack, so the agent never asks
+which technology to use. `karni new` asks for the kind in a terminal, and
+`--kind` says it: `app` (this guide's ticket shop), `site` for a public
+website the client edits in the admin, or `site+app`. For a website from a
+designer's pages, `karni new "Crumb Bakery" --kind site --design ../design`
+builds the site and prints what the agent does next
+([start a site project](../public-site.md#start-a-site-project)).
+
 ## 2. Say what you want, in domain terms
 
 You describe the domain, and the agent runs the generators. A prompt like

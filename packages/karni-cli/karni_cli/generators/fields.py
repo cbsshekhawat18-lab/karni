@@ -355,8 +355,13 @@ def render_model_body(
                     args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
                 else:
                     args.append("on_delete=models.CASCADE")
-            elif spec.optional:
-                args.append("blank=True")
+            else:
+                if target.key == "self":
+                    # A hand-picked list of its own kind goes one way: a course that lists
+                    # another does not make that one list it back.
+                    args.append("symmetrical=False")
+                if spec.optional:
+                    args.append("blank=True")
             if targets.count(target.key) > 1:
                 args.append(f"related_name={pystr(snake(model) + '_' + spec.name + '_set')}")
             out.lines.append(call(head + _RELATIONS[spec.kind], args, indent, line_length))

@@ -29,3 +29,6 @@ testpaths = ["tests", "*/tests"]
 # The Karni release this project was generated for. `karni upgrade` starts
 # from here (or from the installed karni, whichever is newer).
 baseline = "0.2.0"
+# What the project is: an app (an API and a React app). `karni context` and the
+# agent files state it with its stack.
+kind = "app"

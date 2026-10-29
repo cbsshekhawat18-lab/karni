@@ -1753,8 +1753,9 @@ class _Builder:
                     f"{evidence} It looks {lean}.",
                     [
                         (
-                            f"hand-picked: add `{f.token}` to the {parent.name} command (after "
-                            f"{target.name} exists) and remove the decide from the map"
+                            f"hand-picked: add `{f.token}` to the {parent.name} command "
+                            + ("" if parent is target else f"(after {target.name} exists) ")
+                            + "and remove the decide from the map"
                         ),
                         f"derived: delete `{f.name}` from the map and query the rows in the view",
                     ],

@@ -38,3 +38,22 @@ MIDDLEWARE += [  # noqa: F821
 # FEATURE_X = env.bool("FEATURE_X", default=False)
 # SILENCED_SYSTEM_CHECKS starts empty. Extend it to silence a check on purpose:
 # SILENCED_SYSTEM_CHECKS += ["karni.W967"]
+{%- if cookiecutter.kind == "site" %}
+
+# --- A public website (kind "site" in pyproject.toml) -------------------------
+# Nobody opens an account: staff create them in the admin, and the editor role
+# (karni-site's) is for people who only change the site's content.
+# KARNI_ACCOUNTS_REGISTRATION=True in .env opens registration.
+KARNI_ACCOUNTS_REGISTRATION = env.bool(  # noqa: F821
+    "KARNI_ACCOUNTS_REGISTRATION", default=False
+)
+# Staff, and the editor role karni-site declares. The roles an app gives the
+# people who sign up (user, customer) are left out.
+KARNI_ROLES = {"staff": KARNI_ROLES["staff"]}  # noqa: F821
+{%- endif %}
+{%- if cookiecutter.staff_app == "no" %}
+
+# No staff app (frontend/): the admin wears the design's colours and fonts from
+# this file, which `karni import design` and `karni ui detect --css` write.
+KARNI_THEME_CSS = "karni-theme.css"
+{%- endif %}

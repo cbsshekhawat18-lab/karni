@@ -25,3 +25,8 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 testpaths = ["tests", "*/tests"]
 # Karni's architecture rules run as a SEPARATE invocation (never via addopts):
 #   pytest --pyargs karni.testing.architecture
+
+[tool.karni]
+# What the project is: an app (an API and a React app). `karni context` and the
+# agent files state it with its stack.
+kind = "app"

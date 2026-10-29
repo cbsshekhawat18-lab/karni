@@ -128,6 +128,8 @@ def test_selection_between_versions() -> None:
         "agent-files-public-forms",
         "agent-files-site-from-design",
         "admin-light-only",
+        "project-kind",
+        "agent-files-project-kind",
     }
     assert in_0_4_1 <= set(_ids("0.4.0", "0.4.1"))
     assert not in_0_4 & set(_ids("0.4.0", "0.4.1"))  # 0.4.0's changes are behind a 0.4.0 project
@@ -244,7 +246,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     result = runner.invoke(app, ["upgrade"])
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "karni 0.1.0 -> 0.4.1: 53 change(s), 6 mechanical, 47 manual" in out
+    assert "karni 0.1.0 -> 0.4.1: 55 change(s), 6 mechanical, 49 manual" in out
 
     views = (git_project / "library" / "views.py").read_text()
     assert (

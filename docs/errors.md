@@ -2190,7 +2190,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C106: An option value is invalid
 
-*karni command* · from `karni make, karni types, karni ui detect`
+*karni command* · from `karni make, karni new, karni types, karni ui detect`
 
 **Why Karni objects.** The option accepts specific values (the message lists them).
 
@@ -2246,11 +2246,21 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass the folder that holds the design's index.html and the other pages, with its css/, js/ and image folders inside it.
 
+<a id="c112"></a>
+
+### C112: The project's kind is not one Karni knows
+
+*karni command* · from `karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)`
+
+**Why Karni objects.** `karni new` records the project's kind in pyproject.toml: site, app or site+app. The agent files and `karni context` state it with its stack, so a value Karni cannot read stops them instead of guessing.
+
+**Fix.** Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove the line, and Karni infers the kind from the project), then run `karni rules sync`.
+
 <a id="c121"></a>
 
 ### C121: The content map cannot be used
 
-*karni command* · from `karni design extract --map`
+*karni command* · from `karni design extract --map, karni import design --map`
 
 **Why Karni objects.** The map says which structure of the design is which model and which element is which field. Extract follows it exactly, so a model, a field, a relation's target or a selector it cannot follow stops it before anything is written.
 

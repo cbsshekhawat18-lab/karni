@@ -414,12 +414,15 @@ def plan(
     source_label: str | None = None,
     editable: bool = False,
     previous: dict[str, Any] | None = None,
+    content_map: dict[str, Any] | None = None,
 ) -> SitePlan:
     """Plan the site app ``app`` for the design folder ``design``.
 
     ``editable=True`` makes every text, image and menu editable in the admin
     (:mod:`karni_cli.design.editable`); ``previous`` is the last import's
-    record, whose block keys it keeps.
+    record, whose block keys it keeps. ``content_map`` (``karni design
+    analyze --map``) names the content that becomes rows, which ``editable``
+    leaves without blocks (:mod:`karni_cli.design.regions`).
     """
     texts, files = scan(design)
     result = SitePlan(app)
@@ -452,13 +455,22 @@ def plan(
     editor = None
     if editable:
         from karni_cli.design.editable import Editable, detect_highlight
+        from karni_cli.design.regions import detail_pages, row_regions
 
+        rows = (
+            row_regions(content_map, {page.path: (page.text, page.doc) for page in content_pages})
+            if content_map
+            else None
+        )
+        shared = detail_pages(content_map) if content_map else None
         editor = Editable(
             app,
             mapped,
             site_name=unescape(site),
             highlight=detect_highlight(content_pages),
             previous=previous,
+            rows=rows,
+            shared=shared,
         )
         editor.prepare(content_pages, layout, renderer.by_key)
     base = _render_base(reference, content_pages, layout, renderer, shared_head, site, result)
@@ -669,6 +681,14 @@ def plan(
     if editor is not None:
         result.design["editable"] = editor.finish(result.templates, base_name, renderer)
         result.editable = editor.report
+        if editor.left_out:
+            pages_named = ", ".join(sorted(editor.left_out))
+            result.editable.notes.append(
+                f"rows: {sum(editor.left_out.values())} part(s) of {len(editor.left_out)} "
+                f"page(s) ({pages_named}) are content the map reads into rows, so they have no "
+                "blocks: the templates render them from the rows, and the client edits the rows "
+                "in the admin."
+            )
     _notes(result, layout, content_pages)
     _form_notes(result, content_pages)
     return result

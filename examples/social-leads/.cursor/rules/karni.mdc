@@ -9,6 +9,12 @@ alwaysApply: true
 This is a Karni project. Karni already implements everything generic, so you write
 only domain code.
 
+An app (kind `app` in pyproject.toml). The stack is set, so never ask which technology
+to use: Python 3.12, Django 5.2, PostgreSQL, Redis and Celery, a REST API on Django REST
+framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui. Screens go in
+`frontend/src/pages/` (`karni make page`). A public website joins with `karni add site`
+(rule K309).
+
 Before any work, run these two commands and follow what they return:
 
 1. `karni context` prints the live inventory: apps, models, viewsets, UI components,
@@ -20,7 +26,6 @@ While you work:
 
 - Run `karni rules --check <file>` on every file you write and fix each violation it prints.
 - Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module, site-from-design.
-- App screens go in `frontend/src/pages/` (`karni make page`). A public, server-rendered website goes in a site app (`karni make site`, rule K309).
 - Run `karni check` before committing. Every enforced rule fails the build.
 
 If the `karni` command is unavailable, say so and stop. Do not guess the conventions.
