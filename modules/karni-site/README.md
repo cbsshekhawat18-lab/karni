@@ -374,7 +374,7 @@ The module declares a role, `editor`, through Karni's role system (the
 site settings, the page content, the menus and the page titles. No
 enquiries, users, roles, redirects or project models. `karni sync-roles`
 (and every migrate) creates it. Give a person staff status and the role.
-This module's admin pages open for whoever the roles' grants admit, so no
+Karni's admin pages open for whoever the roles' grants admit, so no
 Django permission needs ticking, and the permission matrix changes the
 role's grants without a deploy.
 
@@ -632,9 +632,9 @@ notification naming a setting the project lacks `SITE023`.
 - `KARNI_SITE_MENU_ROWS`: which rows a *children from* item lists.
 - `KARNI_SITE_EDITOR_ROLE`, a role of that slug in `KARNI_ROLES`, or the
   permission matrix: the editor's grants.
-- `karni_site.admin.GrantedAdminMixin` and `GrantedInlineMixin`: the same
-  grant-based admin pages for your own models. Unregister any of this
-  module's admins and register your own subclass.
+- Unregister any of this module's admins and register your own subclass.
+  Every Karni admin page opens for a grant, so your own models' pages do
+  too (`KARNI_ADMIN_GRANTS_OPEN_PAGES`, [admin](https://cbsshekhawat18-lab.github.io/karni/admin/#who-may-open-a-page)).
 - `karni_site.blocks.text()` / `image()`, `karni_site.menus.entries()`,
   `karni_site.redirects.redirect_for()` and `karni_site.seo.page_seo()`
   for your own tags, views or middleware.

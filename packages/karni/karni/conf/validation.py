@@ -93,6 +93,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)
+    KARNI_ADMIN_GRANTS_OPEN_PAGES: bool = True
     KARNI_MATRIX_EXCLUDE: list[Any] = Field(default_factory=list)
     KARNI_IMPORT_INLINE_ROWS: int = Field(default=500, ge=0)
     KARNI_IMPORT_MAX_ROWS: int = Field(default=100_000, ge=1)

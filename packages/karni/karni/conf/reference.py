@@ -58,6 +58,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_API_CACHE_TTL": "Seconds a cached response lives.",
     "KARNI_API_CACHE_ALIAS": "The Django cache alias responses are stored in.",
     "KARNI_ADMIN_AUTODISCOVER": "Register every unregistered model in the admin at startup (`karni.admin`).",
+    "KARNI_ADMIN_GRANTS_OPEN_PAGES": "A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page).",
     "KARNI_ADMIN_EXCLUDE": "App labels or `app_label.ModelName` entries the admin leaves out.",
     "KARNI_IMPORT_INLINE_ROWS": "Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress.",
     "KARNI_IMPORT_MAX_ROWS": "An upload with more rows than this is refused (`E803`). Split the file.",

@@ -237,7 +237,6 @@ redirect to the index, never a 403) and leave the row unchanged:
 <!-- karni:example:hidden-admin (tests/testing/test_docs_example.py runs this block) -->
 ```python
 # events/tests/test_event_admin_scope.py: KARNI_ROLES grants organizers "events.event:*": "own"
-from django.contrib.auth.models import Permission
 from django.utils import timezone
 
 from karni.testing import APITestCase, user_with_roles
@@ -247,8 +246,7 @@ from events.models import Event
 
 class EventAdminScopeTests(APITestCase):
     def test_the_admin_treats_another_organizers_event_as_missing(self):
-        staff = user_with_roles("organizer", is_staff=True)
-        staff.user_permissions.add(*Permission.objects.filter(codename__endswith="_event"))
+        staff = user_with_roles("organizer", is_staff=True)  # the grant opens the admin page
         mine = Event.objects.create(title="Mine", starts_at=timezone.now(), organizer=staff)
         other = user_with_roles("organizer")
         theirs = Event.objects.create(title="Theirs", starts_at=timezone.now(), organizer=other)

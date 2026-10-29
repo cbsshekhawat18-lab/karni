@@ -144,15 +144,19 @@ class KarniAdminMixin(admin.ModelAdmin):
       when it points at a soft-deleted row, while new choices stay alive-only
       (amendment C3). Add forms and untouched fields keep Django's default
       queryset, which is already alive-only for soft-delete targets.
+    * **Who may open a page**: a role's grant (``app.model:<action>``) opens
+      the page for that action, and so does Django's model permission
+      (:meth:`granted`; ``KARNI_ADMIN_GRANTS_OPEN_PAGES = False`` leaves
+      Django's permissions alone). The index and app list show exactly the
+      models the user may open. Signing in still needs ``is_staff``.
     * **Row scope** (ADR 0002, P2): ``get_queryset`` shows only the rows the
       user's grants reach for ``view`` (:mod:`karni.admin.scope`), so the
       changelist, search, filters, autocomplete and actions all agree with
       the API; ``has_view/change/delete_permission(request, obj)`` also
       require the row to be inside the matching grant's scope, and relation
-      choices are limited to target rows the user may view. Django's model
-      permissions still decide which screens exist. ``scope_exempt = True``
-      with a ``scope_exempt_reason`` turns the row scope off for one admin
-      (``karni check`` lists every exemption).
+      choices are limited to target rows the user may view.
+      ``scope_exempt = True`` with a ``scope_exempt_reason`` turns the row
+      scope off for one admin (``karni check`` lists every exemption).
     * **Import and export** (ADR 0002, P6) come from
       :class:`karni.admin.transfer.TransferAdminMixin`, mixed into
       :class:`KarniModelAdmin`: the *Export selected* actions and the
@@ -165,7 +169,7 @@ class KarniAdminMixin(admin.ModelAdmin):
     """
 
     scope_exempt: ClassVar[bool] = False
-    """``True`` shows every row Django's model permissions admit (needs a reason)."""
+    """``True`` shows every row to whoever may open the page (needs a reason)."""
 
     scope_exempt_reason: ClassVar[str] = ""
     """Why this admin is exempt from row scope — required with ``scope_exempt``."""
@@ -256,25 +260,62 @@ class KarniAdminMixin(admin.ModelAdmin):
         """The rows the user's grants reach for ``view`` (every surface starts here)."""
         return scope_queryset(self, request, super().get_queryset(request))
 
+    # -- who may open a page: a grant, or Django's model permission -----------
+
+    def granted(self, request: HttpRequest, action: str) -> bool:
+        """Whether the user holds ``app_label.model:<action>`` through a role.
+
+        A grant opens this admin's page for that action, as Django's model
+        permission does. Superusers hold every grant. ``False`` for everyone
+        while ``KARNI_ADMIN_GRANTS_OPEN_PAGES`` is ``False``: then only Django's
+        model permissions open pages, the rule before 0.4.1.
+
+        Override / escape hatch: override this method to open pages on another
+        rule (``return False`` keeps one admin on Django's permissions only).
+        """
+        if not getattr(settings, "KARNI_ADMIN_GRANTS_OPEN_PAGES", True):
+            return False
+        from karni.accounts.roles import user_can
+        from karni.meta import permission_key
+
+        return user_can(getattr(request, "user", None), permission_key(self.model, action))
+
+    def has_module_permission(self, request: HttpRequest) -> bool:
+        """Django's app permission, or any grant on this model (the index lists it)."""
+        return bool(super().has_module_permission(request)) or any(
+            self.granted(request, action) for action in ("view", "change", "add", "delete")
+        )
+
     def has_view_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
-        """Django's view-or-change permission, and the row inside the user's scope."""
-        return super().has_view_permission(request, obj) and (
+        """A view or change grant (else Django's permission), and the row inside the scope."""
+        opened = (
+            self.granted(request, "view")
+            or self.granted(request, "change")
+            or super().has_view_permission(request, obj)
+        )
+        return opened and (
             within_scope(self, request, obj, "view") or within_scope(self, request, obj, "change")
         )
 
     def has_add_permission(self, request: HttpRequest) -> bool:
-        return super().has_add_permission(request) and self.vetoed(request, "add") is None
+        """An add grant (else Django's permission), unless a veto refuses it."""
+        opened = self.granted(request, "add") or super().has_add_permission(request)
+        return opened and self.vetoed(request, "add") is None
 
     def has_change_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
+        """A change grant (else Django's permission), the row in scope, and no veto."""
+        opened = self.granted(request, "change") or super().has_change_permission(request, obj)
         return (
-            super().has_change_permission(request, obj)
+            opened
             and within_scope(self, request, obj, "change")
             and self.vetoed(request, "change") is None
         )
 
     def has_delete_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
+        """A delete grant (else Django's permission), the row in scope, and no veto."""
+        opened = self.granted(request, "delete") or super().has_delete_permission(request, obj)
         return (
-            super().has_delete_permission(request, obj)
+            opened
             and within_scope(self, request, obj, "delete")
             and self.vetoed(request, "delete") is None
         )

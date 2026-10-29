@@ -1,10 +1,11 @@
 """Row scope in the admin (ADR 0002, P2): the admin shows the rows the user's grants reach.
 
-Django's model permissions still decide which screens a staff user may open;
-the roles' grants (``KARNI_ROLES`` → ``RolePermission`` rows, the same data
-the API's ``Granted()`` reads) decide which rows those screens show and
-accept. The changelist, the change form, search, list filters, the
-autocomplete endpoint, relation choices and every action go through
+A role's grant, or Django's model permission, opens a screen for a staff
+user (:meth:`karni.admin.base.KarniAdminMixin.granted`); the roles' grants
+(``KARNI_ROLES`` → ``RolePermission`` rows, the same data the API's
+``Granted()`` reads) decide which rows those screens show and accept. The
+changelist, the change form, search, list filters, the autocomplete
+endpoint, relation choices and every action go through
 :func:`scope_queryset`, so a branch manager sees their branch and nothing
 else — the same answer the API gives. Superusers hold every grant.
 

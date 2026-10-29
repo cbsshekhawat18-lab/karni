@@ -313,3 +313,17 @@ static/<app>/ with a srcset and sizes. Importing a design again changes the \
 templates the project has not edited. An edited one is kept, as before."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-designs-images-are-sized"
+
+[[change]]
+id = "admin-grants-open-pages"
+kind = "behaviour"
+symbol = "karni.admin.KarniModelAdmin (KARNI_ADMIN_GRANTS_OPEN_PAGES)"
+summary = """\
+A role's grant (`app.model:<action>`) now opens that model's admin page for a \
+staff user, as Django's model permission does: the `staff` role, karni-site's \
+`editor` and every project role reach their pages with no Django permission \
+ticked. Review who holds staff status and which roles. Only a superuser \
+changes is_superuser or a superuser's account. \
+KARNI_ADMIN_GRANTS_OPEN_PAGES = False restores Django's permissions only."""
+mechanical = false
+migration = "migrations/0.4.1.md#grants-open-admin-pages"

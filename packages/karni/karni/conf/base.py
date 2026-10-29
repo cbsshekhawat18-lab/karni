@@ -509,6 +509,10 @@ BASE: dict[str, Any] = {
         },
     },
     "KARNI_ADMIN_AUTODISCOVER": env.bool("KARNI_ADMIN_AUTODISCOVER", default=True),
+    # A role's grant opens the admin page for that model and action (rows still
+    # follow the grant's scope). False: only Django's model permissions open
+    # pages, as in 0.4.0 (karni.admin.base.KarniAdminMixin.granted).
+    "KARNI_ADMIN_GRANTS_OPEN_PAGES": env.bool("KARNI_ADMIN_GRANTS_OPEN_PAGES", default=True),
     # The admin's colour scheme: "light" (the default: light only, no switch),
     # "dark", or "auto" (unfold's light/dark/system switch). Wired into
     # UNFOLD["THEME"] by karni_settings(), read per request.

@@ -37,18 +37,61 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from django.contrib.admin.options import InlineModelAdmin
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.http import HttpRequest
 from unfold.admin import TabularInline
 
 from karni.admin.derive import admin_meta, password_field_names
 from karni.exceptions import KarniImproperlyConfigured
 
-__all__ = ["build_inline", "collect_inlines"]
+__all__ = ["KarniInlineMixin", "build_inline", "collect_inlines"]
 
 #: One ``AdminMeta.inline_on`` declaration: the child model and the name of
 #: the FK on it that points at the parent.
 InlineSpec = tuple[type[models.Model], str]
+
+
+class KarniInlineMixin(InlineModelAdmin):  # type: ignore[type-arg]
+    """An inline whose rows open for a role's grant on the inline's model.
+
+    A user holding ``app_label.model:<action>`` for the inline's model may do
+    that action on its rows, as Django's model permission allows. The same
+    rule as :meth:`karni.admin.base.KarniAdminMixin.granted`, and off with it
+    (``KARNI_ADMIN_GRANTS_OPEN_PAGES = False``). Mix it in front of any
+    inline class: ``class LineInline(KarniInlineMixin, TabularInline)``.
+
+    Override / escape hatch: override :meth:`granted`, or leave the mixin out
+    to keep an inline on Django's permissions only.
+    """
+
+    def granted(self, request: HttpRequest, action: str) -> bool:
+        """Whether the user holds ``action`` on the inline's model through a role."""
+        from django.conf import settings
+
+        if not getattr(settings, "KARNI_ADMIN_GRANTS_OPEN_PAGES", True):
+            return False
+        from karni.accounts.roles import user_can
+        from karni.meta import permission_key
+
+        return user_can(getattr(request, "user", None), permission_key(self.model, action))
+
+    def has_view_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return (
+            self.granted(request, "view")
+            or self.granted(request, "change")
+            or super().has_view_permission(request, obj)
+        )
+
+    def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return self.granted(request, "add") or super().has_add_permission(request, obj)
+
+    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return self.granted(request, "change") or super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
+        return self.granted(request, "delete") or super().has_delete_permission(request, obj)
 
 
 def collect_inlines(
@@ -102,7 +145,8 @@ def build_inline(model: type[models.Model], fk_name: str) -> type[TabularInline]
     honest; adding rows is one click) and ``show_change_link = True`` so the
     child's full change form stays reachable. Password-named fields are
     excluded from the inline form, mirroring the derived parent form
-    (amendment C5).
+    (amendment C5). :class:`KarniInlineMixin` in front lets a role's grant
+    on the child model open its rows.
 
     Override / escape hatch: subclass the returned class, or replace the
     parent's ``inlines`` wholesale via its ``AdminMeta.extra``.
@@ -118,4 +162,4 @@ def build_inline(model: type[models.Model], fk_name: str) -> type[TabularInline]
     passwords = password_field_names(model)
     if passwords:
         attrs["exclude"] = list(passwords)
-    return type(f"{model.__name__}Inline", (TabularInline,), attrs)
+    return type(f"{model.__name__}Inline", (KarniInlineMixin, TabularInline), attrs)

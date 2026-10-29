@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "DEFAULT_ADMIN_EXCLUDE",
     "KarniAdminMixin",
+    "KarniInlineMixin",
     "KarniModelAdmin",
     "SoftDeleteAdminMixin",
     "SoftDeleteListFilter",
@@ -71,6 +72,7 @@ DEFAULT_ADMIN_EXCLUDE: tuple[str, ...] = (
 
 _LAZY_IMPORTS: dict[str, str] = {
     "KarniAdminMixin": "karni.admin.base",
+    "KarniInlineMixin": "karni.admin.inlines",
     "KarniModelAdmin": "karni.admin.base",
     "SoftDeleteAdminMixin": "karni.admin.soft_delete",
     "SoftDeleteListFilter": "karni.admin.soft_delete",
