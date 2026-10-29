@@ -23,8 +23,14 @@ The copies use the same names and widths as karni-site's copies of
 uploaded images (``KARNI_SITE_IMAGE_WIDTHS``' default), so a client's
 upload replaces them in the same markup.
 
+The first large picture of each page (:func:`first_picture`, a hero or a
+slider's first slide, outside the header, navigation, footer and asides)
+gets ``fetchpriority="high"``: it most likely paints largest, so the
+browser loads it before the rest.
+
 Override / escape hatch: an ``<img>`` with its own ``srcset``, ``width``
-and ``height`` is left as it is. Remove the copies' ``srcset`` from a
+and ``height`` is left as it is, and one with its own ``loading`` or
+``fetchpriority`` keeps them. Remove the copies' ``srcset`` from a
 template to stop using them.
 """
 
@@ -32,6 +38,7 @@ from __future__ import annotations
 
 import re
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -40,12 +47,14 @@ from typing import Any, Final
 from karni_cli.design.parse import Node
 
 __all__ = [
+    "LARGE",
     "MARKER",
     "NATURAL",
     "QUALITY",
     "WIDTHS",
     "Sizer",
     "copy_targets",
+    "first_picture",
     "image_size",
     "make_copy",
     "pillow_available",
@@ -66,6 +75,36 @@ _SVG_ROOT = re.compile(rb"<svg\b[^>]*>", re.IGNORECASE | re.DOTALL)
 _SVG_ATTR = re.compile(
     rb"""\b(width|height)\s*=\s*["']\s*([0-9.]+)\s*(px)?\s*["']""", re.IGNORECASE
 )
+
+
+#: A picture at least this many pixels wide is large: the first one of a page loads first.
+LARGE: Final = 600
+#: Where a page's own pictures never are: its header, navigation, footer and asides.
+_CHROME: Final = frozenset({"header", "nav", "footer", "aside"})
+
+
+def first_picture(root: Node, width_of: Callable[[Node], int | None]) -> Node | None:
+    """The first ``<img>`` under ``root`` at least :data:`LARGE` wide, outside the page's chrome.
+
+    ``width_of`` gives an image's width (the one it is shown at, else its own),
+    or ``None`` when it is not known.
+    """
+    for node in root.iter_elements():
+        if node.tag != "img" or _inside(node, _CHROME):
+            continue
+        width = width_of(node)
+        if width is not None and width >= LARGE:
+            return node
+    return None
+
+
+def _inside(node: Node, tags: frozenset[str]) -> bool:
+    parent = node.parent
+    while parent is not None:
+        if parent.kind == "element" and parent.tag in tags:
+            return True
+        parent = parent.parent
+    return False
 
 
 def rendition_name(path: str, width: int) -> str:
@@ -227,6 +266,8 @@ class Sizer:
     without_pillow: set[str] = field(default_factory=set)
     #: ``"<page>: <src>"`` for images whose size could not be read.
     unsized: list[str] = field(default_factory=list)
+    #: ``"<page>:<line>"`` of each page's first large picture, which loads first.
+    first_pictures: list[str] = field(default_factory=list)
     _sizes: dict[str, tuple[int, int] | None] = field(default_factory=dict)
     _copyable_cache: dict[str, bool] = field(default_factory=dict)
     _noted: set[str] = field(default_factory=set)
@@ -258,6 +299,25 @@ class Sizer:
             return []
         self.planned[path] = wanted
         return wanted
+
+    def first(self, node: Node, source: str, text: str, where: str) -> str:
+        """``text`` (the page's first large picture) with ``fetchpriority="high"``.
+
+        An image whose design sets ``loading`` or ``fetchpriority`` keeps them.
+        """
+        attrs = node.attrs(source)
+        if attrs.get("loading") is not None or attrs.get("fetchpriority") is not None:
+            return text
+        self.first_pictures.append(where)
+        return _append(text, {"fetchpriority": "high"})
+
+    def width(self, node: Node, source: str, path: str | None) -> int | None:
+        """The width ``node`` is shown at: its ``width`` attribute, else its file's own."""
+        given = _number(node.attrs(source).get("width"))
+        if given is not None:
+            return given
+        size = self.size(path) if path is not None else None
+        return size[0] if size is not None else None
 
     def tag(self, node: Node, source: str, text: str, path: str | None, where: str) -> str:
         """The rewritten ``<img>`` start tag ``text`` with the attributes this adds."""

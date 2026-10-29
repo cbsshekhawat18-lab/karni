@@ -295,9 +295,12 @@ test requests each page the way they do and checks what they get:
 
 ```python
 # website/tests/test_pages.py
+from pathlib import Path
+
 import pytest
 from django.test import Client
-from karni.testing import assert_pages
+from karni.testing import assert_pages, load_content
+from pytest_django import Settings
 
 PAGES = [
     "/",
@@ -305,6 +308,12 @@ PAGES = [
     "/services/design/",
     # karni:pages
 ]
+
+
+@pytest.fixture(autouse=True)
+def site_content(db: None, settings: Settings, tmp_path: Path) -> None:
+    settings.MEDIA_ROOT = str(tmp_path)  # its images go to a folder the test owns
+    load_content("content/site.json", missing_ok=True)
 
 
 @pytest.mark.django_db
@@ -315,7 +324,14 @@ def test_every_page_passes_the_page_checks(client: Client) -> None:
 `karni make site` writes this test with `"/"` in `PAGES`, and `karni make
 view` adds each new page's URL above the marker. A path with a capture, such
 as `/services/<slug:slug>/`, needs a real URL, so the command leaves it to
-you. Create the rows such a page shows in the test first, for example with
+you. The rows such a page shows come from the site's real content:
+`load_content` loads `content/site.json` (what `karni design extract`
+writes) the way `karni load` does, before each test. It reads a relative
+path from the project root (`BASE_DIR`, else the folder above the settings
+package), so the test passes whatever folder pytest runs in, and
+`missing_ok=True` loads nothing until the file exists. A missing file is
+`E804` and a row the models refuse `E805`, each with the path. Without a
+content file, create the rows in the test, for example with
 `create(Service, slug="design")` from
 [`karni.testing.factories`](#automatic-factories-karnitestingfactories).
 

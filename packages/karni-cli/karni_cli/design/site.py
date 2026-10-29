@@ -37,7 +37,7 @@ from karni_cli.design import compare, rewrite, seo
 from karni_cli.design.compare import Block, Group, Layout, Variation
 from karni_cli.design.forms import forms_in
 from karni_cli.design.images import WIDTHS as _COPY_WIDTHS
-from karni_cli.design.images import Sizer
+from karni_cli.design.images import Sizer, first_picture
 from karni_cli.design.parse import Document, Node, parse
 from karni_cli.design.rewrite import Mapped, Policy, Rewriter
 
@@ -264,6 +264,8 @@ class _Renderer:
         self.problems: list[str] = []
         self.order = [page.path for page in pages]
         self.routed = [page.path for page in pages if page.path in mapped.pages]
+        #: Page path -> the start of its first large picture (images.first_picture), or None.
+        self._first: dict[str, int | None] = {}
 
     def begin(self) -> None:
         """Start collecting the origins the pieces rendered from now on need."""
@@ -371,10 +373,27 @@ class _Renderer:
 
     def _sized(self, page: PageSource, node: Node, text: str) -> str:
         assert self.sizer is not None
-        ref = self.mapped.resolve(node.attr(page.text, "src") or "", page.dir)
-        path = ref.path if ref.kind == "asset" else None
+        path = self._asset(page, node)
         where = f"{page.path}:{page.line(node.start)}"
-        return self.sizer.tag(node, page.text, text, path, where)
+        text = self.sizer.tag(node, page.text, text, path, where)
+        if node.start == self._first_picture(page):
+            text = self.sizer.first(node, page.text, text, where)
+        return text
+
+    def _asset(self, page: PageSource, node: Node) -> str | None:
+        ref = self.mapped.resolve(node.attr(page.text, "src") or "", page.dir)
+        return ref.path if ref.kind == "asset" else None
+
+    def _first_picture(self, page: PageSource) -> int | None:
+        if page.path not in self._first:
+            assert self.sizer is not None
+            sizer = self.sizer
+            found = first_picture(
+                page.doc.body_or_root(),
+                lambda node: sizer.width(node, page.text, self._asset(page, node)),
+            )
+            self._first[page.path] = found.start if found is not None else None
+        return self._first[page.path]
 
     def group(self, group: Group) -> str:
         """The markup of a shared block, from its reference page, markers generalized."""
@@ -746,6 +765,12 @@ def _image_notes(result: SitePlan, sizer: Sizer | None) -> None:
             f"images: {count} smaller WebP {'copy' if count == 1 else 'copies'} of {images} "
             f"{'image' if images == 1 else 'images'} for their srcset, and width and height on "
             "every image of the design."
+        )
+    if sizer.first_pictures:
+        result.notes.append(
+            'images: the first large picture of each page loads first (fetchpriority="high"), '
+            f"as the one most likely to paint largest: {', '.join(sizer.first_pictures)}. "
+            "Turned into a loop, it is {% image ... eager=forloop.first %}."
         )
     if sizer.without_pillow:
         result.notes.append(

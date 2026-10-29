@@ -64,6 +64,13 @@ SITE_APP = "website"
 #: Where ``--design`` writes the draft content map, relative to the project.
 CONTENT_MAP = Path("content") / "design-map.json"
 PROCEDURE = "site-from-design"
+#: The step that makes the admin's first account. A site has no sign-up: nobody else can.
+ADMIN_ACCOUNT = "  karni createsuperuser  # the first admin account"
+SITE_ADMIN_ACCOUNT = (
+    f"{ADMIN_ACCOUNT}: nobody signs up on the site, so nobody can sign in before it. The "
+    "client's own account is a user the admin gives the staff role (or editor, for the "
+    "content only)"
+)
 #: The procedure's steps ``karni new --design`` runs itself (1-based).
 DONE_STEPS = (2, 3)
 
@@ -448,6 +455,7 @@ def new(
         typer.echo(line)
     if source is not None:
         typer.echo("  karni migrate && karni test  # the page test covers every page")
+        typer.echo(SITE_ADMIN_ACCOUNT if chosen == "site" else ADMIN_ACCOUNT)
         typer.echo(
             f"Then the rest of the {PROCEDURE} procedure (`karni rules --procedure {PROCEDURE}` "
             "prints all of it). karni new ran steps 2 and 3, the analysis and the import, so "
@@ -458,6 +466,7 @@ def new(
         return
     if site:
         typer.echo("  karni migrate")
+        typer.echo(SITE_ADMIN_ACCOUNT if chosen == "site" else ADMIN_ACCOUNT)
         typer.echo(
             f"  # pages: karni import design <design folder> --app {site_app} --editable for a "
             f"designer's pages (karni rules --procedure {PROCEDURE}), or karni make view <name> "

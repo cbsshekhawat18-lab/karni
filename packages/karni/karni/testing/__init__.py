@@ -31,6 +31,9 @@ package stays free of test-only imports:
 * ``assert_pages`` (:mod:`karni.testing.pages`): a public site's pages
   answer, carry a title, a description and alt text, and link only to URLs
   that exist.
+* ``load_content`` (:mod:`karni.testing.content`): the project's real
+  content (``content/site.json``) loaded as ``karni load`` does, its path
+  read from the project root;
 * ``query_budget`` (:mod:`karni.testing.performance`);
 * :mod:`karni.testing.factories` and :mod:`karni.testing.values` —
   generated factories and the value engine ``karni seed`` shares.
@@ -43,6 +46,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
+    from karni.testing.content import load_content
     from karni.testing.hidden import assert_admin_row_hidden, assert_row_hidden
     from karni.testing.isolation import assert_isolated
     from karni.testing.pages import assert_pages
@@ -58,6 +62,7 @@ __all__ = [
     "assert_row_hidden",
     "assert_schema_snapshot",
     "client_as",
+    "load_content",
     "query_budget",
     "user_with_roles",
 ]
@@ -71,6 +76,7 @@ _LAZY = {
     "assert_row_hidden": "karni.testing.hidden",
     "assert_schema_snapshot": "karni.testing.schema",
     "client_as": "karni.testing.api",
+    "load_content": "karni.testing.content",
     "query_budget": "karni.testing.performance",
     "user_with_roles": "karni.testing.api",
 }

@@ -614,7 +614,9 @@ search engines without project code:
   through the project's storage, local or S3). Uploads larger than
   `KARNI_SITE_IMAGE_MAX_SIZE` are scaled down. Until the copies exist the
   original is shown. Pillow is the `karni-site[images]` extra, which `karni
-  make site` adds. Without it images are shown as uploaded.
+  make site` adds. Without it images are shown as uploaded. The picture at
+  the top of a page loads first, not lazily: `eager=True`, or in a loop
+  `eager=forloop.first` (a hero slider's first slide).
 - **404 and 500 pages.** `templates/404.html` and `500.html` extend the
   site's layout, `karni_site`'s handlers render them with the request while
   `DEBUG` is off, and they are never indexed. With `DEBUG` on you see

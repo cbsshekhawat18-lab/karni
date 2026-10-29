@@ -147,6 +147,54 @@ def test_images_get_their_size_and_smaller_copies() -> None:
     ) in plan.notes
 
 
+def test_the_first_large_picture_of_each_page_loads_first(tmp_path: Path) -> None:
+    design = tmp_path / "design"
+    (design / "img").mkdir(parents=True)
+    for name in ("hero.jpg", "badge.jpg", "course-art.jpg", "logo.svg"):
+        (design / "img" / name).write_bytes((COLLEGE / "img" / name).read_bytes())
+    head = "<!doctype html><html><head><title>{0}</title></head><body><header>"
+    head += '<img src="img/hero.jpg" alt="A banner in the header"></header><main>'
+    pages = {
+        # A hero first: it loads first, the cards after it keep the browser's own order.
+        "index.html": '<img src="img/hero.jpg" alt="Hero"><img src="img/course-art.jpg" alt="A">',
+        # A small badge first: the first large picture is the one after it.
+        "about.html": '<img src="img/badge.jpg" alt="Badge"><img src="img/course-art.jpg" alt="B">',
+        # The designer said lazy: it stays lazy, and no other picture is promoted.
+        "visit.html": '<img src="img/course-art.jpg" alt="C" loading="lazy">'
+        '<img src="img/hero.jpg" alt="D">',
+        # Only small pictures: none.
+        "small.html": '<img src="img/badge.jpg" alt="E">',
+    }
+    for name, body in pages.items():
+        (design / name).write_text(
+            head.format(name) + body + "</main><footer>"
+            '<img src="img/hero.jpg" alt="A banner in the footer"></footer></body></html>'
+        )
+    plan = site.plan(design, "website")
+
+    def high(page: str, src: str, alt: str) -> bool:
+        markup = plan.templates[f"templates/website/{page}.html"]
+        found = re.search(
+            r"<img src=\"\{% static 'website/"
+            + re.escape(src)
+            + r"' %\}\" alt=\""
+            + alt
+            + r'"[^>]*>',
+            markup,
+        )
+        assert found is not None, (page, alt)
+        return 'fetchpriority="high"' in found.group(0)
+
+    assert high("home", "img/hero.jpg", "Hero") and not high("home", "img/course-art.jpg", "A")
+    assert not high("about", "img/badge.jpg", "Badge") and high("about", "img/course-art.jpg", "B")
+    assert not high("visit", "img/course-art.jpg", "C") and not high("visit", "img/hero.jpg", "D")
+    assert not high("small", "img/badge.jpg", "E")
+    base = plan.templates["templates/website/base.html"]
+    assert "fetchpriority" not in base  # the header's and the footer's pictures are not the page's
+    note = next(n for n in plan.notes if "loads first" in n)
+    assert "index.html:1, about.html:1" in note and "eager=forloop.first" in note
+
+
 def test_without_pillow_images_are_sized_without_copies(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(images, "pillow_available", lambda: False)
     plan = site.plan(COLLEGE, "website")

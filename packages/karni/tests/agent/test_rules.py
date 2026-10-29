@@ -153,7 +153,7 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
         "inside `{% for %}`",
         "`karni make view <model> --app <site app> --path",
         "`karni make form <name> <field:type> ...`",
-        'call_command("karni_load", "content/site.json")',
+        'load_content("content/site.json")',
     ]
     found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
     assert found == sorted(found), found
@@ -162,7 +162,11 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
     assert "except what the map reads into rows" in imported and "`<form>`" in imported
     form = next(step for step in steps if "karni make form" in step)
     assert "{% karni_form %}" in form and "--notify" in form
-    assert steps[-1].endswith("Then `karni check`.")
+    last = steps[-1]
+    assert "Then `karni check`." in last and "from `karni.testing`" in last
+    assert "project root" in last  # not a path the working directory decides
+    # A new site has no account: the last step says how to make the first one.
+    assert "`karni createsuperuser`" in last and "staff role" in last
     models = next(step for step in steps if "Run the `karni make model` commands" in step)
     assert "karni types" not in models  # a site's models have no API to type
     detail = next(step for step in steps if "karni make view <model>" in step)
@@ -171,6 +175,7 @@ def test_the_site_from_design_procedure_names_each_command_in_order() -> None:
     assert "Nothing changed" in load and "karni seed" in load
     loops = next(step for step in steps if "{% for %}" in step)
     assert "|highlight }}" in loops and "KARNI_SITE_HIGHLIGHT" in loops
+    assert "eager=forloop.first" in loops  # the first picture of a hero list is not lazy
     assert "<slug:slug>" in loops and "Model.objects" in loops
     assert "K309" in procedure.rules and "{arguments}" in procedure.intro
     assert "nothing is invented" in procedure.outro.lower()

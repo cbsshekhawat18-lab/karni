@@ -332,7 +332,8 @@ A `karni_site/robots.txt` template of the project's own replaces it.
 
 ```django
 {% image project.photo width=400 alt=project.title class="card-img" %}
-{% image page.hero alt="" loading="eager" fetchpriority="high" %}
+{% image page.hero alt="" eager=True %}
+{% for slide in slides %}{% image slide.image width=1920 alt=slide.title eager=forloop.first %}{% endfor %}
 ```
 
 renders an `<img>` with `srcset` and `sizes` from the image's WebP copies,
@@ -342,7 +343,11 @@ without one). `alt` is required, `alt=""` for an image that only
 decorates. Any other `name=value` is an attribute, an underscore a hyphen
 in `data_` and `aria_` names. A lazy image's `sizes` starts with `auto`,
 so the browser loads the copy that fits the layout: a photo in a card at
-the card's size. An empty field renders nothing.
+the card's size. An empty field renders nothing. `eager=True` is for the
+picture at the top of a page, the one that paints largest: it loads first
+(`loading="eager"` and `fetchpriority="high"`), and in a loop
+`eager=forloop.first` does that for the first item only, such as the first
+slide of a hero slider.
 
 The copies are made when a save uploads an image (an `ImageField`, or one
 of this module's image fields), by a Celery task, through the field's own
