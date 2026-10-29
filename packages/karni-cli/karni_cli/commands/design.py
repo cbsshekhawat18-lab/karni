@@ -210,6 +210,8 @@ def extract(
     except MapError as exc:
         if exc.pending:
             raise CliError(str(exc), code="C122") from None
+        if exc.code == "C124":
+            raise CliError(str(exc), code="C124") from None
         raise CliError(str(exc), code="C121") from None
     text = json.dumps(result.content, indent=2, ensure_ascii=False) + "\n"
     if dry_run:

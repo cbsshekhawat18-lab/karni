@@ -2075,6 +2075,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C121`](errors.md#c121) | cli | The content map cannot be used |
 | [`C122`](errors.md#c122) | cli | The content map has decisions left |
 | [`C123`](errors.md#c123) | cli | A content map is there already |
+| [`C124`](errors.md#c124) | cli | A content map option has a value extract does not know |
 | [`C199`](errors.md#c199) | cli | Internal error in karni |
 | [`C201`](errors.md#c201) | cli | karni upgrade needs a clean git work tree |
 | [`C202`](errors.md#c202) | cli | karni upgrade does not downgrade |

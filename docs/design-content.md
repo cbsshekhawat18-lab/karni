@@ -54,8 +54,13 @@ import reads, and works from the markup alone:
    model's items with each item in one place is a foreign key (cards under
    their menu section). An attribute whose tokens are another model's keys
    (`data-tags="houses interiors"`) is a relation too. A text that is always
-   another model's title ("Taught by Mia Chen") is that relation's, not a
-   field.
+   another model's title ("Taught by Mia Chen") or key (a tag `whitening`
+   naming the `whitening` treatment) is that relation: a foreign key the map
+   reads `"by": "title"` or `"by": "key"`, or nothing when a link already
+   points at the row. A detail page that links to the rows pointing back at
+   it (a treatment page listing its stories, each story naming its
+   treatment) holds the same relation from the other end: the page loops
+   over `treatment.story_set`, and the report says so.
 6. **One more row.** A single block on the page of a list, with the values
    that list's items hold (a class-named one among them), is proposed as one
    more row of that model, with a flag named after its own class: a founder's
@@ -272,11 +277,26 @@ the item's own text. Selectors support types, classes, ids, attributes,
 compound (`p:not(.role)`), the child and descendant combinators and comma
 groups. A value can also be an object with
 `select` and one of: `all` (every match's text, joined), `list` (a list),
-`fields` (a list of objects), `pairs` (a definition list), `to` with `many`,
-`split` or `by` (a relation, by link, by key or by title), `rows` (child rows),
-`present` (true when the place matches), `drop` (markup to leave out),
-`pattern` (a regular expression whose last group is the value), `link:
-"path"` (a page's URL path) and `decide` (an open decision).
+`fields` (a list of objects), `pairs` (a definition list), `to` (a
+relation, see below), `rows` (child rows), `present` (true when the place
+matches), `drop` (markup to leave out), `pattern` (a regular expression
+whose last group is the value), `link: "path"` (a page's URL path) and
+`decide` (an open decision).
+
+A **relation** is `{"select": ..., "to": "<Model>"}`, and `"by"` says how
+the place names the related row:
+
+| `"by"` | The place holds | Example |
+| --- | --- | --- |
+| absent (or `"link"`) | a link to the row's page or `#anchor` | `"a.teacher@href"` |
+| `"key"` | the row's key, as text or an attribute (`data-type="houses"`) | a tag `<li>whitening</li>` for the row keyed `whitening` |
+| `"title"` | the row's title, as text | `<p>Mia Chen</p>` for the teacher of that name |
+
+`"many": true` makes it a list (a many-to-many field), and `"split": true`
+reads an attribute that holds several keys (`data-tags="a b"`). Analyze
+writes `"by"` when a text names the row. Any other value of `"by"`, of a
+key's `"from"` or of `"link"` is refused with `C124`, because extract would
+otherwise read the place another way without a word.
 
 ## Extract
 

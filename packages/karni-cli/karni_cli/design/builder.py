@@ -973,12 +973,63 @@ class _Builder:
             if model.kind == "items":
                 self.subsets(model)
         self.derived_titles()
+        self.reverse_relations()
+
+    def reverse_relations(self) -> None:
+        """A link to another row that only shows the rows pointing back is no field.
+
+        A treatment page that links to its stories, while each story names its
+        treatment, holds one relation seen from both ends: the story's foreign
+        key stays, and the page loops over ``treatment.story_set``.
+        """
+        for model in self.models:
+            for f in list(model.fields):
+                if f.kind != "relation" or f.many or f.target is None or f.target is model:
+                    continue
+                other = f.target
+                back = next(
+                    (
+                        g
+                        for g in other.fields
+                        if g.kind == "relation" and not g.many and g.target is model
+                    ),
+                    None,
+                )
+                if back is None:
+                    continue
+                pointing: dict[int, set[int]] = {}
+                for eid, row in back.values.items():
+                    if isinstance(row, Entity):
+                        pointing.setdefault(id(row), set()).add(eid)
+                shown = {eid: row for eid, row in f.values.items() if isinstance(row, Entity)}
+                if not shown or any(
+                    id(row) not in pointing.get(eid, set()) for eid, row in shown.items()
+                ):
+                    continue
+                model.fields.remove(f)
+                accessor = other.name.lower() + "_set"
+                model.notes.append(
+                    f"{f.name} shows the {other.name} rows whose {back.name} is this "
+                    f"{model.name}: loop over {snake(model.name)}.{accessor}.all in the "
+                    "template, not a field."
+                )
 
     def derived_titles(self) -> None:
-        """A value that is always another model's title shows that row: the template reads it
-        through the relation, so it is not a field."""
+        """A text that always names another model's row shows that row: a relation, not a field.
+
+        The text is the row's title ("Taught by Mia Chen") or its key (a tag
+        ``whitening`` naming the ``whitening`` treatment). When the model
+        already points at that row another way (a link), the text is read
+        through that relation and dropped. Otherwise the text becomes the
+        relation, and the map reads it ``"by": "title"`` or ``"by": "key"``.
+        """
         titles = {
-            id(m): {_norm(self._title(e)) for e in m.entities} - {""}
+            id(m): {_norm(self._title(e)): e for e in m.entities if _norm(self._title(e))}
+            for m in self.models
+            if m.kind == "items"
+        }
+        keys = {
+            id(m): {t[4:]: e for e in m.entities for t in e.tokens if t.startswith("key:")}
             for m in self.models
             if m.kind == "items"
         }
@@ -986,19 +1037,48 @@ class _Builder:
             for f in list(model.fields):
                 if f.kind != "value" or f.slot_kind != "text":
                     continue
-                shown = {_norm(str(v)) for v in f.values.values() if v}
+                raw = {eid: str(v) for eid, v in f.values.items() if v}
+                shown = {_norm(v) for v in raw.values()}
                 if len(shown) < 2:
                     continue
                 for other in self.models:
                     if other is model or id(other) not in titles:
                         continue
-                    if shown <= titles[id(other)]:
+                    by_title, by_key = titles[id(other)], keys[id(other)]
+                    if shown <= set(by_title):
+                        by, rows = "title", {eid: by_title[_norm(v)] for eid, v in raw.items()}
+                    elif all(slugify(v) in by_key for v in raw.values()):
+                        by, rows = "key", {eid: by_key[slugify(v)] for eid, v in raw.items()}
+                    else:
+                        continue
+                    linked = any(
+                        g is not f and g.kind == "relation" and g.target is other and not g.many
+                        for g in model.fields
+                    )
+                    if linked:
                         model.fields.remove(f)
                         model.notes.append(
-                            f"{f.name} always shows a {other.name} title: read it through a "
+                            f"{f.name} always shows a {other.name} {by}: read it through the "
                             f"relation to {other.name} in the template, not as a field."
                         )
                         break
+                    wanted = snake(other.name)
+                    if f.name != wanted:
+                        f.name = self._unique(model, wanted)
+                    f.kind, f.type, f.optional, f.target = (
+                        "relation",
+                        f"fk:{other.name}",
+                        True,
+                        other,
+                    )
+                    f.values = dict(rows)
+                    for rule in f.rules:
+                        rule.options.update({"to": other.name, "by": by})
+                    f.note = (
+                        f"the text names a {other.name} by its {by}: a relation, read "
+                        f'"by": "{by}" in the map'
+                    )
+                    break
 
     def nested_relation(self, model: Model, source: Source, parent: Model) -> None:
         parents: dict[int, set[int]] = {}

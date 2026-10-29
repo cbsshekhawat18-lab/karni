@@ -141,12 +141,35 @@ _VALUE_KEYS: Final = frozenset(
 )
 
 
-class MapError(ValueError):
-    """The map cannot be used: what is wrong and where. ``pending`` lists open decisions."""
+#: The values some options take: a relation's ``by``, a key's ``from``, a value's ``link``.
+BY_VALUES: Final = ("link", "key", "title")
+FROM_VALUES: Final = ("page", "link", "attr", "field", "position")
+LINK_VALUES: Final = ("path",)
+#: The code of a map whose only problems are option values extract does not know.
+VALUE_CODE: Final = "C124"
 
-    def __init__(self, message: str, *, pending: list[str] | None = None) -> None:
+
+class MapError(ValueError):
+    """The map cannot be used: what is wrong and where. ``pending`` lists open decisions.
+
+    ``code`` is ``C124`` when every problem is an option value extract does not
+    know (a relation's ``"by"``), else ``None`` (the command's ``C121``).
+    """
+
+    def __init__(
+        self, message: str, *, pending: list[str] | None = None, code: str | None = None
+    ) -> None:
         super().__init__(message)
         self.pending = list(pending or [])
+        self.code = code
+
+
+def _choice(value: Any, allowed: tuple[str, ...], what: str, where: str) -> str | None:
+    """The problem with ``value`` for an option that takes one of ``allowed``, or ``None``."""
+    if value is None or value in allowed:
+        return None
+    listed = ", ".join(f'"{item}"' for item in allowed)
+    return f"{where}: {what} is {value!r}, which extract does not know. Write one of {listed}."
 
 
 def read_map(path: Path) -> dict[str, Any]:
@@ -185,6 +208,7 @@ def check_map(data: Any, where: str = "the map") -> None:
     names = {str(m.get("name")) for m in data["models"] if isinstance(m, Mapping)}
     pending: list[str] = []
     problems: list[str] = []
+    unknown_values: list[str] = []
     for model in data["models"]:
         if not isinstance(model, Mapping) or not model.get("name"):
             problems.append('every model is an object with a "name".')
@@ -211,6 +235,21 @@ def check_map(data: Any, where: str = "the map") -> None:
                 problems.append(f"{label}: unknown key(s) {', '.join(sorted(unknown))}.")
             if not source.get("page") and not source.get("pages"):
                 problems.append(f'{label}: give "page" or "pages".')
+            for key_rule, what in (
+                (source.get("key"), "key"),
+                (
+                    (source.get("parent") or {}).get("key")
+                    if isinstance(source.get("parent"), Mapping)
+                    else None,
+                    "parent key",
+                ),
+            ):
+                if isinstance(key_rule, Mapping):
+                    found = _choice(
+                        key_rule.get("from"), FROM_VALUES, f'its {what}\'s "from"', label
+                    )
+                    if found:
+                        unknown_values.append(found)
             for place_name in ("items", "within"):
                 if source.get(place_name):
                     _check_selector(str(source[place_name]), f"{label} {place_name}", problems)
@@ -231,6 +270,14 @@ def check_map(data: Any, where: str = "the map") -> None:
                         problems.append(
                             f"{where_}: relation to {target!r}, not a model of the map."
                         )
+                    for option, allowed in (("by", BY_VALUES), ("link", LINK_VALUES)):
+                        found = _choice(rule.get(option), allowed, f'"{option}"', where_)
+                        if found:
+                            unknown_values.append(found)
+                    if rule.get("by") is not None and not target:
+                        problems.append(
+                            f'{where_}: "by" says how a relation names its row, so it needs "to".'
+                        )
                     place = str(rule.get("select", ":scope"))
                 else:
                     place = str(rule)
@@ -238,9 +285,13 @@ def check_map(data: Any, where: str = "the map") -> None:
                     parse_place(place)
                 except SelectorError as exc:
                     problems.append(f"{where_}: {exc}")
-    if problems:
-        listed = "\n".join(f"  - {problem}" for problem in problems)
-        raise MapError(f"{where}: {len(problems)} problem(s):\n{listed}")
+    if problems or unknown_values:
+        every = [*problems, *unknown_values]
+        listed = "\n".join(f"  - {problem}" for problem in every)
+        raise MapError(
+            f"{where}: {len(every)} problem(s):\n{listed}",
+            code=None if problems else VALUE_CODE,
+        )
     if pending:
         listed = "\n".join(f"  - {item}" for item in pending)
         raise MapError(

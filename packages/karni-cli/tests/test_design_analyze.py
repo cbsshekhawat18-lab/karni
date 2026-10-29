@@ -478,6 +478,47 @@ def test_figures_on_a_page_in_german_read_its_numbers(tmp_path: Path) -> None:
     assert _types(model)["flaeche"] == "int"
 
 
+def test_a_detail_page_that_lists_the_rows_pointing_back_holds_no_field(tmp_path: Path) -> None:
+    design = tmp_path / "design"
+    (design / "venues").mkdir(parents=True)
+    (design / "img").mkdir()
+    page = (
+        "<!doctype html><html><head><title>{0}</title></head><body><main>{1}</main></body></html>"
+    )
+    venues = (
+        ("studio", "The studio", "e1"),
+        ("hall", "The hall", "e2"),
+        ("yard", "The yard", "e3"),
+    )
+    for key, title, event in venues:
+        (design / "img" / f"{key}.jpg").write_bytes(b"\xff\xd8\xff")
+        body = (
+            f'<h1>{title}</h1><img class="photo" src="../img/{key}.jpg" alt="{title}">'
+            f"<p class='about'>All about {title.lower()}, a place to meet.</p>"
+            f'<section class="coming"><h2>Coming up</h2><ul><li>'
+            f'<a href="../events.html#{event}">Event at {key}</a></li></ul></section>'
+        )
+        (design / "venues" / f"{key}.html").write_text(page.format(title, body))
+    cards = "".join(
+        f'<a class="venue" href="venues/{key}.html"><img src="img/{key}.jpg" alt="{title}">'
+        f"<h3>{title}</h3></a>"
+        for key, title, _ in venues
+    )
+    (design / "index.html").write_text(page.format("Venues", cards))
+    events = "".join(
+        f'<article class="event" id="{event}"><h3>Event at {key}</h3>'
+        f'<time datetime="2026-0{n}-01">1 {month} 2026</time><span class="where">{key}</span></article>'
+        for n, ((key, _, event), month) in enumerate(zip(venues, ("May", "June", "July")), start=5)
+    )
+    (design / "events.html").write_text(page.format("Events", events))
+    analysis = analyze(design, "website")
+    event = _model(analysis, "Event")
+    assert _types(event)["venue"] == "fk:Venue?"
+    venue = _model(analysis, "Venue")
+    assert not any(f.target is event for f in venue.fields if f.kind == "relation")
+    assert any("loop over venue.event_set.all" in note for note in venue.notes)
+
+
 def test_names_come_from_the_markup_not_from_a_list(tmp_path: Path) -> None:
     design = tmp_path / "design"
     shutil.copytree(DESIGNS / "school", design)

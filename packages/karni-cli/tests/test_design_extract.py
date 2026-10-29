@@ -197,6 +197,78 @@ def test_numbers_are_read_in_the_pages_language(tmp_path: Path) -> None:
         check_map({**spec, "decimal": "comma"})
 
 
+def _people_and_classes(tmp_path: Path) -> Path:
+    """Teachers on one page, classes that name their teacher by name and their room by key."""
+    design = tmp_path / "design"
+    (design / "img").mkdir(parents=True)
+    head = (
+        "<!doctype html><html><head><title>{0}</title></head><body><main>{1}</main></body></html>"
+    )
+    teachers = "".join(
+        f'<article class="teacher"><img src="img/{key}.jpg" alt="{name}"><h3>{name}</h3>'
+        f'<p class="bio">{name} teaches here.</p></article>'
+        for key, name in (("mia", "Mia Chen"), ("omar", "Omar Haddad"), ("lena", "Lena Berg"))
+    )
+    for key in ("mia", "omar", "lena"):
+        (design / "img" / f"{key}.jpg").write_bytes(b"\xff\xd8\xff")
+    rooms = "".join(
+        f'<div class="room" id="{key}"><img src="img/{key}.jpg" alt="{title}"><h3>{title}</h3>'
+        f"<p>Seats {seats}.</p></div>"
+        for key, title, seats in (("mia", "Studio", 8), ("omar", "Hall", 30), ("lena", "Yard", 12))
+    )
+    classes = "".join(
+        f'<li class="class"><h4>{title}</h4><p class="by">{teacher}</p>'
+        f'<span class="room">{room}</span></li>'
+        for title, teacher, room in (
+            ("Clay basics", "Mia Chen", "mia"),
+            ("Big drawing", "Omar Haddad", "omar"),
+            ("Outdoor sketching", "Lena Berg", "lena"),
+        )
+    )
+    (design / "index.html").write_text(head.format("Teachers", teachers))
+    (design / "rooms.html").write_text(head.format("Rooms", rooms))
+    (design / "classes.html").write_text(head.format("Classes", f"<ul>{classes}</ul>"))
+    return design
+
+
+def test_a_text_that_names_another_row_is_a_relation_by_title_or_key(tmp_path: Path) -> None:
+    design = _people_and_classes(tmp_path)
+    analysis = analyze(design, "website")
+    spec = analysis.draft_map(str(design))
+    model = next(m for m in spec["models"] if m["name"] == "Class")
+    values = model["sources"][0]["values"]
+    by = {
+        name: rule["by"] for name, rule in values.items() if isinstance(rule, dict) and "by" in rule
+    }
+    assert by == {"teacher": "title", "room": "key"}
+    assert model["fields"]["teacher"] == "fk:Teacher?" and model["fields"]["room"] == "fk:Room?"
+    rows = _rows(extract(design, spec, tmp_path / "site.json").content, "website.Class")
+    assert rows["clay-basics"]["teacher"] == "mia-chen" and rows["clay-basics"]["room"] == "mia"
+
+
+def test_an_option_value_extract_does_not_know_is_refused(tmp_path: Path) -> None:
+    design = _people_and_classes(tmp_path)
+    spec = analyze(design, "website").draft_map(str(design))
+    model = next(m for m in spec["models"] if m["name"] == "Class")
+    model["sources"][0]["values"]["teacher"]["by"] = "name"
+    with pytest.raises(MapError, match="\"by\" is 'name', which extract does not know") as raised:
+        check_map(spec)
+    assert raised.value.code == "C124" and '"link", "key", "title"' in str(raised.value)
+    model["sources"][0]["key"] = {"from": "slug"}
+    with pytest.raises(MapError, match="key's \"from\" is 'slug'"):
+        check_map(spec)
+    # Through the command: C124, with the values it takes.
+    model["sources"][0]["key"] = {"from": "field", "field": "title"}
+    map_file = tmp_path / "map.json"
+    map_file.write_text(json.dumps(spec))
+    fails("design", "extract", str(design), "--map", str(map_file), match="C124")
+    # "by" without "to" is a map extract cannot follow.
+    model["sources"][0]["values"]["teacher"] = {"select": "p.by", "by": "title"}
+    with pytest.raises(MapError, match='"by" says how a relation names its row') as raised:
+        check_map(spec)
+    assert raised.value.code is None
+
+
 def test_the_maps_marker_goes_around_highlighted_words(tmp_path: Path) -> None:
     data = _map("school")
     assert data["marker"] == "=="
