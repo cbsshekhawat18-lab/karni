@@ -23,7 +23,8 @@ at the same version ([releasing](releasing.md)).
 
 ## The promise
 
-For everything listed as public below:
+For everything listed as public below, except the names marked
+[experimental](#experimental-names):
 
 1. **Nothing breaks without warning.** A public name is deprecated for at
    least one minor release before it is removed. While deprecated, it keeps
@@ -121,6 +122,34 @@ and a codemod or detector is included where possible.
 - The scaffold's templates (`templates/project/`). They generate *your*
   files, and changing them never changes an existing project. Project-level
   migrations, where needed, ship as `karni upgrade` codemods.
+
+## Experimental names
+
+A new public name can ship as **experimental** first. An experimental name is
+public and documented, but it may change or be removed in a minor release
+without the deprecation cycle above. Every such change is noted in the
+[CHANGELOG](https://github.com/cbsshekhawat18-lab/karni/blob/main/CHANGELOG.md)
+and in the migration notes of that release, so an upgrade never changes one
+silently.
+
+A name is experimental only when it is marked, and the mark is visible
+wherever you meet the name:
+
+- its docstring (Python) or doc comment (TypeScript) starts with
+  `Experimental.`,
+- the docs section that describes it opens with an *Experimental* note,
+- its capability in the [reference](REFERENCE.md#capabilities-and-status)
+  has the status `experimental` and says *Experimental tier*. The status
+  `experimental` alone only means that no reference application uses the
+  capability yet: those names keep the promise.
+
+Some parts never become experimental. An error code keeps its meaning forever
+and is never reused, also for an experimental feature. A change to the
+database schema of an experimental model always comes with a migration.
+
+An experimental name becomes stable in a minor release, once a reference
+application uses it. The CHANGELOG entry of that release says so, and from
+then on the promise above applies in full.
 
 ## Supported platforms
 

@@ -91,10 +91,12 @@ Every item meets all of these before it counts as done.
   and the patterns already in the code.** Type hints, ruff, mypy and pytest
   in Python, strict TypeScript with no `any` and Vitest in the UI. An escape
   hatch for every abstraction, and no abstraction without three real uses.
-- **New public names start as experimental.** The [stability
-  promise](../stability.md) has no experimental tier yet. Item 1a adds one
-  before any experimental name ships: what it covers, how a name is marked,
-  and that an experimental name may change in a minor release.
+- **New public names start as experimental.** They follow the
+  [experimental tier](../stability.md#experimental-names) of the stability
+  promise: marked `Experimental.` in the docstring, by an *Experimental*
+  note in the docs and by *Experimental tier* in the reference, free to
+  change in a minor release with a CHANGELOG entry, and stable once a
+  reference application uses them.
 - **It is tested.** Unit and integration tests, plus an `assert_*` helper or a
   `karni check` rule wherever there is a misuse to catch.
 - **It is documented.** A docs page or section, `docs/REFERENCE.md`

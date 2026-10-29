@@ -341,7 +341,10 @@ STATUS_NOTE = (
     "`stable`: public under the [stability promise](stability.md) and used by a reference "
     "application (EventHub or the social-leads example). `experimental`: public and "
     "covered by Karni's own tests, but no reference application uses it yet, so expect "
-    "rough edges. `planned`: documented as coming, but not in the code."
+    "rough edges. A capability that also says *Experimental tier* has names that may change "
+    "in a minor release without the deprecation cycle "
+    "([experimental names](stability.md#experimental-names)). Every other capability keeps "
+    "the promise. `planned`: documented as coming, but not in the code."
 )
 
 
