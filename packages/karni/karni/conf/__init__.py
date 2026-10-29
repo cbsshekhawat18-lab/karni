@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from karni.conf.admin_logo import logo_paths, site_icon, site_logo
+from karni.conf.admin_theme import theme as admin_theme
 from karni.conf.base import (
     ALLAUTH_MIDDLEWARE,
     BASE,
@@ -537,6 +538,8 @@ def karni_settings(
     if isinstance(unfold, dict):
         unfold.setdefault("SITE_LOGO", site_logo)
         unfold.setdefault("SITE_ICON", site_icon)
+        # KARNI_ADMIN_THEME → UNFOLD["THEME"], per request like the logo.
+        unfold.setdefault("THEME", admin_theme)
 
     _ensure_sqlite_dir(namespace.get("DATABASES"))
     _record_consumed(namespace, used)

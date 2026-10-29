@@ -235,3 +235,16 @@ and lists it in the adapters. Until then `karni rules sync --check` (and make ch
 reports the files as stale."""
 mechanical = false
 migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
+
+[[change]]
+id = "admin-light-only"
+kind = "behaviour"
+symbol = "KARNI_ADMIN_THEME"
+summary = """\
+The admin is light only by default: KARNI_ADMIN_THEME (default "light") sets \
+UNFOLD["THEME"], which pins unfold's light palette and hides its light / dark / \
+system switch. Set KARNI_ADMIN_THEME = "auto" for the switch, or "dark". A \
+project that sets UNFOLD["THEME"] itself keeps its value."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-admin-is-light-only"
+

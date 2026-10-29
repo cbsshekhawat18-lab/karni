@@ -11,6 +11,12 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
+  `"light"`) pins unfold's light palette and hides its light / dark / system
+  switch, read on every request. `"auto"` brings the switch back and
+  `"dark"` pins the dark palette. See
+  [docs/admin.md](docs/admin.md#theming) and the
+  [migration note](docs/migrations/0.4.1.md#the-admin-is-light-only).
 - **Everything a client sees on a public site is edited in the admin.**
   The karni-site module now holds the site's own details (`SiteSettings`:
   name, tagline, logo, favicon, the default share image, address, phone,

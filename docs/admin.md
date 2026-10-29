@@ -219,8 +219,7 @@ Behavioural fine print (by design, see the `karni/models.py` docstrings):
 ## Theming
 
 The admin, the welcome page and `@karni/ui` are one product: the same
-colours in light and dark, the same radius, spacing, font stack and
-dark-mode switch. They share one source, `@karni/ui`'s token stylesheet
+colours, radius, spacing and font stack. They share one source, `@karni/ui`'s token stylesheet
 (`packages/karni-ui/src/styles.css`, published as `@karni/ui/styles.css`).
 The `karni` package ships a byte-for-byte copy of it as the static file
 `karni/tokens.css`, and a test fails, printing the `cp` command, until a
@@ -248,9 +247,21 @@ Unfold reads the `UNFOLD` setting. Karni's default:
   The test pins each step to its token.
 - Sets `BORDER_RADIUS` to `var(--karni-radius-md)`, the radius of
   `@karni/ui`'s buttons and inputs.
-- Leaves unfold's light / dark / system switch on (`THEME` unset). By
-  default the admin follows the system preference, like the welcome page.
-  Dark mode is the `dark` class on `<html>` in all three.
+- Shows the admin in light mode only, with no light / dark switch, through
+  `THEME` (below).
+
+`KARNI_ADMIN_THEME` (default `"light"`) sets unfold's `THEME`, so every page,
+the login screen and every screenshot look the same. The other values:
+
+```python
+KARNI_ADMIN_THEME = "dark"  # dark only
+KARNI_ADMIN_THEME = "auto"  # unfold's light / dark / system switch, following the system preference
+```
+
+The admin reads it on every request (`UNFOLD["THEME"]` holds
+`karni.conf.admin_theme.theme`), so it works wherever `settings.py` assigns
+it, and an unknown value fails startup. Setting `UNFOLD["THEME"]` yourself
+wins. Dark mode is the `dark` class on `<html>`, as in `@karni/ui`.
 
 The project's own brand comes from the file its staff app loads:
 `frontend/src/karni-theme.css`, which `karni ui detect` writes. `KARNI_THEME_CSS`

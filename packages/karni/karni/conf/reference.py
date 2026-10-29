@@ -70,6 +70,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ADMIN_LOGO": 'Logo for the admin header and login: `karni` for Karni\'s mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming).',
     "KARNI_THEME_CSS": 'The project\'s `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin).',
     "KARNI_ADMIN_BASE": "Dotted path of the `ModelAdmin` every derived admin is built on.",
+    "KARNI_ADMIN_THEME": "The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming).",
     "KARNI_ADMIN_PATH": "URL path the scaffold mounts the Django admin at (trailing slash). Set it to something unguessable in production.",
     "KARNI_HEALTH_CHECKS": "Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out.",
     "KARNI_CSP": 'Directives merged into the Content-Security-Policy every response carries, as a dict (JSON in the environment): sources are added, `None` removes a directive, e.g. `{"font-src": ["https://fonts.gstatic.com"]}`. `None` sends no policy. See [security headers](security.md#security-headers).',
