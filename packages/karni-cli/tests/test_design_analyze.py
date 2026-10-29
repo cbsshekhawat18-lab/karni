@@ -512,10 +512,10 @@ def test_a_detail_page_that_lists_the_rows_pointing_back_holds_no_field(tmp_path
     )
     (design / "events.html").write_text(page.format("Events", events))
     analysis = analyze(design, "website")
-    event = _model(analysis, "Event")
-    assert _types(event)["venue"] == "fk:Venue?"
+    events_model = _model(analysis, "Event")
+    assert _types(events_model)["venue"] == "fk:Venue?"
     venue = _model(analysis, "Venue")
-    assert not any(f.target is event for f in venue.fields if f.kind == "relation")
+    assert not any(f.target is events_model for f in venue.fields if f.kind == "relation")
     assert any("loop over venue.event_set.all" in note for note in venue.notes)
 
 
