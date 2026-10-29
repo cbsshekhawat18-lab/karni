@@ -75,11 +75,15 @@ def fails(*args: str, match: str) -> str:
     return message
 
 
+#: Folders a snapshot leaves out: caches, installs and the repository karni new makes.
+_NOT_SNAPSHOT = frozenset({"__pycache__", "node_modules", ".git"})
+
+
 def snapshot(root: Path) -> dict[str, str]:
     return {
         p.relative_to(root).as_posix(): p.read_text(encoding="utf-8")
         for p in sorted(root.rglob("*"))
-        if p.is_file() and "__pycache__" not in p.parts and "node_modules" not in p.parts
+        if p.is_file() and not _NOT_SNAPSHOT & set(p.relative_to(root).parts)
     }
 
 

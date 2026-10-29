@@ -237,7 +237,6 @@ redirect to the index, never a 403) and leave the row unchanged:
 <!-- karni:example:hidden-admin (tests/testing/test_docs_example.py runs this block) -->
 ```python
 # events/tests/test_event_admin_scope.py: KARNI_ROLES grants organizers "events.event:*": "own"
-from django.contrib.auth.models import Permission
 from django.utils import timezone
 
 from karni.testing import APITestCase, user_with_roles
@@ -247,8 +246,7 @@ from events.models import Event
 
 class EventAdminScopeTests(APITestCase):
     def test_the_admin_treats_another_organizers_event_as_missing(self):
-        staff = user_with_roles("organizer", is_staff=True)
-        staff.user_permissions.add(*Permission.objects.filter(codename__endswith="_event"))
+        staff = user_with_roles("organizer", is_staff=True)  # the grant opens the admin page
         mine = Event.objects.create(title="Mine", starts_at=timezone.now(), organizer=staff)
         other = user_with_roles("organizer")
         theirs = Event.objects.create(title="Theirs", starts_at=timezone.now(), organizer=other)
@@ -512,6 +510,35 @@ Public API: `factory_for`, `auto_factory`, `explicit_factories`, `create`,
 `create_batch`, `build`, `clear_cache`, `FactoryBuilder`, `AutoFactory`
 (base of generated factories), `AutoSubFactory`, `DEFAULT_PASSWORD`.
 
+## The cache in tests
+
+The `karni` pytest plugin runs every test on an empty local-memory cache:
+each alias in `CACHES` becomes a `LocMemCache` of its own (with the alias's
+`KEY_PREFIX`, `VERSION`, `KEY_FUNCTION` and `TIMEOUT`), cleared before and
+after the test. Nothing a test caches reaches the next test, a later run or
+the development server that shares `REDIS_URL`: rate-limit counters, a
+listener's "already queued" flag, a cached page or menu. The tests of a new
+project never connect to Redis. A `DummyCache` alias stays as it is.
+
+A test that needs the project's own cache (one that checks Redis itself)
+says so:
+
+```python
+import pytest
+
+
+@pytest.mark.karni_project_cache
+def test_the_lock_is_shared_between_workers():
+    ...
+```
+
+`karni_test_cache = project` in the pytest ini file (`[tool.pytest.ini_options]`
+in `pyproject.toml`) keeps the project's cache for every test, the rule
+before 0.4.1. A fixture named `_karni_test_cache` in `conftest.py` replaces
+the plugin's. Code that keeps a cache object from import time
+(`caches["default"]` stored in a module) keeps that object: use
+`django.core.cache.cache` or look the alias up when it is needed.
+
 ## Rate limits in tests
 
 The `karni` pytest plugin gives DRF's throttles an empty cache of their own
@@ -532,8 +559,9 @@ def test_the_contact_form_is_rate_limited(client_as, settings):
 ```
 
 `assert_crud` and `assert_isolated` switch throttling off for the resource
-they test. To keep the shared cache instead, define an autouse fixture named
-`_karni_fresh_throttles` in `conftest.py` that does nothing.
+they test. The throttles' cache stays fresh with `karni_project_cache` too.
+To keep the shared cache for throttles as well, define an autouse fixture
+named `_karni_fresh_throttles` in `conftest.py` that does nothing.
 
 ## Queued listeners and Celery tasks
 

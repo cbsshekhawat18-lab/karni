@@ -320,8 +320,9 @@ Asking the question:
 - `access = Granted()` on a viewset is the default that `karni make viewset`
   writes. It means `Can` for the viewset's own model and the current action,
   so the roles decide who reaches which rows and the viewset names nothing.
-  See [Access control](api.md#access-control). The [admin](admin.md#row-scope)
-  applies the same grants to its rows.
+  See [Access control](api.md#access-control). The [admin](admin.md#who-may-open-a-page)
+  applies the same grants: a grant opens that model's admin page for a
+  person with staff status, and its scope decides the rows.
 - `Can("events.event:approve")` in an `access` declaration is the gate *and*
   the row filter (the union of the scopes). See [Access control](api.md#access-control).
   It must name the viewset's own model (`E209`). To gate on another model's
@@ -491,10 +492,19 @@ source of truth.
 
 ## Admin
 
+A person signs in to the admin with `is_staff` set, and then opens the pages
+their roles' grants name (`app.model:<action>`) or their Django model
+permissions allow. A role gives no admin access without staff status. See
+[who may open a page](admin.md#who-may-open-a-page), and
+`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` for Django's permissions only.
+
 `KarniUserAdmin` (email-based `UserAdmin` with working add/change forms,
 styled by `karni.admin`) is registered automatically while
-`AUTH_USER_MODEL == "karni_accounts.User"`. After swapping the user model,
-reuse it:
+`AUTH_USER_MODEL == "karni_accounts.User"`. Only a superuser changes
+`is_superuser` and `user_permissions` there (its `superuser_fields`), or
+edits or deletes a superuser's account. Anyone who may change users may
+still give roles, so grant the user model's `change` only to people trusted
+with every role. After swapping the user model, reuse it:
 
 ```python
 # myapp/admin.py

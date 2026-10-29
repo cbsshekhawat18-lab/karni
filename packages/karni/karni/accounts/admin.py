@@ -171,6 +171,39 @@ def _build_user_admin() -> type[Any]:
         )
         actions_detail = ["effective_permissions"]
 
+        #: Fields only a superuser changes: anyone else sees them read-only.
+        superuser_fields: tuple[str, ...] = ("is_superuser", "user_permissions")
+
+        def get_readonly_fields(self, request: Any, obj: Any = None) -> Any:
+            """``superuser_fields`` are read-only unless the editor is a superuser.
+
+            A role's grant on the user model opens this page. Without this, a
+            user holding that grant could make themselves a superuser.
+            """
+            names = list(super().get_readonly_fields(request, obj))
+            if not getattr(request.user, "is_superuser", False):
+                names.extend(name for name in self.superuser_fields if name not in names)
+            return names
+
+        def has_change_permission(self, request: Any, obj: Any = None) -> bool:
+            """Only a superuser changes a superuser's account (email, password, roles)."""
+            if self._guards_superuser(request, obj):
+                return False
+            return bool(super().has_change_permission(request, obj))
+
+        def has_delete_permission(self, request: Any, obj: Any = None) -> bool:
+            """Only a superuser deletes a superuser's account."""
+            if self._guards_superuser(request, obj):
+                return False
+            return bool(super().has_delete_permission(request, obj))
+
+        @staticmethod
+        def _guards_superuser(request: Any, obj: Any) -> bool:
+            return bool(
+                getattr(obj, "is_superuser", False)
+                and not getattr(request.user, "is_superuser", False)
+            )
+
         @action(
             description="Effective permissions",
             url_path="permissions",

@@ -71,6 +71,7 @@ __all__ = [
     "KarniManyRelatedField",
     "KarniModelSerializer",
     "KarniPrimaryKeyRelatedField",
+    "PhoneNumberField",
     "build_serializer",
     "serializer_name",
 ]
@@ -79,6 +80,21 @@ USER_FORCED_READ_ONLY = frozenset(
     {"last_login", "is_staff", "is_superuser", "is_active", "groups", "user_permissions"}
 )
 """Fields forced read-only on user-model serializers (sensitive-field policy)."""
+
+
+class PhoneNumberField(serializers.CharField):
+    """A ``CharField`` that cleans a phone number to E.164, for :class:`karni.fields.PhoneField`.
+
+    The value is normalised before the validators run, so a uniqueness check
+    compares what the database stores. A national number needs
+    ``KARNI_PHONE_COUNTRY_CODE`` (:func:`karni.fields.normalize_phone`).
+    Declare it on a hand-written serializer to get the same input rules.
+    """
+
+    def to_internal_value(self, data: Any) -> Any:
+        from karni.fields.text import normalize_phone
+
+        return normalize_phone(super().to_internal_value(data))
 
 
 class KarniPrimaryKeyRelatedField(PrimaryKeyRelatedField):
@@ -276,9 +292,13 @@ class KarniModelSerializer(serializers.ModelSerializer):
         says what a field starts as; forms then cannot prefill it. A literal
         default (``"draft"``, ``True``) becomes the serializer field's default,
         which drf-spectacular emits. Callable defaults (``uuid4``, ``now``)
-        stay with the model.
+        stay with the model. A ``PhoneField`` becomes a :class:`PhoneNumberField`.
         """
         field_class, kwargs = super().build_standard_field(field_name, model_field)
+        from karni.fields.text import PhoneField
+
+        if isinstance(model_field, PhoneField) and field_class is serializers.CharField:
+            field_class = PhoneNumberField  # national numbers, formatted input: E.164
         live_unique = _live_unique_validator(model_field)
         if live_unique is not None:
             kwargs["validators"] = [

@@ -23,8 +23,12 @@
 ARG POSTGRES_VERSION=16
 
 FROM python:3.12-slim AS base
+# Uploads and static files live on the /data volume in every container (on the
+# host they default to data/ under the project).
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    MEDIA_ROOT=/data/media \
+    STATIC_ROOT=/data/static
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 FROM base AS deps
@@ -73,6 +77,8 @@ FROM python:3.12-slim AS prod
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    MEDIA_ROOT=/data/media \
+    STATIC_ROOT=/data/static \
     PATH="/venv/bin:${PATH}"
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --from=deps /venv /venv

@@ -313,3 +313,60 @@ static/<app>/ with a srcset and sizes. Importing a design again changes the \
 templates the project has not edited. An edited one is kept, as before."""
 mechanical = false
 migration = "migrations/0.4.1.md#the-designs-images-are-sized"
+
+[[change]]
+id = "admin-grants-open-pages"
+kind = "behaviour"
+symbol = "karni.admin.KarniModelAdmin (KARNI_ADMIN_GRANTS_OPEN_PAGES)"
+summary = """\
+A role's grant (`app.model:<action>`) now opens that model's admin page for a \
+staff user, as Django's model permission does: the `staff` role, karni-site's \
+`editor` and every project role reach their pages with no Django permission \
+ticked. Review who holds staff status and which roles. Only a superuser \
+changes is_superuser or a superuser's account. \
+KARNI_ADMIN_GRANTS_OPEN_PAGES = False restores Django's permissions only."""
+mechanical = false
+migration = "migrations/0.4.1.md#grants-open-admin-pages"
+
+[[change]]
+id = "tests-get-a-local-memory-cache"
+kind = "behaviour"
+symbol = "karni.testing.pytest_plugin (karni_test_cache)"
+summary = """\
+Karni's pytest plugin runs every test on an empty local-memory cache: each \
+alias in CACHES becomes a LocMemCache for the test, so throttle counters and \
+cached values never pass between tests, runs or the development server's \
+Redis. A test that needs the project's own cache takes \
+@pytest.mark.karni_project_cache, and `karni_test_cache = project` in the \
+pytest ini file keeps it for every test."""
+mechanical = false
+migration = "migrations/0.4.1.md#tests-run-on-an-empty-local-memory-cache"
+
+[[change]]
+id = "dev-files-under-the-project"
+kind = "behaviour"
+symbol = "MEDIA_ROOT and STATIC_ROOT (dev profile)"
+summary = """\
+In the dev profile MEDIA_ROOT and STATIC_ROOT default to data/media and \
+data/static under the project root, and a relative value is read from the \
+project root, not the working directory. Production keeps /data/media and \
+/data/static. The scaffold's Dockerfile sets /data in every container and its \
+.env.example no longer sets the two. A project whose .env sets them keeps its \
+values. Add the two ENV lines to an earlier Dockerfile before removing them \
+from .env."""
+mechanical = false
+migration = "migrations/0.4.1.md#files-under-the-project-in-development"
+
+[[change]]
+id = "frontend-zod-4"
+kind = "project-files"
+symbol = "frontend/package.json (zod, @hookform/resolvers)"
+summary = """\
+npm audit reports Zod before 4.6.6 as high severity (GHSA-mrhx-c7xc-m3w5). \
+The scaffold's frontend now depends on zod ^4.6.6, @hookform/resolvers ^5.2.0 \
+and react-hook-form ^7.55.0, and @karni/ui accepts Zod 3 (3.23 or later) and \
+Zod 4 (4.6.6 or later). An earlier project keeps working on Zod 3. Bump the \
+three in frontend/package.json to clear the audit, after moving code of your \
+own off Zod 3's required_error and invalid_type_error."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-frontend-moves-to-zod-4"

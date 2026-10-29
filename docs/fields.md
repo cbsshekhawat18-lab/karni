@@ -115,10 +115,38 @@ a duplicate from a concurrent insert. A number as the DSL argument
 Stored in E.164: `+`, country code and number, at most 15 digits
 (`+14155552671`). Input may carry spaces, dashes, dots, parentheses, a
 `(0)` trunk marker or a `00` prefix (`"+44 (0)20 7946 0958"` is stored as
-`+442079460958`). A national number without a country code is rejected, not
-guessed. There is no dependency: per-country number plans need Google's
-`phonenumbers` (megabytes of metadata). Add `validators=[...]` built on it
-when well formed is not enough and you must know a number is assignable.
+`+442079460958`). The model field, its form field (`PhoneFormField`, which
+the admin uses) and the API's serializer field (`PhoneNumberField`) clean
+input the same way.
+
+A national number, written without `+` or `00`, is rejected unless the
+project says which country its numbers are in:
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_PHONE_COUNTRY_CODE = "44"   # a national number gets +44
+KARNI_PHONE_TRUNK_PREFIX = "0"    # and loses its leading 0 (the default)
+```
+
+Then `"01234 000 111"` is stored as `+441234000111`, and a number from
+another country still needs its `+`. The trunk prefix is what a caller dials
+before a national number and what the international form drops: `"0"` in
+most countries, `"1"` in North America (`KARNI_PHONE_COUNTRY_CODE = "1"`
+turns `"1 415 555 2671"` and `"(415) 555-2671"` into `+14155552671`), `"8"`
+in Russia, and `""` where the number is dialled as written (Italy keeps its
+leading 0: `"06 1234 5678"` becomes `+390612345678`). Both settings are read
+on every call, and the environment variables of the same names set them
+too. The rejection message names `KARNI_PHONE_COUNTRY_CODE`. The admin
+shows the number as stored.
+
+`KARNI_PHONE_NORMALIZER` names the function every PhoneField cleans a
+number with. It takes the value as typed and returns it in E.164, or
+unchanged to have it rejected. `karni.fields.to_e164(value,
+country_code=..., trunk_prefix=...)` holds Karni's rules for a function of
+your own. There is no dependency: per-country number plans need Google's
+`phonenumbers` (megabytes of metadata). Use it in your normalizer, or add
+`validators=[...]` built on it, when well formed is not enough and you must
+know a number is assignable.
 
 ### CountryField and CurrencyField
 

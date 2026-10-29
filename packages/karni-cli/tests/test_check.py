@@ -133,3 +133,42 @@ def test_check_outside_project_errors(runner, tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["check"])
     assert result.exit_code != 0
+
+
+def _fresh_frontend(tmp_path: Path, monkeypatch) -> None:
+    """A project right after `karni new`: frontend/ without node_modules, outside CI."""
+    from karni_cli.environment import CI_ENV_VARS
+
+    (tmp_path / "manage.py").write_text("")
+    (tmp_path / "frontend" / "src").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    for name in CI_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(project_mod, "run_manage", _fake_run(0))
+
+
+def test_a_fresh_frontend_is_skipped_with_the_exact_command(runner, tmp_path, monkeypatch) -> None:
+    _fresh_frontend(tmp_path, monkeypatch)
+    result = runner.invoke(app, ["check"])
+    assert result.exit_code == 0, result.output
+    assert "karni check: ok" in result.output
+    assert "skipped: the frontend checks (eslint and jscpd) need frontend/node_modules" in (
+        result.output
+    )
+    assert "`(cd frontend && npm install)`" in result.output
+    assert "`(cd frontend && npx --yes npm@11 install)`" in result.output
+    assert result.output.count("frontend/node_modules") == 1  # one message, not one per tool
+
+
+def test_a_missing_frontend_install_fails_in_ci_and_with_the_flag(
+    runner, tmp_path, monkeypatch
+) -> None:
+    _fresh_frontend(tmp_path, monkeypatch)
+    forced = runner.invoke(app, ["check", "--frontend"])
+    assert forced.exit_code == 1 and "karni check: FAILED" in forced.output
+    assert "`(cd frontend && npm install)`" in forced.output and "--no-frontend" in forced.output
+    monkeypatch.setenv("CI", "true")
+    in_ci = runner.invoke(app, ["check"])
+    assert in_ci.exit_code == 1 and "karni check: FAILED" in in_ci.output
+    skipped = runner.invoke(app, ["check", "--no-frontend"])
+    assert skipped.exit_code == 0 and "node_modules" not in skipped.output

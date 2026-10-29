@@ -465,3 +465,40 @@ def test_karni_cache_picks_redis_or_locmem(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_login_lands_on_the_admin(make_settings) -> None:
     assert make_settings("dev")["LOGIN_REDIRECT_URL"] == "/admin/"
+
+
+# ---------------------------------------------------------------------------
+# File roots: under the project in development, /data in production
+# ---------------------------------------------------------------------------
+
+
+def test_dev_stores_files_under_the_project(make_settings, tmp_path) -> None:
+    settings_file = str(tmp_path / "config" / "settings.py")
+    ns = make_settings("dev", preset={"__file__": settings_file})
+    assert ns["MEDIA_ROOT"] == str(tmp_path.resolve() / "data" / "media")
+    assert ns["STATIC_ROOT"] == str(tmp_path.resolve() / "data" / "static")
+    # BASE_DIR, when the settings define it, is the project root.
+    elsewhere = tmp_path / "elsewhere"
+    ns = make_settings("dev", preset={"__file__": settings_file, "BASE_DIR": elsewhere})
+    assert ns["MEDIA_ROOT"] == str(elsewhere.resolve() / "data" / "media")
+
+
+def test_a_relative_root_is_read_from_the_project_not_the_working_directory(
+    make_settings, tmp_path
+) -> None:
+    preset = {"__file__": str(tmp_path / "config" / "settings.py")}
+    ns = make_settings("dev", preset=dict(preset), MEDIA_ROOT="uploads")
+    assert ns["MEDIA_ROOT"] == str(tmp_path.resolve() / "uploads")
+    ns = make_settings("dev", preset=dict(preset), MEDIA_ROOT="/srv/media")
+    assert ns["MEDIA_ROOT"] == "/srv/media"
+    # Written in settings.py before the call: left exactly as written.
+    ns = make_settings("dev", preset={**preset, "MEDIA_ROOT": "media"})
+    assert ns["MEDIA_ROOT"] == "media"
+    # No project root known (a bare namespace): left relative.
+    assert make_settings("dev")["MEDIA_ROOT"] == "data/media"
+
+
+def test_production_keeps_the_data_volume(make_settings, tmp_path) -> None:
+    preset = {"__file__": str(tmp_path / "config" / "settings.py")}
+    ns = make_settings("prod", preset=preset, **PROD_OK)
+    assert (ns["MEDIA_ROOT"], ns["STATIC_ROOT"]) == ("/data/media", "/data/static")

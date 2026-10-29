@@ -222,3 +222,50 @@ def test_a_staff_user_without_the_role_sees_nothing(roles: None) -> None:
     admin = signed_in(staff)
     assert admin.get(url(Block, "changelist")).status_code == 403
     assert url(Block, "changelist") not in admin.get(reverse("admin:index")).content.decode()
+
+
+def test_the_staff_role_opens_the_projects_own_pages_and_the_sites(roles: None) -> None:
+    """The staff role (every grant) with no Django permission ticked: every Karni page opens."""
+    from tests.conftest import make_user
+
+    manager = make_user("manager@example.com", "staff", staff=True)
+    assert not manager.user_permissions.exists()
+    enquiry = Enquiry.objects.create(name="Ada", message="A cake, please")
+    admin = signed_in(manager)
+    index = admin.get(reverse("admin:index")).content.decode()
+    for model in (Enquiry, Service, Block, Menu, Redirect, PageSeo):
+        assert url(model, "changelist") in index, model
+        assert admin.get(url(model, "changelist")).status_code == 200, model
+    assert admin.get(url(Enquiry, "change", enquiry.pk)).status_code == 200
+    assert admin.get(url(Service, "add")).status_code == 200
+
+
+def test_a_project_role_opens_its_own_pages_only(settings: Settings) -> None:
+    from karni.accounts.roles import sync_roles
+
+    from tests.conftest import make_user
+
+    settings.KARNI_ROLES = {
+        **settings.KARNI_ROLES,
+        "front_desk": {"name": "Front desk", "grants": {"testapp.enquiry:*": "all"}},
+    }
+    sync_roles()
+    desk = make_user("desk@example.com", "front_desk", staff=True)
+    admin = signed_in(desk)
+    index = admin.get(reverse("admin:index")).content.decode()
+    assert url(Enquiry, "changelist") in index
+    assert url(Service, "changelist") not in index and url(Block, "changelist") not in index
+    assert admin.get(url(Enquiry, "add")).status_code == 200
+    assert admin.get(url(Service, "changelist")).status_code == 403
+    # The escape hatch: Django's model permissions only, for this module's pages too.
+    settings.KARNI_ADMIN_GRANTS_OPEN_PAGES = False
+    assert admin.get(url(Enquiry, "changelist")).status_code == 403
+
+
+def test_the_editor_needs_django_permissions_once_grants_stop_opening_pages(
+    editor: Any, settings: Settings
+) -> None:
+    admin = signed_in(editor)
+    assert admin.get(url(Block, "changelist")).status_code == 200
+    settings.KARNI_ADMIN_GRANTS_OPEN_PAGES = False
+    assert admin.get(url(Block, "changelist")).status_code == 403

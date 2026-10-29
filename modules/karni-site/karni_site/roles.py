@@ -4,8 +4,9 @@ An editor changes what visitors read and nothing else: the site's details,
 the page content, the menus and each page's title and description. They
 have no grant on enquiries, users, roles, redirects or any project model, so
 the admin shows them none of those. Give a person staff status and the role.
-This module's admin pages open for whoever the roles' grants admit
-(:mod:`karni_site.admin`), so no Django permission needs ticking.
+Karni's admin pages open for whoever the roles' grants admit
+(:meth:`karni.admin.base.KarniAdminMixin.granted`), so no Django permission
+needs ticking.
 
 Override / escape hatch: ``KARNI_SITE_EDITOR_ROLE`` names the slug (``None``
 declares no role), a role of the same slug in ``KARNI_ROLES`` replaces this

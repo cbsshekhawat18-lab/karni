@@ -24,20 +24,21 @@ pip install karni karni-cli pytest pytest-django
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
 docker compose up -d --wait db
-printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' >> .env
+printf 'DATABASE_URL=postgres://karni:karni@localhost:5432/karni\nKARNI_CACHE=locmem\n' >> .env
 ```
 
 `karni new` wrote a Django project configured by one call
 (`karni_settings(globals())`), a Vite + React frontend on `@karni/ui`, a
 docker-compose stack with a Makefile, and the guidance files AI coding
-agents read. Run in a terminal, `karni new` first asks what kind of project
+agents read, and made the folder a git repository with a first commit
+(`--no-git` skips it). Run in a terminal, `karni new` first asks what kind of project
 it is: Enter takes `app`, this page's kind, and `--kind app` skips the
 question (`--kind site` makes a public website, see
 [start a site project](public-site.md#start-a-site-project)). `docker compose up -d --wait db` starts the project's
 PostgreSQL 16 from that stack, published on localhost only (set
-`KARNI_DB_PORT` in `.env` when port 5432 is taken). The four `.env` lines point
-the app at it, at an in-process cache instead of Redis, and at a local media
-folder. pytest and pytest-django are the project's dev dependencies
+`KARNI_DB_PORT` in `.env` when port 5432 is taken). The two `.env` lines point
+the app at it and at an in-process cache instead of Redis. Uploads go to
+`data/media` in the project, which git ignores. pytest and pytest-django are the project's dev dependencies
 (`karni test` runs them), and they go into the same venv.
 
 PostgreSQL is Karni's default and the database it is built and tested for:
@@ -67,7 +68,7 @@ two services and create its database, then continue with step 2:
 ```sh
 karni new "Ticket Shop" && cd ticket_shop
 cp .env.example .env
-printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\nMEDIA_ROOT=data/media\nSTATIC_ROOT=data/static\n' "$USER" >> .env
+printf 'DATABASE_URL=postgres://%s@127.0.0.1:5432/ticket_shop\nREDIS_URL=redis://127.0.0.1:6379/0\n' "$USER" >> .env
 createdb ticket_shop
 ```
 

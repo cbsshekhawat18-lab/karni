@@ -1054,7 +1054,8 @@ class AdminHiddenRowProbe:
             self.unproven(
                 "changelist",
                 f"the changelist {url or ''} {status}: the user cannot open it, so this proves "
-                "no row scope. Log in a staff user with the model's view permission.",
+                "no row scope. Log in a staff user with a view grant on the model (or its "
+                "Django view permission).",
             )
             return
         shown = self._shown(response)

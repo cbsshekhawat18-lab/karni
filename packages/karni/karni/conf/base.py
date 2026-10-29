@@ -509,6 +509,10 @@ BASE: dict[str, Any] = {
         },
     },
     "KARNI_ADMIN_AUTODISCOVER": env.bool("KARNI_ADMIN_AUTODISCOVER", default=True),
+    # A role's grant opens the admin page for that model and action (rows still
+    # follow the grant's scope). False: only Django's model permissions open
+    # pages, as in 0.4.0 (karni.admin.base.KarniAdminMixin.granted).
+    "KARNI_ADMIN_GRANTS_OPEN_PAGES": env.bool("KARNI_ADMIN_GRANTS_OPEN_PAGES", default=True),
     # The admin's colour scheme: "light" (the default: light only, no switch),
     # "dark", or "auto" (unfold's light/dark/system switch). Wired into
     # UNFOLD["THEME"] by karni_settings(), read per request.
@@ -589,6 +593,12 @@ BASE: dict[str, Any] = {
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
+    # PhoneField (karni.fields): the country code a national number gets ("44"),
+    # None for international numbers only; the trunk prefix it loses; and the
+    # function that does it, read on every call.
+    "KARNI_PHONE_COUNTRY_CODE": env("KARNI_PHONE_COUNTRY_CODE", default=None),
+    "KARNI_PHONE_TRUNK_PREFIX": env("KARNI_PHONE_TRUNK_PREFIX", default="0"),
+    "KARNI_PHONE_NORMALIZER": "karni.fields.text.default_phone_normalizer",
     # --- Import and export (karni.transfer) ---------------------------------
     # Files with at most this many rows import inside the request; larger
     # ones run in Celery with progress. The two caps refuse outright.

@@ -99,13 +99,59 @@ it takes anything a `ModelAdmin` accepts.
 Precedence: explicit `admin.site.register` (project `admin.py`) >
 `AdminMeta` > derived defaults.
 
+## Who may open a page
+
+A staff user opens a model's admin page for an action when they hold the
+grant for it through a role (`app_label.model:<action>`, see
+[roles as data](accounts.md#roles-as-data)), or Django's model permission
+for it. The grants are the same data the API reads for `access = Granted()`,
+so a role that may change orders through the API may change them in the
+admin too, and no Django permission needs ticking:
+
+```python
+KARNI_ROLES = {
+    "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}},
+    "front_desk": {"grants": {"clinic.appointment:*": "all", "clinic.patient:view": "all"}},
+}
+```
+
+A person with staff status and the `front_desk` role sees Appointments and
+Patients on the admin index, opens and changes appointments, and reads
+patients. The index, the app pages and the sidebar list exactly the models
+the user may open. Every other page is a 403.
+
+- Signing in to the admin still needs `is_staff` (Django's own rule). A
+  role alone never opens the admin.
+- Superusers hold every grant.
+- Rows still follow the grant's scope (below), and a [veto](#vetoes) still
+  refuses an action.
+- A user without a grant for a model keeps Django's model permissions for
+  it, as before.
+- Inlines follow the same rule for the inline's model. Generated inlines
+  have it, and `karni.admin.KarniInlineMixin` gives it to your own:
+  `class LineInline(KarniInlineMixin, TabularInline)`.
+- Only a superuser changes `is_superuser` and `user_permissions`, or edits
+  or deletes a superuser's account, on `KarniUserAdmin`. A grant on the user
+  model still lets its holder give roles to people, so grant
+  `<user model>:change` only to someone trusted with every role.
+
+`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` restores the rule before 0.4.1:
+only Django's model permissions open pages, and the grants decide the rows.
+To keep one admin on Django's permissions, override `granted()`:
+
+```python
+class LedgerAdmin(KarniModelAdmin):
+    def granted(self, request, action):
+        return False  # Django's model permissions only, for this page
+```
+
 ## Row scope
 
 The admin shows the rows the user's grants reach (ADR 0002, P2). That is the
-same answer the API gives for `access = Granted()`. Django's model permissions
-still decide which screens a staff user may open. The roles' grants
+same answer the API gives for `access = Granted()`. A grant or a Django
+permission opens a page ([above](#who-may-open-a-page)). The roles' grants
 (`KARNI_ROLES` → `RolePermission`, see [roles as data](accounts.md#roles-as-data))
-decide which rows those screens show and accept:
+decide which rows those pages show and accept:
 
 - `get_queryset()` keeps only the rows the user's `view` grants reach, so the
   changelist, its search and list filters, the autocomplete endpoint and
@@ -120,8 +166,7 @@ decide which rows those screens show and accept:
   the API's relation fields accept.
 
 A soft-deleted row inside the scope stays reachable (the owner can restore
-it). An admin that must show everything its Django permissions admit opts
-out:
+it). An admin that must show every row to whoever may open it opts out:
 
 ```python
 class SupportConsoleAdmin(KarniModelAdmin):

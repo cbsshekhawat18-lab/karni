@@ -14,13 +14,12 @@
 * **Redirects** and **Page titles and descriptions**.
 
 These pages open for whoever the roles' grants admit (``karni.accounts``
-roles, the permission matrix): the ``editor`` role this module declares
-needs no Django permission ticked, only staff status. Rows still follow the
-grants' scope, as everywhere in Karni's admin.
+roles, the permission matrix), as every Karni admin page does: the
+``editor`` role this module declares needs no Django permission ticked, only
+staff status. Rows still follow the grants' scope.
 
 Override / escape hatch: unregister any of these and register your own
-subclass (``admin.site.unregister(Block)``); ``GrantedAdminMixin`` and
-``GrantedInlineMixin`` give your own admin the same grant-based access.
+subclass (``admin.site.unregister(Block)``).
 """
 
 from __future__ import annotations
@@ -37,10 +36,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.text import Truncator
 from django.utils.translation import gettext_lazy as _
-from karni.accounts.roles import user_can
-from karni.admin import KarniModelAdmin
-from karni.admin.scope import within_scope
-from karni.meta import permission_key
+from karni.admin import KarniInlineMixin, KarniModelAdmin
 from unfold.admin import TabularInline
 
 from karni_site import routes
@@ -50,90 +46,11 @@ from karni_site.sitesettings import settings_model
 
 __all__ = [
     "BlockAdmin",
-    "GrantedAdminMixin",
-    "GrantedInlineMixin",
     "MenuAdmin",
     "PageSeoAdmin",
     "RedirectAdmin",
     "SiteSettingsAdmin",
 ]
-
-
-def _granted(request: HttpRequest, model: type[models.Model], action: str) -> bool:
-    return user_can(getattr(request, "user", None), permission_key(model, action))
-
-
-class GrantedAdminMixin:
-    """A ``KarniModelAdmin`` whose pages open for a grant, not only a Django permission.
-
-    A user holding ``app.model:<action>`` through a role may do that action
-    here, inside the grant's scope and unless a veto refuses it. Anyone
-    else falls back to Django's permissions, as in every Karni admin.
-    """
-
-    model: type[models.Model]
-
-    def _grant(self, request: HttpRequest, action: str) -> bool:
-        return _granted(request, self.model, action)
-
-    def has_module_permission(self, request: HttpRequest) -> bool:
-        return super().has_module_permission(request) or any(  # type: ignore[misc]
-            self._grant(request, action) for action in ("view", "change", "add", "delete")
-        )
-
-    def has_view_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        if self._grant(request, "view") or self._grant(request, "change"):
-            return within_scope(self, request, obj, "view") or within_scope(
-                self, request, obj, "change"
-            )
-        return super().has_view_permission(request, obj)  # type: ignore[misc]
-
-    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        if self._grant(request, "change"):
-            return within_scope(self, request, obj, "change") and (
-                self.vetoed(request, "change") is None  # type: ignore[attr-defined]
-            )
-        return super().has_change_permission(request, obj)  # type: ignore[misc]
-
-    def has_add_permission(self, request: HttpRequest, *args: Any) -> bool:
-        if self._grant(request, "add"):
-            return self.vetoed(request, "add") is None  # type: ignore[attr-defined]
-        return super().has_add_permission(request, *args)  # type: ignore[misc]
-
-    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        if self._grant(request, "delete"):
-            return within_scope(self, request, obj, "delete") and (
-                self.vetoed(request, "delete") is None  # type: ignore[attr-defined]
-            )
-        return super().has_delete_permission(request, obj)  # type: ignore[misc]
-
-
-class GrantedInlineMixin:
-    """The same for an inline: its rows open for a grant on the inline's model."""
-
-    model: type[models.Model]
-
-    def has_view_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        return (
-            _granted(request, self.model, "view")
-            or _granted(request, self.model, "change")
-            or super().has_view_permission(request, obj)  # type: ignore[misc]
-        )
-
-    def has_add_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        return _granted(request, self.model, "add") or super().has_add_permission(  # type: ignore[misc]
-            request, obj
-        )
-
-    def has_change_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        return _granted(request, self.model, "change") or super().has_change_permission(  # type: ignore[misc]
-            request, obj
-        )
-
-    def has_delete_permission(self, request: HttpRequest, obj: Any = None) -> bool:
-        return _granted(request, self.model, "delete") or super().has_delete_permission(  # type: ignore[misc]
-            request, obj
-        )
 
 
 #: An address typed without a scheme is https.
@@ -142,8 +59,8 @@ URL_FIELDS: dict[type[models.Field[Any, Any]], dict[str, Any]] = {
 }
 
 
-class SiteAdmin(GrantedAdminMixin, KarniModelAdmin):
-    """The base of this module's admins: grants open the pages, deletes go row by row."""
+class SiteAdmin(KarniModelAdmin):
+    """The base of this module's admins: no import or export, deletes go row by row."""
 
     karni_transfer = False
     formfield_overrides = URL_FIELDS
@@ -173,13 +90,13 @@ def _file_url(value: Any) -> str:
 # site settings
 
 
-class OpeningHoursInline(GrantedInlineMixin, TabularInline):
+class OpeningHoursInline(KarniInlineMixin, TabularInline):
     model = OpeningHours
     fields = ("days", "times", "order")
     extra = 0
 
 
-class SocialLinkInline(GrantedInlineMixin, TabularInline):
+class SocialLinkInline(KarniInlineMixin, TabularInline):
     model = SocialLink
     formfield_overrides = URL_FIELDS
     fields = ("name", "url", "order")
@@ -459,7 +376,7 @@ class MenuItemForm(forms.ModelForm):
         return data
 
 
-class MenuItemInline(GrantedInlineMixin, TabularInline):
+class MenuItemInline(KarniInlineMixin, TabularInline):
     model = MenuItem
     form = MenuItemForm
     fields = (

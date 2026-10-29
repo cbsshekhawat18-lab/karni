@@ -118,11 +118,14 @@ refuses a missing `SECRET_KEY` or an empty `ALLOWED_HOSTS`, and
 ([deploy checks](#deploy-checks)).
 
 **Admin.** It is mounted at `KARNI_ADMIN_PATH` (move it off `/admin/`).
-Django's model permissions decide which screens a staff user may open. The
-roles' grants decide which rows those screens show and accept (row scope, ADR
-0002 P2). A staff user with permissions but no grant sees nothing, and an
-admin that opts out needs a reason that `karni check` lists. There is no logo
-unless `KARNI_ADMIN_LOGO` says so.
+Only staff users (`is_staff`) sign in. A role's grant, or Django's model
+permission, decides which screens a staff user may open
+(`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` keeps Django's permissions only).
+The roles' grants decide which rows those screens show and accept (row
+scope, ADR 0002 P2). A staff user with permissions but no grant sees
+nothing, and an admin that opts out needs a reason that `karni check` lists.
+Only a superuser makes or edits a superuser. There is no logo unless
+`KARNI_ADMIN_LOGO` says so.
 
 **Welcome page.** `/` on first boot (`karni.welcome`) is served only while
 `DEBUG` is on and only until the project defines its own root route. With
