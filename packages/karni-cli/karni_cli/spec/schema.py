@@ -346,7 +346,8 @@ class Spec(_Node):
         default_factory=list,
         description=(
             "karni make page, in navigation order. Each item is one key: an entity with its "
-            "pages (list, detail, form), or a page name with its kind (dashboard, blank, login)."
+            "pages (list, detail, form), or a page name with its kind (dashboard, blank, login, "
+            "or code: a page of the project's own at /<name>, which karni build leaves alone)."
         ),
     )
     seed: dict[str, int] = Field(

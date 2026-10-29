@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import tomlkit
 import typer
@@ -29,7 +30,12 @@ from karni_cli.project import (
     require_project,
     venv_python,
 )
-from karni_cli.settings_edit import add_app
+from karni_cli.settings_edit import MARKER, add_entry
+
+if TYPE_CHECKING:  # karni_cli.generators imports this module: a runtime import would loop
+    from karni_cli.generators.core import Workspace
+
+SETTINGS = "config/settings.py"
 
 
 def add_dependency_text(text: str, distribution: str) -> str | None:
@@ -56,18 +62,6 @@ def add_dependency_text(text: str, distribution: str) -> str | None:
             continue
     deps.append(distribution)
     return tomlkit.dumps(doc)
-
-
-def _add_dependency(project_root: str, distribution: str) -> bool:
-    """Add the distribution to [project].dependencies. Returns False when present."""
-    pyproject = Path(project_root) / "pyproject.toml"
-    if not pyproject.is_file():
-        raise CliError("No pyproject.toml in the project root.", code="C207")
-    updated = add_dependency_text(pyproject.read_text(), distribution)
-    if updated is None:
-        return False
-    pyproject.write_text(updated)
-    return True
 
 
 def _read_agents_fragment(project: Path, app_name: str) -> str | None:
@@ -148,27 +142,53 @@ def record_guidance(project: Path, module: str) -> bool:
     return True
 
 
-def _wire_site(settings_path: Path) -> None:
-    """karni-site also needs its redirect middleware and its ``site`` context processor."""
-    from karni_cli.generators.site import wire_site_settings
+def plan_module(ws: Workspace, module: str) -> list[str]:
+    """Plan ``karni add <module>``'s file edits into ``ws``; returns the lines it reports.
 
-    text = settings_path.read_text()
-    updated, notes = wire_site_settings(text, "config/settings.py")
-    if updated != text:
-        settings_path.write_text(updated)
-    for note in notes:
-        typer.echo(note)
+    The dependency in ``pyproject.toml``, the app in the ``# karni:apps``
+    block, and for ``site`` its middleware, context processor and the kind
+    (an app becomes a site+app). ``karni build`` plans its modules the same
+    way, so ``--dry-run`` shows them. Recording the module's agent guidance
+    needs it installed, so :func:`record_guidance` runs after the write.
+    """
+    app_name = f"karni_{module.replace('-', '_')}"
+    distribution = f"karni-{module.replace('_', '-')}"
+    pyproject = ws.read("pyproject.toml")
+    if pyproject is None:
+        raise CliError("No pyproject.toml in the project root.", code="C207")
+    with_dependency = add_dependency_text(pyproject, distribution)
+    if with_dependency is not None:
+        ws.write("pyproject.toml", with_dependency)
+    settings = ws.read(SETTINGS)
+    if settings is None:
+        raise CliError(f"{ws.path(SETTINGS)} not found.", code="C001")
+    with_app = add_entry(
+        settings, app_name, setting="INSTALLED_APPS", marker=MARKER, filename="settings.py"
+    )
+    if with_app is not None:
+        ws.write(SETTINGS, with_app)
+    lines = [
+        f"{distribution}: {'added to' if with_dependency else 'already in'} pyproject.toml",
+        f"{app_name}: {'wired into' if with_app else 'already in'} INSTALLED_APPS",
+    ]
+    if module == "site":
+        from karni_cli import kinds
+        from karni_cli.generators.site import wire_site_settings
+
+        text = ws.read(SETTINGS) or ""
+        updated, notes = wire_site_settings(text, "config/settings.py")
+        if updated != text:
+            ws.write(SETTINGS, updated)
+        lines += notes
+        adopted = kinds.adopt_site_text(ws.read("pyproject.toml") or "", ws.root)
+        if adopted is not None:
+            ws.write("pyproject.toml", adopted[0])
+            lines.append(kinds.adoption_note(adopted[1], adopted[2]))
+    return lines
 
 
-def _adopt_site(project: Path) -> None:
-    """The project's kind gets its site: an app becomes a site+app (and says how to go back)."""
-    from karni_cli import kinds
-
-    pyproject = project / "pyproject.toml"
-    adopted = kinds.adopt_site_text(pyproject.read_text(encoding="utf-8"), project)
-    if adopted is not None:
-        pyproject.write_text(adopted[0], encoding="utf-8")
-        typer.echo(kinds.adoption_note(adopted[1], adopted[2]))
+def _site_next(project: Path) -> None:
+    """After karni add site: the site app is the next step, unless the project has one."""
     from karni_cli.commands.context import site_line
 
     if site_line(project) is None:
@@ -179,18 +199,18 @@ def _adopt_site(project: Path) -> None:
 
 
 def add(module: str = typer.Argument(..., help='Module short name, e.g. "payments"')) -> None:
+    from karni_cli.generators.core import Workspace
+
     project = require_project()
     app_name = f"karni_{module.replace('-', '_')}"
-    distribution = f"karni-{module.replace('_', '-')}"
-
-    dep_added = _add_dependency(str(project), distribution)
-    app_added = add_app(project / "config" / "settings.py", app_name)
-
-    typer.echo(f"{distribution}: {'added to' if dep_added else 'already in'} pyproject.toml")
-    typer.echo(f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS")
+    ws = Workspace(project)
+    lines = plan_module(ws, module)
+    for path, _before, after in ws.changes():
+        path.write_text(after, encoding="utf-8")
+    for line in lines:
+        typer.echo(line)
     if module == "site":
-        _wire_site(project / "config" / "settings.py")
-        _adopt_site(project)
+        _site_next(project)
 
     record_guidance(project, module)
 

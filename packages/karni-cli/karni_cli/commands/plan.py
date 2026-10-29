@@ -49,9 +49,12 @@ def plan(
     pointed elsewhere, a module removed, a key type switched, access widened),
     with the rows it affects when the database answers (manage.py karni_rows,
     only SELECT COUNT). karni build refuses risky changes without
-    --allow-destructive. It writes nothing. Exit status 1 when the spec has a
-    problem.
+    --allow-destructive. A change on code the project wrote by hand (a model
+    or a viewset karni build did not write, .karni/build.json says which) is
+    marked (not managed): karni build leaves it. It writes nothing. Exit
+    status 1 when the spec has a problem.
     """
+    from karni_cli.build import record as build_record
     from karni_cli.spec import plan as plan_mod
     from karni_cli.spec.export import read_facts
     from karni_cli.spec.validate import validate_text
@@ -81,7 +84,9 @@ def plan(
             count = len(report.issues)
             typer.echo(f"{shown}: {count} problem{'s' if count != 1 else ''}, so no plan.")
         raise typer.Exit(1)
-    result = plan_mod.plan_project(report.spec, facts, root, file=shown)
+    # what karni build manages (.karni/build.json): a change on the project's own code is marked
+    managed = build_record.load(root).managed()
+    result = plan_mod.plan_project(report.spec, facts, root, file=shown, managed=managed)
     counter = None if offline else plan_mod.manage_counter(root, docker=docker, service=service)
     plan_mod.apply_counts(result, counter)
     if as_json:

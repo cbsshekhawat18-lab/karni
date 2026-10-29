@@ -24,6 +24,13 @@ keeping its rows. A field removed and a field of the same type added to one
 entity, without ``was``, is shown as a removal with the hint that it is
 probably a rename.
 
+Ownership: given :class:`Managed` (what ``.karni/build.json`` records),
+each change is marked ``managed`` or not. ``karni build`` writes Karni's code
+in files of its own (:mod:`karni_cli.build.layout`), and a change on code the
+project wrote by hand (a model, a viewset, a page, a module to remove) is not
+managed: ``karni build`` leaves it to the project. ``access: code`` means
+the project's viewset decides, so it matches any access the project has.
+
 ``--json`` prints :meth:`Plan.as_dict`, whose JSON Schema is
 :func:`json_schema` (published as ``docs/assets/karni-plan.schema.json``).
 
@@ -43,11 +50,11 @@ from typing import Any, Final, Literal, get_args
 from pydantic import BaseModel, ConfigDict, Field
 
 from karni_cli import project as project_mod
+from karni_cli.build import layout
 from karni_cli.generators.fields import is_user_target
-from karni_cli.generators.naming import snake
 from karni_cli.project import CliError
 from karni_cli.spec import export, schema
-from karni_cli.spec.catalog import MODULES
+from karni_cli.spec.catalog import MODULES, module_setting
 from karni_cli.spec.normal import normalise, role_name
 from karni_cli.spec.validate import validate_text
 
@@ -58,6 +65,7 @@ __all__ = [
     "PLAN_VERSION",
     "Change",
     "Count",
+    "Managed",
     "Plan",
     "apply_counts",
     "json_schema",
@@ -153,6 +161,8 @@ class Change:
     counts: tuple[Count, ...] = ()
     #: Whether the counts were asked for and answered (``rows`` may still be unknown).
     counted: bool = False
+    #: ``False``: the project's own code holds it, and karni build leaves it (see :class:`Managed`).
+    managed: bool = True
 
     def line(self) -> str:
         """The change as one line of the text output."""
@@ -163,6 +173,8 @@ class Change:
             text += f", {self.reason}"
         if self.counted and self.counts:
             text += f" ({self.rows} rows)" if self.rows is not None else " (rows unknown)"
+        if not self.managed:
+            text += " (not managed)"
         return text
 
     def as_dict(self) -> dict[str, Any]:
@@ -174,7 +186,24 @@ class Change:
             "risky": self.risky,
             "reason": self.reason,
             "rows": self.rows,
+            "managed": self.managed,
         }
+
+
+@dataclass(frozen=True)
+class Managed:
+    """Experimental. What karni build manages in a project, as ``.karni/build.json`` records it.
+
+    ``entities`` are the ``app.Entity`` labels whose code Karni writes,
+    ``pages`` the pages it writes (``app.Entity:list``, ``about:blank``) and
+    ``adopted`` the Karni-owned files and blocks handed to the project with
+    ``karni build --adopt``. A change on anything else that already exists is
+    not managed. Something new (an entity, a page, a module) is managed.
+    """
+
+    entities: frozenset[str] = frozenset()
+    pages: frozenset[str] = frozenset()
+    adopted: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -186,14 +215,26 @@ class Plan:
     row_counts: RowStatus = "not needed"
     #: Why the counts are missing (offline, a database that did not answer).
     note: str | None = None
+    #: Both sides in normal form, and the renames, for karni build (not in the JSON output).
+    current: dict[str, Any] = field(default_factory=dict, repr=False)
+    desired: dict[str, Any] = field(default_factory=dict, repr=False)
+    #: new ``app.Entity`` -> old, for the entities renamed with ``was:``.
+    entity_renames: dict[str, str] = field(default_factory=dict, repr=False)
+    #: (new ``app.Entity``, new field) -> old field, for the fields renamed with ``was:``.
+    field_renames: dict[tuple[str, str], str] = field(default_factory=dict, repr=False)
 
     @property
     def risky(self) -> list[Change]:
         return [change for change in self.changes if change.risky]
 
+    @property
+    def not_managed(self) -> list[Change]:
+        return [change for change in self.changes if not change.managed]
+
     def summary(self) -> str:
-        total, risky = len(self.changes), len(self.risky)
-        return f"{total} change{'s' if total != 1 else ''}, {risky} risky."
+        total, risky, left = len(self.changes), len(self.risky), len(self.not_managed)
+        text = f"{total} change{'s' if total != 1 else ''}, {risky} risky"
+        return text + (f", {left} not managed." if left else ".")
 
     def text(self) -> str:
         """The plan as the terminal shows it: one line per change, grouped by area."""
@@ -205,6 +246,10 @@ class Plan:
             if found:
                 lines += [area, *(change.line() for change in found)]
         lines.append(self.summary())
+        if self.not_managed:
+            lines.append(
+                "karni build leaves the changes marked not managed to the project's own code."
+            )
         if self.risky:
             if self.note:
                 lines.append(f"Row counts skipped: {self.note}.")
@@ -219,7 +264,11 @@ class Plan:
             "valid": True,
             "issues": [],
             "changes": [change.as_dict() for change in self.changes],
-            "summary": {"changes": len(self.changes), "risky": len(self.risky)},
+            "summary": {
+                "changes": len(self.changes),
+                "risky": len(self.risky),
+                "not_managed": len(self.not_managed),
+            },
             "row_counts": {"status": self.row_counts, "note": self.note},
         }
 
@@ -258,11 +307,16 @@ class _ChangeOut(_Out):
     rows: int | None = Field(
         description="The rows it affects, when the database was counted. null when not counted."
     )
+    managed: bool = Field(
+        description="false: the project's own code holds it (a hand-written model, viewset or "
+        "page, a module to remove), and karni build leaves it to the project."
+    )
 
 
 class _SummaryOut(_Out):
     changes: int = Field(description="How many changes.")
     risky: int = Field(description="How many of them are risky.")
+    not_managed: int = Field(description="How many of them karni build leaves to the project.")
 
 
 class _RowCountsOut(_Out):
@@ -315,7 +369,7 @@ def invalid_output(file: str, issues: Iterable[dict[str, Any]]) -> dict[str, Any
             "valid": False,
             "issues": list(issues),
             "changes": [],
-            "summary": {"changes": 0, "risky": 0},
+            "summary": {"changes": 0, "risky": 0, "not_managed": 0},
             "row_counts": {"status": "not needed", "note": None},
         }
     )
@@ -536,12 +590,18 @@ def _app(ctx: _Context) -> None:
 
 def _modules(ctx: _Context) -> None:
     old, new = ctx.current["modules"], ctx.desired["modules"]
+    installed = {module["name"]: module for module in ctx.facts.get("modules") or []}
     for name, options in new.items():
         if name not in old:
             ctx.add(Change("modules", "add", name, _show(options) if options else ""))
             continue
+        # the export leaves out an option at its default: compare the setting's value itself
+        values = (installed.get(name) or {}).get("settings") or {}
         for option in sorted(set(options) | set(old[name])):
             before, after = old[name].get(option), options.get(option)
+            setting = module_setting(name, option)
+            if option not in old[name] and option in options and setting in values:
+                before = values[setting]
             if before != after:
                 ctx.add(
                     Change(
@@ -647,6 +707,15 @@ def _roles(ctx: _Context) -> None:
             ctx.add(Change("roles", "remove", slug))
 
 
+def tested(entity: dict[str, Any]) -> bool:
+    """Experimental. Whether karni build writes an API test for ``entity`` (in normal form).
+
+    A table another system owns, or one on another database, gets none: the
+    test database holds neither.
+    """
+    return not entity.get("external") and entity.get("database") in (None, "default")
+
+
 def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
     fields = ", ".join(f"{name} {token}" for name, token in entity["fields"].items())
     options: list[str] = []
@@ -715,7 +784,8 @@ def _entities_and_fields(ctx: _Context) -> None:
             ctx.migrate(label)
             if entity["access"] != {"read": ["granted"], "write": ["granted"]}:
                 ctx.add(Change("access", "add", label, _rule(entity["access"])))
-            ctx.add(Change("tests", "add", f"{app}/tests/test_{snake(label.split('.')[1])}.py"))
+            if tested(entity):
+                ctx.add(Change("tests", "add", layout.test_file(app, label.split(".")[1])))
             continue
         matched.add(old_label)
         before = old_entities[old_label]
@@ -726,7 +796,8 @@ def _entities_and_fields(ctx: _Context) -> None:
             ctx.migrate(label)
         _options(ctx, label, old_label, before, entity)
         _fields(ctx, label, old_label, before, entity, resolve_old, resolve_new, outside_fields)
-        if before["access"] != entity["access"]:
+        # access: code is the project's viewset deciding: any access it has matches
+        if entity["access"] != "code" and before["access"] != entity["access"]:
             why = _widened(before["access"], entity["access"])
             ctx.add(
                 Change(
@@ -964,8 +1035,112 @@ def _seed(ctx: _Context) -> None:
             ctx.add(Change("seed", "remove", label.split(".", 1)[1], str(count)))
 
 
-def plan_project(spec: schema.Spec, facts: dict[str, Any], root: Path, *, file: str) -> Plan:
-    """Experimental. The plan for ``spec`` against the project ``facts`` describe (no counts yet)."""
+def _own(ctx: _Context, managed: Managed) -> None:
+    """Mark each change ``managed`` or not, from what ``.karni/build.json`` records."""
+    current = _entities(ctx.current)
+    desired = _entities(ctx.desired)
+    resolve_new, resolve_old = _resolver(desired), _resolver(current)
+    renamed_back = {old: new for new, old in ctx.entity_renames.items()}
+
+    def known(label: str) -> bool:
+        old = ctx.entity_renames.get(label, label)
+        return label in managed.entities or old in managed.entities
+
+    def new(label: str) -> bool:
+        return label not in current and ctx.entity_renames.get(label) not in current
+
+    def free(path: str) -> bool:
+        return path not in managed.adopted
+
+    old_pages = {
+        renamed_back.get(resolve_old(n, ""), resolve_old(n, "")) if n[:1].isupper() else n: k
+        for entry in ctx.current["pages"]
+        for n, k in entry.items()
+    }
+    for change in ctx.changes:
+        area, action, target = change.area, change.action, change.target
+        if area in ("entities", "fields", "access"):
+            label = target.split(" ", 1)[0]
+            if area == "fields":
+                label = label.rsplit(".", 1)[0]
+            app = label.split(".", 1)[0]
+            file = (
+                layout.api_file(app)
+                if area == "access" or target.endswith(" search")
+                else layout.models_file(app)
+            )
+            if action == "add" and area == "entities":
+                # a model of that name outside the spec is the project's: build does not replace it
+                ok = not change.risky
+            elif action == "add" and area == "access":
+                ok = new(label) or known(label)
+            else:
+                ok = known(label)
+            change.managed = ok and free(file)
+        elif area in ("roles", "features"):
+            change.managed = free(layout.SETTINGS_BLOCK)
+        elif area == "modules":
+            change.managed = action == "add" or (action == "change" and free(layout.SETTINGS_BLOCK))
+        elif area == "apps":
+            change.managed = action == "add"
+        elif area == "app":
+            # karni add site turns an app into a site+app: the only kind change build makes
+            change.managed = target == "kind" and change.detail == "app -> site+app"
+        elif area == "tests":
+            change.managed = free(target)
+        elif area == "migrations":
+            # an app gets a migration from build only for the changes build makes there
+            change.managed = any(
+                other.managed
+                and other.area in ("entities", "fields")
+                and other.target.split(".", 1)[0] == target
+                for other in ctx.changes
+            )
+        elif area == "seed":
+            name = target
+            label = resolve_new(name, "") if action != "remove" else resolve_old(name, "")
+            label = renamed_back.get(label, label) if action == "remove" else label
+            app = label.split(".", 1)[0]
+            change.managed = (new(label) or known(label)) and free(layout.seeds_file(app))
+        elif area == "pages":
+            change.managed = _page_managed(change, ctx, managed, resolve_new, old_pages)
+
+
+def _page_managed(
+    change: Change,
+    ctx: _Context,
+    managed: Managed,
+    resolve: Callable[[str, str], str],
+    old_pages: dict[str, list[str]],
+) -> bool:
+    if any(block in managed.adopted for block in layout.ROUTES_BLOCKS):
+        return False
+    if change.target == "navigation":
+        return True
+    name = change.target
+    ident = resolve(name, "") if name[:1].isupper() else name
+    before = old_pages.get(ident, [])
+    after = next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
+    if change.action == "add" and set(after) & {"code", "dashboard"}:
+        return False  # the project's page (code), or the scaffold's home page (dashboard)
+    dropped = [kind for kind in before if kind not in after]
+    return all(f"{ident}:{kind}" in managed.pages for kind in dropped)
+
+
+def plan_project(
+    spec: schema.Spec,
+    facts: dict[str, Any],
+    root: Path,
+    *,
+    file: str,
+    managed: Managed | None = None,
+) -> Plan:
+    """Experimental. The plan for ``spec`` against the project ``facts`` describe (no counts yet).
+
+    ``managed``: what karni build manages (:class:`Managed`, from
+    ``.karni/build.json``). Each change is then marked managed or not.
+    ``None`` marks every change managed.
+    """
     pk = str(facts["settings"].get("KARNI_PK") or "uuid")
     current = normalise(_current_spec(facts, root), pk=pk)
     desired = normalise(_with_shipped_roles(spec, facts), pk=pk)
@@ -1000,9 +1175,18 @@ def plan_project(spec: schema.Spec, facts: dict[str, Any], root: Path, *, file: 
     for app in ctx.migrations:
         ctx.add(Change("migrations", "add", app))
     _seed(ctx)
+    if managed is not None:
+        _own(ctx, managed)
     order = {area: index for index, area in enumerate(AREAS)}
     changes = sorted(ctx.changes, key=lambda change: order[change.area])
-    return Plan(file, changes)
+    return Plan(
+        file,
+        changes,
+        current=current,
+        desired=desired,
+        entity_renames=entity_renames,
+        field_renames=field_renames,
+    )
 
 
 # row counts -----------------------------------------------------------------------

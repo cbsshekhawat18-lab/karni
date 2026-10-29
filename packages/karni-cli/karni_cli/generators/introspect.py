@@ -250,6 +250,42 @@ def _role_names_in(node: ast.AST) -> list[str]:
     return found
 
 
+def read_slot(cls: ast.ClassDef) -> ast.AST | None:
+    """The ``read=`` argument of the class's ``Access(...)`` (``None``: no such call)."""
+    for node in ast.walk(cls):
+        if isinstance(node, ast.Call) and _call_name(node) == "Access":
+            for keyword in node.keywords:
+                if keyword.arg == "read":
+                    return keyword.value
+    return None
+
+
+def owned_reads(cls: ast.ClassDef) -> list[str]:
+    """The ``Owned("...")`` paths that scope the class's reads.
+
+    Those of ``Access(read=...)``, or every one in the body when the class
+    declares no ``Access(...)`` (an ``Owned`` read is then the whole rule).
+    """
+    read = read_slot(cls)
+    if read is None:
+        return owned_paths(cls)
+    return [
+        node.args[0].value
+        for node in ast.walk(read)
+        if isinstance(node, ast.Call)
+        and _call_name(node) == "Owned"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    ]
+
+
+def reading_roles(cls: ast.ClassDef) -> list[str]:
+    """The ``HasRole("...")`` names in ``Access(read=...)``: roles that read every row."""
+    read = read_slot(cls)
+    return _role_names_in(read) if read is not None else []
+
+
 def granted_reads(cls: ast.ClassDef) -> bool:
     """Whether the class body calls ``Granted()`` — the roles' grants decide its rows."""
     return any(

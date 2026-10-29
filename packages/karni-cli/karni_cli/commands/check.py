@@ -32,16 +32,32 @@ from karni_cli.project import CliError, require_project
 _BARE_IGNORE = re.compile(r"jscpd:ignore-start\s*$")
 
 
-def _frontend_duplication(project: Path) -> int:
+def _run(argv: list[str], cwd: Path, capture: list[str] | None) -> int:
+    """Run a frontend tool: its output streams through, or is appended to ``capture``."""
+    if capture is None:
+        return subprocess.run(argv, cwd=cwd, text=True, check=False).returncode
+    proc = subprocess.run(argv, cwd=cwd, text=True, capture_output=True, check=False)
+    capture.append((proc.stdout or "") + (proc.stderr or ""))
+    return proc.returncode
+
+
+def _say(text: str, capture: list[str] | None) -> None:
+    if capture is None:
+        typer.echo(text, err=True)
+    else:
+        capture.append(text)
+
+
+def _frontend_duplication(project: Path, capture: list[str] | None = None) -> int:
     frontend = project / "frontend"
     if not frontend.is_dir():
         return 0
     jscpd = frontend / "node_modules" / ".bin" / "jscpd"
     if not jscpd.exists():
-        typer.echo(
+        _say(
             f"karni check: jscpd not installed. {toolchain.install_hint()}. "
             "Pass --no-frontend to skip the frontend duplication checks.",
-            err=True,
+            capture,
         )
         return 1
     # Reason-required opt-outs: a bare jscpd:ignore-start (no reason after it)
@@ -54,34 +70,45 @@ def _frontend_duplication(project: Path) -> int:
     ]
     if bare:
         for location in bare:
-            typer.echo(f"[duplicate] {location}: jscpd:ignore-start requires a reason", err=True)
+            _say(f"[duplicate] {location}: jscpd:ignore-start requires a reason", capture)
         return 1
-    proc = subprocess.run(
-        [str(jscpd), "--config", ".jscpd.json"],
-        cwd=frontend,
-        text=True,
-        check=False,
-    )
-    return proc.returncode
+    return _run([str(jscpd), "--config", ".jscpd.json"], frontend, capture)
 
 
-def _frontend_lint(project: Path) -> int:
+def _frontend_lint(project: Path, capture: list[str] | None = None) -> int:
     """``eslint .`` in frontend/ with the project's own binary (the @karni/ui rules live there)."""
     frontend = project / "frontend"
     if not frontend.is_dir():
         return 0
     eslint = frontend / "node_modules" / ".bin" / "eslint"
     if not eslint.exists():
-        typer.echo(
+        _say(
             f"karni check: eslint not installed. {toolchain.install_hint()}. "
             "Pass --no-frontend to skip the frontend checks.",
-            err=True,
+            capture,
         )
         return 1
-    proc = subprocess.run(
-        [str(eslint), ".", "--max-warnings", "0"], cwd=frontend, text=True, check=False
-    )
-    return proc.returncode
+    return _run([str(eslint), ".", "--max-warnings", "0"], frontend, capture)
+
+
+def run_checks(
+    project: Path, *, docker: bool | None = None, service: str = "django"
+) -> tuple[bool, str]:
+    """``karni check``'s backend and frontend checks, captured: ``(passed, output)``.
+
+    ``karni build`` runs it as its last step.
+    """
+    out: list[str] = []
+    try:
+        proc = project_mod.run_manage(project, ["karni_check"], docker=docker, service=service)
+        out.append((proc.stdout or "") + (proc.stderr or ""))
+        backend = proc.returncode
+    except CliError as exc:
+        out.append(f"error: {exc}")
+        backend = 1
+    dup = _frontend_duplication(project, out)
+    lint = _frontend_lint(project, out)
+    return not (backend or dup or lint), "\n".join(part.rstrip() for part in out if part.strip())
 
 
 def check(

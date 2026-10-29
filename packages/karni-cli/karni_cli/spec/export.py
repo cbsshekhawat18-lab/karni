@@ -838,4 +838,4 @@ def _page_entry(
     components = set(re.findall(r"<([A-Z]\w*)", source))
     if components == {"Page"}:
         return name, "blank"
-    return None
+    return name, "code"  # a page of the project's own: karni build leaves it alone

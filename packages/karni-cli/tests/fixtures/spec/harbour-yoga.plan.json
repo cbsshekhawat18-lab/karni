@@ -11,7 +11,8 @@
       "detail": "app -> site+app",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "modules",
@@ -20,7 +21,8 @@
       "detail": "provider stripe",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "modules",
@@ -29,7 +31,8 @@
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "features",
@@ -38,7 +41,8 @@
       "detail": "KARNI_2FA",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "features",
@@ -47,7 +51,8 @@
       "detail": "KARNI_EMAIL_OTP",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "features",
@@ -56,7 +61,8 @@
       "detail": "KARNI_SOCIAL_TOKEN_PROVIDERS apple, google",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "features",
@@ -65,7 +71,8 @@
       "detail": "KARNI_TERMS version 2026-11, url /terms/",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "roles",
@@ -74,7 +81,8 @@
       "detail": "grants classes.booking custom:taught_by, classes.session own",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "roles",
@@ -83,7 +91,8 @@
       "detail": "default, grants classes.booking own",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "roles",
@@ -92,7 +101,8 @@
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "roles",
@@ -101,7 +111,8 @@
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "apps",
@@ -110,7 +121,8 @@
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "entities",
@@ -119,7 +131,8 @@
       "detail": "(name str:120, slug slug:name, address text?) key slug, search name",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "entities",
@@ -128,7 +141,8 @@
       "detail": "(studio fk:Studio, instructor fk:User, title str:200, starts_at datetime, capacity int, price money:EUR) owner instructor, audit, order starts_at",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "entities",
@@ -137,7 +151,8 @@
       "detail": "(session fk:Session, member fk:User, status state:pending>paid|pending>cancelled|paid>refunded, note text?) owner member, audit, groups Booking, Notes",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "access",
@@ -146,7 +161,8 @@
       "detail": "read public, write role:staff",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "access",
@@ -155,7 +171,8 @@
       "detail": "read public, write owned:instructor | role:staff",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "access",
@@ -164,7 +181,8 @@
       "detail": "read owned:member | owned:session__instructor | role:staff, write owned:member",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "pages",
@@ -173,7 +191,8 @@
       "detail": "list, detail, form",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "pages",
@@ -182,7 +201,8 @@
       "detail": "list, detail",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "migrations",
@@ -191,7 +211,8 @@
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "seed",
@@ -200,7 +221,8 @@
       "detail": "3",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "seed",
@@ -209,7 +231,8 @@
       "detail": "40",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "seed",
@@ -218,39 +241,44 @@
       "detail": "200",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "tests",
       "action": "add",
-      "target": "classes/tests/test_studio.py",
+      "target": "classes/tests/karni/test_studio.py",
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "tests",
       "action": "add",
-      "target": "classes/tests/test_session.py",
+      "target": "classes/tests/karni/test_session.py",
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     },
     {
       "area": "tests",
       "action": "add",
-      "target": "classes/tests/test_booking.py",
+      "target": "classes/tests/karni/test_booking.py",
       "detail": "",
       "risky": false,
       "reason": null,
-      "rows": null
+      "rows": null,
+      "managed": true
     }
   ],
   "summary": {
     "changes": 27,
-    "risky": 0
+    "risky": 0,
+    "not_managed": 0
   },
   "row_counts": {
     "status": "not needed",

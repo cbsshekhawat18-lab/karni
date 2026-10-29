@@ -73,7 +73,7 @@ RESERVED_TYPES: Final = {"markdown": "markdown fields (large-apps item 12)"}
 ACCESS_WORDS: Final = ("public", "authenticated", "granted")
 STANDARD_ACTIONS: Final = ("view", "add", "change", "delete")
 ENTITY_PAGES: Final = ("list", "detail", "form")
-NAMED_PAGES: Final = ("dashboard", "blank", "login")
+NAMED_PAGES: Final = ("dashboard", "blank", "login", "code")
 #: Fields every BaseModel has, which key, order and search may name.
 BASE_FIELDS: Final = ("id", "created_at", "updated_at")
 _USER_TARGET: Final = "__user__"

@@ -69,6 +69,10 @@
             }
           ],
           "description": "The rows it affects, when the database was counted. null when not counted."
+        },
+        "managed": {
+          "description": "false: the project's own code holds it (a hand-written model, viewset or page, a module to remove), and karni build leaves it to the project.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -78,7 +82,8 @@
         "detail",
         "risky",
         "reason",
-        "rows"
+        "rows",
+        "managed"
       ],
       "type": "object"
     },
@@ -164,11 +169,16 @@
         "risky": {
           "description": "How many of them are risky.",
           "type": "integer"
+        },
+        "not_managed": {
+          "description": "How many of them karni build leaves to the project.",
+          "type": "integer"
         }
       },
       "required": [
         "changes",
-        "risky"
+        "risky",
+        "not_managed"
       ],
       "type": "object"
     }

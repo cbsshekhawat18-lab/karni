@@ -7,6 +7,7 @@ import typer
 from karni_cli import __version__
 from karni_cli.commands.add import add
 from karni_cli.commands.beat import beat
+from karni_cli.commands.build import build
 from karni_cli.commands.check import check
 from karni_cli.commands.config import config_app
 from karni_cli.commands.context import context
@@ -87,6 +88,7 @@ app.command(help="Upgrade across Karni versions: codemods, diff, manual-change r
 app.add_typer(rules_app, name="rules")
 app.add_typer(spec_app, name="spec")
 app.command(help="Compare karni.yaml with the project: what karni build would change")(plan)
+app.command(help="Make the project match karni.yaml, without touching hand-written code")(build)
 app.command(
     help="Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])"
 )(mcp)

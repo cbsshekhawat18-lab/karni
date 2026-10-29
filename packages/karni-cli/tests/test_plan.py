@@ -195,7 +195,7 @@ def test_adding_a_field_an_entity_a_page_and_a_seed(base: Project) -> None:
     assert "  ~ Product: list -> list, detail" in lines and "  + about: blank" in lines
     assert "  + shop" in lines[lines.index("migrations") :]
     assert "  ~ Product: 5 -> 8" in lines and "  + Invoice: 20" in lines
-    assert "  + shop/tests/test_invoice.py" in lines
+    assert "  + shop/tests/karni/test_invoice.py" in lines
     assert not plan.risky and plan.row_counts == "not needed"
     assert lines[-1] == f"{len(plan.changes)} changes, 0 risky."
 
@@ -625,7 +625,7 @@ def test_an_empty_project_plans_everything(empty: tuple[str, dict[str, Any]]) ->
     )
     assert "  + payments: provider stripe" in text and "  + site" in text
     assert "  - user" in text and "  + member: default, grants classes.booking own" in text
-    assert data["summary"] == {"changes": len(data["changes"]), "risky": 0}
+    assert data["summary"] == {"changes": len(data["changes"]), "risky": 0, "not_managed": 0}
     assert data["row_counts"] == {"status": "not needed", "note": None}
 
 
