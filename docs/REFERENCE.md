@@ -102,6 +102,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Adapter files for every supported agent tool from one rule set (`karni rules sync`) | `stable` | [AGENTS.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/AGENTS.md), [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.cursor/commands/new-model.md) |
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
+| The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line) and `karni spec export` (the spec of an existing project). Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -1323,6 +1324,46 @@ karni design extract [OPTIONS] DIRECTORY
 | `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
 | `--dry-run` |  | Print what would be written and write nothing. |
 
+#### `karni spec`
+
+The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export).
+
+```
+karni spec COMMAND [ARGS]...
+```
+
+##### `karni spec validate`
+
+Experimental. Check a karni.yaml: every problem with its code, line and fix.
+
+It checks the YAML, every key and value (unknown keys are errors, keys that start with x- are kept and ignored), each field through karni make model's own parser, and every reference: relations, roles named in access, grants, pages, modules, field groups, keys and owners. Codes are C211 to C242 (karni explain &lt;code&gt;). Exit status 1 when there is a problem.
+
+```
+karni spec validate [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {file, valid, issues: [{code, line, path, message, fix}]}. |
+
+##### `karni spec export`
+
+Experimental. Write the spec of this project from its code (manage.py karni_facts).
+
+The models become entities (each field in the field syntax when its type makes the same column), the viewsets their access and search, KARNI_ROLES the roles, the settings the features, the installed modules and their changed settings the modules, frontend/src/routes.tsx the pages, and the seeders the seed counts. What the spec cannot express is listed, and kept as comments at the top of the file. The file starts with a yaml-language-server line naming the JSON Schema, for editors.
+
+```
+karni spec export [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `-o`, `--output` PATH |  | Write the spec to this file. Default: print it. |
+| `--force` |  | Replace the output file if it exists. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### Debugging
 
 #### `karni trace`
@@ -2128,6 +2169,37 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C205`](errors.md#c205) | cli | The agent adapter configuration is invalid |
 | [`C206`](errors.md#c206) | cli | The OpenAPI schema cannot be turned into types |
 | [`C207`](errors.md#c207) | cli | karni add cannot edit pyproject.toml |
+| [`C210`](errors.md#c210) | cli | No spec file |
+| [`C211`](errors.md#c211) | cli | The spec is not valid YAML |
+| [`C212`](errors.md#c212) | cli | Unknown key in the spec |
+| [`C213`](errors.md#c213) | cli | A spec value has the wrong type, or a required key is missing |
+| [`C214`](errors.md#c214) | cli | Unknown spec version |
+| [`C215`](errors.md#c215) | cli | A name in the spec is not valid |
+| [`C216`](errors.md#c216) | cli | A field's type is not valid |
+| [`C217`](errors.md#c217) | cli | An access rule is not valid |
+| [`C218`](errors.md#c218) | cli | A role grant is not valid |
+| [`C219`](errors.md#c219) | cli | A feature's value is not valid |
+| [`C220`](errors.md#c220) | cli | A page entry is not valid |
+| [`C221`](errors.md#c221) | cli | A module option is not valid |
+| [`C222`](errors.md#c222) | cli | A key is written twice |
+| [`C223`](errors.md#c223) | cli | A seed count is not valid |
+| [`C224`](errors.md#c224) | cli | A key reserved for a later release |
+| [`C225`](errors.md#c225) | cli | The app kind and the modules disagree |
+| [`C230`](errors.md#c230) | cli | A relation names an entity that does not exist |
+| [`C231`](errors.md#c231) | cli | A relation name is ambiguous |
+| [`C232`](errors.md#c232) | cli | Access names a role the spec does not declare |
+| [`C233`](errors.md#c233) | cli | A grant names an entity the spec does not have |
+| [`C234`](errors.md#c234) | cli | A grant's scope does not fit the entity |
+| [`C235`](errors.md#c235) | cli | A page names an entity that does not exist |
+| [`C236`](errors.md#c236) | cli | A module Karni does not know |
+| [`C237`](errors.md#c237) | cli | A field group names a field the entity does not have |
+| [`C238`](errors.md#c238) | cli | An entity option names a field the entity does not have |
+| [`C239`](errors.md#c239) | cli | owner does not lead to the user |
+| [`C240`](errors.md#c240) | cli | owned:&lt;path&gt; in access does not lead to the user |
+| [`C241`](errors.md#c241) | cli | seed names an entity that does not exist |
+| [`C242`](errors.md#c242) | cli | Two pages share a route |
+| [`C245`](errors.md#c245) | cli | karni spec export cannot read the project |
+| [`C246`](errors.md#c246) | cli | The output file exists |
 | [`C301`](errors.md#c301) | cli | No frontend found |
 | [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
 | [`C303`](errors.md#c303) | cli | A theme source cannot be read |

@@ -2716,6 +2716,316 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add the table (or the dependency) by hand, then re-run.
 
+<a id="c210"></a>
+
+### C210: No spec file
+
+*karni command* · from `karni spec validate`
+
+**Why Karni objects.** karni spec validate reads a karni.yaml: by default the project root's, else the current directory's.
+
+**Fix.** Write one (docs/app-spec.md), export the project's with karni spec export -o karni.yaml, or pass --spec <file>.
+
+<a id="c211"></a>
+
+### C211: The spec is not valid YAML
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The spec is YAML. A syntax error stops everything else, and the parser names the line.
+
+**Fix.** Fix the line the message names: indent with spaces, and quote a value that holds ': ' or starts with *, &, !, %, @ or a backtick.
+
+<a id="c212"></a>
+
+### C212: Unknown key in the spec
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Every key of the format means one thing, so a misspelt key would be ignored without a word. A key that starts with x- is kept and ignored, for notes of your own.
+
+**Fix.** Fix the spelling (the message lists the keys that mapping takes), remove the key, or prefix it with x-.
+
+<a id="c213"></a>
+
+### C213: A spec value has the wrong type, or a required key is missing
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Values are never coerced: a list where a string is expected, or a number written for a text, is an error rather than a guess. version and app.name are required.
+
+**Fix.** Write the value in the form docs/app-spec.md shows for the key. Quote a value YAML would read as a date, a number or true/false.
+
+<a id="c214"></a>
+
+### C214: Unknown spec version
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** version moves only for a breaking change of the format, and this karni reads version 1.
+
+**Fix.** Write version: 1, or upgrade karni-cli when the spec comes from a newer release.
+
+<a id="c215"></a>
+
+### C215: A name in the spec is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Names become code: app labels are Python packages, entities classes, pages file names and roles the slugs HasRole checks.
+
+**Fix.** Use snake_case app labels (not one Django, Karni or a module takes), PascalCase entities, kebab-case page names, and role slugs of letters, digits, _, . and -.
+
+<a id="c216"></a>
+
+### C216: A field's type is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Fields use karni make model's own syntax and are checked by its own parser and renderer, so the spec and the generator accept exactly the same fields. The message is the generator's, with its code.
+
+**Fix.** Write name: type[:arg...], a trailing ? for optional (karni make model --help lists the types and their arguments).
+
+<a id="c217"></a>
+
+### C217: An access rule is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entity's access maps onto Karni's Access(read=..., write=..., create=...): each slot takes public, authenticated, granted, role:<slug> or owned:<field>, or a list of them, any of which admits.
+
+**Fix.** Use those forms, or write access: code and declare the viewset's Access(...) by hand (Where, Can, &, a computed get_access).
+
+<a id="c218"></a>
+
+### C218: A role grant is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.
+
+**Fix.** Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.
+
+<a id="c219"></a>
+
+### C219: A feature's value is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each feature is one setting: social_login names the built-in providers of KARNI_SOCIAL_TOKEN_PROVIDERS, and terms is KARNI_TERMS (a version of at most 100 characters, URL path prefixes that start with /).
+
+**Fix.** Name google, microsoft or apple (a provider class of your own goes in settings), and fix the terms value the message names.
+
+<a id="c220"></a>
+
+### C220: A page entry is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).
+
+**Fix.** Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.
+
+<a id="c221"></a>
+
+### C221: A module option is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A module's options are its settings: the option provider of payments is KARNI_PAYMENTS_PROVIDER. An option the module does not have, or a value of the wrong type, would be lost.
+
+**Fix.** Use an option the message lists, with the type its setting takes (the module's README has the table). Credentials stay in .env.
+
+<a id="c222"></a>
+
+### C222: A key is written twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** YAML keeps the last of two equal keys in a mapping and drops the first without a word, so half of what was written would be lost.
+
+**Fix.** Keep one of the two and merge what the other said into it.
+
+<a id="c223"></a>
+
+### C223: A seed count is not valid
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** seed sets each entity's demo rows per karni seed run (a Seeder's Meta.count), where 0 skips the entity.
+
+**Fix.** Write a whole number, 0 or more.
+
+<a id="c224"></a>
+
+### C224: A key reserved for a later release
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, integer keys, external tables, a second database, cross-entity search, markdown fields), so a spec written today keeps its meaning.
+
+**Fix.** Remove the key, and write that part by hand in the project until the feature ships.
+
+<a id="c225"></a>
+
+### C225: The app kind and the modules disagree
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** karni add site turns an app into a site+app, so a spec of kind app with the site module describes a project that cannot exist.
+
+**Fix.** Write kind: site+app (karni new --kind site+app adds the site module by itself), or drop the module.
+
+<a id="c230"></a>
+
+### C230: A relation names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A fk, m2m or o2o field must point at something karni make model can import: an entity of the spec, the user model, or a model of a module the spec adds.
+
+**Fix.** Fix the name, add the entity, add the module, or point at User. A model of the project outside the spec cannot be named.
+
+<a id="c231"></a>
+
+### C231: A relation name is ambiguous
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Two apps of the spec define an entity of that name, so the bare name could mean either.
+
+**Fix.** Write app.Name, e.g. fk:shop.Product.
+
+<a id="c232"></a>
+
+### C232: Access names a role the spec does not declare
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** role:<slug> becomes HasRole("<slug>"), which nobody would hold if no role of that slug exists. Without roles, the spec has Karni's shipped roles (staff, user, customer), plus the roles of the modules it adds.
+
+**Fix.** Declare the role under roles, or fix the slug.
+
+<a id="c233"></a>
+
+### C233: A grant names an entity the spec does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A grant pattern that matches no model grants nothing, and Karni refuses it at startup (E206).
+
+**Fix.** Name an entity as app.entity (lowercase or as written), or add the module whose model it names.
+
+<a id="c234"></a>
+
+### C234: A grant's scope does not fit the entity
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** own compares the entity's owner field with the user, and related:<key> its scope path <key> with the user's attribute <key>. own:<field> must name that owner field, and related:<key> a scope path the entity declares.
+
+**Fix.** Set owner: on the entity, add scope_paths: {<key>: <lookup>}, or change the scope.
+
+<a id="c235"></a>
+
+### C235: A page names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entity's pages compose its API resource, which only an entity of the spec has.
+
+**Fix.** Name an entity of the spec (app.Name when two apps define it), or add it.
+
+<a id="c236"></a>
+
+### C236: A module Karni does not know
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** modules lists what karni add installs, and this release knows approvals, impersonation, payments and site.
+
+**Fix.** Fix the name. A module of your own is added with karni add and stays out of the spec until the module catalog lets modules declare themselves.
+
+<a id="c237"></a>
+
+### C237: A field group names a field the entity does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.
+
+**Fix.** Name the entity's fields, each in one group.
+
+<a id="c238"></a>
+
+### C238: An entity option names a field the entity does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** key, search, order, audit and scope_paths each name fields of the entity (key, search and order may also name id, created_at and updated_at).
+
+**Fix.** Name a field the entity declares, or add it under fields.
+
+<a id="c239"></a>
+
+### C239: owner does not lead to the user
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The own scope compares the owner field with the signed-in user, so it must be a relation to the user or a path through relations ending at one.
+
+**Fix.** Name a relation to the user (member: fk:User, then owner: member) or a path such as workspace__members.
+
+<a id="c240"></a>
+
+### C240: owned:<path> in access does not lead to the user
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** owned:<path> becomes Owned("<path>"), which keeps the rows whose path points at the signed-in user.
+
+**Fix.** Name a relation to the user (owned:member) or a path through relations (owned:session__instructor).
+
+<a id="c241"></a>
+
+### C241: seed names an entity that does not exist
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** seed counts demo rows per entity of the spec.
+
+**Fix.** Name an entity of the spec (app.Name when two apps define it).
+
+<a id="c242"></a>
+
+### C242: Two pages share a route
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each page karni make page writes has a route (an entity's list at /<route>, its detail at /<route>/$id, its form at /<route>/new and /<route>/$id/edit, a named page at /<name>), and two pages cannot answer the same path.
+
+**Fix.** Rename the page or drop one of them.
+
+<a id="c245"></a>
+
+### C245: karni spec export cannot read the project
+
+*karni command* · from `karni spec export`
+
+**Why Karni objects.** The export reads the project through manage.py karni_facts, run by the project's interpreter, which needs this karni (the command is new in it).
+
+**Fix.** Upgrade the project's karni, then fix what the message shows (the command's last output lines): a settings error, a model that fails to import, or output printed at startup.
+
+<a id="c246"></a>
+
+### C246: The output file exists
+
+*karni command* · from `karni spec export`
+
+**Why Karni objects.** karni spec export does not overwrite a spec: it may hold edits of your own.
+
+**Fix.** Pass --force to replace it, or write to another file with -o.
+
 <a id="c301"></a>
 
 ### C301: No frontend found

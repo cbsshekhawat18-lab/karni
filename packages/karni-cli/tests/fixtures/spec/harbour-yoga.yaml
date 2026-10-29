@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Harbour Yoga
+  kind: site+app
+  recipe: booking
+modules:
+  payments:
+    provider: stripe
+features:
+  two_factor: true
+  email_code_login: true
+  social_login: [google, apple]
+  terms: {version: "2026-11", url: /terms/}
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  instructor:
+    name: Instructor
+    grants:
+      classes.session: own:instructor
+      classes.booking: custom:taught_by
+  member: {name: Member, default: true, grants: {classes.booking: own}}
+apps:
+  classes:
+    entities:
+      Studio:
+        fields: {name: "str:120", slug: "slug:name", address: "text?"}
+        key: slug
+        search: [name]
+        access: {read: public, write: "role:staff"}
+      Session:
+        fields:
+          studio: fk:Studio
+          instructor: fk:User
+          title: "str:200"
+          starts_at: datetime
+          capacity: int
+          price: "money:EUR"
+        owner: instructor
+        order: starts_at
+        audit: true
+        access: {read: public, write: ["role:staff", "owned:instructor"]}
+      Booking:
+        fields:
+          session: fk:Session
+          member: fk:User
+          status: "state:pending>paid|pending>cancelled|paid>refunded"
+          note: "text?"
+        owner: member
+        audit: true
+        groups: {Booking: [session, member, status], Notes: [note]}
+        access:
+          read: ["owned:member", "owned:session__instructor", "role:staff"]
+          write: owned:member
+pages:
+  - home: dashboard
+  - Session: [list, detail, form]
+  - Booking: [list, detail]
+seed: {Studio: 3, Session: 40, Booking: 200}
+x-notes: kept and ignored

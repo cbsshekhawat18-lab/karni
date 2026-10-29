@@ -320,6 +320,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("agents", "`karni explain <code>`: why an error happens and the fix, offline"),
     Capability(
         "agents",
+        "The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` "
+        "(every problem with its code and line) and `karni spec export` (the spec of an "
+        "existing project). Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
         "a user, from the code that decides it",
     ),

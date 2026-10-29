@@ -46,7 +46,7 @@ SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     ("Debugging", ("why", "why-empty")),
-    ("Generators", ("make", "import", "design")),
+    ("Generators", ("make", "import", "design", "spec")),
     # The development capture under .karni/ (docs/debugging/).
     ("Debugging", ("trace", "replay")),
 )

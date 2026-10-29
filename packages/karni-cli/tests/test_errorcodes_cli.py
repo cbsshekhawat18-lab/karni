@@ -83,7 +83,11 @@ def test_every_cli_error_carries_a_registered_code() -> None:
 
 
 def test_every_cli_code_is_used() -> None:
-    used = {code for _, _, code in _calls()}
+    from karni_cli.spec.validate import iter_codes
+
+    # karni spec validate reports its codes as issues, not CliErrors (tests/test_spec.py
+    # produces each one).
+    used = {code for _, _, code in _calls()} | set(iter_codes())
     unused = [code.code for code in errorcodes.CODES if code.code not in used]
     assert not unused, f"retire or use: {unused}"
 

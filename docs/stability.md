@@ -180,6 +180,9 @@ Experimental now:
   `karni.testing.create_external_tables`, the pytest option
   `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
   --external`.
+- [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
+  `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
+  `karni.facts` and the `karni_cli.spec` package.
 
 ## Supported platforms
 

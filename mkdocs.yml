@@ -96,6 +96,7 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - "App spec (karni.yaml)": app-spec.md
   - Debugging:
       - Request ids and capture: debugging/capture.md
       - Trace, replay and failure briefs: debugging/trace-and-replay.md
@@ -124,5 +125,6 @@ nav:
       - Launch registrations: launch-registrations.md
       - Launch checklist: launch-checklist.md
       - "Roadmap: large apps": roadmap/large-apps.md
+      - "Roadmap: app builder": roadmap/app-builder.md
       - Findability research: seo-research.md
       - Security: security.md
