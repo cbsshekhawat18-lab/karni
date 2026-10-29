@@ -20,6 +20,7 @@ from typing import Any
 
 import typer
 
+from karni_cli.design.analyze import Analysis
 from karni_cli.design.analyze import analyze as run_analysis
 from karni_cli.design.extract import MapError, read_map
 from karni_cli.design.extract import extract as run_extract
@@ -69,6 +70,36 @@ def _label(path: Path) -> str:
         return str(path)
 
 
+def analyze_design(
+    source: Path,
+    app: str,
+    *,
+    map_file: Path | None = None,
+    force: bool = False,
+    label: str | None = None,
+) -> Analysis:
+    """The analysis of the design folder ``source``, with its draft map written to ``map_file``.
+
+    The command's work without the printing: ``karni new --design`` calls it.
+    """
+    try:
+        analysis = run_analysis(source, app, label=label or str(source))
+    except ValueError as exc:
+        raise CliError(str(exc), code="C111") from None
+    if map_file is not None:
+        if map_file.exists() and not force:
+            raise CliError(
+                f"{map_file} is there already, and it may hold your edits. Pass --force to "
+                "replace it, or write the draft to another file.",
+                code="C123",
+            )
+        map_file.parent.mkdir(parents=True, exist_ok=True)
+        design_label = Path(os.path.relpath(source, map_file.parent.resolve())).as_posix()
+        data = analysis.draft_map(design_label)
+        map_file.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return analysis
+
+
 @design_app.command("analyze")
 def analyze(
     directory: Path = typer.Argument(..., help="The folder with the design's HTML pages."),
@@ -106,22 +137,9 @@ def analyze(
     Example: karni design analyze ../design --map content/design-map.json
     """
     source = _design_dir(directory)
-    label = _app_label(app)
-    try:
-        analysis = run_analysis(source, label, label=_label(source))
-    except ValueError as exc:
-        raise CliError(str(exc), code="C111") from None
-    if map_file is not None:
-        if map_file.exists() and not force:
-            raise CliError(
-                f"{map_file} is there already, and it may hold your edits. Pass --force to "
-                "replace it, or write the draft to another file.",
-                code="C123",
-            )
-        map_file.parent.mkdir(parents=True, exist_ok=True)
-        design_label = Path(os.path.relpath(source, map_file.parent.resolve())).as_posix()
-        data = analysis.draft_map(design_label)
-        map_file.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    analysis = analyze_design(
+        source, _app_label(app), map_file=map_file, force=force, label=_label(source)
+    )
     if as_json:
         typer.echo(json.dumps(analysis.to_dict(), indent=2, ensure_ascii=False))
         return

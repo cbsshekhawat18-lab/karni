@@ -235,3 +235,29 @@ and lists it in the adapters. Until then `karni rules sync --check` (and make ch
 reports the files as stale."""
 mechanical = false
 migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
+
+[[change]]
+id = "project-kind"
+kind = "project-files"
+symbol = "pyproject.toml [tool.karni] kind"
+summary = """\
+`karni new` records the project's kind (site, app or site+app) as `kind` under \
+[tool.karni] in pyproject.toml, and `karni context` and the agent files state it. \
+A project without the line is read as the kind its files show: karni_site in the \
+apps block makes a site, frontend/ a staff app. Add the line to say it, or run \
+`karni add site` to turn an app into a site+app."""
+mechanical = false
+migration = "migrations/0.4.1.md#projects-have-a-kind"
+
+[[change]]
+id = "agent-files-project-kind"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+The adapters open with the project's kind and its stack, so an agent never asks \
+which technology to use. The site-from-design procedure analyzes before it imports \
+(`karni import design --editable --map`, so the content that becomes rows has no \
+blocks), adds the forms and ends with `karni check`. Run `karni rules sync`. Until \
+then `karni rules sync --check` (and make check) reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#the-agent-files-state-the-kind-run-karni-rules-sync"

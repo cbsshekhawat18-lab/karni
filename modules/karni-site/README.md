@@ -14,8 +14,11 @@ karni add site
 karni migrate
 ```
 
-`karni make site <app>`, `karni import design` and `karni make form` do the
-`karni add site` step for you when the project does not have the module yet.
+A new project of a kind with a site (`karni new "Name" --kind site`, or
+`--design <folder>` for a designer's pages) has the module wired from the
+start. `karni make site <app>`, `karni import design` and `karni make form` do the
+`karni add site` step for you when the project does not have the module yet,
+and an app becomes a site+app (`kind` under `[tool.karni]` in pyproject.toml).
 Then install it (`uv pip install -r pyproject.toml`, or rebuild the
 container) and migrate: the module's tables hold what the client edits.
 

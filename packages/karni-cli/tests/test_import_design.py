@@ -481,9 +481,11 @@ def test_import_the_bakery(project: Path) -> None:
     assert views.count("def ") == 4 and 'render(request, "website/menu.html")' in views
     urls = (site_dir / "urls.py").read_text()
     assert "from django.views.generic import RedirectView\n" in urls
+    # Split the way ruff format splits it: the project's lint passes.
     assert (
-        '    path("specials/", RedirectView.as_view(pattern_name="website:menu", '
-        'permanent=True, query_string=True), name="specials"),\n    # karni:urls\n'
+        '    path(\n        "specials/",\n        RedirectView.as_view(\n'
+        '            pattern_name="website:menu", permanent=True, query_string=True\n'
+        '        ),\n        name="specials",\n    ),\n    # karni:urls\n'
     ) in urls
     assert 'path("menu/", views.menu, name="menu"),' in urls
     pages = (site_dir / "tests" / "test_pages.py").read_text()

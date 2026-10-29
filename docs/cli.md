@@ -36,7 +36,17 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 
 ### `karni new`
 
-Scaffold a project from templates/project
+Create a project: a public website, an app, or both.
+
+Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defaults and the production stack. A site (--kind site) also has a site app at / on the karni-site module, where the client edits every text, image, menu and page title in the admin, registration off and the roles staff and editor. An app (--kind app) has the React app in frontend/. A site+app has both.
+
+With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
+
+Example:
+
+```sh
+karni new "Crumb Bakery" --kind site --design ../design
+```
 
 ```
 karni new [OPTIONS] NAME
@@ -47,6 +57,10 @@ karni new [OPTIONS] NAME
 | `NAME` (required) |  | Project name (slug is derived from it) |
 | `--output-dir`, `-o` PATH | `.` |  |
 | `--domain` TEXT | `example.com` | Production domain for Caddy |
+| `--kind` TEXT |  | What the project is: site (a public website the client edits in the admin), app (an API and a React app for signed-in users) or site+app. Asked when run in a terminal, else app (site with --design). |
+| `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
+| `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
+| `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
 
 ### `karni add`
 
@@ -1140,6 +1154,8 @@ With --editable, every text becomes a block (`{% editable %}`), every image `{% 
 
 Writes .karni/design.json. A second run with a new version of the design reports the changes and keeps every file the project edited since, and every block keeps its key.
 
+With --map content/design-map.json (karni design analyze --map writes it), the content the map reads into rows gets no blocks: the cards, detail pages and galleries that become models are rendered from the rows, and the client edits the rows in the admin.
+
 ```
 karni import design [OPTIONS] DIRECTORY
 ```
@@ -1152,6 +1168,7 @@ karni import design [OPTIONS] DIRECTORY
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
 | `--editable/--no-editable` |  | Make every text, image, menu and contact detail editable in the admin (karni-site blocks, menus and site settings). Remembered for later imports. |
+| `--map` PATH |  | The content map from karni design analyze --map: with --editable, the content it reads into rows (cards, detail pages, galleries) gets no blocks, because the templates render it from the rows. Remembered for later imports. |
 
 ### `karni design`
 

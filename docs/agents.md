@@ -17,7 +17,7 @@ follow what they return.
 
 | Command | What it returns |
 |---|---|
-| `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, BASES |
+| `karni context` | Live inventory: KIND (the project's kind), APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), DESIGN (the designer's pages it imported), MODULES, BASES |
 | `karni rules` | Every convention as `CODE summary` (about 560 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
@@ -114,6 +114,15 @@ off `karni check` or ESLint (configure those where they live). `ADD += [...]`
 works too. Unknown names, codes or fields are errors that name the line.
 
 ## Adapters
+
+Every adapter opens with the project's kind and its stack: a public website
+(`site`), an app (`app`) or both (`site+app`), as `kind` under `[tool.karni]`
+in pyproject.toml records it ([start a site project](public-site.md#start-a-site-project)).
+For a site it says that the pages are Django views and templates in the
+design's own HTML and CSS on karni-site, that the client edits them in the
+admin and that nobody signs up. For an app it names the API and the React
+app in `frontend/`. An agent reads the stack there and never asks which
+technology to use. `karni context` prints the same kind on its first line.
 
 `karni new` generates them, and `karni rules sync` refreshes them. The registry
 is `packages/karni-cli/karni_cli/agent_adapters.toml`: a renamed file is a
@@ -341,15 +350,17 @@ What `karni rules --procedure` returns:
 ```text
 Build the public site from the design: <design folder> [site app]
 
-1. Run `karni context` to see the apps, models and whether a site app exists.
-2. `karni import design <design folder> --app <site app>` turns the pages into the site app: `base.html` with the shared header and footer, a template, view and route per page, the files under `static/<site app>/`, `{% ifactive %}` on the menu. Then `karni test`: the page test covers every page.
-3. `karni design analyze <design folder> --app <site app> --map content/design-map.json` lists the content that repeats (cards, detail pages, galleries, lists of links), the models and relations it proposes as `karni make model` commands, and the decisions the markup cannot settle, and writes a draft content map. Read it first: rename a model or field in its command and in the map together, and delete from both what should stay in a template.
+1. Run `karni context` to see the kind, the apps, the models and whether a site app exists.
+2. `karni design analyze <design folder> --app <site app> --map content/design-map.json` lists the content that repeats (cards, detail pages, galleries, lists of links), the models and relations it proposes as `karni make model` commands, and the decisions the markup cannot settle, and writes a draft content map. Read it first: rename a model or field in its command and in the map together, and delete from both what should stay in a template.
+3. `karni import design <design folder> --app <site app> --editable --map content/design-map.json` turns the pages into the site app: `base.html` with the shared header and footer, a template, view and route per page, the files under `static/<site app>/`, `{% ifactive %}` on the menu. Every text, image, menu and contact detail the client sees becomes editable in the admin, except what the map reads into rows: the loops render that from the rows, never from blocks. The report names each `<form>`. Then `karni migrate` and `karni test`: the page test covers every page. Change which structures the map holds later? Import again before you edit the templates.
 4. Answer every decision in the map. A hand-picked list or flag: keep the value, remove its `decide` and add the field the decision names to that model's command. One a query derives (every project of this service, the newest three): delete the value from the map and query it in the view.
-5. Run the `karni make model` commands in the order printed (models others point at come first), then `karni make migration && karni migrate && karni types`.
+5. Run the `karni make model` commands in the order printed (models others point at come first), then `karni make migration && karni migrate`. Staff edit the rows in the admin as it is: write no viewset, serializer or admin class for them.
 6. `karni design extract <design folder> --map content/design-map.json -o content/site.json` writes the pages' real content, with image paths relative to the file. Fix what it reports (a missing image, two pages that disagree on a value, a required field without one) in the map or the models, then extract again.
 7. `karni load content/site.json --dry-run` shows what changes per model, row by row. Then `karni load content/site.json`, and once more: the second run must say Nothing changed. Commit `content/`. Never fill these tables with `karni seed` (it refuses tables that hold real rows) or with content you type in.
 8. Turn the repeated markup into loops. The view reads `Model.objects` (filter what is not published, `select_related`/`prefetch_related` what the template loops over). The template keeps one copy of the item's markup inside `{% for %}` with `{{ row.field }}` where the map reads a value, `{{ row.image.url }}` for an image and `{{ row.heading|highlight:"<markup>" }}` for highlighted words (the analysis names the markup). A model's detail pages become one view and template with a `<slug:slug>` capture, keeping each page's URL (the slug is the page's file name).
-9. `karni test`: give each detail page a real URL in the page test's `PAGES` and load the content first in that test (`call_command("karni_load", "content/site.json")` in a fixture), so every page renders real rows.
+9. For those detail pages: `karni make view <model> --app <site app> --path "/<folder>/<slug:slug>/"` writes the view, its template and its route. Build the template from one detail page's template (its blocks stay, their keys start with the model's name), read the row with `get_object_or_404(Model.objects, slug=slug)`, delete the old pages' views, routes and templates, and point every link at `{% url '<site app>:<model>' row.slug %}`.
+10. For each `<form>` the import named: `karni make form <name> <field:type> ...` with the design's fields (`--notify <SETTING>` for the email that tells staff) writes the model, its viewset, the tests and the email, and prints the `{% karni_form %}` tag that keeps the form's classes, labels and button. Put the tag where the `<form>` was, then `karni make migration && karni migrate`. Never write a form view, a form template or a throttle.
+11. `karni test`: give each detail page a real URL in the page test's `PAGES` and load the content first in that test (`call_command("karni_load", "content/site.json")` in a fixture), so every page renders real rows. Then `karni check`.
 
 Nothing is retyped and nothing is invented: every value comes from the design through extract and load, and a new version of the design is extract and load again.
 

@@ -32,6 +32,65 @@ signed-in users is an app screen, even when it looks like a web page.
 A project can have both. The site answers `/`, the admin stays at
 `KARNI_ADMIN_PATH`, and the React app keeps its own routes.
 
+## Start a site project
+
+`karni new` asks what kind of project it is, and `--kind` says it without
+the question:
+
+```bash
+karni new "Crumb Bakery" --kind site                    # a public website
+karni new "Crumb Bakery" --kind site --design ../design # built from a designer's pages
+karni new "Field Notes" --kind app                      # an API and a React app
+karni new "Bake Club" --kind site+app                   # both
+```
+
+| Kind | What `karni new` sets up |
+|---|---|
+| `site` | the site app `website` at `/` on the [`karni-site` module](#the-karni-site-module), the admin as the place the client edits every text, image, menu and page title, registration off (`KARNI_ACCOUNTS_REGISTRATION = False`, staff create the accounts), the roles `staff` and `editor`, and the staff app in `frontend/` for staff (`--no-staff-app` leaves it out, and staff work in the admin) |
+| `app` | the API and the React app in `frontend/` for signed-in users, as `karni new` always made |
+| `site+app` | both: the site app and karni-site, and the app with its registration and roles |
+
+Every kind has the same security defaults (the
+[Content-Security-Policy and headers](security.md#security-headers), the
+public-create throttle, `karni check --deploy`) and the production stack. Run
+in a terminal, `karni new` asks for the kind. Run by a script or an agent, it
+makes an app, or a site with `--design`. `--site-app` names the site app
+something other than `website`.
+
+The kind is recorded in pyproject.toml, next to the release the project was
+made for:
+
+```toml
+[tool.karni]
+baseline = "0.4.1"
+kind = "site"
+```
+
+`karni context` prints it first (`KIND: site (...)`), and the agent files
+(`AGENTS.md` and the others, [Karni for AI agents](agents.md)) open with the
+kind and its stack, so an agent never asks which technology to use. A
+project made before kinds has none recorded, and Karni infers it:
+`karni_site` installed makes a site, `frontend/` a staff app.
+
+`--design <folder>` runs, on the new project, the first steps of the
+[site-from-design procedure](design-content.md): `karni design analyze`
+writes the draft content map `content/design-map.json` and prints the models
+it proposes, then `karni import design --editable --map
+content/design-map.json` builds the site app, makes everything the client
+sees editable and themes the staff app and the admin from the design's
+stylesheets. It prints the rest of the procedure as the next steps, with the
+project's own paths: the decisions, the models, the content and the loops.
+
+### An app that gets a site
+
+`karni add site` turns an app into a site+app: it wires karni-site into the
+project and sets `kind = "site+app"`, then `karni make site website` (or
+`karni import design`) makes the site app. `karni make site` and `karni
+import design` change the kind the same way when they wire the module. To go
+back, set `kind = "app"` again and run `karni rules sync`. The site's files
+stay until you delete them: the site app and its include in
+`config/urls.py`, and karni-site in pyproject.toml and config/settings.py.
+
 ## Create the site
 
 ```bash
@@ -94,7 +153,8 @@ kept as written:
 
 ```bash
 karni make site website                       # optional: import design runs it when needed
-karni import design ../design --app website --editable
+karni design analyze ../design --map content/design-map.json   # the content that repeats
+karni import design ../design --app website --editable --map content/design-map.json
 karni migrate
 karni test
 ```
@@ -103,6 +163,19 @@ With `--editable`, every text, image, menu and contact detail becomes
 editable in the admin, with the design's own as the defaults (see
 [Everything the client edits](#everything-the-client-edits)). Without it the
 pages are plain templates.
+
+With `--map`, the content map `karni design analyze` wrote, the content that
+becomes rows has no blocks: the items of each list the map holds (the cards,
+the list of courses) and the values of a model's detail pages (a title, an
+image, a gallery). The templates render those from the rows once they loop
+over them ([Load, then loop](design-content.md#load-then-loop)), and the
+client edits the rows in the admin. A block over the same text would be a
+copy that the page never shows. The rest of each page (its headings, its
+own text) stays a block, and the copy a model's detail pages share has one
+key on all of them, which starts with the model's name (`course.`), so the
+one template that replaces them keeps it. The record remembers the
+map. Delete a source from the map and import again, and its markup is
+editable again.
 
 What it does, page by page:
 

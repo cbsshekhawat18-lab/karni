@@ -979,3 +979,16 @@ def test_test_generator_never_drops_isolation_silently(project: Path) -> None:
     assert "assert_isolated" not in text.split("# No assert_isolated", 1)[0]
     assert "# No assert_isolated: 'member' (custom:workspace)" in text
     assert "isolation: NOT generated" in result.output and "owner_field" in result.output
+
+
+def test_a_model_names_itself_in_its_own_command(project: Path) -> None:
+    """karni design analyze proposes `related:m2m:website.Course?` in Course's own command."""
+    ok("make", "app", "website")
+    ok("make", "model", "Course", "title:str:80", "related:m2m:website.Course?", "--app", "website")
+    ok("make", "model", "Step", "title:str:80", "next:fk:Step?", "--app", "website")
+    models = (project / "website" / "models.py").read_text()
+    # A hand-picked list of its own kind goes one way, so a load sets each row's own list.
+    assert 'related = models.ManyToManyField("self", symmetrical=False, blank=True)' in models
+    assert 'next = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True)' in (
+        models
+    )

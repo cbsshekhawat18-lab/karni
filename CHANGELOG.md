@@ -98,6 +98,42 @@ apply codemods and list the manual steps. This file is the human summary.
 - **New agent procedure `site-from-design`**: import, analyze, models,
   extract, load, then templates that loop over the rows. Run `karni rules
   sync` for its slash command files.
+- **Projects have a kind: `karni new --kind site|app|site+app`.** `karni new`
+  asks what the project is (an app when nobody can answer) and sets it up
+  for that kind. A site gets the site app at `/` on karni-site, the admin as
+  the place the client edits it, registration off and the roles staff and
+  editor, with the staff app optional (`--no-staff-app`). An app is what
+  `karni new` always made, and a site+app has both. The kind is recorded as
+  `kind` under `[tool.karni]` in pyproject.toml, `karni context` prints it
+  first, and the agent files open with it and its stack, so an agent never
+  asks which technology to use. `karni add site` turns an app into a
+  site+app and says how to go back. The root `karni --help` says how to
+  start.
+- **`karni new --design <dir>` builds the site from a designer's pages.** It
+  runs `karni design analyze` (the draft content map `content/design-map.json`)
+  and `karni import design --editable --map` (the site app, everything the
+  client sees editable, the staff app and the admin themed from the design),
+  then prints the rest of the site-from-design procedure with the project's
+  paths. A kind with a site is implied.
+- **`karni import design --editable --map <file>`: no blocks over rows.** The
+  content a content map reads into rows (a list's items, a model's detail
+  page values, galleries) is imported without blocks, because the loops
+  render it from the rows and the client edits the rows. The copy a model's
+  detail pages share has one key on all of them. The record remembers the
+  map. Without a staff app, the import themes the admin from the file
+  `KARNI_THEME_CSS` names.
+- **The site-from-design procedure is the whole flow**: analyze, import with
+  `--editable --map`, decisions, models, extract, load, loops, the one view
+  for a model's detail pages (`karni make view <model> --path
+  "/<folder>/<slug:slug>/"`), `karni make form` for each `<form>`, the page
+  test and `karni check`. Its models step no longer runs `karni types`, which
+  a site whose models have no API refused. `karni context` prints a `DESIGN:`
+  line: the designer's pages the project imported, and the content map.
+- **`karni make model` takes the model's own name for a relation to itself**,
+  app-qualified too (`related:m2m:website.Course?`, as `karni design analyze`
+  proposes it), as `"self"`. A many-to-many to itself is
+  `symmetrical=False`: a hand-picked list goes one way, so `karni load` sets
+  each row's own list and a second load changes nothing.
 - **New module `karni-site`: the runtime of a public site.** `{% ifactive
   "<app>:<name>" %}` marks the current page in a menu around whatever markup
   the design uses, `{% csp_hash %}` and `{% csp_allow %}` let a design's

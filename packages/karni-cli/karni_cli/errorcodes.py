@@ -213,7 +213,7 @@ CODES: Final[tuple[CliCode, ...]] = (
     _c(
         "C106",
         "An option value is invalid",
-        "karni make, karni types, karni ui detect",
+        "karni make, karni new, karni types, karni ui detect",
         "The option accepts specific values (the message lists them).",
         "Use one of the values shown, e.g. --access owned:organizer or --every 15m.",
     ),
@@ -259,9 +259,19 @@ CODES: Final[tuple[CliCode, ...]] = (
         "css/, js/ and image folders inside it.",
     ),
     _c(
+        "C112",
+        "The project's kind is not one Karni knows",
+        "karni context, karni rules sync, karni add site (pyproject.toml [tool.karni] kind)",
+        "`karni new` records the project's kind in pyproject.toml: site, app or site+app. The "
+        "agent files and `karni context` state it with its stack, so a value Karni cannot "
+        "read stops them instead of guessing.",
+        'Set kind = "site", "app" or "site+app" under [tool.karni] in pyproject.toml (or remove '
+        "the line, and Karni infers the kind from the project), then run `karni rules sync`.",
+    ),
+    _c(
         "C121",
         "The content map cannot be used",
-        "karni design extract --map",
+        "karni design extract --map, karni import design --map",
         "The map says which structure of the design is which model and which element is which "
         "field. Extract follows it exactly, so a model, a field, a relation's target or a "
         "selector it cannot follow stops it before anything is written.",
