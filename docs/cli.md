@@ -61,6 +61,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
 
 ### `karni add`
 
@@ -247,7 +248,7 @@ karni check [OPTIONS]
 | --- | --- | --- |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
-| `--frontend/--no-frontend` | on |  |
+| `--frontend/--no-frontend` |  | Run the frontend checks (eslint and jscpd in frontend/). By default they run when frontend/node_modules is installed, and are skipped with a note when it is not, except in CI. --frontend fails without it, --no-frontend skips them. |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |

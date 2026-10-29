@@ -142,6 +142,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--git/--no-git` | on | Make the project a git repository with a first commit of what karni new wrote. Skipped inside an existing repository and when git is not installed. |
 
 #### `karni add`
 
@@ -328,7 +329,7 @@ karni check [OPTIONS]
 | --- | --- | --- |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
-| `--frontend/--no-frontend` | on |  |
+| `--frontend/--no-frontend` |  | Run the frontend checks (eslint and jscpd in frontend/). By default they run when frontend/node_modules is installed, and are skipped with a note when it is not, except in CI. --frontend fails without it, --no-frontend skips them. |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
 | `--seo` |  | Also run the SEO checks: every page of the public site rendered, and missing or shared titles and descriptions, images without alt, size or smaller copies, broken links and pages missing from the sitemap reported (karni-site, SITE010 to SITE018). |
@@ -1388,7 +1389,8 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `DEFAULT_ADMIN_EXCLUDE` | constant | `DEFAULT_ADMIN_EXCLUDE`: `sessions`, `contenttypes`, `admin`, `auth.Permission`, `django_celery_results.ChordCounter` |  |
-| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_module_permission`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniInlineMixin` | admin class | An inline whose rows open for a role's grant on the inline's model. | overrides `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
 | `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `delete_queryset` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
@@ -1513,6 +1515,7 @@ class Lead(BaseModel):
 | Setting | Env | Default | What it controls |
 |---|---|---|---|
 | `KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
+| `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |
 | `KARNI_ADMIN_THEME` | `KARNI_ADMIN_THEME` | `"light"` | The admin's colour scheme: `light` (the default, light only with no switch), `dark`, or `auto` for unfold's light / dark / system switch. Read on every request. See [admin](admin.md#theming). |
 | `KARNI_ADMIN_LOGO` | `KARNI_ADMIN_LOGO` | `env("KARNI_ADMIN_LOGO", default="") or None` | Logo for the admin header and login: `karni` for Karni's mark, or `{"light": <static path>, "dark": ..., "icon": ...}`. Leaving it unset keeps the text header. See [admin](admin.md#theming). |
 | `KARNI_THEME_CSS` | `KARNI_THEME_CSS` | `"frontend/src/karni-theme.css"` | The project's `karni-theme.css` (relative to the project root, or absolute), the file `karni ui detect` writes for the staff app. The admin loads it too, so one file holds the brand. `""` turns it off. See [theming](theming.md#one-theme-for-the-staff-app-and-the-admin). |
@@ -1541,6 +1544,9 @@ class Lead(BaseModel):
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
 | `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
+| `KARNI_PHONE_COUNTRY_CODE` | `KARNI_PHONE_COUNTRY_CODE` | `None` | The country code a national phone number gets in a `PhoneField` (digits, e.g. `"44"`): `"01234 000 111"` is stored as `+441234000111`. Unset, only international numbers (`+` or `00`) are accepted. See [fields](fields.md#phonefield). |
+| `KARNI_PHONE_TRUNK_PREFIX` | `KARNI_PHONE_TRUNK_PREFIX` | `"0"` | The prefix a national number loses before the country code goes in front (`"0"`, `"1"` in North America, `"8"` in Russia, `""` where the number is dialled as written, as in Italy). |
+| `KARNI_PHONE_NORMALIZER` |  | `"karni.fields.text.default_phone_normalizer"` | Dotted path of the function a `PhoneField`, its form field and its API field clean a number with: it takes the value as typed and returns E.164, or the value unchanged to reject it. `karni.fields.to_e164` holds Karni's rules for your own function. |
 
 ### Import and export (karni.transfer)
 
