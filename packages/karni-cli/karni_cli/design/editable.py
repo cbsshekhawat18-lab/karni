@@ -131,6 +131,10 @@ _SHARE_TAGS: Final = frozenset({"og:image", "og:image:url", "og:image:secure_url
 #: A file name that says the image is for sharing: share.jpg, og-image.png, social-card.webp.
 _SHARE_NAME = re.compile(r"(?:^|[-_.\s])(?:share|og|opengraph|social)(?:[-_.\s]|$)", re.IGNORECASE)
 _RASTER: Final = (".jpg", ".jpeg", ".png", ".webp")
+#: Inline elements a design highlights words of a heading with.
+_HIGHLIGHT_TAGS: Final = frozenset({"span", "em", "strong", "mark", "b", "i"})
+#: The marker KARNI_SITE_HIGHLIGHT reads around highlighted words (the import writes it).
+MARKER: Final = "=="
 
 
 # keys
@@ -213,6 +217,8 @@ class Overlay:
                 out.append(self.after(point))
             if point in self.text_replace:
                 stop, value = self.text_replace[point]
+                if point > start:
+                    out.append(self.before(point))
                 out.append(value)
                 position = stop
                 continue
@@ -229,8 +235,10 @@ class Overlay:
 def detect_highlight(pages: Iterable[Any]) -> tuple[str, str] | None:
     """The ``(tag, class)`` a design wraps highlighted words of its headings in, or ``None``.
 
-    An inline element with exactly one class and nothing else, inside
-    headings, on two or more headings: ``<span class="highlight">``.
+    An inline element around some of a heading's words, with exactly one
+    class (``<span class="highlight">``) or none (``<em>``), on two or more
+    headings. The most common one wins. Words a design marks with
+    characters (``*whole*``) are text, not a highlight.
     """
     found: Counter[tuple[str, str]] = Counter()
     for page in pages:
@@ -238,15 +246,19 @@ def detect_highlight(pages: Iterable[Any]) -> tuple[str, str] | None:
         for heading in body.iter_elements():
             if not _HEADING.match(heading.tag):
                 continue
+            whole = heading.plain_text(page.text)
             for child in heading.elements():
+                if child.tag not in _HIGHLIGHT_TAGS:
+                    continue
+                inner = child.plain_text(page.text)
+                if not inner or inner == whole:
+                    continue  # the whole heading is not a highlight
                 attrs = child.attrs(page.text)
                 classes = (attrs.get("class") or "").split()
-                if (
-                    child.tag in ("span", "em", "strong", "mark", "b", "i")
-                    and set(attrs) == {"class"}
-                    and len(classes) == 1
-                ):
+                if set(attrs) == {"class"} and len(classes) == 1:
                     found[(child.tag, classes[0])] += 1
+                elif not attrs and child.tag != "span":
+                    found[(child.tag, "")] += 1
     if not found:
         return None
     best, count = found.most_common(1)[0]
@@ -401,7 +413,9 @@ class Editable:
         base = templates[base_rel]
         load = "{% load static karni_site %}"
         if self.defaults and base.startswith(load):
-            pairs = " ".join(f'{name}="{_quoted(value)}"' for name, value in self.defaults.items())
+            images = ("logo", "favicon", "share_image")  # the static paths go last
+            ordered = sorted(self.defaults.items(), key=lambda item: item[0] in images)
+            pairs = " ".join(f'{name}="{_quoted(value)}"' for name, value in ordered)
             templates[base_rel] = load + "{% site_defaults " + pairs + " %}" + base[len(load) :]
         for menu in self.menus:
             original = menu.page.overlay
@@ -640,8 +654,18 @@ class Editable:
             overlay.text_replace[start] = (end, "{{ site.name }}")
             return
 
+        literal = [
+            offset
+            for node in nodes
+            for token in _text_tokens(node)
+            for offset in _marker_offsets(text, token.start, token.end)
+            if start <= offset and offset + len(MARKER) <= end
+        ]
+
         def apply(key: str) -> None:
             overlay.wrap(start, end, '{% editable "' + key + '" %}', "{% endeditable %}")
+            for offset in literal:  # the design's own "==", kept as text (karni_site: \\==)
+                overlay.text_replace[offset] = (offset + len(MARKER), "\\" + MARKER)
 
         self.items.append(
             _Item(page, path, prefix, section, short_name(plain, "text"), apply, text=raw)
@@ -1019,6 +1043,26 @@ class Editable:
 
 
 # rendering a menu
+
+
+def _text_tokens(node: Node) -> Iterable[Node]:
+    """The text nodes of ``node`` and inside it."""
+    if node.kind == "text":
+        yield node
+        return
+    for child in node.iter():
+        if child.kind == "text":
+            yield child
+
+
+def _marker_offsets(source: str, start: int, end: int) -> list[int]:
+    """Where the highlight marker starts in ``source[start:end]``, left to right, apart."""
+    found: list[int] = []
+    at = source.find(MARKER, start, end)
+    while at != -1:
+        found.append(at)
+        at = source.find(MARKER, at + len(MARKER), end)
+    return found
 
 
 def _menu_renderer(editable: Editable, menu: _Menu) -> Render:

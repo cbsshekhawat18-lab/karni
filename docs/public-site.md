@@ -323,7 +323,9 @@ tags work in a template written by hand:
   changes it. Once they change it, their version stays.
 - **Text** is edited as plain text: a new line is a line break, and words
   between the highlight markers (`==fresh every morning==`) render in the design's
-  highlight (a backslash before the marker keeps it as typed). Model fields
+  highlight (a backslash before the marker keeps it as typed). A template's
+  default reads the markers too: `{% editable "home.title" %}Bread ==worth==
+  the walk{% endeditable %}` shows the highlight before anyone edits it. Model fields
   rendered with `{{ value|highlight }}` read the same markers. Bold, emphasis and links are kept, and everything else is
   removed when it is saved: scripts, styles, event attributes, `javascript:`
   links.
@@ -365,8 +367,11 @@ What the import marks:
   differ keeps its markup and its link texts become blocks, and the report
   says where.
 - headings that highlight words with the same element and class
-  (`<span class="highlight">`) set `KARNI_SITE_HIGHLIGHT` in
-  config/settings.py, so the client types `==words==` for the same.
+  (`<span class="highlight">`), or the same element without one (`<em>`),
+  set `KARNI_SITE_HIGHLIGHT` in config/settings.py once, so the client
+  types `==words==` for the same. Characters a design writes around words
+  (`*whole*`) are its text, not a highlight. A `==` in the design's own text
+  is written `\==`, so the page shows it as written.
 
 `.karni/design.json` records each block's key and where it was. The next
 import gives the same place the same key, so the client's edits stay

@@ -155,12 +155,15 @@ on the standard library's `html.parser`): it keeps the elements
 other element with its text kept, every event attribute (`onclick`), and
 any link whose scheme `KARNI_SITE_LINK_SCHEMES` does not list
 (`javascript:`, `data:`). A link that opens a new tab gets `rel="noopener
-noreferrer"`. The template's own default is shown as written.
+noreferrer"`. The template's own default is shown as written, with the
+words between the highlight markers in the highlight's markup, the way an
+edited text shows them.
 
 The highlight convention is `KARNI_SITE_HIGHLIGHT`: the marker a client
 types, and the element and class it becomes. The default is `==words==` as
 `<mark>`. `karni import design --editable` sets it to the design's own
-markup when its headings highlight words (`<span class="highlight">`). It
+markup when its headings highlight words (`<span class="highlight">`, or
+`<em>` without a class). It
 is one convention for the whole site: a model field rendered with
 [`{{ value|highlight }}`](#highlight-words-the-design-sets-apart) reads the
 same marker. A backslash before the marker (`\==`) keeps it as typed.

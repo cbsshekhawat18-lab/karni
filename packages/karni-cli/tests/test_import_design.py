@@ -740,7 +740,8 @@ def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: 
     base = (templates / "base.html").read_text()
     assert base.startswith(
         '{% load static karni_site %}{% site_defaults name="Crumb & Co" '
-        'map_url="https://maps.example.com/crumb" %}{% csp_allow '
+        'map_url="https://maps.example.com/crumb" logo="website/img/logo.svg" '
+        'favicon="website/img/logo.svg" %}{% csp_allow '
     )
     assert (
         '<link rel="icon" href="{% site_image "favicon" url %}'
@@ -791,7 +792,12 @@ def test_editable_bakery_marks_text_images_menus_and_the_sites_details(project: 
     ) in about
     record = _design_json(project)["editable"]
     assert record["enabled"] is True and record["menus"] == {"header": "website/menus/header.html"}
-    assert record["site"] == {"name": "Crumb & Co", "map_url": "https://maps.example.com/crumb"}
+    assert record["site"] == {
+        "name": "Crumb & Co",
+        "map_url": "https://maps.example.com/crumb",
+        "logo": "website/img/logo.svg",
+        "favicon": "website/img/logo.svg",
+    }
     assert "home.hero.bread_worth_the_walk" in record["keys"].values()
 
 
@@ -851,6 +857,48 @@ def test_editable_portfolio_menu_picture_and_email(project: Path) -> None:
     base = (project / "website/templates/website/base.html").read_text()
     assert 'email="hello@example.com"' in base
     assert '<script type="application/ld+json">{"@context"' in base
+
+
+def _highlight_design(tmp_path: Path, first: str, second: str, text: str = "") -> Path:
+    design = tmp_path / "clinic"
+    design.mkdir()
+    page = (
+        "<!DOCTYPE html><html><head><title>{title} | Elm Clinic</title>"
+        '<meta name="description" content="d"></head><body>'
+        '<header><nav><a href="index.html">Home</a> <a href="care.html">Care</a></nav></header>'
+        "<main>{main}</main></body></html>"
+    )
+    (design / "index.html").write_text(page.format(title="Home", main=f"<h1>{first}</h1>{text}"))
+    (design / "care.html").write_text(page.format(title="Care", main=f"<h2>{second}</h2>"))
+    return design
+
+
+def test_a_plain_emphasis_in_headings_is_the_highlight(project: Path, tmp_path: Path) -> None:
+    design = _highlight_design(
+        tmp_path,
+        "Gentle care, <em>honest</em> advice",
+        "Care for the <em>whole</em> family",
+        "<p>Our rule: price == quote, always.</p>",
+    )
+    result = ok("import", "design", str(design), "--app", "website", "--editable")
+    assert "highlight: <em> in headings, typed as ==words==" in result.output
+    settings = (project / "config" / "settings.py").read_text()
+    assert 'KARNI_SITE_HIGHLIGHT = {"marker": "==", "tag": "em", "class": ""}' in settings
+    assert "# The design highlights words in its headings with <em>. A client" in settings
+    home = (project / "website/templates/website/home.html").read_text()
+    assert "Gentle care, <em>honest</em> advice{% endeditable %}" in home
+    # The design's own "==" is text: written \== so the block shows it as typed.
+    assert "Our rule: price \\== quote, always.{% endeditable %}" in home
+    ok("import", "design", str(design))
+    assert (project / "config" / "settings.py").read_text().count("KARNI_SITE_HIGHLIGHT =") == 1
+
+
+def test_characters_around_words_are_not_a_highlight(project: Path, tmp_path: Path) -> None:
+    design = _highlight_design(tmp_path, "Request an *appointment*", "Patient *stories*")
+    ok("import", "design", str(design), "--app", "website", "--editable")
+    assert "KARNI_SITE_HIGHLIGHT" not in (project / "config" / "settings.py").read_text()
+    home = (project / "website/templates/website/home.html").read_text()
+    assert '{% editable "home.main.request_an_appointment" %}Request an *appointment*' in home
 
 
 def test_the_designs_highlight_becomes_the_setting(project: Path, tmp_path: Path) -> None:

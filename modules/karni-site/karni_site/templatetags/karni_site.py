@@ -290,8 +290,12 @@ class EditableNode(Node):
         self.nodelist = nodelist
 
     def render(self, context: Context) -> SafeString:
+        from karni_site.sanitize import apply_highlight
+
         key = _resolved_key(self.key, context, "editable")
-        default = str(self.nodelist.render(context))
+        # The template's words between the markers (==words==) are the highlight, as in an
+        # edit: the default is stored and shown the way the client's text would be.
+        default = apply_highlight(str(self.nodelist.render(context)))
         return mark_safe(blocks.text(key, default, _request(context)))  # noqa: S308 - template default or cleaned HTML
 
 

@@ -32,6 +32,7 @@ import hashlib
 import json
 import os
 import shutil
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -293,6 +294,12 @@ def _write_image_copies(
 HIGHLIGHT_SETTING = "KARNI_SITE_HIGHLIGHT"
 
 
+def _element(found: Mapping[str, Any]) -> str:
+    """``<em>`` or ``<span class="accent">``: the highlight markup as the design writes it."""
+    css = str(found.get("class") or "")
+    return f'<{found["tag"]} class="{css}">' if css else f"<{found['tag']}>"
+
+
 def _highlight_setting(ws: Workspace, plan: SitePlan) -> None:
     """Tell karni-site how the design highlights words, when the project has not said."""
     found = (plan.design.get("editable") or {}).get("highlight")
@@ -306,9 +313,10 @@ def _highlight_setting(ws: Workspace, plan: SitePlan) -> None:
         f'"class": {pystr(found["class"])}}}'
     )
     block = (
-        "\n# The design highlights words in its headings with "
-        f'<{found["tag"]} class="{found["class"]}">. A client types ==words== in an editable\n'
-        "# block for the same (karni import design --editable).\n" + line + "\n"
+        f"\n# The design highlights words in its headings with {_element(found)}. A client "
+        "types ==words== in an\n# editable block for the same (karni import design --editable).\n"
+        + line
+        + "\n"
     )
     ws.write(SETTINGS, text.rstrip("\n") + "\n" + block)
 
@@ -330,7 +338,7 @@ def _editable_lines(plan: SitePlan) -> list[str]:
     found = (plan.design.get("editable") or {}).get("highlight")
     if found:
         lines.append(
-            f'highlight: <{found["tag"]} class="{found["class"]}"> in headings, typed as ==words== '
+            f"highlight: {_element(found)} in headings, typed as ==words== "
             f"({HIGHLIGHT_SETTING} in config/settings.py)."
         )
     lines.extend(f"  - {note}" for note in report.notes)
