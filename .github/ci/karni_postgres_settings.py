@@ -39,6 +39,16 @@ if template := os.environ.get("KARNI_TEST_DB_TEMPLATE"):
     _db["TEST"] = {"TEMPLATE": template}
 
 DATABASES = {"default": _db}
+# Every other alias the suite's settings define (packages/karni's "second", for the
+# external tables suite) gets a database of its own on the same server, named
+# after the default one: karni plus _second.
+for _alias in _suite_settings.DATABASES:
+    if _alias != "default":
+        DATABASES[_alias] = {
+            **_db,
+            "NAME": f"{_db['NAME']}_{_alias}",
+            "TEST": {**_db.get("TEST", {})},
+        }
 
 # The project root karni infers is the parent of the settings package — for
 # this overlay that is .github/, where no test app lives (the seeding and

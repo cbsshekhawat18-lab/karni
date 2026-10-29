@@ -283,6 +283,7 @@ Project models inherit `karni.models.BaseModel`. Optional settings for Karni's l
 - `stable` Model events and listeners, optionally queued to Celery (`@on_updated`)
 - `stable` Field-level change history (`class Karni: audit = True`)
 - `experimental` Scheduled tasks (`<app>/schedules.py`, `karni schedule`)
+- `experimental` External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier
 - `planned` A tenant scope on every model (the `karni-tenancy` module)
 
 Base classes: `AuditedModel`, `BaseModel`, `GuardedModel`, `SoftDeleteModel`, `TimestampedModel`, `UUIDModel`.
@@ -424,7 +425,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).

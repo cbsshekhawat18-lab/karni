@@ -812,6 +812,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask users to accept terms, or remove the client's call.
 
+<a id="e270"></a>
+
+#### E270: An external model is managed by Django
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `class Karni: external = True` says another system owns the table or view, so Karni must never create, change or drop it. Django still migrates a model unless `Meta.managed = False`, so `migrate` would try to create or alter that table. The two declarations go together.
+
+**Fix.** Add `managed = False` to the model's `class Meta`, or remove `external = True` if Django should own the table.
+
+<a id="e271"></a>
+
+#### E271: Karni.database names a database that is not in DATABASES
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `class Karni: database = '<alias>'` sends the model's reads, writes and migrations to that alias of the DATABASES setting. An alias Django does not know fails on the first query.
+
+**Fix.** Add the alias to DATABASES (for example DATABASES['warehouse'] = env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.
+
+<a id="e272"></a>
+
+#### E272: The table or view of an external model does not exist
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** An external model reads a table or view another system owns, and Karni never creates it. `karni check` connected to the model's database and found no table or view with the model's Meta.db_table, so every query on the model would fail.
+
+**Fix.** Create the table or view in that database (a SQL view the project owns can come from a RunSQL migration), or fix Meta.db_table. A PostgreSQL table in another schema is written db_table = 'schema"."table'. Where the table cannot exist (a CI database), add 'karni.E272' to SILENCED_SYSTEM_CHECKS in that environment's settings.
+
+<a id="e273"></a>
+
+#### E273: An external model has a column its table or view lacks
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** Every concrete field of an external model is a column Karni selects. A field whose column (its name, or db_column) is missing from the table or view makes every query on the model fail.
+
+**Fix.** Fix the field's name or db_column to match the column, remove the field, or regenerate the model from the table with `karni make model <Name> --external --table <table>` and keep what you need.
+
+<a id="e274"></a>
+
+#### E274: An external model's field type does not match its column
+
+*system check (error)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** The database reports a column type that cannot hold the field's values, for example a DateTimeField over a text column or an IntegerField over a date. Karni compares broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and skips columns whose type the database does not report, so a reported mismatch is a real one.
+
+**Fix.** Change the field to the column's type (`karni make model <Name> --external --table <table> --dry-run` shows the type Django infers), or cast the column in the view.
+
+<a id="e275"></a>
+
+#### E275: class Karni: external, writable or database has a value of the wrong type
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `external` and `writable` are True or False, and `database` is the name of a DATABASES alias. Another value would be read in a way the code does not say.
+
+**Fix.** Write external = True, writable = True or database = '<alias>' (a non-empty string).
+
+<a id="e276"></a>
+
+#### E276: A relation joins models on different databases
+
+*system check (error)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** A foreign key, one-to-one or many-to-many field needs both tables in one database: Django joins them in SQL, and Karni's router refuses to relate rows across databases. A model on another database that inherits BaseModel has this problem too, because AuditedModel's created_by and updated_by point at the user table.
+
+**Fix.** Keep related models on the same database (the same Karni.database), or store the other row's key in a plain field. For a model Karni manages on another database, compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.
+
 ### 3xx · Admin
 
 <a id="e301"></a>
@@ -1147,6 +1217,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A backup that fails quietly is found missing on the day it is needed, so the backup service reports the failure in its log, and its health check turns unhealthy until a backup succeeds.
 
 **Fix.** Read the line after E521: it names the step (pg_dump, pg_restore, psql, the media archive, S3) and its error. Check DATABASE_URL, that the client tools match the database's major version (the backup image's POSTGRES_VERSION), the free space in KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run `docker compose -f docker-compose.prod.yml exec backup karni-backup run`.
+
+<a id="w540"></a>
+
+#### W540: The database of an external model cannot be reached
+
+*system check (warning)* · from `karni.db.checks.check_external_tables (karni check)`
+
+**Why Karni objects.** `karni check` compares each external model with its table or view when the model's database answers. This one did not, so nothing was compared for it. That is not an error: the database may be outside this machine's reach (CI, a laptop).
+
+**Fix.** Check the alias in DATABASES (host, port, credentials, network) and run `karni check` again where the database is reachable. Add 'karni.W540' to SILENCED_SYSTEM_CHECKS where it never is.
+
+<a id="w541"></a>
+
+#### W541: Karni.writable on a model that is not external
+
+*system check (warning)* · from `karni.db.checks.check_database_options`
+
+**Why Karni objects.** `writable = True` only lifts the read-only default of an external model. Every other model is writable already, so the declaration does nothing.
+
+**Fix.** Remove `writable = True`, or add `external = True` (with Meta.managed = False) if another system owns the table.
+
+<a id="w542"></a>
+
+#### W542: Karni.database is declared but Karni's database router is not installed
+
+*system check (warning)* · from `karni.db.checks.check_database_router`
+
+**Why Karni objects.** A model declares `class Karni: database`, but DATABASE_ROUTERS does not list karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is replaced after the call.
+
+**Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
 ### 6xx · Testing and seeding
 
@@ -2496,6 +2596,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the draft to another file, or pass --force to replace the map.
 
+<a id="c140"></a>
+
+### C140: The database to read the table from cannot be used
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** `karni make model <Name> --external --table <table>` writes the model from the table's columns, so it reads them from the database (manage.py karni_inspect, in the project's interpreter). The database did not answer, the alias is not in DATABASES, or the project's karni has no karni_inspect command.
+
+**Fix.** Start the database or fix its settings (the message names the alias and the error), pass the alias with --database, or upgrade the project's karni. Then run the command again.
+
+<a id="c141"></a>
+
+### C141: The table or view is not in the database
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** The database answered, but has no table or view of that name, or the name has a schema (schema.table) on a database other than PostgreSQL, which has none.
+
+**Fix.** Check the name and the alias (--database). A PostgreSQL table in another schema is written schema.table, e.g. --table reporting.sales.
+
+<a id="c142"></a>
+
+### C142: These options do not go with --external
+
+*karni command* · from `karni make model --external`
+
+**Why Karni objects.** An external model's fields come from the table, so it takes no field list and needs --table. --table, --database and --writable describe an external model, so they need --external. Imports never write a read-only table, so --key does not apply.
+
+**Fix.** Run karni make model <Name> --external --table <[schema.]table> [--database <alias>] [--writable], with no fields.
+
 <a id="c199"></a>
 
 ### C199: Internal error in karni
@@ -2936,7 +3066,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Rule.** Models inherit `karni.models.BaseModel` (= `UUIDModel` + `TimestampedModel` + `SoftDeleteModel` + `AuditedModel`), or compose those mixins directly when a model should not have all four (e.g. an append-only log: `UUIDModel, TimestampedModel`). Declare `APIMeta` / `AdminMeta` only for fields that must be hidden, read-only or write-only.
 
-**Why Karni objects.** The mixins supply uuid ids, timestamps, soft delete, audit stamping and the managers the derived API/admin rely on.
+**Why Karni objects.** The mixins supply uuid ids, timestamps, soft delete, audit stamping and the managers the derived API/admin rely on. The exception is a table or view another system owns: a plain `models.Model` with `class Meta: managed = False` and `class Karni: external = True` (experimental, `karni make model <Name> --external --table <table>`), which Karni only reads unless `writable = True`.
 
 **Fix.** Inherit karni.models.BaseModel (or compose its mixins).
 

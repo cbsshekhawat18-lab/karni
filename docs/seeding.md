@@ -56,7 +56,9 @@ So a second plain `karni seed` on the same database refuses. Run
 ## What you get
 
 - **Every model of your own apps**, plus the user model and any model a
-  seeder names. Relation targets are seeded first, so foreign keys point at
+  seeder names. Models Django does not manage (`Meta.managed = False`) are
+  left out, [external tables and views](models.md#external-tables-views-and-a-second-database)
+  among them: another system fills them. Relation targets are seeded first, so foreign keys point at
   real rows, to-many relations get a few rows each, and one-to-one targets
   are used once.
 - **Values inferred from field names and types**, from the same engine the

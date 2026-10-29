@@ -133,6 +133,7 @@ def test_every_status_check_reports_both_states(
     assert "✗" not in html and "✓" in html
 
 
+@pytest.mark.django_db(databases="__all__")  # the external tables app has a second database
 def test_renders_with_models_and_their_links_resolve(first_boot: None, client: Any) -> None:
     found = inventory.models()
     assert found, "the test apps register models"

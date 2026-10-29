@@ -18,7 +18,9 @@ near-future datetime; optional fields are mostly filled. Relations point at
 rows seeded earlier in the run (or existing rows), so the data is connected;
 to-many relations get a few rows each; one-to-one targets are used once.
 Unique fields and constraints hold (values embed the row's number; a clash
-on a multi-field constraint is retried).
+on a multi-field constraint is retried). Models Django does not manage
+(``Meta.managed = False``), external tables and views among them
+(:mod:`karni.db`), are never seeded: another system fills them.
 
 **A demo login.** The first user is ``demo@example.com`` with the password
 ``karni-password`` (:data:`karni.testing.factories.DEFAULT_PASSWORD`),
@@ -266,6 +268,7 @@ def clear_cache() -> None:
 
 
 def _seedable(model: type[models.Model]) -> bool:
+    """A model seeding writes to: concrete, not swapped, and managed (never an external table)."""
     meta = model._meta
     return not (
         meta.abstract or meta.proxy or not meta.managed or meta.auto_created or meta.swapped

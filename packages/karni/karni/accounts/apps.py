@@ -49,11 +49,15 @@ def sync_roles_after_migrate(sender: AppConfig, **kwargs: Any) -> None:
     the full report above.
     """
     from django.conf import settings
+    from django.db import DEFAULT_DB_ALIAS, router
 
+    from karni.accounts.models import Role
     from karni.accounts.roles import sync_roles
 
     if not getattr(settings, "KARNI_ROLES_AUTOSYNC", True):
         return
+    if not router.allow_migrate_model(kwargs.get("using", DEFAULT_DB_ALIAS), Role):
+        return  # a database the role tables do not live on (class Karni: database)
     report = sync_roles()
     verbosity = kwargs.get("verbosity", 1)
     stdout = kwargs.get("stdout")

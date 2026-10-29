@@ -48,7 +48,7 @@ _PROFILES: dict[str, dict[str, Any]] = {"dev": DEV, "prod": PROD}
 
 # Settings that are ordered lists Karni must extend rather than replace when
 # the project has already defined them.
-_LIST_MERGED_SETTINGS = ("INSTALLED_APPS", "MIDDLEWARE")
+_LIST_MERGED_SETTINGS = ("INSTALLED_APPS", "MIDDLEWARE", "DATABASE_ROUTERS")
 
 #: Entry-point group through which installed Karni modules ship their default
 #: settings ("the settings fragment"). A staged exception to the
@@ -391,11 +391,13 @@ def karni_settings(
 
     Special cases:
 
-    * ``INSTALLED_APPS`` / ``MIDDLEWARE``: when the namespace already defines
-      them, Karni appends only its missing entries after the project's own,
-      deduplicated and preserving the project's order, instead of replacing
-      the list — except ``unfold``, which is inserted immediately *before*
-      ``django.contrib.admin`` (its templates must override the admin's).
+    * ``INSTALLED_APPS`` / ``MIDDLEWARE`` / ``DATABASE_ROUTERS``: when the
+      namespace already defines them, Karni appends only its missing entries
+      after the project's own, deduplicated and preserving the project's
+      order, instead of replacing the list — except ``unfold``, which is
+      inserted immediately *before* ``django.contrib.admin`` (its templates
+      must override the admin's). So a project's own database routers come
+      before :class:`karni.db.DatabaseRouter` and win.
     * ``KARNI_SOCIAL_AUTH`` / ``KARNI_2FA``: when enabled (in the namespace,
       as an override or via env), the allauth / django-otp apps, middleware
       and companion settings are added to the defaults before merging.

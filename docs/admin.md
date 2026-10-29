@@ -189,6 +189,22 @@ them, so use it in a custom view. The `karni-impersonation` module registers
 the veto that blocks dangerous actions while a support user acts as someone
 else.
 
+## External tables and views
+
+!!! warning "Experimental"
+    `KarniModelAdmin.is_read_only` is [experimental](stability.md#experimental-names).
+
+An [external model](models.md#external-tables-views-and-a-second-database)
+(`class Karni: external = True`) is registered like any other, with derived
+columns, filters, search and row scope. Unless it declares `writable =
+True`, its admin is read-only: no add, change or delete permission, so the
+change view shows every field read-only, the bulk delete action and the
+import page are gone, and the export actions stay. An inline of such a model
+(`AdminMeta.inline_on`) shows its rows and changes none.
+`KarniModelAdmin.is_read_only()` decides it: override it to make one admin
+writable, or any admin read-only. A model on a second database
+(`Karni.database`) is read and written there.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

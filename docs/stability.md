@@ -167,6 +167,14 @@ Experimental now:
   (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
   of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [External tables, views and a second database](models.md#external-tables-views-and-a-second-database):
+  the `class Karni` options `external`, `writable` and `database`, `karni.db`
+  (with `DatabaseRouter`, `karni.db.checks` and `karni.db.introspection`),
+  `BaseViewSet.is_read_only` and `read_only_refused_actions`,
+  `KarniModelAdmin.is_read_only`, `assert_crud`'s `read_only`,
+  `karni.testing.create_external_tables`, the pytest option
+  `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
+  --external`.
 
 ## Supported platforms
 

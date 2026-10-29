@@ -125,6 +125,32 @@ def _is_abstract(cls: ast.ClassDef) -> bool:
     return False
 
 
+def _nested_constant(cls: ast.ClassDef, nested: str, name: str) -> object:
+    """The constant ``name = <value>`` in ``cls``'s nested class ``nested``, else ``None``."""
+    for stmt in cls.body:
+        if isinstance(stmt, ast.ClassDef) and stmt.name == nested:
+            for item in stmt.body:
+                if (
+                    isinstance(item, ast.Assign)
+                    and any(isinstance(t, ast.Name) and t.id == name for t in item.targets)
+                    and isinstance(item.value, ast.Constant)
+                ):
+                    return item.value.value
+    return None
+
+
+def _is_external(cls: ast.ClassDef) -> bool:
+    """An external table or view (``karni.db``, experimental): model-base accepts it.
+
+    Both declarations are needed: ``class Karni: external = True`` and
+    ``class Meta: managed = False``.
+    """
+    return (
+        _nested_constant(cls, "Karni", "external") is True
+        and _nested_constant(cls, "Meta", "managed") is False
+    )
+
+
 def _class_lines(cls: ast.ClassDef) -> list[int]:
     first = min([cls.lineno, *(d.lineno for d in cls.decorator_list)])
     return sorted({cls.lineno, cls.lineno - 1, first, first - 1})
@@ -255,7 +281,12 @@ def _python(path: str, text: str) -> list[tuple[Finding, list[int]]]:
         if isinstance(node, ast.ClassDef):
             bases = {_dotted(b) for b in node.bases}
             short = {b.rsplit(".", 1)[-1] for b in bases}
-            if bases & model_names and not short & KARNI_MODEL_BASES and not _is_abstract(node):
+            if (
+                bases & model_names
+                and not short & KARNI_MODEL_BASES
+                and not _is_abstract(node)
+                and not _is_external(node)
+            ):
                 found.append(
                     (
                         _finding(

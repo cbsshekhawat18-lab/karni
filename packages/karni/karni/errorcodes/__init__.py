@@ -22,7 +22,8 @@ accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
 why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
-(``StateField``, capacity, ``no_overlap``).
+(``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
+tables, SQL views and a second database (``karni.db``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1018,6 +1019,126 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "while it was set answers 404 with this code once it is unset.",
         'Set KARNI_TERMS = {"version": "<version>", "url": "<where the terms are>"} to ask '
         "users to accept terms, or remove the client's call.",
+    ),
+    # E270-E279 / W540-W549 external tables, SQL views and a second database
+    # (karni.db, experimental)
+    _e(
+        "E270",
+        "An external model is managed by Django",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: external = True` says another system owns the table or view, so Karni "
+        "must never create, change or drop it. Django still migrates a model unless "
+        "`Meta.managed = False`, so `migrate` would try to create or alter that table. The two "
+        "declarations go together.",
+        "Add `managed = False` to the model's `class Meta`, or remove `external = True` if "
+        "Django should own the table.",
+    ),
+    _e(
+        "E271",
+        "Karni.database names a database that is not in DATABASES",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`class Karni: database = '<alias>'` sends the model's reads, writes and migrations to "
+        "that alias of the DATABASES setting. An alias Django does not know fails on the first "
+        "query.",
+        "Add the alias to DATABASES (for example DATABASES['warehouse'] = "
+        "env.db_url('WAREHOUSE_DATABASE_URL')), or fix the name in `class Karni`.",
+    ),
+    _e(
+        "E272",
+        "The table or view of an external model does not exist",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "An external model reads a table or view another system owns, and Karni never creates "
+        "it. `karni check` connected to the model's database and found no table or view with "
+        "the model's Meta.db_table, so every query on the model would fail.",
+        "Create the table or view in that database (a SQL view the project owns can come from "
+        "a RunSQL migration), or fix Meta.db_table. A PostgreSQL table in another schema is "
+        "written db_table = 'schema\".\"table'. Where the table cannot exist (a CI database), "
+        "add 'karni.E272' to SILENCED_SYSTEM_CHECKS in that environment's settings.",
+    ),
+    _e(
+        "E273",
+        "An external model has a column its table or view lacks",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "Every concrete field of an external model is a column Karni selects. A field whose "
+        "column (its name, or db_column) is missing from the table or view makes every query "
+        "on the model fail.",
+        "Fix the field's name or db_column to match the column, remove the field, or "
+        "regenerate the model from the table with `karni make model <Name> --external "
+        "--table <table>` and keep what you need.",
+    ),
+    _e(
+        "E274",
+        "An external model's field type does not match its column",
+        "check",
+        "karni.db.checks.check_external_tables (karni check)",
+        "The database reports a column type that cannot hold the field's values, for example "
+        "a DateTimeField over a text column or an IntegerField over a date. Karni compares "
+        "broad kinds only (numbers, text, dates, times, booleans, UUIDs, JSON, binary), and "
+        "skips columns whose type the database does not report, so a reported mismatch is a "
+        "real one.",
+        "Change the field to the column's type (`karni make model <Name> --external --table "
+        "<table> --dry-run` shows the type Django infers), or cast the column in the view.",
+    ),
+    _e(
+        "E275",
+        "class Karni: external, writable or database has a value of the wrong type",
+        "check",
+        "karni.db.checks.check_database_options",
+        "`external` and `writable` are True or False, and `database` is the name of a "
+        "DATABASES alias. Another value would be read in a way the code does not say.",
+        "Write external = True, writable = True or database = '<alias>' (a non-empty string).",
+    ),
+    _e(
+        "E276",
+        "A relation joins models on different databases",
+        "check",
+        "karni.db.checks.check_database_options",
+        "A foreign key, one-to-one or many-to-many field needs both tables in one database: "
+        "Django joins them in SQL, and Karni's router refuses to relate rows across "
+        "databases. A model on another database that inherits BaseModel has this problem "
+        "too, because AuditedModel's created_by and updated_by point at the user table.",
+        "Keep related models on the same database (the same Karni.database), or store the "
+        "other row's key in a plain field. For a model Karni manages on another database, "
+        "compose UUIDModel, TimestampedModel and SoftDeleteModel instead of BaseModel.",
+    ),
+    _e(
+        "W540",
+        "The database of an external model cannot be reached",
+        "warning",
+        "karni.db.checks.check_external_tables (karni check)",
+        "`karni check` compares each external model with its table or view when the model's "
+        "database answers. This one did not, so nothing was compared for it. That is not an "
+        "error: the database may be outside this machine's reach (CI, a laptop).",
+        "Check the alias in DATABASES (host, port, credentials, network) and run `karni "
+        "check` again where the database is reachable. Add 'karni.W540' to "
+        "SILENCED_SYSTEM_CHECKS where it never is.",
+    ),
+    _e(
+        "W541",
+        "Karni.writable on a model that is not external",
+        "warning",
+        "karni.db.checks.check_database_options",
+        "`writable = True` only lifts the read-only default of an external model. Every other "
+        "model is writable already, so the declaration does nothing.",
+        "Remove `writable = True`, or add `external = True` (with Meta.managed = False) if "
+        "another system owns the table.",
+    ),
+    _e(
+        "W542",
+        "Karni.database is declared but Karni's database router is not installed",
+        "warning",
+        "karni.db.checks.check_database_router",
+        "A model declares `class Karni: database`, but DATABASE_ROUTERS does not list "
+        "karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default "
+        "database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is "
+        "replaced after the call.",
+        "Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first "
+        "router with an answer wins). If your own router routes these models, add "
+        "'karni.W542' to SILENCED_SYSTEM_CHECKS.",
     ),
     # E3xx admin
     _e(

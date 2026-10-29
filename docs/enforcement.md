@@ -42,6 +42,13 @@ carries it, and `pytest
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 
+`model-base` and `query-scaling` (experimental) leave out a model over a
+table or view another system owns: `class Karni: external = True` together
+with `Meta.managed = False` on a plain `models.Model`. Without
+`managed = False` the model still fails `model-base`, and `karni.E270` says
+why. See [external tables, views and a second
+database](models.md#external-tables-views-and-a-second-database).
+
 Opt-out goes on the same line, the line above a class or method, or the line
 above its first decorator. `opt-out-reason` itself cannot be suppressed:
 

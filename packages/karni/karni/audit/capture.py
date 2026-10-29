@@ -23,6 +23,7 @@ from django.db import models, transaction
 from django.db.models.signals import post_delete, post_save, pre_save
 
 from karni.audit import REDACTED
+from karni.db import is_read_only
 from karni.exceptions import KarniImproperlyConfigured
 from karni.meta import karni_option
 from karni.middleware import get_current_user
@@ -127,7 +128,8 @@ def audited_fields(model: type[models.Model]) -> tuple[str, ...] | None:
 
 def _audited_fields(model: type[models.Model]) -> tuple[str, ...] | None:
     declared = karni_option(model, "audit", False)
-    if not declared:
+    if not declared or is_read_only(model):
+        # Karni never writes a read-only external table, so it has no change to record.
         return None
     names = [field.name for field in model._meta.concrete_fields]
     if declared is True:

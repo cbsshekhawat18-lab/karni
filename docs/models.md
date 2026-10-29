@@ -1,5 +1,5 @@
 ---
-description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), the managers, related lookups and what each mixin does alone."
+description: "karni.models: BaseModel and its four mixins (UUID primary key, timestamps, soft delete, audit fields), the managers, related lookups, and external tables, SQL views and a second database."
 ---
 
 # Models
@@ -220,3 +220,219 @@ A model that should be counted and listed on the staff app's home page says
 so next to its other `class Karni` options: `dashboard = True`, or a dict
 that picks the counts and the columns. The keys, the defaults and what the
 page shows are in [API: the staff dashboard](api.md#the-staff-dashboard).
+
+## External tables, views and a second database
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `class Karni` options `external`, `writable` and `database`,
+    `karni.db` (with `DatabaseRouter`, `karni.db.checks` and
+    `karni.db.introspection`), `BaseViewSet.is_read_only` and
+    `read_only_refused_actions`, `KarniModelAdmin.is_read_only`,
+    `assert_crud(..., read_only=...)`, `karni.testing.create_external_tables`,
+    the pytest option `--karni-external-tables`, `manage.py karni_inspect` and
+    `karni make model --external`. They may change in a minor release.
+
+Some tables belong to another system: a reporting schema a warehouse fills, a
+SQL view over your own tables, a second database with sales figures. Karni
+reads them as models without owning them.
+
+### An external table or view
+
+Two declarations go together: `class Karni: external = True` and
+`Meta.managed = False`. The model may inherit plain `models.Model`, so it
+needs no UUID key, soft delete or audit columns:
+
+```python
+from django.db import models
+
+
+class Sale(models.Model):
+    id = models.IntegerField(primary_key=True)
+    region = models.CharField(max_length=40)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    sold_on = models.DateField()
+
+    class Meta:
+        managed = False
+        db_table = "sales"
+
+    class Karni:
+        external = True
+```
+
+What Karni then does:
+
+- **No DDL, ever.** `makemigrations` records the model with `managed=False`
+  (so other models can point at it), and no migration creates, alters or
+  drops its table. Karni's router never migrates it.
+- **Read-only by default.** Its `BaseViewSet` answers `POST`, `PUT`,
+  `PATCH` and `DELETE` (and the import endpoints) with 405, to everyone,
+  before authentication, and the OpenAPI document leaves those operations
+  out. The admin lists the rows and shows each one read-only: no add, change
+  or delete, no import page. Export works.
+- **Everything else works as on any model.** `access` declarations, role
+  grants (`app.sale:view` is a permission key like any other), row scope in
+  the API and the admin, `Karni.field_roles`, filters, search, ordering,
+  `?expand=` and export.
+- **No change history**, even with `Karni.audit`, because Karni writes
+  nothing to the table.
+- **Skipped by seeding and by the query-scaling check.** Another system
+  fills the table, so neither can seed it the way it really is.
+- **The `model-base` rule accepts it**, and only with both declarations.
+  `external = True` without `managed = False` is `karni.E270`.
+
+`class Karni: writable = True` lets the API and the admin write the table
+(a mapping table admins edit, a table both systems share). Change history
+then follows `Karni.audit` as usual. A primary key the database does not
+generate (no auto-increment, no default) is sent in the create body and
+cannot change afterwards.
+
+`BaseViewSet.is_read_only()` and `KarniModelAdmin.is_read_only()` decide
+per viewset or admin. Override them to change one surface only.
+
+### A SQL view
+
+A view is an external model too. Give it a column whose values are unique as
+the primary key (Django needs one), and create the view where your project
+creates its other SQL, for example a `RunSQL` migration:
+
+```python
+class RegionTotal(models.Model):
+    region = models.CharField(primary_key=True, max_length=40)
+    total = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        managed = False
+        db_table = "region_totals"
+
+    class Karni:
+        external = True
+```
+
+### A table in another PostgreSQL schema
+
+Django quotes `db_table` as one identifier, so a schema and a table are
+written with the quoting trick:
+
+```python
+class Meta:
+    managed = False
+    db_table = 'reporting"."sales'   # the table "sales" in the schema "reporting"
+```
+
+Filters, ordering, `select_related`, the admin changelist and export work
+on it. SQLite has no schemas, so such a model works on PostgreSQL only.
+
+### A second database
+
+`class Karni: database = "<alias>"` sends a model's reads, writes and
+migrations to that alias of `DATABASES`. It applies to external models and
+to models Karni manages there:
+
+```python
+DATABASES["warehouse"] = env.db_url("WAREHOUSE_DATABASE_URL")
+
+
+class Stock(models.Model):
+    sku = models.CharField(primary_key=True, max_length=20)
+    quantity = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = "stock"
+
+    class Karni:
+        external = True
+        database = "warehouse"
+
+
+class ProductMapping(UUIDModel, TimestampedModel):  # Karni migrates it, on warehouse only
+    sku = models.CharField(max_length=20, unique=True)
+    label = models.CharField(max_length=80)
+
+    class Karni:
+        database = "warehouse"
+```
+
+`karni_settings()` lists `karni.db.DatabaseRouter` in `DATABASE_ROUTERS`. It
+answers from `Karni.database`:
+
+- reads and writes of the model go to its alias;
+- a model Karni manages migrates only on its own alias (`python manage.py
+  migrate --database warehouse`), an external model never. On an alias some model
+  names, nothing else migrates, so `migrate --database warehouse` creates no
+  user or session tables there. A `RunPython` or `RunSQL` meant for that
+  alias passes `hints={"model_name": "<model>"}`;
+- relations between models on different aliases are refused. Django joins
+  related tables in one database, so a foreign key across them cannot work,
+  and `karni.E276` reports one at startup. This is why `ProductMapping`
+  above composes `UUIDModel` and `TimestampedModel` instead of `BaseModel`:
+  `AuditedModel`'s `created_by` and `updated_by` point at the user table on
+  `default`.
+
+A project with one database is unaffected. Routers a project lists before
+Karni's win, because Django takes the first router that answers:
+
+```python
+DATABASE_ROUTERS = ["myproject.routers.ReplicaRouter", *DATABASE_ROUTERS]
+```
+
+### Checks
+
+At startup (every `manage.py` command):
+
+| Code | When |
+|---|---|
+| `karni.E270` | `external = True` without `Meta.managed = False` |
+| `karni.E271` | `Karni.database` names an alias `DATABASES` does not have |
+| `karni.E275` | `external` or `writable` is not a bool, or `database` not a non-empty string |
+| `karni.E276` | a relation joins models on different databases |
+| `karni.W541` | `writable = True` on a model that is not external |
+| `karni.W542` | a model declares `Karni.database` but `DATABASE_ROUTERS` lacks Karni's router |
+
+`karni check` also connects to every database that holds an external model
+and compares each model with its table or view:
+
+| Code | When |
+|---|---|
+| `karni.E272` | the table or view does not exist |
+| `karni.E273` | a field's column is missing from it |
+| `karni.E274` | a field's type clearly does not match its column (numbers, text, dates, times, booleans, UUIDs, JSON and binary compared as kinds, columns of unknown type skipped) |
+| `karni.W540` | the database did not answer, so nothing was compared |
+
+The comparison runs in `karni check` and not at startup, because `migrate`
+runs the startup checks, and a view your own migration creates does not
+exist before it runs. For the same reason `karni check --deploy`, which the
+production image runs before its command, leaves it out. Silence a code with `SILENCED_SYSTEM_CHECKS` where the
+table cannot exist (a CI database), and the comparison leaves it out too.
+
+### Writing the model from the table
+
+```sh
+karni make model Sale --external --table reporting.sales --database warehouse
+karni make model Target --external --table targets --writable
+```
+
+`karni make model --external` reads the table's columns from the database
+with Django's `inspectdb` machinery (field types, `null`, `max_length`, the
+primary key) and writes the model with `Meta.managed = False`,
+`Meta.db_table` (schema-qualified for `schema.table`) and `class Karni:
+external = True`, plus `database` and `writable` when given. A view gets its
+`id` column, else its first unique column, else its first column as the
+primary key, with a comment saying so. A foreign key column becomes a plain
+field with a comment, because the model it points at may not exist yet. It
+also writes the viewset with an `access` declaration to edit, as `karni make
+model` does. The database must be reachable (`C140` says so when it is
+not), and the table must be in it (`C141`).
+
+### Tests
+
+Karni's pytest plugin creates the table of every external model in each
+test database once it is migrated, from the model's fields, and on
+PostgreSQL the schema a `'schema"."table'` name points at. A table or view
+that already exists (a view your migration creates) is left alone. So
+factories, `assert_crud` and your own tests can write rows. `pytest
+--karni-external-tables=off` (or `karni_external_tables = off` in the pytest
+ini file) turns it off, and `karni.testing.create_external_tables(using,
+models)` does it by hand. See [testing](testing.md#external-tables).

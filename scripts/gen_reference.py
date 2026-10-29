@@ -123,6 +123,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("models", "Scheduled tasks (`<app>/schedules.py`, `karni schedule`)"),
     Capability(
         "models",
+        "External tables, SQL views and a second database as models Karni reads (`class Karni: "
+        "external`, `writable`, `database`, `karni make model --external`). Experimental tier",
+    ),
+    Capability(
+        "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
         planned="docs/models.md#scopes-the-filters-every-default-manager-applies",
     ),

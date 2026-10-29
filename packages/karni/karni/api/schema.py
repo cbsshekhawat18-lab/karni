@@ -99,6 +99,9 @@ class KarniAutoSchema(AutoSchema):
         """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle``/``-honeypot``."""
         if self._karni_action() == "history" and not self._karni_audited():
             return None  # no history is kept for this resource: no operation to document
+        view = self._karni_view()
+        if view is not None and view.refuses_read_only(self._karni_action()):
+            return None  # a read-only external model: its writes answer 405, so none is documented
         operation = super().get_operation(path, path_regex, path_prefix, method, registry)
         if operation is None:
             return None

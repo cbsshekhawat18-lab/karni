@@ -298,6 +298,38 @@ CODES: Final[tuple[CliCode, ...]] = (
         "over it would lose those edits.",
         "Write the draft to another file, or pass --force to replace the map.",
     ),
+    # C140-C149 karni make model --external (experimental)
+    _c(
+        "C140",
+        "The database to read the table from cannot be used",
+        "karni make model --external",
+        "`karni make model <Name> --external --table <table>` writes the model from the table's "
+        "columns, so it reads them from the database (manage.py karni_inspect, in the project's "
+        "interpreter). The database did not answer, the alias is not in DATABASES, or the "
+        "project's karni has no karni_inspect command.",
+        "Start the database or fix its settings (the message names the alias and the error), "
+        "pass the alias with --database, or upgrade the project's karni. Then run the command "
+        "again.",
+    ),
+    _c(
+        "C141",
+        "The table or view is not in the database",
+        "karni make model --external",
+        "The database answered, but has no table or view of that name, or the name has a schema "
+        "(schema.table) on a database other than PostgreSQL, which has none.",
+        "Check the name and the alias (--database). A PostgreSQL table in another schema is "
+        "written schema.table, e.g. --table reporting.sales.",
+    ),
+    _c(
+        "C142",
+        "These options do not go with --external",
+        "karni make model --external",
+        "An external model's fields come from the table, so it takes no field list and needs "
+        "--table. --table, --database and --writable describe an external model, so they need "
+        "--external. Imports never write a read-only table, so --key does not apply.",
+        "Run karni make model <Name> --external --table <[schema.]table> [--database <alias>] "
+        "[--writable], with no fields.",
+    ),
     _c(
         "C199",
         "Internal error in karni",
