@@ -29,7 +29,7 @@ the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| A1 | An app spec format (`karni.yaml`), with a published JSON Schema and `karni spec validate`. | none | planned |
+| A1 | An app spec format (`karni.yaml`), with a published JSON Schema and `karni spec validate`. | none | done |
 | A2 | `karni plan`: compare the spec with the project and print the change plan, writing nothing. | A1 | planned |
 | A3 | `karni build`: apply the plan idempotently, without touching hand-written code. | A2 | planned |
 

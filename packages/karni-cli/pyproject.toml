@@ -52,6 +52,9 @@ dependencies = [
     # upgrade must work on the first try for a user on an old release, and it
     # is imported only by that command (prebuilt wheels for every platform).
     "libcst>=1.4",
+    # `karni spec`: the karni.yaml format and its JSON Schema. Karni itself depends on
+    # Pydantic 2, so a project has it already (prebuilt wheels for every platform).
+    "pydantic>=2",
 ]
 
 [project.urls]

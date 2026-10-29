@@ -167,6 +167,9 @@ Experimental now:
   (with `TermsGateMiddleware`), the `TermsAcceptance` model, the `terms` field
   of `me/`, the client's `onError` hook, and `TermsGate` and `useAuth()`'s
   `terms`, `termsRequired` and `acceptTerms` in `@karni/ui`.
+- [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
+  `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
+  `karni.facts` and the `karni_cli.spec` package.
 
 ## Supported platforms
 

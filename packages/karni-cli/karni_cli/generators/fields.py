@@ -292,84 +292,113 @@ def render_model_body(
         by the caller, which can see the project's models).
     """
     out = Rendered()
-    indent = "    "
     targets = [resolve[s.name].key for s in specs if s.is_relation]
     for spec in specs:
-        head = f"{spec.name} = models."
-        typed = TYPED.get(spec.kind)
-        if typed is not None:
-            typed(spec, out, indent, line_length, specs)
-            continue
-        if spec.kind in {"str", "url"}:
-            django = {"str": "CharField", "url": "URLField"}[spec.kind]
-            args: list[str] = []
-            if spec.kind == "str":
-                args.append(f"max_length={_int_arg(spec, 0, 255, 'max_length')}")
-            elif spec.args and spec.args[0]:
-                args.append(f"max_length={_int_arg(spec, 0, 1, 'max_length')}")
-            out.lines.append(
-                call(head + django, args + _optional_kwargs(spec), indent, line_length)
-            )
-        elif spec.kind in _SIMPLE:
-            out.lines.append(
-                call(head + _SIMPLE[spec.kind], _optional_kwargs(spec), indent, line_length)
-            )
-        elif spec.kind == "decimal":
-            digits = _int_arg(spec, 0, 10, "max_digits")
-            places = _int_arg(spec, 1, 2, "decimal_places")
-            if places > digits:
-                raise CliError(
-                    f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits}).",
-                    code="C104",
-                )
-            args = [f"max_digits={digits}", f"decimal_places={places}", *_optional_kwargs(spec)]
-            out.lines.append(call(head + "DecimalField", args, indent, line_length))
-        elif spec.kind == "bool":
-            args = _optional_kwargs(spec) or ["default=False"]
-            out.lines.append(call(head + "BooleanField", args, indent, line_length))
-        elif spec.kind == "uuid":
-            if spec.optional:
-                args = _optional_kwargs(spec)
-            else:
-                args = ["default=uuid.uuid4"]
-                out.imports.append(Import("uuid"))
-            out.lines.append(call(head + "UUIDField", args, indent, line_length))
-        elif spec.kind in {"file", "image"}:
-            django = "FileField" if spec.kind == "file" else "ImageField"
-            upload = pystr(f"{app_label}/{snake(model)}/")
-            args = [f"upload_to={upload}", *_optional_kwargs(spec)]
-            out.lines.append(call(head + django, args, indent, line_length))
-            if spec.kind == "image":
-                # The caller asks the project's interpreter and notes Pillow only if it is missing.
-                out.images.append(f"{model}.{spec.name}")
-        elif spec.kind == "choice":
-            _render_choice(spec, out, indent, line_length)
-        elif spec.kind in lifecycle_fields.TYPES:
-            names = {s.name for s in specs}
-            lifecycle_fields.render(spec, out, indent, line_length, model, names)
-        else:
-            target = resolve[spec.name]
-            args = [target.expr]
-            if spec.kind != "m2m":
-                if spec.optional:
-                    args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
-                else:
-                    args.append("on_delete=models.CASCADE")
-            else:
-                if target.key == "self":
-                    # A hand-picked list of its own kind goes one way: a course that lists
-                    # another does not make that one list it back.
-                    args.append("symmetrical=False")
-                if spec.optional:
-                    args.append("blank=True")
-            if targets.count(target.key) > 1:
-                args.append(f"related_name={pystr(snake(model) + '_' + spec.name + '_set')}")
-            out.lines.append(call(head + _RELATIONS[spec.kind], args, indent, line_length))
-            if target.is_user:
-                out.imports.append(Import("django.conf", "settings"))
+        render_field(
+            spec,
+            out,
+            specs=specs,
+            model=model,
+            app_label=app_label,
+            resolve=resolve,
+            line_length=line_length,
+            targets=targets,
+        )
     if out.lines:
         out.imports.append(Import("django.db", "models"))
     return out
+
+
+def render_field(
+    spec: FieldSpec,
+    out: Rendered,
+    *,
+    specs: list[FieldSpec],
+    model: str,
+    app_label: str,
+    resolve: dict[str, RelationTarget],
+    line_length: int,
+    targets: list[str],
+) -> None:
+    """Append one field's line (and its inner class, imports and notes) to ``out``.
+
+    ``specs`` are all the model's fields (a slug source, a capacity total and a
+    money companion are checked against them) and ``targets`` the relation keys
+    of all of them (a second relation to one model gets a ``related_name``).
+    ``karni spec validate`` runs every field of a spec through it, so the spec
+    and ``karni make model`` accept exactly the same fields.
+    """
+    indent = "    "
+    head = f"{spec.name} = models."
+    typed = TYPED.get(spec.kind)
+    if typed is not None:
+        typed(spec, out, indent, line_length, specs)
+        return
+    if spec.kind in {"str", "url"}:
+        django = {"str": "CharField", "url": "URLField"}[spec.kind]
+        args: list[str] = []
+        if spec.kind == "str":
+            args.append(f"max_length={_int_arg(spec, 0, 255, 'max_length')}")
+        elif spec.args and spec.args[0]:
+            args.append(f"max_length={_int_arg(spec, 0, 1, 'max_length')}")
+        out.lines.append(call(head + django, args + _optional_kwargs(spec), indent, line_length))
+    elif spec.kind in _SIMPLE:
+        out.lines.append(
+            call(head + _SIMPLE[spec.kind], _optional_kwargs(spec), indent, line_length)
+        )
+    elif spec.kind == "decimal":
+        digits = _int_arg(spec, 0, 10, "max_digits")
+        places = _int_arg(spec, 1, 2, "decimal_places")
+        if places > digits:
+            raise CliError(
+                f"Field {spec.name}: decimal_places ({places}) > max_digits ({digits}).",
+                code="C104",
+            )
+        args = [f"max_digits={digits}", f"decimal_places={places}", *_optional_kwargs(spec)]
+        out.lines.append(call(head + "DecimalField", args, indent, line_length))
+    elif spec.kind == "bool":
+        args = _optional_kwargs(spec) or ["default=False"]
+        out.lines.append(call(head + "BooleanField", args, indent, line_length))
+    elif spec.kind == "uuid":
+        if spec.optional:
+            args = _optional_kwargs(spec)
+        else:
+            args = ["default=uuid.uuid4"]
+            out.imports.append(Import("uuid"))
+        out.lines.append(call(head + "UUIDField", args, indent, line_length))
+    elif spec.kind in {"file", "image"}:
+        django = "FileField" if spec.kind == "file" else "ImageField"
+        upload = pystr(f"{app_label}/{snake(model)}/")
+        args = [f"upload_to={upload}", *_optional_kwargs(spec)]
+        out.lines.append(call(head + django, args, indent, line_length))
+        if spec.kind == "image":
+            # The caller asks the project's interpreter and notes Pillow only if it is missing.
+            out.images.append(f"{model}.{spec.name}")
+    elif spec.kind == "choice":
+        _render_choice(spec, out, indent, line_length)
+    elif spec.kind in lifecycle_fields.TYPES:
+        names = {s.name for s in specs}
+        lifecycle_fields.render(spec, out, indent, line_length, model, names)
+    else:
+        target = resolve[spec.name]
+        args = [target.expr]
+        if spec.kind != "m2m":
+            if spec.optional:
+                args += ["on_delete=models.SET_NULL", "null=True", "blank=True"]
+            else:
+                args.append("on_delete=models.CASCADE")
+        else:
+            if target.key == "self":
+                # A hand-picked list of its own kind goes one way: a course that lists
+                # another does not make that one list it back.
+                args.append("symmetrical=False")
+            if spec.optional:
+                args.append("blank=True")
+        if targets.count(target.key) > 1:
+            args.append(f"related_name={pystr(snake(model) + '_' + spec.name + '_set')}")
+        out.lines.append(call(head + _RELATIONS[spec.kind], args, indent, line_length))
+        if target.is_user:
+            out.imports.append(Import("django.conf", "settings"))
 
 
 def _render_choice(spec: FieldSpec, out: Rendered, indent: str, line_length: int) -> None:

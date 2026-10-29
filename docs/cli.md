@@ -29,7 +29,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design)
+- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
@@ -1226,6 +1226,46 @@ karni design extract [OPTIONS] DIRECTORY
 | `--map` PATH (required) |  | The content map (karni design analyze --map writes a draft). |
 | `--output`, `-o` PATH | `content/site.json` | The content file to write, in the karni load format. |
 | `--dry-run` |  | Print what would be written and write nothing. |
+
+### `karni spec`
+
+The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export).
+
+```
+karni spec COMMAND [ARGS]...
+```
+
+#### `karni spec validate`
+
+Experimental. Check a karni.yaml: every problem with its code, line and fix.
+
+It checks the YAML, every key and value (unknown keys are errors, keys that start with x- are kept and ignored), each field through karni make model's own parser, and every reference: relations, roles named in access, grants, pages, modules, field groups, keys and owners. Codes are C211 to C242 (karni explain &lt;code&gt;). Exit status 1 when there is a problem.
+
+```
+karni spec validate [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--json` |  | Print {file, valid, issues: [{code, line, path, message, fix}]}. |
+
+#### `karni spec export`
+
+Experimental. Write the spec of this project from its code (manage.py karni_facts).
+
+The models become entities (each field in the field syntax when its type makes the same column), the viewsets their access and search, KARNI_ROLES the roles, the settings the features, the installed modules and their changed settings the modules, frontend/src/routes.tsx the pages, and the seeders the seed counts. What the spec cannot express is listed, and kept as comments at the top of the file. The file starts with a yaml-language-server line naming the JSON Schema, for editors.
+
+```
+karni spec export [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `-o`, `--output` PATH |  | Write the spec to this file. Default: print it. |
+| `--force` |  | Replace the output file if it exists. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
 ## Debugging
 

@@ -11,6 +11,28 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **The app spec, `karni.yaml` (experimental).** One small file describes an
+  app in the terms `karni make`, `karni add` and the settings already use:
+  `app` (name, kind), `modules` (each with its settings as options),
+  `features` (`two_factor`, `email_code_login`, `social_login`, `terms`),
+  `roles` (`KARNI_ROLES` with Karni's scopes, and `default` for
+  `KARNI_ACCOUNTS_DEFAULT_ROLES`), `apps` with their entities (fields in
+  `karni make model`'s syntax, `key`, `search`, `owner`, `audit`, `groups`,
+  `order`, `scope_paths`, and `access` in Karni's `Access` vocabulary, or
+  `access: code`), `pages` and `seed`. Unknown keys are errors, keys that
+  start with `x-` are kept and ignored, and the keys of later features are
+  reserved. `karni spec validate [--spec karni.yaml] [--json]` reports every
+  problem with its code (`C210` to `C246`), line, path and fix, checking each
+  field with the generator's own parser and every reference between the
+  parts. `karni spec export [-o karni.yaml]` writes the spec of an existing
+  project from its models, viewsets, settings, modules, seeders and frontend
+  routes, lists what the spec cannot express, and starts the file with the
+  `yaml-language-server` line naming the JSON Schema, published as
+  `docs/assets/karni-spec.schema.json`. The backend side is the new
+  `manage.py karni_facts` (`karni.facts`). karni-cli now depends on Pydantic
+  2, which Karni already requires. `karni make model`'s field rendering is one
+  function per field (`render_field`), with no change to what it writes.
+  [docs/app-spec.md](docs/app-spec.md).
 - **Experimental names: a tier of the stability promise.** A new public name
   may ship as experimental first: marked `Experimental.` in its docstring, by
   an *Experimental* note in its docs and by *Experimental tier* in the

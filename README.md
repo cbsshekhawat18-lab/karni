@@ -260,6 +260,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni make`](docs/REFERENCE.md#karni-make) | Generate project code: apps, models, viewsets, tasks, schedules, listeners, pages: [app](docs/REFERENCE.md#karni-make-app), [model](docs/REFERENCE.md#karni-make-model), [viewset](docs/REFERENCE.md#karni-make-viewset), [serializer](docs/REFERENCE.md#karni-make-serializer), [migration](docs/REFERENCE.md#karni-make-migration), [test](docs/REFERENCE.md#karni-make-test), [factory](docs/REFERENCE.md#karni-make-factory), [seeder](docs/REFERENCE.md#karni-make-seeder), [task](docs/REFERENCE.md#karni-make-task), [schedule](docs/REFERENCE.md#karni-make-schedule), [event](docs/REFERENCE.md#karni-make-event), [listener](docs/REFERENCE.md#karni-make-listener), [command](docs/REFERENCE.md#karni-make-command), [service](docs/REFERENCE.md#karni-make-service), [middleware](docs/REFERENCE.md#karni-make-middleware), [page](docs/REFERENCE.md#karni-make-page), [component](docs/REFERENCE.md#karni-make-component), [site](docs/REFERENCE.md#karni-make-site), [view](docs/REFERENCE.md#karni-make-view), [deploy](docs/REFERENCE.md#karni-make-deploy), [form](docs/REFERENCE.md#karni-make-form), [module](docs/REFERENCE.md#karni-make-module) |
 | [`karni import`](docs/REFERENCE.md#karni-import) | Import a designer's files into the project: [design](docs/REFERENCE.md#karni-import-design) |
 | [`karni design`](docs/REFERENCE.md#karni-design) | Read a designer's pages: the models their content needs, and the content itself: [analyze](docs/REFERENCE.md#karni-design-analyze), [extract](docs/REFERENCE.md#karni-design-extract) |
+| [`karni spec`](docs/REFERENCE.md#karni-spec) | The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export): [validate](docs/REFERENCE.md#karni-spec-validate), [export](docs/REFERENCE.md#karni-spec-export) |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -401,6 +402,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `stable` Adapter files for every supported agent tool from one rule set (`karni rules sync`)
 - `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
+- `experimental` The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line) and `karni spec export` (the spec of an existing project). Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
