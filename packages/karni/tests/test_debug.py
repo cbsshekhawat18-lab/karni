@@ -54,7 +54,7 @@ def _eager_celery(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tasks run inline (no broker); retries re-run inline too."""
     from celery import current_app
 
-    monkeypatch.setattr(current_app.conf, "task_always_eager", True)
+    monkeypatch.setitem(current_app.conf, "task_always_eager", True)
 
 
 @pytest.fixture
