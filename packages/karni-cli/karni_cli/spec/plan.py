@@ -1120,7 +1120,9 @@ def _page_managed(
     name = change.target
     ident = resolve(name, "") if name[:1].isupper() else name
     before = old_pages.get(ident, [])
-    after = next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
+    after: list[str] = next(
+        (k for e in ctx.desired["pages"] for n, k in e.items() if n == name), []
+    )
     if change.action == "add" and set(after) & {"code", "dashboard"}:
         return False  # the project's page (code), or the scaffold's home page (dashboard)
     dropped = [kind for kind in before if kind not in after]
