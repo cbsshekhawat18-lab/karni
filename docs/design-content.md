@@ -72,7 +72,9 @@ import reads, and works from the markup alone:
    statistics is the page's copy, never a model, and never the other half
    of a slider next to it. A list inside an
    item without pictures becomes a JSON field (a list of strings, of pairs for
-   a `<dl>`, of objects), and one with pictures a child model. A section only
+   a `<dl>`, of objects), and one with pictures a child model. A `<dl>` with
+   the same terms on every item (Duration, Price, Visits on each detail page)
+   is one field per term instead, typed by its definitions. A section only
    some detail pages have stays in those pages' templates. A structure found
    on several pages with different items each time (a slider) is one model
    with a `page` field, and a foreign key to the detail page's model when it
@@ -95,10 +97,11 @@ folder name. Rename anything in the map.
 | An image | `image`, and its `alt` as `<name>_alt` |
 | A link to a page of the design that is not a row | `str:200`, the page's URL path |
 | A list of short texts | `json`, a list of strings |
-| A definition list | `json`, `[term, definition]` pairs |
+| A definition list with the same terms on every item | one field per term, named after it and typed by its definitions (`"term"` in the map) |
+| A definition list whose terms differ between items | `json`, `[term, definition]` pairs |
 | `<time datetime="...">` or a date written out ("14 March 2026") | `date` |
 | A price ("€4.50", "From $12") | `decimal:10:2`, the symbol left in the template |
-| A number with the same words around it ("12 weeks", "4,000 patients") | `int`, the words left in the template |
+| A number with the same words around it ("12 weeks", "4,000 patients", or "1 visit" and "3 visits") | `int`, the words left in the template (with Django's `pluralize` filter for a plural) |
 | `01`, `02`, `03` before the items | the rows' `position`, not a field |
 | `01 — Design` | `position`, and `Design` as the field |
 | A badge only some items have ("New", "Vegan") | `bool` |
@@ -307,7 +310,8 @@ they do not list.
 | `all` | `"all": true` | Every match's text, joined by blank lines (paragraphs). |
 | `list` | `"list": true` | A list, one entry per match: true for the match's text, a place for that place inside each match. |
 | `fields` | `"fields": {"name": "dt", "price": "dd"}` | A list of objects, {name: place} inside each match. |
-| `pairs` | `"pairs": true` | A definition list as [term, definition] pairs. |
+| `pairs` | `"pairs": true` | A definition list as [term, definition] pairs, for a json field. |
+| `term` | `"term": "Duration"` | The definition of that term in a definition list (&lt;dt&gt;Duration&lt;/dt&gt;&lt;dd&gt;45 minutes&lt;/dd&gt; gives "45 minutes"), parsed by the field's type. Case and spaces do not matter. Analyze writes it when every item's list has the same terms, one field per term. |
 | `to` | `"to": "Teacher"` | A relation to that model of the map. "by" says how the place names the row. |
 | `by` | `"by": "key"` | How a relation's place names the row: "link" (the default: a link to the row's page or #anchor), "key" (the row's key, as text or an attribute such as data-type="houses") or "title" (the row's title as text, &lt;p&gt;Mia Chen&lt;/p&gt;). Analyze writes it when a text names the row. Any other value is refused with C124. |
 | `many` | `"many": true` | A relation to several rows: a many-to-many field. |

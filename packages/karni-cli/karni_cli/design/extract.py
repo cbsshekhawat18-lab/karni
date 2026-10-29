@@ -80,6 +80,11 @@ class MapError(ValueError):
         self.code = code
 
 
+def _term(text: str) -> str:
+    """A definition list's term as compared: spaces collapsed, case ignored."""
+    return " ".join(text.split()).casefold()
+
+
 def _choice(value: Any, allowed: tuple[str, ...], what: str, where: str) -> str | None:
     """The problem with ``value`` for an option that takes one of ``allowed``, or ``None``."""
     if value is None or value in allowed:
@@ -466,7 +471,7 @@ class _Extractor:
                 str(options.get("by", "")),
                 bool(options.get("split")),
             )
-        if options.get("pairs"):
+        if options.get("pairs") or "term" in options:
             pairs: list[list[str]] = []
             for node in nodes:
                 term = ""
@@ -480,7 +485,11 @@ class _Extractor:
                         term = ""
                 if term:
                     pairs.append([term, ""])
-            return pairs
+            if "term" not in options:
+                return pairs
+            wanted = _term(str(options["term"]))
+            definition = next((d for t, d in pairs if _term(t) == wanted), "")
+            return parse_value("text", kind.rstrip("?"), definition, self.reader.decimal_mark(page))
         if "list" in options:
             inner = options["list"]
             found: list[str] = []

@@ -662,6 +662,7 @@ class _Builder:
         for source in order:
             if self.model_of.get(id(source)) is not model:
                 continue
+            split_terms(source)
             partner = self.lone.get(id(source))
             if partner is not None:
                 self.consider_lone(model, source, partner)
@@ -1652,6 +1653,8 @@ class _Builder:
             rule.options["all"] = True
         if kind == "pairs":
             rule.options["pairs"] = True
+        if kind == "term":
+            rule.options["term"] = rule.key[2]
         if kind == "link" and f.kind != "relation":
             rule.options["link"] = "path"
 
@@ -1993,6 +1996,34 @@ class _Builder:
         if model.parent is not None:
             found.append(model.parent)
         return [m for m in found if m is not None]
+
+
+def split_terms(source: Source) -> None:
+    """A definition list whose terms are the same on every item: one value per term.
+
+    ``<dl><dt>Duration</dt><dd>45 minutes</dd><dt>Price</dt><dd>From $80</dd></dl>``
+    on every detail page is two fields, ``duration`` and ``price``, each typed
+    by its definitions, not one list of pairs. The list stays one ``json``
+    field when the terms differ between items, when fewer than two items have
+    it, or when two terms would give one field name.
+    """
+    for key in source.slot_keys():
+        if key[1] != "pairs":
+            continue
+        held = [(e, slot) for e in source.entries if (slot := e.value(key)) is not None]
+        terms = {tuple(term for term, _ in slot.pairs) for _, slot in held}
+        if len(held) < 2 or len(terms) != 1:
+            continue
+        labels = next(iter(terms))
+        names = [snake(label) for label in labels]
+        if not all(names) or len(set(names)) != len(names):
+            continue
+        for entry, slot in held:
+            at = entry.slots.index(slot)
+            entry.slots[at : at + 1] = [
+                Slot(slot.path, "term", term, slot.node, definition)
+                for term, definition in slot.pairs
+            ]
 
 
 def _shape_key(key: SlotKey) -> tuple[str, str, str]:

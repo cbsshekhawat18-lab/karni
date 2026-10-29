@@ -233,7 +233,18 @@ KEYS: Final[tuple[MapKey, ...]] = (
         '"fields": {"name": "dt", "price": "dd"}',
         "A list of objects, {name: place} inside each match.",
     ),
-    MapKey("value", "pairs", '"pairs": true', "A definition list as [term, definition] pairs."),
+    MapKey(
+        "value",
+        "pairs",
+        '"pairs": true',
+        "A definition list as [term, definition] pairs, for a json field.",
+    ),
+    MapKey(
+        "value",
+        "term",
+        '"term": "Duration"',
+        "The definition of that term in a definition list (<dt>Duration</dt><dd>45 minutes</dd> gives \"45 minutes\"), parsed by the field's type. Case and spaces do not matter. Analyze writes it when every item's list has the same terms, one field per term.",
+    ),
     MapKey(
         "value",
         "to",

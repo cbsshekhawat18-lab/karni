@@ -459,6 +459,8 @@ class Namer:
     def field_name(self, source: Source, key: SlotKey, *, title: bool, image: str = "") -> str:
         """A field's name: the element's own class (BEM and prefixes stripped), else its role."""
         path, kind, attr = key
+        if kind == "term":
+            return snake(attr) or "value"  # a definition list's term names its value
         context = ""
         steps = list(path)
         if source.kind == "detail" and steps:
@@ -577,19 +579,43 @@ def infer_type(kind: str, values: list[str], decimal: str | None = None) -> tupl
         return "decimal:10:2", note + " (money:<code> if the project computes with it)"
     numbers = [number(v, decimal) for v in present]
     if len(present) >= 2 and all(n is not None for n in numbers):
-        affixes = {(n[1], n[2]) for n in numbers if n is not None}
+        written = {(n[1], n[2]) for n in numbers if n is not None}
+        # "1 visit" and "2 visits" are one unit, written singular for 1
+        affixes = written if len(written) == 1 else {(b, _unit(a)) for b, a in written}
         if len(affixes) == 1:
             before, after = affixes.pop()
             note = ""
             if before or after:
                 around = (before + " " + after).strip()
                 note = f"the text around the number ({around!r}) stays in the template"
+            if len(written) > 1:
+                note += ", plural with " + _pluralize(after, {a for _, a in written})
             if all(n is not None and n[0] == n[0].to_integral_value() for n in numbers):
                 return "int", note
             return "decimal:10:2", note
     if all(date(v) is not None for v in present):
         return "date", ""
     return _str_size(present), ""
+
+
+def _pluralize(unit: str, written: set[str]) -> str:
+    """How a template writes ``unit`` after a number: ``visit{{ value|pluralize }}``."""
+    one = unit.strip()
+    more = next((a.strip() for a in written if a.strip() != one), one)
+    suffix = more[len(one) :] if more.startswith(one) else ""
+    argument = "" if suffix == "s" else f':"{suffix}"' if suffix else f':"{one},{more}"'
+    if not suffix and more.startswith(one[:-1]) and len(one) > 1:
+        argument = f':"{one[-1]},{more[len(one) - 1 :]}"'
+        one = one[:-1]
+    return f"|pluralize ({one}{{{{ value|pluralize{argument} }}}})"
+
+
+def _unit(after: str) -> str:
+    """The words after a number with the last one singular: ``" visits"`` is ``" visit"``."""
+    head, _, last = after.rpartition(" ")
+    if not last.isalpha() or not last.islower():
+        return after
+    return f"{head} {singular(last)}" if head or after.startswith(" ") else singular(last)
 
 
 def parse_value(kind: str, dsl: str, raw: str, decimal: str | None = None) -> Any:
