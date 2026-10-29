@@ -476,6 +476,7 @@ under the enforced Content-Security-Policy as it is.
 | `classes="bootstrap"` | a preset of class names (`KARNI_SITE_FORM_PRESETS`) |
 | `<part>_class` | the class of one part: `form`, `row`, `column`, `field`, `label`, `input`, `select`, `check`, `check_input`, `check_label`, `invalid`, `error`, `help`, `message`, `success`, `failure`, `button`, `required` |
 | `template` | another template for the whole form |
+| `editable="contact.enquiry"` | each field's label and placeholder, the button and the sent message are editable blocks under that key (`contact.enquiry.email.label`, `contact.enquiry.button`), the texts above as their defaults |
 
 The name is the model's (`"contact"` for `Contact`, `"booking_request"` for
 `BookingRequest`, `"shop.enquiry"` when two apps have one), served by the
@@ -485,7 +486,9 @@ name to a viewset. A name no form has fails `karni check` (`SITE020`).
 When the site came from `karni import design`, `karni make form` names the
 template and line of the design's `<form>` it replaces and prints the tag
 with the arguments that keep that form's own class names, rows, labels,
-placeholders and button.
+placeholders and button. It matches the design's controls to the form's
+fields by name, then by label and type, says which control fills which
+field, and adds `editable=` after an editable import.
 
 ### `notify_recipients`: the email a new submission sends
 

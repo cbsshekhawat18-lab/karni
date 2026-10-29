@@ -31,7 +31,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from karni_cli.design.forms import best_match, forms_in, suggest_tag
+from karni_cli.design.forms import best_match, forms_in, match_fields, suggest_tag
 from karni_cli.main import app
 
 from .conftest import REPO_ROOT, TEMPLATE, require_modules
@@ -239,6 +239,88 @@ def test_design_forms_are_read_from_plain_markup_too() -> None:
     )
     # A form that shares less than half its fields is not this form.
     assert best_match(forms, ["email"]) is None
+
+
+def _one_tag(text: str) -> bool:
+    """Whether Django reads ``text`` as exactly one block tag (no tag inside an argument)."""
+    from django.template.base import Lexer, TokenType
+
+    tokens = Lexer(text).tokenize()
+    return len(tokens) == 1 and tokens[0].token_type == TokenType.BLOCK
+
+
+def test_an_editable_import_prints_a_tag_that_compiles(project: Path) -> None:
+    ok("import", "design", str(DESIGNS / "salon"), "--app", "website", "--editable")
+    home = (project / "website" / "templates" / "website" / "home.html").read_text()
+    assert '{% editable "home.' in home.split('<form class="booking-form"', 1)[1]
+    out = ok(
+        "make", "form", "booking_request", "name:str:80", "email:email",
+        "preferred_date:date", "service:choice:cut|colour",
+    ).output  # fmt: skip
+    tag = (
+        out.split("<form> ... </form> (line ", 1)[1].split("with:\n", 1)[1].splitlines()[0].strip()
+    )
+    # Plain labels only: the editable label of the design is not copied into the argument.
+    assert _one_tag(tag), tag
+    assert "editable" not in tag.replace('editable="home.booking_request"', "")
+    assert 'labels="preferred_date: Preferred day"' in tag and 'button="Book now"' in tag
+    # The design's "day" fills the model's preferred_date, and the output says so.
+    assert "day -> preferred_date (by its type date, the only such field left)" in out
+    assert 'editable="home.booking_request": the labels, placeholders, button' in out
+
+
+def test_design_fields_match_model_fields_by_label_and_type() -> None:
+    source = """<form class="request">
+      <p><label for="n">Full name</label><input id="n" name="n" required></p>
+      <p><label for="e">Email</label><input id="e" name="e" type="email"></p>
+      <p><label for="d">Preferred date</label><input id="d" name="date" type="date"></p>
+      <p><label for="a">Arriving</label><input id="a" name="arrive" type="date"></p>
+      <p><label for="t">Topic</label><select id="t" name="topic"><option>A</option></select></p>
+      <p><label><input type="checkbox" name="newsletter"> Send me news</label></p>
+      <p><label for="m">Message</label><textarea id="m" name="m"></textarea></p>
+    </form>"""
+    form = forms_in(source)[0]
+    fields = {
+        "full_name": "str",
+        "email": "email",
+        "preferred_date": "date",
+        "arrival": "date",
+        "topic": "choice",
+        "message": "text",
+    }
+    matches, unmatched = match_fields(form, fields)
+    found = {m.design: (m.model, m.how) for m in matches}
+    assert found == {
+        "n": ("full_name", "label"),
+        "e": ("email", "label"),
+        "date": ("preferred_date", "label"),
+        "topic": ("topic", "name"),
+        "m": ("message", "label"),
+        "arrive": ("arrival", "type"),  # the one date input and the one date field left
+    }
+    assert unmatched == ["newsletter"]  # no field holds it
+    tag = suggest_tag("visit", form, fields)
+    assert _one_tag(tag) and tag.endswith('labels="arrival: Arriving" %}')
+    # Two date inputs that name no field, and two date fields: nothing is guessed.
+    two = forms_in(
+        '<form><label for="f">From</label><input id="f" name="f" type="date">'
+        '<label for="t">To</label><input id="t" name="t" type="date"></form>'
+    )[0]
+    assert match_fields(two, {"check_in": "date", "check_out": "date"}) == ([], ["f", "t"])
+
+
+def test_a_template_label_loses_its_tags() -> None:
+    source = (
+        '<form><label for="x">{% editable "contact.main.your_name" %}Your {{ site.name }} '
+        'name{% endeditable %}</label><input id="x" name="name">'
+        '<button type="submit">{% editable "contact.main.send" %}Send | go{% endeditable %}'
+        "</button></form>"
+    )
+    form = forms_in(source)[0]
+    assert form.fields[0].label == "Your name" and form.button == "Send | go"
+    tag = suggest_tag("contact", form, {"name": "str"}, editable="contact.contact")
+    assert _one_tag(tag) and 'labels="name: Your name"' in tag
+    assert tag.endswith('button="Send | go" editable="contact.contact" %}')
 
 
 # for real: three forms in one project

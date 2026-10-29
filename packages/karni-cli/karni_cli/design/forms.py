@@ -9,23 +9,60 @@ markup: its class names (a field's element, a row, the label, the control,
 the button, the required mark), its labels, placeholders and rows.
 
 :func:`forms_in` reads a page or a template, :func:`best_match` picks the
-form whose fields a generated form has, :func:`suggest_tag` writes the tag.
+form whose fields a generated form has, :func:`match_fields` says which
+model field each control fills (by name, then by its label and its type,
+so the design's ``date`` fills ``preferred_date``), :func:`suggest_tag`
+writes the tag. Texts read from a template (an imported, editable page)
+lose their template tags: a tag's argument holds plain text only.
 Nothing here writes a file.
 """
 
 from __future__ import annotations
 
+import re
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final
 
 from karni_cli.design.parse import Node, collapse, parse
 
-__all__ = ["DesignField", "DesignForm", "best_match", "forms_in", "suggest_tag"]
+__all__ = [
+    "DesignField",
+    "DesignForm",
+    "FieldMatch",
+    "best_match",
+    "forms_in",
+    "match_fields",
+    "plain_text",
+    "suggest_tag",
+]
 
 #: Inputs a visitor does not fill.
 _NOT_FILLED: Final = frozenset({"hidden", "submit", "button", "reset", "image"})
+#: Django template syntax in a template's text: ``{% editable "..." %}``, ``{{ site.name }}``.
+_TEMPLATE_SYNTAX: Final = re.compile(r"\{%.*?%\}|\{\{.*?\}\}|\{#.*?#\}", re.DOTALL)
+_WORD: Final = re.compile(r"[a-z0-9]+")
+#: The model field kinds (karni make model's field DSL) each kind of control can fill.
+_FILLS: Final[dict[str, frozenset[str]]] = {
+    "email": frozenset({"email", "str"}),
+    "tel": frozenset({"phone", "str"}),
+    "url": frozenset({"url", "str"}),
+    "date": frozenset({"date"}),
+    "datetime-local": frozenset({"datetime"}),
+    "time": frozenset({"time", "str"}),
+    "number": frozenset({"int", "decimal", "float"}),
+    "range": frozenset({"int", "decimal", "float"}),
+    "checkbox": frozenset({"bool", "m2m", "choice"}),
+    "radio": frozenset({"choice", "fk", "country", "str"}),
+    "select": frozenset({"choice", "fk", "m2m", "country", "str"}),
+    "textarea": frozenset({"text", "str"}),
+    "file": frozenset({"file", "image"}),
+}
+#: Controls whose type alone says which field they fill, when the model has one such field.
+_DISTINCT: Final = frozenset(
+    {"email", "tel", "url", "date", "datetime-local", "time", "number", "file", "checkbox"}
+)
 #: The class sets ``{% karni_form classes="..." %}`` ships (karni_site.forms.PRESETS).
 BOOTSTRAP: Final[dict[str, str]] = {
     "row": "row",
@@ -146,6 +183,16 @@ def _required_mark(label: Node | None, source: str) -> tuple[str, str]:
     return "", ""
 
 
+def plain_text(text: str) -> str:
+    """``text`` without Django template syntax, whitespace collapsed: what a tag argument holds.
+
+    A page ``karni import design --editable`` wrote wraps a label in
+    ``{% editable "..." %}...{% endeditable %}``. Inside another tag's
+    argument that would not parse, so only the words are kept.
+    """
+    return collapse(_TEMPLATE_SYNTAX.sub("", text))
+
+
 def _label_text(label: Node | None, control: Node, source: str) -> str:
     if label is None:
         return ""
@@ -159,7 +206,7 @@ def _label_text(label: Node | None, control: Node, source: str) -> str:
         ):
             continue
         parts.append(child.text(source))
-    return collapse("".join(parts)).rstrip(" *:").strip()
+    return plain_text("".join(parts)).rstrip(" *:").strip()
 
 
 def _wrapper(control: Node, label: Node | None, form: Node, controls: list[Node]) -> Node | None:
@@ -202,7 +249,7 @@ def _describe(form: Node, source: str) -> DesignForm:
                 type=kind,
                 required=control.attr(source, "required") is not None or bool(mark),
                 label=_label_text(label, control, source),
-                placeholder=control.attr(source, "placeholder") or "",
+                placeholder=plain_text(control.attr(source, "placeholder") or ""),
                 line=_line(source, control.start),
             )
         )
@@ -292,7 +339,7 @@ def _describe(form: Node, source: str) -> DesignForm:
         fields=fields,
         markup={key: value for key, value in markup.items() if value},
         rows=rows,
-        button=collapse(button_text),
+        button=plain_text(button_text),
         required_mark=_common(marks),
     )
 
@@ -303,16 +350,112 @@ def forms_in(source: str) -> list[DesignForm]:
     return [_describe(node, source) for node in document.root.find_all("form")]
 
 
-def best_match(forms: Sequence[DesignForm], names: Iterable[str]) -> DesignForm | None:
-    """The form most of whose fields ``names`` has, or ``None`` when none is half covered.
+@dataclass(frozen=True)
+class FieldMatch:
+    """A control of the design's form and the model field it fills."""
 
-    Ranked by the fields in common, then by the share of the form's fields
-    they are, then by document order.
+    design: str  # the control's name in the design
+    model: str  # the model field
+    how: str  # "name", "label" (its label and type) or "type" (its type alone)
+
+    def describe(self, form: DesignForm) -> str:
+        if self.how == "name":
+            return f"{self.design} -> {self.model}"
+        control = next((item for item in form.fields if item.name == self.design), None)
+        kind = control.type if control is not None else "?"
+        if self.how == "label" and control is not None and control.label:
+            return f"{self.design} -> {self.model} (by its label {control.label!r} and type {kind})"
+        return f"{self.design} -> {self.model} (by its type {kind}, the only such field left)"
+
+
+def _words(text: str) -> list[str]:
+    return _WORD.findall(text.lower().replace("_", " ").replace("-", " "))
+
+
+def _fills(control: DesignField, kind: str) -> bool:
+    """Whether ``control`` can hold a value of the model field kind ``kind``."""
+    allowed = _FILLS.get(control.type)
+    if allowed is None:  # a text input holds most things
+        return kind not in {"bool", "file", "image", "m2m", "json"}
+    return kind in allowed
+
+
+def match_fields(
+    form: DesignForm, fields: Mapping[str, str] | Sequence[str]
+) -> tuple[list[FieldMatch], list[str]]:
+    """Which model field each control of ``form`` fills, and the controls nothing fills.
+
+    ``fields`` maps the model's field names to their kinds (``"date"``,
+    ``"choice"``), or lists the names. A control fills, in this order: the
+    field of its own name; the field its label names (``Preferred date``,
+    ``preferred_date``) or whose name holds its own (``date`` in
+    ``preferred_date``), when its type can hold that field; the model's only
+    field of its type (the only date) when the control's type says what it
+    is. Each field is filled once.
     """
-    wanted = set(names)
+    kinds: dict[str, str] = (
+        dict(fields) if isinstance(fields, Mapping) else dict.fromkeys(fields, "")
+    )
+    free = dict(kinds)
+    found: dict[str, FieldMatch] = {}
+    for control in form.fields:
+        if control.name in free:
+            found[control.name] = FieldMatch(control.name, control.name, "name")
+            free.pop(control.name)
+    for control in form.fields:
+        if control.name in found:
+            continue
+        snake = "_".join(_words(control.name))
+        if snake in free:
+            found[control.name] = FieldMatch(control.name, snake, "name")
+            free.pop(snake)
+    for control in form.fields:
+        if control.name in found:
+            continue
+        own = set(_words(control.name))
+        label = set(_words(control.label))
+        scored: list[tuple[int, str]] = []
+        for name, kind in free.items():
+            if kind and not _fills(control, kind):
+                continue
+            words = set(_words(name))
+            if control.label and "_".join(_words(control.label)) == name:
+                scored.append((3, name))
+            elif label and words <= label:
+                scored.append((2, name))
+            elif own and own <= words:
+                scored.append((1, name))
+        if not scored:
+            continue
+        best = max(score for score, _ in scored)
+        names = [name for score, name in scored if score == best]
+        if len(names) == 1:
+            found[control.name] = FieldMatch(control.name, names[0], "label")
+            free.pop(names[0])
+    for control in form.fields:
+        if control.name in found or control.type not in _DISTINCT:
+            continue
+        same = [c for c in form.fields if c.name not in found and c.type == control.type]
+        fitting = [name for name, kind in free.items() if kind and _fills(control, kind)]
+        if len(same) == 1 and len(fitting) == 1:
+            found[control.name] = FieldMatch(control.name, fitting[0], "type")
+            free.pop(fitting[0])
+    matched = [found[c.name] for c in form.fields if c.name in found]
+    return matched, [c.name for c in form.fields if c.name not in found]
+
+
+def best_match(
+    forms: Sequence[DesignForm], names: Mapping[str, str] | Sequence[str]
+) -> DesignForm | None:
+    """The form most of whose fields ``names`` fills, or ``None`` when none is half covered.
+
+    ``names`` maps the model's field names to their kinds, or lists them
+    (see :func:`match_fields`). Ranked by the fields in common, then by the
+    share of the form's fields they are, then by document order.
+    """
     scored = []
     for index, form in enumerate(forms):
-        common = len(wanted & set(form.names))
+        common = len(match_fields(form, names)[0])
         share = common / len(form.names) if form.names else 0.0
         if common and share >= 0.5:
             scored.append((common, share, -index, form))
@@ -324,17 +467,33 @@ def _humanize(name: str) -> str:
     return text[:1].upper() + text[1:]
 
 
+def _argument(text: str) -> str:
+    """A label inside ``labels="field: text | ..."``: no ``|`` that would split it."""
+    return plain_text(text).replace("|", "/")
+
+
 def _quote(value: str) -> str:
-    return '"' + value.replace('"', "'") + '"'
+    return '"' + plain_text(value).replace('"', "'") + '"'
 
 
-def suggest_tag(name: str, form: DesignForm, fields: Sequence[str]) -> str:
+def suggest_tag(
+    name: str,
+    form: DesignForm,
+    fields: Mapping[str, str] | Sequence[str],
+    *,
+    editable: str = "",
+) -> str:
     """``{% karni_form "<name>" ... %}`` with the arguments that keep the design's markup.
 
-    Only fields the generated form has are named. Class names equal to the
-    Bootstrap preset become ``classes="bootstrap"``.
+    Only fields the generated form has are named, by the model's names
+    (:func:`match_fields`). Class names equal to the Bootstrap preset become
+    ``classes="bootstrap"``. ``editable`` (a block key prefix such as
+    ``contact.enquiry``) makes the form's labels, placeholders, button and
+    message blocks the client edits in the admin. Every value is plain
+    text, so the tag always compiles.
     """
-    known = set(fields)
+    matches, _unmatched = match_fields(form, fields)
+    rename = {match.design: match.model for match in matches}
     options: list[tuple[str, str]] = []
     markup = dict(form.markup)
     same = [key for key, value in BOOTSTRAP.items() if markup.get(key) == value]
@@ -359,27 +518,31 @@ def suggest_tag(name: str, form: DesignForm, fields: Sequence[str]) -> str:
     ):
         if markup.get(key):
             options.append((f"{key}_class", markup[key]))
-    rows = [[n for n in row if n in known] for row in form.rows]
+    rows = [[rename[n] for n in row if n in rename] for row in form.rows]
     rows = [row for row in rows if len(row) > 1]
     if rows:
         options.append(("rows", "|".join(",".join(row) for row in rows)))
     labels = [
-        f"{item.name}: {item.label}"
+        f"{rename[item.name]}: {_argument(item.label)}"
         for item in form.fields
-        if item.name in known and item.label and item.label.lower() != _humanize(item.name).lower()
+        if item.name in rename
+        and item.label
+        and item.label.lower() != _humanize(rename[item.name]).lower()
     ]
     if labels:
         options.append(("labels", " | ".join(labels)))
     hints = [
-        f"{item.name}: {item.placeholder}"
+        f"{rename[item.name]}: {_argument(item.placeholder)}"
         for item in form.fields
-        if item.name in known and item.placeholder
+        if item.name in rename and item.placeholder
     ]
     if hints:
         options.append(("placeholders", " | ".join(hints)))
     if form.button:
-        options.append(("button", form.button))
+        options.append(("button", plain_text(form.button)))
     if form.id:
         options.append(("id", form.id))
+    if editable:
+        options.append(("editable", editable))
     args = "".join(f" {key}={_quote(value)}" for key, value in options)
     return f'{{% karni_form "{name}"{args} %}}'

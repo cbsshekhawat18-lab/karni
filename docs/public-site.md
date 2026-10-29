@@ -678,15 +678,32 @@ templates:
 The [karni-site README](https://github.com/cbsshekhawat18-lab/karni/blob/main/modules/karni-site/README.md)
 lists every argument and setting.
 
+`editable="<key>"` makes the form's texts editable in the admin like the
+rest of the page: each field's label and placeholder, the button and the
+sent message become blocks under that key (`home.booking.email.label`,
+`home.booking.button`), with the tag's own texts as their defaults:
+
+```django
+{% karni_form "booking_request" labels="day: Preferred day" button="Book now" editable="home.booking" %}
+```
+
 When the site came from `karni import design`, the import lists each
 `<form>` of the design (it is in `.karni/design.json` too), and `karni make
 form` names the template and the line of the form it replaces, with the tag
-that keeps that form's class names, rows, labels, placeholders and button:
+that keeps that form's class names, rows, labels, placeholders and button.
+It matches each of the design's controls to a field of the form: by its
+name, then by its label and its type (the design's `day` with the label
+*Preferred date* fills `preferred_date`), then by its type alone when one
+control and one field of that type are left. It says which control fills
+which field, and names the controls no field fills and the fields the
+design does not show. After an editable import the tag gets `editable=`,
+and its arguments are always plain text:
 
 ```text
 design: website/templates/website/home.html:8: <form action="book.php"> with name, email, day, service (the fields of booking_request)
+fields: the design's form fills name -> name, email -> email, day -> day, service -> service.
 replace: in website/templates/website/home.html, replace that <form> ... </form> (line 8) with:
-    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" %}
+    {% karni_form "booking_request" form_class="booking-form" message_class="form-note" row_class="form-row" field_class="field" required_class="req" button_class="btn btn-accent" rows="name,email" labels="day: Preferred day" placeholders="name: Jane Doe" button="Book now" editable="home.booking_request" %}
 ```
 
 ### The email

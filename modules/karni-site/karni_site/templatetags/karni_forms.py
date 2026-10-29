@@ -31,6 +31,11 @@ Arguments (every one optional, each a string or a variable):
   ``error_class``, ``help_class``, ``message_class``, ``success_class``,
   ``failure_class``, ``button_class``, ``required_class``).
 * ``template``: another template for the whole form.
+* ``editable="contact.enquiry"``: the labels, the placeholders, the button
+  and the sent message become editable blocks under that key
+  (``contact.enquiry.email.label``, ``contact.enquiry.button``), with the
+  texts above as their defaults. The client changes them in the admin's
+  Page content.
 
 Override / escape hatch: the settings ``KARNI_SITE_FORM_CLASSES``,
 ``KARNI_SITE_FORM_PRESETS``, ``KARNI_SITE_FORM_MESSAGES``,
@@ -70,6 +75,7 @@ OPTIONS: Final[frozenset[str]] = frozenset(
         "id",
         "classes",
         "template",
+        "editable",
         *MESSAGE_KEYS,
         *(f"{key}_class" for key in CLASS_KEYS),
     }
