@@ -2017,6 +2017,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E301`](errors.md#e301) | exception | KARNI_ADMIN_BASE is not a ModelAdmin class |
 | [`E302`](errors.md#e302) | exception | AdminMeta.inline_on is invalid |
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
+| [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
+| [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |

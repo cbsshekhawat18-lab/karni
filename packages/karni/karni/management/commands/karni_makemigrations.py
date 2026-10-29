@@ -26,13 +26,15 @@ from pathlib import Path
 from typing import Any
 
 from django.apps import apps
-from django.core.management.base import CommandError, CommandParser
+from django.core.management.base import CommandParser
 from django.core.management.commands import makemigrations as django_makemigrations
 from django.db import DatabaseError, migrations, router
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.loader import MigrationLoader
 from django.db.migrations.questioner import NonInteractiveMigrationQuestioner
 from django.db.migrations.writer import MigrationWriter
+
+from karni.exceptions import KarniCommandError
 
 
 class EmptyTableQuestioner(NonInteractiveMigrationQuestioner):
@@ -77,9 +79,10 @@ def write_renames(renames: dict[str, Any]) -> list[str]:
     for app_label, operations in by_app.items():
         leaves = loader.graph.leaf_nodes(app_label)
         if len(leaves) != 1:
-            raise CommandError(
+            raise KarniCommandError(
                 f"{app_label} has {len(leaves)} latest migrations, so the renames have no single "
-                "place to go. Run manage.py makemigrations --merge first."
+                "place to go. Run manage.py makemigrations --merge first.",
+                code="E305",
             )
         number = (MigrationAutodetector.parse_number(leaves[0][1]) or 0) + 1
         migration = migrations.Migration(f"{number:04d}_karni_renames", app_label)
@@ -109,9 +112,11 @@ class Command(django_makemigrations.Command):
         try:
             renames = json.loads(options.pop("renames") or "{}")
         except json.JSONDecodeError as exc:
-            raise CommandError(f"--renames is not JSON: {exc}") from None
+            raise KarniCommandError(f"--renames is not JSON: {exc}", code="E304") from None
         if not isinstance(renames, dict):
-            raise CommandError("--renames must be a JSON object with models and fields.")
+            raise KarniCommandError(
+                "--renames must be a JSON object with models and fields.", code="E304"
+            )
         written = write_renames(renames)
         options["interactive"] = False
         chosen = django_makemigrations.NonInteractiveMigrationQuestioner

@@ -914,6 +914,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': ..., 'icon': ...} with at least 'light'. Leave it unset for a text header.
 
+<a id="e304"></a>
+
+#### E304: karni_makemigrations --renames is not a rename list
+
+*exception* · from `karni.management.commands.karni_makemigrations`
+
+**Why Karni objects.** karni build passes the renames of the plan as JSON: {"models": [[app, old, new]], "fields": [[app, model, old, new]]}. Anything else cannot be written as a migration.
+
+**Fix.** Pass a JSON object with models and fields lists, or run karni build, which writes it.
+
+<a id="e305"></a>
+
+#### E305: An app has more than one latest migration, so the renames have no place
+
+*exception* · from `karni.management.commands.karni_makemigrations.write_renames`
+
+**Why Karni objects.** A rename migration follows the app's latest migration. Two migrations that both claim to be latest (two branches) leave no single one to follow.
+
+**Fix.** Run manage.py makemigrations --merge for the app, then karni build again.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>

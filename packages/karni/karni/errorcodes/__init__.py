@@ -1168,6 +1168,25 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': "
         "..., 'icon': ...} with at least 'light'. Leave it unset for a text header.",
     ),
+    # E304-E305 manage.py karni_makemigrations (karni build, experimental)
+    _e(
+        "E304",
+        "karni_makemigrations --renames is not a rename list",
+        "exception",
+        "karni.management.commands.karni_makemigrations",
+        'karni build passes the renames of the plan as JSON: {"models": [[app, old, new]], '
+        '"fields": [[app, model, old, new]]}. Anything else cannot be written as a migration.',
+        "Pass a JSON object with models and fields lists, or run karni build, which writes it.",
+    ),
+    _e(
+        "E305",
+        "An app has more than one latest migration, so the renames have no place",
+        "exception",
+        "karni.management.commands.karni_makemigrations.write_renames",
+        "A rename migration follows the app's latest migration. Two migrations that both claim "
+        "to be latest (two branches) leave no single one to follow.",
+        "Run manage.py makemigrations --merge for the app, then karni build again.",
+    ),
     # E4xx events, listeners, schedules, Celery
     _e(
         "E401",
