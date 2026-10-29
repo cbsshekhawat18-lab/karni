@@ -54,7 +54,7 @@ def plan(
     marked (not managed): karni build leaves it. It writes nothing. Exit
     status 1 when the spec has a problem.
     """
-    from karni_cli.build import record as build_record
+    from karni_cli.builder import record as build_record
     from karni_cli.spec import plan as plan_mod
     from karni_cli.spec.export import read_facts
     from karni_cli.spec.validate import validate_text

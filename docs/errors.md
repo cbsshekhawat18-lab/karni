@@ -3080,7 +3080,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C270: A risky change without --allow-destructive
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** A risky change can lose data or open it to more people: a field or an entity removed, a type narrowed, a choice dropped, a relation pointed elsewhere, access widened. karni plan marks each with ! and the rows it affects, and karni build applies none of them without being told.
 
@@ -3090,7 +3090,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C271: A module removal
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni.yaml no longer lists a module the project has. Removing a module drops its tables, and karni remove (with the module catalog) is not built yet, so karni build refuses it.
 
@@ -3100,7 +3100,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C272: A key type switch
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** Switching an entity's pk between uuid and bigint rewrites every row and every relation to it: a data migration karni build does not write.
 
@@ -3110,7 +3110,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C273: A Karni-owned file was edited by hand
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build rewrites its own files (<app>/karni/, <app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.
 
@@ -3120,7 +3120,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C274: --adopt names a file karni build does not own
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** --adopt hands a Karni-owned file or block to the project. The files karni build owns are the ones .karni/build.json lists. Any other file is the project's already.
 
@@ -3130,7 +3130,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C275: The project's code is in the way
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni.yaml asks for something the project already has as code of its own: a model of that name outside the spec, a class of that name in models.py, viewsets.py or seeds.py that does not extend Karni's, or a route a page of the project's holds. karni build never replaces the project's code.
 
@@ -3140,7 +3140,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C276: A module karni build added is not installed
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build adds a new module the way karni add does: the dependency in pyproject.toml and the app in INSTALLED_APPS. The project's interpreter must have it installed before Django can start with it.
 
@@ -3150,7 +3150,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C277: makemigrations failed
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build writes the migrations with manage.py karni_makemigrations: the renames first, then Django's makemigrations. A required field added to a table that holds rows needs values Django cannot invent.
 
@@ -3160,7 +3160,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C278: migrate failed
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build applies the migrations on the default database and on every alias its entities name.
 
@@ -3170,7 +3170,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C279: Seeding failed
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build seeds only the tables it created in this build, and only while they hold no row, so demo rows never mix with real data.
 
@@ -3180,7 +3180,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C280: karni types failed
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build writes the TypeScript types and hooks from the API schema, as karni types does. It needs the backend to print its schema and Node for openapi-typescript.
 
@@ -3190,7 +3190,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C281: The project's tests fail
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in <app>/tests/karni/.
 
@@ -3200,7 +3200,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C282: karni check fails
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni build ends with karni check: the architecture rules, the system checks and the frontend's lint. The code it writes passes them, so a failure comes from the project's code or its environment.
 
@@ -3210,7 +3210,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C283: A project class karni build must change has code of its own
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** karni.yaml removes an entity, and the project's subclass of it (in models.py, viewsets.py or seeds.py) holds code of its own. karni build removes such a class only while it is still the one it wrote.
 
@@ -3220,7 +3220,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C284: A marker karni build writes at is missing
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** The settings block goes right above karni_settings(globals()) in config/settings.py, where every setting takes effect. The pages' routes go before the // karni:page-imports and // karni:routes markers of frontend/src/routes.tsx.
 
@@ -3230,7 +3230,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 ### C285: The build record cannot be read
 
-*karni command* · from `karni build (karni_cli.build)`
+*karni command* · from `karni build (karni_cli.builder)`
 
 **Why Karni objects.** .karni/build.json holds the fingerprints of the files karni build owns. It is missing a part, is not JSON, or comes from a newer karni-cli.
 

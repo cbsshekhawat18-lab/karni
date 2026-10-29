@@ -26,7 +26,7 @@ probably a rename.
 
 Ownership: given :class:`Managed` (what ``.karni/build.json`` records),
 each change is marked ``managed`` or not. ``karni build`` writes Karni's code
-in files of its own (:mod:`karni_cli.build.layout`), and a change on code the
+in files of its own (:mod:`karni_cli.builder.layout`), and a change on code the
 project wrote by hand (a model, a viewset, a page, a module to remove) is not
 managed: ``karni build`` leaves it to the project. ``access: code`` means
 the project's viewset decides, so it matches any access the project has.
@@ -50,7 +50,7 @@ from typing import Any, Final, Literal, get_args
 from pydantic import BaseModel, ConfigDict, Field
 
 from karni_cli import project as project_mod
-from karni_cli.build import layout
+from karni_cli.builder import layout
 from karni_cli.generators.fields import is_user_target
 from karni_cli.project import CliError
 from karni_cli.spec import export, schema

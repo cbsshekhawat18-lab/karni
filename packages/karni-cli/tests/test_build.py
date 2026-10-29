@@ -27,7 +27,7 @@ import pytest
 from typer.testing import CliRunner
 
 from karni_cli import project as project_mod
-from karni_cli.build import output, record, render, run
+from karni_cli.builder import output, record, render, run
 from karni_cli.commands import check as check_mod
 from karni_cli.commands import types as types_mod
 from karni_cli.main import app
@@ -533,7 +533,7 @@ def test_the_published_build_schema_is_current() -> None:
     expected = json.dumps(output.json_schema(), indent=2) + "\n"
     assert BUILD_SCHEMA.read_text() == expected, (
         "docs/assets/karni-build.schema.json is stale. Regenerate it: "
-        "python -m karni_cli.build.output > docs/assets/karni-build.schema.json"
+        "python -m karni_cli.builder.output > docs/assets/karni-build.schema.json"
     )
 
 

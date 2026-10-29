@@ -187,7 +187,7 @@ Experimental now:
   and schema, the layout of the files it writes (`<app>/karni/`,
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
   blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
-  `karni_cli.build` package.
+  `karni_cli.builder` package.
 
 ## Supported platforms
 

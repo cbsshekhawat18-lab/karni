@@ -7,7 +7,7 @@
     karni build --adopt <file>          hand a Karni-owned file to the project
     karni build --json
 
-See :mod:`karni_cli.build` and docs/app-spec.md. The build modules (and
+See :mod:`karni_cli.builder` and docs/app-spec.md. The build modules (and
 Pydantic) are imported inside the command, so ``karni --help`` stays fast.
 """
 
@@ -75,8 +75,8 @@ def build(
     Fingerprints live in .karni/build.json (commit it). Exit status 1 when
     it stops.
     """
-    from karni_cli.build.run import Options, Result
-    from karni_cli.build.run import build as run_build
+    from karni_cli.builder.run import Options, Result
+    from karni_cli.builder.run import build as run_build
     from karni_cli.spec.export import read_facts
     from karni_cli.spec.validate import validate_text
 

@@ -9,7 +9,7 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
     the `karni.yaml` format, `karni spec validate`, `karni spec export`,
     `karni plan`, `karni build`, `manage.py karni_facts`, `manage.py
     karni_rows`, `manage.py karni_makemigrations`, `karni.facts`, the
-    `karni_cli.spec` and `karni_cli.build` packages, `.karni/build.json` and
+    `karni_cli.spec` and `karni_cli.builder` packages, `.karni/build.json` and
     the three JSON Schemas. They may change in a minor release, and each
     change is in the CHANGELOG. The error codes keep their meaning.
 
@@ -750,7 +750,7 @@ owner}`, each step `{name, status, summary}` with `status` one of `done`,
 `skipped`, `failed` and `pending`. The schema is published as
 [`karni-build.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-build.schema.json)
 (in the repository, `docs/assets/karni-build.schema.json`, regenerated with
-`python -m karni_cli.build.output > docs/assets/karni-build.schema.json`).
+`python -m karni_cli.builder.output > docs/assets/karni-build.schema.json`).
 `version` moves only for a breaking change of the output.
 
 | Code | Problem |
