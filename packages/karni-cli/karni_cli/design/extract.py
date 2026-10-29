@@ -6,6 +6,12 @@ element is which field. This module reads the pages with it and writes the
 content in the format :mod:`karni.transfer.loading` loads, image paths
 relative to the output file. Nothing is retyped and nothing is made up.
 
+The images the content names are copied next to the output file, under
+``files/`` at their path in the design (``content/files/img/mia.jpg``), so
+the project holds everything ``karni load`` reads even when the design
+folder is elsewhere. ``copy_files=False`` (``--keep-paths``) points at the
+design's own files instead.
+
 The map (JSON)::
 
     {
@@ -114,7 +120,10 @@ from karni_cli.design.values import (
     text_of,
 )
 
-__all__ = ["ExtractResult", "MapError", "Reader", "extract", "read_map"]
+__all__ = ["FILES_DIR", "ExtractResult", "MapError", "Reader", "extract", "read_map"]
+
+#: The folder next to the content file the design's images are copied into.
+FILES_DIR: Final = "files"
 
 MAP_VERSION: Final = 1
 _SOURCE_KEYS: Final = frozenset(
@@ -314,6 +323,21 @@ class ExtractResult:
 
     content: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
+    #: The design's files the content names: path next to the output file -> the design's file.
+    files: dict[str, Path] = field(default_factory=dict)
+
+    def copy_files(self, output: Path) -> list[str]:
+        """Copy :attr:`files` next to ``output``. The paths written (unchanged ones are skipped)."""
+        written: list[str] = []
+        for name, source in sorted(self.files.items()):
+            target = output.parent / name
+            data = source.read_bytes()
+            if target.is_file() and target.read_bytes() == data:
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            written.append(name)
+        return written
 
     def counts(self) -> dict[str, int]:
         return {label: len(rows) for label, rows in self.content.items()}
@@ -374,6 +398,10 @@ class Reader:
         self.marker = marker
         #: The map's "decimal" (``","`` or ``"."``): else each page's ``<html lang>`` says.
         self.decimal = decimal
+        #: Whether images are copied next to the output (``files/``) or named in the design.
+        self.copy_files = True
+        #: The copies to make: path next to the output file -> the design's file.
+        self.files: dict[str, Path] = {}
         self.docs: dict[str, tuple[str, Document]] = {}
         self.problems: list[str] = []
 
@@ -420,7 +448,12 @@ class Reader:
         return text
 
     def image(self, value: str, page: str) -> str:
-        """An image path as the content file names it: relative to the output file."""
+        """An image path as the content file names it: relative to the output file.
+
+        With :attr:`copy_files` the image is copied under ``files/`` next to
+        the output file (at its path in the design), else the path points
+        into the design folder.
+        """
         if not value:
             return ""
         ref = self.mapped.resolve(unescape(value), posixpath.dirname(page))
@@ -431,6 +464,11 @@ class Reader:
         if not target.is_file():
             self.problems.append(f"{page}: the image {value!r} is not in the design.")
             return ""
+        if self.copy_files:
+            inside = target.resolve().relative_to(self.design.resolve()).as_posix()
+            name = f"{FILES_DIR}/{inside}"
+            self.files[name] = target
+            return name
         return Path(os.path.relpath(target.resolve(), self.output.parent.resolve())).as_posix()
 
     def link(self, value: str, page: str) -> str:
@@ -833,8 +871,14 @@ def extract(
     output: Path,
     *,
     reader: type[Reader] = Reader,
+    copy_files: bool = True,
 ) -> ExtractResult:
     """The content of ``design`` read with the map ``spec``, for a file at ``output``.
+
+    With ``copy_files`` the images are named under ``files/`` next to
+    ``output`` and listed in :attr:`ExtractResult.files` for
+    :meth:`ExtractResult.copy_files`, else they point into ``design``.
+    Nothing is written here.
 
     :raises MapError: the map is not usable or has decisions left.
     """
@@ -846,7 +890,8 @@ def extract(
     marker = str(spec.get("marker") or HIGHLIGHT_MARKER)
     values = reader(design, output, mapped, marker)
     values.decimal = str(spec.get("decimal") or "") or None
+    values.copy_files = copy_files
     extractor = _Extractor(spec, values)
     extractor.run()
     content = extractor.content()
-    return ExtractResult(content, extractor.reader.problems)
+    return ExtractResult(content, extractor.reader.problems, dict(extractor.reader.files))

@@ -950,8 +950,8 @@ PROCEDURES: tuple[Procedure, ...] = (
             "come first), then `karni make migration && karni migrate`. Staff edit the rows in "
             "the admin as it is: write no viewset, serializer or admin class for them.",
             "`karni design extract <design folder> --map content/design-map.json -o "
-            "content/site.json` writes the pages' real content, with image paths relative to "
-            "the file. Fix what it reports (a missing image, two pages that disagree on a value, "
+            "content/site.json` writes the pages' real content and copies the images it names "
+            "to `content/files/`. Fix what it reports (a missing image, two pages that disagree on a value, "
             "a required field without one) in the map or the models, then extract again.",
             "`karni load content/site.json --dry-run` shows what changes per model, row by row. "
             "Then `karni load content/site.json`, and once more: the second run must say "

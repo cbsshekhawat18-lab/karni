@@ -310,9 +310,14 @@ Wrote content/site.json:
 The output is a [content file](content-loading.md): one list of rows per
 model, models others point at first, child rows nested under their parent.
 Each value is parsed by its field's type (`"12 weeks"` is `12`, `"4,000"` is
-`4000`, `"€4.50"` is `"4.50"`, `"14 March 2026"` is `"2026-03-14"`), relations name their rows by
-key, and image paths are relative to the output file, pointing into the
-design folder, so `karni load` uploads the designer's own images once.
+`4000`, `"€4.50"` is `"4.50"`, `"14 March 2026"` is `"2026-03-14"`), and
+relations name their rows by key. The images the content names are copied
+next to the output file, under `files/` at their path in the design
+(`content/files/img/mia.jpg`), and the content file names those copies, so
+`karni load` uploads the designer's own images and the project holds every
+file it reads, wherever the design folder is. Commit `content/files/` with
+the content file. A copy that has not changed is not written again.
+`--keep-paths` names the design's own files instead (`../design/img/mia.jpg`).
 Extract lists what to check: an image the design does not have, two pages
 that disagree on a value, a required field some row has no value for. A
 map it cannot follow stops it before anything is written (`C121`).

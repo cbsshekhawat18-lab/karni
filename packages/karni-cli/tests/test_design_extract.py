@@ -46,10 +46,19 @@ def test_extract_writes_load_content_with_image_paths_relative_to_the_file(tmp_p
     teachers = _rows(result.content, "website.Teacher")
     assert list(teachers) == ["mia-chen", "omar-haddad", "lena-berg"]
     assert teachers["mia-chen"]["position"] == 1
+    # The images are named next to the content file, at their path in the design.
     photo = teachers["mia-chen"]["photo"]
+    assert photo == "files/img/mia.jpg"
+    assert result.files[photo] == DESIGNS / "school" / "img" / "mia.jpg"
+    assert not (output.parent / photo).exists()  # extract writes nothing itself
+    # With copy_files=False the paths point into the design, as written.
+    kept = _rows(
+        extract(DESIGNS / "school", _map("school"), output, copy_files=False).content,
+        "website.Teacher",
+    )["mia-chen"]["photo"]
     assert (
-        not photo.startswith("/")
-        and (output.parent / photo).resolve() == (DESIGNS / "school" / "img" / "mia.jpg").resolve()
+        not kept.startswith("/")
+        and (output.parent / kept).resolve() == (DESIGNS / "school" / "img" / "mia.jpg").resolve()
     )
     courses = _rows(result.content, "website.Course")
     assert list(courses) == ["pottery", "drawing", "weaving", "printing"]  # the list's order
@@ -373,8 +382,21 @@ def test_extract_refuses_open_decisions_then_writes_the_content(
     assert "website.Course   4 row(s) (8 child row(s))" in first.output
     content = json.loads((tmp_path / "content" / "site.json").read_text())
     assert content["website.Course"][0]["slug"] == "pottery"
+    # The project holds the images the content names: the design folder can be anywhere.
+    photo = content["website.Teacher"][0]["photo"]
+    copied = tmp_path / "content" / photo
+    assert photo.startswith("files/img/") and copied.is_file()
+    assert copied.read_bytes() == (Path(design) / photo.removeprefix("files/")).read_bytes()
+    assert "images: " in first.output and "copied, 0 unchanged" in first.output
     second = ok("design", "extract", design, "--map", "map.json")
     assert "The content is unchanged since the last extract." in second.output
+    assert "(0 copied, 15 unchanged)" in second.output
+    kept = ok(
+        "design", "extract", design, "--map", "map.json", "-o", "kept/site.json", "--keep-paths"
+    )
+    assert "images:" not in kept.output and not (tmp_path / "kept" / "files").exists()
+    path = json.loads((tmp_path / "kept" / "site.json").read_text())["website.Teacher"][0]["photo"]
+    assert (tmp_path / "kept" / path).resolve() == (Path(design) / "img" / "mia.jpg").resolve()
     (tmp_path / "bad.json").write_text('{"models": [{"name": "X"}]}')
     fails("design", "extract", design, "--map", "bad.json", match="C121")
 
