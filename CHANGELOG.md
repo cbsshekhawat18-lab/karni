@@ -41,6 +41,19 @@ apply codemods and list the manual steps. This file is the human summary.
   and the site-from-design procedure name `karni createsuperuser`. `karni
   check --seo` holds back the crawl's request logs, and `/sitemap.xml` reads
   each section once.
+- **Fixes from the third end-to-end test.** `karni worker` on a Mac runs
+  Celery's threads pool (`--pool` picks another), and the dev profile gives
+  broker reads a 5 second timeout, so a stopping worker no longer hangs in
+  "Warm shutdown" when Redis does not answer its last poll. `karni explain`
+  explains karni-site's template tags (`karni explain image`) and the content
+  map's keys (`karni explain map.items`), from the sources the tables in
+  docs/public-site.md and docs/design-content.md are rendered from. `karni
+  design analyze` makes a detail page's `<dl>` with the same terms on every
+  page one typed field per term (`"term"` in the map). `karni import design
+  --editable --map` seeds a menu of every detail page of a model as that
+  model's rows, so a new row appears in it. The site-from-design procedure
+  says how `{% karni_seo %}` finds a detail page's row. See the
+  [migration notes](docs/migrations/0.4.1.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout).
 - **Karni sites say they run on Karni.** `{% karni_seo %}` writes
   `<meta name="generator" content="Karni">` on every public page, and the
   scaffold's `frontend/index.html` carries the same line, so tools that list
