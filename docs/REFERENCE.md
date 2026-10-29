@@ -103,6 +103,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
 | The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
+| `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -1380,6 +1381,25 @@ karni plan [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+#### `karni build`
+
+Make the project match karni.yaml, without touching hand-written code
+
+```
+karni build [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--dry-run` |  | Print the plan and the files it would write. Write nothing. |
+| `--allow-destructive` |  | Apply the risky (!) changes too: a field or entity removed, a type narrowed, access widened. Without it they stop the build (C270), each named with its rows. |
+| `--force` |  | Replace Karni-owned files edited by hand, keeping each as &lt;file&gt;.orig. |
+| `--adopt` TEXT (repeatable) |  | Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for their blocks) to the project: karni build stops managing it. Repeatable. |
+| `--json` |  | Print {version, file, valid, issues, status, code, message, plan, files, hand_edits, adopted, steps, next} (docs/assets/karni-build.schema.json). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 ### Debugging
 
 #### `karni trace`
@@ -2221,6 +2241,22 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C252`](errors.md#c252) | cli | database names an alias the project does not have |
 | [`C253`](errors.md#c253) | cli | A relation joins two databases |
 | [`C254`](errors.md#c254) | cli | A rename (was) is not valid |
+| [`C270`](errors.md#c270) | cli | A risky change without --allow-destructive |
+| [`C271`](errors.md#c271) | cli | A module removal |
+| [`C272`](errors.md#c272) | cli | A key type switch |
+| [`C273`](errors.md#c273) | cli | A Karni-owned file was edited by hand |
+| [`C274`](errors.md#c274) | cli | --adopt names a file karni build does not own |
+| [`C275`](errors.md#c275) | cli | The project's code is in the way |
+| [`C276`](errors.md#c276) | cli | A module karni build added is not installed |
+| [`C277`](errors.md#c277) | cli | makemigrations failed |
+| [`C278`](errors.md#c278) | cli | migrate failed |
+| [`C279`](errors.md#c279) | cli | Seeding failed |
+| [`C280`](errors.md#c280) | cli | karni types failed |
+| [`C281`](errors.md#c281) | cli | The project's tests fail |
+| [`C282`](errors.md#c282) | cli | karni check fails |
+| [`C283`](errors.md#c283) | cli | A project class karni build must change has code of its own |
+| [`C284`](errors.md#c284) | cli | A marker karni build writes at is missing |
+| [`C285`](errors.md#c285) | cli | The build record cannot be read |
 | [`C301`](errors.md#c301) | cli | No frontend found |
 | [`C302`](errors.md#c302) | cli | A generated file was edited, so karni ui detect does not overwrite it |
 | [`C303`](errors.md#c303) | cli | A theme source cannot be read |

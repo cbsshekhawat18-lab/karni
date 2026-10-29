@@ -29,7 +29,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [queries](#karni-queries)
 - **Runners**: [serve](#karni-serve), [migrate](#karni-migrate), [test](#karni-test), [shell](#karni-shell), [routes](#karni-routes), [schema](#karni-schema), [worker](#karni-worker), [beat](#karni-beat), [schedule](#karni-schedule), [seed](#karni-seed), [load](#karni-load), [sync-roles](#karni-sync-roles), [createsuperuser](#karni-createsuperuser), [manage](#karni-manage)
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
-- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan)
+- **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan), [build](#karni-build)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
 
 ## Project
@@ -1287,6 +1287,25 @@ karni plan [OPTIONS]
 | `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
 | `--json` |  | Print {version, file, valid, issues, changes: [{area, action, target, detail, risky, reason, rows}], summary, row_counts} (docs/assets/karni-plan.schema.json). |
 | `--offline` |  | Do not open the database: risky changes show no row counts. |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+### `karni build`
+
+Make the project match karni.yaml, without touching hand-written code
+
+```
+karni build [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+| `--dry-run` |  | Print the plan and the files it would write. Write nothing. |
+| `--allow-destructive` |  | Apply the risky (!) changes too: a field or entity removed, a type narrowed, access widened. Without it they stop the build (C270), each named with its rows. |
+| `--force` |  | Replace Karni-owned files edited by hand, keeping each as &lt;file&gt;.orig. |
+| `--adopt` TEXT (repeatable) |  | Hand a Karni-owned file (or config/settings.py, frontend/src/routes.tsx for their blocks) to the project: karni build stops managing it. Repeatable. |
+| `--json` |  | Print {version, file, valid, issues, status, code, message, plan, files, hand_edits, adopted, steps, next} (docs/assets/karni-build.schema.json). |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 

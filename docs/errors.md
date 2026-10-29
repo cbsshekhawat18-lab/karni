@@ -3076,6 +3076,166 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
 
+<a id="c270"></a>
+
+### C270: A risky change without --allow-destructive
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** A risky change can lose data or open it to more people: a field or an entity removed, a type narrowed, a choice dropped, a relation pointed elsewhere, access widened. karni plan marks each with ! and the rows it affects, and karni build applies none of them without being told.
+
+**Fix.** Check each change karni plan lists (a rename keeps its rows: write was: on the field or the entity), then run karni build --allow-destructive, or change karni.yaml.
+
+<a id="c271"></a>
+
+### C271: A module removal
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni.yaml no longer lists a module the project has. Removing a module drops its tables, and karni remove (with the module catalog) is not built yet, so karni build refuses it.
+
+**Fix.** Put the module back in karni.yaml, or remove it by hand: migrate its app to zero, then take it out of the karni:apps block and its dependency out of pyproject.toml.
+
+<a id="c272"></a>
+
+### C272: A key type switch
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** Switching an entity's pk between uuid and bigint rewrites every row and every relation to it: a data migration karni build does not write.
+
+**Fix.** Put pk back in karni.yaml. docs/models.md (choosing the key type) says how to write that migration by hand.
+
+<a id="c273"></a>
+
+### C273: A Karni-owned file was edited by hand
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build rewrites its own files (<app>/karni/, <app>/tests/karni/, frontend/src/pages/karni/, the karni:spec blocks) on every build, and records a sha256 of each in .karni/build.json. A file whose content no longer matches was edited by hand, and a build must not silently lose the edit. The message names the file and the changed lines, and nothing is written.
+
+**Fix.** Move the change into the project's own file (<app>/models.py, viewsets.py or seeds.py: the subclass of each class, a page or test of your own) or into karni.yaml, then run karni build. Or karni build --force replaces the file and keeps your copy as <file>.orig. Or karni build --adopt <file> makes it the project's: karni build stops managing it and says so on every run.
+
+<a id="c274"></a>
+
+### C274: --adopt names a file karni build does not own
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** --adopt hands a Karni-owned file or block to the project. The files karni build owns are the ones .karni/build.json lists. Any other file is the project's already.
+
+**Fix.** Name a file the record lists (classes/karni/api.py), or config/settings.py and frontend/src/routes.tsx for their karni:spec blocks.
+
+<a id="c275"></a>
+
+### C275: The project's code is in the way
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni.yaml asks for something the project already has as code of its own: a model of that name outside the spec, a class of that name in models.py, viewsets.py or seeds.py that does not extend Karni's, or a route a page of the project's holds. karni build never replaces the project's code.
+
+**Fix.** Rename the entity or page in karni.yaml, or rename (or remove) the project's own class or route. A page of the project's can stay in the spec as - <name>: code.
+
+<a id="c276"></a>
+
+### C276: A module karni build added is not installed
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build adds a new module the way karni add does: the dependency in pyproject.toml and the app in INSTALLED_APPS. The project's interpreter must have it installed before Django can start with it.
+
+**Fix.** Install the project's dependencies (uv pip install -r pyproject.toml, or docker compose build), then run karni build again: it continues from where it stopped.
+
+<a id="c277"></a>
+
+### C277: makemigrations failed
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build writes the migrations with manage.py karni_makemigrations: the renames first, then Django's makemigrations. A required field added to a table that holds rows needs values Django cannot invent.
+
+**Fix.** Read the output it shows. For a required field on a table with rows: add it as optional first (str?), fill it, then make it required. Then run karni build again.
+
+<a id="c278"></a>
+
+### C278: migrate failed
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build applies the migrations on the default database and on every alias its entities name.
+
+**Fix.** Read the output it shows (a database that does not answer, a constraint the rows break), fix it, then run karni build again.
+
+<a id="c279"></a>
+
+### C279: Seeding failed
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build seeds only the tables it created in this build, and only while they hold no row, so demo rows never mix with real data.
+
+**Fix.** Read the output it shows, fix it (karni seed --help), then run karni build again: it continues from seed.
+
+<a id="c280"></a>
+
+### C280: karni types failed
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build writes the TypeScript types and hooks from the API schema, as karni types does. It needs the backend to print its schema and Node for openapi-typescript.
+
+**Fix.** Read the output it shows. Install Node (and npm install in frontend/), then run karni build again.
+
+<a id="c281"></a>
+
+### C281: The project's tests fail
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build runs the project's own tests (karni test) after it built the code, including the API tests it wrote in <app>/tests/karni/.
+
+**Fix.** Run karni test to see every failure, fix the code (the project's files or karni.yaml), then run karni build again: it continues from test.
+
+<a id="c282"></a>
+
+### C282: karni check fails
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni build ends with karni check: the architecture rules, the system checks and the frontend's lint. The code it writes passes them, so a failure comes from the project's code or its environment.
+
+**Fix.** Run karni check to see every finding, fix them, then run karni build again: it continues from check.
+
+<a id="c283"></a>
+
+### C283: A project class karni build must change has code of its own
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** karni.yaml removes an entity, and the project's subclass of it (in models.py, viewsets.py or seeds.py) holds code of its own. karni build removes such a class only while it is still the one it wrote.
+
+**Fix.** Move that code elsewhere or delete the class, then run karni build again.
+
+<a id="c284"></a>
+
+### C284: A marker karni build writes at is missing
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** The settings block goes right above karni_settings(globals()) in config/settings.py, where every setting takes effect. The pages' routes go before the // karni:page-imports and // karni:routes markers of frontend/src/routes.tsx.
+
+**Fix.** Restore the call or the markers (see the scaffold's files), or pass --adopt for the block and keep those settings or routes yourself.
+
+<a id="c285"></a>
+
+### C285: The build record cannot be read
+
+*karni command* · from `karni build (karni_cli.build)`
+
+**Why Karni objects.** .karni/build.json holds the fingerprints of the files karni build owns. It is missing a part, is not JSON, or comes from a newer karni-cli.
+
+**Fix.** Restore it from version control, or upgrade karni-cli. Deleting it makes karni build treat every Karni-owned file as new: it stops on each one that exists (C273), and --force or --adopt settles them.
+
 <a id="c301"></a>
 
 ### C301: No frontend found

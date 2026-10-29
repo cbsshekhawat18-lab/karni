@@ -1,5 +1,5 @@
 ---
-description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and published JSON Schemas."
+description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan, karni build and published JSON Schemas."
 ---
 
 # The app spec: `karni.yaml`
@@ -7,19 +7,20 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
 !!! warning "Experimental"
     Everything on this page is [experimental](stability.md#experimental-names):
     the `karni.yaml` format, `karni spec validate`, `karni spec export`,
-    `karni plan`, `manage.py karni_facts`, `manage.py karni_rows`,
-    `karni.facts`, the `karni_cli.spec` package and both JSON Schemas. They
-    may change in a minor release, and each change is in the CHANGELOG. The
-    error codes keep their meaning.
+    `karni plan`, `karni build`, `manage.py karni_facts`, `manage.py
+    karni_rows`, `manage.py karni_makemigrations`, `karni.facts`, the
+    `karni_cli.spec` and `karni_cli.build` packages, `.karni/build.json` and
+    the three JSON Schemas. They may change in a minor release, and each
+    change is in the CHANGELOG. The error codes keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
 roles, built-in features, modules and pages. An AI agent turns a one-line
 request into a spec, and Karni turns the spec into code without a language
 model. This release reads and checks a spec (`karni spec validate`),
-writes the spec of an existing project (`karni spec export`) and shows
-what would change to make the project match a spec ([`karni
-plan`](#karni-plan)). `karni build`, which makes the change, comes next on
-the [app-builder roadmap](roadmap/app-builder.md).
+writes the spec of an existing project (`karni spec export`), shows what
+would change to make the project match a spec ([`karni
+plan`](#karni-plan)) and makes the change ([`karni build`](#karni-build)),
+without touching the code written by hand.
 
 The spec describes only what `karni make`, `karni add` and the settings can
 already do. Each key maps to one of them. Anything it cannot express stays
@@ -291,6 +292,7 @@ computed `get_access()`.
 | `- home: dashboard` | the scaffold's home page at `/`, the staff dashboard |
 | `- about: blank` | `karni make page about`: a bare page at `/about` |
 | `- login: login` | `karni make page login --kind login` |
+| `- reports: code` | a page of the project's own at `/reports`: `karni build` leaves it alone |
 
 Two pages may not share a route (`C242`).
 
@@ -396,7 +398,8 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   differ from each module's defaults, **seed** from the seeders' counts.
 - **pages** are the routes whose page is a `karni make page` page at its
   default route: a resource list, detail or form, a login, a bare page, and
-  the scaffold's dashboard.
+  the scaffold's dashboard. Any other page at `/<name>` is the project's
+  own: `- <name>: code`.
 
 What the spec cannot express is listed on the terminal and as comments at
 the top of the file: other `class Karni` options (`dashboard`,
@@ -527,8 +530,10 @@ it is probably a rename and how to write `was`. Once the rename is done,
 
 `--json` prints `{version, file, valid, issues, changes, summary,
 row_counts}`: each change is `{area, action, target, detail, risky,
-reason, rows}`, `action` one of `add`, `change`, `rename` and `remove`,
-`rows` `null` when not counted, and `row_counts` is `{status, note}` with
+reason, rows, managed}`, `action` one of `add`, `change`, `rename` and
+`remove`, `rows` `null` when not counted, `managed` `false` for a change in
+the project's own code ([what karni build manages](#what-karni-build-manages)),
+`summary` is `{changes, risky, not_managed}`, and `row_counts` is `{status, note}` with
 `status` one of `counted`, `offline`, `unreachable` and `not needed`. A spec
 with problems gives `valid: false` and its `issues`, as
 `karni spec validate --json` reports them. The schema is published as
@@ -541,3 +546,228 @@ with problems gives `valid: false` and its `issues`, as
 |---|---|
 | [C210](errors.md#c210) | no spec file |
 | [C250](errors.md#c250) | `karni plan` cannot read the project (`manage.py karni_facts` failed) |
+
+## `karni build`
+
+!!! warning "Experimental"
+    `karni build`, its output, `--json` and its schema, the layout of the
+    files it writes, `.karni/build.json` and `manage.py
+    karni_makemigrations` are experimental.
+
+`karni build` makes the project match `karni.yaml`. It applies the plan
+`karni plan` prints, in one command, and a second run with no change in the
+spec writes nothing.
+
+```sh
+karni build                          # karni.yaml in the project root
+karni build --dry-run                # the plan and the files it would write
+karni build --allow-destructive      # apply the risky (!) changes too
+karni build --force                  # replace Karni-owned files edited by hand
+karni build --adopt classes/karni/api.py
+karni build --json
+```
+
+From an empty `karni new` project and the spec at the top of this page, it
+prints the plan, then one line per step:
+
+```text
+...
+25 changes, 0 risky.
+modules     karni add payments
+files       23 written: 15 Karni's, 8 the project's (pyproject.toml, classes/__init__.py, ...)
+migrations  classes/migrations/0001_initial.py
+migrate     applied 84 on default
+seed        Studio 3, Session 40, Booking 200 (demo login demo@example.com / karni-password)
+types       frontend/src/api/types.ts and hooks.ts
+test        6 passed in 3.36s, tests/openapi.snapshot.json updated (the API changed: commit it)
+check       ok
+Built: the project matches karni.yaml.
+```
+
+Run again, it prints one line: `Nothing to build: the project matches
+karni.yaml.`
+
+### What Karni owns, and what the project owns
+
+Karni's code and the project's code live in separate files. Karni rewrites
+its own files on every build. It creates the project's files once, adds a
+missing class to them, and never rewrites what is in them.
+
+| What | Karni owns (rewritten every build) | The project owns (created once) |
+|---|---|---|
+| models | `<app>/karni/models.py`: each entity as an abstract class on `BaseModel` or `BigIntBaseModel` (or the external declaration), with its fields, `Meta`, `class Karni` and `AdminMeta` | `<app>/models.py`: `class Session(karni.Session):` and the project's methods |
+| API | `<app>/karni/api.py`: each viewset's model, access and search, as a base class | `<app>/viewsets.py`: `class SessionViewSet(karni.SessionViewSet):` and custom actions |
+| seed counts | `<app>/karni/seeds.py`: a `Seeder` per entity with a `seed` count | `<app>/seeds.py`: the subclass, where a field's demo values are steered |
+| tests | `<app>/tests/karni/test_<entity>.py`: `assert_crud`, and `assert_isolated` when reads are owned | every other test |
+| settings | the block between `# karni:spec start` and `# karni:spec end` in `config/settings.py`: roles, features and module options | everything else in `config/settings.py` |
+| pages | `frontend/src/pages/karni/*.tsx`, and the blocks between `// karni:spec imports` and `// karni:spec routes` markers in `routes.tsx` | every other page and route |
+
+For one entity, `Session` in the app `classes`, that is:
+
+```python
+# classes/karni/models.py (Karni's)
+class Session(BaseModel):
+    studio = models.ForeignKey("Studio", on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+
+    class Meta(BaseModel.Meta):
+        abstract = True
+        ordering = ["starts_at"]
+
+    class Karni:
+        owner_field = "instructor"
+
+
+# classes/models.py (the project's)
+from classes.karni import models as karni
+
+
+class Session(karni.Session):
+    def is_full(self) -> bool:
+        return self.booking_set.count() >= self.capacity
+```
+
+Django sees one model, `classes.Session`: a field changed in Karni's abstract
+class is a normal migration of the project's concrete model. The viewset the
+router serves is the project's subclass, and it inherits the access Karni
+declares, so every [architecture rule](enforcement.md) passes without an
+opt-out. A subclass overrides anything of its base: a method, `access`, or
+one option with `class Karni(karni.Session.Karni)`.
+
+The settings block sits right above `karni_settings(globals())`, where every
+setting takes effect, `KARNI_2FA` included. It sets every feature of the
+spec (`KARNI_2FA`, `KARNI_EMAIL_OTP`, `KARNI_SOCIAL_TOKEN_PROVIDERS`,
+`KARNI_TERMS`), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
+spec has roles, and each module option. A social provider's client ids come
+from the environment: `KARNI_SOCIAL_GOOGLE_CLIENT_IDS` (comma-separated) for
+`google`, and so on. A setting assigned again below the call wins over the
+block, so leave the spec's settings to the spec.
+
+### A hand edit in a Karni-owned file
+
+`karni build` records a sha256 of every Karni-owned file and block in
+`.karni/build.json`. Commit it. Before it writes anything, it checks every
+hash. A Karni-owned file edited by hand stops the build (`C273`), nothing is
+written, and the message names the file and the changed lines:
+
+```text
+classes/karni/api.py: edited by hand (line 14)
+    -    search_fields = ("name",)
+    +    search_fields = ("name", "address")
+error C273: classes/karni/api.py was edited by hand, so karni build wrote nothing.
+next: three ways on: 1. move the change into classes/viewsets.py (the subclass of each viewset), or karni.yaml, then karni build. 2. karni build --force replaces it (your copy is kept as classes/karni/api.py.orig). 3. karni build --adopt classes/karni/api.py makes it the project's: karni build stops managing it.
+```
+
+The three ways on:
+
+1. **Move the change** into the project's file the message names (the
+   subclass of the class), or into `karni.yaml`, then run `karni build`.
+2. **`--force`** replaces the file and keeps the edited copy next to it as
+   `<file>.orig` (`.orig.1` when one exists).
+3. **`--adopt <file>`** hands the file to the project. `karni build` stops
+   managing it, records that, and says so on every later run. A change of
+   the plan that lands in an adopted file is then marked not managed.
+   `--adopt config/settings.py` and `--adopt frontend/src/routes.tsx` adopt
+   their blocks.
+
+A Karni-owned file that is missing is written again. One that exists but
+was never written by `karni build` stops the build the same way, until it
+is forced or adopted.
+
+### The escape hatches
+
+- `access: code` on an entity: Karni's base class declares no access, and
+  the project's viewset does. `karni build` creates it once with `access =
+  Granted()` as a start. Any access the project declares there matches the
+  spec.
+- `- <name>: code` in `pages`: the page at `/<name>` is the project's, and
+  `karni build` leaves it alone. `karni spec export` writes a page of the
+  project's this way.
+- Every subclass in the project's files overrides its Karni base.
+
+### The steps, in order
+
+The build validates the spec and computes `karni plan`'s change list with
+what `.karni/build.json` records. The plan decides everything after it: the
+modules to add, the entities and fields renamed, the tables created and
+removed. Nothing is written when the plan asks for what the build does not
+do, or for a risky change without `--allow-destructive` (each named with its
+rows). Then the hash check, then the steps:
+
+1. **modules**: `karni add` for each module the plan adds. A module removed
+   from the spec is refused (`C271`): `karni remove` comes with the module
+   catalog.
+2. **files**: the Karni-owned files and blocks, the project's files once
+   (an app the spec adds gets its skeleton as `karni make app` writes it).
+3. **migrations**: `manage.py karni_makemigrations`, which writes the
+   renames (`was:`) as `RenameModel` and `RenameField` first, so the data
+   stays even when the type changes too, then runs Django's
+   `makemigrations` without questions. A required field added to an empty
+   table needs no value. On a table with rows it stops (`C277`): add it as
+   optional first, fill it, then make it required.
+4. **migrate**: on `default` and on every alias an entity names.
+5. **seed**: only the tables this build created, only while they hold no
+   row, with the spec's `seed` counts. Demo rows never mix with real data.
+6. **types**: `karni types`, when the project has a frontend.
+7. **test**: the project's own tests (`karni test`). The API changed on
+   purpose, so the contract snapshot (`tests/openapi.snapshot.json`)
+   follows it, and the step says so: commit it.
+8. **check**: `karni check`.
+
+The build stops at the first failure with its code, what was done and what
+to do next. The steps not run yet are remembered on this machine
+(`.karni/local/state.json`), and the next `karni build` continues from
+there.
+
+### What karni build manages
+
+On a project built by hand (`karni make`, or code written without Karni),
+`karni spec export -o karni.yaml` then `karni build` manages only what is
+new: new entities, the settings block and new pages. The models and
+viewsets the project already has stay the project's, and `karni plan` marks
+a change to them `(not managed)`:
+
+```text
+fields
+  + shop.Product.color: str:30? (not managed)
+entities
+  + shop.Invoice: (product fk:Product, total money:EUR)
+2 changes, 0 risky, 1 not managed.
+karni build leaves the changes marked not managed to the project's own code.
+```
+
+Converting a hand-written model or viewset into a Karni-owned base is a
+later step of the [app-builder roadmap](roadmap/app-builder.md), not part of
+this release.
+
+### `--json`
+
+`--json` prints `{version, file, valid, issues, status, code, message,
+plan, files, hand_edits, adopted, steps, next}`. `status` is one of `built`,
+`nothing to build`, `dry run`, `refused`, `failed` and `invalid`, `plan` is
+exactly what `karni plan --json` prints, each file is `{path, action,
+owner}`, each step `{name, status, summary}` with `status` one of `done`,
+`skipped`, `failed` and `pending`. The schema is published as
+[`karni-build.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-build.schema.json)
+(in the repository, `docs/assets/karni-build.schema.json`, regenerated with
+`python -m karni_cli.build.output > docs/assets/karni-build.schema.json`).
+`version` moves only for a breaking change of the output.
+
+| Code | Problem |
+|---|---|
+| [C270](errors.md#c270) | a risky change without `--allow-destructive` |
+| [C271](errors.md#c271) | a module removal |
+| [C272](errors.md#c272) | a key type switch |
+| [C273](errors.md#c273) | a Karni-owned file was edited by hand |
+| [C274](errors.md#c274) | `--adopt` names a file karni build does not own |
+| [C275](errors.md#c275) | the project's code is in the way (a model, a class, a route) |
+| [C276](errors.md#c276) | a module karni build added is not installed |
+| [C277](errors.md#c277) | makemigrations failed |
+| [C278](errors.md#c278) | migrate failed |
+| [C279](errors.md#c279) | seeding failed |
+| [C280](errors.md#c280) | karni types failed |
+| [C281](errors.md#c281) | the project's tests fail |
+| [C282](errors.md#c282) | karni check fails |
+| [C283](errors.md#c283) | a project class karni build must remove has code of its own |
+| [C284](errors.md#c284) | a marker karni build writes at is missing |
+| [C285](errors.md#c285) | `.karni/build.json` cannot be read |

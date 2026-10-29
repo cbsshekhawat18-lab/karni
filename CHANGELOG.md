@@ -11,6 +11,47 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **`karni build` (experimental): the spec applied in one command,
+  idempotently, without touching hand-written code.** `karni build
+  [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]
+  [--adopt <file>...]` computes `karni plan`, refuses risky changes without
+  `--allow-destructive` (`C270`), a key type switch (`C272`) and a module
+  removal (`C271`), checks that no Karni-owned file was edited by hand
+  (`C273`), then runs `karni add` for new modules, writes the files,
+  `manage.py karni_makemigrations`, migrate, seed (only the tables it
+  created, only while empty), `karni types`, `karni test` and `karni check`.
+  It stops at the first failure with its code (`C270` to `C285`), and the
+  next run continues from there. A second run with no change writes
+  nothing. Karni's code lives in files of its own (`<app>/karni/models.py`
+  as abstract classes, `api.py` as viewset bases, `seeds.py`,
+  `<app>/tests/karni/`, `frontend/src/pages/karni/`, and the `karni:spec`
+  blocks of `config/settings.py` and `routes.tsx`), fingerprinted in
+  `.karni/build.json`. The project's `models.py`, `viewsets.py` and
+  `seeds.py` hold a subclass per entity, created once. `--force` keeps a
+  `.orig` copy, and `--adopt` hands a file to the project. `--json` follows
+  the published `docs/assets/karni-build.schema.json`.
+  [docs/app-spec.md](docs/app-spec.md#karni-build).
+- **`manage.py karni_makemigrations` (experimental).** Django's
+  `makemigrations` without questions, with the renames written first as
+  `RenameModel` and `RenameField` (so the data stays when the type changes
+  too), and a required field added to an empty table without a one-off
+  value.
+- **`karni plan` marks what karni build manages.** Each change gains
+  `managed` (and the summary `not_managed`): a change on a model, viewset
+  or page the project wrote by hand is printed `(not managed)`. `access:
+  code` now matches any access the project declares, the planned API tests
+  are `<app>/tests/karni/test_<entity>.py` (none for an external entity or
+  one on another database), and a module option at its default no longer
+  shows as a change. A page of kind `code` (`- reports: code`) is a page of
+  the project's own, and `karni spec export` writes one so.
+- **`karni make test` checks isolation only where reads are owned.** An
+  `Owned(...)` in `write=` alone no longer gives `assert_isolated`, and a
+  role the read rule admits outright (`HasRole("staff")` next to
+  `Owned(...)`) no longer runs it: the check acts as a signed-in user. Both
+  generated tests failed with `E605` before.
+- **The query-scaling rule measures a model on another database there**
+  (`Karni.database`), instead of failing on the test database's guard.
+
 - **`karni plan` (experimental): what `karni build` would change, writing
   nothing.** `karni plan [--spec karni.yaml] [--json] [--offline]` validates
   the spec, reads the project the way `karni spec export` does, compares

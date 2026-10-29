@@ -262,6 +262,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni design`](docs/REFERENCE.md#karni-design) | Read a designer's pages: the models their content needs, and the content itself: [analyze](docs/REFERENCE.md#karni-design-analyze), [extract](docs/REFERENCE.md#karni-design-extract) |
 | [`karni spec`](docs/REFERENCE.md#karni-spec) | The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export): [validate](docs/REFERENCE.md#karni-spec-validate), [export](docs/REFERENCE.md#karni-spec-export) |
 | [`karni plan`](docs/REFERENCE.md#karni-plan) | Compare karni.yaml with the project: what karni build would change |
+| [`karni build`](docs/REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
 <!-- /generated:commands -->
@@ -406,6 +407,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `stable` Slash commands for the routine tasks (`/new-model`, `/new-page`, …)
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
 - `experimental` The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier
+- `experimental` `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
