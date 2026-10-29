@@ -56,8 +56,12 @@ def _calls() -> list[tuple[str, int, str | None]]:
             continue  # bundled copies (_templates, _agent, _changelog, _errorcodes), at any depth
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "CliError":
+            name = getattr(getattr(node, "func", None), "id", "")
+            # karni build's Stop("C27x", ...) is its CliError: the code comes first
+            if isinstance(node, ast.Call) and name in ("CliError", "Stop"):
                 code = next((kw.value for kw in node.keywords if kw.arg == "code"), None)
+                if name == "Stop" and node.args:
+                    code = node.args[0]
                 literal = (
                     code.value
                     if isinstance(code, ast.Constant) and isinstance(code.value, str)
