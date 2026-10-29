@@ -126,6 +126,8 @@ def check_module_ranges(version: str) -> list[str]:
                     f"{module} requires {requirement!r}, which excludes karni "
                     f"{version}. Widen the range in its pyproject.toml (docs/modules.md)."
                 )
+        if module not in UI_MODULES:
+            continue  # no npm package (karni-site), so no peer range to check
         peers = _package_json(f"{module}/ui").get("peerDependencies") or {}
         spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
         if isinstance(spec, str) and not _caret_allows(spec, version):

@@ -553,7 +553,7 @@ def test_the_lock_is_shared_between_workers():
 
 `karni_test_cache = project` in the pytest ini file (`[tool.pytest.ini_options]`
 in `pyproject.toml`) keeps the project's cache for every test, the rule
-before 0.4.1. A fixture named `_karni_test_cache` in `conftest.py` replaces
+before 0.5.0. A fixture named `_karni_test_cache` in `conftest.py` replaces
 the plugin's. Code that keeps a cache object from import time
 (`caches["default"]` stored in a module) keeps that object: use
 `django.core.cache.cache` or look the alias up when it is needed.

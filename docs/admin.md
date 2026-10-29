@@ -135,7 +135,7 @@ the user may open. Every other page is a 403.
   model still lets its holder give roles to people, so grant
   `<user model>:change` only to someone trusted with every role.
 
-`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` restores the rule before 0.4.1:
+`KARNI_ADMIN_GRANTS_OPEN_PAGES = False` restores the rule before 0.5.0:
 only Django's model permissions open pages, and the grants decide the rows.
 To keep one admin on Django's permissions, override `granted()`:
 

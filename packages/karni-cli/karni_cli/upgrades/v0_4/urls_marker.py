@@ -1,7 +1,7 @@
 """The ``# karni:urls`` marker in config/urls.py, where ``karni make site`` inserts routes.
 
-Changelog entry ``urls-marker`` (0.4.1). Migration note:
-docs/migrations/0.4.1.md#a-marker-for-project-routes-in-configurlspy.
+Changelog entry ``urls-marker`` (0.5.0). Migration note:
+docs/migrations/0.5.md#a-marker-for-project-routes-in-configurlspy.
 
 The marker goes inside ``urlpatterns`` right before ``*welcome_urls()`` (and
 before the comment lines attached to it), so the welcome route stays last. A

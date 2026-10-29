@@ -62,7 +62,7 @@ made for:
 
 ```toml
 [tool.karni]
-baseline = "0.4.1"
+baseline = "0.5.0"
 kind = "site"
 ```
 
@@ -571,8 +571,8 @@ urlpatterns = [
 ```
 
 Keep the include after the API, admin and health routes, so that a site URL
-can never shadow them. Projects created before Karni 0.4.1 have no marker:
-`karni upgrade` adds it ([migration note](migrations/0.4.1.md)), or add the
+can never shadow them. Projects created before Karni 0.5.0 have no marker:
+`karni upgrade` adds it ([migration note](migrations/0.5.md)), or add the
 include by hand before `*welcome_urls()`.
 
 The scaffold's Caddyfile serves `/static/` and `/media/` from disk and sends

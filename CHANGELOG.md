@@ -9,7 +9,7 @@ Breaking changes and deprecations are recorded in machine-readable form in
 `docs/migrations/<version>.md`. The TOML file is what `karni upgrade` reads to
 apply codemods and list the manual steps. This file is the human summary.
 
-## Unreleased
+## 0.5.0 (unreleased)
 
 - **Production email is set up, or the deploy check says so.** `karni_settings()`
   reads the mail server from `EMAIL_URL` (`smtp+tls://user:password@host:587`)
@@ -18,7 +18,7 @@ apply codemods and list the manual steps. This file is the human summary.
   console, locmem, dummy or file backend or comes from a localhost sender. A new
   project's `.env.prod.example` lists the email settings, and both env examples
   show `KARNI_PHONE_COUNTRY_CODE` with its format. See the
-  [migration note](docs/migrations/0.4.1.md#production-email-email_url-and-karniw520).
+  [migration note](docs/migrations/0.5.md#production-email-email_url-and-karniw520).
 - **`karni explain` explains settings.** `karni explain KARNI_SITE_HIGHLIGHT`
   prints a setting's description, default, environment variable and docs link,
   Karni's own and every module's, from the source
@@ -53,7 +53,7 @@ apply codemods and list the manual steps. This file is the human summary.
   --editable --map` seeds a menu of every detail page of a model as that
   model's rows, so a new row appears in it. The site-from-design procedure
   says how `{% karni_seo %}` finds a detail page's row. See the
-  [migration notes](docs/migrations/0.4.1.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout).
+  [migration notes](docs/migrations/0.5.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout).
 - **Karni sites say they run on Karni.** `{% karni_seo %}` writes
   `<meta name="generator" content="Karni">` on every public page, and the
   scaffold's `frontend/index.html` carries the same line, so tools that list
@@ -90,7 +90,7 @@ apply codemods and list the manual steps. This file is the human summary.
   switch, read on every request. `"auto"` brings the switch back and
   `"dark"` pins the dark palette. See
   [docs/admin.md](docs/admin.md#theming) and the
-  [migration note](docs/migrations/0.4.1.md#the-admin-is-light-only).
+  [migration note](docs/migrations/0.5.md#the-admin-is-light-only).
 - **Everything a client sees on a public site is edited in the admin.**
   The karni-site module now holds the site's own details (`SiteSettings`:
   name, tagline, logo, favicon, the default share image, address, phone,
@@ -356,7 +356,7 @@ apply codemods and list the manual steps. This file is the human summary.
   [docs/testing.md](docs/testing.md#public-pages-assert_pages).
 - **`config/urls.py` has a `# karni:urls` marker** where `karni make site`
   inserts its include. `karni upgrade` adds it to existing projects
-  ([docs/migrations/0.4.1.md](docs/migrations/0.4.1.md)).
+  ([docs/migrations/0.5.md](docs/migrations/0.5.md)).
 - **Security: `--access public-read` no longer lets every signed-in user
   write.** In 0.4.0 the preset wrote `Access(read=Public(),
   write=Authenticated())`. A new project also has open self-registration, so
@@ -366,7 +366,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `write=HasRole("staff")`, and `--access public-read:<role>` names another
   role. This changes a security-relevant default: review every viewset that
   declares `read=Public(), write=Authenticated()`. `karni upgrade` lists the
-  step, and [the 0.4.1 migration note](docs/migrations/0.4.1.md) has the
+  step, and [the 0.5 migration note](docs/migrations/0.5.md) has the
   details.
 - **Public forms are protected by default.** A viewset whose `create` anyone
   may call (`create=Public()`) is limited to `KARNI_PUBLIC_CREATE_RATE` (10
@@ -382,7 +382,7 @@ apply codemods and list the manual steps. This file is the human summary.
   public form's declaration, and the `new-model` agent procedure names it.
   The pytest plugin starts each test with empty
   rate-limit counters. This changes a default: see
-  [the 0.4.1 migration note](docs/migrations/0.4.1.md#public-creates-are-rate-limited).
+  [the 0.5 migration note](docs/migrations/0.5.md#public-creates-are-rate-limited).
 - **Security headers on every response.** `karni.security.SecurityHeadersMiddleware`
   sends a Content-Security-Policy (report-only while `DEBUG` is on) and a
   Permissions-Policy. The default policy allows what Karni serves: the admin

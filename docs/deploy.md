@@ -402,7 +402,7 @@ prod exec db sh -c 'dropdb -U "$POSTGRES_USER" restore_check'
 
 ## An existing project
 
-A project created before Karni 0.4.1 has a `Dockerfile` without the
+A project created before Karni 0.5.0 has a `Dockerfile` without the
 `staff-app` and `backup` targets and without the deploy gate. Copy those parts
 from a new project's `Dockerfile` (`karni new` in a scratch folder), add the
 `basepath` line to `frontend/src/routes.tsx`, then write the stack:

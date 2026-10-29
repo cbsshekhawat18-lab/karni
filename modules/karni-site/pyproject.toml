@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-site"
-version = "0.4.0"
+version = "0.5.0"
 description = "Public websites for Karni: every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,7 +27,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 # Range-pinned per the module contract (docs/modules.md).
-dependencies = ["karni>=0.4,<0.5"]
+dependencies = ["karni>=0.5,<0.6"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"

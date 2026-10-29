@@ -1,6 +1,6 @@
-# Karni 0.4.1: what changed since 0.4.0 that a project may notice.
-# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.4.1.md.
-version = "0.4.1"
+# Karni 0.5.0: what changed since 0.4.0 that a project may notice.
+# Schema and rules: karni/changelog/__init__.py. Migration notes: docs/migrations/0.5.md.
+version = "0.5.0"
 
 [[change]]
 id = "public-read-writes-need-a-role"
@@ -12,7 +12,7 @@ In 0.4.0 it wrote `write=Authenticated()`, which with open registration lets any
 who signs up change and delete every row. Review each viewset that declares \
 `read=Public(), write=Authenticated()`. `karni check` reports each one as karni.W102."""
 mechanical = false
-migration = "migrations/0.4.1.md#public-read-viewsets-review-who-may-write"
+migration = "migrations/0.5.md#public-read-viewsets-review-who-may-write"
 
 [[change]]
 id = "public-creates-limited-by-default"
@@ -25,7 +25,7 @@ caller) without a `throttle` declaration, a request that fills the honeypot fiel
 and its import endpoints need a signed-in user. Raise or remove the limit if a public \
 endpoint takes more than that from one caller."""
 mechanical = false
-migration = "migrations/0.4.1.md#public-creates-are-rate-limited"
+migration = "migrations/0.5.md#public-creates-are-rate-limited"
 
 [[change]]
 id = "security-headers-by-default"
@@ -37,7 +37,7 @@ report-only with DEBUG on, and a Permissions-Policy. A page that loads scripts, 
 or fonts from another host, or runs an inline script, needs KARNI_CSP (or @csp_extend) \
 before it reaches production."""
 mechanical = false
-migration = "migrations/0.4.1.md#security-headers-on-every-response"
+migration = "migrations/0.5.md#security-headers-on-every-response"
 
 [[change]]
 id = "urls-marker"
@@ -49,7 +49,7 @@ urlpatterns, before `*welcome_urls()`. `karni make site` and `karni make view` \
 insert routes there. The codemod adds the line to a project that lacks it."""
 mechanical = true
 codemod = "v0_4.urls_marker"
-migration = "migrations/0.4.1.md#a-marker-for-project-routes-in-configurlspy"
+migration = "migrations/0.5.md#a-marker-for-project-routes-in-configurlspy"
 
 [[change]]
 id = "agent-files-public-site"
@@ -60,7 +60,7 @@ The adapters say where app screens and a public site go, K302 and K306 are \
 about app screens and the new-page procedure points at rule K309. Run \
 `karni rules sync`, or `karni rules sync --check` reports the files as stale."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-agent-files-run-karni-rules-sync"
+migration = "migrations/0.5.md#the-agent-files-run-karni-rules-sync"
 
 [[change]]
 id = "seed-refuses-occupied-tables"
@@ -72,7 +72,7 @@ their tables already holds rows, users aside. A script that seeds a database \
 twice, or seeds after loading data, passes --reset to start over or --force \
 to add demo rows on top."""
 mechanical = false
-migration = "migrations/0.4.1.md#karni-seed-refuses-tables-that-already-hold-rows"
+migration = "migrations/0.5.md#karni-seed-refuses-tables-that-already-hold-rows"
 
 [[change]]
 id = "settings-read-during-the-call"
@@ -86,7 +86,7 @@ settings. A settings module that assigns one of them below the call now fails \
 startup with karni.E508 instead of running with the settings computed from the \
 old value. Move the assignment above the call or pass it as a keyword."""
 mechanical = false
-migration = "migrations/0.4.1.md#settings-the-call-reads-fail-loudly-below-it"
+migration = "migrations/0.5.md#settings-the-call-reads-fail-loudly-below-it"
 
 [[change]]
 id = "admin-logo-on-every-request"
@@ -99,7 +99,7 @@ takes effect below the karni_settings() call too, and the login screen shows the
 same logo above its title. A project that replaces UNFOLD after the call while \
 KARNI_ADMIN_LOGO is set fails startup with karni.E508."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-admin-logo-works-wherever-it-is-assigned-and-on-the-login-screen"
+migration = "migrations/0.5.md#the-admin-logo-works-wherever-it-is-assigned-and-on-the-login-screen"
 
 [[change]]
 id = "make-model-adds-images-extra"
@@ -112,7 +112,7 @@ prints the change and says to reinstall. It edits only that one requirement \
 string, --dry-run shows the diff, and a project that already lists the extra \
 is left alone."""
 mechanical = false
-migration = "migrations/0.4.1.md#karni-make-model-adds-the-images-extra-to-pyprojecttoml"
+migration = "migrations/0.5.md#karni-make-model-adds-the-images-extra-to-pyprojecttoml"
 
 [[change]]
 id = "dev-port-in-env"
@@ -125,7 +125,7 @@ the scaffold's frontend/vite.config.ts proxies /api and /health to it (read from
 KARNI_API_PROXY still wins. A project's existing vite.config.ts keeps working: \
 karni serve --local prints the KARNI_API_PROXY line when the two disagree."""
 mechanical = false
-migration = "migrations/0.4.1.md#one-dev-port-karni_dev_port"
+migration = "migrations/0.5.md#one-dev-port-karni_dev_port"
 
 [[change]]
 id = "site-runtime-module"
@@ -143,7 +143,7 @@ module has tables, so run `karni migrate` after installing it. A site app create
 before this gets the missing pieces from `karni make site <app> --force` after \
 `pip install karni-site`, and its base.html can load `karni_site` for the tags."""
 mechanical = false
-migration = "migrations/0.4.1.md#a-site-apps-runtime-is-the-karni-site-module"
+migration = "migrations/0.5.md#a-site-apps-runtime-is-the-karni-site-module"
 
 [[change]]
 id = "staff-app-guard-and-dashboard"
@@ -157,7 +157,7 @@ Sign out, and its home page is <Dashboard> (the models that declare \
 scaffolded earlier keeps its own files: copy the two from a fresh `karni new` \
 to get the sign-in prompt and the dashboard."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-staff-app-requires-sign-in-and-opens-on-a-dashboard"
+migration = "migrations/0.5.md#the-staff-app-requires-sign-in-and-opens-on-a-dashboard"
 
 [[change]]
 id = "admin-loads-project-theme"
@@ -171,7 +171,7 @@ STATICFILES_FINDERS. A project that appended its own admin stylesheet of \
 --karni-* overrides can drop it, and a project that defines STATICFILES_FINDERS \
 itself adds the finder to keep the file served."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-admin-wears-the-projects-karni-themecss"
+migration = "migrations/0.5.md#the-admin-wears-the-projects-karni-themecss"
 
 [[change]]
 id = "karni-theme-light-colours-scoped"
@@ -183,7 +183,7 @@ of `:root`, so they no longer override Karni's dark palette under \
 <html class="dark">. A file written by 0.4.0 keeps overriding it until it is \
 regenerated with `karni ui detect --force` (or edited by hand)."""
 mechanical = false
-migration = "migrations/0.4.1.md#karni-themecss-keeps-dark-mode"
+migration = "migrations/0.5.md#karni-themecss-keeps-dark-mode"
 
 [[change]]
 id = "production-stack"
@@ -198,7 +198,7 @@ refuses to start on a failure (E520). To adopt it, copy those Dockerfile parts \
 from a fresh `karni new` project, then run `karni make deploy compose --force`, \
 which replaces the Caddyfile."""
 mechanical = false
-migration = "migrations/0.4.1.md#a-production-stack-karni-make-deploy-compose"
+migration = "migrations/0.5.md#a-production-stack-karni-make-deploy-compose"
 
 [[change]]
 id = "staff-app-base-path"
@@ -210,7 +210,7 @@ in createRouter), so the production build works under /app/, where Caddy serves 
 it. Add the line to a project's routes.tsx before serving the staff app under a \
 path. In development the base is /, and nothing changes."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-staff-app-follows-vites-base-path"
+migration = "migrations/0.5.md#the-staff-app-follows-vites-base-path"
 
 [[change]]
 id = "agent-files-public-forms"
@@ -221,7 +221,7 @@ Rule K309 and the new-model procedure now name `karni make form` for a public \
 form and `{% karni_form %}` for the page that shows it. Run `karni rules sync`, \
 or `karni rules sync --check` reports the files as stale."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-agent-files-name-karni-make-form"
+migration = "migrations/0.5.md#the-agent-files-name-karni-make-form"
 
 [[change]]
 id = "agent-files-site-from-design"
@@ -234,7 +234,7 @@ templates that loop over the rows. `karni rules sync` writes its slash command f
 and lists it in the adapters. Until then `karni rules sync --check` (and make check) \
 reports the files as stale."""
 mechanical = false
-migration = "migrations/0.4.1.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
+migration = "migrations/0.5.md#a-procedure-from-a-design-to-content-run-karni-rules-sync"
 
 [[change]]
 id = "admin-light-only"
@@ -246,7 +246,7 @@ UNFOLD["THEME"], which pins unfold's light palette and hides its light / dark / 
 system switch. Set KARNI_ADMIN_THEME = "auto" for the switch, or "dark". A \
 project that sets UNFOLD["THEME"] itself keeps its value."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-admin-is-light-only"
+migration = "migrations/0.5.md#the-admin-is-light-only"
 
 [[change]]
 id = "project-kind"
@@ -259,7 +259,7 @@ A project without the line is read as the kind its files show: karni_site in the
 apps block makes a site, frontend/ a staff app. Add the line to say it, or run \
 `karni add site` to turn an app into a site+app."""
 mechanical = false
-migration = "migrations/0.4.1.md#projects-have-a-kind"
+migration = "migrations/0.5.md#projects-have-a-kind"
 
 [[change]]
 id = "agent-files-project-kind"
@@ -272,7 +272,7 @@ which technology to use. The site-from-design procedure analyzes before it impor
 blocks), adds the forms and ends with `karni check`. Run `karni rules sync`. Until \
 then `karni rules sync --check` (and make check) reports the files as stale."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-agent-files-state-the-kind-run-karni-rules-sync"
+migration = "migrations/0.5.md#the-agent-files-state-the-kind-run-karni-rules-sync"
 
 [[change]]
 id = "site-head-karni-seo"
@@ -286,7 +286,7 @@ canonical link, share tags and JSON-LD. A site app created earlier keeps its \
 head: wrap its <title> and description in the tag and remove its canonical \
 link, or import the design again."""
 mechanical = false
-migration = "migrations/0.4.1.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+migration = "migrations/0.5.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
 
 [[change]]
 id = "site-urls-include"
@@ -299,7 +299,7 @@ robots.txt (closed outside production) and sitemap.xml. A project wired \
 earlier gets it from `karni add site` or `karni make site <app> --force`, or \
 adds the line by hand."""
 mechanical = false
-migration = "migrations/0.4.1.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
+migration = "migrations/0.5.md#search-engines--karni_seo--sitemapxml-and-robotstxt"
 
 [[change]]
 id = "import-design-sizes-images"
@@ -312,7 +312,7 @@ installed, smaller WebP copies of each large JPEG, PNG or WebP under \
 static/<app>/ with a srcset and sizes. Importing a design again changes the \
 templates the project has not edited. An edited one is kept, as before."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-designs-images-are-sized"
+migration = "migrations/0.5.md#the-designs-images-are-sized"
 
 [[change]]
 id = "admin-grants-open-pages"
@@ -326,7 +326,7 @@ ticked. Review who holds staff status and which roles. Only a superuser \
 changes is_superuser or a superuser's account. \
 KARNI_ADMIN_GRANTS_OPEN_PAGES = False restores Django's permissions only."""
 mechanical = false
-migration = "migrations/0.4.1.md#grants-open-admin-pages"
+migration = "migrations/0.5.md#grants-open-admin-pages"
 
 [[change]]
 id = "tests-get-a-local-memory-cache"
@@ -340,7 +340,7 @@ Redis. A test that needs the project's own cache takes \
 @pytest.mark.karni_project_cache, and `karni_test_cache = project` in the \
 pytest ini file keeps it for every test."""
 mechanical = false
-migration = "migrations/0.4.1.md#tests-run-on-an-empty-local-memory-cache"
+migration = "migrations/0.5.md#tests-run-on-an-empty-local-memory-cache"
 
 [[change]]
 id = "dev-files-under-the-project"
@@ -355,7 +355,7 @@ project root, not the working directory. Production keeps /data/media and \
 values. Add the two ENV lines to an earlier Dockerfile before removing them \
 from .env."""
 mechanical = false
-migration = "migrations/0.4.1.md#files-under-the-project-in-development"
+migration = "migrations/0.5.md#files-under-the-project-in-development"
 
 [[change]]
 id = "frontend-zod-4"
@@ -369,7 +369,7 @@ Zod 4 (4.6.6 or later). An earlier project keeps working on Zod 3. Bump the \
 three in frontend/package.json to clear the audit, after moving code of your \
 own off Zod 3's required_error and invalid_type_error."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-frontend-moves-to-zod-4"
+migration = "migrations/0.5.md#the-frontend-moves-to-zod-4"
 
 [[change]]
 id = "production-email"
@@ -384,7 +384,7 @@ sender at localhost (Django's webmaster@localhost). Set EMAIL_URL and \
 DEFAULT_FROM_EMAIL in .env.prod before the next deploy, or add karni.W520 to \
 SILENCED_SYSTEM_CHECKS in a project that sends no email."""
 mechanical = false
-migration = "migrations/0.4.1.md#production-email-email_url-and-karniw520"
+migration = "migrations/0.5.md#production-email-email_url-and-karniw520"
 
 [[change]]
 id = "development-worker-pool-and-broker-timeout"
@@ -397,7 +397,7 @@ timeout, so a worker that stops while Redis does not answer its last BRPOP exits
 instead of waiting for good. Production and a worker in Docker keep Celery's defaults. \
 A project that sets CELERY_BROKER_TRANSPORT_OPTIONS itself keeps its own value."""
 mechanical = false
-migration = "migrations/0.4.1.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout"
+migration = "migrations/0.5.md#the-development-worker-threads-on-a-mac-and-a-broker-timeout"
 
 [[change]]
 id = "menus-of-rows"
@@ -411,4 +411,4 @@ one model's detail pages as such an item (data-karni-children-from in the seed),
 a row the client adds appears in the menu. Menus already in the database keep their \
 items."""
 mechanical = false
-migration = "migrations/0.4.1.md#menus-that-list-a-models-rows"
+migration = "migrations/0.5.md#menus-that-list-a-models-rows"

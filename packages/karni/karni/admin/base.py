@@ -268,7 +268,7 @@ class KarniAdminMixin(admin.ModelAdmin):
         A grant opens this admin's page for that action, as Django's model
         permission does. Superusers hold every grant. ``False`` for everyone
         while ``KARNI_ADMIN_GRANTS_OPEN_PAGES`` is ``False``: then only Django's
-        model permissions open pages, the rule before 0.4.1.
+        model permissions open pages, the rule before 0.5.0.
 
         Override / escape hatch: override this method to open pages on another
         rule (``return False`` keeps one admin on Django's permissions only).

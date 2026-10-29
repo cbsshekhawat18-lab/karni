@@ -5,7 +5,7 @@ description: "For maintainers: lockstep versions across the ten packages, cuttin
 # Releasing Karni
 
 This page is for maintainers. Users, see [the stability promise](stability.md)
-and the migration notes ([0.4.1](migrations/0.4.1.md), [0.4](migrations/0.4.md), [0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
+and the migration notes ([0.5](migrations/0.5.md), [0.4](migrations/0.4.md), [0.3](migrations/0.3.md), [0.2](migrations/0.2.md), [1.0](migrations/1.0.md)).
 
 ## Lockstep versions
 
