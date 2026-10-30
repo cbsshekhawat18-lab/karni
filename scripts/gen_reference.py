@@ -134,6 +134,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, "
+        "`children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and "
+        "`delete_branch()`, and the tree changelist in the admin. Experimental tier",
+    ),
+    Capability(
+        "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
         planned="docs/models.md#scopes-the-filters-every-default-manager-applies",
     ),
@@ -181,6 +187,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user "
         "accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). "
         "Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
+        "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
+        "OpenAPI document. Experimental tier",
     ),
     Capability(
         "api",
@@ -245,6 +257,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once "
         "the user accepts the current terms. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and "
+        "`TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. "
+        "Experimental tier",
     ),
     Capability(
         "ui",

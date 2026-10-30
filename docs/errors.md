@@ -944,6 +944,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
+<a id="e340"></a>
+
+#### E340: A tree node's new parent is the node itself or a node below it
+
+*exception* · from `karni.models.TreeModel.check_parent (save, clean, move_to); the API answers 400`
+
+**Why Karni objects.** A parent below the node would make the branch its own ancestor: a cycle. Every walk stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni refuses the write before any SQL.
+
+**Fix.** Choose a parent outside the node's branch (or None for a root). To swap two nodes, move the lower one out of the branch first. In the API, POST <id>/move/ with another parent.
+
+<a id="e341"></a>
+
+#### E341: A tree node with live children cannot be deleted alone
+
+*exception* · from `karni.models.TreeModel.delete; the API answers 409`
+
+**Why Karni objects.** A soft-deleted node hides its whole branch. Deleting a node that still has live children would hide them too, without anyone deciding that, so delete() refuses and the answer counts the children.
+
+**Fix.** Move the children to another parent first, or delete the whole branch on purpose: node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every node of the branch).
+
+<a id="e342"></a>
+
+#### E342: A tree endpoint got a parameter it cannot use
+
+*API 400 response* · from `karni.api.tree (tree/, move/, ?parent=, ?descendants_of=, ?branch=)`
+
+**Why Karni objects.** The tree endpoints take keys of the model (?root=, ?parent=, ?descendants_of=, the parent of move/), a whole number of levels (?depth=, from 1 to the viewset's tree_max_depth) and true or false (?branch=). A key must name a node the requester may read.
+
+**Fix.** Send a key of the model (or null for ?parent= and move/'s parent), a depth within the limit the message names, and branch=true or branch=false.
+
+<a id="e343"></a>
+
+#### E343: A tree method got an argument it cannot use
+
+*exception* · from `karni.managers.TreeQuerySet (walk, descendants, ancestors, subtree_ids); karni.models.TreeModel.move_to`
+
+**Why Karni objects.** A walk starts from rows of the model, their keys or a queryset of the model. A row of another model, an unsaved row or a malformed key names no node. move_to() takes a position only on an OrderedTreeModel, as a whole number from 0.
+
+**Fix.** Pass saved rows of the model or their keys. Drop the position on a TreeModel, or inherit OrderedTreeModel to order siblings.
+
+<a id="e344"></a>
+
+#### E344: A tree model's default manager has no tree walks
+
+*system check (error)* · from `karni.checks.check_tree_models`
+
+**Why Karni objects.** TreeModel's manager (karni.managers.TreeManager) carries roots(), children(), ancestors(), descendants() and subtree_ids(), and the tree endpoints use them. A base listed before TreeModel (class Region(BaseModel, TreeModel)) supplies its own `objects` first, so the walks are missing.
+
+**Fix.** List TreeModel first: class Region(TreeModel, BaseModel). A custom manager must be built on karni.managers.TreeQuerySet, the way TreeManager is.
+
+<a id="e345"></a>
+
+#### E345: A tree model's parent is not a foreign key to the model itself
+
+*system check (error)* · from `karni.checks.check_tree_models`
+
+**Why Karni objects.** Every walk joins a node to its parent through the `parent` column, so `parent` must stay a nullable ForeignKey to the same model.
+
+**Fix.** Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='children').
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -3526,6 +3586,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
 
+<a id="c460"></a>
+
+### C460: A tree entity's keys do not fit
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** tree: true makes the entity a TreeModel, which adds a parent field (tree: ordered makes it an OrderedTreeModel, which adds position too). Karni adds that column, so it cannot be a table another system owns, and the entity cannot declare a field of that name.
+
+**Fix.** Remove tree from an external entity, and remove parent (and position) from the fields of a tree entity, or rename a field that means something else.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4057,6 +4127,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
 **Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
+
+<a id="k312"></a>
+
+### K312: Trees: TreeModel.
+
+*agent rule, error* · enforced by `hand-written-tree`
+
+**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect.
+
+**Why Karni objects.** Hand-written trees loop on cyclic data, cost one query per level and repeat the same endpoints and widgets in every project. TreeModel's walks are one cycle-safe query each.
+
+**Fix.** Inherit TreeModel first and drop the parent field, or opt out with the reason.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

@@ -36,6 +36,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Field-level change history (`class Karni: audit = True`) | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scheduled tasks (`<app>/schedules.py`, `karni schedule`) | `experimental` | Karni's own tests |
 | External tables, SQL views and a second database as models Karni reads (`class Karni: external`, `writable`, `database`, `karni make model --external`). Experimental tier | `experimental` | Karni's own tests |
+| Tree models: `TreeModel` and `OrderedTreeModel` with cycle-safe walks (`roots`, `children`, `ancestors`, `descendants`, `subtree_ids`), `move_to()` and `delete_branch()`, and the tree changelist in the admin. Experimental tier | `experimental` | Karni's own tests |
 | A tenant scope on every model (the `karni-tenancy` module) | `planned` | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ### API
@@ -51,6 +52,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
+| Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -75,6 +77,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
+| `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -1502,10 +1505,12 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `BigIntBaseModel` | model | Experimental. `BaseModel` with a 64-bit integer key (`IntegerKeyModel`). | fields `id`, `created_at`, `updated_at`, `deleted_at`, `created_by`, `updated_by` and managers `objects` (BaseManager), `all_objects` |
 | `GuardedModel` | model | The model half of `StateField`, `CapacityField` and `no_overlap`. |  |
 | `IntegerKeyModel` | model | Experimental. A 64-bit auto-incrementing integer primary key (`BigAutoField`). | fields `id` |
+| `OrderedTreeModel` | model | Experimental. A `TreeModel` whose siblings have an order: `position`. | fields `parent`, `position` and managers `objects` (TreeManager) |
 | `SoftDeleteManager` | manager | Default manager of `karni.models.SoftDeleteModel`. |  |
 | `SoftDeleteModel` | model | Rows are hidden by `delete()` instead of removed. | fields `deleted_at` and managers `objects` (SoftDeleteManager), `all_objects` |
 | `SoftDeleteQuerySet` | queryset | QuerySet whose `delete()` soft-deletes by stamping `deleted_at`. | methods `delete`, `hard_delete`, `restore`, `alive`, `dead` |
 | `TimestampedModel` | model | `created_at` (indexed) and `updated_at`, maintained by Django. | fields `created_at`, `updated_at` and managers `objects` (ManagerFromTimestampedQuerySet) |
+| `TreeModel` | model | Experimental. A node of a hierarchy: `parent` points at another row of the same model. | fields `parent` and managers `objects` (TreeManager) |
 | `UUIDModel` | model | Random UUID primary key, safe to expose in URLs (no enumeration). | fields `id` |
 
 ### karni.api
@@ -1514,7 +1519,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `read_only_refused_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `read_only_refused_actions`, `tree_actions`, `tree_max_nodes`, `tree_default_depth`, `tree_max_depth`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
@@ -1533,7 +1538,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `DEFAULT_ADMIN_EXCLUDE` | constant | `DEFAULT_ADMIN_EXCLUDE`: `sessions`, `contenttypes`, `admin`, `auth.Permission`, `django_celery_results.ChordCounter` |  |
-| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `get_changelist`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
 | `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `delete_queryset` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
@@ -1855,6 +1860,9 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `ResourceForm` | `resource: string` | Schema-driven create and edit form for one resource: inputs, validation and server errors derived from the OpenAPI schema. | [ResourceForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/form/ResourceForm.tsx) |
 | `ResourceDetail` | `resource: string`, `id: string \| number` | Schema-driven read view of one row: every readable field, labelled and formatted. | [ResourceDetail.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/detail/ResourceDetail.tsx) |
 | `ResourceSelect` | `resource: string`, `value: string \| number \| readonly (string \| number)[] \| null`, `onChange: (value: string \| number \| (string \| number)[] \| null) => void` | Searchable picker for a related row, querying the related resource as you type. | [ResourceSelect.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/select/ResourceSelect.tsx) |
+| `TreeView` | `resource: string` | Experimental. A tree resource as an expandable, keyboard-driven tree. | [TreeView.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/tree/TreeView.tsx) |
+| `TreeSelect` | `resource: string`, `value: string \| number \| readonly (string \| number)[] \| null`, `onChange: (value: string \| number \| (string \| number)[] \| null) => void` | Experimental. A picker for a relation that points at a tree resource. | [TreeSelect.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/tree/TreeSelect.tsx) |
+| `TreeBreadcrumb` | `resource: string`, `id: string \| number` | Experimental. The path from the root to one node of a tree resource, as a breadcrumb (`GET /<resource>/<id>/ancestors/`). | [TreeBreadcrumb.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/tree/TreeBreadcrumb.tsx) |
 | `ChangeHistory` | `resource: string`, `id: string \| number` | The field-level change history of one row: when, by whom, what changed from what to what. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
 | `ResourceImport` | `resource: string` | Import a CSV or XLSX file into a resource: upload, map columns to fields, preview (the mandatory dry run, which shows N created / updated / skipped with every row's errors), confirm, then commit. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
 | `EmptyValue` |  | A field that has no value (null, "", an empty list), the same in every Karni component: ResourceTable's cells, ResourceDetail's rows and ChangeHistory's before/after values. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
@@ -1888,6 +1896,10 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useTheme` |  | Returns the theme choice and a setter, and throws a descriptive error outside ThemeProvider. | [theme.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/theme/theme.tsx) |
 | `useKarniPrimitives` |  | The registered primitives in scope (the roles the project replaced). | [registry.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/primitives/registry.tsx) |
 | `useUnsavedChangesGuard` | `options?: UseUnsavedChangesGuardOptions` | Tracks unsaved changes, warns on reload or close, and gives a router blocker what it needs. | [useUnsavedChangesGuard.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useUnsavedChangesGuard.ts) |
+| `useResourceTree` | `resource: string`, `params?: ResourceTreeParams \| undefined`, `options?: Omit<UseQueryOptions<TreeResponse<T>, Error, TreeResponse<T>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/`), under `root` or from the roots. | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
+| `useResourceChildren` | `resource: string`, `id: string \| number`, `params?: ResourceChildrenParams \| undefined`, `options?: Omit<UseQueryOptions<Paginated<TreeNode<T>>, Error, Paginated<TreeNode<T>>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. One page of a node's children (`GET /<resource>/<id>/children/`). | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
+| `useResourceAncestors` | `resource: string`, `id: string \| number`, `options?: Omit<UseQueryOptions<TreeNode<T>[], Error, TreeNode<T>[], readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The nodes above one node, root first (`GET /<resource>/<id>/ancestors/`). | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
+| `useTreeMutations` | `resource: string` | Experimental. Move a node or delete a branch. | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
 | `useChangeHistory` | `resource: string`, `id: string \| number`, `params?: ChangeHistoryParams \| undefined`, `options?: Omit<UseQueryOptions<ChangeHistoryPage, Error, ChangeHistoryPage, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `useImportDescribe` | `resource: string`, `options?: Omit<UseQueryOptions<ImportDescription, Error, ImportDescription, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches what a resource's import accepts: its columns, required fields and allowed values. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
 | `useImportJob` | `resource: string`, `jobId: string \| undefined`, `options?: UseImportJobOptions \| undefined` | Fetches one import job and polls it while it runs. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
@@ -1924,6 +1936,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `UNSAVED_CHANGES_MESSAGE` | constant | What the leave warning says. | [useUnsavedChangesGuard.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useUnsavedChangesGuard.ts) |
 | `defaultResourceDetailSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceDetail.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/detail/ResourceDetail.tsx) |
 | `defaultResourceSelectSlots` | constant | ResourceSelect's own slot components, for wrapping rather than rewriting. | [select-states.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/select/select-states.tsx) |
+| `defaultTreeViewSlots` | constant | Experimental. TreeView's own slot components, for wrapping rather than rewriting. | [tree-states.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/tree/tree-states.tsx) |
 | `defaultChangeHistorySlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ChangeHistory.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/history/ChangeHistory.tsx) |
 | `changeHistoryKey` | function | The query key of one row's change history. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `defaultResourceImportSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [ResourceImport.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/import/ResourceImport.tsx) |
@@ -2073,6 +2086,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
 | [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
+| [`E340`](errors.md#e340) | exception | A tree node's new parent is the node itself or a node below it |
+| [`E341`](errors.md#e341) | exception | A tree node with live children cannot be deleted alone |
+| [`E342`](errors.md#e342) | api | A tree endpoint got a parameter it cannot use |
+| [`E343`](errors.md#e343) | exception | A tree method got an argument it cannot use |
+| [`E344`](errors.md#e344) | check | A tree model's default manager has no tree walks |
+| [`E345`](errors.md#e345) | check | A tree model's parent is not a foreign key to the model itself |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |
@@ -2339,6 +2358,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C370`](errors.md#c370) | cli | A state field spec is invalid |
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
+| [`C460`](errors.md#c460) | cli | A tree entity's keys do not fit |
 
 ### Agent rules (`K`)
 
@@ -2388,6 +2408,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module (karni modules list). |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
+| [`K312`](errors.md#k312) | rule | Trees: TreeModel. |
 
 ### ESLint plugin (`karni/…`)
 
