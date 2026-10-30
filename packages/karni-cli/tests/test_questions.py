@@ -513,6 +513,12 @@ apps:
         ("x: 1\n", ("a", "b"), {"c": 1}, "x: 1\na: {b: {c: 1}}\n"),
         ("x: 1\n", ("modules", "site"), {"c": 1}, "x: 1\nmodules:\n  site: {c: 1}\n"),
         ("a:\n  b: 1\n# tail\n", ("a", "c"), [1, 2], "a:\n  b: 1\n  c: [1, 2]\n# tail\n"),
+        (
+            "a:\n  b: {\n    c: 1,\n  }\nd: 1\n",
+            ("a", "e"),
+            2,
+            "a:\n  b: {\n    c: 1,\n  }\n  e: 2\nd: 1\n",
+        ),
     ],
 )
 def test_the_writer_keeps_everything_else(

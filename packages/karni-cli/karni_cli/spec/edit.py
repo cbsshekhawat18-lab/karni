@@ -102,6 +102,8 @@ def _is_null(node: yaml.Node) -> bool:
 
 def _last_line(node: yaml.Node) -> int:
     """The 0-based line of the last character written for ``node`` (its deepest content)."""
+    if isinstance(node, yaml.CollectionNode) and node.flow_style:
+        return node.end_mark.line  # the closing bracket
     if isinstance(node, yaml.MappingNode):
         return max(
             (max(_last_line(k), _last_line(v)) for k, v in node.value),
