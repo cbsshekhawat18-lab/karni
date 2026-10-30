@@ -354,11 +354,12 @@ def _on_m2m(
 ) -> None:
     if action not in {"post_add", "post_remove", "post_clear"} or not cache_enabled():
         return
-    changes: dict[type[Model], set[Any] | None] = {}
-    for related in (sender, model):
-        changes.update(dict.fromkeys(_concrete(related)))
-    for target in _concrete(type(instance)):
-        changes.setdefault(target, {instance.pk})
+    changes: dict[type[Model], set[Any] | None] = dict.fromkeys(_concrete(sender))
+    rows = set(pk_set) if pk_set else None  # post_clear names no row: every row
+    for target, pks in [(model, rows), (type(instance), {instance.pk})]:
+        for concrete in _concrete(target):
+            known = changes.get(concrete, set())
+            changes[concrete] = None if known is None or pks is None else known | pks
     _invalidate(changes)
 
 
