@@ -172,14 +172,16 @@ def matched(loaded: Loaded, request: str, *, app_name: str) -> dict[str, Any]:
     return _out(loaded, entries, request=request, app_name=app_name, next_=next_)
 
 
-def shown(loaded: Loaded, name: str, *, app_name: str) -> dict[str, Any] | None:
-    """Experimental. One recipe with its spec (``blank``: the blank start alone). None: no such."""
-    if name == BLANK:
+def shown(loaded: Loaded, name: str, *, app_name: str) -> dict[str, Any]:
+    """Experimental. One recipe with its spec (``blank``: the blank start alone).
+
+    :raises CliError: ``C420`` when there is no such recipe, ``C421`` when it
+        cannot be used (:meth:`Loaded.require`).
+    """
+    recipe = loaded.require(name)
+    if recipe is None:
         next_ = "write it to karni.yaml, add what the request asks for, then karni plan --questions"
         return _out(loaded, [], request=None, app_name=app_name, next_=next_)
-    recipe = loaded.get(name)
-    if recipe is None:
-        return None
     next_ = (
         "write its spec to karni.yaml, change what the request asks for, then karni plan "
         "--questions"

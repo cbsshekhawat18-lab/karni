@@ -207,9 +207,29 @@ class Loaded:
 
     recipes: dict[str, Recipe] = field(default_factory=dict)
     problems: list[str] = field(default_factory=list)
+    #: The recipes left out because they cannot be used, by name, with the problem.
+    broken: dict[str, str] = field(default_factory=dict)
 
     def get(self, name: str) -> Recipe | None:
         return self.recipes.get(name)
+
+    def require(self, name: str) -> Recipe | None:
+        """Experimental. The recipe ``name`` (``None`` for the blank start).
+
+        :raises CliError: ``C421`` when it is there but cannot be used, ``C420``
+            when there is none of that name.
+        """
+        from karni_cli.project import CliError
+
+        if name == BLANK:
+            return None
+        recipe = self.recipes.get(name)
+        if recipe is not None:
+            return recipe
+        if name in self.broken:
+            raise CliError(f"The recipe {name!r} cannot be used: {self.broken[name]}", code="C421")
+        known = ", ".join([*sorted(self.recipes), BLANK])
+        raise CliError(f"There is no recipe {name!r} (there are: {known}).", code="C420")
 
 
 @dataclass(frozen=True)
@@ -345,6 +365,7 @@ def load(builtin: Traversable | Path | None = None, *, installed: bool = True) -
             loaded.recipes[name] = read_folder(folder, name=name, source=source)
         except RecipeError as exc:
             loaded.problems.append(str(exc))
+            loaded.broken.setdefault(name, str(exc))
     return loaded
 
 

@@ -175,6 +175,11 @@ def test_a_recipe_that_cannot_be_used_is_left_out_and_reported(builtin: Path, ru
     result = runner.invoke(app, ["recipes", "list"])
     assert result.exit_code == 0
     assert result.stderr.count("warning: C421: ") == 3
+    shown = runner.invoke(app, ["recipes", "show", "nospec"])
+    assert isinstance(shown.exception, CliError) and shown.exception.code == "C421"
+    assert "The recipe 'nospec' cannot be used: built in (nospec): no karni.yaml." in str(
+        shown.exception
+    )
 
 
 # where recipes come from --------------------------------------------------------------

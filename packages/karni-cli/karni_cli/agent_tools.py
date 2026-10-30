@@ -286,7 +286,8 @@ def modules(root: Path | None, name: str = "") -> dict[str, Any]:
 def recipes(root: Path | None, match: str = "", name: str = "") -> dict[str, Any]:
     """Experimental. ``karni recipes``: every recipe, the best few for ``match``, or ``name``.
 
-    ``name`` ``blank`` is the blank start. C420 when there is no such recipe.
+    ``name`` ``blank`` is the blank start. C420 when there is no such recipe, C421 when it
+    cannot be used.
     """
     from karni_cli import recipes as recipes_mod
     from karni_cli.recipes import output
@@ -294,11 +295,7 @@ def recipes(root: Path | None, match: str = "", name: str = "") -> dict[str, Any
     loaded = recipes_mod.load()
     app = recipes_mod.app_name(root)
     if name:
-        data = output.shown(loaded, name, app_name=app)
-        if data is None:
-            known = ", ".join([*sorted(loaded.recipes), recipes_mod.BLANK])
-            raise CliError(f"There is no recipe {name!r} (there are: {known}).", code="C420")
-        return data
+        return output.shown(loaded, name, app_name=app)
     if match:
         return output.matched(loaded, match, app_name=app)
     return output.listing(loaded, app_name=app)

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from karni_cli.project import CliError, find_project
+from karni_cli.project import find_project
 
 if TYPE_CHECKING:
     from karni_cli.recipes import Loaded
@@ -133,9 +133,6 @@ def show(
 
     loaded, app = _load()
     data = output.shown(loaded, name, app_name=app)
-    if data is None:
-        known = ", ".join([*sorted(loaded.recipes), "blank"])
-        raise CliError(f"There is no recipe {name!r} (there are: {known}).", code="C420")
     if as_json:
         typer.echo(json.dumps(data, indent=2))
         return
