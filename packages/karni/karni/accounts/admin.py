@@ -257,7 +257,7 @@ def grant_form(operator: Any) -> type[Any]:
                 return data  # the model's clean() reports it on its field
             reasons = grants.refusals(operator, checked)
             if reasons:
-                raise ValidationError(reasons, code="E363")
+                raise ValidationError([f"E363: {reason}" for reason in reasons], code="E363")
             return data
 
         def save(self, commit: bool = True) -> Any:

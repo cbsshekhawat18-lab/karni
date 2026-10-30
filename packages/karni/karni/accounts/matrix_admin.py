@@ -197,4 +197,4 @@ def _user_grants_url(model_admin: Any, user: Any) -> str:
         url = reverse(f"{model_admin.admin_site.name}:karni_accounts_usergrant_changelist")
     except NoReverseMatch:
         return ""
-    return f"{url}?user__id__exact={user.pk}"
+    return f"{url}?user={user.pk}"
