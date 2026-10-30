@@ -205,6 +205,20 @@ import page are gone, and the export actions stay. An inline of such a model
 writable, or any admin read-only. A model on a second database
 (`Karni.database`) is read and written there.
 
+## Tree models
+
+!!! warning "Experimental"
+    The tree changelist (`karni.admin.tree`, `tree_changelist_max_rows`) is
+    [experimental](stability.md#experimental-names).
+
+A [tree model](models.md#tree-models)'s changelist lists the rows in tree
+order, a parent and then its branch, with the name indented by depth
+(the `tree_label` column, first in the derived columns). Filters and search
+still apply, and a row whose parent they leave out starts a branch. A list
+sorted by a column is flat, and so is one with more than
+`tree_changelist_max_rows` (10,000) rows. Set it to 0 on an admin to turn
+tree order off.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

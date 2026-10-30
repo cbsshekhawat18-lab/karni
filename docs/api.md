@@ -379,6 +379,20 @@ and leaves them out of the OpenAPI document and the `Allow` header. Reads,
 lists the refused actions, and `is_read_only()` decides per viewset:
 override it to serve writes from one viewset.
 
+## Tree models
+
+!!! warning "Experimental"
+    The tree endpoints and filters are [experimental](stability.md#experimental-names).
+
+A viewset whose model is a [tree model](models.md#tree-models) also serves
+`tree/` (nested, a few levels at a time), `<id>/children/`,
+`<id>/ancestors/` and `<id>/move/`, and its list takes `?parent=<id>`,
+`?parent=null` and `?descendants_of=<id>`. A node with live children
+answers `DELETE` with 409 (`E341`) unless the request says `?branch=true`.
+Access applies to each of them, and `tree_max_nodes`, `tree_default_depth`
+and `tree_max_depth` bound `tree/`. See
+[the API of tree models](models.md#the-api).
+
 ## Deferred writes
 
 When a `karni.signals.pre_write` receiver defers a write (the

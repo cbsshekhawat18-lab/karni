@@ -151,7 +151,7 @@ def _pk_params(model: type[models.Model], values: Iterable[Any], connection: Any
 
 @dataclass(frozen=True)
 class Restriction:
-    """The rows a walk may enter: a condition on the table itself, or a subquery of keys.
+    """Experimental. The rows a walk may enter: a condition on the table, or a subquery of keys.
 
     ``inline`` is true for a condition over the model's own table only (the
     default manager's ``deleted_at IS NULL``, a ``Where`` on the row): the walk

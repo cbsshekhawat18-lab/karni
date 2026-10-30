@@ -487,7 +487,7 @@ def _self_parent(model: type) -> str | None:
 
 
 def check_hand_written_tree() -> list[Violation]:
-    """A project model with a ``parent`` foreign key to itself that is not a ``TreeModel``."""
+    """Experimental. A project model with a ``parent`` foreign key to itself, not a tree model."""
     from karni.models import TreeModel
 
     violations: list[Violation] = []
