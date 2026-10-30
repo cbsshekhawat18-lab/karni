@@ -38,7 +38,7 @@ the item it names is done.
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
 | A4 | A module catalog with a manifest per module and feature, plus `karni remove`. | none | done |
-| A5 | Clarifying questions derived from the spec and the module manifests, at most about five. | A1, A4 | planned |
+| A5 | Clarifying questions derived from the spec and the module manifests, at most about five. | A1, A4 | done |
 
 ### Phase C: agents
 

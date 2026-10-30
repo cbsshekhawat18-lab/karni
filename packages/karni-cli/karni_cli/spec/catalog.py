@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Final
 from karni_cli.catalog import load
 
 if TYPE_CHECKING:
-    from karni.catalog import Manifest
+    from karni.catalog import Ask, Manifest
 
 __all__ = [
     "FEATURES",
@@ -51,6 +51,7 @@ class KnownModule:
 
     ``options`` maps an option to the JSON types its value may have
     (``string``, ``integer``, ``boolean``, ``array``, ``object``, ``null``).
+    ``asks`` are the manifest's questions, in its order (``karni plan --questions``).
     """
 
     name: str
@@ -58,6 +59,8 @@ class KnownModule:
     options: dict[str, tuple[str, ...]]
     requires: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
+    title: str = ""
+    asks: tuple[Ask, ...] = ()
 
     @property
     def app(self) -> str:
@@ -89,24 +92,34 @@ def known_module(manifest: Manifest) -> KnownModule:
         },
         manifest.requires,
         manifest.conflicts,
+        manifest.title,
+        manifest.asks,
     )
 
 
 @dataclass(frozen=True)
 class KnownFeature:
-    """Experimental. One key of ``features:``: the setting that switches it, its extra."""
+    """Experimental. One key of ``features:``: the setting that switches it, its extra, its asks."""
 
     name: str
     switch: str
     extra: str
     requires: tuple[str, ...] = ()
     conflicts: tuple[str, ...] = ()
+    title: str = ""
+    asks: tuple[Ask, ...] = ()
 
 
 def known_feature(manifest: Manifest) -> KnownFeature:
     """Experimental. A feature manifest as the spec sees it."""
     return KnownFeature(
-        manifest.name, manifest.switch, manifest.extra, manifest.requires, manifest.conflicts
+        manifest.name,
+        manifest.switch,
+        manifest.extra,
+        manifest.requires,
+        manifest.conflicts,
+        manifest.title,
+        manifest.asks,
     )
 
 

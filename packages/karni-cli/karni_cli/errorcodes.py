@@ -1005,6 +1005,38 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
         "counter that starts at 0.",
     ),
+    # C400-C419 clarifying questions: karni plan --questions, karni spec answer
+    _c(
+        "C400",
+        "No open question has this id",
+        "karni spec answer (karni_cli.spec.questions)",
+        "karni spec answer writes the answer to a question karni plan --questions asks. The id "
+        "is not one of them: it is mistyped, or karni.yaml settles that question already (an "
+        "answered question is gone, and so is one the file was edited to settle).",
+        "Run karni plan --questions --max 0 for the open ids, then karni spec answer <id> "
+        "<value> with one of them.",
+    ),
+    _c(
+        "C401",
+        "The value is not an answer the question takes",
+        "karni spec answer (karni_cli.spec.questions)",
+        "A question with options takes one of them (several, comma-separated, when it says "
+        "so). A question without options takes a value of the types it lists (string, "
+        "integer, boolean, null, array).",
+        "Pass one of the options karni plan --questions prints under the question, or a value "
+        "of its type.",
+    ),
+    _c(
+        "C402",
+        "The answer cannot be written into karni.yaml",
+        "karni spec answer (karni_cli.spec.edit)",
+        "karni spec answer changes only the key the question names and keeps every other line "
+        "of the file. It writes nothing when it cannot: an anchor or alias shares the key, the "
+        "key sits in a layout it cannot place a key in, or the result would not pass karni "
+        "spec validate.",
+        "Set the key the message names in karni.yaml by hand, then run karni spec validate and "
+        "karni plan --questions.",
+    ),
 )
 
 

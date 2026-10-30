@@ -10,6 +10,8 @@ pages. Anything it cannot express stays in the project's own code.
 - :mod:`karni_cli.spec.validate`: ``karni spec validate``, every issue with its code and line.
 - :mod:`karni_cli.spec.export`: ``karni spec export``, the spec of an existing project.
 - :mod:`karni_cli.spec.normal`: one canonical form, to compare two specs.
+- :mod:`karni_cli.spec.questions`: ``karni plan --questions``, the gaps worth asking about.
+- :mod:`karni_cli.spec.edit`: one key set in a spec's text, every comment kept.
 
 See docs/app-spec.md.
 """

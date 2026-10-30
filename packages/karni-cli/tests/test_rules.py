@@ -19,8 +19,9 @@ FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 #: tiktoken check below is stricter when the package is available.
 # Measured 567 cl100k tokens with 44 rules (K013-K015 and K030-K032 debugging, K114 typed
 # fields, K115 and K116 lifecycle and capacity, K206 token classes, K309 public site, K307
-# naming the module catalog). The README quotes the figure.
-TOKEN_BUDGET = 570
+# naming the module catalog). K310 (karni plan --questions before karni build) costs 17
+# more: 584 with 45 rules, so the budget rose by 17, from 570. The README quotes the figure.
+TOKEN_BUDGET = 587
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:
@@ -67,6 +68,17 @@ def test_explain_procedure_and_json(runner, tmp_path, monkeypatch) -> None:
 
     assert runner.invoke(app, ["rules", "--explain", "K999"]).exit_code != 0
     assert runner.invoke(app, ["rules", "--procedure", "nope"]).exit_code != 0
+
+
+def test_the_questions_rule_is_listed_and_explained(runner, tmp_path, monkeypatch) -> None:
+    listing = _rules_output(runner, monkeypatch, tmp_path)
+    assert "K310 Before karni build: ask only karni plan --questions." in listing
+    explain = runner.invoke(app, ["rules", "--explain", "K310"])
+    assert explain.exit_code == 0, explain.output
+    out = explain.output
+    assert "run `karni plan --questions` before `karni build`" in out
+    assert "Never ask about anything karni.yaml already settles" in out
+    assert "karni spec answer <id> <value>" in out
 
 
 def test_explain_the_public_site_rule(runner, tmp_path, monkeypatch) -> None:

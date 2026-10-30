@@ -11,6 +11,25 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Clarifying questions (experimental): `karni plan --questions` and
+  `karni spec answer`.** Before `karni build`, `karni plan --questions
+  [--json] [--max N]` lists the few questions to ask the user, at most 5
+  by default, decided by fixed rules over `karni.yaml` and the module
+  manifests, never by a language model: an entity related to the user
+  without `owner`, an entity without `access` (the `--access` presets that
+  fit it), roles without a `default` for sign-ups, no `app.kind`, and each
+  unanswered ask of a listed module or of a feature the spec turns on.
+  The data model and access come first, then the kind and the modules,
+  then the features, and the same spec always gives the same questions.
+  Each has a stable id, one sentence, its options, a default and the key it
+  sets. `karni spec answer <id> <value>` writes the answer into karni.yaml
+  and keeps every other line, comments included. An unknown id (`C400`), a
+  value the question does not take (`C401`) and an answer that cannot be
+  written cleanly (`C402`) are refused. It reads only the spec, so it works
+  before the project exists. `--json` follows the published
+  `docs/assets/karni-questions.schema.json`. A new agent rule, `K310`,
+  tells agents to ask only these questions before `karni build`.
+  [docs/app-spec.md](docs/app-spec.md#questions).
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

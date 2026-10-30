@@ -103,6 +103,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Slash commands for the routine tasks (`/new-model`, `/new-page`, …) | `stable` | [new-model.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/.claude/commands/new-model.md) |
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
 | The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
+| Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier | `experimental` | Karni's own tests |
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
 | The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
@@ -1379,7 +1380,7 @@ karni design extract [OPTIONS] DIRECTORY
 
 #### `karni spec`
 
-The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export).
+The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
 
 ```
 karni spec COMMAND [ARGS]...
@@ -1417,6 +1418,22 @@ karni spec export [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+##### `karni spec answer`
+
+Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+
+The answer goes to the key the question names, and every other line of the file stays as it was: comments, order and layout. The question is then settled and karni plan --questions no longer asks it. Editing the file by hand settles it the same way. An id that is not an open question (C400) and a value the question does not take (C401) are refused, and so is an answer that cannot be written without changing anything else (C402): nothing is written then.
+
+```
+karni spec answer [OPTIONS] QUESTION_ID VALUE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `QUESTION_ID` (required) |  | The question's id, as karni plan --questions prints it. |
+| `VALUE` (required) |  | One of its options (several comma-separated when it takes several), or a value of its type when it has none. |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+
 #### `karni plan`
 
 Compare karni.yaml with the project: what karni build would change
@@ -1432,6 +1449,8 @@ karni plan [OPTIONS]
 | `--offline` |  | Do not open the database: risky changes show no row counts. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+| `--questions` |  | Print the questions to ask the user before karni build instead of the plan: the gaps of karni.yaml, most impact first. Reads only the spec. With --json, docs/assets/karni-questions.schema.json. |
+| `--max` INT RANGE |  | With --questions: show at most N (default 5, 0 shows them all). |
 
 #### `karni build`
 
@@ -2339,6 +2358,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C370`](errors.md#c370) | cli | A state field spec is invalid |
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
+| [`C400`](errors.md#c400) | cli | No open question has this id |
+| [`C401`](errors.md#c401) | cli | The value is not an answer the question takes |
+| [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
 
 ### Agent rules (`K`)
 
@@ -2388,6 +2410,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module (karni modules list). |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
+| [`K310`](errors.md#k310) | rule | Before karni build: ask only karni plan --questions. |
 
 ### ESLint plugin (`karni/…`)
 

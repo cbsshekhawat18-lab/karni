@@ -4,6 +4,7 @@
     karni spec validate --spec other.yaml --json
     karni spec export                    print the project's spec
     karni spec export -o karni.yaml      write it (--force replaces a file)
+    karni spec answer <id> <value>       write the answer to a karni plan --questions question
 
 See :mod:`karni_cli.spec` and docs/app-spec.md. The spec modules (and
 Pydantic) are imported inside the commands, so ``karni --help`` stays fast.
@@ -21,8 +22,8 @@ from karni_cli.project import CliError
 
 spec_app = typer.Typer(
     help=(
-        "The app spec, karni.yaml (experimental): check it (validate) or write it from an "
-        "existing project (export)."
+        "The app spec, karni.yaml (experimental): check it (validate), write it from an "
+        "existing project (export), or answer a question of karni plan --questions (answer)."
     ),
     no_args_is_help=True,
     add_completion=False,
@@ -130,3 +131,91 @@ def export(
     for line in exported.left_out:
         typer.echo(f"not in the spec: {line}")
     typer.echo(f"next: karni spec validate --spec {output}")
+
+
+@spec_app.command("answer")
+def answer(
+    question_id: str = typer.Argument(
+        ..., help="The question's id, as karni plan --questions prints it."
+    ),
+    value: str = typer.Argument(
+        ...,
+        help="One of its options (several comma-separated when it takes several), or a value "
+        "of its type when it has none.",
+    ),
+    spec: Path | None = typer.Option(
+        None,
+        "--spec",
+        help="The spec file. Default: karni.yaml in the project root, else in this directory.",
+        show_default=False,
+    ),
+) -> None:
+    """Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+
+    The answer goes to the key the question names, and every other line of the
+    file stays as it was: comments, order and layout. The question is then
+    settled and karni plan --questions no longer asks it. Editing the file by
+    hand settles it the same way. An id that is not an open question (C400) and
+    a value the question does not take (C401) are refused, and so is an answer
+    that cannot be written without changing anything else (C402): nothing is
+    written then.
+    """
+    from karni_cli.spec import questions as questions_mod
+    from karni_cli.spec.edit import EditError, set_values
+    from karni_cli.spec.validate import validate_text
+
+    path = spec or _default_spec()
+    if not path.is_file():
+        raise CliError(
+            f"No spec at {path}. Write one (docs/app-spec.md), export the project's with "
+            "karni spec export -o karni.yaml, or pass --spec <file>.",
+            code="C210",
+        )
+    shown = path.name if spec is None else str(spec)
+    text = path.read_text(encoding="utf-8")
+    report = validate_text(text)
+    if not report.ok or report.spec is None or report.source is None:
+        for issue in report.issues:
+            typer.echo(issue.render(shown))
+        count = len(report.issues)
+        typer.echo(f"{shown}: {count} problem{'s' if count != 1 else ''}, so no questions.")
+        raise typer.Exit(1)
+    found = {q.id: q for q in questions_mod.questions(report.spec, report.source.data)}
+    question = found.get(question_id)
+    if question is None:
+        open_ids = ", ".join(found) or "none"
+        raise CliError(
+            f"{question_id!r} is not an open question of {shown} (open: {open_ids}). An "
+            "answered question is gone: karni plan --questions lists the open ones.",
+            code="C400",
+        )
+    try:
+        parsed = question.parse(value)
+        writes = question.writes(parsed)
+    except questions_mod.AnswerError as exc:
+        raise CliError(str(exc), code="C401") from None
+    try:
+        changed = set_values(text, writes)
+    except EditError as exc:
+        raise CliError(
+            f"{shown}: the answer to {question_id} cannot be written without changing anything "
+            f"else: {exc} Nothing was written. Set {question.key} by hand.",
+            code="C402",
+        ) from None
+    after = validate_text(changed)
+    if not after.ok or after.spec is None or after.source is None:
+        problems = " ".join(issue.render(shown) for issue in after.issues)
+        raise CliError(
+            f"{shown}: the answer to {question_id} would make the spec invalid ({problems}). "
+            f"Nothing was written. Set {question.key} by hand.",
+            code="C402",
+        )
+    path.write_text(changed, encoding="utf-8")
+    keys = ", ".join(".".join(str(part) for part in where) for where, _ in writes)
+    typer.echo(f"{shown}: {keys} set ({question_id} answered).")
+    left = len(questions_mod.questions(after.spec, after.source.data))
+    if left:
+        noun = "question" if left == 1 else "questions"
+        typer.echo(f"next: karni plan --questions ({left} {noun} open)")
+    else:
+        typer.echo("next: karni build (no question is open)")

@@ -6,6 +6,9 @@ string plain unless YAML would read it as something else, then double-quoted.
 Every choice is checked by reading the text back, so :func:`dump` always
 round-trips through ``yaml.safe_load``.
 
+:func:`entry` and :func:`flow` write one part in the same style, for
+:mod:`karni_cli.spec.edit`, which changes one key of an existing file.
+
 Override / escape hatch: the data is plain, so ``yaml.safe_dump`` writes it
 too, without the flow style and the comments.
 """
@@ -17,7 +20,7 @@ from typing import Any
 
 import yaml
 
-__all__ = ["dump"]
+__all__ = ["dump", "entry", "flow"]
 
 WIDTH = 96
 #: Mappings always written one key per line (they are what a reader scans).
@@ -95,6 +98,17 @@ def _entry(head: str, item: Any, indent: int, name: str) -> list[str]:
     if flow is not None and len(head) + 1 + len(flow) <= WIDTH:
         return [f"{head} {flow}"]
     return [head, *_lines(item, indent + 2, name)]
+
+
+def entry(key: str, value: Any, indent: int = 0) -> list[str]:
+    """Experimental. The lines of one ``key: value`` entry at ``indent``, as :func:`dump` writes it."""
+    return _entry(f"{' ' * indent}{_key(key)}:", value, indent, key)
+
+
+def flow(value: Any) -> str:
+    """Experimental. ``value`` in flow style, as :func:`dump` writes it inside ``{...}``."""
+    written = _flow(value)
+    return json.dumps(value, ensure_ascii=False) if written is None else written
 
 
 def dump(data: dict[str, Any], *, header: list[str] | None = None) -> str:

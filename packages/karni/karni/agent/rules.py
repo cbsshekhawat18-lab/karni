@@ -436,6 +436,30 @@ RULES: tuple[Rule, ...] = (
             "editable content, SEO and public forms."
         ),
     ),
+    Rule(
+        code="K310",
+        category="architecture",
+        severity="must",
+        summary="Before karni build: ask only karni plan --questions.",
+        rule=(
+            "When the app is described in karni.yaml, run `karni plan --questions` before "
+            "`karni build` and ask the user only the questions it prints, in its order, with "
+            "their options and defaults. Write each answer with `karni spec answer <id> "
+            "<value>` (or in karni.yaml), and run it again until none is open. Never ask about "
+            "anything karni.yaml already settles, nor about the stack, names, labels, colours "
+            "or page titles: those are yours to choose."
+        ),
+        rationale=(
+            "Karni chooses the questions with fixed rules over the spec and the module "
+            "manifests (owners, access, the sign-up role, the kind, each module's and feature's "
+            "asks), so every agent asks the same few, and the user is never asked what the "
+            "spec or Karni's defaults already decide."
+        ),
+        fix=(
+            "Run `karni plan --questions`, ask the user those questions only, then `karni spec "
+            "answer <id> <value>` for each answer."
+        ),
+    ),
     # backend
     Rule(
         code="K101",

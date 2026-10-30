@@ -1,5 +1,5 @@
 ---
-description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan, karni build and published JSON Schemas."
+description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and its questions, karni build and published JSON Schemas."
 ---
 
 # The app spec: `karni.yaml`
@@ -7,11 +7,12 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
 !!! warning "Experimental"
     Everything on this page is [experimental](stability.md#experimental-names):
     the `karni.yaml` format, `karni spec validate`, `karni spec export`,
-    `karni plan`, `karni build`, `manage.py karni_facts`, `manage.py
-    karni_rows`, `manage.py karni_makemigrations`, `karni.facts`, the
-    `karni_cli.spec` and `karni_cli.builder` packages, `.karni/build.json` and
-    the three JSON Schemas. They may change in a minor release, and each
-    change is in the CHANGELOG. The error codes keep their meaning.
+    `karni plan`, `karni plan --questions`, `karni spec answer`, `karni
+    build`, `manage.py karni_facts`, `manage.py karni_rows`, `manage.py
+    karni_makemigrations`, `karni.facts`, the `karni_cli.spec` and
+    `karni_cli.builder` packages, `.karni/build.json` and the four JSON
+    Schemas. They may change in a minor release, and each change is in the
+    CHANGELOG. The error codes keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
 roles, built-in features, modules and pages. An AI agent turns a one-line
@@ -19,8 +20,9 @@ request into a spec, and Karni turns the spec into code without a language
 model. This release reads and checks a spec (`karni spec validate`),
 writes the spec of an existing project (`karni spec export`), shows what
 would change to make the project match a spec ([`karni
-plan`](#karni-plan)) and makes the change ([`karni build`](#karni-build)),
-without touching the code written by hand.
+plan`](#karni-plan)), lists the few [questions](#questions) to ask the user
+first, and makes the change ([`karni build`](#karni-build)), without
+touching the code written by hand.
 
 The spec describes only what `karni make`, `karni add` and the settings can
 already do. Each key maps to one of them. Anything it cannot express stays
@@ -557,6 +559,137 @@ with problems gives `valid: false` and its `issues`, as
 |---|---|
 | [C210](errors.md#c210) | no spec file |
 | [C250](errors.md#c250) | `karni plan` cannot read the project (`manage.py karni_facts` failed) |
+
+## Questions
+
+!!! warning "Experimental"
+    `karni plan --questions`, its `--json` output and schema, `karni spec
+    answer`, the question ids and the rules that choose the questions are
+    experimental.
+
+Before `karni build`, the agent asks the user only what the spec leaves
+open and what matters. Karni decides which questions, with fixed rules over
+`karni.yaml` and the manifests of [the module
+catalog](modules.md#the-module-catalog). No language model is involved, and
+the same spec gives the same questions in the same order.
+
+```sh
+karni plan --questions                 # at most 5, most impact first
+karni plan --questions --max 0         # all of them (--max N: at most N)
+karni plan --questions --json
+karni spec answer classes.Booking.owner member
+```
+
+It reads only the spec. The project and its database are not opened, so it
+works before the project exists. The example at the top of this page,
+without these keys:
+
+- `kind: site+app` of `app`
+- `provider: stripe` of the payments module
+- `access: {read: public, write: "role:staff"}` of Studio
+- `owner: member` of Booking
+- `default: true` of the member role
+
+gives:
+
+```text
+5 of 7 questions for the user before karni build, most impact first:
+1. classes.Booking.owner: Who owns a Booking: the member?
+   - member: the member (fk:User) (default)
+   - created_by: whoever created it
+2. classes.Studio.access: Who may see and change studios?
+   - granted: what each role's grants allow (default)
+   - authenticated: any signed-in user
+   - public-read: anyone sees them, only staff change them
+   - public-create: anyone creates them (a public form), only staff see and change them
+   - staff: only staff
+3. roles.default: Which role does someone who signs up get: instructor, member or none?
+   - instructor: Instructor, grants classes.session own:instructor, classes.booking custom:taught_by
+   - member: Member, grants classes.booking own (default)
+   - none: no role, staff give each account its role
+4. app.kind: What kind of project is it: an app, a public site or both?
+   - app: React screens behind sign-in (default)
+   - site: public pages the server renders
+   - site+app: both, a public site and an app
+5. modules.payments.provider: Which payment provider: Stripe or Razorpay?
+   - stripe (default)
+   - razorpay
+   - test
+next: ask the user only these, then karni spec answer <id> <value> for each (or edit karni.yaml), and karni plan --questions again.
+```
+
+### What makes a question
+
+A question is a gap: a key the spec does not write, where the answer changes
+who sees what or how a module works. The kinds of gap, in the order of
+their impact:
+
+| Area | The gap | The options |
+|---|---|---|
+| `owner` | an entity with a relation to the user (`fk:User`, `o2o:User`, `m2m:User`) and no `owner` | each of those fields (the first is the default), and `created_by`, whoever created the row, which the own scope uses without an owner. An external entity, or one on another database, has no `created_by` |
+| `access` | an entity without `access` | the [`--access` presets](#access) that fit it: `granted` (the default, what no `access` means), `owned:<field>` for its owner and each relation to the user, `authenticated`, and `public-read`, `public-create` and `staff` when the spec has the `staff` role (with another system role: `public-read:<role>`, `public-create:<role>` and `role:<role>`) |
+| `roles` | roles declared and none with `default` | each role that is not a system role, and `none`. The default is the role that grants least. Sign-up is open in every project a spec describes (`KARNI_ACCOUNTS_REGISTRATION`), and an account without a role is granted nothing. A spec without `roles` has Karni's shipped roles and no such question |
+| `app` | no `app.kind` | `app` (the default), `site` and `site+app` |
+| `modules` | an ask of a listed module's manifest whose option the spec does not set. The site module counts when the kind has a site | the manifest's options and default, or any value of the option's type |
+| `features` | an ask of a feature the spec turns on, when karni.yaml has a key for it (`terms.required`) | the manifest's options and default |
+
+The data model and access come first, then the kind and the modules, then
+the features. Within an area the order is the spec's (apps, entities,
+modules), then the manifest's order of its asks. An ask whose setting
+karni.yaml has no key for (how long a sign-in code lives, who may sign up
+with a code) is never a question: `karni modules show <name>` prints it,
+and its setting goes in the settings. Nothing cosmetic is ever asked:
+names, labels, colours, page titles, field groups, pages and seed counts
+are the agent's to choose.
+
+A key written in the file settles its question, even when it holds the
+default: `owner: created_by`, `access: {read: granted, write: granted}`,
+`default: false` on the roles. A key that starts with `x-` settles nothing.
+
+Each question has an `id`, the same for the same gap whatever else the spec
+says (`classes.Booking.owner`, `classes.Studio.access`, `roles.default`,
+`app.kind`, `modules.payments.provider`, `features.terms.required`), one
+sentence to ask, its options with what each means, its default, and the
+dotted `key` of karni.yaml the answer sets.
+
+### Answers
+
+`karni spec answer <id> <value>` writes the answer into karni.yaml, and the
+question is gone:
+
+```text
+$ karni spec answer classes.Booking.owner member
+karni.yaml: apps.classes.entities.Booking.owner set (classes.Booking.owner answered).
+next: karni plan --questions (6 questions open)
+```
+
+Only that key changes. The comments, the order and the layout of every
+other line stay as they are: a new key goes at the end of its mapping (`,
+key: value` before the `}` of a flow mapping), and an empty module
+(`payments:`) takes its options on its own line. An access answer is
+written in the preset's shape (`owned:member` is `access: {read:
+"owned:member", write: "owned:member"}`), and the sign-up role as `default:
+true` on that role (`none`: `default: false` on each role that is not a
+system role). Editing the file by hand settles a question the same way.
+
+| Code | Problem |
+|---|---|
+| [C400](errors.md#c400) | the id is not an open question: mistyped, or settled already |
+| [C401](errors.md#c401) | the value is not one of the options, or not of the question's type |
+| [C402](errors.md#c402) | the answer cannot be written without changing anything else (an anchor shares the key), or it would make the spec invalid. Nothing is written |
+
+### `--json` of the questions
+
+`--json` prints `{version, file, valid, issues, questions, total, max}`.
+Each question is `{id, area, question, options: [{value, label}], default,
+multiple, types, key}`, `total` counts every open question, and `max` is
+the cap (`null` with `--max 0`). A spec with problems gives `valid: false`,
+its `issues` and no questions. The schema is published as
+[`karni-questions.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-questions.schema.json)
+(in the repository, `docs/assets/karni-questions.schema.json`, regenerated
+with `python -m karni_cli.spec.questions >
+docs/assets/karni-questions.schema.json`). `version` moves only for a
+breaking change of the output.
 
 ## `karni build`
 

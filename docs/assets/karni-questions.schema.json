@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cbsshekhawat18-lab.github.io/karni/assets/karni-questions.schema.json",
+  "title": "karni plan --questions --json",
+  "description": "Experimental. The output of karni plan --questions --json.",
+  "$defs": {
+    "_IssueOut": {
+      "additionalProperties": false,
+      "description": "A problem in the spec, as karni spec validate --json reports it.",
+      "properties": {
+        "code": {
+          "description": "The error code (karni explain <code>).",
+          "type": "string"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The 1-based line, when known."
+        },
+        "path": {
+          "description": "The dotted path of the key.",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong.",
+          "type": "string"
+        },
+        "fix": {
+          "description": "How to fix it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "line",
+        "path",
+        "message",
+        "fix"
+      ],
+      "type": "object"
+    },
+    "_OptionOut": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The value karni spec answer takes and writes."
+        },
+        "label": {
+          "description": "What it means, in plain words.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "label"
+      ],
+      "type": "object"
+    },
+    "_QuestionOut": {
+      "additionalProperties": false,
+      "description": "One question for the user.",
+      "properties": {
+        "id": {
+          "description": "Stable for the same gap: karni spec answer <id> <value>.",
+          "type": "string"
+        },
+        "area": {
+          "description": "The kind of gap, most impact first: owner, access, roles, app, modules, features.",
+          "enum": [
+            "owner",
+            "access",
+            "roles",
+            "app",
+            "modules",
+            "features"
+          ],
+          "type": "string"
+        },
+        "question": {
+          "description": "One sentence to ask the user.",
+          "type": "string"
+        },
+        "options": {
+          "description": "The answers to choose from. Empty: a free value of one of types.",
+          "items": {
+            "$ref": "#/$defs/_OptionOut"
+          },
+          "type": "array"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The answer when the user has no preference. null when there is none."
+        },
+        "multiple": {
+          "description": "true: the answer is several options, comma-separated.",
+          "type": "boolean"
+        },
+        "types": {
+          "description": "The JSON types the value takes.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "key": {
+          "description": "The dotted path of the karni.yaml key the answer sets.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "area",
+        "question",
+        "options",
+        "default",
+        "multiple",
+        "types",
+        "key"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "The version of this output: 1.",
+      "type": "integer"
+    },
+    "file": {
+      "description": "The spec file, as given.",
+      "type": "string"
+    },
+    "valid": {
+      "description": "false when the spec has problems: then issues lists them.",
+      "type": "boolean"
+    },
+    "issues": {
+      "description": "The spec's problems (karni spec validate's).",
+      "items": {
+        "$ref": "#/$defs/_IssueOut"
+      },
+      "type": "array"
+    },
+    "questions": {
+      "description": "The questions to ask, most impact first, at most max of them.",
+      "items": {
+        "$ref": "#/$defs/_QuestionOut"
+      },
+      "type": "array"
+    },
+    "total": {
+      "description": "How many questions the spec leaves open in all.",
+      "type": "integer"
+    },
+    "max": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The cap (--max). null: no cap (--max 0)."
+    }
+  },
+  "required": [
+    "version",
+    "file",
+    "valid",
+    "issues",
+    "questions",
+    "total",
+    "max"
+  ],
+  "type": "object"
+}

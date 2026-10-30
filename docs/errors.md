@@ -3526,6 +3526,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
 
+<a id="c400"></a>
+
+### C400: No open question has this id
+
+*karni command* · from `karni spec answer (karni_cli.spec.questions)`
+
+**Why Karni objects.** karni spec answer writes the answer to a question karni plan --questions asks. The id is not one of them: it is mistyped, or karni.yaml settles that question already (an answered question is gone, and so is one the file was edited to settle).
+
+**Fix.** Run karni plan --questions --max 0 for the open ids, then karni spec answer <id> <value> with one of them.
+
+<a id="c401"></a>
+
+### C401: The value is not an answer the question takes
+
+*karni command* · from `karni spec answer (karni_cli.spec.questions)`
+
+**Why Karni objects.** A question with options takes one of them (several, comma-separated, when it says so). A question without options takes a value of the types it lists (string, integer, boolean, null, array).
+
+**Fix.** Pass one of the options karni plan --questions prints under the question, or a value of its type.
+
+<a id="c402"></a>
+
+### C402: The answer cannot be written into karni.yaml
+
+*karni command* · from `karni spec answer (karni_cli.spec.edit)`
+
+**Why Karni objects.** karni spec answer changes only the key the question names and keeps every other line of the file. It writes nothing when it cannot: an anchor or alias shares the key, the key sits in a layout it cannot place a key in, or the result would not pass karni spec validate.
+
+**Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4057,6 +4087,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A marketing site must be crawlable and faithful to the client's design, which the app-screen rules forbid for good reason. One Django app with plain views keeps the API, the admin and the access layer as the only write path.
 
 **Fix.** Run `karni make site <app>`, then `karni import design <dir> --app <app> --editable` for a designer's pages or `karni make view <name> --app <app>` per page, and `karni make form` for each form. Karni's docs page public-site covers editable content, SEO and public forms.
+
+<a id="k310"></a>
+
+### K310: Before karni build: ask only karni plan --questions.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** When the app is described in karni.yaml, run `karni plan --questions` before `karni build` and ask the user only the questions it prints, in its order, with their options and defaults. Write each answer with `karni spec answer <id> <value>` (or in karni.yaml), and run it again until none is open. Never ask about anything karni.yaml already settles, nor about the stack, names, labels, colours or page titles: those are yours to choose.
+
+**Why Karni objects.** Karni chooses the questions with fixed rules over the spec and the module manifests (owners, access, the sign-up role, the kind, each module's and feature's asks), so every agent asks the same few, and the user is never asked what the spec or Karni's defaults already decide.
+
+**Fix.** Run `karni plan --questions`, ask the user those questions only, then `karni spec answer <id> <value>` for each answer.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

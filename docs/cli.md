@@ -1287,7 +1287,7 @@ karni design extract [OPTIONS] DIRECTORY
 
 ### `karni spec`
 
-The app spec, karni.yaml (experimental): check it (validate) or write it from an existing project (export).
+The app spec, karni.yaml (experimental): check it (validate), write it from an existing project (export), or answer a question of karni plan --questions (answer).
 
 ```
 karni spec COMMAND [ARGS]...
@@ -1325,6 +1325,22 @@ karni spec export [OPTIONS]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+#### `karni spec answer`
+
+Experimental. Write the answer to a question of karni plan --questions into karni.yaml.
+
+The answer goes to the key the question names, and every other line of the file stays as it was: comments, order and layout. The question is then settled and karni plan --questions no longer asks it. Editing the file by hand settles it the same way. An id that is not an open question (C400) and a value the question does not take (C401) are refused, and so is an answer that cannot be written without changing anything else (C402): nothing is written then.
+
+```
+karni spec answer [OPTIONS] QUESTION_ID VALUE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `QUESTION_ID` (required) |  | The question's id, as karni plan --questions prints it. |
+| `VALUE` (required) |  | One of its options (several comma-separated when it takes several), or a value of its type when it has none. |
+| `--spec` PATH |  | The spec file. Default: karni.yaml in the project root, else in this directory. |
+
 ### `karni plan`
 
 Compare karni.yaml with the project: what karni build would change
@@ -1340,6 +1356,8 @@ karni plan [OPTIONS]
 | `--offline` |  | Do not open the database: risky changes show no row counts. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+| `--questions` |  | Print the questions to ask the user before karni build instead of the plan: the gaps of karni.yaml, most impact first. Reads only the spec. With --json, docs/assets/karni-questions.schema.json. |
+| `--max` INT RANGE |  | With --questions: show at most N (default 5, 0 shows them all). |
 
 ### `karni build`
 

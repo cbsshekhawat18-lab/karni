@@ -183,6 +183,10 @@ Experimental now:
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
   `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
   `karni.facts` and the `karni_cli.spec` package.
+- [Clarifying questions](app-spec.md#questions): `karni plan --questions`
+  (its `--max`, its `--json` output and schema, the question ids and the
+  rules that choose them), `karni spec answer`, `karni_cli.spec.questions`
+  and `karni_cli.spec.edit`.
 - [`karni build`](app-spec.md#karni-build): the command, its `--json` output
   and schema, the layout of the files it writes (`<app>/karni/`,
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`

@@ -327,6 +327,13 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
+        "Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth "
+        "asking the user (owners, access, the sign-up role, the kind, each module's and "
+        "feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer "
+        "keeping the file's comments. Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni build`: the spec applied in one command, idempotently. Karni's code in files of "
         "its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit "
         "found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and "
