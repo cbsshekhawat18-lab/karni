@@ -514,6 +514,77 @@ def test_pk_external_and_database_changes(base: Project) -> None:
     assert _only(removed, "stock.Part.sku").risky
 
 
+# trees -------------------------------------------------------------------------------------
+
+
+def _tree_facts(base: Project) -> dict[str, Any]:
+    facts = json.loads(json.dumps(base.facts))
+    facts["apps"].append(
+        {
+            "label": "geo",
+            "name": "geo",
+            "models": [
+                _model("geo.Region", base_model=True, pk="uuid", tree="tree"),
+                _model("geo.Category", base_model=True, pk="uuid", tree="ordered"),
+                _model("geo.Zone", base_model=True, pk="uuid", tree=None),
+            ],
+        }
+    )
+    return facts
+
+
+TREES = """\
+  geo:
+    entities:
+      Region: {fields: {sku: "str:20"}, access: code, tree: true}
+      Category: {fields: {sku: "str:20"}, access: code, tree: ordered, order: [position]}
+      Zone: {fields: {sku: "str:20"}, access: code}
+"""
+
+
+def _tree_plan(base: Project, text: str) -> Plan:
+    facts = _tree_facts(base)
+    facts["apps"][-1]["models"][1]["ordering"] = ["position"]
+    report = validate_text(BASE.replace("pages:\n", text + "pages:\n"))
+    assert report.ok and report.spec is not None, report.issues
+    return plan_project(report.spec, facts, base.root, file="karni.yaml")
+
+
+def test_a_tree_is_exported_and_plans_nothing(base: Project) -> None:
+    exported = build(_tree_facts(base), base.root).data["apps"]["geo"]["entities"]
+    assert exported["Region"]["tree"] is True and exported["Category"]["tree"] == "ordered"
+    assert "tree" not in exported["Zone"]
+    assert _tree_plan(base, TREES).changes == []
+
+
+def test_a_change_between_flat_and_tree_is_risky(base: Project) -> None:
+    text = """\
+  geo:
+    entities:
+      Region: {fields: {sku: "str:20"}, access: code}
+      Category: {fields: {sku: "str:20"}, access: code, tree: true}
+      Zone: {fields: {sku: "str:20"}, access: code, tree: true}
+"""
+    plan = _tree_plan(base, text)
+    flat = _only(plan, "geo.Region tree")
+    assert flat.detail == "true -> false" and flat.risky
+    assert flat.reason == "the parent column is dropped, and every row's place in the tree with it"
+    assert [count.request() for count in flat.counts] == [
+        {"model": "geo.Region", "field": "parent", "kind": "set"}
+    ]
+    unordered = _only(plan, "geo.Category tree")
+    assert unordered.detail == "ordered -> true" and unordered.risky
+    made = _only(plan, "geo.Zone tree")
+    assert made.detail == "false -> true" and made.risky
+    assert made.reason is not None and made.reason.startswith("every row becomes a root")
+    assert [c.target for c in plan.changes if c.area == "migrations"] == ["geo"]
+    ordered = _tree_plan(base, TREES.replace("tree: true}", "tree: ordered}"))
+    added = _only(ordered, "geo.Region tree")
+    assert added.detail == "true -> ordered" and not added.risky  # a position column is added
+    new = _tree_plan(base, TREES + "      Area: {fields: {name: str}, tree: ordered}\n")
+    assert _only(new, "geo.Area").detail == "(name str) tree ordered"
+
+
 def test_database_must_be_an_alias_the_project_has(
     base: Project, monkeypatch: pytest.MonkeyPatch
 ) -> None:

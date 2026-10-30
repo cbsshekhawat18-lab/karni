@@ -20,7 +20,8 @@ spec has no key for, hand-written pages and grants the spec cannot name. The
 list is printed, and written as comments at the top of the file.
 
 An entity is a model on ``BaseModel`` or ``BigIntBaseModel`` (its ``pk``
-written when it differs from the project's ``KARNI_PK``), an external model
+written when it differs from the project's ``KARNI_PK``, and ``tree`` when
+it inherits ``TreeModel`` or ``OrderedTreeModel``), an external model
 (``external``, ``table``, ``writable``, ``database``), or a model Karni
 manages on another database (``database``, on ``UUIDModel`` or
 ``IntegerKeyModel``).
@@ -47,6 +48,7 @@ from karni_cli.project import CliError
 from karni_cli.spec import emit, schema
 from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS, module_setting
 from karni_cli.spec.normal import role_name
+from karni_cli.spec.validate import TREE_FIELDS
 
 __all__ = [
     "Exported",
@@ -609,6 +611,9 @@ def _entity(
         entity["pk"] = model["pk"]
     if isinstance(database, str) and database and database != "default":
         entity["database"] = database
+    tree = model.get("tree")  # the facts leave parent (and position) out of the fields
+    if tree in ("tree", "ordered"):
+        entity["tree"] = True if tree == "tree" else "ordered"
     for option, key in KARNI_KEYS.items():
         if option in karni:
             value = karni.pop(option)
@@ -648,7 +653,7 @@ def _entity(
 
 def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> None:
     """Drop what names a field the spec left out, so the export always validates."""
-    fields = set(entity["fields"])
+    fields = set(entity["fields"]) | set(TREE_FIELDS.get(entity.get("tree", False), ()))
     known = fields | {"id", "created_at", "updated_at"}
 
     def keep(value: str, names: set[str]) -> bool:

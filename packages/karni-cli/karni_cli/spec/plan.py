@@ -12,7 +12,8 @@ a field or an entity removed, a field's type changed (a shorter length, a
 field that becomes required, a choice or state dropped, another kind), a
 relation pointed at another entity, a module removed, an entity's key type
 switched (out of scope for ``karni build``), an entity moved to another
-database, and access widened (writes from a role to every signed-in user or
+database, an entity made a tree or flat again or its siblings' order dropped
+(``tree``, experimental), and access widened (writes from a role to every signed-in user or
 to everyone, reads to everyone, a role's grant from its own rows to all).
 ``karni build`` (app-builder item A3) refuses them without
 ``--allow-destructive``. Each risky change names the rows it affects, as a
@@ -107,13 +108,14 @@ _FEATURE_SETTINGS: Final = {
     "terms": "KARNI_TERMS",
 }
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
-_MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database"})
+_MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree"})
 _OPTIONS: Final = (
     "pk",
     "external",
     "table",
     "writable",
     "database",
+    "tree",
     "key",
     "search",
     "owner",
@@ -827,6 +829,25 @@ def _entities_and_fields(ctx: _Context) -> None:
         ctx.migrate(old_label)
 
 
+def _tree_risk(old: Any, new: Any, label: str) -> tuple[str | None, tuple[Count, ...]]:
+    """Experimental. ``(reason, counts)`` for a ``tree`` change. ``reason`` ``None``: not risky.
+
+    Making an entity a tree or flat again changes its table, its delete and
+    its API, so both are risky. Between ``true`` and ``ordered`` only dropping
+    ``position`` is: adding it loses nothing.
+    """
+    if not old and new:
+        why = "every row becomes a root, and a node with children can no longer be deleted alone"
+        return why, (Count(label),)
+    if old and not new:
+        why = "the parent column is dropped, and every row's place in the tree with it"
+        return why, (Count(label, "parent", "set"),)
+    if old == "ordered" and new is True:
+        why = "the position column is dropped, and the order of siblings with it"
+        return why, (Count(label),)
+    return None, ()
+
+
 def _options(
     ctx: _Context, label: str, old_label: str, before: dict[str, Any], after: dict[str, Any]
 ) -> None:
@@ -835,7 +856,11 @@ def _options(
         if old == new:
             continue
         risky, reason = False, None
-        if key == "pk" and old is not None and new is not None:
+        counts: tuple[Count, ...] = ()
+        if key == "tree":
+            reason, counts = _tree_risk(old, new, old_label)
+            risky = reason is not None
+        elif key == "pk" and old is not None and new is not None:
             risky = True
             reason = (
                 "switching the key type of a table that holds rows is out of scope, so karni "
@@ -852,7 +877,7 @@ def _options(
                 f"{_show(old)} -> {_show(new)}",
                 risky=risky,
                 reason=reason,
-                counts=(Count(old_label),) if risky else (),
+                counts=counts or ((Count(old_label),) if risky else ()),
             )
         )
         if key in _MIGRATED:
