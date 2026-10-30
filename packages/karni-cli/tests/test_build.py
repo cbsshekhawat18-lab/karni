@@ -63,6 +63,7 @@ def _env(mp: pytest.MonkeyPatch, root: Path) -> None:
     mp.setenv("KARNI_SOCIAL_GOOGLE_CLIENT_IDS", "google-client")
     mp.setenv("KARNI_SOCIAL_APPLE_CLIENT_IDS", "apple-client")
     mp.setenv("PYTHONDONTWRITEBYTECODE", "1")
+    mp.setenv("KARNI_CACHE", "locmem")  # karni new's .env points at the compose Redis
     for name in ("DJANGO_SETTINGS_MODULE", "KARNI_PAYMENTS_PROVIDER", "KARNI_2FA", "CI"):
         mp.delenv(name, raising=False)
     mp.chdir(root)
@@ -179,7 +180,7 @@ def test_a_spec_builds_an_empty_project_that_passes_its_tests_and_check(harbour:
     assert steps["modules"].endswith("karni add payments")
     assert "classes/migrations/0001_initial.py" in steps["migrations"]
     assert "Studio 3, Session 40, Booking 200" in steps["seed"]
-    assert "6 passed" in steps["test"]
+    assert " passed in " in steps["test"] and "failed" not in steps["test"]  # the site app's too
     assert steps["check"].split() == ["check", "ok"]
     assert lines[-1] == "Built: the project matches karni.yaml."
     # Karni's code and the project's live in separate files
