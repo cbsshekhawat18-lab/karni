@@ -12,7 +12,7 @@ from django.test.utils import CaptureQueriesContext
 
 from karni.exceptions import KarniValueError
 from karni.tree import tree_order
-from tests.testapp.models import Category, Region, Venue
+from tests.testapp.models import Category, Product, Region, Venue
 from tests.tree.build import LEVELS, bulk_tree, regions
 
 pytestmark = pytest.mark.django_db
@@ -139,6 +139,20 @@ def test_a_filtered_queryset_walks_only_its_rows() -> None:
     # Filter after the walk to keep the branch and narrow the result.
     branch = Region.objects.descendants(tree.europe).exclude(code="fr")
     assert set(names(branch)) == {"Paris", "Germany", "Berlin"}
+
+
+def test_a_restriction_with_a_join_walks_through_a_subquery() -> None:
+    tree = regions()
+    shop = Product.objects.create(name="Atlas")
+    shop.regions.set([tree.europe, tree.france, tree.germany])
+    sold = Region.objects.filter(products__name="Atlas")  # a join: a fenced subquery of keys
+    assert set(names(sold.descendants(tree.europe))) == {"France", "Germany"}
+    plain = str(Region.objects.descendants(tree.europe).query)
+    assert "karni_keys" not in plain  # the default manager's condition is inlined
+    joined = str(sold.descendants(tree.europe).query)
+    assert "karni_keys" in joined
+    if connection.vendor == "postgresql":
+        assert "OFFSET 0" in joined
 
 
 def test_a_walk_refuses_what_names_no_node() -> None:

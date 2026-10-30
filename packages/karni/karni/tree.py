@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from django.db.backends.base.base import BaseDatabaseWrapper
 
 __all__ = [
+    "Restriction",
     "TreeCycleError",
     "TreeHasChildren",
     "TreeSpec",
@@ -148,18 +149,56 @@ def _pk_params(model: type[models.Model], values: Iterable[Any], connection: Any
     return params
 
 
-def compile_queryset(queryset: models.QuerySet[Any]) -> tuple[str, tuple[Any, ...]] | None:
-    """``SELECT pk`` of ``queryset`` as SQL and params, or ``None`` when it filters nothing.
+@dataclass(frozen=True)
+class Restriction:
+    """The rows a walk may enter: a condition on the table itself, or a subquery of keys.
+
+    ``inline`` is true for a condition over the model's own table only (the
+    default manager's ``deleted_at IS NULL``, a ``Where`` on the row): the walk
+    adds it to its own ``WHERE``, which every planner handles well. Anything
+    with a join is a subquery of keys instead.
+    """
+
+    sql: str
+    params: tuple[Any, ...]
+    inline: bool
+
+
+def compile_queryset(queryset: models.QuerySet[Any]) -> Restriction | None:
+    """The rows of ``queryset`` as a :class:`Restriction`, or ``None`` when it filters nothing.
 
     A queryset with no ``WHERE`` (``Model._base_manager.all()``) needs no
-    restriction, so the walk skips the subquery. Raises
-    :class:`django.core.exceptions.EmptyResultSet` for ``.none()``.
+    restriction. Raises :class:`django.core.exceptions.EmptyResultSet` for
+    ``.none()``.
     """
-    if not queryset.query.where:
+    from django.core.exceptions import FullResultSet
+
+    query = queryset.query
+    if not query.where:
         return None
+    used = {alias for alias, count in query.alias_refcount.items() if count}
+    table = queryset.model._meta.db_table
+    compiler = query.get_compiler(using=queryset.db)
+    if used <= {table} and query.base_table in (None, table):
+        try:
+            sql, params = compiler.compile(query.where)
+        except FullResultSet:
+            return None
+        return Restriction(sql, tuple(params), inline=True)
     inner = queryset.order_by().values("pk")
     sql, params = inner.query.get_compiler(using=queryset.db).as_sql()
-    return sql, tuple(params)
+    return Restriction(sql, tuple(params), inline=False)
+
+
+def _keys_in(column: str, subquery: str, connection: Any) -> str:
+    """``column IN (subquery)``; on PostgreSQL fenced (``OFFSET 0``) so it stays a hashed lookup.
+
+    Pulled up into a join, the subquery can meet a planner without table
+    statistics (a table loaded a moment ago) and become a nested loop that
+    scans the whole table once per node.
+    """
+    fence = " OFFSET 0" if connection.vendor == "postgresql" else ""
+    return f"{column} IN (SELECT * FROM ({subquery}) karni_keys{fence})"
 
 
 def walk_sql(
@@ -168,7 +207,7 @@ def walk_sql(
     *,
     start: tuple[str, Sequence[Any]],
     up: bool = False,
-    restrict: tuple[str, Sequence[Any]] | None = None,
+    restrict: Restriction | None = None,
     max_depth: int | None = None,
     include_self: bool = False,
     select: str = "node_id",
@@ -180,25 +219,34 @@ def walk_sql(
 
     ``start`` is the SQL of the starting keys (``"%s, %s"`` with its params, or
     a subquery selecting keys). The walk goes to the children (``up=False``)
-    or the parents (``up=True``), at most ``max_depth`` steps, through rows
-    whose key is in ``restrict`` (a subquery, or ``None`` for every row).
-    Each row of the walk has ``node_id``, ``parent_id`` and ``depth`` (0 for
-    the start rows, which ``include_self=False`` leaves out); ``select``,
-    ``where`` and ``order_limit`` shape the final ``SELECT``.
+    or the parents (``up=True``), at most ``max_depth`` steps, through the
+    rows ``restrict`` admits (:func:`compile_queryset`, ``None`` for every
+    row). Each row of the walk has ``node_id``, ``parent_id`` and ``depth``
+    (0 for the start rows, which ``include_self=False`` leaves out);
+    ``select``, ``where`` and ``order_limit`` shape the final ``SELECT``.
     """
     quote = connection.ops.quote_name
     table = quote(model._meta.db_table)
-    pk = f"t.{quote(pk_field(model).column)}"
-    parent = f"t.{quote(model._meta.get_field('parent').column)}"  # type: ignore[union-attr]
+    # The table keeps its own name as its alias, so an inline restriction's
+    # columns ("app_region"."deleted_at") resolve inside the walk.
+    pk = f"{table}.{quote(pk_field(model).column)}"
+    parent = f"{table}.{quote(model._meta.get_field('parent').column)}"  # type: ignore[union-attr]
     cte = quote(_CTE)
     join = f"{pk} = w.parent_id" if up else f"{parent} = w.node_id"
     start_sql, start_params = start
+    if start_sql.lstrip().upper().startswith("SELECT"):
+        start_clause = _keys_in(pk, start_sql, connection)
+    else:
+        start_clause = f"{pk} IN ({start_sql})"
     params: list[Any] = [*start_params]
     restrict_sql = ""
     restrict_params: list[Any] = []
     if restrict is not None:
-        restrict_sql = f" AND {pk} IN ({restrict[0]})"
-        restrict_params = [*restrict[1]]
+        if restrict.inline:
+            restrict_sql = f" AND ({restrict.sql})"
+        else:
+            restrict_sql = f" AND {_keys_in(pk, restrict.sql, connection)}"
+        restrict_params = [*restrict.params]
     params += restrict_params
     depth_sql = ""
     depth_params: list[Any] = []
@@ -206,6 +254,13 @@ def walk_sql(
         depth_sql = " AND w.depth < %s"
         depth_params = [int(max_depth)]
     postgres = connection.vendor == "postgresql"
+    # The step reads the nodes found so far, then each one's children through the
+    # parent index. SQLite plans a CROSS JOIN in the order written, so no index on a
+    # restriction column (deleted_at) can turn the step into a scan of the table.
+    step_from = (
+        f"{table} INNER JOIN {cte} w ON {join}" if postgres else f"{cte} w CROSS JOIN {table}"
+    )
+    step_join = "" if postgres else f" AND {join}"
     if postgres:
         columns = "node_id, parent_id, depth"
         base_extra = ""
@@ -228,12 +283,11 @@ def walk_sql(
     params += [*where_params]
     sql = (
         f"WITH RECURSIVE {cte}({columns}) AS ("
-        f"SELECT {pk}, {parent}, 0{base_extra} FROM {table} t "
-        f"WHERE {pk} IN ({start_sql}){restrict_sql} "
+        f"SELECT {pk}, {parent}, 0{base_extra} FROM {table} "
+        f"WHERE {start_clause}{restrict_sql} "
         "UNION ALL "
-        f"SELECT {pk}, {parent}, w.depth + 1{step_extra} FROM {table} t "
-        f"INNER JOIN {cte} w ON {join} "
-        f"WHERE {guard}{depth_sql}{restrict_sql}"
+        f"SELECT {pk}, {parent}, w.depth + 1{step_extra} FROM {step_from} "
+        f"WHERE {guard}{step_join}{depth_sql}{restrict_sql}"
         f"){tail} "
         f"SELECT {select} FROM {cte} WHERE {final}"
     )
