@@ -446,19 +446,22 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 45 conventions, each with a code, in 584 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 46 conventions, each with a code, in 603 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
-- **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
+- **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools, and the `/new-app` flow as `recipes`, `questions`, `answer`, `plan` and `build`.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.
 
-When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it:
+When an agent writes a serializer or a raw `<table>` by hand, `karni check` fails the build and names the component to use. The first prompt, as a new project's welcome page shows it: describe the app in one line, and give it to the `/new-app` slash command.
 
 ```text
-You are working in the Karni project `ticket_shop`. Run `karni context` and
-`karni rules` first and follow them. Then add an Event model (title, starts_at)
-with its viewset and test using `karni make`, run `make migrate && karni types`,
-and run `karni check`. Never write serializers, routers, admin classes or
-permission checks by hand: Karni derives them.
+/new-app a booking app for a yoga studio, with online payments
+```
+
+The agent writes `karni.yaml`, asks you only the questions `karni plan --questions` lists, and runs `karni build`. In a tool without slash commands, the same flow is one prompt:
+
+```text
+You are working in the Karni project `ticket_shop`. Run `karni rules --procedure
+new-app` and follow every step for: <the app in one line>
 ```
 
 Karni works the same without any AI tool: nothing in it calls a language model, and every generator is a command you run. See [building with an agent](docs/guide/with-ai.md) and [without one](docs/guide/without-ai.md).

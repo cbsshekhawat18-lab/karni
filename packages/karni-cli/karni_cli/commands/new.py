@@ -258,6 +258,16 @@ def _setup_lines(slug: str, project: Path, staff_app: bool, site: bool) -> list[
     return lines
 
 
+def _new_app_lines() -> list[str]:
+    """The last lines of ``karni new``: build the app with an agent, /new-app."""
+    return [
+        "Then build the app with your agent: describe it in one line, and give the line to",
+        "  /new-app <the app in one line>",
+        "  (in a tool without slash commands, the prompt: Run `karni rules --procedure new-app` "
+        "and follow every step for: <the app in one line>)",
+    ]
+
+
 def _procedure_lines(project: Path, design: Path, site_app: str) -> list[str]:
     """The site-from-design steps after the ones ``karni new`` ran, with this project's names."""
     found = agent_data.load(project).procedure(PROCEDURE)
@@ -399,3 +409,5 @@ def new(
             f"--app {site_app}"
         )
     typer.echo("  karni check")
+    for line in _new_app_lines():
+        typer.echo(line)

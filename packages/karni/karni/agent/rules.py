@@ -460,6 +460,30 @@ RULES: tuple[Rule, ...] = (
             "answer <id> <value>` for each answer."
         ),
     ),
+    Rule(
+        code="K311",
+        category="architecture",
+        severity="must",
+        summary="New app: /new-app. Never hand-write what karni.yaml expresses.",
+        rule=(
+            "To build an app from a request, follow the new-app procedure (`/new-app <the app "
+            "in one line>`, or `karni rules --procedure new-app`): a recipe or the blank start, "
+            "karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write "
+            "what karni.yaml can express (apps, entities, fields, owners, access, roles, "
+            "modules, features, pages, seed counts): change karni.yaml and run `karni build` "
+            "again. Write only the domain logic that is left, in the project's own files."
+        ),
+        rationale=(
+            "karni build turns the spec into models, viewsets, migrations, seeds, tests, types "
+            "and settings without a language model, so the agent writes a short YAML file "
+            "instead of thousands of lines, and a later change to the spec updates the app "
+            "without touching the code written by hand."
+        ),
+        fix=(
+            "Move the hand-written entity, field, access, role or setting into karni.yaml, then "
+            "run `karni build`."
+        ),
+    ),
     # backend
     Rule(
         code="K101",
@@ -1034,6 +1058,43 @@ PROCEDURES: tuple[Procedure, ...] = (
             "through extract and load, and a new version of the design is extract and load again."
         ),
         rules=("K009", "K309", "K003", "K301"),
+    ),
+    Procedure(
+        name="new-app",
+        description="Build an app from a one-line request: karni.yaml, then karni build",
+        argument_hint="<the app in one line>",
+        intro="Build this app: {arguments}",
+        steps=(
+            '`karni recipes list --match "<the request>"` ranks the recipes by the words they '
+            "share with the request. Start karni.yaml from the closest one that fits (`karni "
+            "recipes show <name>` prints its spec and what people usually change) or, when none "
+            "does, from the blank start it prints. Write in it what the request asks for: apps, "
+            "entities and fields, roles, modules (`karni modules list`), features, pages. `karni "
+            "spec validate` checks it.",
+            "`karni plan --questions` lists the questions for the user, most impact first. Ask "
+            "the user those and only those, with their options and defaults, in one message. "
+            "Names, labels and the rest are yours to choose.",
+            "Write each answer with `karni spec answer <id> <value>` (a question the user leaves "
+            "to you takes its default). Edit karni.yaml by hand only for what no question "
+            "covers. Run `karni plan --questions` again until none is open.",
+            "`karni plan` shows what `karni build` will change. Check that it is what the "
+            "request asks for, and ask the user before any risky (!) change.",
+            "`karni build` makes the project match karni.yaml: modules, models, viewsets, "
+            "migrations, seeds, types, tests and `karni check`. It stops at the first failure "
+            "with its code and what to do next. A Karni-owned file edited by hand stops it "
+            "(C273): ask the user which of the three ways on to take.",
+            "Write only the domain logic that is left, where the project owns the code: methods "
+            "on the subclasses in `<app>/models.py`, custom actions in `<app>/viewsets.py`, "
+            "demo values in `<app>/seeds.py`, your own pages and tests. Never edit "
+            "`<app>/karni/` or the `karni:spec` blocks: `karni build` rewrites them.",
+            "Done when `karni check` and `karni test` pass.",
+        ),
+        outro=(
+            "Never hand-write what karni.yaml can express: change karni.yaml and run `karni "
+            "build` again. The MCP tools recipes, questions, answer, plan and build do the same "
+            "as these commands."
+        ),
+        rules=("K311", "K310", "K305", "K301"),
     ),
 )
 

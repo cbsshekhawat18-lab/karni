@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import re
+from html import escape
 from typing import Any
 
 import django
@@ -152,6 +153,21 @@ def test_renders_with_models_and_their_links_resolve(first_boot: None, client: A
             assert link.api_url in html
             assert client.get(link.api_url).status_code in {200, 401, 403}
     assert any(link.admin_url for link in found) and any(link.api_url for link in found)
+
+
+def test_the_first_prompt_is_the_new_app_flow(first_boot: None, client: Any) -> None:
+    """Describe the app in one line, then /new-app, or the plain prompt without slash commands."""
+    html = client.get("/").content.decode()
+    assert '<pre id="new-app">/new-app &lt;the app in one line&gt;</pre>' in html
+    project = escape(inventory.project_name())
+    prompt = (
+        f"You are working in the Karni project `{project}`. Run `karni rules --procedure "
+        "new-app` and follow every step for: &lt;the app in one line&gt;"
+    )
+    assert f'<pre id="prompt">{prompt}</pre>' in html
+    assert "Describe the app in one line" in html
+    assert "<code>karni plan --questions</code>" in html and "<code>karni build</code>" in html
+    assert "Event model" not in html.split('id="prompt"')[1].split("</pre>")[0]
 
 
 def test_renders_with_zero_models(first_boot: None, client: Any, settings: Any) -> None:

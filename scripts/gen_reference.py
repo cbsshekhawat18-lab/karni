@@ -347,6 +347,14 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
+        "The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes "
+        "list --match`, `show`, the `karni.recipes` entry points, the blank start), the "
+        "`new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, "
+        "`spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning "
+        "JSON with a published schema. Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
         "a user, from the code that decides it",
     ),

@@ -57,9 +57,10 @@ from karni_cli.generators.viewset import PUBLIC_READ_WRITER
 from karni_cli.project import CliError
 from karni_cli.spec import schema
 from karni_cli.spec.catalog import FEATURES, MODULES, KnownFeature, KnownModule
+from karni_cli.spec.edit import EditError, set_values
 from karni_cli.spec.normal import role_name
 from karni_cli.spec.source import Loc
-from karni_cli.spec.validate import SHIPPED_ROLES
+from karni_cli.spec.validate import SHIPPED_ROLES, validate_text
 
 __all__ = [
     "AREAS",
@@ -67,9 +68,11 @@ __all__ = [
     "QUESTIONS_SCHEMA_URL",
     "QUESTIONS_VERSION",
     "AnswerError",
+    "Answered",
     "Option",
     "Question",
     "access_rule",
+    "answer",
     "checked_output",
     "invalid_output",
     "json_schema",
@@ -665,6 +668,65 @@ def invalid_output(
             "max": limit or None,
         }
     )
+
+
+@dataclass(frozen=True)
+class Answered:
+    """Experimental. An answer written into a spec's text (``karni spec answer``)."""
+
+    #: The spec's text with the answer in it. Every other line is as it was.
+    text: str
+    #: The dotted keys the answer set.
+    keys: tuple[str, ...]
+    #: How many questions are open after it.
+    open: int
+
+
+def answer(
+    text: str, found: list[Question], question_id: str, value: str, *, file: str
+) -> Answered:
+    """Experimental. ``karni spec answer``: the answer to ``question_id`` written into ``text``.
+
+    ``found`` is :func:`questions` of the valid spec ``text`` holds, and
+    ``value`` the answer as typed. Nothing is written to disk here.
+
+    :raises CliError: ``C400`` when ``question_id`` is not an open question,
+        ``C401`` when the question does not take ``value``, ``C402`` when the
+        answer cannot be written without changing anything else, or would
+        make the spec invalid.
+    """
+    by_id = {question.id: question for question in found}
+    question = by_id.get(question_id)
+    if question is None:
+        open_ids = ", ".join(by_id) or "none"
+        raise CliError(
+            f"{question_id!r} is not an open question of {file} (open: {open_ids}). An "
+            "answered question is gone: karni plan --questions lists the open ones.",
+            code="C400",
+        )
+    try:
+        parsed = question.parse(value)
+        writes = question.writes(parsed)
+    except AnswerError as exc:
+        raise CliError(str(exc), code="C401") from None
+    try:
+        changed = set_values(text, writes)
+    except EditError as exc:
+        raise CliError(
+            f"{file}: the answer to {question_id} cannot be written without changing anything "
+            f"else: {exc} Nothing was written. Set {question.key} by hand.",
+            code="C402",
+        ) from None
+    after = validate_text(changed)
+    if not after.ok or after.spec is None or after.source is None:
+        problems = " ".join(issue.render(file) for issue in after.issues)
+        raise CliError(
+            f"{file}: the answer to {question_id} would make the spec invalid ({problems}). "
+            f"Nothing was written. Set {question.key} by hand.",
+            code="C402",
+        )
+    keys = tuple(".".join(str(part) for part in where) for where, _ in writes)
+    return Answered(changed, keys, len(questions(after.spec, after.source.data)))
 
 
 if __name__ == "__main__":  # pragma: no cover - python -m karni_cli.spec.questions

@@ -20,8 +20,10 @@ FIXTURES = REPO_ROOT / "packages" / "karni" / "tests" / "agent" / "fixtures"
 # Measured 567 cl100k tokens with 44 rules (K013-K015 and K030-K032 debugging, K114 typed
 # fields, K115 and K116 lifecycle and capacity, K206 token classes, K309 public site, K307
 # naming the module catalog). K310 (karni plan --questions before karni build) costs 17
-# more: 584 with 45 rules, so the budget rose by 17, from 570. The README quotes the figure.
-TOKEN_BUDGET = 587
+# more: 584 with 45 rules, so the budget rose by 17, from 570. K311 (the new-app flow, karni.yaml
+# before code) costs 19 more: 603 with 46 rules, so the budget rose by 19, from 587. The README
+# quotes the figure.
+TOKEN_BUDGET = 606
 
 
 def _rules_output(runner, monkeypatch, cwd: Path) -> str:

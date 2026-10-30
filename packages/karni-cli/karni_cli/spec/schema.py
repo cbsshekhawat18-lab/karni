@@ -357,13 +357,17 @@ class Spec(_Node):
     )
 
 
-def _tidy(node: Any) -> Any:
-    """Drop Pydantic's generated titles and ``null`` defaults (noise for an editor)."""
+def _tidy(node: Any, *, names: bool = False) -> Any:
+    """Drop Pydantic's generated titles and ``null`` defaults (noise for an editor).
+
+    ``names``: ``node`` maps property names to schemas, so a property named
+    ``title`` or ``default`` stays.
+    """
     if isinstance(node, dict):
         cleaned = {
-            key: _tidy(value)
+            key: _tidy(value, names=key == "properties" and not names)
             for key, value in node.items()
-            if key != "title" and not (key == "default" and value is None)
+            if names or (key != "title" and not (key == "default" and value is None))
         }
         return cleaned
     if isinstance(node, list):

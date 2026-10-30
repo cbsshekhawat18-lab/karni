@@ -133,7 +133,14 @@ def test_public_site_rule_and_the_app_screen_rules_point_at_each_other() -> None
 def test_procedures_reference_real_codes() -> None:
     codes = set(rules_by_code())
     names = [p.name for p in PROCEDURES]
-    assert names == ["new-model", "new-page", "add-module", "new-module", "site-from-design"]
+    assert names == [
+        "new-model",
+        "new-page",
+        "add-module",
+        "new-module",
+        "site-from-design",
+        "new-app",
+    ]
     for procedure in PROCEDURES:
         assert "{arguments}" in procedure.intro
         assert set(procedure.rules) <= codes, procedure.name
@@ -202,3 +209,33 @@ def test_import_light(module: str) -> None:
         check=False,
     )
     assert proc.returncode == 0, proc.stderr
+
+
+def test_the_new_app_procedure_follows_the_flow_in_order() -> None:
+    """One line to a running app: recipe or blank start, questions, answers, plan, build."""
+    procedure = next(p for p in PROCEDURES if p.name == "new-app")
+    steps = procedure.steps
+    order = [
+        'karni recipes list --match "<the request>"',
+        "`karni plan --questions` lists the questions",
+        "`karni spec answer <id> <value>`",
+        "`karni plan` shows",
+        "`karni build` makes the project match karni.yaml",
+        "Write only the domain logic that is left",
+        "Done when `karni check` and `karni test` pass.",
+    ]
+    found = [next(i for i, step in enumerate(steps) if phrase in step) for phrase in order]
+    assert found == list(range(len(order))), found
+    assert "blank start" in steps[0] and "only those" in steps[1]
+    assert "C273" in steps[4] and "ask the user" in steps[4]
+    assert "`<app>/models.py`" in steps[5] and "Never edit `<app>/karni/`" in steps[5]
+    assert "Never hand-write what karni.yaml can express" in procedure.outro
+    assert procedure.rules[0] == "K311" and "K310" in procedure.rules
+
+
+def test_k311_puts_karni_yaml_before_code() -> None:
+    rule = rules_by_code()["K311"]
+    assert rule.category == "architecture" and rule.severity == "must"
+    assert "/new-app" in rule.summary and "karni.yaml" in rule.summary
+    assert "karni rules --procedure new-app" in rule.rule
+    assert "Never hand-write what karni.yaml can express" in rule.rule

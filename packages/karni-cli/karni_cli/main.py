@@ -25,6 +25,7 @@ from karni_cli.commands.modules import modules_app
 from karni_cli.commands.new import new
 from karni_cli.commands.plan import plan
 from karni_cli.commands.queries import queries
+from karni_cli.commands.recipes import recipes_app
 from karni_cli.commands.remove import remove
 from karni_cli.commands.replay import replay
 from karni_cli.commands.routes import routes
@@ -93,8 +94,10 @@ app.add_typer(rules_app, name="rules")
 app.add_typer(spec_app, name="spec")
 app.command(help="Compare karni.yaml with the project: what karni build would change")(plan)
 app.command(help="Make the project match karni.yaml, without touching hand-written code")(build)
+app.add_typer(recipes_app, name="recipes")
 app.command(
-    help="Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])"
+    help="Serve context, rules, check, the debugging tools and the app-builder flow (recipes, "
+    "questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])"
 )(mcp)
 app.command(help="Report the environment: project, interpreter, Node, adapters, history")(doctor)
 app.command(

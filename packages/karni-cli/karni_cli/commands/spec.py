@@ -161,7 +161,6 @@ def answer(
     written then.
     """
     from karni_cli.spec import questions as questions_mod
-    from karni_cli.spec.edit import EditError, set_values
     from karni_cli.spec.validate import validate_text
 
     path = spec or _default_spec()
@@ -180,40 +179,11 @@ def answer(
         count = len(report.issues)
         typer.echo(f"{shown}: {count} problem{'s' if count != 1 else ''}, so no questions.")
         raise typer.Exit(1)
-    found = {q.id: q for q in questions_mod.questions(report.spec, report.source.data)}
-    question = found.get(question_id)
-    if question is None:
-        open_ids = ", ".join(found) or "none"
-        raise CliError(
-            f"{question_id!r} is not an open question of {shown} (open: {open_ids}). An "
-            "answered question is gone: karni plan --questions lists the open ones.",
-            code="C400",
-        )
-    try:
-        parsed = question.parse(value)
-        writes = question.writes(parsed)
-    except questions_mod.AnswerError as exc:
-        raise CliError(str(exc), code="C401") from None
-    try:
-        changed = set_values(text, writes)
-    except EditError as exc:
-        raise CliError(
-            f"{shown}: the answer to {question_id} cannot be written without changing anything "
-            f"else: {exc} Nothing was written. Set {question.key} by hand.",
-            code="C402",
-        ) from None
-    after = validate_text(changed)
-    if not after.ok or after.spec is None or after.source is None:
-        problems = " ".join(issue.render(shown) for issue in after.issues)
-        raise CliError(
-            f"{shown}: the answer to {question_id} would make the spec invalid ({problems}). "
-            f"Nothing was written. Set {question.key} by hand.",
-            code="C402",
-        )
-    path.write_text(changed, encoding="utf-8")
-    keys = ", ".join(".".join(str(part) for part in where) for where, _ in writes)
-    typer.echo(f"{shown}: {keys} set ({question_id} answered).")
-    left = len(questions_mod.questions(after.spec, after.source.data))
+    found = questions_mod.questions(report.spec, report.source.data)
+    answered = questions_mod.answer(text, found, question_id, value, file=shown)
+    path.write_text(answered.text, encoding="utf-8")
+    typer.echo(f"{shown}: {', '.join(answered.keys)} set ({question_id} answered).")
+    left = answered.open
     if left:
         noun = "question" if left == 1 else "questions"
         typer.echo(f"next: karni plan --questions ({left} {noun} open)")

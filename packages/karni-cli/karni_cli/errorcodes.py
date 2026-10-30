@@ -1037,6 +1037,27 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Set the key the message names in karni.yaml by hand, then run karni spec validate and "
         "karni plan --questions.",
     ),
+    # C42x recipes and the app-builder MCP tools
+    _c(
+        "C420",
+        "No recipe of that name",
+        "karni recipes show, the MCP tool recipes (karni_cli.recipes)",
+        "Recipes are the folders built into karni-cli and the karni.recipes entry points of "
+        "its environment. blank is the blank start, the one name that is always there.",
+        'Run karni recipes list for the names, or karni recipes list --match "<the request>" '
+        "for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an "
+        "entry point (docs/app-spec.md#recipes).",
+    ),
+    _c(
+        "C421",
+        "A recipe cannot be used",
+        "karni recipes list, karni recipes show, the MCP tool recipes (karni_cli.recipes)",
+        "A recipe is a folder with a recipe.toml that follows its schema, a name that is the "
+        "folder's (or the entry point's), and a karni.yaml. One that does not, or whose name "
+        "another recipe has already, is left out and reported.",
+        "Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename "
+        "the recipe, then run karni recipes show <name>.",
+    ),
 )
 
 

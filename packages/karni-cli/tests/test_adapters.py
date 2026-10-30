@@ -34,7 +34,7 @@ ADAPTER_FILES = {
     "CONVENTIONS.md",
     ".junie/AGENTS.md",
 }
-PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design")
+PROCEDURES = ("new-model", "new-page", "add-module", "new-module", "site-from-design", "new-app")
 COMMAND_FILES = {
     f"{directory}/{name}{suffix}"
     for directory, suffix in (
@@ -74,7 +74,7 @@ def new_project(runner, tmp_path: Path, monkeypatch) -> Path:
     monkeypatch.setenv("KARNI_TEMPLATES", str(TEMPLATE))
     result = runner.invoke(app, ["new", "Acme Board", "-o", str(tmp_path)])
     assert result.exit_code == 0, result.output
-    assert "28 agent adapter files" in result.output
+    assert "32 agent adapter files" in result.output
     project = tmp_path / "acme_board"
     monkeypatch.chdir(project)
     return project
