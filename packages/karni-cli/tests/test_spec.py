@@ -73,6 +73,7 @@ def test_a_minimal_spec_and_its_defaults() -> None:
         "email_code_login": False,
         "social_login": [],
         "terms": None,
+        "user_grants": False,
     }
 
 
@@ -421,6 +422,7 @@ features:
   email_code_login: true
   social_login: [google, apple]
   terms: {version: "2026-11", url: /terms/}
+  user_grants: true
 roles:
   staff: {name: Staff, system: true, grants: {"*": all}}
   instructor: {grants: {classes.session: own, classes.studio:view: all}}
@@ -622,6 +624,7 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         "KARNI_SOCIAL_TOKEN_PROVIDERS = "
         + repr({name: {"client_ids": ["test"]} for name in features.social_login}),
         f"KARNI_TERMS = {features.terms.model_dump(exclude_none=True)!r}" if features.terms else "",
+        f"KARNI_USER_GRANTS = {features.user_grants!r}",
         *(
             f"{catalog.module_setting(module, option)} = {value!r}"
             for module, options in spec.modules.items()

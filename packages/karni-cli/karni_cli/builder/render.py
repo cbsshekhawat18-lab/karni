@@ -603,6 +603,7 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     if terms is not None and terms.get("required") is True:
         terms.pop("required")
     rows.append(_literal(terms, "", line, "KARNI_TERMS = "))
+    rows.append(f"KARNI_USER_GRANTS = {features.user_grants!r}")
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

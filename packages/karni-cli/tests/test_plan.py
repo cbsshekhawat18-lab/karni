@@ -219,6 +219,14 @@ def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     assert not plan.risky
 
 
+def test_turning_on_per_user_grants_plans_its_setting(base: Project) -> None:
+    plan = _plan(_edit(("roles:\n", "features: {user_grants: true}\nroles:\n")), base)
+    change = _only(plan, "user_grants")
+    assert (change.area, change.action, change.detail) == ("features", "add", "KARNI_USER_GRANTS")
+    assert not change.risky
+    assert "  + user_grants: KARNI_USER_GRANTS" in plan.text().splitlines()
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

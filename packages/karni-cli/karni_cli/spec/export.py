@@ -704,6 +704,8 @@ def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:
             if key in terms:
                 written[key] = list(terms[key])
         features["terms"] = written
+    if settings.get("KARNI_USER_GRANTS"):
+        features["user_grants"] = True
     return features
 
 

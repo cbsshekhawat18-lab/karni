@@ -20,8 +20,9 @@ from karni_cli.spec.validate import validate_text
 
 from .conftest import REPO_ROOT
 
-#: Tokens the CATALOG block of karni context may take with Karni's 4 modules and 5 features.
-CATALOG_TOKEN_BUDGET = 240
+#: Tokens the CATALOG block of karni context may take with Karni's 4 modules and 6 features
+#: (240 for 5, plus one line for user_grants).
+CATALOG_TOKEN_BUDGET = 265
 
 CHAT = """
 name = "chat"
@@ -111,6 +112,7 @@ def test_every_manifest_in_the_repo_is_valid() -> None:
         "social_login",
         "terms",
         "two_factor",
+        "user_grants",
     ]
     for manifest in loaded.modules:
         path = REPO_ROOT / "modules" / f"karni-{manifest.name}" / f"karni_{manifest.name}"
