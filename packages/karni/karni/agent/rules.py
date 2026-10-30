@@ -436,6 +436,29 @@ RULES: tuple[Rule, ...] = (
             "editable content, SEO and public forms."
         ),
     ),
+    Rule(
+        code="K312",
+        category="architecture",
+        severity="error",
+        summary="Trees: TreeModel.",
+        rule=(
+            "A hierarchy (categories, regions, organisation units, a menu) is a tree model: "
+            "`class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an "
+            "order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` "
+            "foreign key to the model itself, never write recursive SQL or a loop over "
+            "`.parent`, and never write a tree endpoint or a tree component. "
+            "`Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the "
+            "API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView "
+            "and TreeSelect."
+        ),
+        rationale=(
+            "Hand-written trees loop on cyclic data, cost one query per level and repeat the "
+            "same endpoints and widgets in every project. TreeModel's walks are one cycle-safe "
+            "query each."
+        ),
+        fix="Inherit TreeModel first and drop the parent field, or opt out with the reason.",
+        enforced_by=("hand-written-tree",),
+    ),
     # backend
     Rule(
         code="K101",

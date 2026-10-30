@@ -194,6 +194,58 @@ def test_an_integer_key_base_or_mixin_passes(monkeypatch) -> None:
     assert architecture.check_model_base() == []
 
 
+# hand-written-tree (tree models)
+
+
+@isolate_apps("tests.testapp")
+def test_a_hand_written_tree_is_flagged(monkeypatch) -> None:
+    from karni.models import BaseModel, TreeModel
+
+    class Folder(BaseModel):  # noqa: DJ008
+        parent = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Unit(BaseModel):  # noqa: DJ008
+        parent_unit = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Person(BaseModel):  # noqa: DJ008
+        manager = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    class Area(TreeModel, BaseModel):  # noqa: DJ008
+        class Meta:
+            app_label = "testapp"
+
+    # karni: allow(hand-written-tree): the legacy table keeps its own parent column
+    class Legacy(BaseModel):  # noqa: DJ008
+        parent = models.ForeignKey("self", null=True, on_delete=models.CASCADE)
+
+        class Meta:
+            app_label = "testapp"
+
+    models_ = [Folder, Unit, Person, Area, Legacy]
+    cfg = SimpleNamespace(get_models=lambda: models_, name="testapp", label="testapp")
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: [cfg])
+    violations = architecture.check_hand_written_tree()
+    assert [v.rule for v in violations] == ["hand-written-tree", "hand-written-tree"]
+    assert "Folder.parent" in violations[0].message and "TreeModel" in violations[0].hint
+    assert "Unit.parent_unit" in violations[1].message
+
+
+@pytest.mark.django_db
+def test_testapp_trees_pass(monkeypatch) -> None:
+    real = [django_apps.get_app_config("testapp")]
+    monkeypatch.setattr(architecture, "project_app_configs", lambda: real)
+    assert architecture.check_hand_written_tree() == []
+
+
 # viewset-base
 
 

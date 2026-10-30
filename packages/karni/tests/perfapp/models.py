@@ -83,6 +83,7 @@ class Chapter(BaseModel):
         return self.title
 
 
+# karni: allow(hand-written-tree): a factory fixture with one field of each shape, not a hierarchy
 class Specimen(BaseModel):
     class Size(models.IntegerChoices):
         SMALL = 1, "Small"

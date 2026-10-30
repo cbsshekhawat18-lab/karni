@@ -39,6 +39,7 @@ carries it, and `pytest
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |
 | `redundant-serializer` | a Meta-only ModelSerializer identical to the generated one | delete it, since `BaseViewSet(model=X)` generates it |
 | `audited-bulk-write` | `<AuditedModel>.objects…update()` or `.bulk_update()` in project code. Signals do not fire, so no change-history entry is written | save the instances, or opt out with the reason |
+| `hand-written-tree` (experimental) | a project model has a `parent` (or `parent_*`) foreign key to itself and is not a `TreeModel` | inherit `karni.models.TreeModel` first and drop the field (see [tree models](models.md#tree-models)), or opt out with the reason |
 | `duplicate` | ≥ `min_statements` structurally identical statements in two places | reuse the named Karni API, or extract one implementation |
 | `opt-out-reason` | any opt-out marker without a reason | write the reason |
 
