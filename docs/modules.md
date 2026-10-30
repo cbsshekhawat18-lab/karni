@@ -494,6 +494,11 @@ Top level:
 | `default` | no | the answer when nobody says otherwise, one of `options` |
 | `multiple` | no | `true` when the answer is a list of options |
 
+For a module or a feature listed in karni.yaml, each ask whose answer the
+spec does not set is one of the [questions](app-spec.md#questions) `karni
+plan --questions` lists, in the manifest's order. Order the asks by how much
+the answer matters.
+
 `[wiring]`, modules only, what `karni add` writes and `karni remove` takes out:
 
 | Key | Required | Takes |
