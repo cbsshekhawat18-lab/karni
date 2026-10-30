@@ -69,13 +69,20 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
     server = mcp_server.build_server(generated_project)
     tools = asyncio.run(server.list_tools())
     assert sorted(tool.name for tool in tools) == [
+        "answer",
+        "build",
         "check",
         "context",
         "explain_failure",
         "explain_text",
+        "modules",
+        "plan",
         "queries",
+        "questions",
+        "recipes",
         "replay",
         "rules",
+        "spec_validate",
         "trace",
         "why",
         "why_empty",
@@ -95,5 +102,10 @@ def test_server_registers_the_tools(generated_project: Path) -> None:
         "data",
         "explain",
     }
+    # The app-builder flow: build takes no --force and no --adopt.
+    assert set(schemas["build"]["properties"]) == {"spec", "dry_run", "allow_destructive"}
+    assert set(schemas["questions"]["properties"]) == {"spec", "max"}
+    assert set(schemas["answer"]["properties"]) == {"id", "value", "spec"}
+    assert set(schemas["recipes"]["properties"]) == {"match", "name"}
     # The --project root is what the tools use, wherever the server was started.
     assert mcp_server._project() == generated_project

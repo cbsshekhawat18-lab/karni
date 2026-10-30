@@ -300,6 +300,8 @@ def builtin_root() -> Traversable:
 
 
 def _builtin(root: Traversable) -> Iterable[tuple[str, Traversable, str]]:
+    if not root.is_dir():
+        return
     for child in sorted(root.iterdir(), key=lambda item: item.name):
         if child.is_dir() and child.joinpath(RECIPE_FILE).is_file():
             yield child.name, child, f"built in ({child.name})"
