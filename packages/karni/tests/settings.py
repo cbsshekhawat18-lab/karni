@@ -71,7 +71,13 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # External tables, a SQL view and a second database (karni.db): viewsets
     # mounted by its own URLconf only.
     "tests.externalapp",
+    # Cross-model search (class Karni: search): a catalog whose viewsets its own
+    # URLconf and router serve (tests.searchapp.urls).
+    "tests.searchapp",
 ]
+# tests.searchapp's models declare search, and the default router does not serve
+# them (their router is tests.searchapp.urls'), so karni.W591 is expected here.
+SILENCED_SYSTEM_CHECKS += ["karni.W591"]  # type: ignore[name-defined]  # noqa: F821
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that
 # tests/accounts/test_integer_user.py runs in a subprocess with this variable.

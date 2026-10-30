@@ -20,6 +20,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             after_import = "shop.imports.reindex"
             no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
             # external = True, writable = True, database = "warehouse": karni.db (experimental)
+            # search = {"fields": ["number"]}: karni.global_search (experimental)
 
 Every option has a default, so a model with no ``Karni`` class behaves
 sensibly: owned by whoever created it, no extra scope paths, the four
@@ -163,6 +164,16 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "state) and the newest rows. `True` for the defaults, or a dict "
         "([API: dashboard](api.md#the-staff-dashboard)).",
         'dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}',
+    ),
+    # cross-model search (karni.global_search, experimental)
+    Option(
+        "search",
+        "`None`",
+        "Experimental. Put the model in cross-model search (`GET /api/search/`): the text "
+        "`fields` to match, the `title` and `subtitle` a hit shows, a `weight` across models. "
+        "Each field gets a GIN trigram index "
+        "([search across models](global-search.md)).",
+        'search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}',
     ),
     # typed field layer (karni.fields)
     Option(

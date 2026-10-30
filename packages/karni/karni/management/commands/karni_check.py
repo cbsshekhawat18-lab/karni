@@ -16,7 +16,9 @@ It also compares every external model (``class Karni: external = True``,
 experimental) with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
 fail, ``karni.W540`` (a database that does not answer) is printed. Not with
-``--deploy``, which the production image runs before ``migrate``.
+``--deploy``, which the production image runs before ``migrate``. In the same
+place it prints ``karni.W590`` for a field ``class Karni: search`` searches
+whose table has no trigram index on PostgreSQL (experimental).
 """
 
 from __future__ import annotations
@@ -91,6 +93,13 @@ class Command(BaseCommand):
             for warning in warnings:
                 self.stdout.write(f"external tables: {warning}")
             failures.extend(f"external tables: {error}" for error in errors)
+
+            # Experimental: a field Karni.search searches whose table lacks its
+            # trigram index on PostgreSQL (karni.W590). Printed, not failed.
+            from karni.global_search import search_index_failures
+
+            for warning in search_index_failures():
+                self.stdout.write(f"search indexes: {warning}")
 
         for ep in sorted(entry_points(group="karni.checks"), key=lambda e: e.name):
             try:

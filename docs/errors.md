@@ -1026,6 +1026,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
 
+<a id="e430"></a>
+
+#### E430: Karni.search is malformed or names a field the model does not have
+
+*system check (error)* · from `karni.global_search.search_declaration; karni.checks.check_global_search`
+
+**Why Karni objects.** GET /api/search/ matches the query against the declared fields, shows each hit's title and subtitle, and makemigrations adds a trigram index per field. A field that is not text, a title that is not a column or a weight that is not a positive number would fail at query time, so the declaration is refused at boot.
+
+**Fix.** Write search = {'fields': [...], 'title': ..., 'subtitle': ..., 'weight': ...}: fields lists text fields of the model (CharField, TextField), title and subtitle name a field or a path through foreign keys (title defaults to the first field), weight is a number above 0 (default 1). For example search = {'fields': ['name', 'sku'], 'title': 'name'}.
+
+<a id="e431"></a>
+
+#### E431: ?models= names a resource cross-model search does not cover
+
+*API 400 response* · from `karni.api.global_search.GlobalSearchView`
+
+**Why Karni objects.** GET /api/search/?models= picks the resources to search by their router prefix. A name that is not one of them is a typo or a model without class Karni: search, and searching nothing for it would hide the mistake, so the request answers 400 with the resources it covers.
+
+**Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
+
 ### 5xx · Settings and optional dependencies
 
 <a id="e501"></a>
@@ -1287,6 +1307,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A model declares `class Karni: database`, but DATABASE_ROUTERS does not list karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is replaced after the call.
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
+
+<a id="w590"></a>
+
+#### W590: A field cross-model search searches has no trigram index
+
+*system check (warning)* · from `karni.global_search.check_search_indexes (karni check)`
+
+**Why Karni objects.** On PostgreSQL every searched field needs a GIN trigram index, or each search reads the whole table. Karni adds the index to the model's Meta.indexes, so it exists once the migration that creates it is written and applied.
+
+**Fix.** Run python manage.py makemigrations <app> and python manage.py migrate (karni build writes the migration for an app built from karni.yaml). For a table another system owns, run the CREATE INDEX the message prints in its database. For a table small enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].
+
+<a id="w591"></a>
+
+#### W591: A model declares Karni.search but no routed viewset serves it
+
+*system check (warning)* · from `karni.checks.check_global_search_routes`
+
+**Why Karni objects.** Cross-model search reads each model through its list endpoint, so the access rules hold, and links each hit to the resource's page. A model no routed BaseViewSet serves has neither, so search never finds it.
+
+**Fix.** Declare a BaseViewSet for the model in the app's viewsets.py (karni make viewset), or remove search from its class Karni.
 
 ### 6xx · Testing and seeding
 

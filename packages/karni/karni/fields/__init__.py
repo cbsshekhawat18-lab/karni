@@ -35,9 +35,10 @@ Field                  Column, constraint, index                     Backends
 =====================  ============================================  ==============
 
 ``LiveUniqueConstraint`` declares uniqueness over live rows of a
-soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` are
-PostgreSQL indexes that are a no-op elsewhere; ``CreateExtension`` creates a
-PostgreSQL extension from a migration. ``karni schema`` lists what each
+soft-deletable model; ``GinIndex``/``GistIndex``/``BrinIndex`` (and the
+experimental ``TrigramIndex``) are PostgreSQL indexes that are a no-op
+elsewhere; ``CreateExtension`` creates a PostgreSQL extension from a
+migration. ``karni schema`` lists what each
 declaration created and why; ``docs/fields.md`` has the full reference.
 
 Lifecycle and limited resources (``docs/lifecycle-and-capacity.md``):
@@ -67,7 +68,7 @@ from karni.fields.base import (
 from karni.fields.capacity import CapacityField
 from karni.fields.constraints import LiveUniqueConstraint
 from karni.fields.extensions import CreateExtension, ensure_extension
-from karni.fields.indexes import BrinIndex, GinIndex, GistIndex
+from karni.fields.indexes import BrinIndex, GinIndex, GistIndex, TrigramIndex
 from karni.fields.iso import CountryField, CurrencyField, country_codes, currency_codes
 from karni.fields.money import MoneyField, allocate, quantize, split
 from karni.fields.numbers import PercentField, QuantityField
@@ -102,6 +103,7 @@ __all__ = [  # noqa: F822
     "SearchField",
     "SlugField",
     "StateField",
+    "TrigramIndex",
     "allocate",
     "contribute_constraint",
     "contribute_index",

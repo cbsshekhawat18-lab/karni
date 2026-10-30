@@ -448,6 +448,11 @@ BASE: dict[str, Any] = {
         default="karni.api.search.postgres.PostgresSearchProvider",
     ),
     "KARNI_API_MAX_EXPAND_DEPTH": env.int("KARNI_API_MAX_EXPAND_DEPTH", default=2),
+    # Cross-model search, GET /api/search/ (karni.global_search, experimental).
+    "KARNI_GLOBAL_SEARCH_MIN_LENGTH": env.int("KARNI_GLOBAL_SEARCH_MIN_LENGTH", default=2),
+    "KARNI_GLOBAL_SEARCH_LIMIT": env.int("KARNI_GLOBAL_SEARCH_LIMIT", default=5),
+    "KARNI_GLOBAL_SEARCH_MAX_LIMIT": env.int("KARNI_GLOBAL_SEARCH_MAX_LIMIT", default=20),
+    "KARNI_GLOBAL_SEARCH_THRESHOLD": env.float("KARNI_GLOBAL_SEARCH_THRESHOLD", default=0.3),
     # Zero-argument factory returning the router karni.api.urls exposes;
     # consumed at first URLconf import (overriding it later is a no-op).
     "KARNI_API_ROUTER": env("KARNI_API_ROUTER", default="karni.api.routers.get_default_router"),
