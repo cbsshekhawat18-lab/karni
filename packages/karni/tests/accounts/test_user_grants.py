@@ -475,7 +475,7 @@ class TestRefusals:
             [str(arena.pk), str(hall.pk)],
             "kept",
         )
-        with pytest.raises(TypeError, match="cannot set user"):
+        with pytest.raises(TypeError, match=r"E365: change\(\) cannot set user"):
             grants.change(None, row, user=organizer)
 
     def test_a_superuser_may_give_anything(self) -> None:

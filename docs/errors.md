@@ -994,6 +994,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni build) to use per-user grants.
 
+<a id="e365"></a>
+
+#### E365: karni.accounts.grants.change() was given a field it does not set
+
+*exception* · from `karni.accounts.grants.change`
+
+**Why Karni objects.** change() sets a grant's permission, scope, targets, expires_at and reason. The user a grant belongs to, granted_by and the timestamps are not changed this way: a grant for another user is a new grant, and granted_by follows the operator.
+
+**Fix.** Pass only permission, scope, targets, expires_at or reason. To move access to another user, revoke() this grant and grant() a new one.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>

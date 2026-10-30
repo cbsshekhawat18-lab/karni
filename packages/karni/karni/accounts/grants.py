@@ -60,7 +60,7 @@ from karni.accounts.roles import (
     grants_for,
     permission_keys,
 )
-from karni.exceptions import KarniValueError
+from karni.exceptions import KarniTypeError, KarniValueError
 from karni.meta import model_actions, owner_field, permission_key, scope_paths
 from karni.middleware import current_user
 
@@ -131,19 +131,20 @@ def normalise_targets(targets: Any) -> tuple[str, ...]:
     """Experimental. ``targets`` as text ids, in order, without repeats.
 
     Accepts a list (or tuple) of strings, integers or UUIDs. Raises
-    ``ValueError`` for anything else, an empty id included.
+    :class:`~karni.exceptions.KarniValueError` (``E362``, a ``ValueError``)
+    for anything else, an empty id included.
     """
     if targets is None:
         return ()
     if isinstance(targets, str | bytes) or not isinstance(targets, Iterable):
-        raise ValueError("targets must be a list of ids")
+        raise _error("E362", "A user grant's targets must be a list of ids.")
     found: list[str] = []
     for target in targets:
         if isinstance(target, bool) or not isinstance(target, str | int | uuid.UUID):
-            raise ValueError(f"target {target!r} is not an id")
+            raise _error("E362", f"A user grant's target {target!r} is not an id.")
         text = str(target).strip()
         if not text:
-            raise ValueError("a target is empty")
+            raise _error("E362", "A user grant's target is empty.")
         found.append(text)
     return tuple(dict.fromkeys(found))
 
@@ -288,10 +289,7 @@ def check(
             f"No permission {permission!r} matches takes scope {scope_label(kind, path)!r}: "
             "none of their models has the owner field or scope path it needs.",
         )
-    try:
-        found = normalise_targets(targets)
-    except ValueError as exc:
-        raise _error("E362", f"A user grant's targets are invalid: {exc}.") from exc
+    found = normalise_targets(targets)
     if found and kind not in TARGETED_SCOPES:
         raise _error(
             "E362",
@@ -667,8 +665,9 @@ def change(operator: Any, row: UserGrant, **fields: Any) -> UserGrant:
     """
     unknown = sorted(set(fields) - set(CHANGEABLE))
     if unknown:
-        raise TypeError(
-            f"change() cannot set {', '.join(unknown)}. It sets {', '.join(CHANGEABLE)}."
+        raise KarniTypeError(
+            f"change() cannot set {', '.join(unknown)}. It sets {', '.join(CHANGEABLE)}.",
+            code="E365",
         )
     if widens(row, fields):
         checked = check(

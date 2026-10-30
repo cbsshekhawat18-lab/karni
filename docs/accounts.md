@@ -527,7 +527,7 @@ deleting the grant (a soft delete, recorded in the history) or setting
 |---|---|
 | `grant(operator, user, permission, scope="all", *, targets, expires_at, reason)` | One grant. |
 | `bulk_grant(operator, users, permission, scope="all", ...)` | The same grant to many users, all of them or none. |
-| `change(operator, row, **fields)` | A new `permission`, `scope`, `targets`, `expires_at` or `reason`. |
+| `change(operator, row, **fields)` | A new `permission`, `scope`, `targets`, `expires_at` or `reason`. Any other field is [`E365`](errors.md#e365). |
 | `expire(operator, row, at=None)` | Ends the grant now (or at `at`). The row stays. |
 | `revoke(operator, row)` | Deletes the grant, with the operator in the history. |
 | `check(permission, scope, targets)` | The checks alone, raising the codes below. |

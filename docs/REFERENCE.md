@@ -2080,6 +2080,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E362`](errors.md#e362) | exception | A user grant's targets are invalid |
 | [`E363`](errors.md#e363) | api | The operator may not give this user grant |
 | [`E364`](errors.md#e364) | api | Per-user grants are turned off |
+| [`E365`](errors.md#e365) | exception | karni.accounts.grants.change() was given a field it does not set |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |

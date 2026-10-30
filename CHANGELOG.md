@@ -22,7 +22,8 @@ apply codemods and list the manual steps. This file is the human summary.
   one more query per request however many checks it makes. Off, no grant row
   is read. `karni.accounts.grants` writes them (`grant`, `bulk_grant`,
   `change`, `expire`, `revoke`), refusing a bad pattern, scope or targets
-  (`E360`, `E361`, `E362`) and a grant the operator does not hold (`E363`),
+  (`E360`, `E361`, `E362`), a grant the operator does not hold (`E363`) and
+  a field `change()` does not set (`E365`),
   and `scope_targets(user, scope, permission=...)` gives the target ids a
   user's roles and user grants hold, with the grant behind each, for the
   tree scope and the menus to come. The admin edits a user's grants on their
