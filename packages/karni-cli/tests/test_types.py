@@ -36,6 +36,29 @@ def test_generated_hooks_golden(schema: dict) -> None:
     assert out.index("useEventsList") < out.index("useVenuesList")
 
 
+def test_a_schema_without_trees_imports_no_tree_hook(schema: dict) -> None:
+    out = generate_hooks(schema)
+    assert "Tree" not in out
+    assert (
+        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";' in out
+    )
+
+
+def test_a_tree_resource_gets_a_tree_hook(schema: dict) -> None:
+    schema["components"]["schemas"]["TestappVenue"]["x-karni-tree"] = {
+        "parent": "parent",
+        "ordered": False,
+    }
+    out = generate_hooks(schema)
+    assert '  useResourceTree,\n} from "@karni/ui";' in out
+    assert '  ResourceTreeParams,\n} from "@karni/ui";' in out
+    assert (
+        "export const useVenuesTree = (params?: ResourceTreeParams) =>\n"
+        '  useResourceTree<components["schemas"]["TestappVenue"]>("venues", params);\n'
+    ) in out
+    assert "useEventsTree" not in out  # events is not a tree
+
+
 def test_no_karni_resources_errors(schema: dict) -> None:
     for item in schema["paths"].values():
         item["get"].pop("x-karni-resource", None)
