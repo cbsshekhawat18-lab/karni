@@ -1050,7 +1050,7 @@ change of the output.
 | Code | Problem |
 |---|---|
 | [C420](errors.md#c420) | no recipe of that name |
-| [C421](errors.md#c421) | a recipe cannot be used, so it is left out |
+| [C421](errors.md#c421) | a recipe cannot be used: the list leaves it out, and `show` names its problem |
 
 ## MCP tools
 
