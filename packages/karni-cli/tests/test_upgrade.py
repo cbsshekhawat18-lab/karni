@@ -69,7 +69,7 @@ def test_the_shipped_0_2_entries() -> None:
     assert by_id["agent-guidance-files"].codemod == "v0_2.agent_guidance"
     assert by_id["mandatory-access"].mechanical is False
     assert changelog.newest_release(by_id.values()) == "0.5.0"
-    assert by_id["urls-marker"].codemod == "v0_4.urls_marker" and by_id["urls-marker"].mechanical
+    assert by_id["urls-marker"].codemod == "v0_5.urls_marker" and by_id["urls-marker"].mechanical
     assert by_id["public-read-writes-need-a-role"].release == "0.5.0"
     assert by_id["public-read-writes-need-a-role"].mechanical is False
     assert by_id["seed-refuses-occupied-tables"].release == "0.5.0"
@@ -289,7 +289,7 @@ def test_apply_and_report(runner, git_project: Path) -> None:
     assert "urls-marker: nothing to change" in out  # this project has no config/urls.py
     assert "Next: review `git diff`, pin karni to 0.5.0" in out
     assert "public-read-writes-need-a-role: karni make --access public-read" in manual
-    assert "migrations/0.5.0/#public-read-viewsets-review-who-may-write" in manual
+    assert "migrations/0.5/#public-read-viewsets-review-who-may-write" in manual
 
     changed = set(_git(git_project, "status", "--porcelain").split())
     assert {"library/views.py", "library/models.py"} <= changed
@@ -444,7 +444,7 @@ def test_the_typescript_fixture_entry_end_to_end(
     assert "DataTable" in screen.read_text()
 
 
-# v0_4.urls_marker: the scaffold's route marker, added to older projects
+# v0_5.urls_marker: the scaffold's route marker, added to older projects
 
 SCAFFOLD_URLS = TEMPLATE / "{{cookiecutter.project_slug}}" / "config" / "urls.py"
 MARKER_LINES = (
@@ -463,7 +463,7 @@ def test_the_urls_marker_codemod_restores_the_scaffold(tmp_path: Path) -> None:
     (tmp_path / "config").mkdir()
     urls = tmp_path / "config" / "urls.py"
     urls.write_text(_without_marker(scaffold))
-    codemod = load_codemod("v0_4.urls_marker")
+    codemod = load_codemod("v0_5.urls_marker")
     assert codemod.apply(tmp_path).files == {"config/urls.py": 1}
     # Before the comment that belongs to *welcome_urls(): exactly the new scaffold.
     assert urls.read_text() == scaffold
@@ -479,11 +479,11 @@ def test_the_urls_marker_codemod_reports_a_urlconf_without_the_welcome_route(
     urls = tmp_path / "config" / "urls.py"
     urls.write_text('urlpatterns = [\n    path("api/", include("karni.api.urls")),\n]\n')
     before = urls.read_text()
-    outcome = load_codemod("v0_4.urls_marker").apply(tmp_path)
+    outcome = load_codemod("v0_5.urls_marker").apply(tmp_path)
     assert outcome.files == {}
     assert len(outcome.sites) == 1 and "# karni:urls" in outcome.sites[0].render()
     assert urls.read_text() == before
-    assert load_codemod("v0_4.urls_marker").apply(tmp_path / "missing").files == {}
+    assert load_codemod("v0_5.urls_marker").apply(tmp_path / "missing").files == {}
 
 
 def test_upgrading_a_0_4_0_project_adds_the_marker_and_enables_make_site(

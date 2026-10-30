@@ -48,7 +48,7 @@ The scaffold's config/urls.py carries a `# karni:urls` marker line inside \
 urlpatterns, before `*welcome_urls()`. `karni make site` and `karni make view` \
 insert routes there. The codemod adds the line to a project that lacks it."""
 mechanical = true
-codemod = "v0_4.urls_marker"
+codemod = "v0_5.urls_marker"
 migration = "migrations/0.5.md#a-marker-for-project-routes-in-configurlspy"
 
 [[change]]
