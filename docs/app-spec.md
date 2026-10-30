@@ -220,6 +220,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `table` | `table` or `schema.table` | `karni make model --table` (`Meta.db_table`), with `external` only |
 | `writable` | `true` / `false` | `Karni.writable`, with `external` only |
 | `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
+| `tree` | `true`, `ordered` or `false` | a [tree model](models.md#tree-models): `TreeModel` (`true`) or `OrderedTreeModel` (`ordered`), listed before the base |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
@@ -254,6 +255,35 @@ relation between entities on different databases is refused (`C253`): the
 user and the modules' models are on `default`. A managed entity on another
 database is built without the audit users, whose relations would point at
 `default`.
+
+### Trees
+
+!!! warning "Experimental"
+    The `tree` key is experimental, like the
+    [tree models](models.md#tree-models) it builds.
+
+`tree: true` makes the entity a hierarchy: `karni build` writes its model
+base as `class Region(TreeModel, BaseModel)`, which adds a `parent` field,
+the tree queries and the tree endpoints of the API. `tree: ordered` writes
+`OrderedTreeModel` instead, which also adds `position`, the order of a
+node among its siblings. The entity does not declare `parent` or
+`position` itself (`C460`), and an external entity cannot be a tree,
+because Karni never adds a column to a table another system owns (`C460`).
+`order`, `search`, `key`, `audit` and `groups` may name `parent`, and
+`position` on an ordered tree:
+
+```yaml
+Region: {fields: {name: str}, tree: true, search: name}
+Category:
+  fields: {name: str}
+  tree: ordered
+  order: [position]
+```
+
+A relation to a tree is an ordinary field (`fk:Region`, `m2m:Category`).
+`karni spec export` writes `tree` for a model on `TreeModel` or
+`OrderedTreeModel`. In `karni plan`, making an entity a tree or flat again is
+a risky change, and so is `ordered` back to `true`, which drops `position`.
 
 `groups` become the admin change form's fieldsets today. Field groups in the
 React forms and detail pages (item 12 of the
@@ -319,7 +349,7 @@ they arrive:
 
 | Key | Where | For |
 |---|---|---|
-| `tree: true`, `taxonomies:` | entity | hierarchies and taxonomies |
+| `taxonomies:` | entity | taxonomies |
 | `aggregate:` | entity | aggregation endpoints (large-apps item 8) |
 | `search:` | top level | a search block across entities |
 | `markdown` | field type | markdown fields (large-apps item 12) |
@@ -374,6 +404,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C252](errors.md#c252) | `database` names an alias the project does not have |
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
+| [C460](errors.md#c460) | a tree entity's keys do not fit (`external`, a `parent` or `position` field) |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -398,6 +429,9 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   `external`, `table` (from `Meta.db_table`), `writable` and `database`,
   and so is a model Karni manages on another database (`Karni.database`)
   on `UUIDModel` or `IntegerKeyModel`.
+- **tree** is `true` for a model on `TreeModel` and `ordered` for one on
+  `OrderedTreeModel`. Their `parent` and `position` fields are not written
+  under `fields`.
 - **key, owner, audit, scope_paths** come from `class Karni`, **order** from
   `Meta.ordering`, **groups** from `AdminMeta`'s fieldsets, **search** from
   the viewset's `search_fields`.
@@ -464,7 +498,7 @@ entities
 The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit, groups,
-order, pk, external, table, writable, database), field changes of existing
+order, pk, external, table, writable, database, tree), field changes of existing
 entities, access, pages and navigation, the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.
@@ -497,6 +531,9 @@ karni build refuses the risky (!) changes without --allow-destructive.
 | a module removed | the rows of its models |
 | a key type switched (`pk`) on an existing entity | its rows. Switching it is out of scope: `karni build` does not apply it ([why](models.md#choosing-the-key-type)) |
 | an entity moved to another database | its rows, which stay where they are |
+| an entity made a tree (`tree: true` or `ordered`) | its rows, which all become roots |
+| an entity made flat again (`tree` removed) | rows whose `parent` is set |
+| `tree: ordered` back to `true` (drops `position`) | the entity's rows |
 | access widened: reads to `public`, writes or creates from a role to `authenticated` or `public` | the entity's rows (none for creates) |
 | a grant's scope widened to `all` | the rows of the entity the grant names (none for a pattern with `*`) |
 
