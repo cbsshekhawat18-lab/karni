@@ -28,6 +28,7 @@ import type {
   FieldKind,
   OperationDef,
   ParsedSchema,
+  RelatedDef,
   RelationRef,
   ResourceSchema,
 } from "./types";
@@ -546,6 +547,34 @@ export function parseDashboard(raw: unknown): DashboardDef | undefined {
   };
 }
 
+// reverse relations (x-karni-related)
+
+/**
+ * Experimental. The `x-karni-related` extension of a list operation: the
+ * reverse relations whose rows ResourceDetail's `related` tabs list. A
+ * malformed entry is dropped.
+ */
+export function parseRelated(raw: unknown): RelatedDef[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const found: RelatedDef[] = [];
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+    const { name, resource, field, param, key, label } = entry;
+    if (typeof name !== "string" || typeof resource !== "string" || typeof field !== "string") {
+      continue;
+    }
+    found.push({
+      name,
+      resource,
+      field,
+      param: typeof param === "string" && param !== "" ? param : null,
+      key: typeof key === "string" && key !== "" ? key : "id",
+      label: typeof label === "string" && label !== "" ? label : humanize(resource),
+    });
+  }
+  return found;
+}
+
 // operation extraction
 
 function operationDef(
@@ -706,11 +735,12 @@ export function parseOpenApi(input: unknown): ParsedSchema {
       order += 1;
     }
 
+    const parsedResource: ResourceSchema = { resource, operations, fields };
     const dashboard = parseDashboard(listOp["x-karni-dashboard"]);
-    resources[resource] =
-      dashboard !== undefined
-        ? { resource, operations, fields, dashboard }
-        : { resource, operations, fields };
+    if (dashboard !== undefined) parsedResource.dashboard = dashboard;
+    const related = parseRelated(listOp["x-karni-related"]);
+    if (related !== undefined) parsedResource.related = related;
+    resources[resource] = parsedResource;
   }
 
   const parsed: ParsedSchema = { resources };

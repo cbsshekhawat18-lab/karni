@@ -26,6 +26,13 @@ import { formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
 import { evaluateAccess } from "../table/access";
 import {
+  DefaultRelated,
+  RelatedTabs,
+  type ResourceDetailRelated,
+  type ResourceDetailRelatedProps,
+  type ResourceDetailRelatedTab,
+} from "./related";
+import {
   DefaultTransitions,
   TransitionConfirm,
   TransitionFailure,
@@ -39,6 +46,9 @@ import {
 } from "./transitions";
 
 export type {
+  ResourceDetailRelated,
+  ResourceDetailRelatedProps,
+  ResourceDetailRelatedTab,
   ResourceDetailTransitionOptions,
   ResourceDetailTransitionTarget,
   ResourceDetailTransitionsProps,
@@ -124,6 +134,8 @@ export interface ResourceDetailSlots {
   Deleted: React.ComponentType<ResourceDetailDeletedProps>;
   /** The lifecycle buttons of one StateField (see the `transitions` prop). */
   Transitions: React.ComponentType<ResourceDetailTransitionsProps>;
+  /** Experimental. The related tabs (see the `related` prop): one ResourceTable per tab. */
+  Related: React.ComponentType<ResourceDetailRelatedProps>;
 }
 
 export interface ResourceDetailProps {
@@ -132,6 +144,14 @@ export interface ResourceDetailProps {
   fields?: Record<string, ResourceDetailFieldOverride>;
   /** Appended below the field list (e.g. a child <ResourceTable>), even while the record loads. */
   sections?: ReadonlyArray<React.ReactNode>;
+  /**
+   * Experimental. A tab per reverse relation, each a ResourceTable of the
+   * related rows filtered to this record: `related={["deals", "people"]}`.
+   * A name is the relation's name, its resource, or `resource.field` when two
+   * relations lead to one resource (the backend publishes them as
+   * `x-karni-related`). An object sets the tab's label and table props.
+   */
+  related?: ReadonlyArray<string | ResourceDetailRelated>;
   expand?: readonly string[];
   /** The heading. A function receives the loaded record. A placeholder stands in until then. */
   title?: React.ReactNode | ((item: Item) => React.ReactNode);
@@ -456,6 +476,7 @@ export const defaultResourceDetailSlots: ResourceDetailSlots = {
   NotFound: DefaultNotFound,
   EmptyValue: DefaultEmptyValue,
   DeleteDialog: DefaultDeleteDialog,
+  Related: DefaultRelated,
   Deleted: DefaultDeleted,
   Transitions: DefaultTransitions,
 };
@@ -563,6 +584,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     id,
     fields,
     sections,
+    related,
     expand,
     title,
     actions,
@@ -853,6 +875,7 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   }
 
   const { domain, audit } = domainAndAudit;
+
   return (
     <div className={cn("space-y-6", className)}>
       {header}
@@ -901,6 +924,17 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
             ))}
           </dl>
         </section>
+      ) : null}
+      {related !== undefined && related.length > 0 && schema !== undefined && !deleting ? (
+        <RelatedTabs
+          requested={related}
+          schema={schema}
+          item={item}
+          id={id}
+          identity={identity}
+          resourceLabel={label}
+          Related={Slots.Related}
+        />
       ) : null}
       {appended}
       {askedFor !== undefined && askedTarget !== undefined ? (

@@ -167,6 +167,9 @@ export type {
   ResourceDetailDeletedProps,
   ResourceDetailEmptyValueProps,
   ResourceDetailDeleteDialogProps,
+  ResourceDetailRelated,
+  ResourceDetailRelatedProps,
+  ResourceDetailRelatedTab,
   ResourceDetailTransitionOptions,
   ResourceDetailTransitionTarget,
   ResourceDetailTransitionsProps,
@@ -249,6 +252,13 @@ export { karniKeys } from "./hooks/keys";
 export { useResourceList } from "./hooks/useResourceList";
 export { useResourceItem } from "./hooks/useResourceItem";
 export { useResourceMutations } from "./hooks/useResourceMutations";
+// row counts per resource, for dashboard charts (experimental)
+export { useResourceCounts } from "./hooks/useResourceCounts";
+export type {
+  ResourceCountPoint,
+  ResourceCountTarget,
+  ResourceCounts,
+} from "./hooks/useResourceCounts";
 export type { ResourceMutations } from "./hooks/useResourceMutations";
 export type {
   Paginated,
@@ -282,6 +292,7 @@ export type {
   ResourceSchema,
   DashboardDef,
   DashboardCountDef,
+  RelatedDef,
 } from "./schema/types";
 
 // auth
@@ -460,3 +471,74 @@ export type {
   DataChartEmptyProps,
   DataChartLoadingProps,
 } from "./components/chart/data-chart";
+
+// page blocks beyond CRUD (experimental)
+export {
+  DashboardGrid,
+  DashboardCard,
+  defaultDashboardCardSlots,
+} from "./components/dashboard-grid/dashboard-grid";
+export type {
+  DashboardGridProps,
+  DashboardGridColumns,
+  DashboardCardProps,
+  DashboardCardSpan,
+  DashboardCardSlots,
+  DashboardCardLoadingProps,
+  DashboardCardEmptyProps,
+} from "./components/dashboard-grid/dashboard-grid";
+
+export { ChartCard } from "./components/dashboard-grid/chart-card";
+export type { ChartCardProps } from "./components/dashboard-grid/chart-card";
+
+export {
+  Accordion,
+  defaultAccordionSlots,
+  toggleAccordion,
+} from "./components/accordion/accordion";
+export type {
+  AccordionProps,
+  AccordionItem,
+  AccordionSlots,
+  AccordionTriggerProps,
+} from "./components/accordion/accordion";
+
+export {
+  MarkdownView,
+  defaultMarkdownViewSlots,
+  preloadMarkdown,
+} from "./components/markdown/markdown-view";
+export type {
+  MarkdownViewProps,
+  MarkdownViewSlots,
+  MarkdownViewLoadingProps,
+} from "./components/markdown/markdown-view";
+
+export {
+  DataTable,
+  defaultDataTableSlots,
+  compareValues,
+  sortRows,
+} from "./components/data-table/data-table";
+export type {
+  DataTableProps,
+  DataTableColumn,
+  DataTableValue,
+  DataTableSort,
+  DataTableSortDirection,
+  DataTableSlots,
+  DataTableLoadingProps,
+  DataTableEmptyProps,
+} from "./components/data-table/data-table";
+export type { DataTableExportFormat } from "./components/data-table/export";
+
+export {
+  ComparisonTable,
+  defaultComparisonTableSlots,
+} from "./components/comparison-table/comparison-table";
+export type {
+  ComparisonTableProps,
+  ComparisonMetric,
+  ComparisonTableSlots,
+  ComparisonTableEmptyProps,
+} from "./components/comparison-table/comparison-table";

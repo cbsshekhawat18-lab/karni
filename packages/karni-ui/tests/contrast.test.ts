@@ -111,6 +111,9 @@ const TEXT: ReadonlyArray<readonly [string, string, string]> = [
   ["foreground@0.9/background", "background", "toast description"],
   ["foreground@0.9/muted", "muted", "info toast description"],
   ["foreground", "muted", "SocialButton and OtpLoginForm approval message"],
+  ["foreground", "muted-subtle", "Accordion header, hovered"],
+  ["primary", "background", "MarkdownView links"],
+  ["primary", "card", "MarkdownView links in a DashboardCard"],
 ];
 
 const NON_TEXT: ReadonlyArray<readonly [string, string, string]> = [
@@ -131,6 +134,11 @@ const NON_TEXT: ReadonlyArray<readonly [string, string, string]> = [
   ["chart-3", "background", "chart series 3"],
   ["chart-4", "background", "chart series 4"],
   ["chart-5", "background", "chart series 5"],
+  ["chart-1", "card", "ChartCard series 1"],
+  ["chart-2", "card", "ChartCard series 2"],
+  ["chart-3", "card", "ChartCard series 3"],
+  ["chart-4", "card", "ChartCard series 4"],
+  ["chart-5", "card", "ChartCard series 5"],
 ];
 
 function failures(

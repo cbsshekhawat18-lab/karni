@@ -222,6 +222,14 @@
      lets the page scroll instead. */
   --karni-table-max-height: 70vh;
 
+  /* Page blocks (experimental). DashboardGrid's space between cards, and the
+     box DataTable and ComparisonTable scroll inside. DataTable renders only
+     the rows in view past 100 rows, so keep its height a length, not `none`.
+     Its rows are this tall. */
+  --karni-dashboard-gap: 1rem;
+  --karni-data-table-max-height: var(--karni-table-max-height);
+  --karni-data-table-row-height: 2.5rem;
+
   --karni-z-raised: 10;
   --karni-z-drawer: 40;
   --karni-z-popover: 50;

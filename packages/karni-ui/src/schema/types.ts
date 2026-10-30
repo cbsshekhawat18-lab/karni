@@ -112,6 +112,26 @@ export interface DashboardDef {
 }
 
 /**
+ * Experimental. One reverse relation of a resource, from `x-karni-related` on
+ * its list operation: the rows of another resource that point at this one
+ * (the deals of a company). ResourceDetail's `related` tabs read it.
+ */
+export interface RelatedDef {
+  /** The relation's name on this model (its related name: `deals`, or Django's `deal_set`). */
+  name: string;
+  /** The resource the related rows belong to (its router prefix). */
+  resource: string;
+  /** The field of that resource that points here. */
+  field: string;
+  /** The list query parameter that filters by this row, or null when the list has none. */
+  param: string | null;
+  /** The field of this resource whose value the parameter takes (its primary key, usually `id`). */
+  key: string;
+  /** The related rows in words ("Deals"). */
+  label: string;
+}
+
+/**
  * An operation's `x-karni-access` rule as the backend publishes it: the access
  * predicate governing the operation, e.g. `{"role": ["staff"]}`,
  * `{"owned": "organizer"}`, `{"any": [...]}`. A display hint only: the server
@@ -156,6 +176,8 @@ export interface ResourceSchema {
   fields: readonly FieldDef[];
   /** The model's dashboard declaration (`x-karni-dashboard`), when it opts in. */
   dashboard?: DashboardDef;
+  /** Experimental. Its reverse relations (`x-karni-related`), when the backend publishes them. */
+  related?: readonly RelatedDef[];
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */

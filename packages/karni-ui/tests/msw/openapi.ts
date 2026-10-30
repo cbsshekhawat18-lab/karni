@@ -14,6 +14,7 @@
  * - a JSONField "any" schema (metadata),
  * - read-only resources without a create operation (venues, tags, users),
  * - x-karni-resource on list ops and x-karni-auth-mode at the root,
+ * - x-karni-related on the venues, tags and users list ops (reverse relations),
  * - list query params (page/page_size/ordering/search/expand enum/filters).
  */
 
@@ -197,12 +198,18 @@ function jsonResponse(ref: string, status = "200") {
   };
 }
 
-function listPaths(resource: string, componentName: string, extraListParams: unknown[] = []) {
+function listPaths(
+  resource: string,
+  componentName: string,
+  extraListParams: unknown[] = [],
+  extensions: Record<string, unknown> = {},
+) {
   return {
     [`/api/${resource}/`]: {
       get: {
         operationId: `${resource}_list`,
         "x-karni-resource": resource,
+        ...extensions,
         parameters: [
           queryParam("ordering", { type: "string" }),
           queryParam("page", { type: "integer" }),
@@ -309,9 +316,43 @@ export const openApiFixture = {
         responses: { "204": { description: "No response body" } },
       },
     },
-    ...listPaths("venues", "Venue"),
-    ...listPaths("tags", "Tag"),
-    ...listPaths("users", "User"),
+    // x-karni-related: the reverse relations (karni.api.schema), as the server publishes them.
+    ...listPaths("venues", "Venue", [], {
+      "x-karni-related": [
+        {
+          name: "event_set",
+          resource: "events",
+          field: "venue",
+          param: "venue",
+          key: "id",
+          label: "Events",
+        },
+      ],
+    }),
+    ...listPaths("tags", "Tag", [], {
+      "x-karni-related": [
+        {
+          name: "events",
+          resource: "events",
+          field: "tags",
+          param: null,
+          key: "id",
+          label: "Events",
+        },
+      ],
+    }),
+    ...listPaths("users", "User", [], {
+      "x-karni-related": [
+        {
+          name: "event_set",
+          resource: "events",
+          field: "organizer",
+          param: "organizer",
+          key: "id",
+          label: "Organized events",
+        },
+      ],
+    }),
   },
   components: {
     schemas: {
