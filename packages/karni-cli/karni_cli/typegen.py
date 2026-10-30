@@ -4,6 +4,10 @@ The item component for each resource is resolved by following the list
 operation's 200 response ``$ref`` through the paginated wrapper to
 ``properties.results.items.$ref`` — never derived from the resource name
 (component names are app-qualified, e.g. ``TestappEvent``).
+
+A resource whose aggregate operation carries ``x-karni-aggregate``
+(experimental) also gets ``use<Resource>Aggregate``, whose ``groupBy`` is
+the union of the groups it declares.
 """
 
 from __future__ import annotations
@@ -59,6 +63,25 @@ def resource_components(doc: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+def aggregate_groups(doc: dict[str, Any]) -> dict[str, list[str]]:
+    """resource -> the groups its aggregate action takes (``x-karni-aggregate``), experimental.
+
+    The aggregate operation sits at ``<list path>aggregate/``. A resource
+    without a declared aggregation has no such operation.
+    """
+    found: dict[str, list[str]] = {}
+    paths = doc.get("paths", {})
+    for path, item in sorted(paths.items()):
+        resource = (item.get("get") or {}).get("x-karni-resource")
+        if not resource or resource in found:
+            continue
+        operation = (paths.get(f"{path}aggregate/") or {}).get("get") or {}
+        declared = operation.get("x-karni-aggregate")
+        if isinstance(declared, dict):
+            found[resource] = [str(group) for group in declared.get("group_by") or []]
+    return found
+
+
 def _pascal(resource: str) -> str:
     return "".join(part.capitalize() for part in resource.replace("-", "_").split("_"))
 
@@ -67,13 +90,17 @@ def generate_hooks(doc: dict[str, Any]) -> str:
     resources = resource_components(doc)
     if not resources:
         raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
+    aggregates = {name: groups for name, groups in aggregate_groups(doc).items() if groups}
+    hooks = ["useResourceItem", "useResourceList", "useResourceMutations"]
+    types = ["ResourceItemParams", "ResourceListParams", "ResourceMutationsOptions"]
+    if aggregates:
+        hooks.insert(0, "useAggregate")
+        types.insert(0, "AggregateParams")
     lines = [
         HEADER.rstrip("\n"),
-        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";',
+        f'import {{ {", ".join(hooks)} }} from "@karni/ui";',
         "import type {",
-        "  ResourceItemParams,",
-        "  ResourceListParams,",
-        "  ResourceMutationsOptions,",
+        *(f"  {name}," for name in types),
         '} from "@karni/ui";',
         'import type { components } from "./types";',
         "",
@@ -91,6 +118,16 @@ def generate_hooks(doc: dict[str, Any]) -> str:
             f'  useResourceMutations<{item}>("{resource}", options);',
             "",
         ]
+        groups = aggregates.get(resource)
+        if groups:
+            union = " | ".join(json.dumps(group) for group in groups)
+            lines += [
+                f"export type {name}AggregateGroup = {union};",
+                f"export const use{name}Aggregate = (",
+                f"  params: AggregateParams & {{ groupBy: {name}AggregateGroup }},",
+                f') => useAggregate("{resource}", params);',
+                "",
+            ]
     return "\n".join(lines)
 
 

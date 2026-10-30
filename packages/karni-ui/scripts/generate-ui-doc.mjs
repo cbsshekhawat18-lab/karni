@@ -67,6 +67,8 @@ const HOOKS = {
   useResourceItem: "One row by id, optionally expanded.",
   useChangeHistory:
     "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
+  useAggregate:
+    "Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.",
   useImportDescribe:
     "The importable fields of a resource and the user's remembered column mapping.",
   useImportJob: "One import job's state. It polls while the backend previews or commits it.",

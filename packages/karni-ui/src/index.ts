@@ -250,6 +250,15 @@ export { useResourceList } from "./hooks/useResourceList";
 export { useResourceItem } from "./hooks/useResourceItem";
 export { useResourceMutations } from "./hooks/useResourceMutations";
 export type { ResourceMutations } from "./hooks/useResourceMutations";
+export { useAggregate, aggregateKey, buildAggregateQuery } from "./hooks/useAggregate";
+export type {
+  AggregateCategory,
+  AggregateKey,
+  AggregateMetric,
+  AggregateParams,
+  AggregateResult,
+  AggregateSeries,
+} from "./hooks/useAggregate";
 export type {
   Paginated,
   FilterValue,
@@ -447,7 +456,7 @@ export type {
   DashboardLoadingProps,
 } from "./components/dashboard/dashboard";
 
-export { DataChart, defaultDataChartSlots } from "./components/chart/data-chart";
+export { DataChart, aggregateSeries, defaultDataChartSlots } from "./components/chart/data-chart";
 export type {
   DataChartProps,
   DataChartKind,
