@@ -352,6 +352,18 @@ describe.each(SNAPSHOTS)("parseOpenApi — generated testapp snapshot, $keys key
       expect(event.operations.list?.queryParams).not.toContain("id");
       expect(event.operations.list?.queryParams).not.toContain("id__gte");
       expect(event.operations.list?.queryParams).toContain("venue");
+
+      // x-karni-related (experimental): the venue's events, filtered by ?venue=.
+      expect(parsed.resources["venues"]?.related).toEqual([
+        {
+          name: "events",
+          resource: "events",
+          field: "venue",
+          param: "venue",
+          key: "id",
+          label: "Events",
+        },
+      ]);
     },
   );
 });

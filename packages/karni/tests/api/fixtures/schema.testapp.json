@@ -4729,6 +4729,16 @@
         "x-karni-access": {
           "authenticated": true
         },
+        "x-karni-related": [
+          {
+            "field": "organizer",
+            "key": "id",
+            "label": "Events",
+            "name": "events",
+            "param": "organizer",
+            "resource": "events"
+          }
+        ],
         "x-karni-resource": "users"
       },
       "post": {
@@ -5538,6 +5548,16 @@
         "x-karni-access": {
           "public": true
         },
+        "x-karni-related": [
+          {
+            "field": "venue",
+            "key": "id",
+            "label": "Events",
+            "name": "events",
+            "param": "venue",
+            "resource": "events"
+          }
+        ],
         "x-karni-resource": "venues"
       },
       "post": {
