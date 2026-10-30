@@ -21,6 +21,7 @@ import sys
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -120,7 +121,7 @@ def _agent(flow: Flow, request: str) -> None:
             break
         for question in asked["questions"]:
             value = _as_text(question)
-            flow.call("answer", lambda q=question, v=value: mcp_server.answer_tool(q["id"], v))
+            flow.call("answer", partial(mcp_server.answer_tool, question["id"], value))
     step("questions and answers")
     # 4. the plan
     planned = flow.call("plan", mcp_server.plan_tool)

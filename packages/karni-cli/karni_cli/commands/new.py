@@ -263,8 +263,10 @@ def _new_app_lines() -> list[str]:
     return [
         "Then build the app with your agent: describe it in one line, and give the line to",
         "  /new-app <the app in one line>",
-        "  (in a tool without slash commands, the prompt: Run `karni rules --procedure new-app` "
-        "and follow every step for: <the app in one line>)",
+        (
+            "  (in a tool without slash commands, the prompt: Run `karni rules --procedure "
+            "new-app` and follow every step for: <the app in one line>)"
+        ),
     ]
 
 

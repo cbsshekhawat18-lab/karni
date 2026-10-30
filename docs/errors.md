@@ -3556,6 +3556,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
 
+<a id="c420"></a>
+
+### C420: No recipe of that name
+
+*karni command* · from `karni recipes show, the MCP tool recipes (karni_cli.recipes)`
+
+**Why Karni objects.** Recipes are the folders built into karni-cli and the karni.recipes entry points of its environment. blank is the blank start, the one name that is always there.
+
+**Fix.** Run karni recipes list for the names, or karni recipes list --match "<the request>" for the closest. A recipe of your own joins with a recipe.toml, a karni.yaml and an entry point (docs/app-spec.md#recipes).
+
+<a id="c421"></a>
+
+### C421: A recipe cannot be used
+
+*karni command* · from `karni recipes list, karni recipes show, the MCP tool recipes (karni_cli.recipes)`
+
+**Why Karni objects.** A recipe is a folder with a recipe.toml that follows its schema, a name that is the folder's (or the entry point's), and a karni.yaml. One that does not, or whose name another recipe has already, is left out and reported.
+
+**Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show <name>.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4099,6 +4119,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Karni chooses the questions with fixed rules over the spec and the module manifests (owners, access, the sign-up role, the kind, each module's and feature's asks), so every agent asks the same few, and the user is never asked what the spec or Karni's defaults already decide.
 
 **Fix.** Run `karni plan --questions`, ask the user those questions only, then `karni spec answer <id> <value>` for each answer.
+
+<a id="k311"></a>
+
+### K311: New app: /new-app. Never hand-write what karni.yaml expresses.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** To build an app from a request, follow the new-app procedure (`/new-app <the app in one line>`, or `karni rules --procedure new-app`): a recipe or the blank start, karni.yaml, `karni plan --questions`, `karni plan`, `karni build`. Never hand-write what karni.yaml can express (apps, entities, fields, owners, access, roles, modules, features, pages, seed counts): change karni.yaml and run `karni build` again. Write only the domain logic that is left, in the project's own files.
+
+**Why Karni objects.** karni build turns the spec into models, viewsets, migrations, seeds, tests, types and settings without a language model, so the agent writes a short YAML file instead of thousands of lines, and a later change to the spec updates the app without touching the code written by hand.
+
+**Fix.** Move the hand-written entity, field, access, role or setting into karni.yaml, then run `karni build`.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

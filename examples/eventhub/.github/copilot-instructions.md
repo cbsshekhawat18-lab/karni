@@ -21,7 +21,8 @@ Before any work, run these two commands and follow what they return:
 While you work:
 
 - Run `karni rules --check <file>` on every file you write and fix each violation it prints.
-- Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module, site-from-design.
+- Use `karni rules --procedure <name>` for routine tasks: new-model, new-page, add-module, new-module, site-from-design, new-app.
+- To build an app from a one-line request, run `/new-app <the request>` where your tool has slash commands, else follow `karni rules --procedure new-app`: karni.yaml first, then `karni build` (rule K311).
 - Run `karni check` before committing. Every enforced rule fails the build.
 
 If the `karni` command is unavailable, say so and stop. Do not guess the conventions.

@@ -106,6 +106,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier | `experimental` | Karni's own tests |
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
 | The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
+| The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -426,7 +427,7 @@ karni types [OPTIONS]
 
 #### `karni mcp`
 
-Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -1508,6 +1509,46 @@ karni replay [OPTIONS] REQUEST_ID
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 
+### Other
+
+#### `karni recipes`
+
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+
+```
+karni recipes COMMAND [ARGS]...
+```
+
+##### `karni recipes list`
+
+Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+
+```
+karni recipes list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--match` TEXT |  | A one-line request: the best few recipes for it, with their scores (2 for each word of the request a use_when phrase has, 1 for each one only the purpose has). |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
+##### `karni recipes show`
+
+Experimental. One recipe: what it is for, what people usually change, its files and spec.
+
+blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits.
+
+```
+karni recipes show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A recipe, or blank for the blank start. |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
 ## Base classes
 
 The public names of the four packages a project builds on, from their `__all__`. *What you get* is read from the class itself: the fields and managers a model inherits, the attributes a viewset declares and the endpoints it serves, the admin hooks it overrides, a function's signature.
@@ -2361,6 +2402,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C400`](errors.md#c400) | cli | No open question has this id |
 | [`C401`](errors.md#c401) | cli | The value is not an answer the question takes |
 | [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
+| [`C420`](errors.md#c420) | cli | No recipe of that name |
+| [`C421`](errors.md#c421) | cli | A recipe cannot be used |
 
 ### Agent rules (`K`)
 
@@ -2411,6 +2454,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
 | [`K310`](errors.md#k310) | rule | Before karni build: ask only karni plan --questions. |
+| [`K311`](errors.md#k311) | rule | New app: /new-app. Never hand-write what karni.yaml expresses. |
 
 ### ESLint plugin (`karni/…`)
 
@@ -2455,6 +2499,7 @@ One per routine task, written for each agent tool by `karni new` and `karni rule
 | `/add-module` | `<module> (e.g. payments)` | Install an optional Karni module and wire it into settings |
 | `/new-module` | `<app_name>` | Create a new local Django app following Karni conventions |
 | `/site-from-design` | `<design folder> [site app]` | Build the public site from a designer's pages, with models and real content |
+| `/new-app` | `<the app in one line>` | Build an app from a one-line request: karni.yaml, then karni build |
 
 | Tool | Written to |
 |---|---|

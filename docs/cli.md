@@ -31,6 +31,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 - **Debugging**: [why](#karni-why), [why-empty](#karni-why-empty)
 - **Generators**: [make](#karni-make), [import](#karni-import), [design](#karni-design), [spec](#karni-spec), [plan](#karni-plan), [build](#karni-build)
 - **Debugging**: [trace](#karni-trace), [replay](#karni-replay)
+- **Other**: [recipes](#karni-recipes)
 
 ## Project
 
@@ -333,7 +334,7 @@ karni types [OPTIONS]
 
 ### `karni mcp`
 
-Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp])
+Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp])
 
 ```
 karni mcp [OPTIONS]
@@ -1414,3 +1415,43 @@ karni replay [OPTIONS] REQUEST_ID
 | `--json` |  | Print the result as JSON. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
+## Other
+
+### `karni recipes`
+
+Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show).
+
+```
+karni recipes COMMAND [ARGS]...
+```
+
+#### `karni recipes list`
+
+Experimental. Every recipe, or with --match the best few for a request, and the blank start.
+
+--match compares the words of the request with each recipe's use_when and purpose, after lowercasing, making plurals singular and leaving out words that name no app (a, the, app, with ...). A recipe scores 2 for each word one of its use_when phrases has and 1 for each word only its purpose has. The recipes that score 2 or more come back, best first, at most 3. When none does, start from the blank start: karni.yaml with the version and the app's name, nothing else.
+
+```
+karni recipes list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--match` TEXT |  | A one-line request: the best few recipes for it, with their scores (2 for each word of the request a use_when phrase has, 1 for each one only the purpose has). |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |
+
+#### `karni recipes show`
+
+Experimental. One recipe: what it is for, what people usually change, its files and spec.
+
+blank shows the blank start: karni.yaml with the version and the app's name, nothing else, where an app starts when no recipe fits.
+
+```
+karni recipes show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A recipe, or blank for the blank start. |
+| `--json` |  | Print {version, request, threshold, recipes, blank, next, problems} (docs/assets/karni-recipes.schema.json). |

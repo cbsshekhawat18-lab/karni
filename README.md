@@ -241,7 +241,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
 | [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
-| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, explain_text and queries as MCP tools (needs karni-cli[mcp]) |
+| [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp]) |
 | [`karni queries`](docs/REFERENCE.md#karni-queries) | Run one endpoint in-process as a user and report its queries |
 | [`karni serve`](docs/REFERENCE.md#karni-serve) | Start the dev stack |
 | [`karni migrate`](docs/REFERENCE.md#karni-migrate) | Apply migrations |
@@ -267,6 +267,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni build`](docs/REFERENCE.md#karni-build) | Make the project match karni.yaml, without touching hand-written code |
 | [`karni trace`](docs/REFERENCE.md#karni-trace) | Follow a captured request: its tasks, retries, email, webhooks, audit |
 | [`karni replay`](docs/REFERENCE.md#karni-replay) | Re-run a captured request against the current code, as any user |
+| [`karni recipes`](docs/REFERENCE.md#karni-recipes) | Recipes (experimental): ready-made karni.yaml files a new app starts from, matched to a one-line request (list, show): [list](docs/REFERENCE.md#karni-recipes-list), [show](docs/REFERENCE.md#karni-recipes-show) |
 <!-- /generated:commands -->
 
 </details>
@@ -412,10 +413,11 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier
 - `experimental` `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier
 - `experimental` The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier
+- `experimental` The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
-Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`.
+Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`, `/new-app`.
 <!-- /generated:agents -->
 
 Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent rules](docs/REFERENCE.md#agent-rules-k).
