@@ -91,6 +91,7 @@ class KarniSettingsModel(BaseModel):
     KARNI_API_CACHE: bool = False
     KARNI_API_CACHE_TTL: Any = 300
     KARNI_API_CACHE_ALIAS: Any = "default"
+    KARNI_AGGREGATE_MAX_GROUPS: int = Field(default=1000, ge=1)
     KARNI_EVENTS_AUTODISCOVER: bool = True
     KARNI_SCHEDULES_AUTODISCOVER: bool = True
     KARNI_ADMIN_EXCLUDE: list[Any] = Field(default_factory=list)

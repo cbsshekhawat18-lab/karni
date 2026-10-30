@@ -17,7 +17,11 @@ Three layers, all on by default in a Karni project's test run:
    ``BaseViewSet`` (an external model's aside, :mod:`karni.db`), ``list`` is
    measured with 2 and with 12 rows and ``retrieve`` with 2 and with 12
    related rows per to-many relation the serializer renders; the query count
-   must not grow. An absolute budget cannot see an N+1 in a one-row test — this can. Rows come from
+   must not grow. A viewset with an aggregation (:mod:`karni.aggregation`,
+   experimental) has its ``aggregate`` action measured with 2 and 12 rows
+   too, grouped by its first declared group, with ``top=1`` and, when it
+   declares a second group, ``stack``. An absolute budget cannot see an N+1
+   in a one-row test — this can. Rows come from
    :mod:`karni.testing.factories` (explicit ``<app>/factories.py`` factories
    win), the requester gets every role the ``read`` predicate names and owns
    the rows its ``Owned`` paths name. It runs as part of the architecture
@@ -48,6 +52,7 @@ __all__ = [
     "SCALING_SMALL",
     "ScalingCase",
     "ScalingResult",
+    "aggregate_query",
     "check_scaling",
     "pytest_generate_tests",
     "query_budget",
@@ -157,7 +162,10 @@ def _optout(viewset: type[Any]) -> tuple[bool, str]:
 
 
 def scaling_cases() -> list[ScalingCase]:
-    """``list``/``retrieve`` of every routed project ``BaseViewSet`` not opted out."""
+    """``list``/``retrieve`` (and ``aggregate``) of every routed project ``BaseViewSet``.
+
+    A viewset opted out with ``# karni: allow(query-scaling): <reason>`` is left out.
+    """
     from karni.api.routers import resolve_router
     from karni.api.viewsets import BaseViewSet
     from karni.testing._source import project_app_configs
@@ -185,7 +193,38 @@ def scaling_cases() -> list[ScalingCase]:
         expand = expansions(viewset)
         if expand and callable(getattr(viewset, "list", None)):
             cases.append(ScalingCase(viewset, "list", error, expand=expand))
+        if aggregate_query(viewset):
+            cases.append(ScalingCase(viewset, "aggregate", error))
     return cases
+
+
+def aggregate_query(viewset: type[Any]) -> dict[str, str]:
+    """The query the scaling check sends to ``aggregate``: ``{}`` without an aggregation.
+
+    The first declared group with ``top=1`` (so the "Other" query runs too),
+    stacked by the second declared group when there is one.
+    """
+    from karni.aggregation import Aggregation, aggregation_of
+    from karni.errorcodes import KarniError
+
+    model = viewset.model if viewset.model is not None else getattr(viewset.queryset, "model", None)
+    declared = viewset.__dict__.get("aggregation") or getattr(viewset, "aggregation", None)
+    try:
+        aggregation = (
+            Aggregation.coerce(declared, viewset.__name__)
+            if declared is not None
+            else aggregation_of(model)
+        )
+    except KarniError:
+        return {}  # karni check reports it (E380)
+    if aggregation is None or not aggregation.group_by:
+        return {}
+    query = {"group_by": aggregation.group_by[0], "top": "1"}
+    first = aggregation.group_by[0].partition(":")[0]
+    others = [entry for entry in aggregation.group_by if entry.partition(":")[0] != first]
+    if others:
+        query["stack"] = others[0]
+    return query
 
 
 def _serves_external(viewset: type[Any]) -> bool:
@@ -365,7 +404,17 @@ def check_scaling(case: ScalingCase) -> ScalingResult:
         expand = {"expand": ",".join(case.expand)} if case.expand else {}
         view, serializer_class = _view(viewset, action, user, expand)
         plan = plan_for(serializer_class, model, view.get_serializer_context())
-        if action == "list":
+        if action == "aggregate":
+            query = aggregate_query(viewset)
+            for _ in range(SCALING_SMALL):
+                create(model, **owner)
+            _measure(viewset, action, user, query=query)  # warm-up: one-time lookups
+            small, response, _report = _measure(viewset, action, user, query=query)
+            for _ in range(SCALING_LARGE - SCALING_SMALL):
+                create(model, **owner)
+            large, response, report = _measure(viewset, action, user, query=query)
+            status = response.status_code
+        elif action == "list":
             # Rows already present (other fixtures, the requester itself) render in
             # both runs; one page must hold them plus every seeded row.
             page = {"page_size": model._default_manager.count() + SCALING_LARGE, **expand}
@@ -432,7 +481,7 @@ def _database_marks(case: ScalingCase) -> list[Any]:
 def test_list_and_retrieve_queries_do_not_grow_with_rows(
     db: None, karni_scaling_case: ScalingCase
 ) -> None:
-    """Every routed project viewset's ``list``/``retrieve`` is N-independent."""
+    """Every routed project viewset's ``list``/``retrieve`` (and ``aggregate``) is N-independent."""
     import pytest
 
     if karni_scaling_case.optout_error:

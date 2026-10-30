@@ -485,6 +485,8 @@ BASE: dict[str, Any] = {
     "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
     "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),
     "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
+    # The most groups one GET <resource>/aggregate/ returns (karni.aggregation, experimental).
+    "KARNI_AGGREGATE_MAX_GROUPS": env.int("KARNI_AGGREGATE_MAX_GROUPS", default=1000),
     # --- Admin (karni.admin + django-unfold) --------------------------------
     "UNFOLD": {
         "SITE_TITLE": _ADMIN_TITLE,

@@ -69,6 +69,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_API_CACHE": "Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`).",
     "KARNI_API_CACHE_TTL": "Seconds a cached response lives.",
     "KARNI_API_CACHE_ALIAS": "The Django cache alias responses are stored in.",
+    "KARNI_AGGREGATE_MAX_GROUPS": "Experimental. The most groups one `GET <resource>/aggregate/` returns. A request that makes more is refused (`E387`): send `top` or narrow it with filters. See [aggregations](aggregations.md).",
     "KARNI_ADMIN_AUTODISCOVER": "Register every unregistered model in the admin at startup (`karni.admin`).",
     "KARNI_ADMIN_EXCLUDE": "App labels or `app_label.ModelName` entries the admin leaves out.",
     "KARNI_IMPORT_INLINE_ROWS": "Files with at most this many rows [import](import-export.md) inside the request. Larger ones run in Celery with progress.",

@@ -164,6 +164,15 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "([API: dashboard](api.md#the-staff-dashboard)).",
         'dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}',
     ),
+    Option(
+        "aggregate",
+        "`None`",
+        "Experimental. What `GET <resource>/aggregate/` may group by and sum: the fields, "
+        "relation paths and expressions in `group_by` (a date takes `:year`, `:quarter` or "
+        "`:month`), the `values` a metric reads, the `metrics` allowed and named `expressions` "
+        "([aggregations](aggregations.md)).",
+        'aggregate = {"group_by": ["region", "launched_on"], "values": ["price"]}',
+    ),
     # typed field layer (karni.fields)
     Option(
         "append_only",
