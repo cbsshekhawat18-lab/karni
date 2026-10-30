@@ -201,7 +201,7 @@ class KarniAutoSchema(AutoSchema):
 
             return tree_response_serializer(node)
         if action == "ancestors" and (node := self._karni_tree_node()) is not None:
-            return node(many=True)
+            return node
         if action == "history":
             from karni.audit.serializers import ChangeLogSerializer
 
@@ -300,17 +300,23 @@ class KarniAutoSchema(AutoSchema):
         ]
 
     def get_filter_backends(self) -> list[Any]:
-        """Stock, except ``children/``: a paginated list the list filters do not apply to."""
-        if self._karni_action() == "children":
+        """Stock, except ``children/`` and ``ancestors/``: the list filters do not apply there."""
+        if self._karni_action() in ("children", "ancestors"):
             return []
         return list(super().get_filter_backends())
 
+    def _get_paginator(self) -> Any:
+        """Stock, except ``ancestors/``: a plain array (a path is never long enough to page)."""
+        if self._karni_action() == "ancestors":
+            return None
+        return super()._get_paginator()
+
     def _is_list_view(self, serializer: Any = None) -> bool:
-        """History and a node's children are paginated lists (``paginated_response``)."""
+        """History, a node's children and its ancestors are lists; the rest are not."""
         action = self._karni_action()
-        if action in ("history", "children"):
+        if action in ("history", "children", "ancestors"):
             return True
-        if action in ("tree", "ancestors", "move"):
+        if action in ("tree", "move"):
             return False
         if action in (
             "export",
