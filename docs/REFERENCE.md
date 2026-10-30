@@ -47,7 +47,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Query budgets: a list endpoint that runs more queries than declared fails its test | `stable` | [viewsets.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/viewsets.py) |
 | CSV and XLSX export of any list (`/export/?format=`) | `stable` | [test_leads.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/tests/test_leads.py) |
 | Import from CSV or XLSX with a mandatory preview (`/import/`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
-| Response caching per viewset (`Cache`, `Uncached`) | `experimental` | Karni's own tests |
+| Response caching per viewset (`Cache`, `Uncached`, `KARNI_API_CACHE`): entries shared only by callers with the same access, invalidated on every write, `X-Cache` | `stable` | [viewsets.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/events/viewsets.py) |
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
@@ -1533,7 +1533,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | Name | Kind | Purpose | What you get |
 |---|---|---|---|
 | `DEFAULT_ADMIN_EXCLUDE` | constant | `DEFAULT_ADMIN_EXCLUDE`: `sessions`, `contenttypes`, `admin`, `auth.Permission`, `django_celery_results.ChordCounter` |  |
-| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
+| `KarniAdminMixin` | admin class | Every Karni admin behaviour, as cooperative `ModelAdmin` overrides. | overrides `get_queryset`, `has_view_permission`, `has_add_permission`, `has_change_permission`, `has_delete_permission`, `get_actions`, `response_action`, `get_list_display`, `get_list_filter`, `get_search_fields`, `get_sortable_by`, `get_fields`, `get_fieldsets`, `get_readonly_fields`, `lookup_allowed`, `history_view`, `formfield_for_manytomany`, `get_exclude`, `get_form`, `formfield_for_foreignkey`, `save_model`, `save_related`, `log_addition`, `log_change`, `delete_model`, `delete_queryset`, `response_add`, `response_change`, `response_delete` |
 | `KarniModelAdmin` | admin class | `KarniAdminMixin` (and the import/export mixin) on the `KARNI_ADMIN_BASE` class. |  |
 | `SoftDeleteAdminMixin` | admin class | Admin behaviour for soft-delete models. | overrides `get_queryset`, `get_paginator`, `get_changelist`, `get_list_filter`, `get_search_results`, `delete_queryset` |
 | `SoftDeleteListFilter` | admin class | Changelist filter over `deleted_at`: alive (default) / deleted / all. |  |
@@ -1664,9 +1664,11 @@ class Lead(BaseModel):
 | `KARNI_QUERY_BUDGET_MODE` | `KARNI_QUERY_BUDGET_MODE` | `"off"` | `off`, `warn` (log an exceeded budget) or `raise` (fail the request, which is what the pytest plugin sets). |
 | `KARNI_QUERY_LOG` | `KARNI_QUERY_LOG` | `False` | Log each request's query count, duplicates and SQL time (`QueryLogMiddleware`). |
 | `KARNI_SEED_LOGINS` | `KARNI_SEED_LOGINS` | `{}` | Extra `karni seed` logins with their roles, as JSON: `{"organizer@example.com": ["organizer"]}`. |
-| `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
+| `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses, invalidated on every write. See [response caching](api.md#response-caching). |
 | `KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
 | `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
+| `KARNI_API_CACHE_FLUSH` | `KARNI_API_CACHE_FLUSH` | `None` | A daily full flush of the response cache through Celery beat: `"HH:MM"`, or `"HH:MM Area/City"` for a timezone other than Celery's. `None` (the default) schedules nothing. |
+| `KARNI_API_CACHE_LEGACY_HEADER` | `KARNI_API_CACHE_LEGACY_HEADER` | `True` | Also send the deprecated `X-Karni-Cache` header, with a deprecation warning once per process. `X-Cache` replaces it. Set it to `False` once nothing reads the old header. Removed with the header in 1.0. |
 
 ### Admin (karni.admin + django-unfold)
 
@@ -2081,6 +2083,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E406`](errors.md#e406) | check | Two schedules share a name |
 | [`E407`](errors.md#e407) | exception | No schedule has that name |
 | [`E408`](errors.md#e408) | exception | A scheduled task failed when run by hand |
+| [`E410`](errors.md#e410) | check | A cached viewset reads a model Karni sees no write to |
+| [`E411`](errors.md#e411) | exception | KARNI_API_CACHE_FLUSH is not a time of day |
 | [`E501`](errors.md#e501) | exception | An optional dependency is not installed |
 | [`W501`](errors.md#w501) | warning | The throttle cache is private to each process |
 | [`E502`](errors.md#e502) | exception | Unknown settings profile |
@@ -2107,6 +2111,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
 | [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
 | [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
+| [`W580`](errors.md#w580) | warning | Cached responses live in a cache private to each process |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |
@@ -2339,6 +2344,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C370`](errors.md#c370) | cli | A state field spec is invalid |
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
+| [`C520`](errors.md#c520) | cli | An entity's cache value is not valid |
+| [`C521`](errors.md#c521) | cli | A cached entity reads a table Karni does not see written |
 
 ### Agent rules (`K`)
 

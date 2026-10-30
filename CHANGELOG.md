@@ -11,6 +11,45 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Response caching is stable** (large-apps item 9). Keys are
+  `karni:api:r:<app_label.model>:<sha256>` over the viewset, the path, the
+  query string normalised (sorted parameters, empty values dropped, the comma
+  lists of `?expand=` and `__in` filters sorted), the API version, the
+  language, the caller's access scope and the version tokens of every model
+  read. Callers with the same roles share an entry when the read access
+  depends on roles alone (`Public`, `Authenticated`, `HasRole`, grants scoped
+  `all`), otherwise the entry is the user's own. `BaseViewSet.get_cache_scope`
+  and `karni.api.caching.access_scope` decide it. Every write invalidates:
+  signals for every model in every process, Karni's `update()`, `delete()`,
+  `bulk_create()` and `bulk_update()` once per call, imports and content
+  loads once per run (never for a dry run), the admin's bulk actions once per
+  action (`invalidation_batch()`), and again when a transaction commits.
+  `invalidate(Model)` now covers the model's details too. `X-Cache: HIT`,
+  `MISS` or `BYPASS` on every cacheable response, and `X-Bypass-Cache: 1`
+  for staff. `karni.E410` refuses a cached viewset that reads an external,
+  unmanaged or other-database model without `Cache(ttl=...)` or
+  `Uncached(...)`, and `karni.W580` warns about a per-process cache in
+  production. `KARNI_API_CACHE_FLUSH = "03:30 Europe/Paris"` schedules a
+  daily full flush through Celery beat (`karni-flush-api-cache`, `E411` for a
+  bad value). `clear()` uses the backend's `delete_pattern` when it has one
+  and replaces the version tokens otherwise, and the admin's *API cache*
+  screen shows the setup and clears everything or one resource. The pytest
+  plugin starts every test with an empty response cache. EventHub caches its
+  venues. `X-Karni-Cache` is deprecated (removed in 1.0, with a warning once
+  per process until `KARNI_API_CACHE_LEGACY_HEADER = False`).
+  [docs/api.md](docs/api.md#response-caching),
+  [migration note](docs/migrations/0.4.1.md#response-caching-is-stable).
+- **karni.yaml takes `features: api_cache` and an entity's `cache:`.**
+  `api_cache` takes `true`, `false` or `{ttl: <seconds>}` and sets
+  `KARNI_API_CACHE` and `KARNI_API_CACHE_TTL` in the settings block (left
+  out, the block sets nothing and the environment decides). An entity's
+  `cache:` (seconds, or `false`) becomes `cache = Cache(ttl=...)` or
+  `cache = Uncached(reason="spec")` in its Karni-owned viewset. `karni spec
+  export` and `karni plan` read both back, and `manage.py karni_facts`
+  reports each viewset's `cache` and the two settings. New codes: `C520` (an
+  entity's `cache` is not valid) and `C521` (with `api_cache` on, an entity
+  reads an external table or one on another database and has no `cache`).
+  The `api_cache` feature manifest is `in_spec = true`.
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

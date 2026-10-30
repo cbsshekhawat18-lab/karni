@@ -274,3 +274,21 @@ def test_only_superusers_see_the_screen() -> None:
     assert client.get(SCREEN).status_code == 403
     assert client.post(SCREEN, {"clear": "all"}).status_code == 403
     assert SCREEN not in client.get("/admin/").content.decode()
+
+
+# tests start from an empty cache
+
+
+def test_turning_caching_on_starts_from_no_cached_response(event: Event) -> None:
+    _get(Events)
+    assert _get(Events)["X-Cache"] == "HIT"
+    with override_settings(KARNI_API_CACHE=True):  # a test of its own would do this
+        assert _get(Events)["X-Cache"] == "MISS"
+
+
+def test_the_pytest_plugin_empties_the_cache_before_each_test(event: Event) -> None:
+    from karni.testing import pytest_plugin
+
+    _get(Events)
+    pytest_plugin._karni_fresh_response_cache.__wrapped__()  # type: ignore[attr-defined]
+    assert _get(Events)["X-Cache"] == "MISS"

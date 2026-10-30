@@ -1026,6 +1026,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
 
+<a id="e410"></a>
+
+#### E410: A cached viewset reads a model Karni sees no write to
+
+*system check (error)* · from `karni.checks.check_api_cache`
+
+**Why Karni objects.** With KARNI_API_CACHE on, a cached response is invalidated when a model it reads is written. An external or unmanaged model, or one on another database, is written by another system, so no signal reaches Karni and the response would stay stale for the whole KARNI_API_CACHE_TTL.
+
+**Fix.** Bound the staleness with `cache = Cache(ttl=60)` on the viewset (any explicit ttl), or opt it out with `cache = Uncached(reason='reads the warehouse tables')`. After a write you can see, call karni.api.caching.invalidate(Model).
+
+<a id="e411"></a>
+
+#### E411: KARNI_API_CACHE_FLUSH is not a time of day
+
+*exception* · from `karni.conf.validation; karni.api.caching.parse_flush`
+
+**Why Karni objects.** The scheduled flush of the response cache runs once a day at the time this setting names, in its timezone or Celery's.
+
+**Fix.** Write 'HH:MM' (24-hour), optionally followed by an IANA timezone: '03:30' or '03:30 Europe/Paris'. Leave it unset (None) for no scheduled flush.
+
 ### 5xx · Settings and optional dependencies
 
 <a id="e501"></a>
@@ -1287,6 +1307,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A model declares `class Karni: database`, but DATABASE_ROUTERS does not list karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is replaced after the call.
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
+
+<a id="w580"></a>
+
+#### W580: Cached responses live in a cache private to each process
+
+*system check (warning)* · from `karni.checks.check_api_cache_backend`
+
+**Why Karni objects.** KARNI_API_CACHE keeps responses and their version tokens in KARNI_API_CACHE_ALIAS. A per-process backend (LocMemCache) keeps them in each worker, so a write handled by one worker leaves the other workers serving the old response until the TTL ends.
+
+**Fix.** Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database cache) in production, or silence karni.W580 for a single-process deployment.
 
 ### 6xx · Testing and seeding
 
@@ -3525,6 +3555,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A capacity counter can name the integer field holding the total, which must be declared in the same command. The counter is never optional.
 
 **Fix.** Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a counter that starts at 0.
+
+<a id="c520"></a>
+
+### C520: An entity's cache value is not valid
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** cache: on an entity is its viewset's response caching: how many seconds a cached response lives (Cache(ttl=...)), or false (Uncached). true says nothing the setting does not, and a lifetime of 0 or less caches nothing.
+
+**Fix.** Write cache: 60 (any whole number of seconds above 0), or cache: false to never cache the entity. Leave the key out to follow KARNI_API_CACHE_TTL.
+
+<a id="c521"></a>
+
+### C521: A cached entity reads a table Karni does not see written
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** With api_cache on, a cached response is cleared when Karni sees a write to a table it reads. An external table, a table on another database, or an external entity reached through ?expand= is written by another system, so its cached responses would stay stale until they expire. karni check refuses the same viewset in the project.
+
+**Fix.** Add cache: <seconds> to the entity (how stale a response may be), or cache: false to never cache it.
 
 ## Agent rules (`K`)
 

@@ -5,7 +5,7 @@ import csv
 from django.conf import settings
 from django.db.models import DecimalField, F, Q, Sum
 from django.http import HttpResponse
-from karni.api import Access, Authenticated, BaseViewSet, HasRole, Owned, Public, Where
+from karni.api import Access, Authenticated, BaseViewSet, Cache, HasRole, Owned, Public, Where
 from karni_payments.services import create_checkout
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,6 +21,9 @@ class VenueViewSet(BaseViewSet):
     model = Venue
     access = Access(read=Public(), write=HasRole("organizer", "staff"))
     search_fields = ("name", "city")
+    # Venues rarely change: their responses may live an hour (every write still
+    # invalidates them at once). KARNI_API_CACHE is on in config/settings.py.
+    cache = Cache(ttl=3600)
 
 
 class EventViewSet(BaseViewSet):

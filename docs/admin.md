@@ -167,6 +167,23 @@ gated on the grants (`karni_accounts.rolepermission:view` to look, `:change`
 to edit) and work at tablet width. The rules, the guard rails and the API are
 in [accounts](accounts.md#permission-matrix).
 
+## The API cache screen
+
+The admin index lists **Karni → API cache** (`<admin>/karni/api-cache/`), for
+superusers only. It shows whether [response caching](api.md#response-caching)
+is on, the cache backend and alias in use, how a clear works with that
+backend (`delete_pattern` deletes the entries, otherwise the version tokens
+are replaced), the daily flush `KARNI_API_CACHE_FLUSH` schedules, and every
+routed resource with its TTL and the models it reads. **Clear everything**
+drops every cached response, and **Clear** on a row drops one resource's.
+The bulk actions of every changelist (delete selected, restore, your own)
+invalidate the cache once per action, not once per row.
+
+Override / escape hatch: subclass `karni.admin.cache.ApiCacheScreen` (its
+`has_permission(request)` lets a role in) and call
+`karni.admin.cache.install(site, screen=MyScreen)` from an `admin.py`. The
+template is `karni_admin/api_cache.html`.
+
 ## Import and export
 
 Every changelist has **Export selected as CSV / XLSX** and an **Import**

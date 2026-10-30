@@ -55,7 +55,8 @@ render as a relation (a ``SerializerMethodField``, an aggregate).
 or ``BYPASS``. A staff user's request with ``X-Bypass-Cache: 1`` neither
 reads nor writes the cache (``BYPASS``). The header is ignored for
 everyone else. ``X-Karni-Cache`` (``hit``/``miss``) is deprecated and
-removed in 1.0.
+removed in 1.0: it is sent, with a ``KarniDeprecationWarning`` once per
+process, until ``KARNI_API_CACHE_LEGACY_HEADER = False``.
 
 **Clearing.** :func:`clear` drops every entry, or one resource's. It uses
 the backend's ``delete_pattern`` when there is one (django-redis), and
@@ -66,7 +67,9 @@ clears by hand.
 Settings: ``KARNI_API_CACHE`` (bool, default ``False``),
 ``KARNI_API_CACHE_TTL`` (seconds, default 300), ``KARNI_API_CACHE_ALIAS``
 (default ``"default"``), ``KARNI_API_CACHE_FLUSH`` (``"HH:MM"`` or
-``"HH:MM Area/City"``, default ``None``: no scheduled flush).
+``"HH:MM Area/City"``, default ``None``: no scheduled flush),
+``KARNI_API_CACHE_LEGACY_HEADER`` (default ``True`` until 1.0: also send
+``X-Karni-Cache``).
 
 Override / escape hatches, per viewset: ``cache = Uncached(reason="...")``
 (opt out, reason required), ``cache = Cache(ttl=60, depends_on=[...])``
@@ -358,11 +361,26 @@ def _on_m2m(
     _invalidate(changes)
 
 
+def _on_setting(setting: str, enter: bool, **kwargs: Any) -> None:
+    """``override_settings`` turned caching on or moved it: start from no cached response.
+
+    Rows a test wrote roll back, but the cache keeps what it stored.
+    """
+    if setting in {"KARNI_API_CACHE", "KARNI_API_CACHE_ALIAS"} and enter and cache_enabled():
+        try:
+            clear()
+        except Exception:  # noqa: BLE001 - CACHES may change in the same override, later
+            pass
+
+
 def connect() -> None:
     """Connect the write signals for every model (idempotent; each returns at once while off)."""
+    from django.core.signals import setting_changed
+
     post_save.connect(_on_save, weak=False, dispatch_uid="karni.api.caching.save")
     post_delete.connect(_on_delete, weak=False, dispatch_uid="karni.api.caching.delete")
     m2m_changed.connect(_on_m2m, weak=False, dispatch_uid="karni.api.caching.m2m")
+    setting_changed.connect(_on_setting, weak=False, dispatch_uid="karni.api.caching.setting")
 
 
 # keys
@@ -735,10 +753,33 @@ class ResponseCache:
         backend().set(self.key, {"data": _plain(response.data), "headers": headers}, self.ttl)
 
 
+_LEGACY_NOTE = "migrations/0.4.1.md#response-caching-is-stable"
+_legacy_warned = False
+
+
 def _mark(response: Response, state: str) -> None:
     response[CACHE_HEADER] = state
-    if state != BYPASS:  # deprecated in 0.4.1, removed in 1.0 (X-Cache replaces it)
+    if state != BYPASS and getattr(settings, "KARNI_API_CACHE_LEGACY_HEADER", True):
         response[LEGACY_CACHE_HEADER] = state.lower()
+        _warn_legacy_header()
+
+
+def _warn_legacy_header() -> None:
+    """Once per process: ``X-Karni-Cache`` goes in 1.0, ``X-Cache`` replaces it."""
+    global _legacy_warned
+    if _legacy_warned:
+        return
+    _legacy_warned = True
+    from karni.deprecation import warn_deprecated
+
+    warn_deprecated(
+        "The X-Karni-Cache response header",
+        "X-Cache (HIT, MISS or BYPASS), then set KARNI_API_CACHE_LEGACY_HEADER = False to stop "
+        "sending the old one",
+        removed_in="1.0",
+        doc_anchor=_LEGACY_NOTE,
+        stacklevel=3,
+    )
 
 
 def wants_bypass(request: Any) -> bool:

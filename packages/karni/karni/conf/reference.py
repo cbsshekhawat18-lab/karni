@@ -69,6 +69,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_API_CACHE": "Cache `BaseViewSet` list and retrieve responses, invalidated on every write. See [response caching](api.md#response-caching).",
     "KARNI_API_CACHE_TTL": "Seconds a cached response lives.",
     "KARNI_API_CACHE_ALIAS": "The Django cache alias responses are stored in.",
+    "KARNI_API_CACHE_LEGACY_HEADER": "Also send the deprecated `X-Karni-Cache` header, with a deprecation warning once per process. `X-Cache` replaces it. Set it to `False` once nothing reads the old header. Removed with the header in 1.0.",
     "KARNI_API_CACHE_FLUSH": 'A daily full flush of the response cache through Celery beat: `"HH:MM"`, or `"HH:MM Area/City"` for a timezone other than Celery\'s. `None` (the default) schedules nothing.',
     "KARNI_ADMIN_AUTODISCOVER": "Register every unregistered model in the admin at startup (`karni.admin`).",
     "KARNI_ADMIN_EXCLUDE": "App labels or `app_label.ModelName` entries the admin leaves out.",

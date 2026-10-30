@@ -231,17 +231,30 @@ def test_anonymous_callers_share_one_entry(event: Event) -> None:
 def test_every_cacheable_response_says_hit_or_miss(event: Event) -> None:
     first, second = _get(PublicEvents), _get(PublicEvents)
     assert (first["X-Cache"], second["X-Cache"]) == ("MISS", "HIT")
-    # Deprecated in 0.4.1, removed in 1.0.
-    assert (first["X-Karni-Cache"], second["X-Karni-Cache"]) == ("miss", "hit")
+    assert "X-Karni-Cache" not in first  # KARNI_API_CACHE_LEGACY_HEADER = False (tests/settings.py)
     detail = _get(PublicEvents, action="retrieve", pk=str(event.pk))
     assert detail["X-Cache"] == "MISS"
+
+
+def test_the_old_header_is_sent_with_a_warning_until_1_0(
+    event: Event, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from karni.api import caching
+    from karni.deprecation import KarniDeprecationWarning
+
+    monkeypatch.setattr(caching, "_legacy_warned", False)
+    with override_settings(KARNI_API_CACHE_LEGACY_HEADER=True):
+        with pytest.warns(KarniDeprecationWarning, match="X-Karni-Cache response header"):
+            first = _get(PublicEvents)
+        second = _get(PublicEvents)  # once per process
+    assert (first["X-Karni-Cache"], second["X-Karni-Cache"]) == ("miss", "hit")
 
 
 def test_staff_may_bypass_the_cache(event: Event) -> None:
     staff = _user("staff@example.com", is_staff=True)
     bypass = {"X-Bypass-Cache": "1"}
     first = _get(PublicEvents, user=staff, headers=bypass)
-    assert first["X-Cache"] == "BYPASS" and "X-Karni-Cache" not in first
+    assert first["X-Cache"] == "BYPASS"
     assert _get(PublicEvents, user=staff)["X-Cache"] == "MISS"  # the bypass stored nothing
     assert _get(PublicEvents, user=staff)["X-Cache"] == "HIT"
     assert _get(PublicEvents, user=staff, headers=bypass)["X-Cache"] == "BYPASS"

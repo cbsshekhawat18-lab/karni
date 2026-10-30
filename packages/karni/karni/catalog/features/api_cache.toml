@@ -11,7 +11,7 @@ in_spec = true
 docs = "docs/api.md#response-caching"
 
 [provides]
-settings = { KARNI_API_CACHE = "boolean", KARNI_API_CACHE_TTL = "integer", KARNI_API_CACHE_ALIAS = "string" }
+settings = { KARNI_API_CACHE = "boolean", KARNI_API_CACHE_TTL = "integer", KARNI_API_CACHE_ALIAS = "string", KARNI_API_CACHE_FLUSH = ["string", "null"] }
 
 [[asks]]
 question = "For how many seconds may a cached response be served?"

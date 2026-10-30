@@ -50,6 +50,9 @@ ROOT_URLCONF = "tests.urls"
 # Fast, insecure hashing keeps the user-heavy accounts tests quick.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+# The suite reads X-Cache: no deprecated X-Karni-Cache (tests/api/test_cache_keys.py checks it).
+KARNI_API_CACHE_LEGACY_HEADER = False
+
 karni_settings(globals(), env_name="dev")
 
 # Test-only apps exercised by the api (tests.testapp), admin (tests.adminapp),
