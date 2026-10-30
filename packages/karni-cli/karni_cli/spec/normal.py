@@ -8,8 +8,10 @@ its explicit moves), a field written as ``{type, was}`` as its type, an
 entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order, and the site
-module listed whenever the kind has a site. What carries meaning in its
-order stays in order: fields, pages, search fields and the ordering.
+module listed whenever the kind has a site, and an ``aggregate`` with every
+metric written out when it lists none. What carries meaning in its order
+stays in order: fields, pages, search fields, the ordering and an
+aggregate's groups (the first is what the query-scaling check groups by).
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -29,7 +31,7 @@ from typing import Any
 from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.project import CliError
-from karni_cli.spec.schema import Spec
+from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
 __all__ = ["canonical_field", "normalise", "role_name"]
 
@@ -89,6 +91,15 @@ def _access(rule: Any) -> Any:
     return out
 
 
+def _aggregate(declared: dict[str, Any]) -> dict[str, Any]:
+    """``aggregate:`` with its defaults written out: every metric when none is listed."""
+    return {
+        "group_by": list(dict.fromkeys(declared["group_by"])),
+        "values": list(dict.fromkeys(declared["values"])),
+        "metrics": sorted(set(declared["metrics"] or AGGREGATE_METRICS)),
+    }
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -122,6 +133,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             if isinstance(entity["audit"], list):
                 entity["audit"] = sorted(entity["audit"])
             entity["scope_paths"] = dict(sorted(entity["scope_paths"].items()))
+            if entity["aggregate"] is not None:
+                entity["aggregate"] = _aggregate(entity["aggregate"])
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []

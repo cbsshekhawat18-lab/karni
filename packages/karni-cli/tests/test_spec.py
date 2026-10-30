@@ -160,6 +160,15 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C500", SHOP + "        fields: {name: str}\n        aggregate: {group_by: [colour]}\n", 8),
+    ("C500", SHOP + "        fields: {name: str}\n        aggregate: {group_by: [name__x]}\n", 8),
+    ("C500", SHOP + "        fields: {name: str}\n        aggregate: {group_by: []}\n", 8),
+    ("C500", SHOP + "        fields: {name: str}\n        aggregate:\n          group_by: name\n"
+     "          values: [weight]\n", 10),
+    ("C501", SHOP + "        fields: {name: str}\n        aggregate: {group_by: name, metrics: [median]}\n",
+     8),
+    ("C502", SHOP + "        fields: {name: str}\n        aggregate: {group_by: ['name:year']}\n", 8),
+    ("C502", SHOP + "        fields: {on: date}\n        aggregate: {group_by: ['on:week']}\n", 8),
 ]  # fmt: skip
 
 
@@ -175,8 +184,12 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # The spec's own codes, C324 (the module catalog's requires and conflicts) and the
+    # aggregations' C500-C519.
+    assert all(
+        200 <= int(code[1:]) <= 269 or code == "C324" or 500 <= int(code[1:]) <= 519
+        for code in iter_codes()
+    )
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
@@ -224,6 +237,51 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
         """
     )
     assert report.ok, report.issues
+
+
+def test_an_aggregate_with_paths_buckets_and_metrics() -> None:
+    report = check(
+        """\
+        version: 1
+        app: {name: Shop}
+        apps:
+          shop:
+            entities:
+              Category: {fields: {name: str, parent: "fk:self?"}}
+              Product:
+                fields:
+                  category: fk:Category
+                  channel: "choice:online|store"
+                  launched_on: date
+                  price: "money:EUR"
+                  buyer: "fk:User?"
+                aggregate:
+                  group_by: [category, category__parent, category__name, channel,
+                             "launched_on:year", launched_on, created_at, buyer__email]
+                  values: [price, category]
+                  metrics: [count, sum]
+        """
+    )
+    assert report.ok, report.issues
+    assert report.spec is not None
+    declared = report.spec.apps["shop"].entities["Product"].aggregate
+    assert declared is not None and declared.metrics == ["count", "sum"]
+    data = normalise(report.spec)["apps"]["shop"]["entities"]["Product"]["aggregate"]
+    assert data["group_by"][0] == "category" and data["metrics"] == ["count", "sum"]
+    shorthand = check(SHOP + "        fields: {name: str}\n        aggregate: {group_by: name}\n")
+    assert shorthand.ok and shorthand.spec is not None
+    every = normalise(shorthand.spec)["apps"]["shop"]["entities"]["Product"]["aggregate"]
+    assert every == {
+        "group_by": ["name"],
+        "values": [],
+        "metrics": sorted(schema.AGGREGATE_METRICS),
+    }
+
+
+def test_the_spec_metrics_and_buckets_are_cores() -> None:
+    aggregation = pytest.importorskip("karni.aggregation")
+    assert schema.AGGREGATE_METRICS == aggregation.METRICS
+    assert schema.AGGREGATE_BUCKETS == aggregation.BUCKETS
 
 
 def test_owner_paths_through_relations() -> None:

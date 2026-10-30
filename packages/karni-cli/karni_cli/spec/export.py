@@ -47,9 +47,11 @@ from karni_cli.project import CliError
 from karni_cli.spec import emit, schema
 from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS, module_setting
 from karni_cli.spec.normal import role_name
+from karni_cli.spec.schema import AGGREGATE_METRICS
 
 __all__ = [
     "Exported",
+    "aggregate_of",
     "build",
     "export_project",
     "is_entity",
@@ -614,6 +616,11 @@ def _entity(
             value = karni.pop(option)
             if value not in (None, False, {}, []):
                 entity[key] = value
+    if karni.get("aggregate") not in (None, False):
+        found = aggregate_of(karni["aggregate"])
+        if found is not None:
+            entity["aggregate"] = found
+            karni.pop("aggregate")
     for option in sorted(karni):
         ctx.left_out.append(f"{label}: class Karni {option}")
     if viewset is not None and viewset["search_fields"]:
@@ -644,6 +651,28 @@ def _entity(
         entity["access"] = access
     _drop_unknown(entity, label, ctx.left_out)
     return entity
+
+
+def aggregate_of(declared: Any) -> dict[str, Any] | None:
+    """Experimental. ``class Karni: aggregate`` (as the facts carry it) in the spec's form.
+
+    ``None`` when the spec cannot express it: expressions (``TextNumber`` and
+    the project's own stay in code), or anything but a dict of name lists.
+    """
+    if not isinstance(declared, dict) or set(declared) - {"group_by", "values", "metrics"}:
+        return None
+    lists = {key: declared.get(key) or [] for key in ("group_by", "values", "metrics")}
+    if not all(
+        isinstance(value, list) and all(isinstance(item, str) for item in value)
+        for value in lists.values()
+    ):
+        return None
+    found: dict[str, Any] = {"group_by": list(lists["group_by"])}
+    if lists["values"]:
+        found["values"] = list(lists["values"])
+    if lists["metrics"] and set(lists["metrics"]) != set(AGGREGATE_METRICS):
+        found["metrics"] = list(lists["metrics"])
+    return found
 
 
 def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> None:
@@ -678,6 +707,13 @@ def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> No
             entity["groups"].pop(title)
     if entity.get("groups") == {}:
         entity.pop("groups")
+    aggregate = entity.get("aggregate")
+    if aggregate is not None:
+        reach = known | {"created_by", "updated_by"}
+        entries = [*aggregate["group_by"], *aggregate.get("values", [])]
+        if any(entry.partition(":")[0].split("__", 1)[0] not in reach for entry in entries):
+            left_out.append(f"{label}: aggregate, with a field the spec leaves out")
+            entity.pop("aggregate")
 
 
 def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:

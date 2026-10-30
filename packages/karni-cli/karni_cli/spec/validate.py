@@ -72,7 +72,6 @@ RESERVED: Final[dict[str, dict[str, str]]] = {
     "entity": {
         "tree": "trees (large-apps roadmap)",
         "taxonomies": "taxonomies (large-apps roadmap)",
-        "aggregate": "aggregation endpoints (large-apps item 8)",
     },
 }
 #: Field types a later release adds.
@@ -373,6 +372,7 @@ class _Meaning:
             self.relations(entity)
         for entity in self.entities.values():
             self.options(entity)
+            self.aggregate(entity)
             self.access(entity)
             self.storage(entity)
             self.renames(entity)
@@ -662,6 +662,96 @@ class _Meaning:
                 "Name a relation to the user (e.g. member: fk:User, then owner: member) or a "
                 "path through relations, e.g. workspace__members.",
             )
+
+    def aggregate(self, entity: _Entity) -> None:
+        """``aggregate:``: every group and value a path of fields, buckets on dates (C500-C502)."""
+        declared = entity.entity.aggregate
+        if declared is None:
+            return
+        where = (*entity.path, "aggregate")
+        if not declared.group_by:
+            self.add(
+                "C500",
+                (*where, "group_by"),
+                f"{entity.name}.aggregate.group_by is empty: nothing could be grouped by.",
+                "Name at least one field to group by, e.g. group_by: [status].",
+            )
+        for key, entries in (("group_by", declared.group_by), ("values", declared.values)):
+            for entry in entries:
+                path, colon, bucket = entry.partition(":")
+                if colon and key == "values":
+                    path, bucket = entry, ""
+                last = self.aggregate_path(entity, path, (*where, key), key)
+                if not colon or key == "values" or last == "":
+                    continue
+                if bucket not in schema.AGGREGATE_BUCKETS:
+                    self.add(
+                        "C502",
+                        (*where, key),
+                        f"{entity.name}.aggregate.group_by {entry!r}: {bucket!r} is not a bucket.",
+                        f"Write {path}:year, {path}:quarter or {path}:month, or {path} alone for "
+                        "every bucket.",
+                    )
+                elif last is not None and last not in ("date", "datetime"):
+                    self.add(
+                        "C502",
+                        (*where, key),
+                        f"{entity.name}.aggregate.group_by {entry!r}: a bucket groups a date or "
+                        f"datetime field, and {path} is {last}.",
+                        f"Group by {path} without a bucket, or name a date field.",
+                    )
+        for metric in declared.metrics or ():
+            if metric not in schema.AGGREGATE_METRICS:
+                self.add(
+                    "C501",
+                    (*where, "metrics"),
+                    f"{entity.name}.aggregate.metrics names {metric!r}, which is not a metric.",
+                    "The metrics are " + ", ".join(schema.AGGREGATE_METRICS) + ".",
+                )
+
+    def aggregate_path(self, entity: _Entity, path: str, where: Loc, key: str) -> str | None:
+        """Follow ``path`` through the spec's fields (C500 when it does not lead anywhere).
+
+        Returns the last field's kind (``date``, ``str``, ...), ``None`` when the
+        path leaves the spec (the user, a module's model: Karni checks the rest),
+        or ``""`` after reporting a problem.
+        """
+        current: _Entity | None = entity
+        parts = path.split("__")
+        for index, part in enumerate(parts):
+            if current is None:
+                return None
+            spec = current.fields.get(part)
+            if spec is None:
+                if part in BASE_FIELDS or part in ("created_by", "updated_by"):
+                    kind = "datetime" if part in ("created_at", "updated_at") else "key"
+                    if index == len(parts) - 1:
+                        return kind
+                    if part in ("created_by", "updated_by"):
+                        return None  # the user: outside the spec
+                names = ", ".join(sorted(current.fields)) or "none"
+                self.add(
+                    "C500",
+                    where,
+                    f"{entity.name}.aggregate.{key} names {path!r}, and {current.name} has no "
+                    f"field {part!r} (fields: {names}).",
+                    f"Name a field of {current.name}, or a path through its relations.",
+                )
+                return ""
+            if index == len(parts) - 1:
+                return spec.kind
+            if not spec.is_relation:
+                self.add(
+                    "C500",
+                    where,
+                    f"{entity.name}.aggregate.{key} names {path!r}, and {current.name}.{part} "
+                    "is not a relation for __ to follow.",
+                    "Follow relations only (fk, o2o, m2m), or name the field itself.",
+                )
+                return ""
+            target = current.targets.get(part)
+            current = None if target == _USER_TARGET else self.entities.get(target or "")
+        return None
 
     def leads_to_user(self, entity: _Entity, path: str) -> bool:
         """Whether ``path`` (``a__b``) follows relations from ``entity`` to the user."""
@@ -1310,3 +1400,4 @@ def iter_codes() -> Iterator[str]:
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
     yield "C324"
+    yield from ("C500", "C501", "C502")

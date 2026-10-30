@@ -36,9 +36,12 @@ from karni_cli.generators.fields import TYPES
 from karni_cli.spec.catalog import MODULES, SOCIAL_PROVIDERS
 
 __all__ = [
+    "AGGREGATE_BUCKETS",
+    "AGGREGATE_METRICS",
     "SCHEMA_URL",
     "VERSION",
     "Access",
+    "Aggregate",
     "App",
     "AppInfo",
     "Entity",
@@ -60,6 +63,10 @@ ENTITY_NAME: Final = r"[A-Z][A-Za-z0-9]*"
 FIELD_NAME: Final = r"[a-z][a-z0-9_]*"
 ROLE_SLUG: Final = r"[A-Za-z0-9][A-Za-z0-9_.-]*"
 PAGE_NAME: Final = r"[a-z][a-z0-9-]*"
+#: Experimental. The metrics ``aggregate.metrics`` takes: ``karni.aggregation.METRICS``.
+AGGREGATE_METRICS: Final = ("count", "sum", "avg", "min", "max", "distinct_count")
+#: Experimental. The date buckets a group takes after a colon: ``karni.aggregation.BUCKETS``.
+AGGREGATE_BUCKETS: Final = ("year", "quarter", "month")
 
 
 def _names(core: str) -> dict[str, Any]:
@@ -215,6 +222,32 @@ FieldValue = Annotated[
 ]
 
 
+class Aggregate(_Node):
+    """Experimental. ``aggregate:`` of an entity: ``class Karni: aggregate``.
+
+    What ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).
+    Expressions (``TextNumber`` and your own) stay in the project's code.
+    """
+
+    group_by: Names = Field(
+        description=(
+            "Fields or relation paths (category__parent) a request may group by. A date or "
+            "datetime field takes :year, :quarter or :month, or allows every bucket without one."
+        )
+    )
+    values: Names = Field(
+        default_factory=list, description="Fields a metric other than a plain count reads."
+    )
+    metrics: Names | None = Field(
+        None,
+        description=(
+            "The metrics a request may name, of "
+            + ", ".join(AGGREGATE_METRICS)
+            + " (default: all of them)."
+        ),
+    )
+
+
 class Entity(_Node):
     """Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options."""
 
@@ -282,6 +315,13 @@ class Entity(_Node):
     access: AccessValue = Field(
         default_factory=lambda: Access.model_validate({}),
         description="Who reads and writes: a mapping {read, write, create}, or code.",
+    )
+    aggregate: Aggregate | None = Field(
+        None,
+        description=(
+            "What GET <resource>/aggregate/ may group by and sum (Karni.aggregate): group_by, "
+            "values, metrics."
+        ),
     )
 
     def tokens(self) -> dict[str, str]:
