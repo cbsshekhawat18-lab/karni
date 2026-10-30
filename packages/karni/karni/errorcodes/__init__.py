@@ -15,7 +15,9 @@ Code ranges
 ``E0xx``/``W0xx`` models, managers, scopes · ``E1xx``/``W1xx`` API (access,
 viewsets, serializers, pagination, budgets, caching, expand) · ``E2xx``
 accounts · ``E3xx`` admin · ``E4xx`` events, listeners, schedules, Celery ·
-``E5xx`` settings, optional dependencies, deploy checks and production
+``E47x``/``E48x``/``W61x`` tooling for large projects (context slices, the
+check cache, volume seeding, scaling budgets, query plans) · ``E5xx``
+settings, optional dependencies, deploy checks and production
 (``karni.deploy``) · ``E6xx`` testing and seeding ·
 ``E7xx`` agent tooling (``karni check``, ``karni.rules.py``, changelog) ·
 ``E8xx`` import and export · ``E90x``–``E94x``/``W92x`` debugging (``karni
@@ -1277,6 +1279,26 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "`karni schedule run` executes the task in-process so failures show immediately.",
         "Read the task's own error in the message and fix the task. Then re-run it with "
         "`karni schedule run <name>`.",
+    ),
+    # E47x/E48x/W61x tooling for large projects (experimental): context slices, the
+    # check cache, volume seeding, the scaling budgets and query plans
+    _e(
+        "E470",
+        "A context slice names no app or model",
+        "exception",
+        "karni.introspect.resolve_apps; karni.introspect.resolve_models; karni context",
+        "karni context --app and --model print one area of the project. The label or name "
+        "matched no app with models and no model.",
+        "Use a name the message lists, or run karni context --summary to see every app and "
+        "its models. A model is Name or app_label.Name.",
+    ),
+    _e(
+        "E471",
+        "A context slice names a model two apps share",
+        "exception",
+        "karni.introspect.resolve_models; karni context --model",
+        "Two apps have a model of that name, so the bare name could mean either.",
+        "Write app_label.Name, one of the labels the message lists.",
     ),
     # E5xx settings and optional dependencies
     _e(

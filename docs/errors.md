@@ -1026,6 +1026,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
 
+<a id="e470"></a>
+
+#### E470: A context slice names no app or model
+
+*exception* · from `karni.introspect.resolve_apps; karni.introspect.resolve_models; karni context`
+
+**Why Karni objects.** karni context --app and --model print one area of the project. The label or name matched no app with models and no model.
+
+**Fix.** Use a name the message lists, or run karni context --summary to see every app and its models. A model is Name or app_label.Name.
+
+<a id="e471"></a>
+
+#### E471: A context slice names a model two apps share
+
+*exception* · from `karni.introspect.resolve_models; karni context --model`
+
+**Why Karni objects.** Two apps have a model of that name, so the bare name could mean either.
+
+**Fix.** Write app_label.Name, one of the labels the message lists.
+
 ### 5xx · Settings and optional dependencies
 
 <a id="e501"></a>
@@ -3555,6 +3575,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** karni spec answer changes only the key the question names and keeps every other line of the file. It writes nothing when it cannot: an anchor or alias shares the key, the key sits in a layout it cannot place a key in, or the result would not pass karni spec validate.
 
 **Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
+
+<a id="c580"></a>
+
+### C580: The project's karni has no context slices
+
+*karni command* · from `karni_cli.commands.context`
+
+**Why Karni objects.** karni context --summary, --app and --model ask manage.py karni_context for a slice. The project's karni predates them.
+
+**Fix.** Upgrade karni in the project (pip install -U karni), or run karni context without those flags.
 
 ## Agent rules (`K`)
 

@@ -1037,6 +1037,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Set the key the message names in karni.yaml by hand, then run karni spec validate and "
         "karni plan --questions.",
     ),
+    # C58x/C59x tooling for large projects (experimental)
+    _c(
+        "C580",
+        "The project's karni has no context slices",
+        "karni_cli.commands.context",
+        "karni context --summary, --app and --model ask manage.py karni_context for a slice. "
+        "The project's karni predates them.",
+        "Upgrade karni in the project (pip install -U karni), or run karni context without "
+        "those flags.",
+    ),
 )
 
 
