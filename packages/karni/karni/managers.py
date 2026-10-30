@@ -263,8 +263,9 @@ class TreeQuerySet(BaseQuerySet):
         with connection.cursor() as cursor:
             cursor.execute(sql, [*params, *limit_params])
             fetched = cursor.fetchall()
-        pk = self.model._meta.pk
-        assert pk is not None
+        from karni.tree import pk_field
+
+        pk = pk_field(self.model)
         rows: list[tuple[Any, Any, int]] = []
         seen: set[Any] = set()
         for key, parent, depth in fetched:

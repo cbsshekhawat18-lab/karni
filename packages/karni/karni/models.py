@@ -460,9 +460,9 @@ def _key(model: type[models.Model], value: Any) -> Any:
         value = value.pk
     if value is None:
         return None
-    pk = model._meta.pk
-    assert pk is not None
-    return pk.to_python(value)
+    from karni.tree import pk_field
+
+    return pk_field(model).to_python(value)
 
 
 class TreeModel(models.Model):
@@ -538,7 +538,7 @@ class TreeModel(models.Model):
         """
         from django.db import connections
 
-        from karni.tree import TreeCycleError, start_from, walk_sql
+        from karni.tree import TreeCycleError, pk_field, start_from, walk_sql
 
         cls = type(self)
         current = parent is _UNKNOWN
@@ -558,9 +558,9 @@ class TreeModel(models.Model):
         db = using or router.db_for_write(cls, instance=self)
         connection = connections[db]
         start = start_from(cls, [parent_key], connection)
-        assert start is not None
-        pk = cls._meta.pk
-        assert pk is not None
+        if start is None:
+            return
+        pk = pk_field(cls)
         sql, params = walk_sql(
             cls,
             connection,

@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -113,10 +113,14 @@ def tree_spec(model: Any) -> TreeSpec | None:
 # the walk
 
 
+def pk_field(model: type[models.Model]) -> models.Field[Any, Any]:
+    """The primary key field of ``model`` (every concrete model has one)."""
+    return cast("models.Field[Any, Any]", model._meta.pk)
+
+
 def _pk_params(model: type[models.Model], values: Iterable[Any], connection: Any) -> list[Any]:
     """Database values for primary keys given as rows, keys or strings (``E343`` on a bad one)."""
-    field = model._meta.pk
-    assert field is not None
+    field = pk_field(model)
     params: list[Any] = []
     for value in values:
         if isinstance(value, models.Model):
@@ -126,7 +130,7 @@ def _pk_params(model: type[models.Model], values: Iterable[Any], connection: Any
                     f"Pass {model.__name__} rows or their keys.",
                     code="E343",
                 )
-            value = value.pk
+            value = None if value._state.adding else value.pk
         if value is None:
             raise KarniValueError(
                 f"A walk of {model.__name__} got None (or an unsaved row) as a node. Pass "
@@ -184,9 +188,7 @@ def walk_sql(
     """
     quote = connection.ops.quote_name
     table = quote(model._meta.db_table)
-    pk_field = model._meta.pk
-    assert pk_field is not None
-    pk = f"t.{quote(pk_field.column)}"
+    pk = f"t.{quote(pk_field(model).column)}"
     parent = f"t.{quote(model._meta.get_field('parent').column)}"  # type: ignore[union-attr]
     cte = quote(_CTE)
     join = f"{pk} = w.parent_id" if up else f"{parent} = w.node_id"

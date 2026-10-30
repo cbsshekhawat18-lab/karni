@@ -125,6 +125,8 @@ GRANTED_ACTIONS: Final[dict[str, str]] = {
     "update": "change",
     "partial_update": "change",
     "destroy": "delete",
+    # A tree node's move/ (experimental) changes its parent: an update.
+    "move": "change",
 }
 _METHOD_ACTIONS: Final[dict[str, str]] = {
     "POST": "add",

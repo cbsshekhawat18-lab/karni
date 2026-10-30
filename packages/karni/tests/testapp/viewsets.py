@@ -9,7 +9,9 @@ explicitly when they need a Tag route), and ``OrganizerViewSet`` routes the
 user model so relation fields pointing at it resolve an ``x-karni-relation``
 resource in the schema tests (amendment B13) — users are readable by
 authenticated callers only, so ``?expand=organizer`` never shows an email to
-an anonymous one.
+an anonymous one. ``RegionViewSet``, ``CategoryViewSet`` and
+``ProductViewSet`` serve the tree models (tests/tree/): the tree endpoints
+come from the model alone.
 """
 
 from __future__ import annotations
@@ -17,7 +19,7 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 
 from karni.api import Access, Authenticated, BaseViewSet, HasRole, Public
-from tests.testapp.models import Event, LooseSlot, Slot, Tag, Venue
+from tests.testapp.models import Category, Event, LooseSlot, Product, Region, Slot, Tag, Venue
 
 
 # karni: allow(public-integer-key): the test API is public on purpose, with either key type
@@ -61,3 +63,27 @@ class SlotViewSet(BaseViewSet):
 class LooseSlotViewSet(BaseViewSet):
     model = LooseSlot
     access = Access(read=Authenticated(), write=Authenticated())
+
+
+# karni: allow(public-integer-key): the test API is public on purpose, with either key type
+class RegionViewSet(BaseViewSet):
+    """A tree model: tree/, children/, ancestors/ and move/ with no declaration."""
+
+    model = Region
+    access = Access(read=Public(), write=Authenticated())
+    search_fields = ["name"]
+
+
+class CategoryViewSet(BaseViewSet):
+    """An ordered tree, readable by signed-in users and changed by staff."""
+
+    model = Category
+    access = Access(read=Authenticated(), write=HasRole("staff"))
+
+
+# karni: allow(public-integer-key): the test API is public on purpose, with either key type
+class ProductViewSet(BaseViewSet):
+    """Points at both trees: its category and regions carry x-karni-tree."""
+
+    model = Product
+    access = Access(read=Public(), write=Authenticated())

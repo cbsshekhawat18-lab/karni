@@ -764,6 +764,49 @@ def check_role_scope_paths(app_configs: Any = None, **kwargs: Any) -> list[check
     return messages
 
 
+@checks.register(checks.Tags.models)
+def check_tree_models(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E344 / E345: a tree model whose manager or ``parent`` cannot carry the walks."""
+    from django.db import models
+
+    from karni.models import TreeModel
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            if not issubclass(model, TreeModel):
+                continue
+            manager = model._default_manager
+            if not callable(getattr(manager, "descendants", None)):
+                messages.append(
+                    check_error(
+                        "E344",
+                        f"{model.__name__} inherits TreeModel, but its default manager "
+                        f"'{manager.name}' ({type(manager).__name__}) has no tree walks, so "
+                        f"{model.__name__}.objects.descendants() and the tree endpoints fail.",
+                        hint=_fix("E344"),
+                        obj=model,
+                    )
+                )
+            parent = model._meta.get_field("parent")
+            if not (
+                isinstance(parent, models.ForeignKey)
+                and parent.related_model is model
+                and parent.null
+            ):
+                messages.append(
+                    check_error(
+                        "E345",
+                        f"{model.__name__}.parent is {type(parent).__name__}, not a nullable "
+                        f"ForeignKey to {model.__name__}, so no walk can follow it.",
+                        hint=_fix("E345"),
+                        obj=model,
+                    )
+                )
+    return messages
+
+
 def _stand_in_user(user_model: Any) -> Any:
     """An unsaved user with a primary key, so related filters on it can be built."""
     import uuid

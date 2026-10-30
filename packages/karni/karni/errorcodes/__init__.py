@@ -23,7 +23,8 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
 (``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
-tables, SQL views and a second database (``karni.db``).
+tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
+tree models (``karni.tree``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1202,6 +1203,77 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         'provides.models, and add [project.entry-points."karni.modules"] <name> = '
         '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
         "every key.",
+    ),
+    # E340-E359 / W550-W559 tree models (karni.models.TreeModel, karni.tree, experimental)
+    _e(
+        "E340",
+        "A tree node's new parent is the node itself or a node below it",
+        "exception",
+        "karni.models.TreeModel.check_parent (save, clean, move_to); the API answers 400",
+        "A parent below the node would make the branch its own ancestor: a cycle. Every walk "
+        "stays safe on such data, but the nodes on the cycle drop out of the tree, so Karni "
+        "refuses the write before any SQL.",
+        "Choose a parent outside the node's branch (or None for a root). To swap two nodes, "
+        "move the lower one out of the branch first. In the API, POST <id>/move/ with another "
+        "parent.",
+    ),
+    _e(
+        "E341",
+        "A tree node with live children cannot be deleted alone",
+        "exception",
+        "karni.models.TreeModel.delete; the API answers 409",
+        "A soft-deleted node hides its whole branch. Deleting a node that still has live "
+        "children would hide them too, without anyone deciding that, so delete() refuses and "
+        "the answer counts the children.",
+        "Move the children to another parent first, or delete the whole branch on purpose: "
+        "node.delete_branch(), or DELETE <id>/?branch=true in the API (write access to every "
+        "node of the branch).",
+    ),
+    _e(
+        "E342",
+        "A tree endpoint got a parameter it cannot use",
+        "api",
+        "karni.api.tree (tree/, move/, ?parent=, ?descendants_of=, ?branch=)",
+        "The tree endpoints take keys of the model (?root=, ?parent=, ?descendants_of=, the "
+        "parent of move/), a whole number of levels (?depth=, from 1 to the viewset's "
+        "tree_max_depth) and true or false (?branch=). A key must name a node the requester "
+        "may read.",
+        "Send a key of the model (or null for ?parent= and move/'s parent), a depth within the "
+        "limit the message names, and branch=true or branch=false.",
+    ),
+    _e(
+        "E343",
+        "A tree method got an argument it cannot use",
+        "exception",
+        "karni.managers.TreeQuerySet (walk, descendants, ancestors, subtree_ids); "
+        "karni.models.TreeModel.move_to",
+        "A walk starts from rows of the model, their keys or a queryset of the model. A row of "
+        "another model, an unsaved row or a malformed key names no node. move_to() takes a "
+        "position only on an OrderedTreeModel, as a whole number from 0.",
+        "Pass saved rows of the model or their keys. Drop the position on a TreeModel, or "
+        "inherit OrderedTreeModel to order siblings.",
+    ),
+    _e(
+        "E344",
+        "A tree model's default manager has no tree walks",
+        "check",
+        "karni.checks.check_tree_models",
+        "TreeModel's manager (karni.managers.TreeManager) carries roots(), children(), "
+        "ancestors(), descendants() and subtree_ids(), and the tree endpoints use them. A base "
+        "listed before TreeModel (class Region(BaseModel, TreeModel)) supplies its own "
+        "`objects` first, so the walks are missing.",
+        "List TreeModel first: class Region(TreeModel, BaseModel). A custom manager must be "
+        "built on karni.managers.TreeQuerySet, the way TreeManager is.",
+    ),
+    _e(
+        "E345",
+        "A tree model's parent is not a foreign key to the model itself",
+        "check",
+        "karni.checks.check_tree_models",
+        "Every walk joins a node to its parent through the `parent` column, so `parent` must "
+        "stay a nullable ForeignKey to the same model.",
+        "Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', "
+        "null=True, blank=True, on_delete=models.PROTECT, related_name='children').",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(

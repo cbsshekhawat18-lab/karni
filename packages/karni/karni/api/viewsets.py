@@ -44,6 +44,9 @@ usual):
   ``writable``; override to decide per viewset.
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
+* ``tree_max_nodes`` / ``tree_default_depth`` / ``tree_max_depth`` /
+  ``tree_top_level()`` (experimental) — the tree endpoints a viewset gets
+  when its model is a ``TreeModel`` (:mod:`karni.api.tree`).
 
 Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
 silence:
@@ -287,8 +290,19 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             "import_job",
             "import_preview",
             "import_commit",
+            "move",
         }
     )
+
+    #: Experimental. The actions a viewset serves only when its model is a
+    #: :class:`karni.models.TreeModel` (:mod:`karni.api.tree`).
+    tree_actions: ClassVar[frozenset[str]] = frozenset({"tree", "children", "ancestors", "move"})
+    #: Experimental. The most nodes one ``tree/`` answer holds.
+    tree_max_nodes: ClassVar[int] = 1000
+    #: Experimental. The levels ``tree/`` returns without ``?depth=``.
+    tree_default_depth: ClassVar[int] = 2
+    #: Experimental. The most levels ``?depth=`` may ask for.
+    tree_max_depth: ClassVar[int] = 10
 
     #: Actions governed by ``access.create`` **or** ``access.write`` (an
     #: import creates some rows and changes others); the action decides per
@@ -343,6 +357,26 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             )
         if apps.models_ready:
             _validate_once(cls)
+
+    @classmethod
+    def get_extra_actions(cls) -> list[Any]:
+        """DRF's extra actions, without the tree actions unless the model is a tree model."""
+        actions: list[Any] = list(super().get_extra_actions())
+        if cls.serves_tree():
+            return actions
+        return [extra for extra in actions if extra.__name__ not in cls.tree_actions]
+
+    @classmethod
+    def serves_tree(cls) -> bool:
+        """Experimental. Whether the viewset's model is a :class:`karni.models.TreeModel`."""
+        model = cls.model
+        if model is None and cls.queryset is not None:
+            model = cls.queryset.model
+        if model is None:
+            return False
+        from karni.tree import is_tree_model
+
+        return is_tree_model(model)
 
     # model & access
 
@@ -837,6 +871,56 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self._refused(exc)
         return Response(job_state(started, request))
 
+    # trees (experimental, karni.api.tree): routed only when the model is a TreeModel
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/tree/?root=&depth=``: the tree, nested, a few levels at a time."""
+        from karni.api.tree import tree_response
+
+        return tree_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="children")
+    def children(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/children/``: the node's children, paginated."""
+        from karni.api.tree import children_response
+
+        return children_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="ancestors")
+    def ancestors(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/ancestors/``: the nodes above it, root first."""
+        from karni.api.tree import ancestors_response
+
+        return ancestors_response(self, request)
+
+    @action(detail=True, methods=["post"], url_path="move")
+    def move(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``POST /<resource>/<id>/move/``: a new parent and, on an ordered tree, a position."""
+        from karni.api.tree import move_response
+
+        try:
+            return move_response(self, request)
+        except KarniWriteDeferred as exc:
+            return self.deferred_response(exc)
+
+    def tree_top_level(self, readable: QuerySet[Any], filtered: bool, base: QuerySet[Any]) -> Any:
+        """Experimental. The top level of ``tree/`` without ``?root=`` .
+
+        ``readable`` is the read-scoped queryset, ``filtered`` whether the
+        read scope narrowed it, ``base`` the queryset before the read scope.
+        Override / escape hatch: return another queryset of the model.
+        """
+        from karni.api.tree import top_level
+
+        return top_level(self, readable, filtered, base)
+
+    def get_tree_node_serializer_class(self) -> type[BaseSerializer[Any]]:
+        """Experimental. A tree node's serializer: the row's, ``has_children`` and ``children``."""
+        from karni.api.tree import tree_node_serializer
+
+        return tree_node_serializer(self._row_serializer_class())
+
     # writes & serializers
 
     def deferred_response(self, exc: KarniWriteDeferred) -> Response:
@@ -899,6 +983,44 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return self.deferred_response(exc)
         return response
 
+    def perform_destroy(self, instance: Any) -> None:
+        """Delete the row; on a tree model ``?branch=true`` deletes the whole branch.
+
+        A tree node with live children is refused (``E341``, 409) unless the
+        request says ``?branch=true``, which needs write access to every node
+        of the branch.
+        """
+        from karni.tree import is_tree_model
+
+        if is_tree_model(instance):
+            from karni.api.tree import parse_branch
+
+            if parse_branch(self.request.query_params.get("branch")):
+                self._check_branch_writable(instance)
+                instance.delete_branch()
+                return
+        super().perform_destroy(instance)
+
+    def _check_branch_writable(self, instance: Any) -> None:
+        """403 unless the destroy predicate covers every live node of ``instance``'s branch."""
+        from rest_framework.exceptions import PermissionDenied
+
+        declaration = self.get_access()
+        if not isinstance(declaration, Access):
+            return
+        predicate = action_predicate(self, declaration)
+        rows = rows_or_exempt(self, predicate, self.request)
+        if rows is True:
+            return
+        manager = type(instance)._default_manager
+        branch = manager.descendants(instance, include_self=True)
+        writable = apply_rows(manager.all(), rows).values("pk")
+        if rows is False or branch.exclude(pk__in=writable).exists():
+            raise PermissionDenied(
+                f"Access denied: deleting the branch needs {predicate!r} on every node in it, "
+                "and some are not yours to change."
+            )
+
     def perform_create(self, serializer: BaseSerializer[Any]) -> None:
         """Save, stamping every owner field from ``request.user`` (ADR 0001 R6).
 
@@ -917,15 +1039,35 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         Generation is cached per ``(model, expand, depth, owner fields)`` —
         see :func:`karni.api.serializers.build_serializer`; owner fields of
         the ``access`` declaration are read-only. Without a request (schema
-        generation) the unexpanded base serializer is returned.
+        generation) the unexpanded base serializer is returned. The tree
+        actions render tree nodes (:meth:`get_tree_node_serializer_class`).
+        """
+        if getattr(self, "action", None) in self.tree_actions and self.serves_tree():
+            return self.get_tree_node_serializer_class()
+        return self._row_serializer_class()
+
+    def _row_serializer_class(self) -> type[BaseSerializer[Any]]:
+        """``serializer_class``, else the generated serializer.
+
+        On an ordered tree the generated serializer reads ``position`` only:
+        ``move/`` sets it.
         """
         if self.serializer_class is not None:
             return self.serializer_class
+        from karni.tree import tree_spec
+
+        read_only = self.get_owner_fields()
+        try:
+            spec = tree_spec(self.get_model())
+        except ImproperlyConfigured:
+            spec = None
+        if spec is not None and spec.position is not None:
+            read_only = (*read_only, spec.position)
         return build_serializer(
             self.get_model(),
             expand=self.get_validated_expand(),
             max_depth=self.expand_depth or None,
-            read_only=self.get_owner_fields(),
+            read_only=read_only,
         )
 
     # pagination

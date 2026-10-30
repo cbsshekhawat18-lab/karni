@@ -62,6 +62,7 @@ from karni.exceptions import KarniImproperlyConfigured, KarniWriteDeferred
 from karni.meta import STANDARD_ACTIONS
 from karni.models import SoftDeleteModel
 from karni.signals import pre_write
+from karni.tree import is_tree_model
 
 __all__ = [
     "DEFAULT_ADMIN_BASE",
@@ -157,6 +158,9 @@ class KarniAdminMixin(admin.ModelAdmin):
       Karni: external = True`` and no ``writable = True`` has no add, change
       or delete permission here, so the admin lists it and shows its rows
       read-only (:meth:`is_read_only`).
+    * **Tree models** (experimental): a :class:`karni.models.TreeModel`'s
+      changelist lists the rows in tree order with the name indented by
+      depth (:mod:`karni.admin.tree`, ``tree_changelist_max_rows``).
     * **Import and export** (ADR 0002, P6) come from
       :class:`karni.admin.transfer.TransferAdminMixin`, mixed into
       :class:`KarniModelAdmin`: the *Export selected* actions and the
@@ -186,6 +190,9 @@ class KarniAdminMixin(admin.ModelAdmin):
     None`` to disable the drilldown). Hand-written subclasses may set this too.
     """
 
+    tree_changelist_max_rows: ClassVar[int] = 10000
+    """Experimental. The most rows a tree model's changelist puts in tree order (0: never)."""
+
     karni_read_only: ClassVar[tuple[str, ...]] = ()
     """``AdminMeta.read_only`` entries, appended to the *derived*
     ``readonly_fields`` (an explicit ``readonly_fields`` wins outright)."""
@@ -200,6 +207,13 @@ class KarniAdminMixin(admin.ModelAdmin):
         """
         super().__init__(model, admin_site)
         cls = type(self)
+        if is_tree_model(model):
+            from karni.admin.tree import TreeLabel, tree_list_display
+
+            self.tree_label = TreeLabel(None, str(model._meta.verbose_name).capitalize())
+            if self._karni_derivable("list_display"):
+                derived = list(cls.derive_list_display(model))
+                self.list_display, self.tree_label = tree_list_display(model, derived)
         if self._karni_derivable("list_display"):
             self.list_display = list(cls.derive_list_display(model))
         if self._karni_derivable("list_filter"):
@@ -259,6 +273,12 @@ class KarniAdminMixin(admin.ModelAdmin):
     def get_queryset(self, request: HttpRequest) -> models.QuerySet[Any]:
         """The rows the user's grants reach for ``view`` (every surface starts here)."""
         return scope_queryset(self, request, super().get_queryset(request))
+
+    def get_changelist(self, request: HttpRequest, **kwargs: Any) -> Any:
+        """The base changelist, in tree order for a tree model (:mod:`karni.admin.tree`)."""
+        from karni.admin.tree import tree_changelist_class
+
+        return tree_changelist_class(super().get_changelist(request, **kwargs), self.model)
 
     def has_view_permission(self, request: HttpRequest, obj: models.Model | None = None) -> bool:
         """Django's view-or-change permission, and the row inside the user's scope."""

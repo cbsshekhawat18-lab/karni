@@ -24,6 +24,10 @@ vendor extensions the ``@karni/ui`` frontend consumes:
 * ``x-karni-honeypot: "homepage"`` on a public ``create`` with a honeypot
   field (:mod:`karni.api.honeypot`). The field is not in the request body,
   so it is never required. ``@karni/ui``'s form renders it hidden.
+* ``x-karni-tree: {"parent": "parent", "ordered": bool}`` (experimental) on
+  the component schema of a tree model (:class:`karni.models.TreeModel`)
+  and on every relation field that points at one, so a client shows a tree
+  where it would show a list (:mod:`karni.api.tree`).
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -164,9 +168,40 @@ class KarniAutoSchema(AutoSchema):
         base, _, verb = operation_id.rpartition("_")
         return f"{base}_by_{params[-1]}_{verb}" if base else operation_id
 
+    def _map_serializer(
+        self, serializer: Any, direction: Any, bypass_extensions: bool = False
+    ) -> Any:
+        """Stock component schema, plus ``x-karni-tree`` for a tree model's serializer."""
+        schema = super()._map_serializer(serializer, direction, bypass_extensions)
+        model = getattr(getattr(serializer, "Meta", None), "model", None)
+        if isinstance(schema, dict) and isinstance(model, type):
+            from karni.tree import tree_spec
+
+            spec = tree_spec(model)
+            if spec is not None:
+                schema["x-karni-tree"] = spec.as_extension()
+        return schema
+
+    def _karni_tree_node(self) -> Any:
+        """The tree node serializer of the view (``None`` when it serves no tree)."""
+        view = self._karni_view()
+        if view is None or not view.serves_tree():
+            return None
+        return view.get_tree_node_serializer_class()
+
     def get_response_serializers(self) -> Any:
-        """History answers with change-log entries; export and import with files and job states."""
+        """History answers with change-log entries; export and import with files and job states.
+
+        ``tree/`` answers with the nested tree and ``ancestors/`` with a list
+        of tree nodes (experimental).
+        """
         action = self._karni_action()
+        if action == "tree" and (node := self._karni_tree_node()) is not None:
+            from karni.api.tree import tree_response_serializer
+
+            return tree_response_serializer(node)
+        if action == "ancestors" and (node := self._karni_tree_node()) is not None:
+            return node(many=True)
         if action == "history":
             from karni.audit.serializers import ChangeLogSerializer
 
@@ -186,8 +221,13 @@ class KarniAutoSchema(AutoSchema):
         return super().get_response_serializers()
 
     def get_request_serializer(self) -> Any:
-        """The import endpoints take an upload, then a mapping."""
+        """The import endpoints take an upload, then a mapping. ``move/`` takes a parent."""
         action = self._karni_action()
+        view = self._karni_view()
+        if action == "move" and view is not None and view.serves_tree():
+            from karni.api.tree import tree_move_serializer
+
+            return tree_move_serializer(view.get_model())
         if action == "import_data" and self.method == "POST":
             from karni.transfer.serializers import ImportUploadSerializer
 
@@ -206,6 +246,7 @@ class KarniAutoSchema(AutoSchema):
         expand = self._build_expand_parameter()
         if expand is not None:
             parameters.append(expand)
+        parameters.extend(self._karni_tree_parameters())
         if self._karni_action() in ("export", "import_template"):
             parameters.append(
                 OpenApiParameter(
@@ -219,11 +260,58 @@ class KarniAutoSchema(AutoSchema):
             )
         return parameters
 
-    def _is_list_view(self, serializer: Any = None) -> bool:
-        """The history action is a paginated list (``paginated_response``); the rest are not."""
+    def _karni_tree_parameters(self) -> list[Any]:
+        """``root`` and ``depth`` on ``tree/``, ``branch`` on a tree node's ``DELETE``."""
+        view = self._karni_view()
         action = self._karni_action()
-        if action == "history":
+        if view is None or action not in ("tree", "destroy") or not view.serves_tree():
+            return []
+        if action == "destroy":
+            return [
+                OpenApiParameter(
+                    name="branch",
+                    type=bool,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description=(
+                        "true deletes the node and every node below it. Without it a node "
+                        "with live children is refused (409, E341)."
+                    ),
+                )
+            ]
+        return [
+            OpenApiParameter(
+                name="root",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="A node's key: its children are the top level. Default: the roots.",
+            ),
+            OpenApiParameter(
+                name="depth",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    f"Levels to return, from 1 to {view.tree_max_depth} "
+                    f"(default {view.tree_default_depth})."
+                ),
+            ),
+        ]
+
+    def get_filter_backends(self) -> list[Any]:
+        """Stock, except ``children/``: a paginated list the list filters do not apply to."""
+        if self._karni_action() == "children":
+            return []
+        return list(super().get_filter_backends())
+
+    def _is_list_view(self, serializer: Any = None) -> bool:
+        """History and a node's children are paginated lists (``paginated_response``)."""
+        action = self._karni_action()
+        if action in ("history", "children"):
             return True
+        if action in ("tree", "ancestors", "move"):
+            return False
         if action in (
             "export",
             "import_template",
@@ -355,12 +443,17 @@ def _admits_anonymous(predicate: Predicate) -> bool:
 
 
 def _annotate_relation(schema: Any, field: Any, *, many: bool) -> Any:
-    """Attach ``x-karni-relation`` when the target model has a route."""
+    """Attach ``x-karni-relation`` when the target model has a route, ``x-karni-tree`` to a tree."""
     if not isinstance(schema, dict):
         return schema
     model = _field_target_model(field)
     if model is None:
         return schema
+    from karni.tree import tree_spec
+
+    spec = tree_spec(model)
+    if spec is not None:
+        schema["x-karni-tree"] = spec.as_extension()
     resource = _route_for_model(model)
     if resource is None:
         return schema
