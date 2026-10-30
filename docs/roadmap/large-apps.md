@@ -40,7 +40,7 @@ cannot start before the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| 4 | Tree models: a mixin with cycle-safe recursive queries, tree endpoints, a tree view and a tree select. | none | planned |
+| 4 | Tree models: a mixin with cycle-safe recursive queries, tree endpoints, a tree view and a tree select. | none | done |
 | 5 | A `tree:<field>` access scope: a grant on a node covers every row tagged with it or with a node under it. | 4 | planned |
 | 6 | Per-user grants: access granted to one user, with targets and an expiry, alongside role grants. | none | planned |
 | 7 | Taxonomy tagging: one declaration tags a model to a tree, with filters, facet counts, import columns and the access scope. | 4, 5 | planned |

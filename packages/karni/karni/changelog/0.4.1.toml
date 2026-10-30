@@ -300,3 +300,15 @@ also by its id. keep_ids creates rows with the file's ids. karni_transfer migrat
 0002 adds both options to ImportJob: run `karni migrate`."""
 mechanical = false
 migration = "migrations/0.4.1.md#imports-match-ids-only-when-asked"
+
+[[change]]
+id = "hand-written-tree-rule"
+kind = "behaviour"
+symbol = "karni check: the hand-written-tree rule (karni.testing.architecture)"
+summary = """\
+A project model with a parent (or parent_*) foreign key to the model itself that is \
+not a karni.models.TreeModel fails karni check (experimental). Make it a tree, \
+class Folder(TreeModel, BaseModel) without its own parent field, or keep the field and \
+opt out with # karni: allow(hand-written-tree): <reason> above the class."""
+mechanical = false
+migration = "migrations/0.4.1.md#tree-models-experimental"

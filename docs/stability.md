@@ -194,6 +194,18 @@ Experimental now:
   `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
   `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
   line of `manage.py karni_context`, and `karni_cli.catalog`.
+- [Tree models](models.md#tree-models): `karni.models.TreeModel` and
+  `OrderedTreeModel`, `karni.managers.TreeQuerySet` and `TreeManager`,
+  `karni.tree`, `karni.api.tree` (the `tree/`, `children/`, `ancestors/` and
+  `move/` endpoints, `?parent=`, `?descendants_of=` and `DELETE ?branch=`),
+  `BaseViewSet.serves_tree`, `tree_actions`, `tree_max_nodes`,
+  `tree_default_depth`, `tree_max_depth`, `tree_top_level()` and
+  `get_tree_node_serializer_class()`, the `x-karni-tree` extension,
+  `karni.admin.tree` and `tree_changelist_max_rows`, the `hand-written-tree`
+  rule, the `tree` key of `karni.yaml` and the `tree` fact, the
+  `use<Name>Tree` hooks of `karni types`, and `TreeView`, `TreeSelect`,
+  `TreeBreadcrumb`, `useResourceTree`, `useResourceChildren`,
+  `useResourceAncestors` and `useTreeMutations` in `@karni/ui`.
 
 ## Supported platforms
 

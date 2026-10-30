@@ -11,6 +11,63 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Tree models (experimental): a hierarchy is one declaration.**
+  `class Region(TreeModel, BaseModel)` adds `parent` (a nullable foreign
+  key to the model itself, `PROTECT`, `related_name="children"`), and
+  `OrderedTreeModel` adds `position` for the order of siblings. Both work
+  with `BaseModel` and `BigIntBaseModel`. `objects` is a `TreeManager`:
+  `roots()`, `children(node)`, `ancestors(node)`, `descendants(nodes,
+  include_self, max_depth)`, `subtree_ids(ids)` and `walk(...)`, each one
+  recursive query that never loops on cyclic data (the `CYCLE` clause on
+  PostgreSQL, a path of keys on SQLite). `save()`, `clean()` and
+  `move_to(parent, position=None)` refuse a parent at or below the node
+  (`E340`), and `move_to()` renumbers the old and new siblings of an
+  ordered tree in the same transaction. A soft-deleted node hides its
+  branch: `delete()` refuses a node with live children (`E341`, HTTP 409),
+  and `delete_branch()` soft-deletes a whole branch in one statement.
+  New codes `E340` to `E345`, system checks `E344` (the base listed before
+  `TreeModel`) and `E345` (a redeclared `parent`).
+  [docs/models.md](docs/models.md#tree-models).
+- **Tree endpoints (experimental).** A `BaseViewSet` whose model is a tree
+  model serves `tree/?root=&depth=` (nested and lazy: each node has
+  `has_children`, and `children` is `null` where not loaded, bounded by
+  `tree_max_depth` and `tree_max_nodes`), `<id>/children/` (paginated),
+  `<id>/ancestors/` and `<id>/move/`, and its list takes `?parent=<id>`,
+  `?parent=null` and `?descendants_of=<id>`. `DELETE ?branch=true` deletes a
+  branch with write access to every node in it. Every walk follows the
+  rows the requester may read, and the query counts do not grow with the
+  tree. `Granted()` maps `move` to `change`. On an ordered tree `position`
+  is read-only in the API. The OpenAPI document marks a tree model's schema
+  and every relation to one with `x-karni-tree`.
+- **The admin lists a tree model in tree order (experimental)**, each name
+  indented by depth, with no declaration (`tree_changelist_max_rows`).
+- **`karni check`'s new `hand-written-tree` rule (experimental) and agent
+  rule `K312`.** A project model with a `parent` (or `parent_*`) foreign key
+  to itself that is not a `TreeModel` fails the check. Inherit `TreeModel`
+  first and drop the field, or opt out with `# karni: allow(hand-written-tree):
+  <reason>`. `karni rules` lists 45 rules in 575 tokens.
+- **`karni.yaml`: an entity takes `tree: true` (TreeModel) or `tree:
+  ordered` (OrderedTreeModel) (experimental).** `karni spec validate`
+  refuses a tree on an external entity, or a tree entity that declares
+  `parent` or `position` (`C460`). `karni spec export` writes the key,
+  `karni plan` shows it, and making an entity a tree or flat again, or
+  dropping `ordered`, is a risky change. `karni build` lists `TreeModel` or
+  `OrderedTreeModel` first in the model base. `manage.py karni_facts` gives
+  each model's `tree` (`null`, `"tree"` or `"ordered"`) and leaves the tree's
+  own fields out of `fields`. [docs/app-spec.md](docs/app-spec.md#trees).
+- **`karni types` writes a `use<Name>Tree` hook** for each resource whose
+  schema carries `x-karni-tree` (experimental).
+- **@karni/ui: trees (experimental).** `TreeView` shows a tree resource
+  with lazy branches, search and the WAI-ARIA tree keyboard pattern.
+  `TreeSelect` picks one node or several, and `ResourceForm` uses it for
+  every foreign key or many-to-many whose schema carries `x-karni-tree`.
+  `TreeBreadcrumb` shows the path from the root, and `ResourceDetail` shows
+  it above a tree resource's record (new `breadcrumb` prop and `Breadcrumb`
+  slot). `useResourceTree`, `useResourceChildren`, `useResourceAncestors`
+  and `useTreeMutations` wrap the endpoints, and the schema parser reads
+  `x-karni-tree` into `ResourceSchema.tree` and `FieldDef.tree`. New
+  component roles `tree-view`, `tree-select` and `tree-breadcrumb`, and the
+  theme tokens `--karni-tree-indent` and `--karni-tree-max-height`.
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]
