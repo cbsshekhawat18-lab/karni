@@ -263,6 +263,19 @@ def test_move_needs_write_access_and_a_readable_parent(tree: Regions, scoped: No
     assert response.status_code == 400 and response.json()["parent"][0].startswith("E342")
 
 
+def test_granted_maps_move_to_the_change_permission(tree: Regions, scoped: None) -> None:
+    from karni.accounts.roles import sync_roles
+    from tests.tree import urls
+
+    with override_settings(KARNI_ROLES=urls.ROLES):
+        sync_roles()
+        url = f"/api/granted-regions/{tree.germany.pk}/move/"
+        body = {"parent": str(tree.asia.pk)}
+        assert client_as("reader").post(url, body, format="json").status_code == 403
+        moved = ok(client_as("editor").post(url, body, format="json"))
+        assert moved["parent"] == str(tree.asia.pk) or moved["parent"] == tree.asia.pk
+
+
 def test_a_branch_delete_needs_write_access_to_every_node(tree: Regions, scoped: None) -> None:
     Region.objects.filter(pk=tree.paris.pk).update(code="locked")
     me = client_as()
