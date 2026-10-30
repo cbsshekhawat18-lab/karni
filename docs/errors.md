@@ -944,6 +944,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
 
+<a id="e380"></a>
+
+#### E380: An aggregation declaration is not valid
+
+*system check (error)* · from `karni.aggregation.Aggregation (karni.checks.check_aggregations)`
+
+**Why Karni objects.** class Karni: aggregate on a model, or aggregation on a viewset, says what GET <resource>/aggregate/ may group by and sum. Each name must be a field, a relation path or a declared expression of the model, a bucket (:year, :quarter, :month) needs a date field, and the metrics are count, sum, avg, min, max and distinct_count.
+
+**Fix.** Fix the name the message quotes: {'group_by': ['category', 'launched_on:year'], 'values': ['price'], 'metrics': ['count', 'sum'], 'expressions': {'revenue': TextNumber('revenue_text')}}. Every key but group_by is optional.
+
+<a id="e381"></a>
+
+#### E381: The resource declares no aggregation
+
+*API 400 response* · from `karni.api.viewsets.BaseViewSet.aggregate`
+
+**Why Karni objects.** Nothing is aggregatable unless declared, so GET <resource>/aggregate/ answers 404 for a model without class Karni: aggregate (and a viewset without aggregation).
+
+**Fix.** Declare what may be grouped and summed on the model: class Karni: aggregate = {'group_by': ['region'], 'values': ['price']}.
+
+<a id="e382"></a>
+
+#### E382: group_by, stack or series names something not declared
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** A request may group only by the fields, relation paths and expressions the declaration lists, and never by a field hidden from the requester (Karni.field_roles, APIMeta.write_only). group_by is required.
+
+**Fix.** Use one of the values the message lists (the OpenAPI document lists them too, in x-karni-aggregate), or add the field to the declaration's group_by.
+
+<a id="e383"></a>
+
+#### E383: The metric is not allowed
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** The declaration's metrics list what may be computed: count, sum, avg, min, max, distinct_count, or fewer.
+
+**Fix.** Send one of the metrics the message lists, or add it to the declaration's metrics.
+
+<a id="e384"></a>
+
+#### E384: The value is missing, not declared, or not a number
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** Every metric but count reads a value, which must be in the declaration's values and visible to the requester. sum, avg, min and max need a number field or a numeric expression.
+
+**Fix.** Send value=<one of the declared values>. For a number stored as text, declare an expression: 'expressions': {'revenue': TextNumber('revenue_text')}.
+
+<a id="e385"></a>
+
+#### E385: The date bucket does not fit
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** A bucket (:year, :quarter, :month) groups a date or datetime field. Another bucket, or a bucket on another kind of field, cannot be computed.
+
+**Fix.** Send group_by=<date field>:year, :quarter or :month, or group by the field without a bucket.
+
+<a id="e386"></a>
+
+#### E386: An aggregate parameter is not valid
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** top must be a whole number from 1 to KARNI_AGGREGATE_MAX_GROUPS, only one of stack and series names the second dimension, and it must differ from group_by.
+
+**Fix.** Fix the parameter the message names.
+
+<a id="e387"></a>
+
+#### E387: The aggregate makes too many groups
+
+*API 400 response* · from `karni.aggregation.run_aggregate`
+
+**Why Karni objects.** A response holds at most KARNI_AGGREGATE_MAX_GROUPS groups (default 1000), so grouping by a field with a value per row cannot fill a chart or the server's memory.
+
+**Fix.** Send top=<n> to keep the largest groups and put the rest in Other, narrow the rows with filters, group by a coarser bucket, or raise KARNI_AGGREGATE_MAX_GROUPS.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -1287,6 +1367,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A model declares `class Karni: database`, but DATABASE_ROUTERS does not list karni.db.DatabaseRouter (or a subclass), so Django sends the model to the default database. karni_settings() lists the router, so this happens when DATABASE_ROUTERS is replaced after the call.
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
+
+<a id="w570"></a>
+
+#### W570: An aggregation expression is never used
+
+*system check (warning)* · from `karni.checks.check_aggregations`
+
+**Why Karni objects.** An expression in the declaration's expressions is only reachable through group_by or values. One that neither lists does nothing.
+
+**Fix.** Add its name to group_by or values, or remove it.
 
 ### 6xx · Testing and seeding
 

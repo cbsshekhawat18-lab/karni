@@ -11,6 +11,28 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Aggregations (experimental): grouped counts and sums under the list's
+  filters and access.** A model declares what may be aggregated in `class
+  Karni: aggregate` (`group_by`, `values`, `metrics`, `expressions`), or a
+  viewset in `aggregation`, and `GET <resource>/aggregate/` takes
+  `group_by` (a field, a relation path, an expression, or a date bucket
+  `:year`, `:quarter`, `:month`), `metric` (count, sum, avg, min, max,
+  distinct_count), `value`, `top` (the rest in "Other"), `stack` or
+  `series`, and every list filter and `search`. Access applies first,
+  through the list's queryset. It is one query, two with "Other". A field,
+  metric or path that is not declared, or hidden from the requester, is a
+  400 with its code (`E382` to `E387`), a resource without a declaration a
+  404 (`E381`), and `karni check` checks the declarations (`E380`,
+  `W570`). `karni.aggregation.TextNumber` reads numbers stored as text
+  (`"$1.2B"`, `"450K"`) in SQL on PostgreSQL and SQLite. The OpenAPI
+  document has the `AggregateResult` response, the parameters with the
+  declared values as enums, and `x-karni-aggregate`. The query-scaling
+  check measures the action, `KARNI_AGGREGATE_MAX_GROUPS` (default 1000)
+  caps the groups, and `get_aggregation()` and `aggregate_queryset()` are
+  the escape hatches. In `@karni/ui`, `useAggregate` fetches it and
+  `DataChart` reads it through `aggregate`, with stacked bars (`stacked`),
+  and `karni types` writes `use<Resource>Aggregate` with the declared
+  groups as a union type. [docs/aggregations.md](docs/aggregations.md).
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

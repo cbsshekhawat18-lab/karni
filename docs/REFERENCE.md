@@ -52,6 +52,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
+| Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier | `experimental` | Karni's own tests |
 
 ### Admin
 
@@ -72,6 +73,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Import screen with column mapping and preview (`ResourceImport`) | `stable` | [leads.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/frontend/src/pages/leads.tsx) |
 | Page building blocks: `Page`, `Layout`, `Stat`, `Modal`, `Toaster`, `EmptyState` | `stable` | [event-dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/frontend/src/pages/event-dashboard.tsx) |
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
+| `useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, read directly. Experimental tier | `experimental` | Karni's own tests |
 | `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
@@ -1514,7 +1516,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 |---|---|---|---|
 | `Access` | class | A viewset's access declaration: `access = Access(read=..., write=..., create=...)`. | `Access(*, read: Predicate, write: Predicate, create: Predicate \| None = None) -> None` |
 | `Authenticated` | class | Any authenticated user, on every row. | methods `allows`, `rows`, `facts`, `describe` |
-| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `read_only_refused_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
+| `BaseViewSet` | viewset | Model-driven `ModelViewSet`: declare `model` and `access`, get a full API. | declare `model`, `access`, `expand_depth`, `expandable_fields`, `auto_register`, `route`, `search_fields`, `optimize`, `select_related`, `prefetch_related`, `query_budget`, `pagination`, `cache`, `throttle`, `scope_exempt`, `scope_exempt_reason`, `aggregation`, `read_only_refused_actions`, `write_or_create_actions`, `unbudgeted_actions` and get the endpoints `list`, `create`, `retrieve`, `update`, `partial_update`, `destroy`, `aggregate`, `export`, `history`, `import`, `import/<job>`, `import/<job>/commit`, `import/<job>/preview`, `import/template` |
 | `Budget` | class | `query_budget = Budget(list=25, reason="...")`: a viewset's own query budgets. | `Budget(*, reason: str, default: Any = …, **actions: int \| None) -> None` |
 | `Cache` | class | `cache = Cache(ttl=60, depends_on=[Price])`: tune caching for one viewset. | `Cache(*, ttl: int \| None = None, depends_on: tuple[type[Model] \| str, ...] = ()) -> None` |
 | `Can` | class | The requesting user holds a grant for **any** of the named permissions (ADR 0002). | `Can(*keys: str) -> None` |
@@ -1581,6 +1583,7 @@ class Lead(BaseModel):
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
 | `dashboard` | karni | `None` | Put the model on the staff app's dashboard: counts (all rows, new ones, one per state) and the newest rows. `True` for the defaults, or a dict ([API: dashboard](api.md#the-staff-dashboard)). | `dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}` |
+| `aggregate` | karni | `None` | Experimental. What `GET <resource>/aggregate/` may group by and sum: the fields, relation paths and expressions in `group_by` (a date takes `:year`, `:quarter` or `:month`), the `values` a metric reads, the `metrics` allowed and named `expressions` ([aggregations](aggregations.md)). | `aggregate = {"group_by": ["region", "launched_on"], "values": ["price"]}` |
 | `append_only` | karni | `False` | The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` timestamps (`True`) or on the listed columns. | `append_only = True` |
 | `cascade` | karni | `{}` | Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited model, each with the reason (silences `karni.W965` for that field). | `cascade = {"order": "a line item cannot outlive its order"}` |
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
@@ -1667,6 +1670,7 @@ class Lead(BaseModel):
 | `KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
 | `KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
 | `KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
+| `KARNI_AGGREGATE_MAX_GROUPS` | `KARNI_AGGREGATE_MAX_GROUPS` | `1000` | Experimental. The most groups one `GET <resource>/aggregate/` returns. A request that makes more is refused (`E387`): send `top` or narrow it with filters. See [aggregations](aggregations.md). |
 
 ### Admin (karni.admin + django-unfold)
 
@@ -1877,7 +1881,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `FileUpload` |  | Drag-and-drop or click-to-browse file picker that shows the current file and the pending ones. | [FileUpload.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/file-upload/FileUpload.tsx) |
 | `Stat` | `label: React.ReactNode`, `value: React.ReactNode` | KPI tile: label, value, optional delta and icon. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
 | `Dashboard` |  | The staff app's home page: a Stat per count and the newest rows of every model that opts in with `Karni.dashboard`. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
-| `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points or named series. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points, named series, or the response of `useAggregate` (`aggregate`), with stacked bars (`stacked`). | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 
 ### Hooks
 
@@ -1895,6 +1899,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useResourceList` | `resource: string`, `params?: ResourceListParams \| undefined`, `options?: Omit<UseQueryOptions<Paginated<T>, Error, Paginated<T>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one page of a resource's list (`GET /<resource>/`) with filters, search, ordering and `?expand=`. | [useResourceList.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceList.ts) |
 | `useResourceItem` | `resource: string`, `id: string \| number`, `params?: ResourceItemParams \| undefined`, `options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row of a resource (`GET /<resource>/<id>/`), optionally expanded. | [useResourceItem.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceItem.ts) |
 | `useResourceMutations` | `resource: string`, `options?: ResourceMutationsOptions \| undefined` | Create, update and remove mutations for a resource that refresh the resource's cached lists and items on each success. | [useResourceMutations.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceMutations.ts) |
+| `useAggregate` | `resource: string`, `params: AggregateParams`, `options?: Omit<UseQueryOptions<AggregateResult, Error, AggregateResult, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. Fetches grouped counts and sums of a resource (`GET /<resource>/aggregate/`). | [useAggregate.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useAggregate.ts) |
 | `useKarniClient` |  | Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
@@ -1936,6 +1941,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `EMPTY_VALUE_LABEL` | constant | What a screen reader says for a field that has no value. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `AUDIT_FIELDS` | constant | The audit field names (`created_at`, `created_by`, …) that tables hide and detail views group last. | [audit-fields.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/audit-fields.ts) |
 | `karniKeys` | constant | TanStack Query keys for the schema, a resource, its lists and its items (invalidate `karniKeys.resource(name)` to refresh every view of a resource). | [keys.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/keys.ts) |
+| `aggregateKey` | function | Experimental. The query key of one aggregate (under the resource's invalidation root). | [useAggregate.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useAggregate.ts) |
+| `buildAggregateQuery` | function | Experimental. `params` as the query string the aggregate action reads. | [useAggregate.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useAggregate.ts) |
 | `createKarniClient` | function | Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `KarniApiError` | class | Thrown for non-2xx responses, with the parsed DRF error body in `data`. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `zodFor` | function | Builds a Zod validator for a resource's create or update payload from its schema. | [zod.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/zod.ts) |
@@ -1962,6 +1969,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultDashboardSlots` | constant | Karni's own slots, exported so a project can wrap one instead of rewriting it. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `resolveRelativeDate` | function | A declared filter value: `"today"`, `"today-7"` and `"today+1"` become the date they name (local time, `YYYY-MM-DD`). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `resolveSection` | function | The counts and table of one resource, from its declaration (exported for tests and overrides). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
+| `aggregateSeries` | function | Experimental. An aggregate response as DataChart series: one per series of the response, a point per category. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 | `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
 
 ## Modules
@@ -2073,6 +2081,14 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
 | [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
+| [`E380`](errors.md#e380) | check | An aggregation declaration is not valid |
+| [`E381`](errors.md#e381) | api | The resource declares no aggregation |
+| [`E382`](errors.md#e382) | api | group_by, stack or series names something not declared |
+| [`E383`](errors.md#e383) | api | The metric is not allowed |
+| [`E384`](errors.md#e384) | api | The value is missing, not declared, or not a number |
+| [`E385`](errors.md#e385) | api | The date bucket does not fit |
+| [`E386`](errors.md#e386) | api | An aggregate parameter is not valid |
+| [`E387`](errors.md#e387) | api | The aggregate makes too many groups |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |
@@ -2107,6 +2123,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
 | [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
 | [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
+| [`W570`](errors.md#w570) | warning | An aggregation expression is never used |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |

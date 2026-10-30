@@ -680,6 +680,9 @@ every routed project `BaseViewSet` it measures
 - `list` with **2** rows and with **12** rows,
 - `retrieve` of a row with **2** related rows per to-many relation the
   serializer renders, and of one with **12**,
+- `aggregate`, for a viewset with an [aggregation](aggregations.md)
+  (experimental), with **2** rows and with **12**, grouped by its first
+  declared group with `top=1`, stacked by the second one when there is one,
 
 and fails if the query count grows. Rows come from the automatic factories
 (explicit ones win). Related rows are seeded along the serializer's own

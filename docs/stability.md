@@ -188,6 +188,15 @@ Experimental now:
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
   blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
   `karni_cli.builder` package.
+- [Aggregations](aggregations.md): `class Karni: aggregate`, the viewset's
+  `aggregation`, `get_aggregation()` and `aggregate_queryset()`, the
+  `aggregate` action, its parameters and response, `karni.aggregation` (with
+  `Aggregation`, `TextNumber` and `run_aggregate`), `karni.api.aggregate`,
+  `x-karni-aggregate`, the `KARNI_AGGREGATE_MAX_GROUPS` setting,
+  `karni.testing.performance.aggregate_query`, the `use<Resource>Aggregate`
+  hooks `karni types` writes, and `useAggregate`, `aggregateKey`,
+  `buildAggregateQuery`, `aggregateSeries` and DataChart's `aggregate` and
+  `stacked` in `@karni/ui`.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),
