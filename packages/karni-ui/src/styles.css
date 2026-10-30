@@ -222,6 +222,11 @@
      lets the page scroll instead. */
   --karni-table-max-height: 70vh;
 
+  /* TreeView (and TreeSelect's popover, experimental): the indent of each
+     level, and how tall the tree grows before it scrolls. */
+  --karni-tree-indent: 1.25rem;
+  --karni-tree-max-height: 20rem;
+
   --karni-z-raised: 10;
   --karni-z-drawer: 40;
   --karni-z-popover: 50;

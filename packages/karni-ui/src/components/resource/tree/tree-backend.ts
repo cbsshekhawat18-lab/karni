@@ -104,6 +104,8 @@ export interface TreeBackendOptions {
   lazyFailure?: Failure;
   /** Fail ancestors/ requests. */
   ancestorsFailure?: Failure;
+  /** Delay ancestors/ requests. */
+  ancestorsDelay?: Delay;
   /** Delay every tree/ request. */
   treeDelay?: Delay;
   /** Delay tree/ requests that name a root. */
@@ -521,6 +523,7 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
     treeFailure,
     lazyFailure,
     ancestorsFailure,
+    ancestorsDelay,
     treeDelay,
     lazyDelay,
     search = true,
@@ -570,8 +573,9 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
           ),
         );
       }),
-      http.get(`*/api/${resource}/:id/ancestors/`, ({ request, params }) => {
+      http.get(`*/api/${resource}/:id/ancestors/`, async ({ request, params }) => {
         requests.push(new URL(request.url));
+        await wait(ancestorsDelay);
         if (ancestorsFailure !== undefined) return failWith(ancestorsFailure);
         const row = findRow(store, params["id"]);
         if (row === undefined) return missing();

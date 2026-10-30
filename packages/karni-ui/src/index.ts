@@ -170,6 +170,7 @@ export type {
   ResourceDetailTransitionOptions,
   ResourceDetailTransitionTarget,
   ResourceDetailTransitionsProps,
+  ResourceDetailBreadcrumbOptions,
 } from "./components/resource/ResourceDetail";
 
 export { ResourceSelect, defaultResourceSelectSlots } from "./components/resource/ResourceSelect";
@@ -181,6 +182,35 @@ export type {
   ResourceSelectLoadingProps,
   ResourceSelectOptionProps,
 } from "./components/resource/ResourceSelect";
+
+// tree models (experimental)
+export { TreeView } from "./components/resource/tree/TreeView";
+export type { TreeViewProps, TreeValue } from "./components/resource/tree/TreeView";
+export { defaultTreeViewSlots } from "./components/resource/tree/tree-states";
+export type {
+  TreeViewSlots,
+  TreeViewNodeProps,
+  TreeViewEmptyProps,
+  TreeViewLoadingProps,
+} from "./components/resource/tree/tree-states";
+export { TreeSelect } from "./components/resource/tree/TreeSelect";
+export type { TreeSelectProps, TreeSelectSlots } from "./components/resource/tree/TreeSelect";
+export { TreeBreadcrumb } from "./components/resource/tree/TreeBreadcrumb";
+export type { TreeBreadcrumbProps } from "./components/resource/tree/TreeBreadcrumb";
+export {
+  useResourceTree,
+  useResourceChildren,
+  useResourceAncestors,
+  useTreeMutations,
+} from "./hooks/useResourceTree";
+export type {
+  TreeNode,
+  TreeResponse,
+  ResourceTreeParams,
+  ResourceChildrenParams,
+  TreeMoveInput,
+  TreeMutations,
+} from "./hooks/useResourceTree";
 
 export {
   ChangeHistory,
@@ -282,6 +312,7 @@ export type {
   ResourceSchema,
   DashboardDef,
   DashboardCountDef,
+  TreeRef,
 } from "./schema/types";
 
 // auth

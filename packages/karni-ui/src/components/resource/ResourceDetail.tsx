@@ -17,4 +17,5 @@ export type {
   ResourceDetailTransitionOptions,
   ResourceDetailTransitionTarget,
   ResourceDetailTransitionsProps,
+  ResourceDetailBreadcrumbOptions,
 } from "./detail/ResourceDetail";

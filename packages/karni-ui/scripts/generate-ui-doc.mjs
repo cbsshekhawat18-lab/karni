@@ -25,6 +25,9 @@ const GROUPS = [
       "ResourceSelect",
       "ChangeHistory",
       "ResourceImport",
+      "TreeView",
+      "TreeSelect",
+      "TreeBreadcrumb",
     ],
   ],
   [
@@ -59,12 +62,27 @@ const GROUPS = [
 ];
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
-const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm", "TermsGate"]);
+const EXPERIMENTAL = new Set([
+  "SocialButton",
+  "OtpLoginForm",
+  "TermsGate",
+  "TreeView",
+  "TreeSelect",
+  "TreeBreadcrumb",
+]);
 
 const HOOKS = {
   useResourceList:
     "A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.",
   useResourceItem: "One row by id, optionally expanded.",
+  useResourceTree:
+    "Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/?root=&depth=`): `{ results, truncated }`, each node with `has_children` and `children` (`null` until loaded).",
+  useResourceChildren:
+    "Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).",
+  useResourceAncestors:
+    "Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).",
+  useTreeMutations:
+    "Experimental. `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.",
   useChangeHistory:
     "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
   useImportDescribe:

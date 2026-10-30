@@ -132,6 +132,9 @@ describe("package self-registrations", () => {
       "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
+      "tree-breadcrumb": "TreeBreadcrumb",
+      "tree-select": "TreeSelect",
+      "tree-view": "TreeView",
     });
   });
 });

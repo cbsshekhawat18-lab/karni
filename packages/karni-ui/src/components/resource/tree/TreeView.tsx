@@ -40,6 +40,7 @@ registerComponentRole("tree-view", "TreeView");
 /** Experimental. A tree's selection: one id, several, or none. */
 export type TreeValue = string | number | ReadonlyArray<string | number> | null;
 
+/** Experimental. The props of TreeView. */
 export interface TreeViewProps {
   /** The tree resource (a Karni `TreeModel` viewset's router prefix): "regions". */
   resource: string;
@@ -573,6 +574,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
         return (
           <div
             role="tree"
+            id={treeId}
             aria-label={label}
             aria-multiselectable={selectable && multiple ? true : undefined}
             aria-busy="true"
@@ -594,7 +596,9 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
             type="search"
             value={term}
             aria-label={`Search ${names.plural}`}
-            aria-controls={treeId}
+            aria-controls={
+              loadError == null && searchError == null && emptyProps === null ? treeId : undefined
+            }
             placeholder={`Search ${names.plural}`}
             onChange={(event) => setTerm(event.target.value)}
             onKeyDown={(event) => {

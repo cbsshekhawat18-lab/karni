@@ -22,6 +22,7 @@ export interface TreeSelectSlots {
   Chip: React.ComponentType<ResourceSelectChipProps>;
 }
 
+/** Experimental. The props of TreeSelect (the same shape as ResourceSelect's). */
 export interface TreeSelectProps {
   /** The tree resource the value points at: "regions". */
   resource: string;

@@ -61,7 +61,7 @@ describe("generate-manifest role scan", () => {
     const result = runScript();
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 23 roles/);
+    expect(result.stdout).toMatch(/wrote \d+ components, \d+ hooks, 26 roles/);
 
     const manifest = JSON.parse(
       readFileSync(resolve(packageRoot, "dist/manifest.json"), "utf8"),
@@ -92,6 +92,9 @@ describe("generate-manifest role scan", () => {
       "terms-gate": "TermsGate",
       "theme-toggle": "ThemeToggle",
       toast: "Toaster",
+      "tree-breadcrumb": "TreeBreadcrumb",
+      "tree-select": "TreeSelect",
+      "tree-view": "TreeView",
     });
   });
 

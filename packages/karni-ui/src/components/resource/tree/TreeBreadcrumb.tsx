@@ -9,6 +9,7 @@ import { resourceNames, type ResourceLabel } from "../resource-names";
 
 registerComponentRole("tree-breadcrumb", "TreeBreadcrumb");
 
+/** Experimental. The props of TreeBreadcrumb. */
 export interface TreeBreadcrumbProps {
   /** The tree resource: "regions". */
   resource: string;
