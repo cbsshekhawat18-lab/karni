@@ -198,6 +198,14 @@ Experimental now:
   `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
   `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
   line of `manage.py karni_context`, and `karni_cli.catalog`.
+- [The /new-app flow](agents.md#agents-the-new-app-flow): the `new-app`
+  procedure and rule K311, [recipes](app-spec.md#recipes) (`karni recipes
+  list` and `show`, `--match` and its ranking, the blank start, the
+  `recipe.toml` format and its schema, the `karni.recipes` entry point group,
+  `karni recipes --json` and its schema, `karni_cli.recipes`), and [the MCP
+  tools](app-spec.md#mcp-tools) `recipes`, `spec_validate`, `questions`,
+  `answer`, `plan`, `build` and `modules` with their results' schema
+  (`karni_cli.agent_tools`).
 
 ## Supported platforms
 

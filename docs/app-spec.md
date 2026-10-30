@@ -1,5 +1,5 @@
 ---
-description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and its questions, karni build and published JSON Schemas."
+description: "The Karni app spec, karni.yaml (experimental): one small file that describes an app in the terms karni make, karni add and the settings use, with karni spec validate, karni spec export, karni plan and its questions, karni build, recipes, the MCP tools and published JSON Schemas."
 ---
 
 # The app spec: `karni.yaml`
@@ -10,9 +10,12 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
     `karni plan`, `karni plan --questions`, `karni spec answer`, `karni
     build`, `manage.py karni_facts`, `manage.py karni_rows`, `manage.py
     karni_makemigrations`, `karni.facts`, the `karni_cli.spec` and
-    `karni_cli.builder` packages, `.karni/build.json` and the four JSON
-    Schemas. They may change in a minor release, and each change is in the
-    CHANGELOG. The error codes keep their meaning.
+    `karni_cli.builder` packages, `.karni/build.json`, [recipes](#recipes)
+    (`karni recipes`, the recipe format, the `karni.recipes` entry points,
+    `karni_cli.recipes`), [the MCP tools](#mcp-tools) of the flow
+    (`karni_cli.agent_tools`) and the seven JSON Schemas. They may change in
+    a minor release, and each change is in the CHANGELOG. The error codes
+    keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
 roles, built-in features, modules and pages. An AI agent turns a one-line
@@ -22,7 +25,10 @@ writes the spec of an existing project (`karni spec export`), shows what
 would change to make the project match a spec ([`karni
 plan`](#karni-plan)), lists the few [questions](#questions) to ask the user
 first, and makes the change ([`karni build`](#karni-build)), without
-touching the code written by hand.
+touching the code written by hand. A spec starts from a [recipe](#recipes)
+or from the blank start, and an agent runs the whole flow through `/new-app`
+([the /new-app flow](agents.md#agents-the-new-app-flow)) or [the MCP
+tools](#mcp-tools).
 
 The spec describes only what `karni make`, `karni add` and the settings can
 already do. Each key maps to one of them. Anything it cannot express stays
@@ -917,3 +923,184 @@ owner}`, each step `{name, status, summary}` with `status` one of `done`,
 | [C285](errors.md#c285) | `.karni/build.json` cannot be read |
 | [E304](errors.md#e304) | `manage.py karni_makemigrations --renames` is not a rename list |
 | [E305](errors.md#e305) | an app has two latest migrations, so the renames have no place (`makemigrations --merge` first) |
+
+## Recipes
+
+!!! warning "Experimental"
+    `karni recipes`, its `--json` output and schema, the recipe format and
+    its schema, the `karni.recipes` entry point group, the blank start and
+    the ranking of `--match` are experimental.
+
+A recipe is a ready-made `karni.yaml` for a kind of app that many people
+ask for. A new app starts from the closest recipe, or from the blank start
+when none fits, and the agent changes what the request asks for.
+
+```sh
+karni recipes list                                  # every recipe, and the blank start
+karni recipes list --match "a booking app for a yoga studio"
+karni recipes show <name>                           # its spec, what people usually change
+karni recipes show blank                            # the blank start
+karni recipes list --json                           # also --match and show
+```
+
+### The format
+
+A recipe is a folder:
+
+```text
+<name>/
+  recipe.toml   what it is and when it fits
+  karni.yaml    the spec, with app.recipe naming the recipe
+  files/        optional: the recipe's own domain code, seeds and tests, each at the
+                path it takes in the project (files/shop/models.py is shop/models.py)
+```
+
+The files under `files/` go where the project owns the code: the methods of
+`<app>/models.py`, the actions of `<app>/viewsets.py`, `<app>/seeds.py` and
+tests of its own ([what Karni owns](#what-karni-owns-and-what-the-project-owns)).
+
+`recipe.toml`, every key:
+
+| Key | Required | Takes |
+|---|---|---|
+| `name` | yes | the recipe's name: its folder's name, or its entry point's. Lowercase letters, digits, `-` and `_`. `blank` is taken by the blank start |
+| `title` | yes | a short human name, e.g. `Online shop` |
+| `purpose` | yes | what the app does, in one line of at most 80 characters |
+| `use_when` | yes | plain phrases of what someone asks for when the recipe fits, e.g. `["online shop", "sell products", "checkout"]`. `--match` ranks by them |
+| `usually_changed` | no | what people usually change in the spec after starting from it, in plain words, e.g. `["the product fields", "the currency"]` |
+
+An example:
+
+```toml
+name = "helpdesk"
+title = "Helpdesk"
+purpose = "Tickets that customers open and staff answer and close."
+use_when = ["helpdesk", "support tickets", "customer support", "ticketing"]
+usually_changed = ["the ticket fields", "who may see which tickets"]
+```
+
+Unknown keys are errors. The schema is published as
+[`karni-recipe.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipe.schema.json)
+(in the repository, `docs/assets/karni-recipe.schema.json`, regenerated with
+`python -m karni_cli.recipes > docs/assets/karni-recipe.schema.json`).
+
+### Where recipes come from
+
+1. **Built in**: the folders of `karni_cli/recipes/<name>/`, package data of
+   karni-cli. A recipe of Karni's is a folder added there, nothing else.
+2. **Installed**: the `karni.recipes` entry point group of the environment
+   karni-cli runs in. The entry point's name is the recipe's name, and its
+   value is the package that is the recipe's folder.
+
+```toml
+# pyproject.toml
+[project.entry-points."karni.recipes"]
+helpdesk = "acme_recipes.helpdesk"
+```
+
+A built-in recipe wins over an installed one of the same name. A recipe
+that cannot be used (a `recipe.toml` that breaks the format, a name that is
+not its folder's, no `karni.yaml`, a name taken already) is left out, and
+`karni recipes` reports it as `C421`.
+
+### `--match`
+
+`--match` ranks the recipes for a one-line request by plain word overlap,
+with no language model, so the same request always gives the same ranking:
+
+1. The request, each `use_when` phrase and the purpose become words:
+   lowercase, letters and digits only, plurals made singular (`bookings` is
+   `booking`, `categories` is `category`), and the words that name no app
+   left out (`a`, `the`, `app`, `with`, `for`, `want` ...).
+2. Each word of the request scores 2 when one of the recipe's `use_when`
+   phrases has it, else 1 when its purpose has it.
+3. The recipes that score 2 or more come back, the highest first, then by
+   name, at most 3, each with its score and the words that scored.
+
+When none scores 2, `karni recipes list --match` says so and prints the
+blank start.
+
+### The blank start
+
+The blank start is where an app starts when no recipe fits: a `karni.yaml`
+with the version and the app's name (the project's, inside a project), and
+nothing else. `karni recipes show blank` prints it:
+
+```yaml
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Reading Log
+```
+
+### `--json` of the recipes
+
+`--json` prints `{version, request, threshold, recipes, blank, next,
+problems}`. Each recipe is `{name, title, purpose, use_when,
+usually_changed, source, files, spec, score, matched}`: `spec` is its
+`karni.yaml` with `show` and `null` in a list, and `score` and `matched` come
+with `--match`. `blank` is `{name: "blank", spec}`, and `problems` lists the
+recipes left out. The schema is published as
+[`karni-recipes.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipes.schema.json)
+(in the repository, `docs/assets/karni-recipes.schema.json`, regenerated
+with `python -m karni_cli.recipes.output >
+docs/assets/karni-recipes.schema.json`). `version` moves only for a breaking
+change of the output.
+
+| Code | Problem |
+|---|---|
+| [C420](errors.md#c420) | no recipe of that name |
+| [C421](errors.md#c421) | a recipe cannot be used, so it is left out |
+
+## MCP tools
+
+!!! warning "Experimental"
+    These tools, their parameters and their results are experimental.
+
+`karni mcp` serves the flow from a one-line request to a running app as
+tools, beside `context`, `rules` and `check` ([MCP](agents.md#mcp)). Each
+does what its command does and returns JSON. Karni never calls a language
+model here: the agent reads the results and decides.
+
+| Tool | The command | Returns |
+|---|---|---|
+| `recipes(match="", name="")` | `karni recipes list --match`, `show` | [`karni-recipes.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-recipes.schema.json) |
+| `spec_validate(path="")` | `karni spec validate --json` | `{file, valid, issues}` |
+| `questions(spec="", max=5)` | `karni plan --questions --json` (`max` 0: all) | [`karni-questions.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-questions.schema.json) |
+| `answer(id, value, spec="")` | `karni spec answer` | `{version, file, valid, issues, id, keys, open, next}` |
+| `plan(spec="")` | `karni plan --json` | [`karni-plan.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-plan.schema.json) |
+| `build(spec="", dry_run=False, allow_destructive=False)` | `karni build --json` | [`karni-build.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-build.schema.json) |
+| `modules(name="")` | `karni modules list`, `show --json` | `{version, modules, problems}`, a line per module and feature, or `{version, module, problems}` with the entry in full |
+
+`spec` and `path` are the spec file, relative to the project (`karni.yaml`
+when empty). A failure the command reports as an error comes back as
+`{"error": {"code": "C210", "message": "..."}}`, and nothing is written.
+
+`build` never takes `--force` or `--adopt`. A Karni-owned file edited by hand
+stops it with `C273`, its changed lines and the three ways on, and `next`
+starts with "ask the user which of the three ways on to take": forcing or
+adopting is the user's call, made with `karni build` itself.
+
+What `recipes(match=...)` returns when no recipe fits:
+
+```json
+{
+  "version": 1,
+  "request": "a reading log where each reader tracks the novels they finished",
+  "threshold": 2,
+  "recipes": [],
+  "blank": {
+    "name": "blank",
+    "spec": "# yaml-language-server: $schema=...\nversion: 1\napp:\n  name: Reading Log\n"
+  },
+  "next": "no recipe matches: start karni.yaml from the blank start (karni recipes show blank) and write in it what the request asks for",
+  "problems": []
+}
+```
+
+Every result follows `$defs/<tool>` of
+[`karni-mcp.schema.json`](https://cbsshekhawat18-lab.github.io/karni/assets/karni-mcp.schema.json)
+(in the repository, `docs/assets/karni-mcp.schema.json`, regenerated with
+`python -m karni_cli.agent_tools > docs/assets/karni-mcp.schema.json`),
+which points at the other schemas for the results that are a command's
+`--json` output.

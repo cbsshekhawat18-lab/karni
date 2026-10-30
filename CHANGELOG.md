@@ -11,6 +11,38 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **The /new-app flow (experimental): from a one-line request to a running
+  app.** A new procedure, `new-app`, takes an agent through the flow: a
+  recipe or the blank start (`karni recipes list --match`), the questions
+  of `karni plan --questions` and only those, `karni spec answer`, `karni
+  plan`, `karni build`, then only the domain logic that is left, in the
+  project's own files. `karni rules sync` renders it into every adapter: a
+  `/new-app` slash command for Claude Code, Cursor, Windsurf and Copilot,
+  and a line in AGENTS.md and the other instruction files for tools without
+  slash commands. A new rule, `K311`, says never to hand-write what
+  karni.yaml can express (`karni rules` grows by 19 tokens, to 603). The
+  welcome page's first prompt and the last lines of `karni new` are now
+  this flow: describe the app in one line, then `/new-app`. Run `karni
+  rules sync` in an existing project for the new command and rule.
+  [docs/agents.md](docs/agents.md#agents-the-new-app-flow).
+- **Recipes (experimental): `karni recipes list [--match "<request>"]` and
+  `karni recipes show <name>`.** A recipe is a folder with a `karni.yaml`, a
+  `recipe.toml` (name, title, purpose, `use_when`, `usually_changed`) and
+  optional files of its own. Karni's live in karni-cli, and others join
+  through the `karni.recipes` entry point group. `--match` ranks them by
+  plain word overlap with the request (2 for a `use_when` word, 1 for a
+  purpose word), with no language model, and when none scores 2 it names
+  the blank start: a karni.yaml with the version and the app's name. No
+  recipe ships yet. `--json` follows the published
+  `docs/assets/karni-recipes.schema.json`, `recipe.toml` follows
+  `docs/assets/karni-recipe.schema.json`, and `C420` and `C421` are new.
+  [docs/app-spec.md](docs/app-spec.md#recipes).
+- **MCP tools for the flow (experimental).** `karni mcp` adds `recipes`,
+  `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`,
+  each returning the JSON its command prints, as published in
+  `docs/assets/karni-mcp.schema.json`. `build` never forces or adopts a
+  Karni-owned file edited by hand: it returns `C273` with the three ways
+  on, for the user to choose. [docs/app-spec.md](docs/app-spec.md#mcp-tools).
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

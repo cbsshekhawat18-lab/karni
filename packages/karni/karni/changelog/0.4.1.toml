@@ -300,3 +300,17 @@ also by its id. keep_ids creates rows with the file's ids. karni_transfer migrat
 0002 adds both options to ImportJob: run `karni migrate`."""
 mechanical = false
 migration = "migrations/0.4.1.md#imports-match-ids-only-when-asked"
+
+[[change]]
+id = "agent-files-new-app"
+kind = "project-files"
+symbol = "AGENTS.md and the agent adapter files"
+summary = """\
+A new procedure, new-app, takes an agent from a one-line request to a running app \
+through karni.yaml (a recipe or the blank start, karni plan --questions, karni spec \
+answer, karni plan, karni build), and rule K311 says never to hand-write what \
+karni.yaml can express. `karni rules sync` writes its slash command files and a line \
+for it in the adapters. Until then `karni rules sync --check` (and make check) \
+reports the files as stale."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-procedure-from-one-line-to-an-app-run-karni-rules-sync"
