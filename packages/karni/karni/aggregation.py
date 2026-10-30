@@ -54,6 +54,7 @@ import re
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Any, Final
 
 from django.core.exceptions import FieldDoesNotExist, FieldError
@@ -487,6 +488,10 @@ def _check_visible(model: type[models.Model], path: str, user: Any, code: str, w
 
 # the request ---------------------------------------------------------------------------
 
+#: The reader ``parse_query(check_visibility=False)`` checks for: every field is visible
+#: (``Karni.field_roles`` hides none from a superuser), write-only fields still are not.
+_EVERY_FIELD: Final = SimpleNamespace(is_superuser=True, is_authenticated=True)
+
 
 @dataclass(frozen=True)
 class Dimension:
@@ -678,17 +683,22 @@ def parse_query(
     params: Mapping[str, Any],
     *,
     user: Any = None,
+    check_visibility: bool = True,
 ) -> AggregateQuery:
     """Experimental. The request's parameters, checked against ``aggregation``.
 
     ``params`` is a mapping of the query parameters (a ``QueryDict`` works).
     Fields hidden from ``user`` (``Karni.field_roles``, ``APIMeta.write_only``)
-    are refused like undeclared ones.
+    are refused like undeclared ones. ``check_visibility=False`` checks the
+    declaration alone, as for a reader who may see every field (a saved chart
+    is checked so: whoever views it, the action checks again).
 
     :raises AggregationError: with the code of the first problem: ``E382`` a
         grouping that is not declared, ``E383`` a metric, ``E384`` a value,
         ``E385`` a bucket, ``E386`` any other parameter.
     """
+    if not check_visibility:
+        user = _EVERY_FIELD
     group = str(params.get("group_by") or "")
     if not group:
         allowed = ", ".join(aggregation.group_options(model)) or "nothing"

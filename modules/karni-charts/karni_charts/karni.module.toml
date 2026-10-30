@@ -1,0 +1,34 @@
+# The catalog entry of karni-charts: what `karni modules show charts` prints,
+# what `karni add charts` wires and `karni remove charts` takes out.
+name = "charts"
+kind = "module"
+title = "Saved charts"
+purpose = "Charts defined and previewed in the admin, drawn from a resource's aggregate."
+status = "experimental"
+use_when = [
+    "saved charts",
+    "charts edited in the admin",
+    "analytics dashboard",
+    "reports with charts",
+    "chart builder",
+]
+docs = "docs/charts.md"
+
+[provides]
+models = ["Chart"]
+endpoints = ["/api/charts/", "/api/charts/{slug}/", "/api/charts/{slug}/data/"]
+pages = ["admin: saved charts, with a preview of each one's data"]
+ui = "@karni/charts-ui"
+
+[provides.settings]
+KARNI_CHARTS_READ = "string"
+
+[[asks]]
+question = "Who may read the chart definitions: signed-in users, anyone, or the roles' grants?"
+setting = "KARNI_CHARTS_READ"
+options = ["authenticated", "public", "granted"]
+default = "authenticated"
+
+[wiring]
+apps = ["karni_charts"]
+settings = "karni_charts.conf:DEFAULTS"
