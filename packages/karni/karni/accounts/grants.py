@@ -481,14 +481,15 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
         .order_by("role__slug")
     )
     # A role grant reaches user.<key> alone: without it, the roles give no target.
-    for row in rows if own_target is not None else ():
-        key = row.permission.key
-        if not _wanted(key, permission):
-            continue
-        source = GrantSource(
-            key, row.role.slug, row.role.name, row.scope, row.scope_path, str(row.origin)
-        )
-        found.append(TargetGrant(own_target, key, source))
+    if own_target is not None:
+        for row in rows:
+            key = row.permission.key
+            if not _wanted(key, permission):
+                continue
+            source = GrantSource(
+                key, row.role.slug, row.role.name, row.scope, row.scope_path, str(row.origin)
+            )
+            found.append(TargetGrant(own_target, key, source))
     if enabled():
         by_id = {str(row.pk): row for row in live_rows(user)}
         for grant in user_grants(user):
