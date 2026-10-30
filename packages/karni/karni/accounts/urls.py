@@ -29,7 +29,7 @@ mode). Only the optional feature blocks are conditional at import time:
   ``permissions/grants/bulk/`` (experimental) exist while
   ``KARNI_USER_GRANTS`` is ``True``: per-user grants
   (:mod:`karni.accounts.api.grants`). Off, they answer 404 and are absent
-  from the OpenAPI schema;
+  from the OpenAPI schema.
 * ``2fa/...`` is included from :mod:`karni.accounts.twofa` when ``KARNI_2FA``
   is enabled — the module is referenced by dotted path so core installs
   (without the ``karni[2fa]`` extra) never import it;

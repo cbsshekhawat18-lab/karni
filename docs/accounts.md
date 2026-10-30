@@ -454,7 +454,7 @@ roles without a second request.
 
 A role grant reaches everyone who holds the role. Many apps also give access
 user by user: this customer sees these regions, this analyst sees these
-report sections until the end of the quarter. Without Karni, each such need
+report sections until the end of the quarter. Written by hand, each such need
 becomes a table of its own and a check of its own. A per-user grant is one
 row of `UserGrant`, written like a `KARNI_ROLES` grant, and every check that
 reads the role grants reads it too.
@@ -573,7 +573,10 @@ deleted and switched-off grants give nothing. A scope that points at no row,
 and a superuser, give an empty list: ask `rows_for` or `user_can` for
 `all`. This is the interface a tree scope and a menu built from grants read,
 so they never query the grant tables themselves. It costs one query for the
-roles' side, and the user grants come from the request's cache.
+roles' side, and the user grants come from the request's cache. Each item is
+a `TargetGrant`, and `to_dict()` gives it as JSON. The scopes that take
+targets are listed in `karni.accounts.grants.TARGETED_SCOPES` (`related`
+now), which a new scope that points at rows joins.
 
 ### In the admin
 

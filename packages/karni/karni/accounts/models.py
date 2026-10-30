@@ -618,7 +618,7 @@ class UserGrant(BaseModel):
         ordering: ClassVar[list[str]] = ["-created_at"]
 
     class Karni:
-        """Every change to a user grant is history; ``own`` means the grants you received."""
+        """Every change to a user grant is history, and ``own`` means the grants you received."""
 
         audit = True
         owner_field = "user"

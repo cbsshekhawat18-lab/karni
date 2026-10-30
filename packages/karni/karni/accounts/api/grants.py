@@ -5,12 +5,12 @@ screen, a support tool or a provisioning script. Mounted under the accounts
 URLs while ``KARNI_USER_GRANTS`` is on:
 
 * ``GET permissions/grants/``: the grants the requester may view, paginated,
-  filtered by ``?user=<id>``, ``?active=true|false`` and ``?permission=``;
+  filtered by ``?user=<id>``, ``?active=true|false`` and ``?permission=``.
 * ``POST permissions/grants/``: ``{user, permission, scope, targets,
-  expires_at, reason}``, one grant;
+  expires_at, reason}``, one grant.
 * ``GET``, ``PATCH``, ``DELETE permissions/grants/<id>/``: one grant, a change
   (``permission``, ``scope``, ``targets``, ``expires_at``, ``reason``) and a
-  revoke (a soft delete, recorded in the history);
+  revoke (a soft delete, recorded in the history).
 * ``POST permissions/grants/bulk/``: ``{users: [...], permission, scope,
   targets, expires_at, reason}``, the same grant to every user, all or none.
 

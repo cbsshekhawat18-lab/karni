@@ -458,8 +458,9 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
     gives an empty list. A grant of scope ``all`` reaches every row and has
     no targets, so it is not listed: ask :func:`~karni.accounts.roles.rows_for` or
     :func:`~karni.accounts.roles.user_can` first. A superuser holds ``all``
-    everywhere, so the list is empty for one. The role side costs one query,
-    the user side reuses the request's grants.
+    everywhere, so the list is empty for one. The role side costs one query
+    (none when ``user.<key>`` is empty), the user side reuses the request's
+    grants.
     """
     kind, path = _parse_scope(scope)
     if (
@@ -481,9 +482,10 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
         .select_related("role", "permission__content_type")
         .order_by("role__slug")
     )
-    for row in rows:
+    # A role grant reaches user.<key> alone: without it, the roles give no target.
+    for row in rows if own_target is not None else ():
         key = row.permission.key
-        if own_target is None or not _wanted(key, permission):
+        if not _wanted(key, permission):
             continue
         source = GrantSource(
             key, row.role.slug, row.role.name, row.scope, row.scope_path, str(row.origin)
@@ -666,7 +668,7 @@ def change(operator: Any, row: UserGrant, **fields: Any) -> UserGrant:
     unknown = sorted(set(fields) - set(CHANGEABLE))
     if unknown:
         raise TypeError(
-            f"change() cannot set {', '.join(unknown)}; it sets {', '.join(CHANGEABLE)}."
+            f"change() cannot set {', '.join(unknown)}. It sets {', '.join(CHANGEABLE)}."
         )
     if widens(row, fields):
         checked = check(

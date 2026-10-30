@@ -554,9 +554,10 @@ def grant_rows(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
 
     ``all`` → every row; ``own`` → ``Karni.owner_field`` is the user;
     ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>`` (no
-    value on the user: no row), or is one of the grant's ``targets`` when it
-    has some (a per-user grant); ``custom:<name>`` → the registered callable.
-    :func:`rows_for` unions these, and ``karni why`` shows each one.
+    value on the user: no row); ``custom:<name>`` → the registered callable.
+    A per-user grant with ``targets`` reaches the rows whose scope path is one
+    of them instead. :func:`rows_for` unions these, and ``karni why`` shows
+    each one.
     """
     if grant.scope == "all":
         return True
@@ -605,10 +606,10 @@ class GrantSource:
 
     ``role`` is the role slug (``""`` for a superuser's implicit grant and
     for a user grant), ``origin`` is ``"declared"`` (``KARNI_ROLES``),
-    ``"matrix"`` (the permission matrix), ``"superuser"`` or ``"user_grant"``
-    (a per-user grant, experimental: ``grant_id``, ``reason``, ``expires_at``
-    and ``targets`` describe it); ``scope`` ``"none"`` is a declared grant the
-    matrix revoked, which grants nothing.
+    ``"matrix"`` (the permission matrix), ``"superuser"`` or ``"user_grant"``,
+    and ``scope`` ``"none"`` is a declared grant the matrix revoked, which
+    grants nothing. A per-user grant (experimental) is described by
+    ``grant_id``, ``reason``, ``expires_at`` and ``targets``.
     """
 
     permission: str
