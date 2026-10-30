@@ -121,6 +121,18 @@ def test_an_entity_related_to_the_user_without_owner() -> None:
               Order: {fields: {buyer: fk:User, seller: "o2o:User?", tags: "str:9"}}
     """)
     assert two[0].question == "Who owns an Order: the buyer or the seller?"
+    assert two[0].default == "buyer"
+    named = ask("""\
+        version: 1
+        app: {name: X}
+        apps:
+          a:
+            entities:
+              Order:
+                fields: {buyer: fk:User, seller: "o2o:User?"}
+                access: {read: [public], write: "owned:seller"}
+    """)
+    assert named[0].default == "seller"  # the access names it
 
 
 def test_an_entity_without_a_user_relation_has_no_owner_question() -> None:

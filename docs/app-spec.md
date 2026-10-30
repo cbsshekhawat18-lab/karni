@@ -626,7 +626,7 @@ their impact:
 
 | Area | The gap | The options |
 |---|---|---|
-| `owner` | an entity with a relation to the user (`fk:User`, `o2o:User`, `m2m:User`) and no `owner` | each of those fields (the first is the default), and `created_by`, whoever created the row, which the own scope uses without an owner. An external entity, or one on another database, has no `created_by` |
+| `owner` | an entity with a relation to the user (`fk:User`, `o2o:User`, `m2m:User`) and no `owner` | each of those fields (the default is the one the entity's access names in `owned:`, else the first), and `created_by`, whoever created the row, which the own scope uses without an owner. An external entity, or one on another database, has no `created_by` |
 | `access` | an entity without `access` | the [`--access` presets](#access) that fit it: `granted` (the default, what no `access` means), `owned:<field>` for its owner and each relation to the user, `authenticated`, and `public-read`, `public-create` and `staff` when the spec has the `staff` role (with another system role: `public-read:<role>`, `public-create:<role>` and `role:<role>`) |
 | `roles` | roles declared and none with `default` | each role that is not a system role, and `none`. The default is the role that grants least. Sign-up is open in every project a spec describes (`KARNI_ACCOUNTS_REGISTRATION`), and an account without a role is granted nothing. A spec without `roles` has Karni's shipped roles and no such question |
 | `app` | no `app.kind` | `app` (the default), `site` and `site+app` |

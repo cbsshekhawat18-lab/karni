@@ -340,13 +340,25 @@ def _owner(entity: _Entity) -> Question | None:
     if not entity.entity.external and database in (None, "default"):
         options.append(Option("created_by", "whoever created it"))
     names = [f"the {_phrase(name)}" for name in entity.users]
+    # the default: the first relation to the user the entity's access names (owned:<field>)
+    rule = entity.entity.access
+    owned = (
+        [
+            item[len("owned:") :]
+            for slot in (rule.read, rule.write, rule.create or [])
+            for item in slot
+        ]
+        if isinstance(rule, schema.Access)
+        else []
+    )
+    default = next((name for name in owned if name in entity.users), next(iter(entity.users)))
     return Question(
         id=f"{entity.id}.owner",
         area="owner",
         question=f"Who owns {_article(entity.name)} {entity.name}: {_either(names)}?",
         key=f"{entity.key}.owner",
         options=tuple(options),
-        default=next(iter(entity.users)),
+        default=default,
         target=(*entity.path, "owner"),
     )
 
