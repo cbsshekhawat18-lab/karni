@@ -60,4 +60,40 @@ export const karniKeys = {
     }
     return ["karni", resource, "detail", String(id)] as const;
   },
+
+  /**
+   * Experimental. Key for one `tree/` request of a tree resource: the nodes
+   * under `root` (the roots when absent), `depth` levels deep.
+   */
+  tree(
+    resource: string,
+    params?: { root?: string | number | null; depth?: number },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "tree",
+      normalizeParams({ root: params?.root ?? undefined, depth: params?.depth }),
+    ] as const;
+  },
+
+  /** Experimental. Key for one page of a node's `children/`. */
+  children(
+    resource: string,
+    id: string | number,
+    params?: { page?: number; pageSize?: number },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "children",
+      String(id),
+      normalizeParams({ page: params?.page, page_size: params?.pageSize }),
+    ] as const;
+  },
+
+  /** Experimental. Key for a node's `ancestors/` (the path above it, root first). */
+  ancestors(resource: string, id: string | number): readonly unknown[] {
+    return ["karni", resource, "ancestors", String(id)] as const;
+  },
 };

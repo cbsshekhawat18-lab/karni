@@ -28,6 +28,18 @@ export interface RelationRef {
   many: boolean;
 }
 
+/**
+ * Experimental. A tree model, from the `x-karni-tree` vendor extension: the
+ * self-referencing parent field and whether siblings have an order
+ * (`position`, set by the move action).
+ */
+export interface TreeRef {
+  /** The parent field's name ("parent"). */
+  parent: string;
+  /** True for an ordered tree: `position` orders siblings and only the move action sets it. */
+  ordered: boolean;
+}
+
 export interface FieldDef {
   name: string;
   /** Humanized from the property name (or the schema `title` when present). */
@@ -68,6 +80,11 @@ export interface FieldDef {
   transitions?: Readonly<Record<string, readonly string[]>>;
   /** The states a new row may start in (`x-karni-initial`), with `transitions`. */
   initial?: readonly string[];
+  /**
+   * Experimental. Set on a relation whose target is a tree model
+   * (`x-karni-tree`): ResourceForm edits it with TreeSelect.
+   */
+  tree?: TreeRef;
   /** Declaration order in the schema (response props first, request-only appended). */
   order: number;
 }
@@ -151,11 +168,21 @@ export interface ResourceSchema {
     export?: OperationDef;
     /** `POST /<resource>/import/`: the import flow (upload, preview, commit). */
     import?: OperationDef;
+    /** Experimental. `GET /<resource>/tree/`: nested nodes of a tree model. */
+    tree?: OperationDef;
+    /** Experimental. `GET /<resource>/<id>/children/`: a node's children, paginated. */
+    children?: OperationDef;
+    /** Experimental. `GET /<resource>/<id>/ancestors/`: the path above a node, root first. */
+    ancestors?: OperationDef;
+    /** Experimental. `POST /<resource>/<id>/move/`: a new parent (and position) for a node. */
+    move?: OperationDef;
   };
   /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];
   /** The model's dashboard declaration (`x-karni-dashboard`), when it opts in. */
   dashboard?: DashboardDef;
+  /** Experimental. Present when the resource is a tree model (`x-karni-tree`). */
+  tree?: TreeRef;
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */
