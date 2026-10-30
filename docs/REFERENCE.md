@@ -1753,6 +1753,12 @@ class Lead(BaseModel):
 | `KARNI_APPROVALS_NOTIFY` | `KARNI_APPROVALS_NOTIFY` | `"karni_approvals.notify.email_checkers"` | Dotted path called as fn(pending_change) from the Celery task to notify the checkers. The default emails them. "" turns notification off. |
 | `KARNI_APPROVALS_FROM_EMAIL` | `KARNI_APPROVALS_FROM_EMAIL` | `""` | Sender address for the default notifier, or "" to use DEFAULT_FROM_EMAIL. |
 
+### Module: karni-charts
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_CHARTS_READ` | `KARNI_CHARTS_READ` | `"authenticated"` | Who may read the chart definitions (/api/charts/): "authenticated" (the default), "public" (anyone, for charts on a public page) or "granted" (the roles' grants on karni_charts.chart). The data always follows the source resource's own access, whoever reads the definition. |
+
 ### Module: karni-impersonation
 
 | Setting | Env | Default | What it controls |
@@ -1979,6 +1985,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | Module | Status | Install | UI package | Scope |
 |---|---|---|---|---|
 | [`karni-approvals`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-approvals) | experimental | `karni add approvals` | `@karni/approvals-ui` | A second person approves high-value changes before they are written, with a queue, an API and an audit trail. |
+| [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. |
@@ -2204,6 +2211,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`APR005`](errors.md#apr005) | api | The pending change is no longer pending |
 | [`APR006`](errors.md#apr006) | api | The change could not be applied: the row changed since it was proposed |
 | [`APR007`](errors.md#apr007) | check | The model's approval policy is malformed |
+| [`CHART001`](errors.md#chart001) | exception | The chart's source is not a resource with an aggregation |
+| [`CHART002`](errors.md#chart002) | api | A filter the chart does not allow |
+| [`CHART003`](errors.md#chart003) | exception | The chart's filters are not valid |
+| [`CHART004`](errors.md#chart004) | exception | The chart's axes do not fit the source's aggregation |
 | [`IMP001`](errors.md#imp001) | api | Impersonation needs the explicit impersonate permission |
 | [`IMP002`](errors.md#imp002) | api | The target holds something the impersonator does not |
 | [`IMP003`](errors.md#imp003) | api | A reason is required to impersonate |
@@ -2349,6 +2360,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
 | [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
 | [`C324`](errors.md#c324) | cli | A module or feature needs another, or cannot be next to one |
+| [`C500`](errors.md#c500) | cli | aggregate names a field or path the entity does not have |
+| [`C501`](errors.md#c501) | cli | aggregate names a metric that is not one |
+| [`C502`](errors.md#c502) | cli | A date bucket in aggregate that does not fit |
 | [`C340`](errors.md#c340) | cli | Nothing to explain |
 | [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 | [`C360`](errors.md#c360) | cli | A typed-field argument in the model DSL is invalid |
@@ -2405,6 +2419,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module (karni modules list). |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
+| [`K314`](errors.md#k314) | rule | GROUP BY: Karni.aggregate. |
 
 ### ESLint plugin (`karni/…`)
 

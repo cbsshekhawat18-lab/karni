@@ -97,6 +97,7 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - "Saved charts (karni-charts)": charts.md
       - "App spec (karni.yaml)": app-spec.md
   - Debugging:
       - Request ids and capture: debugging/capture.md

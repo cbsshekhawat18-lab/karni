@@ -197,6 +197,10 @@ Experimental now:
   hooks `karni types` writes, and `useAggregate`, `aggregateKey`,
   `buildAggregateQuery`, `aggregateSeries` and DataChart's `aggregate` and
   `stacked` in `@karni/ui`.
+- [Saved charts](charts.md): the karni-charts module (the `Chart` model and
+  its admin, `/api/charts/` and its `data` action, `karni_charts.services`,
+  `KARNI_CHARTS_READ`, the `CHART` codes' wording) and `@karni/charts-ui`
+  (`SavedChart`, `useSavedChart`, `savedChartKey`, `savedChartQuery`).
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

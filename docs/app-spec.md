@@ -140,7 +140,7 @@ published file differs from the code: regenerate it with
 
 Each key is a module `karni add <name>` installs, one of the modules of
 [the module catalog](modules.md#the-module-catalog) (`karni modules list`):
-Karni's `approvals`, `impersonation`, `payments` and `site`, and any module
+Karni's `approvals`, `charts`, `impersonation`, `payments` and `site`, and any module
 installed next to karni-cli that ships a manifest. The value is a mapping of
 the module's options, or nothing. An option is one of the module's own
 settings its manifest lists, lowercased and without its prefix, with the
@@ -220,6 +220,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `table` | `table` or `schema.table` | `karni make model --table` (`Meta.db_table`), with `external` only |
 | `writable` | `true` / `false` | `Karni.writable`, with `external` only |
 | `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
+| `aggregate` | `{group_by, values, metrics}` | `Karni.aggregate`, the [aggregate action](aggregations.md) (experimental) |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
@@ -254,6 +255,25 @@ relation between entities on different databases is refused (`C253`): the
 user and the modules' models are on `default`. A managed entity on another
 database is built without the audit users, whose relations would point at
 `default`.
+
+`aggregate` says what [`GET <resource>/aggregate/`](aggregations.md)
+(experimental) may group by and sum, and `karni build` writes it as `class
+Karni: aggregate` in the entity's Karni-owned base:
+
+```yaml
+Session:
+  fields: {studio: fk:Studio, starts_at: datetime, price: "money:EUR"}
+  aggregate:
+    group_by: [studio, studio__name, "starts_at:month"]
+    values: [price]
+    metrics: [count, sum, avg]
+```
+
+`group_by` takes fields and paths through relations, with `:year`,
+`:quarter` or `:month` after a date or datetime field, `values` the fields a
+metric reads, and `metrics` defaults to all six. Changing it needs no
+migration. Expressions such as `TextNumber` stay in the project's own code:
+`karni spec export` leaves out an aggregate that has them and says so.
 
 `groups` become the admin change form's fieldsets today. Field groups in the
 React forms and detail pages (item 12 of the
@@ -320,7 +340,6 @@ they arrive:
 | Key | Where | For |
 |---|---|---|
 | `tree: true`, `taxonomies:` | entity | hierarchies and taxonomies |
-| `aggregate:` | entity | aggregation endpoints (large-apps item 8) |
 | `search:` | top level | a search block across entities |
 | `markdown` | field type | markdown fields (large-apps item 12) |
 
@@ -375,6 +394,9 @@ means. `karni explain <code>` prints any code's entry.
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
+| [C500](errors.md#c500) | `aggregate` names a field or path the entity does not have |
+| [C501](errors.md#c501) | `aggregate` names a metric that is not one |
+| [C502](errors.md#c502) | a date bucket in `aggregate` that does not fit |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 
@@ -464,7 +486,7 @@ entities
 The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit, groups,
-order, pk, external, table, writable, database), field changes of existing
+order, pk, external, table, writable, database, aggregate), field changes of existing
 entities, access, pages and navigation, the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.

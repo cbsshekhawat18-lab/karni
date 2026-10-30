@@ -219,6 +219,9 @@ turns a response into `DataChart` series by hand. `karni types` writes a
 typed hook per resource that declares an aggregation,
 `useProductsAggregate`, whose `groupBy` accepts only the declared groups.
 
+A chart that people edit in the admin instead of in code is a
+[saved chart](charts.md).
+
 ## OpenAPI
 
 The `aggregate` operation of a resource that declares an aggregation

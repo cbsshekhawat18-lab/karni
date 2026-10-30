@@ -33,6 +33,31 @@ apply codemods and list the manual steps. This file is the human summary.
   `DataChart` reads it through `aggregate`, with stacked bars (`stacked`),
   and `karni types` writes `use<Resource>Aggregate` with the declared
   groups as a union type. [docs/aggregations.md](docs/aggregations.md).
+- **Saved charts: the karni-charts module (experimental).** `karni add
+  charts` adds a `Chart` model edited in the admin: a source resource (any
+  routed resource whose model declares an aggregation), the x axis (a group
+  with a date bucket), the y axis (a metric and a value), an optional z axis
+  (stacked or as series), `top`, `default_filters` and `allowed_filters`.
+  Saving checks the axes against the source's declaration (`CHART001`,
+  `CHART003`, `CHART004`), and the change form previews the data as the
+  signed-in user. `GET /api/charts/<slug>/data/` returns the definition and
+  the data, read through the source's own aggregate action as the viewer,
+  so the access is the source's, and a viewer's filter the chart does not
+  allow is a 400 (`CHART002`). `KARNI_CHARTS_READ` chooses who reads the
+  definitions. `@karni/charts-ui` draws one with `<SavedChart chart="..."
+  />` on `@karni/ui`'s `DataChart`. [docs/charts.md](docs/charts.md).
+- **`aggregate:` in karni.yaml (experimental).** An entity's `aggregate:
+  {group_by, values, metrics}` is validated against its fields and
+  relations (`C500` a field or path it does not have, `C501` a metric,
+  `C502` a date bucket), shown by `karni plan` (an option, no migration),
+  written by `karni build` into `class Karni: aggregate` of the Karni-owned
+  model base, and read back by `karni spec export` (an aggregate with
+  expressions stays in code). `charts` is a module of the catalog, so
+  `modules: {charts: {read: public}}` adds it. The published JSON Schema
+  is regenerated, and `aggregate:` is no longer a reserved key (`C224`).
+- **Rule K314 (agents): grouped counts and sums are `class Karni:
+  aggregate` and the aggregate action, never a hand-written GROUP BY view.**
+  `karni rules` lists 45 conventions in 576 tokens.
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]
