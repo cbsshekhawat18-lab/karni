@@ -593,20 +593,35 @@ def apply_changes(operator: Any, requested: Requested) -> Plan:
 
 @dataclass(frozen=True)
 class Source:
-    """Why a user holds a permission: the role, its scope and where that grant came from."""
+    """Why a user holds a permission: the role, its scope and where that grant came from.
+
+    A per-user grant (experimental) has ``origin`` ``"user_grant"``, no role,
+    and ``grant`` (its id), ``reason``, ``expires_at`` and ``targets``, which
+    ``to_dict()`` adds for it alone.
+    """
 
     role: str
     role_name: str
     scope: str | None
     origin: str
+    grant: str = ""
+    reason: str = ""
+    expires_at: Any = None
+    targets: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        found: dict[str, Any] = {
             "role": self.role,
             "role_name": self.role_name,
             "scope": self.scope,
             "origin": self.origin,
         }
+        if self.grant:
+            found["grant"] = self.grant
+            found["reason"] = self.reason
+            found["expires_at"] = self.expires_at.isoformat() if self.expires_at else None
+            found["targets"] = list(self.targets)
+        return found
 
 
 @dataclass(frozen=True)
@@ -654,7 +669,9 @@ def effective_permissions(user: Any) -> EffectiveReport:
     A superuser holds everything with scope ``all`` (the admin's own
     convention); for everyone else the sources are the grant rows of the
     user's roles, including a cell the matrix revoked (scope ``None``,
-    origin ``matrix``) so "why can't this person…" is answered too.
+    origin ``matrix``) so "why can't this person…" is answered too. While
+    ``KARNI_USER_GRANTS`` is on, the user's live user grants follow, with
+    origin ``user_grant`` (experimental).
     """
     from karni.accounts.models import RolePermission
     from karni.accounts.permissions import user_roles
@@ -671,6 +688,8 @@ def effective_permissions(user: Any) -> EffectiveReport:
                     row.role.slug, row.role.name, scope_value(row.scope, row.scope_path), row.origin
                 )
             )
+        for key, found in _user_grant_sources(user).items():
+            sources.setdefault(key, []).extend(found)
     entries: list[Effective] = []
     for label, model in matrix_models().items():
         for action in model_actions(model):
@@ -683,7 +702,10 @@ def effective_permissions(user: Any) -> EffectiveReport:
                 )
                 continue
             found = tuple(
-                sorted(sources.get(key, ()), key=lambda source: (source.scope is None, source.role))
+                sorted(
+                    sources.get(key, ()),
+                    key=lambda source: (source.scope is None, bool(source.grant), source.role),
+                )
             )
             values = list(dict.fromkeys(s.scope for s in found if s.scope is not None))
             scope = "all" if "all" in values else (" | ".join(values) or None)
@@ -696,6 +718,31 @@ def effective_permissions(user: Any) -> EffectiveReport:
         user_roles(user) if not superuser else user_roles(user),
         entries,
     )
+
+
+def _user_grant_sources(user: Any) -> dict[str, list[Source]]:
+    """The user's live user grants as :class:`Source` entries, by permission (switch on only)."""
+    from karni.accounts import grants
+
+    if not grants.enabled():
+        return {}
+    rows = {str(row.pk): row for row in grants.live_rows(user)}
+    found: dict[str, list[Source]] = {}
+    for grant in grants.user_grants(user):
+        row = rows[grant.grant_id]
+        found.setdefault(grant.permission, []).append(
+            Source(
+                "",
+                "",
+                scope_value(grant.scope, grant.scope_path),
+                grants.ORIGIN,
+                grant=grant.grant_id,
+                reason=row.reason,
+                expires_at=row.expires_at,
+                targets=grant.targets,
+            )
+        )
+    return found
 
 
 # the matrix's own history

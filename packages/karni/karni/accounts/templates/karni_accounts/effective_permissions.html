@@ -26,10 +26,13 @@
       {% translate "is a superuser: every permission on every row, whatever the roles say." %}
     {% elif report.roles %}
       {% translate "holds these roles:" %} {{ report.roles|join:", " }}
+    {% elif user_grants %}
+      {% translate "holds no role. Only user grants apply." %}
     {% else %}
       {% translate "holds no role, so no grant applies." %}
     {% endif %}
   </p>
+  {% if user_grants_url %}<p><a class="karni-button" href="{{ user_grants_url }}">{% translate "User grants" %}</a></p>{% endif %}
   <div class="karni-scroll"><table class="karni-table">
     <thead>
       <tr>
@@ -50,6 +53,13 @@
                 <div>
                   {% if source.origin == "superuser" %}
                     {% translate "superuser" %}
+                  {% elif source.grant %}
+                    {% blocktranslate with grant=source.grant scope=source.scope trimmed %}
+                      user grant {{ grant }} grants {{ scope }}
+                    {% endblocktranslate %}
+                    {% if source.targets %}<span class="karni-muted">{% translate "targets" %} {{ source.targets|join:", " }}</span>{% endif %}
+                    {% if source.expires_at %}<span class="karni-muted">{% translate "until" %} {{ source.expires_at }}</span>{% endif %}
+                    {% if source.reason %}<span class="karni-muted">({{ source.reason }})</span>{% endif %}
                   {% elif source.scope %}
                     {% blocktranslate with role=source.role scope=source.scope origin=source.origin trimmed %}
                       role {{ role }} grants {{ scope }} ({{ origin }})
@@ -61,7 +71,7 @@
                   {% endif %}
                 </div>
               {% empty %}
-                <span class="karni-muted">{% translate "no role grants it" %}</span>
+                <span class="karni-muted">{% if user_grants %}{% translate "no role or user grant gives it" %}{% else %}{% translate "no role grants it" %}{% endif %}</span>
               {% endfor %}
             </td>
           </tr>

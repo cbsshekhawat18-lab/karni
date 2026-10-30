@@ -22,9 +22,11 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.urls import NoReverseMatch, reverse
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 
+from karni.accounts import grants
 from karni.accounts.matrix import (
     MATRIX_PERMISSION,
     EffectiveReport,
@@ -181,5 +183,18 @@ def effective_view(model_admin: Any, request: HttpRequest, user: Any = None) -> 
         "subject": user,
         "report": report,
         "grouped": _grouped(report),
+        "user_grants": grants.enabled(),
+        "user_grants_url": _user_grants_url(model_admin, user),
     }
     return TemplateResponse(request, "karni_accounts/effective_permissions.html", context)
+
+
+def _user_grants_url(model_admin: Any, user: Any) -> str:
+    """The user grants changelist for ``user`` (experimental), while the switch is on."""
+    if user is None or not grants.enabled():
+        return ""
+    try:
+        url = reverse(f"{model_admin.admin_site.name}:karni_accounts_usergrant_changelist")
+    except NoReverseMatch:
+        return ""
+    return f"{url}?user__id__exact={user.pk}"
