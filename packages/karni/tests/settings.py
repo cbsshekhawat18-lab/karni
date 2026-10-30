@@ -43,6 +43,8 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # The suite runs on sqlite, so swap the default Postgres full-text search
 # provider for the portable icontains one (production keeps Postgres FTS).
 KARNI_SEARCH_PROVIDER = "karni.api.search.simple.SimpleSearchProvider"
+# karni_check's cache writes to the project (.karni/local/): its own tests turn it on.
+KARNI_CHECK_CACHE = False
 
 # Mounts admin/, api/auth/ and api/ for the accounts, api and admin suites.
 ROOT_URLCONF = "tests.urls"

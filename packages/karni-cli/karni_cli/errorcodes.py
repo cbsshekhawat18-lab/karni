@@ -1047,6 +1047,25 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Upgrade karni in the project (pip install -U karni), or run karni context without "
         "those flags.",
     ),
+    _c(
+        "C581",
+        "git cannot say which files changed",
+        "karni_cli.commands.check.changed_files; karni check --changed",
+        "karni check --changed asks git for the files changed in the working tree and the "
+        "index (against HEAD or the ref given), plus untracked files. git is missing, the "
+        "project is not in a git repository, or git does not know the ref.",
+        "Run it inside a git repository (git init, then commit), pass a ref git knows (a "
+        "branch, a tag, a commit), or run karni check without --changed.",
+    ),
+    _c(
+        "C582",
+        "The project's karni has no check cache",
+        "karni_cli.commands.check",
+        "karni check --changed and --no-cache pass options to manage.py karni_check that the "
+        "project's karni predates.",
+        "Upgrade karni in the project (pip install -U karni), or run karni check without "
+        "those flags.",
+    ),
 )
 
 

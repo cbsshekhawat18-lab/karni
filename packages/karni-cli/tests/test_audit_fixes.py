@@ -166,4 +166,17 @@ def test_frontend_lint_needs_eslint_and_uses_it(tmp_path: Path) -> None:
     (bin_dir / "eslint").write_text('#!/bin/sh\necho "$@" > eslint-args\nexit 2\n')
     (bin_dir / "eslint").chmod(0o755)
     assert _frontend_lint(tmp_path) == 2
+    cache = tmp_path / ".karni" / "local" / "eslintcache"
+    assert (frontend / "eslint-args").read_text().split() == [
+        ".",
+        "--max-warnings",
+        "0",
+        "--cache",
+        "--cache-strategy",
+        "content",
+        "--cache-location",
+        str(cache),
+    ]
+    assert (tmp_path / ".karni" / "local" / ".gitignore").is_file()
+    assert _frontend_lint(tmp_path, cache=False) == 2
     assert (frontend / "eslint-args").read_text().split() == [".", "--max-warnings", "0"]

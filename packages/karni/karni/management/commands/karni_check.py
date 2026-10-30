@@ -12,6 +12,15 @@ deployment with ``DEBUG`` on or the scaffold's ``SECRET_KEY`` does not pass.
 A Django deploy warning that a Karni check covers is hidden then, so each
 problem is printed once, with the Karni code and fix.
 
+The checks that read one file at a time keep their results in a cache
+(:mod:`karni.testing.checkcache`, experimental): an unchanged file is not
+read again. ``--no-cache`` (or ``KARNI_CHECK_CACHE = False``) turns it off.
+``--changed FILE ...`` narrows a run to those files (paths relative to the
+project root): the file checks read only them and every check reports only
+their findings, while the checks that read the whole project (Django's
+system checks, the external tables, every other hook) run in full.
+``karni check --changed`` passes the files git reports as changed.
+
 It also compares every external model (``class Karni: external = True``,
 experimental) with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
@@ -58,8 +67,31 @@ class Command(BaseCommand):
             "production environment (DJANGO_ENV=prod, DEBUG=False, the real SECRET_KEY).",
         )
 
+        parser.add_argument(
+            "--no-cache",
+            action="store_true",
+            help="Check every file again: do not read or write the check cache. Experimental.",
+        )
+        parser.add_argument(
+            "--changed",
+            nargs="*",
+            default=None,
+            metavar="FILE",
+            help="Only these files (relative to the project root): the file checks read only "
+            "them and every check reports only their findings. Experimental.",
+        )
+
     def handle(self, *args: Any, **options: Any) -> None:
-        deploy = bool(options.get("deploy"))
+        from karni.testing import checkcache
+        from karni.testing._source import project_root
+
+        cache = checkcache.from_settings(
+            project_root(), no_cache=bool(options.get("no_cache")), changed=options.get("changed")
+        )
+        with checkcache.using(cache):
+            self._run(bool(options.get("deploy")), cache)
+
+    def _run(self, deploy: bool, cache: Any) -> None:
         failures: list[str] = []
         # Django's check writes warnings to these streams and raises the
         # failing findings without printing them, so they are printed below.
@@ -98,6 +130,10 @@ class Command(BaseCommand):
                 failures.extend(f"{ep.name}: {message}" for message in messages)
             except Exception as exc:  # noqa: BLE001 - a broken hook is a failure, not a crash
                 failures.append(f"{ep.name}: {exc}")
+        if cache.enabled and not cache.save():
+            self.stderr.write(f"warning: could not write the check cache {cache.path}")
+        if cache.enabled or cache.changed is not None:
+            self.stdout.write(cache.summary())
 
         # Row-scope exemptions are not failures, but they are printed on every
         # run so they never accumulate quietly (ADR 0002, P2).

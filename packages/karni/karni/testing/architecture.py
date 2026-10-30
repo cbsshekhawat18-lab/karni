@@ -13,7 +13,9 @@ its first decorator::
 from __future__ import annotations
 
 import ast
+from collections.abc import Callable
 from importlib import import_module
+from pathlib import Path
 
 from django.apps import AppConfig
 from django.utils.module_loading import module_has_submodule
@@ -25,6 +27,7 @@ from karni.agent.check import (
     unpaginated_action_calls,
 )
 from karni.exceptions import KarniAssertionError
+from karni.testing import checkcache
 from karni.testing._source import (
     Violation,
     check_optout,
@@ -199,26 +202,24 @@ def check_viewset_access() -> list[Violation]:
 
 def check_access_override() -> list[Violation]:
     """Every ``filter_queryset_for_user`` override in project code needs a reason (Q2.7)."""
+    return _each_file(_access_override_in)
+
+
+def _access_override_in(path: Path, tree: ast.Module) -> list[Violation]:
     violations: list[Violation] = []
-    for cfg in project_app_configs():
-        for path in project_sources(cfg):
-            try:
-                tree = ast.parse(path.read_text())
-            except (OSError, SyntaxError):
-                continue
-            for lineno, candidates in access_override_defs(tree):
-                violations += check_optout(
-                    path,
-                    "access-override",
-                    candidates,
-                    Violation(
-                        rule="access-override",
-                        location=f"{relative(path)}:{lineno}",
-                        message="filter_queryset_for_user is overridden",
-                        hint="express the row rule in access (Where(...)), or add an "
-                        "allow marker with the reason",
-                    ),
-                )
+    for lineno, candidates in access_override_defs(tree):
+        violations += check_optout(
+            path,
+            "access-override",
+            candidates,
+            Violation(
+                rule="access-override",
+                location=f"{relative(path)}:{lineno}",
+                message="filter_queryset_for_user is overridden",
+                hint="express the row rule in access (Where(...)), or add an "
+                "allow marker with the reason",
+            ),
+        )
     return violations
 
 
@@ -231,26 +232,24 @@ def check_unpaginated_action() -> list[Violation]:
     An ``@action`` (or ``list`` override) serialising ``many=True`` without
     ``paginate_queryset`` / ``paginated_response`` returns a whole table.
     """
+    return _each_file(_unpaginated_action_in)
+
+
+def _unpaginated_action_in(path: Path, tree: ast.Module) -> list[Violation]:
     violations: list[Violation] = []
-    for cfg in project_app_configs():
-        for path in project_sources(cfg):
-            try:
-                tree = ast.parse(path.read_text())
-            except (OSError, SyntaxError):
-                continue
-            for lineno, candidates in unpaginated_action_calls(tree):
-                violations += check_optout(
-                    path,
-                    "unpaginated-action",
-                    candidates,
-                    Violation(
-                        rule="unpaginated-action",
-                        location=f"{relative(path)}:{lineno}",
-                        message="list-returning action serialises many=True without pagination",
-                        hint="return self.paginated_response(queryset), or add an allow "
-                        "marker with the reason",
-                    ),
-                )
+    for lineno, candidates in unpaginated_action_calls(tree):
+        violations += check_optout(
+            path,
+            "unpaginated-action",
+            candidates,
+            Violation(
+                rule="unpaginated-action",
+                location=f"{relative(path)}:{lineno}",
+                message="list-returning action serialises many=True without pagination",
+                hint="return self.paginated_response(queryset), or add an allow "
+                "marker with the reason",
+            ),
+        )
     return violations
 
 
@@ -287,29 +286,25 @@ def check_admin_convention() -> list[Violation]:
 
 def check_raw_sql() -> list[Violation]:
     allowed = config("sql_allowed")
+    return _each_file(_raw_sql_in, lambda path: not matches_any(path, allowed))
+
+
+def _raw_sql_in(path: Path, tree: ast.Module) -> list[Violation]:
+    visitor = SqlVisitor()
+    visitor.visit(tree)
     violations: list[Violation] = []
-    for cfg in project_app_configs():
-        for path in project_sources(cfg):
-            if matches_any(path, allowed):
-                continue
-            try:
-                tree = ast.parse(path.read_text())
-            except (OSError, SyntaxError):
-                continue
-            visitor = SqlVisitor()
-            visitor.visit(tree)
-            for lineno, what in visitor.hits:
-                violations += check_optout(
-                    path,
-                    "raw-sql",
-                    [lineno],
-                    Violation(
-                        rule="raw-sql",
-                        location=f"{relative(path)}:{lineno}",
-                        message=f"raw SQL via {what} outside an allowed directory",
-                        hint="move it under a sql_allowed path or add an allow marker",
-                    ),
-                )
+    for lineno, what in visitor.hits:
+        violations += check_optout(
+            path,
+            "raw-sql",
+            [lineno],
+            Violation(
+                rule="raw-sql",
+                location=f"{relative(path)}:{lineno}",
+                message=f"raw SQL via {what} outside an allowed directory",
+                hint="move it under a sql_allowed path or add an allow marker",
+            ),
+        )
     return violations
 
 
@@ -318,28 +313,24 @@ def check_raw_sql() -> list[Violation]:
 
 def check_http_client() -> list[Violation]:
     allowed = config("http_allowed")
+    return _each_file(_http_client_in, lambda path: not matches_any(path, allowed))
+
+
+def _http_client_in(path: Path, tree: ast.Module) -> list[Violation]:
+    # One finding per import statement, shared with `karni rules --check`.
     violations: list[Violation] = []
-    for cfg in project_app_configs():
-        for path in project_sources(cfg):
-            if matches_any(path, allowed):
-                continue
-            try:
-                tree = ast.parse(path.read_text())
-            except (OSError, SyntaxError):
-                continue
-            # One finding per import statement, shared with `karni rules --check`.
-            for lineno, name in http_client_imports(tree):
-                violations += check_optout(
-                    path,
-                    "http-client",
-                    [lineno],
-                    Violation(
-                        rule="http-client",
-                        location=f"{relative(path)}:{lineno}",
-                        message=f"direct HTTP client import: {name}",
-                        hint="call it from a */services/* module instead",
-                    ),
-                )
+    for lineno, name in http_client_imports(tree):
+        violations += check_optout(
+            path,
+            "http-client",
+            [lineno],
+            Violation(
+                rule="http-client",
+                location=f"{relative(path)}:{lineno}",
+                message=f"direct HTTP client import: {name}",
+                hint="call it from a */services/* module instead",
+            ),
+        )
     return violations
 
 
@@ -439,38 +430,120 @@ def check_audited_bulk_write() -> list[Violation]:
     audited = _audited_model_names()
     if not audited:
         return []
+    return _each_file(lambda path, tree: _audited_bulk_write_in(path, tree, audited))
+
+
+def _audited_bulk_write_in(path: Path, tree: ast.Module, audited: set[str]) -> list[Violation]:
+    violations: list[Violation] = []
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"update", "bulk_update"}
+        ):
+            continue
+        root = _receiver_root(node.func.value)
+        if root not in audited:
+            continue
+        violations += check_optout(
+            path,
+            "audited-bulk-write",
+            [node.lineno],
+            Violation(
+                rule="audited-bulk-write",
+                location=f"{relative(path)}:{node.lineno}",
+                message=(
+                    f"{root}.…{node.func.attr}() bypasses the change history "
+                    f"{root} keeps (Karni.audit): no entry is written"
+                ),
+                hint="save() each instance instead, or add an allow marker with the reason",
+            ),
+        )
+    return violations
+
+
+# running every rule, with the check cache (experimental)
+
+FileRule = Callable[[Path, ast.Module], list[Violation]]
+
+
+def _parse(path: Path) -> ast.Module | None:
+    try:
+        return ast.parse(path.read_text())
+    except (OSError, SyntaxError, ValueError):
+        return None
+
+
+def _each_file(rule: FileRule, applies: Callable[[Path], bool] | None = None) -> list[Violation]:
+    """``rule`` over every project source file ``applies`` to, parsed once each."""
     violations: list[Violation] = []
     for cfg in project_app_configs():
         for path in project_sources(cfg):
-            try:
-                tree = ast.parse(path.read_text())
-            except (OSError, SyntaxError):
+            if applies is not None and not applies(path):
                 continue
-            for node in ast.walk(tree):
-                if not (
-                    isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Attribute)
-                    and node.func.attr in {"update", "bulk_update"}
-                ):
-                    continue
-                root = _receiver_root(node.func.value)
-                if root not in audited:
-                    continue
-                violations += check_optout(
-                    path,
-                    "audited-bulk-write",
-                    [node.lineno],
-                    Violation(
-                        rule="audited-bulk-write",
-                        location=f"{relative(path)}:{node.lineno}",
-                        message=(
-                            f"{root}.…{node.func.attr}() bypasses the change history "
-                            f"{root} keeps (Karni.audit): no entry is written"
-                        ),
-                        hint="save() each instance instead, or add an allow marker with the reason",
-                    ),
-                )
+            tree = _parse(path)
+            if tree is not None:
+                violations += rule(path, tree)
     return violations
+
+
+def _file_rules() -> dict[str, tuple[FileRule, Callable[[Path], bool] | None, str]]:
+    """The rules that read one file at a time: ``name -> (rule, applies, extra inputs)``."""
+    sql, http = config("sql_allowed"), config("http_allowed")
+    audited = _audited_model_names()
+    rules: dict[str, tuple[FileRule, Callable[[Path], bool] | None, str]] = {
+        "access-override": (_access_override_in, None, ""),
+        "unpaginated-action": (_unpaginated_action_in, None, ""),
+        "raw-sql": (_raw_sql_in, lambda path: not matches_any(path, sql), ""),
+        "http-client": (_http_client_in, lambda path: not matches_any(path, http), ""),
+    }
+    if audited:
+        rules["audited-bulk-write"] = (
+            lambda path, tree: _audited_bulk_write_in(path, tree, audited),
+            None,
+            ",".join(sorted(audited)),
+        )
+    return rules
+
+
+class _Source:
+    """One source file, parsed the first time a rule needs it (never when every rule hits)."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._tree: list[ast.Module | None] = []
+
+    def tree(self) -> ast.Module | None:
+        if not self._tree:
+            self._tree.append(_parse(self.path))
+        return self._tree[0]
+
+    def runner(self, rule: FileRule) -> Callable[[], list[list[str]]]:
+        def run() -> list[list[str]]:
+            tree = self.tree()
+            if tree is None:
+                return []
+            return [[v.rule, v.location, v.message, v.hint] for v in rule(self.path, tree)]
+
+        return run
+
+
+def _cached_file_rules(cache: checkcache.CheckCache) -> dict[str, list[Violation]]:
+    """Every file rule's findings, each file parsed at most once, unchanged files from the cache."""
+    rules = _file_rules()
+    for name, (_rule, _applies, extra) in rules.items():
+        cache.extra(f"architecture:{name}", extra)
+    found: dict[str, list[Violation]] = {name: [] for name in rules}
+    for cfg in project_app_configs():
+        for path in project_sources(cfg):
+            if not cache.wanted(path):
+                continue
+            source = _Source(path)
+            for name, (rule, applies, _extra) in rules.items():
+                if applies is None or applies(path):
+                    rows = cache.per_file(f"architecture:{name}", path, source.runner(rule))
+                    found[name] += [Violation(*row) for row in rows]
+    return found
 
 
 ALL_CHECKS = (
@@ -487,9 +560,34 @@ ALL_CHECKS = (
 )
 
 
+#: The rules that read one file at a time, by their check function (the check cache).
+_FILE_RULES = {
+    check_access_override: "access-override",
+    check_unpaginated_action: "unpaginated-action",
+    check_raw_sql: "raw-sql",
+    check_http_client: "http-client",
+    check_audited_bulk_write: "audited-bulk-write",
+}
+
+
 def run_checks() -> list[str]:
-    """``karni.checks`` entry point: every architecture violation, rendered."""
-    return [v.render() for check in ALL_CHECKS for v in check()]
+    """``karni.checks`` entry point: every architecture violation, rendered.
+
+    The rules that read one file at a time go through the active check cache
+    (:mod:`karni.testing.checkcache`, experimental): an unchanged file is not
+    parsed again. With ``--changed`` only the findings in the changed files
+    are reported.
+    """
+    cache = checkcache.active()
+    cached = _cached_file_rules(cache)
+    found: list[Violation] = []
+    for check in ALL_CHECKS:
+        name = _FILE_RULES.get(check)
+        if name is not None:
+            found += cached.get(name, [])
+        else:
+            found += [v for v in check() if cache.reports(v.location)]
+    return [v.render() for v in found]
 
 
 # pytest surface

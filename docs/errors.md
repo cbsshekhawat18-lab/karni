@@ -3586,6 +3586,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Upgrade karni in the project (pip install -U karni), or run karni context without those flags.
 
+<a id="c581"></a>
+
+### C581: git cannot say which files changed
+
+*karni command* · from `karni_cli.commands.check.changed_files; karni check --changed`
+
+**Why Karni objects.** karni check --changed asks git for the files changed in the working tree and the index (against HEAD or the ref given), plus untracked files. git is missing, the project is not in a git repository, or git does not know the ref.
+
+**Fix.** Run it inside a git repository (git init, then commit), pass a ref git knows (a branch, a tag, a commit), or run karni check without --changed.
+
+<a id="c582"></a>
+
+### C582: The project's karni has no check cache
+
+*karni command* · from `karni_cli.commands.check`
+
+**Why Karni objects.** karni check --changed and --no-cache pass options to manage.py karni_check that the project's karni predates.
+
+**Fix.** Upgrade karni in the project (pip install -U karni), or run karni check without those flags.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
