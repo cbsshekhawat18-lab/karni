@@ -82,6 +82,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import uuid
+import weakref
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -452,8 +453,18 @@ def _user_hooks(view_class: type[Any], *, root: bool) -> bool:
     return any(_overrides(view_class, name, BaseViewSet) for name in names)
 
 
+_PER_USER: weakref.WeakKeyDictionary[type[Any], bool] = weakref.WeakKeyDictionary()
+
+
 def _renders_per_user(serializer_class: type[Any]) -> bool:
     """Whether a serializer may render something per user: a method field or its own rendering."""
+    found = _PER_USER.get(serializer_class)
+    if found is None:
+        found = _PER_USER[serializer_class] = _walk_per_user(serializer_class)
+    return found
+
+
+def _walk_per_user(serializer_class: type[Any]) -> bool:
     from rest_framework.serializers import BaseSerializer, SerializerMethodField
 
     seen: set[type[Any]] = set()
@@ -567,8 +578,18 @@ def access_scope(view: Any, models: Iterable[type[Model]] | None = None) -> str:
 # what a response reads
 
 
+_READ_MODELS: Final = "_karni_cache_read_models"
+
+
 def _read_models(view: Any) -> set[type[Model]]:
-    """The models ``view``'s current response reads (see the module docstring)."""
+    """The models ``view``'s current response reads (see the module docstring), once per request."""
+    found: set[type[Model]] | None = view.__dict__.get(_READ_MODELS)
+    if found is None:
+        found = view.__dict__[_READ_MODELS] = _models_read_by(view)
+    return found
+
+
+def _models_read_by(view: Any) -> set[type[Model]]:
     from karni.api.optimizer import plan_for
 
     model = view.get_model()
@@ -644,12 +665,12 @@ def dependencies(view_class: type[Any]) -> frozenset[type[Model]]:
     if model is None:
         return frozenset()
     serializer_class = getattr(view_class, "serializer_class", None)
-    if serializer_class is None:
-        depth = int(getattr(view_class, "expand_depth", 0) or 0) or None
-        serializer_class = build_serializer(
-            model, expand=_expand_paths(view_class, model), max_depth=depth
-        )
     try:
+        if serializer_class is None:
+            depth = int(getattr(view_class, "expand_depth", 0) or 0) or None
+            serializer_class = build_serializer(
+                model, expand=_expand_paths(view_class, model), max_depth=depth
+            )
         plan = plan_for(serializer_class, model, {})
         found = {_resolve(m)._meta.concrete_model for m in plan.models}
     except Exception:  # noqa: BLE001 - a hand-written serializer may need a request
