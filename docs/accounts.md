@@ -1,5 +1,5 @@
 ---
-description: "karni.accounts: email-based users, the auth endpoints, one-time-token email flows, roles as data, two-factor and social login, mounted with one include."
+description: "karni.accounts: email-based users, the auth endpoints, one-time-token email flows, roles as data, per-user grants, two-factor and social login, mounted with one include."
 ---
 
 # karni.accounts
@@ -439,6 +439,200 @@ names are looked up once per request). See
 
 `me/` includes `roles: list[str]` (read-only) so frontends can gate UI on
 roles without a second request.
+
+## Per-user grants
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `KARNI_USER_GRANTS` setting, the `UserGrant` model, `karni.accounts.grants`,
+    the `targets` and `grant_id` of `karni.accounts.roles.Grant`, the user-grant
+    fields of `GrantSource` and of the effective permissions, the
+    `permissions/grants/` endpoints, the grants inline and admin, and
+    `features: user_grants` in `karni.yaml`. They may change in a minor
+    release, and each change is in the CHANGELOG. The error codes keep their
+    meaning.
+
+A role grant reaches everyone who holds the role. Many apps also give access
+user by user: this customer sees these regions, this analyst sees these
+report sections until the end of the quarter. Without Karni, each such need
+becomes a table of its own and a check of its own. A per-user grant is one
+row of `UserGrant`, written like a `KARNI_ROLES` grant, and every check that
+reads the role grants reads it too.
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_USER_GRANTS = True
+```
+
+or `KARNI_USER_GRANTS=True` in `.env`, or `features: {user_grants: true}` in
+`karni.yaml` and `karni build`. Off (the default), Karni reads no grant row
+and a request pays nothing for the feature. Startup validation refuses a
+value that is not a bool ([`E504`](errors.md#e504)).
+
+### The grant
+
+| Field | What it holds |
+|---|---|
+| `user` | Who the grant is for. |
+| `permission` | A pattern as in `KARNI_ROLES`: `app_label.model:action`, with `*` for either part, or `*` alone. |
+| `scope` | A scope a role grant takes: `all`, `own`, `related:<key>` or `custom:<name>`. |
+| `targets` | Row ids, stored as text, for a scope that points at rows. A `related:<key>` grant with targets reaches the rows whose `Karni.scope_paths[key]` is one of them, in place of `user.<key>`. |
+| `expires_at` | When the grant ends. Empty means never. |
+| `granted_by` | Who gave it. Karni fills it in from the operator. |
+| `reason` | Why, in a few words. |
+
+`created_at` says when. Every change to a grant is in the
+[change history](change-history.md), with who made it.
+
+```python
+from datetime import timedelta
+
+from django.utils import timezone
+
+from karni.accounts import grants
+
+# A customer who sees the orders of two regions, for one quarter
+grants.grant(
+    request.user,                      # the operator: granted_by, and checked
+    customer,
+    "shop.order:view",
+    "related:region",
+    targets=[north.pk, west.pk],
+    expires_at=timezone.now() + timedelta(days=90),
+    reason="pilot in two regions",
+)
+```
+
+The model needs the scope path, as for a role grant:
+`class Karni: scope_paths = {"region": "region"}` on `Order`.
+
+### How checks take the union
+
+While the switch is on, `grants_for(user)` loads the user's live grants
+(not deleted, not expired) together with their role grants and returns the
+union. So `Granted()`, `Can(...)`, `user.can(...)`, `@requires(...)`, the
+admin's row scope and imports all answer with roles and user grants alike.
+The grants load once per request: one more query, however many checks the
+request makes. A superuser holds everything already and pays nothing.
+
+An expired grant counts for nothing from `expires_at` on. Revoking is
+deleting the grant (a soft delete, recorded in the history) or setting
+`expires_at`. Both are history, so you can always see who had what, and when.
+
+### Writing grants
+
+`karni.accounts.grants` writes grants and checks them first:
+
+| Function | Does |
+|---|---|
+| `grant(operator, user, permission, scope="all", *, targets, expires_at, reason)` | One grant. |
+| `bulk_grant(operator, users, permission, scope="all", ...)` | The same grant to many users, all of them or none. |
+| `change(operator, row, **fields)` | A new `permission`, `scope`, `targets`, `expires_at` or `reason`. |
+| `expire(operator, row, at=None)` | Ends the grant now (or at `at`). The row stays. |
+| `revoke(operator, row)` | Deletes the grant, with the operator in the history. |
+| `check(permission, scope, targets)` | The checks alone, raising the codes below. |
+
+The checks refuse a pattern that matches no permission
+([`E360`](errors.md#e360)), a scope the permissions cannot take
+([`E361`](errors.md#e361): `own` on a model with no owner field, a
+`related:<key>` the model has no scope path for, an unregistered `custom:`),
+and bad targets ([`E362`](errors.md#e362): targets for a scope that points at
+no row, or an id the scope path's field does not take). A wildcard skips the
+models that cannot take the scope, as a `KARNI_ROLES` wildcard does.
+
+Nobody grants what they do not hold, as in the permission matrix: the
+operator must hold every permission the pattern reaches, at scope `all` or at
+the same scope, and for a grant with targets, their own targets under that
+scope must include each one. Otherwise the grant is refused with
+[`E363`](errors.md#e363) and nothing is written. A change that gives more
+(another permission, scope or targets, a later expiry or none) is checked the
+same way. Expiring sooner, a new reason and revoking are not. A superuser,
+and code that passes `operator=None` (a seed, a data migration, a test), are
+not checked. `full_clean()` on a `UserGrant` runs the pattern, scope and
+targets checks for one row. A row saved without them that names no
+permission grants nothing.
+
+### The interface for scopes that point at rows
+
+```python
+from karni.accounts.grants import scope_targets
+
+for item in scope_targets(user, "related:region", permission="shop.order:view"):
+    item.target           # "7", the id as text
+    item.permission       # "shop.order:view"
+    item.source.origin    # "declared" or "matrix" (a role), "user_grant"
+    item.source.role      # the role slug, for a role
+    item.source.grant_id  # the UserGrant id, for a user grant
+```
+
+`scope_targets(user, scope, *, permission=None)` answers which target ids a
+user holds under one scope, from their roles and their user grants, and which
+grant gives each. A role grant of that scope gives the id `user.<key>` holds.
+A user grant gives its targets, or `user.<key>` when it has none. Expired,
+deleted and switched-off grants give nothing. A scope that points at no row,
+and a superuser, give an empty list: ask `rows_for` or `user_can` for
+`all`. This is the interface a tree scope and a menu built from grants read,
+so they never query the grant tables themselves. It costs one query for the
+roles' side, and the user grants come from the request's cache.
+
+### In the admin
+
+While the switch is on, each user's change page lists their grants in an
+editable inline: add one, edit it, tick *Expire now*, or delete it. The
+*targets* field takes ids separated by commas. *User grants* in the admin
+lists every grant, with a *Status* filter (live, expired), *Expire selected*,
+`?user=<id>` for one user's, and the History tab of each grant. Both fill in
+`granted_by` and refuse a grant the operator does not hold (`E363`). They need
+the grants `karni_accounts.usergrant:view`, `:add`, `:change` and `:delete`
+(staff with `"*": "all"` hold them). Their scope on `UserGrant` limits the
+rows too: `own` means the grants you received.
+
+[Effective permissions](#permission-matrix) shows each user's own rows of
+the matrix with every source: the roles, then the user grants, each with its
+id, targets, expiry and reason, and a link to the user's grants.
+
+### The API for grants
+
+| Route | Does |
+|---|---|
+| `GET api/auth/permissions/grants/` | The grants you may view, paginated. Filters: `?user=<id>`, `?active=true` or `false`, `?permission=` |
+| `POST api/auth/permissions/grants/` | `{user, permission, scope, targets, expires_at, reason}`: one grant (201) |
+| `GET`, `PATCH`, `DELETE api/auth/permissions/grants/<id>/` | One grant, a change, a revoke (204) |
+| `POST api/auth/permissions/grants/bulk/` | `{users: [ids], permission, scope, targets, expires_at, reason}`: the same grant to each user, at most 1000, all or none (201) |
+
+Each answer carries `granted_by` and `active`. The gate is
+`karni_accounts.usergrant:view` for reads, `:add`, `:change` and `:delete`
+for the rest, and rows outside your scope on `UserGrant` answer 404. A bad
+pattern, scope or targets is a 400 with the code and the `field`. A grant you
+do not hold is a 403 `E363` with the `reasons`. While the switch is off, the
+routes are not mounted, so they answer 404 and are absent from the OpenAPI
+schema. A URLconf built while it was on answers 404
+[`E364`](errors.md#e364). `GET permissions/effective/` lists user grants
+among the sources, with `origin: "user_grant"`, `grant`, `targets`,
+`expires_at` and `reason`.
+
+### Why a user sees a row
+
+`karni why` and `karni why-empty` say which grant decided. The `roles` line
+counts the user's live grants, the gate names each source, and the `grants`
+section lists role grants and user grants, each with the rows it reaches.
+For one row, the grant that reaches it is marked:
+
+```text
+roles    organizer + 1 user grant
+grants   testapp.event:view  scope own  (role 'organizer', KARNI_ROLES)  → organizer = you
+         testapp.event:view  scope related:venue on 7  (user grant 4b1c..., reason 'cover', expires 2026-12-31 18:00)  → venue in ['7']  ← reaches this row
+```
+
+`--json` carries the same: `origin`, `grant`, `reason`, `expires_at`,
+`targets` and `reaches_row` for each grant. When no grant reaches the row,
+one fix names the user grant to widen.
+
+### Switching it off
+
+`KARNI_USER_GRANTS = False` stops reading the rows. Nothing is deleted, and
+the grants count again when it is back on. To stop using the feature, revoke
+the grants first, then turn it off.
 
 ## Rate limiting
 

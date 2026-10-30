@@ -62,12 +62,12 @@ fix      the row must match status = 'published' (events/viewsets.py:16), but it
 
 | Label | What it says |
 |---|---|
-| `user`, `roles` | Who is asking, and the roles (Django groups) they hold. A superuser holds every grant at scope `all`. |
+| `user`, `roles` | Who is asking, and the roles (Django groups) they hold. A superuser holds every grant at scope `all`. With [per-user grants](../accounts.md#per-user-grants) on, the count of the user's live grants follows (`organizer + 2 user grants`). |
 | `request` | The method, path and viewset action, and which part of `access` governs it. |
 | `access` | The declaration and its `file:line`. For `Granted()`, also the permission it binds to (`Can('events.event:view')`). An `@action(access=...)` or an overridden `get_access()` is shown too. |
 | `gate` | The request gate (`AccessPermission.has_permission`), part by part: who passes and why. |
 | `veto` | A [veto](../api.md#vetoes) that refused after the gate passed, with its name and `file:line`. |
-| `grants` | For `Granted()`/`Can()`: each grant consulted, its scope, the role that gives it and where (`KARNI_ROLES` and its line, the permission matrix, superuser), and the rows it reaches. |
+| `grants` | For `Granted()`/`Can()`: each grant consulted, its scope, the role that gives it and where (`KARNI_ROLES` and its line, the permission matrix, superuser) or the user grant (its id, reason, expiry and targets), and the rows it reaches. For one row, `← reaches this row` marks each grant that reaches it, so you see whether a role grant or a user grant decided. |
 | `read`, `write` | The row filter, part by part, for this row: `yes`/`no`, what the part needs, what the row has. |
 | `row` | The row's values for the fields the predicates read. Sensitive fields are redacted with the [change history's rules](../change-history.md) (`Karni.sensitive`, `KARNI_AUDIT_REDACT`). |
 | `steps` | `why-empty` only: the rows each step of the read pipeline leaves. |

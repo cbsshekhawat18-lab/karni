@@ -225,6 +225,17 @@ class TestUnion:
         finally:
             roles_mod._custom_scopes.pop("published", None)
 
+    def test_a_readable_row_follows_the_first_target(self, place: Any) -> None:
+        from karni.testing.api import granted_values
+
+        arena, *_ = place
+        guest = _user("guest@example.com")
+        grants.grant(None, guest, VIEW, "related:venue", targets=[arena.pk])
+        values = granted_values(Event, _fresh(guest))
+        assert values == {"venue_id": str(arena.pk)}
+        row = _event("Readable", **values)
+        assert user_can(_fresh(guest), VIEW, row)
+
     def test_a_superuser_pays_nothing_more(self) -> None:
         root = _user("root@example.com", is_superuser=True)
         with CaptureQueriesContext(connection) as queries:
