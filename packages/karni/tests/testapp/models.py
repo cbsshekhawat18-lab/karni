@@ -40,8 +40,10 @@ from karni.models import (
     AuditedModel,
     BaseModel,
     BigIntBaseModel,
+    OrderedTreeModel,
     SoftDeleteModel,
     TimestampedModel,
+    TreeModel,
     UUIDModel,
 )
 
@@ -132,6 +134,41 @@ class Event(ApiBase):
 
     def __str__(self) -> str:
         return self.title
+
+
+# tree models (tests/tree/): an unordered and an ordered tree, and a model pointing at both
+
+
+class Region(TreeModel, ApiBase):
+    """A region tree: siblings in creation order."""
+
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, blank=True, default="")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Category(OrderedTreeModel, ApiBase):
+    """A product category tree whose siblings have a position."""
+
+    name = models.CharField(max_length=100)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Product(ApiBase):
+    """An FK and an M2M to tree models: both carry x-karni-tree in the schema."""
+
+    name = models.CharField(max_length=100)
+    category = models.ForeignKey(
+        Category, null=True, blank=True, on_delete=models.PROTECT, related_name="products"
+    )
+    regions = models.ManyToManyField(Region, blank=True, related_name="products")
+
+    def __str__(self) -> str:
+        return self.name
 
 
 # model layer (tests/test_model_layer.py)
