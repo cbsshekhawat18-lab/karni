@@ -56,12 +56,14 @@ describe("TreeSelect", () => {
     const onValue = vi.fn();
     mount(<Picker onValue={onValue} />);
     const button = screen.getByRole("button", { name: "Region Choose a region" });
-    expect(button).toHaveAttribute("aria-haspopup", "tree");
+    expect(button).toHaveAttribute("aria-haspopup", "dialog");
     expect(button).toHaveAttribute("aria-expanded", "false");
     await user.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
     const tree = await screen.findByRole("tree", { name: "Region" });
-    expect(button).toHaveAttribute("aria-controls", tree.id);
+    const popup = screen.getByRole("dialog", { name: "Choose a region" });
+    expect(button).toHaveAttribute("aria-controls", popup.id);
+    expect(popup).toContainElement(tree);
     const europe = await within(tree).findByRole("treeitem", { name: "Europe" });
     await waitFor(() => expect(europe).toHaveFocus());
     await user.keyboard("{ArrowRight}{ArrowRight}{Enter}");

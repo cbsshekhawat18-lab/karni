@@ -35,7 +35,7 @@ describe("ResourceForm and tree relations", () => {
     await user.type(await screen.findByRole("textbox", { name: /Name/ }), "Spade");
 
     const category = screen.getByRole("button", { name: /^Category/ });
-    expect(category).toHaveAttribute("aria-haspopup", "tree");
+    expect(category).toHaveAttribute("aria-haspopup", "dialog");
     await user.click(category);
     const garden = await screen.findByRole("treeitem", { name: "Garden" });
     await waitFor(() => expect(garden).toHaveFocus());
@@ -67,7 +67,7 @@ describe("ResourceForm and tree relations", () => {
     mount(<ResourceForm resource="categories" />);
     expect(await screen.findByRole("button", { name: /^Parent/ })).toHaveAttribute(
       "aria-haspopup",
-      "tree",
+      "dialog",
     );
     expect(screen.queryByText("Position")).not.toBeInTheDocument();
   });

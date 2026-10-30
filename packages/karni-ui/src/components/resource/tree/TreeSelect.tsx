@@ -69,8 +69,8 @@ function shortId(id: string | number): string {
 /**
  * Experimental. A picker for a relation that points at a tree resource.
  *
- * A button opens a popover with a TreeView (lazy branches, search, the
- * keyboard pattern), opened at the chosen node. Enter, Space or a click
+ * A button opens a popover (a non-modal dialog) with a TreeView (lazy
+ * branches, search, the keyboard pattern), opened at the chosen node. Enter, Space or a click
  * chooses a node: one closes the popover, `multiple` toggles and keeps it
  * open. Chosen values show as the button's text, or as removable chips with
  * `multiple`. A preselected id is labelled from its detail endpoint, and one
@@ -103,6 +103,7 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
     const valueId = `${reactId}-value`;
     const nameId = `${reactId}-name`;
     const treeId = `${reactId}-tree`;
+    const popupId = `${reactId}-popup`;
     const [open, setOpen] = React.useState(false);
     const [cache, setCache] = React.useState<Record<string, OptionRow>>({});
     const rootRef = React.useRef<HTMLDivElement>(null);
@@ -253,9 +254,9 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
                 id={buttonId}
                 type="button"
                 disabled={disabled}
-                aria-haspopup="tree"
+                aria-haspopup="dialog"
                 aria-expanded={open}
-                aria-controls={open ? treeId : undefined}
+                aria-controls={open ? popupId : undefined}
                 aria-labelledby={labelledBy}
                 aria-describedby={props["aria-describedby"]}
                 aria-invalid={props["aria-invalid"]}
@@ -291,6 +292,7 @@ export const TreeSelect = React.forwardRef<HTMLButtonElement, TreeSelectProps>(
         <PopoverPrimitive.Portal>
           <PopoverPrimitive.Content
             ref={contentRef}
+            id={popupId}
             side="bottom"
             align="start"
             sideOffset={4}
