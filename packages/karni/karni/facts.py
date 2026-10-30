@@ -4,11 +4,11 @@
 ``karni spec export`` turns it into a ``karni.yaml``. The facts say what the
 code declares, with no opinion on the spec format: each field's class and
 its ``deconstruct()`` arguments, each model's key type, table and whether
-Django manages it, each viewset's route and ``describe()``d access, the
-settings the spec's features and roles come from, the database aliases, and
-every installed module's settings next to the module's defaults. Every value
-is JSON-safe: a function or class becomes its dotted path, a ``Decimal`` a
-string, an enum member its value.
+Django manages it, each viewset's route, ``describe()``d access and
+``cache`` declaration, the settings the spec's features and roles come
+from, the database aliases, and every installed module's settings next to
+the module's defaults. Every value is JSON-safe: a function or class
+becomes its dotted path, a ``Decimal`` a string, an enum member its value.
 
 ``manage.py karni_rows`` prints :func:`count_rows`: the row counts ``karni
 plan`` shows next to a risky change. It is the only part that opens the
@@ -45,6 +45,8 @@ FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_EMAIL_OTP",
     "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "KARNI_TERMS",
+    "KARNI_API_CACHE",
+    "KARNI_API_CACHE_TTL",
     "KARNI_ROLES",
     "KARNI_ACCOUNTS_DEFAULT_ROLES",
     "KARNI_PK",
@@ -209,6 +211,21 @@ def _access(viewset: type) -> dict[str, Any]:
     return {"missing": True}
 
 
+def _cache(viewset: type) -> dict[str, Any] | None:
+    """The viewset's ``cache``: ``{ttl, depends_on}``, ``{uncached: reason}`` or ``None``."""
+    from karni.api.caching import Cache, Uncached
+
+    declared = getattr(viewset, "cache", None)
+    if isinstance(declared, Uncached):
+        return {"uncached": str(declared.reason)}
+    if isinstance(declared, Cache):
+        depends_on = [
+            item if isinstance(item, str) else item._meta.label for item in declared.depends_on
+        ]
+        return {"ttl": declared.ttl, "depends_on": depends_on}
+    return None
+
+
 def _viewsets() -> list[dict[str, Any]]:
     from django.utils.module_loading import import_string
 
@@ -225,6 +242,7 @@ def _viewsets() -> list[dict[str, Any]]:
                 "model": getattr(getattr(model, "_meta", None), "label", None),
                 "access": _access(viewset),
                 "search_fields": [str(name) for name in getattr(viewset, "search_fields", ())],
+                "cache": _cache(viewset),
             }
         )
     return found

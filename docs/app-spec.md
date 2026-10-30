@@ -154,9 +154,7 @@ cannot both be (`C324`).
 ### `features`
 
 The keys are the built-in features of the module catalog that karni.yaml
-takes (`karni modules show <name>` prints each one's questions). Response
-caching (`api_cache`) is in the catalog with no key here yet: set
-`KARNI_API_CACHE` in the settings.
+takes (`karni modules show <name>` prints each one's questions).
 
 | Key | Takes | Setting |
 |---|---|---|
@@ -164,6 +162,12 @@ caching (`api_cache`) is in the catalog with no key here yet: set
 | `email_code_login` | `true` / `false` | `KARNI_EMAIL_OTP`, [sign-in with a code](accounts.md#sign-in-with-a-code-sent-by-email) |
 | `social_login` | `google`, `microsoft`, `apple`, one or a list | `KARNI_SOCIAL_TOKEN_PROVIDERS`, [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). The spec names the providers. Their client ids stay in settings or `.env` |
 | `terms` | `{version, url}`, plus `required`, `paths`, `exempt` | `KARNI_TERMS`, [terms acceptance](accounts.md#terms-acceptance) |
+| `api_cache` | `true` / `false`, or `{ttl: <seconds>}` | `KARNI_API_CACHE`, and `KARNI_API_CACHE_TTL` with a `ttl`, [response caching](api.md#response-caching). `true` keeps the default lifetime (300 seconds) |
+
+`api_cache` left out (or `false`) writes no line in the settings block, so
+`KARNI_API_CACHE` follows the environment: a project may cache in production
+only, with `KARNI_API_CACHE=true` in its `.env`. An entity's `cache:` applies
+whenever caching is on, from the spec or from the environment.
 
 ### `roles`
 
@@ -220,6 +224,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `table` | `table` or `schema.table` | `karni make model --table` (`Meta.db_table`), with `external` only |
 | `writable` | `true` / `false` | `Karni.writable`, with `external` only |
 | `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
+| `cache` | seconds, or `false` | the viewset's [response caching](api.md#response-caching): `cache = Cache(ttl=<seconds>)`, or `cache = Uncached(reason="spec")` for `false` (default: `KARNI_API_CACHE_TTL`) |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
@@ -254,6 +259,15 @@ relation between entities on different databases is refused (`C253`): the
 user and the modules' models are on `default`. A managed entity on another
 database is built without the audit users, whose relations would point at
 `default`.
+
+`cache` takes how many seconds a cached response of the entity lives
+(`cache: 60`), or `false` to never cache it (`C520` for any other value).
+Karni clears a cached response when it sees a write to a table the response
+reads, and it never sees the writes another system makes. So with
+`api_cache` on, an entity that reads an external table, a table on another
+database, or an external entity it can reach through `?expand=` (two levels
+deep) needs a `cache` of its own, which says how stale a response may be
+(`C521`). `karni check` refuses the same viewset in the project.
 
 `groups` become the admin change form's fieldsets today. Field groups in the
 React forms and detail pages (item 12 of the
@@ -375,6 +389,8 @@ means. `karni explain <code>` prints any code's entry.
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
+| [C520](errors.md#c520) | an entity's `cache` is not seconds above 0 or `false` |
+| [C521](errors.md#c521) | with `api_cache` on, an entity reads an external table or one on another database and has no `cache` |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 
@@ -464,9 +480,10 @@ entities
 The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit, groups,
-order, pk, external, table, writable, database), field changes of existing
-entities, access, pages and navigation, the apps that get migrations, seed
-counts, and the API tests `karni make test` writes for new entities. The
+order, pk, external, table, writable, database, cache), field changes of
+existing entities, access, pages and navigation, the apps that get
+migrations, seed counts, and the API tests `karni make test` writes for new
+entities. The
 plan of the example above on a fresh project is about 400 tokens.
 
 ### Risky changes
@@ -607,7 +624,7 @@ missing class to them, and never rewrites what is in them.
 | What | Karni owns (rewritten every build) | The project owns (created once) |
 |---|---|---|
 | models | `<app>/karni/models.py`: each entity as an abstract class on `BaseModel` or `BigIntBaseModel` (or the external declaration), with its fields, `Meta`, `class Karni` and `AdminMeta` | `<app>/models.py`: `class Session(karni.Session):` and the project's methods |
-| API | `<app>/karni/api.py`: each viewset's model, access and search, as a base class | `<app>/viewsets.py`: `class SessionViewSet(karni.SessionViewSet):` and custom actions |
+| API | `<app>/karni/api.py`: each viewset's model, access, search and cache, as a base class | `<app>/viewsets.py`: `class SessionViewSet(karni.SessionViewSet):` and custom actions |
 | seed counts | `<app>/karni/seeds.py`: a `Seeder` per entity with a `seed` count | `<app>/seeds.py`: the subclass, where a field's demo values are steered |
 | tests | `<app>/tests/karni/test_<entity>.py`: `assert_crud`, and `assert_isolated` when reads are owned | every other test |
 | settings | the block between `# karni:spec start` and `# karni:spec end` in `config/settings.py`: roles, features and module options | everything else in `config/settings.py` |
@@ -648,7 +665,8 @@ one option with `class Karni(karni.Session.Karni)`.
 The settings block sits right above `karni_settings(globals())`, where every
 setting takes effect, `KARNI_2FA` included. It sets every feature of the
 spec (`KARNI_2FA`, `KARNI_EMAIL_OTP`, `KARNI_SOCIAL_TOKEN_PROVIDERS`,
-`KARNI_TERMS`), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
+`KARNI_TERMS`, and `KARNI_API_CACHE` with `KARNI_API_CACHE_TTL` while
+`api_cache` is on), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
 spec has roles, and each module option. A social provider's client ids come
 from the environment: `KARNI_SOCIAL_GOOGLE_CLIENT_IDS` (comma-separated) for
 `google`, and so on. A setting assigned again below the call wins over the

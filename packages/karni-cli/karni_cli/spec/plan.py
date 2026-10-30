@@ -54,7 +54,7 @@ from karni_cli.builder import layout
 from karni_cli.generators.fields import is_user_target
 from karni_cli.project import CliError
 from karni_cli.spec import export, schema
-from karni_cli.spec.catalog import MODULES, module_setting
+from karni_cli.spec.catalog import DEFAULT_CACHE_TTL, MODULES, module_setting
 from karni_cli.spec.normal import normalise, role_name
 from karni_cli.spec.validate import validate_text
 
@@ -105,6 +105,7 @@ _FEATURE_SETTINGS: Final = {
     "email_code_login": "KARNI_EMAIL_OTP",
     "social_login": "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "terms": "KARNI_TERMS",
+    "api_cache": "KARNI_API_CACHE",
 }
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
 _MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database"})
@@ -121,6 +122,7 @@ _OPTIONS: Final = (
     "groups",
     "order",
     "scope_paths",
+    "cache",
 )
 
 
@@ -634,6 +636,9 @@ def _features(ctx: _Context) -> None:
         before, after = old.get(key), new.get(key)
         if before == after:
             continue
+        if key == "api_cache":
+            _api_cache(ctx, before, after)
+            continue
         if key == "terms" and before and after:
             changed = [k for k in sorted(set(before) | set(after)) if before.get(k) != after.get(k)]
             detail = ", ".join(
@@ -652,6 +657,21 @@ def _features(ctx: _Context) -> None:
         value = "" if after is True else f" {_show(shown)}"
         action = "add" if not before else "change"
         ctx.add(Change("features", action, key, f"{setting}{value}"))
+
+
+def _api_cache(ctx: _Context, before: Any, after: Any) -> None:
+    """``KARNI_API_CACHE``, with ``KARNI_API_CACHE_TTL`` when it is not the default."""
+    setting = _FEATURE_SETTINGS["api_cache"]
+    if not after:
+        ctx.add(Change("features", "remove", "api_cache", setting))
+        return
+    ttl = after["ttl"]
+    if before:
+        detail = f"KARNI_API_CACHE_TTL {before['ttl']} -> {ttl}"
+        ctx.add(Change("features", "change", "api_cache", detail))
+        return
+    shown = "" if ttl == DEFAULT_CACHE_TTL else f", KARNI_API_CACHE_TTL {ttl}"
+    ctx.add(Change("features", "add", "api_cache", f"{setting}{shown}"))
 
 
 def _grant_counts(pattern: str, labels: Iterable[str]) -> tuple[Count, ...]:
@@ -725,6 +745,9 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             continue
         if key == "external" and value:
             options.append(f"external {entity['table']}")
+            continue
+        if key == "cache" and value is False:
+            options.append("cache false")
             continue
         if key == "table" or value in (None, False, [], {}):
             continue
@@ -1066,7 +1089,7 @@ def _own(ctx: _Context, managed: Managed) -> None:
             app = label.split(".", 1)[0]
             file = (
                 layout.api_file(app)
-                if area == "access" or target.endswith(" search")
+                if area == "access" or target.endswith((" search", " cache"))
                 else layout.models_file(app)
             )
             if action == "add" and area == "entities":

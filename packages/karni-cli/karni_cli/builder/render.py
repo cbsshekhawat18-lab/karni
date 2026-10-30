@@ -12,7 +12,7 @@ For one entity, ``Session`` in the app ``classes``::
     classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni, AdminMeta
                                 (abstract: Django migrates the project's subclass)
     classes/models.py           class Session(karni.Session): the project's methods
-    classes/karni/api.py        class SessionViewSet(BaseViewSet): model, access, search
+    classes/karni/api.py        class SessionViewSet(BaseViewSet): model, access, search, cache
     classes/viewsets.py         class SessionViewSet(karni.SessionViewSet): the project's actions
     classes/karni/seeds.py      class SessionSeeder(Seeder): the seed count
     classes/seeds.py            class SessionSeeder(karni.SessionSeeder): the project's values
@@ -370,6 +370,12 @@ def _api_file(ws: Workspace, inputs: Inputs, app: str, names: list[str]) -> str:
         if entity.search:
             items = [pystr(item) for item in entity.search]
             body.append(tuple_literal("search_fields = ", items, "    ", line))
+        if entity.cache is False:
+            body.append(f"    cache = Uncached(reason={pystr(schema.UNCACHED_REASON)})")
+            used.add("Uncached")
+        elif entity.cache is not None:
+            body.append(f"    cache = Cache(ttl={entity.cache})")
+            used.add("Cache")
         blocks.append("\n".join(body))
     imports = [Import("karni.api", item) for item in sorted(used)]
     imports += [Import(f"{app}.models", name) for name in names]
@@ -603,6 +609,11 @@ def settings_block(spec: schema.Spec, line: int) -> str:
     if terms is not None and terms.get("required") is True:
         terms.pop("required")
     rows.append(_literal(terms, "", line, "KARNI_TERMS = "))
+    # Left out, KARNI_API_CACHE follows the environment: a project may turn it on there.
+    if features.api_cache:
+        rows.append("KARNI_API_CACHE = True")
+        if isinstance(features.api_cache, schema.ApiCache):
+            rows.append(f"KARNI_API_CACHE_TTL = {features.api_cache.ttl}")
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

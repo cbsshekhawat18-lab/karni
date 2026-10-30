@@ -383,6 +383,36 @@ def test_the_projects_own_files_are_never_rewritten(copy: Path) -> None:
     )
 
 
+def test_response_caching_from_the_spec(copy: Path) -> None:
+    _edit(
+        copy / "karni.yaml",
+        ('  terms: {version: "2026-11", url: /terms/}\n',
+         '  terms: {version: "2026-11", url: /terms/}\n  api_cache: {ttl: 120}\n'),
+        ("        search: [name]\n", "        search: [name]\n        cache: 600\n"),
+        ("          write: owned:member\n", "          write: owned:member\n        cache: false\n"),
+    )  # fmt: skip
+    code, out = _build()
+    assert code == 0, out
+    assert "+ api_cache: KARNI_API_CACHE, KARNI_API_CACHE_TTL 120" in out
+    assert "~ classes.Studio cache: none -> 600" in out
+    settings = (copy / "config" / "settings.py").read_text()
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert "KARNI_API_CACHE = True\nKARNI_API_CACHE_TTL = 120\n" in block
+    api = (copy / "classes" / "karni" / "api.py").read_text()
+    assert "    model = Studio\n" in api and "    cache = Cache(ttl=600)\n" in api
+    assert '    cache = Uncached(reason="spec")\n' in api
+    imports = next(line for line in api.splitlines() if line.startswith("from karni.api import"))
+    assert {"Cache", "Uncached"} <= set(imports.split("import ", 1)[1].split(", "))
+    # the project reads back what the spec says: a second build has nothing to do
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    # turned off, the block leaves KARNI_API_CACHE to the environment
+    _edit(copy / "karni.yaml", ("  api_cache: {ttl: 120}\n", ""))
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    assert "KARNI_API_CACHE" not in settings
+
+
 # escape hatches, projects built by hand, keys and databases -----------------------
 
 
