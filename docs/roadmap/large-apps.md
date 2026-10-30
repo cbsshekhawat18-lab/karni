@@ -42,7 +42,7 @@ cannot start before the item it names is done.
 |---|---|---|---|
 | 4 | Tree models: a mixin with cycle-safe recursive queries, tree endpoints, a tree view and a tree select. | none | done |
 | 5 | A `tree:<field>` access scope: a grant on a node covers every row tagged with it or with a node under it. | 4 | planned |
-| 6 | Per-user grants: access granted to one user, with targets and an expiry, alongside role grants. | none | planned |
+| 6 | Per-user grants: access granted to one user, with targets and an expiry, alongside role grants. | none | done |
 | 7 | Taxonomy tagging: one declaration tags a model to a tree, with filters, facet counts, import columns and the access scope. | 4, 5 | planned |
 | 8 | Aggregation endpoints and saved charts: grouped counts and sums under the list's filters and access, and charts defined in the admin. | none | planned |
 | 9 | Response caching to stable: keys that never mix access scopes, invalidation derived from relations, and an admin screen. | none | planned |
@@ -72,8 +72,11 @@ cannot start before the item it names is done.
 
 Notes on the order:
 
-- Item 5 designs the interface for per-user grants that item 6 then fills,
-  so the two agree without item 5 waiting for item 6.
+- Item 6 designed the interface item 5 builds on:
+  `karni.accounts.grants.scope_targets(user, scope, permission=...)` gives
+  the target ids a user's role grants and user grants hold under a scope,
+  with the grant behind each. A tree scope adds itself to
+  `TARGETED_SCOPES`, and item 13 reads the same function.
 - Item 13 may store the menu as a tree model when item 4 is done. Settings
   alone work without it.
 - Item 6 uses the `Can("area:action")` slot that ADR 0001 reserved for a

@@ -40,6 +40,8 @@ __all__ = [
     "TermsAcceptance",
     "TermsAcceptanceQuerySet",
     "User",
+    "UserGrant",
+    "UserGrantQuerySet",
 ]
 
 
@@ -528,3 +530,132 @@ class RolePermission(BaseModel):
     def __str__(self) -> str:
         suffix = f":{self.scope_path}" if self.scope_path else ""
         return f"{self.role_id} may {self.permission_id} ({self.scope}{suffix})"
+
+
+# per-user grants (experimental, karni.accounts.grants)
+
+
+class UserGrantQuerySet(BaseQuerySet):
+    """Experimental. The queryset of :class:`UserGrant`: live and expired grants."""
+
+    def live(self, at: Any = None) -> UserGrantQuerySet:
+        """The grants that apply at ``at`` (default now): no expiry, or an expiry after it."""
+        moment = at if at is not None else timezone.now()
+        return self.filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=moment))
+
+    def expired(self, at: Any = None) -> UserGrantQuerySet:
+        """The grants whose ``expires_at`` is at or before ``at`` (default now)."""
+        moment = at if at is not None else timezone.now()
+        return self.filter(expires_at__lte=moment)
+
+
+class UserGrantManager(ScopedManagerMixin, Manager.from_queryset(UserGrantQuerySet)):  # type: ignore[misc]
+    """Experimental. The default manager of :class:`UserGrant`: scoped, with ``live()``."""
+
+
+class UserGrant(BaseModel):
+    """Experimental. A grant to one user, next to the grants of their roles.
+
+    ``permission`` is a pattern written as in ``KARNI_ROLES``
+    (``app_label.model:action``, with ``*`` for either part, or ``*`` alone)
+    and ``scope`` a scope a role grant takes (``all``, ``own``,
+    ``related:<key>``, ``custom:<name>``). ``targets`` lists row ids, as
+    text, for a scope that points at rows: a ``related:<key>`` grant with
+    targets reaches the rows whose ``Karni.scope_paths[key]`` is one of them,
+    in place of ``user.<key>``. ``expires_at`` ends the grant (``None``
+    never). ``granted_by`` is who gave it and ``reason`` why.
+
+    While ``KARNI_USER_GRANTS`` is on, :func:`karni.accounts.roles.grants_for`
+    adds a user's live grants to their role grants, so ``Granted()``,
+    ``Can``, ``user.can`` and the admin's row scope take the union. Every
+    change is history (``karni.audit``). Revoking is ``delete()`` (a soft
+    delete, recorded) or setting ``expires_at``.
+
+    Override / escape hatch: write grants with :mod:`karni.accounts.grants`
+    (``grant``, ``bulk_grant``, ``expire``, ``revoke``), which check the
+    pattern, the scope and the targets (``E360`` to ``E362``) and what the
+    operator holds (``E363``). ``full_clean()`` runs the same checks on the
+    row alone. A row saved directly skips them: an unknown pattern grants
+    nothing.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="user_grants",
+    )
+    permission = models.CharField(
+        max_length=200,
+        help_text="A KARNI_ROLES pattern: app_label.model:action, with * for either part.",
+    )
+    scope = models.CharField(
+        max_length=120,
+        default="all",
+        help_text="all, own, related:<scope path key> or custom:<registered name>.",
+    )
+    targets = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Row ids (for a related:<key> scope): the rows the grant points at.",
+    )
+    expires_at = models.DateTimeField(
+        null=True, blank=True, db_index=True, help_text="Empty: the grant never expires."
+    )
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    reason = models.CharField(max_length=255, blank=True, default="")
+
+    objects: ClassVar[UserGrantManager] = UserGrantManager()
+
+    class Meta(BaseModel.Meta):
+        verbose_name = "user grant"
+        verbose_name_plural = "user grants"
+        ordering: ClassVar[list[str]] = ["-created_at"]
+
+    class Karni:
+        """Every change to a user grant is history, and ``own`` means the grants you received."""
+
+        audit = True
+        owner_field = "user"
+        cascade: ClassVar[dict[str, str]] = {
+            "user": "a user grant belongs to its user and goes with the account",
+        }
+
+    def __str__(self) -> str:
+        return f"{self.permission} ({self.scope}) for user {self.user_id}"
+
+    @property
+    def is_live(self) -> bool:
+        """Whether the grant applies now: no expiry, or an expiry still ahead."""
+        return self.expires_at is None or self.expires_at > timezone.now()
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Store ``targets`` as a list of text ids (``[1, 2]`` becomes ``["1", "2"]``)."""
+        from karni.accounts.grants import normalise_targets
+
+        try:
+            self.targets = list(normalise_targets(self.targets))
+        except ValueError:
+            pass  # full_clean() and the karni.accounts.grants functions report it (E362)
+        super().save(*args, **kwargs)
+
+    def clean(self) -> None:
+        """Check the pattern, the scope and the targets (:func:`karni.accounts.grants.check`)."""
+        from django.core.exceptions import ValidationError
+
+        from karni.accounts.grants import check
+        from karni.exceptions import KarniError
+
+        super().clean()
+        try:
+            check(self.permission, self.scope, self.targets)
+        except KarniError as exc:
+            field = {"E360": "permission", "E361": "scope", "E362": "targets"}.get(
+                str(exc.code), "permission"
+            )
+            raise ValidationError({field: str(exc)}, code=str(exc.code)) from exc

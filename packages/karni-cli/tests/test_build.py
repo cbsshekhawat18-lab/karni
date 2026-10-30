@@ -230,6 +230,28 @@ def test_a_second_build_writes_nothing(copy: Path) -> None:
 # changes --------------------------------------------------------------------------
 
 
+def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            '  terms: {version: "2026-11", url: /terms/}\n',
+            '  terms: {version: "2026-11", url: /terms/}\n  user_grants: true\n',
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + user_grants: KARNI_USER_GRANTS" in plan, plan
+    settings = copy / "config" / "settings.py"
+    assert "KARNI_USER_GRANTS = False" in settings.read_text()
+    code, out = _build()
+    assert code == 0, out
+    text = settings.read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert "KARNI_USER_GRANTS = True" in block and "KARNI_USER_GRANTS = False" not in text
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
 def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path) -> None:
     spec = copy / "karni.yaml"
     _edit(

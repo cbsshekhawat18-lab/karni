@@ -131,6 +131,9 @@ class Features(_Node):
         ),
     )
     terms: Terms | None = Field(None, description="KARNI_TERMS: the terms acceptance gate.")
+    user_grants: bool = Field(
+        False, description="KARNI_USER_GRANTS: per-user grants next to the role grants."
+    )
 
 
 class Role(_Node):

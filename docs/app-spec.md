@@ -164,6 +164,7 @@ caching (`api_cache`) is in the catalog with no key here yet: set
 | `email_code_login` | `true` / `false` | `KARNI_EMAIL_OTP`, [sign-in with a code](accounts.md#sign-in-with-a-code-sent-by-email) |
 | `social_login` | `google`, `microsoft`, `apple`, one or a list | `KARNI_SOCIAL_TOKEN_PROVIDERS`, [sign-in with an ID token](accounts.md#sign-in-with-an-id-token-google-microsoft-apple). The spec names the providers. Their client ids stay in settings or `.env` |
 | `terms` | `{version, url}`, plus `required`, `paths`, `exempt` | `KARNI_TERMS`, [terms acceptance](accounts.md#terms-acceptance) |
+| `user_grants` | `true` / `false` | `KARNI_USER_GRANTS`, [per-user grants](accounts.md#per-user-grants). The grants themselves are data, written in the admin or the API |
 
 ### `roles`
 

@@ -1275,6 +1275,80 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', "
         "null=True, blank=True, on_delete=models.PROTECT, related_name='children').",
     ),
+    # E360-E379 per-user grants (karni.accounts.grants, experimental)
+    _e(
+        "E360",
+        "A user grant's permission pattern matches no permission",
+        "exception",
+        "karni.accounts.grants.check",
+        "A user grant names its permission as a KARNI_ROLES grant does: 'app_label.model:action', "
+        "with '*' for either part, or '*' alone. A pattern that is malformed or matches no "
+        "permission of the project would grant nothing, so it is refused when the grant is "
+        "written (the API, the admin, karni.accounts.grants.grant or full_clean()).",
+        "Write the key as karni context or GET permissions/matrix/ lists it (e.g. "
+        "'shop.order:view'), and declare a model's extra actions in `class Karni: actions = "
+        "[...]` before granting them.",
+    ),
+    _e(
+        "E361",
+        "A user grant's scope does not fit the permissions it covers",
+        "exception",
+        "karni.accounts.grants.check",
+        "The scope is one a role grant takes: 'all', 'own', 'related:<key>' or "
+        "'custom:<name>'. 'own' needs the model's owner field, 'related:<key>' its "
+        "Karni.scope_paths[key] and 'custom:<name>' a scope registered with register_scope(). "
+        "An explicit key whose model lacks it is refused, and a wildcard pattern must keep at "
+        "least one model that has it.",
+        "Pick a scope from the model's options in GET permissions/matrix/, declare the owner "
+        "field or scope path in `class Karni`, or register the custom scope at startup.",
+    ),
+    _e(
+        "E362",
+        "A user grant's targets are invalid",
+        "exception",
+        "karni.accounts.grants.check",
+        "targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant "
+        "with targets reaches the rows whose Karni.scope_paths[key] is one of them. Targets are "
+        "a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value "
+        "the scope path's field takes.",
+        "Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop "
+        "targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.",
+    ),
+    _e(
+        "E363",
+        "The operator may not give this user grant",
+        "api",
+        "karni.accounts.grants.refusals",
+        "Nobody grants what they do not hold, as in the permission matrix: the operator must "
+        "hold every permission the pattern reaches, at scope 'all' or at the same scope, and for "
+        "a grant with targets their own targets under that scope must include each one. "
+        "Nothing was written. Superusers and code that passes operator=None are not checked.",
+        "Ask someone who holds the permission at that scope (or 'all') to give the grant, "
+        "narrow the pattern, the scope or the targets to what you hold, or grant it from code "
+        "with operator=None.",
+    ),
+    _e(
+        "E364",
+        "Per-user grants are turned off",
+        "api",
+        "karni.accounts.api.grants",
+        "permissions/grants/ and its routes are mounted only while KARNI_USER_GRANTS is True. "
+        "A URLconf built while it was True answers 404 with this code once it is False. While "
+        "it is False, user grants are not read and grant nothing.",
+        "Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni "
+        "build) to use per-user grants.",
+    ),
+    _e(
+        "E365",
+        "karni.accounts.grants.change() was given a field it does not set",
+        "exception",
+        "karni.accounts.grants.change",
+        "change() sets a grant's permission, scope, targets, expires_at and reason. The user a "
+        "grant belongs to, granted_by and the timestamps are not changed this way: a grant for "
+        "another user is a new grant, and granted_by follows the operator.",
+        "Pass only permission, scope, targets, expires_at or reason. To move access to another "
+        "user, revoke() this grant and grant() a new one.",
+    ),
     # E4xx events, listeners, schedules, Celery
     _e(
         "E401",

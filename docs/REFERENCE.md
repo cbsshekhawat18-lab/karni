@@ -90,6 +90,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | The `related:<key>` scope (`class Karni: scope_paths`) and `custom:` scopes | `experimental` | Karni's own tests |
 | Membership through a path: `owner_field = "workspace__members"` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500 | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
+| Per-user grants next to the role grants: a pattern and a scope for one user, with targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). Experimental tier | `experimental` | Karni's own tests |
 | Field visibility per role (`class Karni: field_roles`) | `experimental` | Karni's own tests |
 | Row scope in the admin, from the same grants as the API | `experimental` | Karni's own tests |
 | Change history: who changed which field, when, from what to what | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
@@ -1633,6 +1634,7 @@ class Lead(BaseModel):
 | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
 | `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
+| `KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -2092,6 +2094,12 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E343`](errors.md#e343) | exception | A tree method got an argument it cannot use |
 | [`E344`](errors.md#e344) | check | A tree model's default manager has no tree walks |
 | [`E345`](errors.md#e345) | check | A tree model's parent is not a foreign key to the model itself |
+| [`E360`](errors.md#e360) | exception | A user grant's permission pattern matches no permission |
+| [`E361`](errors.md#e361) | exception | A user grant's scope does not fit the permissions it covers |
+| [`E362`](errors.md#e362) | exception | A user grant's targets are invalid |
+| [`E363`](errors.md#e363) | api | The operator may not give this user grant |
+| [`E364`](errors.md#e364) | api | Per-user grants are turned off |
+| [`E365`](errors.md#e365) | exception | karni.accounts.grants.change() was given a field it does not set |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |

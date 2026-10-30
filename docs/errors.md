@@ -1004,6 +1004,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Remove the redeclared `parent` field, or declare it as models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='children').
 
+<a id="e360"></a>
+
+#### E360: A user grant's permission pattern matches no permission
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** A user grant names its permission as a KARNI_ROLES grant does: 'app_label.model:action', with '*' for either part, or '*' alone. A pattern that is malformed or matches no permission of the project would grant nothing, so it is refused when the grant is written (the API, the admin, karni.accounts.grants.grant or full_clean()).
+
+**Fix.** Write the key as karni context or GET permissions/matrix/ lists it (e.g. 'shop.order:view'), and declare a model's extra actions in `class Karni: actions = [...]` before granting them.
+
+<a id="e361"></a>
+
+#### E361: A user grant's scope does not fit the permissions it covers
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:<key>' or 'custom:<name>'. 'own' needs the model's owner field, 'related:<key>' its Karni.scope_paths[key] and 'custom:<name>' a scope registered with register_scope(). An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
+
+**Fix.** Pick a scope from the model's options in GET permissions/matrix/, declare the owner field or scope path in `class Karni`, or register the custom scope at startup.
+
+<a id="e362"></a>
+
+#### E362: A user grant's targets are invalid
+
+*exception* · from `karni.accounts.grants.check`
+
+**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
+
+**Fix.** Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.
+
+<a id="e363"></a>
+
+#### E363: The operator may not give this user grant
+
+*API 400 response* · from `karni.accounts.grants.refusals`
+
+**Why Karni objects.** Nobody grants what they do not hold, as in the permission matrix: the operator must hold every permission the pattern reaches, at scope 'all' or at the same scope, and for a grant with targets their own targets under that scope must include each one. Nothing was written. Superusers and code that passes operator=None are not checked.
+
+**Fix.** Ask someone who holds the permission at that scope (or 'all') to give the grant, narrow the pattern, the scope or the targets to what you hold, or grant it from code with operator=None.
+
+<a id="e364"></a>
+
+#### E364: Per-user grants are turned off
+
+*API 400 response* · from `karni.accounts.api.grants`
+
+**Why Karni objects.** permissions/grants/ and its routes are mounted only while KARNI_USER_GRANTS is True. A URLconf built while it was True answers 404 with this code once it is False. While it is False, user grants are not read and grant nothing.
+
+**Fix.** Set KARNI_USER_GRANTS = True (or features: user_grants: true in karni.yaml, then karni build) to use per-user grants.
+
+<a id="e365"></a>
+
+#### E365: karni.accounts.grants.change() was given a field it does not set
+
+*exception* · from `karni.accounts.grants.change`
+
+**Why Karni objects.** change() sets a grant's permission, scope, targets, expires_at and reason. The user a grant belongs to, granted_by and the timestamps are not changed this way: a grant for another user is a new grant, and granted_by follows the operator.
+
+**Fix.** Pass only permission, scope, targets, expires_at or reason. To move access to another user, revoke() this grant and grant() a new one.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -4038,7 +4098,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
+**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
 
 **Why Karni objects.** Each of these ships in Karni with tested defaults and override points. A public site is the client's own markup, so it has its own rule.
 
@@ -4098,7 +4158,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
+**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
 
 **Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 

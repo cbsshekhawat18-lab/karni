@@ -68,6 +68,31 @@ apply codemods and list the manual steps. This file is the human summary.
   `x-karni-tree` into `ResourceSchema.tree` and `FieldDef.tree`. New
   component roles `tree-view`, `tree-select` and `tree-breadcrumb`, and the
   theme tokens `--karni-tree-indent` and `--karni-tree-max-height`.
+- **Per-user grants (experimental): access given to one user, next to the
+  role grants.** `UserGrant` in `karni.accounts` (migration `0009`) holds a
+  permission pattern and a scope written as in `KARNI_ROLES`, `targets` (row
+  ids for a `related:<key>` scope, in place of `user.<key>`), `expires_at`,
+  `granted_by` and `reason`, with every change in the history. While
+  `KARNI_USER_GRANTS` is on (default off), `grants_for` adds a user's live
+  grants to their role grants, so `Granted()`, `Can`, `user.can`,
+  `@requires`, the admin's row scope and imports answer with the union, for
+  one more query per request however many checks it makes. Off, no grant row
+  is read. `karni.accounts.grants` writes them (`grant`, `bulk_grant`,
+  `change`, `expire`, `revoke`), refusing a bad pattern, scope or targets
+  (`E360`, `E361`, `E362`), a grant the operator does not hold (`E363`) and
+  a field `change()` does not set (`E365`),
+  and `scope_targets(user, scope, permission=...)` gives the target ids a
+  user's roles and user grants hold, with the grant behind each, for the
+  tree scope and the menus to come. The admin edits a user's grants on their
+  page and lists them all under *User grants* (with *Expire selected*), the
+  effective permissions mark each source as a role or a user grant, and
+  `api/auth/permissions/grants/` lists, adds, changes, revokes and
+  bulk-grants them (`E364` once switched off). `karni why` and `karni
+  why-empty` name the user grant that decided, with its id, reason and
+  expiry. `features: user_grants: true` in `karni.yaml` turns it on through
+  `karni plan` and `karni build`. `Grant` gains `targets` and `grant_id`,
+  and `GrantSource` the user grant's fields, all defaulting to empty.
+  [docs/accounts.md](docs/accounts.md#per-user-grants).
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

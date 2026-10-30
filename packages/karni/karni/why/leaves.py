@@ -124,7 +124,7 @@ def _gate_text(explained: Explained, user: Any) -> str:
         if allows:
             via = ", ".join(_source_name(s) for s in granted) or "a grant"
             return f"holds {key} through {via}"
-        return f"no role you hold grants {key}"
+        return f"no {_grantors()} you hold grants {key}"
     if isinstance(predicate, Where):
         if explained.rows is True or explained.rows is False:
             return f"the function returned {explained.rows}"
@@ -135,7 +135,32 @@ def _gate_text(explained: Explained, user: Any) -> str:
 def _source_name(source: Any) -> str:
     if source.origin == "superuser":
         return "superuser"
+    if source.origin == USER_GRANT:
+        return f"user grant {source.grant_id} (scope {source.scope_label}{_targets(source)})"
     return f"role {source.role!r} (scope {source.scope_label})"
+
+
+#: The ``origin`` of a per-user grant's source (``karni.accounts.grants.ORIGIN``).
+USER_GRANT = "user_grant"
+
+
+def _user_grants_on() -> bool:
+    from karni.accounts.grants import enabled
+
+    return enabled()
+
+
+def _grantors() -> str:
+    """What may grant a permission: roles, and user grants while they are on."""
+    return "role or user grant" if _user_grants_on() else "role"
+
+
+def _targets(source: Any) -> str:
+    targets = tuple(getattr(source, "targets", ()) or ())
+    if not targets:
+        return ""
+    shown = ", ".join(targets[:5]) + (f" and {len(targets) - 5} more" if len(targets) > 5 else "")
+    return f" on {shown}"
 
 
 def _matches(base: QuerySet[Any] | None, row: Model | None, rows: Any) -> bool | None:
@@ -404,6 +429,11 @@ def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | N
             fixes.append(f"give {who} the role {others[0]!r}, which holds {key!r}")
         elif not roles:
             fixes.append(f"give {who} a role and grant it {key!r} in KARNI_ROLES{where}")
+        if _user_grants_on():
+            fixes.append(
+                f"give {who} a user grant of {key!r}: karni.accounts.grants.grant(...) or the "
+                "admin's user grants"
+            )
         return fixes
     if row is None or leaf.allows is False:
         return []
@@ -414,6 +444,12 @@ def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | N
             if owner:
                 now = row_value(row, owner, you=user)
                 fixes.append(f"make {who} the row's {owner} (now {now}) for the 'own' scope")
+        elif source.scope == "related" and source.origin == USER_GRANT and source.targets:
+            path = scope_paths(model).get(source.scope_path, source.scope_path)
+            fixes.append(
+                f"add the row's {path} ({row_value(row, path, you=user)}) to the targets of "
+                f"user grant {source.grant_id}"
+            )
         elif source.scope == "related":
             path = scope_paths(model).get(source.scope_path, source.scope_path)
             fixes.append(
@@ -439,8 +475,26 @@ class GrantLine:
     data: dict[str, Any]
 
 
-def grant_lines(leaf: Explained, *, user: Any, model: type[Model]) -> list[GrantLine]:
-    """The grants a ``Can`` leaf consulted: per role, scope, origin and the rows it reaches."""
+def _grant_rows(source: Any, rows_by_grant: list[tuple[Any, Any]]) -> Any:
+    """The rows the grant behind ``source`` reaches: a user grant by id, a role by scope."""
+    for grant, rows in rows_by_grant:
+        grant_id = getattr(grant, "grant_id", "")
+        if source.origin == USER_GRANT:
+            if grant_id == source.grant_id:
+                return rows
+        elif not grant_id and (grant.scope, grant.scope_path) == (source.scope, source.scope_path):
+            return rows
+    return False
+
+
+def grant_lines(
+    leaf: Explained, *, user: Any, model: type[Model], row: Model | None = None
+) -> list[GrantLine]:
+    """The grants a ``Can`` leaf consulted: per role or user grant, scope and the rows it reaches.
+
+    With ``row``, each grant also says whether it reaches that row, so the
+    grant that decided is named.
+    """
     predicate = leaf.predicate
     if not isinstance(predicate, Can):
         return []
@@ -456,32 +510,34 @@ def grant_lines(leaf: Explained, *, user: Any, model: type[Model]) -> list[Grant
         elif not sources:
             others = holders(key)
             held = f" (roles that hold it: {', '.join(others)})" if others else ""
-            text.append(f"{key}  none: no role you hold grants it{held}")
+            text.append(f"{key}  none: no {_grantors()} you hold grants it{held}")
         for source in sources:
-            rows = next(
-                (
-                    r
-                    for grant, r in rows_by_grant
-                    if grant.scope == source.scope and grant.scope_path == source.scope_path
-                ),
-                False,
-            )
+            rows = _grant_rows(source, rows_by_grant)
             origin = _origin_text(source)
+            reaches = _matches(None, row, rows) if source.scope != "none" else None
+            mark = "  ← reaches this row" if reaches else ""
             if source.scope == "none":
                 text.append(f"{key}  role {source.role!r}: revoked in the permission matrix")
             else:
                 text.append(
-                    f"{key}  scope {source.scope_label}  {origin}  → {q_text(rows, you=user)}"
+                    f"{key}  scope {source.scope_label}{_targets(source)}  {origin}  → "
+                    f"{q_text(rows, you=user)}{mark}"
                 )
-            entries.append(
-                {
-                    "permission": key,
-                    "role": source.role,
-                    "scope": source.scope_label,
-                    "origin": source.origin,
-                    "rows": q_text(rows, you=user),
-                }
-            )
+            entry: dict[str, Any] = {
+                "permission": key,
+                "role": source.role,
+                "scope": source.scope_label,
+                "origin": source.origin,
+                "rows": q_text(rows, you=user),
+            }
+            if row is not None:
+                entry["reaches_row"] = bool(reaches)
+            if source.origin == USER_GRANT:
+                entry["grant"] = source.grant_id
+                entry["reason"] = source.reason
+                entry["expires_at"] = source.expires_at.isoformat() if source.expires_at else None
+                entry["targets"] = list(source.targets)
+            entries.append(entry)
         found.append(GrantLine(key, text, {"permission": key, "grants": entries}))
     return found
 
@@ -489,6 +545,14 @@ def grant_lines(leaf: Explained, *, user: Any, model: type[Model]) -> list[Grant
 def _origin_text(source: Any) -> str:
     if source.origin == "superuser":
         return "(superuser: every permission at scope all)"
+    if source.origin == USER_GRANT:
+        parts = [f"user grant {source.grant_id}"]
+        if source.reason:
+            parts.append(f"reason {source.reason!r}")
+        parts.append(
+            f"expires {source.expires_at:%Y-%m-%d %H:%M}" if source.expires_at else "no expiry"
+        )
+        return f"({', '.join(parts)})"
     if source.origin == "matrix":
         return f"(role {source.role!r}, set in the permission matrix)"
     location = settings_location("KARNI_ROLES", f'"{source.role}"')

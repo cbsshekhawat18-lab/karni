@@ -1,0 +1,21 @@
+# Per-user grants: a built-in feature of karni (karni.accounts.grants).
+name = "user_grants"
+kind = "feature"
+title = "Per-user grants"
+purpose = "Grants to one user, with targets and an expiry, beside the role grants."
+status = "experimental"
+use_when = ["access for one user", "per-user permissions", "this customer sees these regions", "grant access until a date", "temporary access", "a user permission table"]
+switch = "KARNI_USER_GRANTS"
+docs = "docs/accounts.md#per-user-grants"
+
+[provides]
+models = ["UserGrant"]
+endpoints = ["/api/auth/permissions/grants/", "/api/auth/permissions/grants/<id>/", "/api/auth/permissions/grants/bulk/"]
+pages = ["the user's grants on their admin page", "User grants in the admin"]
+settings = { KARNI_USER_GRANTS = "boolean" }
+
+[[asks]]
+question = "Do some users get access one by one (these regions, these sections, until a date), besides their roles?"
+setting = "KARNI_USER_GRANTS"
+options = [true, false]
+default = false

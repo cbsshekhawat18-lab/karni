@@ -301,6 +301,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500",
         ((f"{SL}/crm/models.py", 'owner_field = "lead__workspace__members"'),),
     ),
+    Capability(
+        "permissions",
+        "Per-user grants next to the role grants: a pattern and a scope for one user, with "
+        "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
+        "Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(

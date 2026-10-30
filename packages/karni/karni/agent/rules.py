@@ -297,10 +297,13 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
             "settings, Docker/Compose config, Celery config, HTML tables, forms, or detail "
-            "views. Karni provides all of these. If you think you need one, you need an "
-            "override on an existing Karni base instead. The tables, forms and detail views "
-            "meant here are app screens. A public server-rendered site (K309) is the one place "
-            "for hand-written HTML pages, and its forms still post to a BaseViewSet."
+            "views. Karni provides all of these. Never write a table of per-user permissions "
+            "either: access given to one user is a per-user grant (`features: user_grants`, "
+            "`karni.accounts.grants`), which Granted() already reads. If you think you need one, "
+            "you need an override on an existing Karni base instead. The tables, forms and "
+            "detail views meant here are app screens. A public server-rendered site (K309) is "
+            "the one place for hand-written HTML pages, and its forms still post to a "
+            "BaseViewSet."
         ),
         rationale=(
             "Each of these ships in Karni with tested defaults and override points. A public "
@@ -369,11 +372,11 @@ RULES: tuple[Rule, ...] = (
             "first: the CATALOG lines of `karni context`, `karni modules list` and `karni "
             "modules show <name>` list every module and built-in feature (payments, approvals, "
             "login as a user, a public site, two-factor sign-in, sign-in with a code or with "
-            "Google, Microsoft or Apple, terms acceptance, response caching), whether the "
-            "project has it, its options and the questions to ask. Add a module with `karni "
-            "add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or "
-            "`features:`), and take a module out with `karni remove <name>`, which never drops "
-            "its tables."
+            "Google, Microsoft or Apple, terms acceptance, per-user grants, response caching), "
+            "whether the project has it, its options and the questions to ask. Add a module "
+            "with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its "
+            "setting (or `features:`), and take a module out with `karni remove <name>`, which "
+            "never drops its tables."
         ),
         rationale=(
             "Code that would be written more than once belongs in Karni, never per project. "

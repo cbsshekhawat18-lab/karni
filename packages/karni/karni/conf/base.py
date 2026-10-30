@@ -318,6 +318,9 @@ BASE: dict[str, Any] = {
         "customer": {"name": "Customer", "grants": {"*": "own"}},
     },
     "KARNI_ROLES_AUTOSYNC": env.bool("KARNI_ROLES_AUTOSYNC", default=True),
+    # Per-user grants (experimental): while True, each user's UserGrant rows join their
+    # role grants (one more query per request). Off, they grant nothing and cost nothing.
+    "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

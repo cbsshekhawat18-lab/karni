@@ -46,6 +46,7 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_ACCOUNTS_DEFAULT_ROLES": "Roles (Django groups) every self-registered user starts with, e.g. `attendee`.",
     "KARNI_ACCOUNTS_HONEYPOT_FIELD": 'Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default).',
     "KARNI_ROLES": 'The project\'s roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data).',
+    "KARNI_USER_GRANTS": "Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants).",
     "KARNI_ROLES_AUTOSYNC": "Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand).",
     "KARNI_AUDIT_ASYNC": "Write change-history entries from a Celery task instead of inside the request (history becomes eventually consistent). See [change history](change-history.md).",
     "KARNI_AUDIT_RETENTION_DAYS": "Days of change history to keep. `None` (the default) keeps everything and schedules no pruning.",

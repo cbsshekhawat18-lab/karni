@@ -106,6 +106,7 @@ _FEATURE_SETTINGS: Final = {
     "email_code_login": "KARNI_EMAIL_OTP",
     "social_login": "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "terms": "KARNI_TERMS",
+    "user_grants": "KARNI_USER_GRANTS",
 }
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
 _MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree"})

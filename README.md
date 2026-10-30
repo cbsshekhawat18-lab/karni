@@ -374,6 +374,7 @@ All of this is built and tested, including row scope in the admin and import wit
 - `experimental` The `related:<key>` scope (`class Karni: scope_paths`) and `custom:` scopes
 - `stable` Membership through a path: `owner_field = "workspace__members"`
 - `stable` Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500
+- `experimental` Per-user grants next to the role grants: a pattern and a scope for one user, with targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). Experimental tier
 - `experimental` Field visibility per role (`class Karni: field_roles`)
 - `experimental` Row scope in the admin, from the same grants as the API
 - `stable` Change history: who changed which field, when, from what to what

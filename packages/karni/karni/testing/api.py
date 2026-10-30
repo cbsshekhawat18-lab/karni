@@ -311,7 +311,8 @@ def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
 
     An ``own`` grant sets the model's owner field to the user; a ``related``
     grant sets the scope path to the user's side of it (``user.venue``), when
-    the user has one. An ``all`` grant needs nothing.
+    the user has one, or to its first target (a per-user grant with targets,
+    through the foreign key's ``<field>_id``). An ``all`` grant needs nothing.
     """
     from karni.accounts.roles import grants_for
     from karni.meta import owner_field, permission_key, scope_paths
@@ -326,10 +327,28 @@ def granted_values(model: type[models.Model], user: Any) -> dict[str, Any]:
                 found.setdefault(owner, user)
         elif grant.scope == "related":
             path = scope_paths(model).get(grant.scope_path)
+            if path and grant.targets:
+                attname = _target_attname(model, path)
+                if attname:
+                    found.setdefault(attname, grant.targets[0])
+                continue
             value = getattr(user, grant.scope_path, None)
             if path and value is not None:
                 found.setdefault(path, value)
     return found
+
+
+def _target_attname(model: type[models.Model], path: str) -> str | None:
+    """``venue_id`` for a scope path that is one foreign key of ``model``, else ``None``."""
+    from django.core.exceptions import FieldDoesNotExist
+
+    try:
+        field = model._meta.get_field(path)
+    except FieldDoesNotExist:
+        return None
+    if getattr(field, "many_to_one", False) or getattr(field, "one_to_one", False):
+        return str(field.attname)
+    return None
 
 
 def readable_row(model: type[models.Model], user: Any, **values: Any) -> Any:

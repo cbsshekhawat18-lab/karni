@@ -20,8 +20,9 @@ from karni_cli.spec.validate import validate_text
 
 from .conftest import REPO_ROOT
 
-#: Tokens the CATALOG block of karni context may take with Karni's 4 modules and 5 features.
-CATALOG_TOKEN_BUDGET = 240
+#: Tokens the CATALOG block of karni context may take with Karni's 4 modules and 6 features
+#: (240 for 5, plus one line for user_grants).
+CATALOG_TOKEN_BUDGET = 265
 
 CHAT = """
 name = "chat"
@@ -111,6 +112,7 @@ def test_every_manifest_in_the_repo_is_valid() -> None:
         "social_login",
         "terms",
         "two_factor",
+        "user_grants",
     ]
     for manifest in loaded.modules:
         path = REPO_ROOT / "modules" / f"karni-{manifest.name}" / f"karni_{manifest.name}"
@@ -131,7 +133,9 @@ def test_the_bundled_copy_serves_without_the_monorepo(monkeypatch: pytest.Monkey
         loaded = catalog.load()
         payments = loaded.get("payments")
         assert payments is not None and "_catalog" in payments.source
-        assert len(loaded.features) == 5 and loaded.problems == []
+        source = Path(__file__).resolve().parents[2] / "karni" / "karni" / "catalog" / "features"
+        # A stale bundle (karni-cli installed before a feature was added) fails here: reinstall.
+        assert len(loaded.features) == len(list(source.glob("*.toml"))) and loaded.problems == []
     finally:
         catalog._bundled.cache_clear()
         sys.modules.pop(catalog._MODULE_NAME, None)

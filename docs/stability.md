@@ -180,6 +180,12 @@ Experimental now:
   `karni.testing.create_external_tables`, the pytest option
   `--karni-external-tables`, `manage.py karni_inspect` and `karni make model
   --external`.
+- [Per-user grants](accounts.md#per-user-grants): the `KARNI_USER_GRANTS`
+  setting, the `UserGrant` model, `karni.accounts.grants`, the `targets` and
+  `grant_id` of `karni.accounts.roles.Grant` and the user-grant fields of
+  `GrantSource` and of the effective permissions, the `permissions/grants/`
+  endpoints, the grants inline and admin (`karni.accounts.admin.grant_form`),
+  and `features: user_grants` in `karni.yaml`.
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
   `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
   `karni.facts` and the `karni_cli.spec` package.
