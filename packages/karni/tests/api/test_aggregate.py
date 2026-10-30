@@ -302,7 +302,7 @@ def test_top_with_a_second_dimension(catalog: dict[str, Any], analyst: Any) -> N
 def test_text_numbers_are_summed(catalog: dict[str, Any], analyst: Any) -> None:
     body = _get(client_as(user=analyst), group_by="channel", metric="sum", value="revenue").json()
     pairs = _pairs(body)
-    # online: 1.2K + "" (none) + Undisclosed (none) + 2,000; store: 450 + 1.5M + 1.2b
+    # online: 1.2K + "" (none) + Undisclosed (none) + 2,000. store: 450 + 1.5M + 1.2b
     assert pairs["Online"] == pytest.approx(3200.0)
     assert pairs["Store"] == pytest.approx(450 + 1_500_000 + 1_200_000_000)
     counted = _get(

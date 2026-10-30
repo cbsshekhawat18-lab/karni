@@ -10,7 +10,7 @@ from karni.aggregation import Aggregation
 from karni.api import Access, BaseViewSet, HasRole, Owned
 from tests.aggregateapp.models import Category, Product
 
-#: The owner reads their own products; an analyst reads every product.
+#: The owner reads their own products, an analyst every product.
 READERS = Access(read=Owned("owner") | HasRole("analyst"), write=HasRole("analyst"))
 
 
