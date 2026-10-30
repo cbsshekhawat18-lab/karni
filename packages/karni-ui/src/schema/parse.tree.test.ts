@@ -3,6 +3,8 @@
  * relations that point at a tree, parsed from the simulated tree backend's
  * document (drf-spectacular dialect).
  */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { treeOpenApi } from "../components/resource/tree/tree-backend";
 import { parseOpenApi, parseTreeExtension } from "./parse";
@@ -66,4 +68,50 @@ describe("x-karni-tree", () => {
     expect(parseTreeExtension("tree")).toBeUndefined();
     expect(parseTreeExtension(undefined)).toBeUndefined();
   });
+});
+
+// The generated testapp snapshot, once it carries the tree models (Region,
+// Category, Product): skipped until packages/karni's snapshot is copied here.
+
+const SNAPSHOTS = ["schema.testapp.json", "schema.testapp.bigint.json"] as const;
+
+describe.each(SNAPSHOTS)("x-karni-tree in the generated snapshot %s", (file) => {
+  const path = join(process.cwd(), "tests", "fixtures", file);
+  const text = existsSync(path) ? readFileSync(path, "utf8") : "";
+
+  it.skipIf(!text.includes("x-karni-tree"))(
+    "parses the testapp's tree resources and the relations that point at them " +
+      "(no x-karni-tree yet? copy the snapshot from packages/karni tests/api/fixtures)",
+    () => {
+      const parsed = parseOpenApi(JSON.parse(text));
+      const resources = Object.values(parsed.resources);
+      const region = resources.find(
+        (resource) => resource.tree !== undefined && resource.fields.some((f) => f.name === "code"),
+      );
+      const category = resources.find((resource) => resource.tree?.ordered === true);
+      const product = resources.find((resource) =>
+        resource.fields.some((field) => field.name === "category"),
+      );
+      expect(region?.tree).toEqual({ parent: "parent", ordered: false });
+      expect(category?.tree).toEqual({ parent: "parent", ordered: true });
+      for (const tree of [region, category]) {
+        expect(tree?.operations.tree?.method).toBe("get");
+        expect(tree?.operations.children?.method).toBe("get");
+        expect(tree?.operations.ancestors?.method).toBe("get");
+        expect(tree?.operations.move?.method).toBe("post");
+        const parent = tree?.fields.find((field) => field.name === "parent");
+        expect(parent?.kind).toBe("relation");
+        expect(parent?.tree).toBeDefined();
+      }
+      expect(category?.fields.find((field) => field.name === "position")?.readOnly).toBe(true);
+      expect(product?.tree).toBeUndefined();
+      expect(product?.operations.tree).toBeUndefined();
+      const fk = product?.fields.find((field) => field.name === "category");
+      expect(fk?.relation?.many).toBe(false);
+      expect(fk?.tree).toEqual({ parent: "parent", ordered: true });
+      const m2m = product?.fields.find((field) => field.name === "regions");
+      expect(m2m?.relation?.many).toBe(true);
+      expect(m2m?.tree).toEqual({ parent: "parent", ordered: false });
+    },
+  );
 });
