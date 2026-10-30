@@ -224,3 +224,29 @@ def test_the_terms_gate(settings: Settings) -> None:
     assert TermsAcceptance.objects.get().user_id == user.pk
     assert client.get("/api/users/").status_code == 200
     assert client.get("/api/auth/me/").json()["terms"]["accepted"] is True
+
+
+def test_per_user_grants_with_integer_users(settings: Settings) -> None:
+    from karni.accounts.models import UserGrant
+    from karni.accounts.roles import user_can
+
+    settings.KARNI_USER_GRANTS = True
+    settings.ROOT_URLCONF = _urlconf()
+    staff, member = _user("staff@example.com"), _user()
+    assign_role(staff, "staff")
+    staff_client = _bearer(_login(APIClient(), "staff@example.com").json()["access"])
+    created = staff_client.post(
+        "/api/auth/permissions/grants/",
+        {"user": member.pk, "permission": "intuserapp.user:view", "scope": "all"},
+        format="json",
+    )
+    assert created.status_code == 201, created.content
+    body = created.json()
+    assert body["user"] == member.pk and body["granted_by"] == staff.pk  # JSON numbers
+    assert UserGrant.objects.get().granted_by_id == staff.pk
+    assert user_can(get_user_model().objects.get(pk=member.pk), "intuserapp.user:view")
+    listed = staff_client.get("/api/auth/permissions/grants/", {"user": member.pk}).json()
+    assert [row["id"] for row in listed["results"]] == [body["id"]]
+    mine = _bearer(_login(APIClient()).json()["access"]).get("/api/auth/permissions/effective/")
+    entry = next(e for e in mine.json()["permissions"] if e["permission"] == "intuserapp.user:view")
+    assert [source["origin"] for source in entry["sources"]] == ["user_grant"]

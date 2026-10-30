@@ -688,8 +688,8 @@ def effective_permissions(user: Any) -> EffectiveReport:
                     row.role.slug, row.role.name, scope_value(row.scope, row.scope_path), row.origin
                 )
             )
-        for key, found in _user_grant_sources(user).items():
-            sources.setdefault(key, []).extend(found)
+        for key, granted in _user_grant_sources(user).items():
+            sources.setdefault(key, []).extend(granted)
     entries: list[Effective] = []
     for label, model in matrix_models().items():
         for action in model_actions(model):
