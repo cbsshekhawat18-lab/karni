@@ -15,6 +15,7 @@ wires it in so that it runs without project code:
 | [`assert_row_hidden`, `assert_admin_row_hidden`](#hidden-rows-the-row-scope-check) | one line proving a row outside a client's row scope behaves as "does not exist" on every API surface, and in the admin |
 | [`assert_pages`](#public-pages-assert_pages) | every page of a public site answers, has a title, a description and alt text, and links only to URLs that exist |
 | [`assert_schema_snapshot`](#schema-snapshot) | an accidental API break fails CI |
+| [`assert_module_manifest`](modules.md#checking-a-manifest) | a module's `karni.module.toml` matches its entry point, settings and models (experimental) |
 | [`karni.testing.factories`](#automatic-factories-karnitestingfactories) | a valid factory-boy factory for any model, with realistic values. `<app>/factories.py` overrides it |
 | [`karni.testing.performance`](#query-budgets-and-n1-karnitestingperformance) | the `query_budget` fixture, per-endpoint budgets that raise, the N+1 scaling check |
 | the `karni` pytest plugin | loaded automatically (`pytest11` entry point) wherever `karni` is installed |

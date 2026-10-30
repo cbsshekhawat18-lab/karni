@@ -8,7 +8,9 @@ statically from the project tree (no Django): KIND, APPS, the local apps in
 the ``# karni:apps`` block that live in this project, PAGES, the files
 under ``frontend/src/pages/``, and SITE, the routes of every local urls.py
 that config/urls.py includes (the public site, webhooks), and DESIGN, the
-designer's pages ``karni import design`` imported (``.karni/design.json``). Together with
+designer's pages ``karni import design`` imported (``.karni/design.json``), and CATALOG,
+a line per module and built-in feature with whether the project has it
+(:func:`catalog_lines`, experimental). Together with
 ``karni rules`` this is enough for an agent to start work without reading
 files.
 
@@ -148,6 +150,43 @@ def design_line(project: Path) -> str | None:
     return f"DESIGN: {record.get('source', '?')} in {record.get('app', '?')} ({', '.join(parts)})"
 
 
+def catalog_lines(project: Path, backend_output: str = "") -> list[str]:
+    """Experimental. The ``CATALOG:`` block: one line per module and built-in feature.
+
+    Each line names the entry, whether the project has it (a module is
+    added when its app is in the ``# karni:apps`` block, a feature is on
+    when the backend's ``FEATURES:`` line names it) and its purpose, from
+    the module catalog (:mod:`karni_cli.catalog`). Read without a
+    subprocess. ``[]`` when the catalog cannot be read.
+    """
+    from karni_cli import catalog
+
+    try:
+        loaded = catalog.load(project, ask_project=False)
+    except CliError:
+        return []
+    found = next((ln for ln in backend_output.split("\n") if ln.startswith("FEATURES:")), None)
+    on = set(found.removeprefix("FEATURES:").split()) if found is not None else None
+    lines = ["CATALOG: karni modules show NAME for options. Modules: karni add NAME."]
+    for manifest in loaded.modules:
+        state = "added" if manifest.name in loaded.added else "not added"
+        lines.append(f"  {manifest.name} module, {state}: {manifest.purpose}")
+    for manifest in loaded.features:
+        state = "" if on is None else (", on" if manifest.name in on else ", off")
+        lines.append(f"  {manifest.name} feature{state}: {manifest.purpose}")
+    return lines
+
+
+def with_catalog(text: str, lines: list[str]) -> str:
+    """``text`` with the CATALOG block before ``BASES:``, in place of the ``FEATURES:`` line."""
+    sections = [line for line in text.split("\n") if not line.startswith("FEATURES:")]
+    insert_at = next(
+        (i for i, line in enumerate(sections) if line.startswith("BASES:")), len(sections)
+    )
+    sections[insert_at:insert_at] = lines
+    return "\n".join(sections)
+
+
 def assemble(backend_output: str, ui_lines: list[str]) -> str:
     """Merge UI lines into the backend sections, keeping the documented order
     (MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE, MODULES, BASES)."""
@@ -168,7 +207,7 @@ def build_context_text(
     manifest: Path | None = None,
 ) -> str:
     """The full inventory: KIND, APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE, MODULES,
-    BASES.
+    CATALOG, BASES.
 
     Raises :class:`CliError` when the backend inventory command fails, or the
     project's kind is not one Karni knows.
@@ -185,7 +224,7 @@ def build_context_text(
     ui_lines += [
         line for line in (pages_line(project), site_line(project), design_line(project)) if line
     ]
-    text = assemble(proc.stdout, ui_lines)
+    text = with_catalog(assemble(proc.stdout, ui_lines), catalog_lines(project, proc.stdout))
     apps = apps_line(project)
     return "\n".join(line for line in (kind, apps, text) if line)
 

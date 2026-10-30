@@ -183,6 +183,12 @@ Experimental now:
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
   `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
   `karni.facts` and the `karni_cli.spec` package.
+- [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
+  manifest format and the feature manifests, the `karni.modules` entry point
+  group, `karni.catalog` (with `python -m karni.catalog`),
+  `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
+  `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
+  line of `manage.py karni_context`, and `karni_cli.catalog`.
 
 ## Supported platforms
 

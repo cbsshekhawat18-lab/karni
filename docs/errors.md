@@ -914,6 +914,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set KARNI_ADMIN_LOGO = 'karni' for Karni's mark, or {'light': '<static path>', 'dark': ..., 'icon': ...} with at least 'light'. Leave it unset for a text header.
 
+<a id="e310"></a>
+
+#### E310: A module's manifest does not match the module
+
+*test failure* · from `karni.testing.assert_module_manifest`
+
+**Why Karni objects.** karni.module.toml is what karni modules, karni add, karni remove and the app spec read about a module. assert_module_manifest checks it parses, that the karni.modules entry point names the package, that its settings are the DEFAULTS fragment's, and that its models are the app's. Each listed line is one mismatch.
+
+**Fix.** Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of conf.DEFAULTS under [provides.settings] with its type, list the app's models under provides.models, and add [project.entry-points."karni.modules"] <name> = "karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists every key.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -2942,9 +2952,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** modules lists what karni add installs, and this release knows approvals, impersonation, payments and site.
+**Why Karni objects.** modules lists what karni add installs: the modules of the catalog (karni modules list), which are Karni's own (approvals, impersonation, payments and site) and any module installed next to karni-cli that ships a manifest.
 
-**Fix.** Fix the name. A module of your own is added with karni add and stays out of the spec until the module catalog lets modules declare themselves.
+**Fix.** Fix the name. A module of your own joins the spec once it ships a karni.module.toml (docs/modules.md). Without one, add it with karni add and leave it out of the spec.
 
 <a id="c237"></a>
 
@@ -3146,6 +3156,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask again.
 
+<a id="c313"></a>
+
+### C313: No module or feature of that name in the catalog
+
+*karni command* · from `karni modules show, karni remove (karni_cli.catalog)`
+
+**Why Karni objects.** The catalog holds Karni's modules and built-in features, the copies karni-cli bundles and the manifests (karni.module.toml) of the modules the project has installed.
+
+**Fix.** Run `karni modules list` for the names. A module of your own joins the catalog with a karni.module.toml and a karni.modules entry point (docs/modules.md).
+
+<a id="c314"></a>
+
+### C314: A module manifest is not valid
+
+*karni command* · from `karni modules, karni add, karni remove (karni.catalog)`
+
+**Why Karni objects.** Each module describes itself in karni.module.toml: its purpose, what it provides, the questions to ask and the wiring karni add performs. A manifest that does not follow the format, or that names a module or feature the catalog does not have, cannot be used.
+
+**Fix.** Fix the key the message names (docs/modules.md lists every key), then run `karni modules show <name>`. A module's own tests check it with karni.testing.assert_module_manifest.
+
+<a id="c315"></a>
+
+### C315: The module conflicts with one the project has
+
+*karni command* · from `karni add`
+
+**Why Karni objects.** A module's manifest lists the modules and features it cannot work next to (conflicts). karni add refuses before it writes anything.
+
+**Fix.** Remove the other one first (karni remove <name>, or turn the feature off), or choose another module.
+
+<a id="c316"></a>
+
+### C316: Another module requires the one being removed
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** A module's manifest lists what it needs (requires). Removing a module another added module needs would leave that one broken.
+
+**Fix.** Remove the module that requires it first (the message names it), then this one.
+
+<a id="c317"></a>
+
+### C317: The module is not in this project
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** karni remove takes out what karni add wrote: the dependency in pyproject.toml, the app in the # karni:apps block, its middleware, context processors and URL include, and its recorded agent guidance. None of that is in this project.
+
+**Fix.** Check the name with `karni modules list` (an added module says added).
+
+<a id="c318"></a>
+
+### C318: A built-in feature is switched by a setting, not added or removed
+
+*karni command* · from `karni add, karni remove`
+
+**Why Karni objects.** Features (two_factor, terms, api_cache and the others) ship with karni. There is no package to add and nothing to take out: one setting turns each on or off.
+
+**Fix.** Turn it on or off with its key under features: in karni.yaml, or its setting (karni modules show <name> names both).
+
+<a id="c319"></a>
+
+### C319: The module's tables exist in the database
+
+*karni command* · from `karni remove`
+
+**Why Karni objects.** karni remove never drops data. Once the module is out of INSTALLED_APPS, Django can no longer drop its tables, so the choice is made now: drop them while the module is still added, or keep them.
+
+**Fix.** To drop the tables and their rows, run the printed `karni migrate <app> zero`, then karni remove again. To keep them in the database, run karni remove --keep-tables.
+
 <a id="c320"></a>
 
 ### C320: karni explain needs a code or --failure, not both
@@ -3185,6 +3265,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** The command ran in the project's interpreter and failed without a coded Karni error, usually because Django could not start (settings, imports, the database).
 
 **Fix.** Run the command it names with `karni manage ...` to see the full output, fix what it reports, then retry.
+
+<a id="c324"></a>
+
+### C324: A module or feature needs another, or cannot be next to one
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The catalog's manifests say what each module and feature requires and conflicts with. The spec lists one without what it requires, or two that conflict.
+
+**Fix.** Add what the message says is required (under modules: or features:), or leave one of the two that conflict out. karni modules show <name> lists both.
 
 <a id="c340"></a>
 
@@ -3754,15 +3844,15 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 <a id="k307"></a>
 
-### K307: Cross-project code: a Karni module.
+### K307: Cross-project code: a Karni module (karni modules list).
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it.
+**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
 
-**Why Karni objects.** Code that would be written more than once belongs in Karni, never per project.
+**Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 
-**Fix.** 
+**Fix.** Run `karni modules show <name>`, answer its questions, then `karni add <name>`.
 
 <a id="k308"></a>
 

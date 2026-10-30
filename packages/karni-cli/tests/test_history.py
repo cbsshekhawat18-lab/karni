@@ -90,6 +90,8 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=BACKEND + "\n", stderr=""),
     )
+    # The CATALOG block is test_context's: here the inventory is the backend's alone.
+    monkeypatch.setattr(context_cmd, "catalog_lines", lambda *a, **k: [])
     return root
 
 

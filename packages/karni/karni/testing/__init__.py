@@ -31,6 +31,9 @@ package stays free of test-only imports:
 * ``assert_pages`` (:mod:`karni.testing.pages`): a public site's pages
   answer, carry a title, a description and alt text, and link only to URLs
   that exist.
+* ``assert_module_manifest`` (:mod:`karni.testing.catalog`, experimental): a
+  module's ``karni.module.toml`` parses and matches its entry point, settings
+  fragment and models;
 * ``query_budget`` (:mod:`karni.testing.performance`);
 * ``create_external_tables`` (:mod:`karni.testing.external`, experimental):
   tables for external models in a test database, which the pytest plugin
@@ -46,6 +49,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from karni.testing.api import APITestCase, assert_crud, client_as, user_with_roles
+    from karni.testing.catalog import assert_module_manifest
     from karni.testing.external import create_external_tables
     from karni.testing.hidden import assert_admin_row_hidden, assert_row_hidden
     from karni.testing.isolation import assert_isolated
@@ -58,6 +62,7 @@ __all__ = [
     "assert_admin_row_hidden",
     "assert_crud",
     "assert_isolated",
+    "assert_module_manifest",
     "assert_pages",
     "assert_row_hidden",
     "assert_schema_snapshot",
@@ -72,6 +77,7 @@ _LAZY = {
     "assert_admin_row_hidden": "karni.testing.hidden",
     "assert_crud": "karni.testing.api",
     "assert_isolated": "karni.testing.isolation",
+    "assert_module_manifest": "karni.testing.catalog",
     "assert_pages": "karni.testing.pages",
     "assert_row_hidden": "karni.testing.hidden",
     "assert_schema_snapshot": "karni.testing.schema",

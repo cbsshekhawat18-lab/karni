@@ -137,15 +137,25 @@ published file differs from the code: regenerate it with
 
 ### `modules`
 
-Each key is a module `karni add <name>` installs: `approvals`,
-`impersonation`, `payments` or `site`. The value is a mapping of the
-module's options, or nothing. An option is one of the module's own settings,
-lowercased and without its prefix: `payments: {provider: stripe}` is
+Each key is a module `karni add <name>` installs, one of the modules of
+[the module catalog](modules.md#the-module-catalog) (`karni modules list`):
+Karni's `approvals`, `impersonation`, `payments` and `site`, and any module
+installed next to karni-cli that ships a manifest. The value is a mapping of
+the module's options, or nothing. An option is one of the module's own
+settings its manifest lists, lowercased and without its prefix, with the
+type the manifest gives it: `payments: {provider: stripe}` is
 `KARNI_PAYMENTS_PROVIDER = "stripe"`. Credentials such as
 `STRIPE_SECRET_KEY` are never options: they stay in `.env`. A kind with a
-site (`site`, `site+app`) has the `site` module without listing it.
+site (`site`, `site+app`) has the `site` module without listing it. What a
+listed module or feature requires must be listed too, and two that conflict
+cannot both be (`C324`).
 
 ### `features`
+
+The keys are the built-in features of the module catalog that karni.yaml
+takes (`karni modules show <name>` prints each one's questions). Response
+caching (`api_cache`) is in the catalog with no key here yet: set
+`KARNI_API_CACHE` in the settings.
 
 | Key | Takes | Setting |
 |---|---|---|
@@ -362,6 +372,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C252](errors.md#c252) | `database` names an alias the project does not have |
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
+| [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 

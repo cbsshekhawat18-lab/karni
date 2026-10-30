@@ -8,10 +8,12 @@ from karni_cli import project as project_mod
 from karni_cli.commands.context import (
     apps_line,
     assemble,
+    catalog_lines,
     find_manifest,
     manifest_lines,
     pages_line,
     site_line,
+    with_catalog,
 )
 from karni_cli.main import app
 
@@ -21,6 +23,11 @@ BACKEND = (
     "MODULES: payments\n"
     "BASES: BaseModel SoftDeleteModel BaseViewSet KarniModelAdmin AbstractKarniUser"
 )
+
+
+def _top_level(output: str) -> list[str]:
+    """The inventory's ``KEY:`` lines (the CATALOG block's entries are indented)."""
+    return [line for line in output.strip().split("\n") if not line.startswith(" ")]
 
 
 def test_assemble_orders_sections() -> None:
@@ -68,7 +75,7 @@ def test_cli_end_to_end_with_mocked_backend(runner, tmp_path: Path, monkeypatch)
     )
     result = runner.invoke(app, ["context"])
     assert result.exit_code == 0, result.output
-    assert result.output.strip() == BACKEND
+    assert result.output.strip() == with_catalog(BACKEND, catalog_lines(tmp_path, BACKEND))
 
 
 def test_budget_for_ten_model_project() -> None:
@@ -120,8 +127,8 @@ def test_context_prepends_apps_and_appends_pages(
     )
     result = runner.invoke(app, ["context"])
     assert result.exit_code == 0, result.output
-    keys = [line.split(":")[0] for line in result.output.strip().split("\n")]
-    assert keys == ["KIND", "APPS", "MODELS", "VIEWSETS", "PAGES", "MODULES", "BASES"]
+    keys = [line.split(":")[0] for line in _top_level(result.output)]
+    assert keys == ["KIND", "APPS", "MODELS", "VIEWSETS", "PAGES", "MODULES", "CATALOG", "BASES"]
 
 
 def test_context_failure_exits_nonzero(runner, tmp_path: Path, monkeypatch) -> None:
@@ -183,8 +190,14 @@ def test_context_lists_the_site_after_the_pages(
     )
     result = runner.invoke(app, ["context"])
     assert result.exit_code == 0, result.output
-    lines = result.output.strip().split("\n")
-    assert [line.split(":")[0] for line in lines][-4:] == ["PAGES", "SITE", "MODULES", "BASES"]
+    lines = _top_level(result.output)
+    assert [line.split(":")[0] for line in lines][-5:] == [
+        "PAGES",
+        "SITE",
+        "MODULES",
+        "CATALOG",
+        "BASES",
+    ]
     assert "SITE: website(/)" in lines
 
 

@@ -1,35 +1,44 @@
-"""Experimental. What a spec may name besides its own entities: modules, providers, models.
+"""Experimental. What a spec may name besides its own entities: modules, features, models.
 
-:data:`MODULES` lists the first-party modules ``karni add`` installs. A
-module's options in a spec are its settings: the option ``provider`` of
-``payments`` is ``KARNI_PAYMENTS_PROVIDER``, and the option names are the
-module's own ``KARNI_<MODULE>_*`` settings, lowercased, without the prefix.
+Everything here comes from the module catalog (:mod:`karni_cli.catalog`),
+so there is one source. :data:`MODULES` holds each module's models and
+options. A module's options in a spec are its settings: the option
+``provider`` of ``payments`` is ``KARNI_PAYMENTS_PROVIDER``, and the option
+names are the ``KARNI_<MODULE>_*`` settings its manifest lists, lowercased,
+without the prefix, with the JSON types the manifest gives them.
 Credentials (``STRIPE_SECRET_KEY`` and the like) are never options: they
-stay in the environment. ``tests/test_spec.py`` checks this table against
-each installed module's ``conf.DEFAULTS`` and models, so it cannot drift.
-The module catalog (app-builder item A4) will replace it with a manifest per
-module.
+stay in the environment. :data:`FEATURES` holds the built-in features
+``features:`` takes, and :data:`SOCIAL_PROVIDERS` the providers the
+``social_login`` manifest offers.
 
-Override / escape hatch: a module that is not listed is added with
+Override / escape hatch: a module of your own joins the spec by shipping a
+manifest (docs/modules.md#the-module-catalog). One without is added with
 ``karni add <name>`` by hand and stays out of the spec.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+from karni_cli.catalog import load
+
+if TYPE_CHECKING:
+    from karni.catalog import Manifest
 
 __all__ = [
+    "FEATURES",
     "MODULES",
     "OTHER_MODELS",
     "SOCIAL_PROVIDERS",
     "USER_MODEL",
+    "KnownFeature",
     "KnownModule",
+    "known_feature",
+    "known_module",
     "module_setting",
 ]
 
-#: Experimental. ``karni.accounts.social_token.BUILTIN_PROVIDERS``: the names ``social_login`` takes.
-SOCIAL_PROVIDERS: Final = ("google", "microsoft", "apple")
 #: Experimental. The user model every project has (``AUTH_USER_MODEL``).
 USER_MODEL: Final = "karni_accounts.User"
 #: Experimental. Models a relation may target that are neither entities nor a module's.
@@ -47,6 +56,8 @@ class KnownModule:
     name: str
     models: tuple[str, ...]
     options: dict[str, tuple[str, ...]]
+    requires: tuple[str, ...] = ()
+    conflicts: tuple[str, ...] = ()
 
     @property
     def app(self) -> str:
@@ -65,90 +76,57 @@ def module_setting(module: str, option: str) -> str:
     return f"KARNI_{module.upper()}_{option.upper()}"
 
 
-_S, _I, _B, _A, _O = ("string",), ("integer",), ("boolean",), ("array",), ("object",)
-
-#: Experimental. The first-party modules, by the name ``karni add`` takes.
-MODULES: Final[dict[str, KnownModule]] = {
-    module.name: module
-    for module in (
-        KnownModule(
-            "approvals",
-            ("PendingChange", "Decision"),
-            {
-                "required": _I,
-                "approver_roles": _A,
-                "timeout_hours": _I,
-                "on_timeout": _S,
-                "escalation_roles": _A,
-                "notify": _S,
-                "from_email": _S,
-            },
-        ),
-        KnownModule(
-            "impersonation",
-            ("ImpersonationSession",),
-            {
-                "max_minutes": _I,
-                "blocked": _A,
-                "require_reason": _B,
-                "notify_target": _B,
-                "from_email": _S,
-                "banner": _B,
-                "landing": _S,
-            },
-        ),
-        KnownModule(
-            "payments",
-            ("Payment", "Refund", "WebhookEvent"),
-            {
-                "provider": _S,
-                "currency": _S,
-                "checkout_validator": _S,
-                "event_handler": _S,
-                "allowed_redirects": _A,
-            },
-        ),
-        KnownModule(
-            "site",
-            (
-                "SiteSettings",
-                "OpeningHours",
-                "SocialLink",
-                "Block",
-                "Menu",
-                "MenuItem",
-                "Redirect",
-                "PageSeo",
-            ),
-            {
-                "is_active": _S,
-                "server_error_templates": _A,
-                "not_found_templates": _A,
-                "settings_model": _S,
-                "highlight": _O,
-                "inline_tags": _O,
-                "link_schemes": _A,
-                "sanitizer": _S,
-                "image_types": _A,
-                "cache": _S,
-                "cache_timeout": _I,
-                "seed_on_render": _B,
-                "menu_rows": _S,
-                "menu_rows_limit": _I,
-                "redirects_before_views": _B,
-                "editor_role": ("string", "null"),
-                "forms": _O,
-                "form_class": _S,
-                "form_template": _S,
-                "form_classes": _O,
-                "form_presets": _O,
-                "form_messages": _O,
-                "form_required_mark": _S,
-                "form_script": _B,
-                "form_sent_param": _S,
-                "form_page_template": _S,
-                "notify_from": _S,
-            },
-        ),
+def known_module(manifest: Manifest) -> KnownModule:
+    """Experimental. A module manifest as the spec sees it: its models and options."""
+    prefix = f"KARNI_{manifest.name.upper()}_"
+    return KnownModule(
+        manifest.name,
+        manifest.provides.models,
+        {
+            setting[len(prefix) :].lower(): types
+            for setting, types in manifest.provides.settings.items()
+            if setting.startswith(prefix)
+        },
+        manifest.requires,
+        manifest.conflicts,
     )
+
+
+@dataclass(frozen=True)
+class KnownFeature:
+    """Experimental. One key of ``features:``: the setting that switches it, its extra."""
+
+    name: str
+    switch: str
+    extra: str
+    requires: tuple[str, ...] = ()
+    conflicts: tuple[str, ...] = ()
+
+
+def known_feature(manifest: Manifest) -> KnownFeature:
+    """Experimental. A feature manifest as the spec sees it."""
+    return KnownFeature(
+        manifest.name, manifest.switch, manifest.extra, manifest.requires, manifest.conflicts
+    )
+
+
+_CATALOG = load()
+
+#: Experimental. The modules ``karni add`` installs, by name: the module catalog's.
+MODULES: Final[dict[str, KnownModule]] = {m.name: known_module(m) for m in _CATALOG.modules}
+#: Experimental. The keys of ``features:``: the catalog's features that karni.yaml takes.
+FEATURES: Final[dict[str, KnownFeature]] = {
+    m.name: known_feature(m) for m in _CATALOG.features if m.in_spec
 }
+
+
+def _providers() -> tuple[str, ...]:
+    social = _CATALOG.get("social_login")
+    for ask in social.asks if social is not None else ():
+        if ask.setting == "KARNI_SOCIAL_TOKEN_PROVIDERS":
+            return tuple(str(option) for option in ask.options)
+    return ()
+
+
+#: Experimental. ``karni.accounts.social_token.BUILTIN_PROVIDERS``: the names ``social_login`` takes.
+SOCIAL_PROVIDERS: Final = _providers()

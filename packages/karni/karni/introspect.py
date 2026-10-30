@@ -272,6 +272,24 @@ def modules_section() -> str | None:
     return "MODULES: " + " ".join(sorted(found)) if found else None
 
 
+def features_section() -> str | None:
+    """Experimental. The built-in features that are on (``FEATURES: two_factor terms``).
+
+    A feature is on when the setting its manifest names as the switch
+    (:func:`karni.catalog.features`) holds a value. ``none`` when none is on,
+    so ``karni context`` can tell an older karni (no line) from no feature.
+    """
+    from karni.catalog import ManifestError, features
+
+    try:
+        found = features()
+    except ManifestError as exc:  # inventory must degrade, never crash
+        sys.stderr.write(f"WARNING: feature inventory unavailable: {exc}\n")
+        return None
+    on = [manifest.name for manifest in found if getattr(settings, manifest.switch, None)]
+    return "FEATURES: " + (" ".join(on) if on else "none")
+
+
 def module_distribution(module: str) -> str:
     """Distribution that ships ``module`` (metadata first, karni-<x> convention fallback)."""
     dists = packages_distributions().get(module)
@@ -350,6 +368,7 @@ def build_context() -> str:
         roles_section(),
         visibility_section(),
         performance_section(),
+        features_section(),
         modules_section(),
         "BASES: " + " ".join(BASES),
     ]

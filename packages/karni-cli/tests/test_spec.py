@@ -170,11 +170,13 @@ def test_each_problem_has_its_code_and_line(code: str, text: str, line: int | No
 
 
 def test_every_code_is_tested_and_registered() -> None:
-    tested = {code for code, _, _ in INVALID}
+    # C324 needs a manifest that requires or conflicts with another: tests/test_catalog.py.
+    tested = {code for code, _, _ in INVALID} | {"C324"}
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    assert all(200 <= int(code[1:]) <= 269 for code in iter_codes())
+    # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
+    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
 
 
 def test_issues_name_the_fix_and_the_path() -> None:

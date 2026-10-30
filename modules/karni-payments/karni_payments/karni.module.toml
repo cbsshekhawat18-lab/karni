@@ -1,0 +1,56 @@
+# The catalog entry of karni-payments: what `karni modules show payments` prints,
+# what `karni add payments` wires and `karni remove payments` takes out.
+name = "payments"
+kind = "module"
+title = "Payments"
+purpose = "Hosted checkout, refunds and signed webhooks for Stripe and Razorpay."
+status = "stable"
+use_when = ["payments", "checkout", "refunds", "taking card payments", "Stripe", "Razorpay"]
+services = [
+    "a Celery worker: webhook state changes run as tasks",
+    "a Stripe or Razorpay account (STRIPE_* or RAZORPAY_* keys in .env)",
+]
+docs = "modules/karni-payments/README.md"
+
+[provides]
+models = ["Payment", "Refund", "WebhookEvent"]
+endpoints = [
+    "/api/payments/",
+    "/api/payments/checkout/",
+    "/api/payments/{id}/refund/",
+    "/api/refunds/",
+    "/payments/webhook/<provider>/",
+]
+ui = "@karni/payments-ui"
+
+[provides.settings]
+KARNI_PAYMENTS_PROVIDER = "string"
+KARNI_PAYMENTS_CURRENCY = "string"
+KARNI_PAYMENTS_CHECKOUT_VALIDATOR = "string"
+KARNI_PAYMENTS_EVENT_HANDLER = "string"
+KARNI_PAYMENTS_ALLOWED_REDIRECTS = "array"
+STRIPE_SECRET_KEY = "string"
+STRIPE_WEBHOOK_SECRET = "string"
+RAZORPAY_KEY_ID = "string"
+RAZORPAY_KEY_SECRET = "string"
+RAZORPAY_WEBHOOK_SECRET = "string"
+
+[[asks]]
+question = "Which payment provider: Stripe or Razorpay?"
+setting = "KARNI_PAYMENTS_PROVIDER"
+options = ["stripe", "razorpay", "test"]
+default = "stripe"
+
+[[asks]]
+question = "Which currency, as a lowercase ISO 4217 code?"
+setting = "KARNI_PAYMENTS_CURRENCY"
+default = "usd"
+
+[wiring]
+apps = ["karni_payments"]
+settings = "karni_payments.conf:DEFAULTS"
+urls = 'path("payments/", include("karni_payments.urls"))'
+
+[wiring.extras]
+stripe = "the Stripe provider"
+razorpay = "the Razorpay provider"

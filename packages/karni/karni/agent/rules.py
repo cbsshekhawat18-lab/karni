@@ -362,12 +362,24 @@ RULES: tuple[Rule, ...] = (
         code="K307",
         category="architecture",
         severity="should",
-        summary="Cross-project code: a Karni module.",
+        summary="Cross-project code: a Karni module (karni modules list).",
         rule=(
             "Anything reusable across projects belongs in a Karni module (a `karni_<name>` "
-            "package), not in this project. Say so instead of building it."
+            "package), not in this project. Say so instead of building it. Read the catalog "
+            "first: the CATALOG lines of `karni context`, `karni modules list` and `karni "
+            "modules show <name>` list every module and built-in feature (payments, approvals, "
+            "login as a user, a public site, two-factor sign-in, sign-in with a code or with "
+            "Google, Microsoft or Apple, terms acceptance, response caching), whether the "
+            "project has it, its options and the questions to ask. Add a module with `karni "
+            "add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or "
+            "`features:`), and take a module out with `karni remove <name>`, which never drops "
+            "its tables."
         ),
-        rationale="Code that would be written more than once belongs in Karni, never per project.",
+        rationale=(
+            "Code that would be written more than once belongs in Karni, never per project. "
+            "Each catalog entry is tested, and rebuilding one costs more tokens than adding it."
+        ),
+        fix="Run `karni modules show <name>`, answer its questions, then `karni add <name>`.",
     ),
     Rule(
         code="K308",
@@ -890,20 +902,24 @@ PROCEDURES: tuple[Procedure, ...] = (
         argument_hint="<module> (e.g. payments)",
         intro="Install Karni module: {arguments}",
         steps=(
+            "Run `karni modules show <module>`: what it provides, what it needs and the "
+            "questions to settle first, each with the setting its answer goes to.",
             "Run `karni add <module>`. It adds the `karni-<module>` dependency to "
             "pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked "
-            "`# karni:apps` in config/settings.py, and (once installed) records the "
-            "module's agent guidance.",
+            "`# karni:apps` in config/settings.py (with any middleware its manifest wires), "
+            "and (once installed) records the module's agent guidance. It prints the URL "
+            "include to add, if any.",
             "Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` "
             "in a host venv), then `make migrate`. Run `karni add <module>` again if it "
             "asked you to.",
             "Run `karni context`. The module must appear under MODULES, and `karni rules` now "
             "includes its guidance.",
             "Configure only the settings the module documents. Do not patch its internals.",
+            "To take it out again: `karni remove <module>` (it never drops the tables).",
             "To create a new reusable module instead: `karni make module <name>` "
             "(modules/karni-<name>/, docs/modules.md).",
         ),
-        rules=("K009", "K308"),
+        rules=("K009", "K307", "K308"),
     ),
     Procedure(
         name="new-module",

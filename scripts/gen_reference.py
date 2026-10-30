@@ -327,6 +327,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
+        "The module catalog: a manifest per module and built-in feature, `karni modules list` "
+        "and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from "
+        "the manifest and `karni remove`, which never drops data. Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
         "a user, from the code that decides it",
     ),

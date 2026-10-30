@@ -13,7 +13,8 @@ framework, and a React 18 + TypeScript app in `frontend/` on @karni/ui. Screens 
 Before any work, run these two commands and follow what they return:
 
 1. `karni context` prints the live inventory: apps, models, viewsets, UI components,
-   hooks, pages and installed modules.
+   hooks, pages, and every Karni module and built-in feature with whether the
+   project has it (details: `karni modules show <name>`).
 2. `karni rules` prints the conventions, each with a stable code (K###, or P### for
    the project's own).
 
