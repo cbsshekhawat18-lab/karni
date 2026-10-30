@@ -775,7 +775,7 @@ def _number(value: Any) -> Any:
 
 
 def _base(queryset: QuerySet[Any]) -> QuerySet[Any]:
-    """``queryset`` unordered; behind ``pk IN (...)`` when it is distinct or annotated.
+    """``queryset`` unordered, behind ``pk IN (...)`` when it is distinct or annotated.
 
     A distinct queryset (a search across a to-many relation) or one with
     annotations (a search rank, an overridden ``get_queryset``) would change

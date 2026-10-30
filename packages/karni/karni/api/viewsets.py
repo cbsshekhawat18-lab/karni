@@ -45,8 +45,8 @@ usual):
 * ``filter_backends`` / ``filterset_fields`` / ``search_fields`` /
   ``ordering_fields`` — standard DRF/django-filter attributes.
 * ``aggregation`` / ``get_aggregation()`` / ``aggregate_queryset()``
-  (experimental) — what ``GET <resource>/aggregate/`` may group and sum
-  (:mod:`karni.aggregation`); the model's ``class Karni: aggregate`` is the
+  (experimental): what ``GET <resource>/aggregate/`` may group and sum
+  (:mod:`karni.aggregation`). The model's ``class Karni: aggregate`` is the
   default.
 
 Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
@@ -717,14 +717,14 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="aggregate")
     def aggregate(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """Grouped counts, sums, averages, minimums and maximums of the rows the list shows.
+        """Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.
 
         ``group_by`` names a declared field, relation path or expression (a date
         takes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,
         avg, min, max and distinct_count, ``value`` the declared field it reads,
         ``top`` keeps the largest groups and puts the rest in Other, and ``stack``
         or ``series`` adds a second dimension. Every list filter and ``search``
-        apply, after access. Experimental.
+        apply, after access.
         """
         from karni.aggregation import parse_query, run_aggregate
 
