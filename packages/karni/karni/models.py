@@ -686,7 +686,7 @@ class TreeModel(models.Model):
         parent_key = _key(cls, parent)
         with transaction.atomic(using=db):
             self.check_parent(parent_key, using=db)
-            old_parent = _key(cls, self.parent_id)  # type: ignore[attr-defined]
+            old_parent = _key(cls, self.parent_id)  # type: ignore[attr-defined,has-type]
             if isinstance(parent, models.Model):
                 self.parent = parent
             else:

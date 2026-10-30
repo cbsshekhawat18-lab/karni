@@ -182,7 +182,7 @@ def test_checks_report_a_tree_model_without_walks_or_parent() -> None:
             app_label = "testapp"
 
     class Branch(TreeModel, BaseModel):
-        parent = models.CharField(max_length=10, blank=True)  # type: ignore[assignment]
+        parent = models.CharField(max_length=10, blank=True)
 
         class Meta:
             app_label = "testapp"
