@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site.
+  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts.
   # Every step goes through the root Makefile, so CI and `make` never drift.
   # ---------------------------------------------------------------------------
   python:
@@ -64,6 +64,7 @@ jobs:
             modules/karni-approvals/pyproject.toml
             modules/karni-impersonation/pyproject.toml
             modules/karni-site/pyproject.toml
+            modules/karni-charts/pyproject.toml
 
       - name: Install packages (editable) + dev tools
         run: make install-py
@@ -155,7 +156,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: |
           rc=0
-          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site; do
+          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts; do
             echo "==> pytest on PostgreSQL ($d)"
             (cd "$d" && python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations) || rc=1
           done
@@ -209,7 +210,7 @@ jobs:
         run: make install-py CORE_ONLY=1
       - name: No module is installed
         run: |
-          ! python -m pip show karni-payments karni-approvals karni-impersonation karni-site 2>/dev/null | grep -q "^Name:"
+          ! python -m pip show karni-payments karni-approvals karni-impersonation karni-site karni-charts 2>/dev/null | grep -q "^Name:"
       - name: Test (the module tests skip)
         run: make test-py CORE_ONLY=1
 
@@ -627,7 +628,7 @@ jobs:
         run: $COMPOSE down -v --remove-orphans
 
   # ---------------------------------------------------------------------------
-  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui and modules/karni-impersonation/ui.
+  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui and modules/karni-charts/ui.
   # ---------------------------------------------------------------------------
   ui:
     name: UI (Node 24)
@@ -644,6 +645,7 @@ jobs:
             modules/karni-payments/ui/package-lock.json
             modules/karni-approvals/ui/package-lock.json
             modules/karni-impersonation/ui/package-lock.json
+            modules/karni-charts/ui/package-lock.json
 
       # karni-ui first: payments-ui resolves @karni/ui from its source, which
       # imports packages/karni-ui/node_modules.
@@ -692,3 +694,6 @@ jobs:
           cd ../../karni-impersonation/ui
           node -e "const m = require('@karni/impersonation-ui'); if (!m.ImpersonationBanner) throw new Error('CJS impersonation-ui missing exports')"
           node --input-type=module -e "const m = await import('@karni/impersonation-ui'); if (!m.ImpersonationBanner) throw new Error('ESM impersonation-ui missing exports')"
+          cd ../../karni-charts/ui
+          node -e "const m = require('@karni/charts-ui'); if (!m.SavedChart) throw new Error('CJS charts-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/charts-ui'); if (!m.SavedChart) throw new Error('ESM charts-ui missing exports')"

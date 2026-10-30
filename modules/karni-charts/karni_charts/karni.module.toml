@@ -3,7 +3,7 @@
 name = "charts"
 kind = "module"
 title = "Saved charts"
-purpose = "Charts defined and previewed in the admin, drawn from a resource's aggregate."
+purpose = "Charts edited in the admin, drawn from a resource's aggregate."
 status = "experimental"
 use_when = [
     "saved charts",

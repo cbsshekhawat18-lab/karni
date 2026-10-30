@@ -19,10 +19,12 @@ One tag publishes every package at the same version:
 | `karni-approvals` | PyPI | `modules/karni-approvals` |
 | `karni-impersonation` | PyPI | `modules/karni-impersonation` |
 | `karni-site` | PyPI | `modules/karni-site` |
+| `karni-charts` | PyPI | `modules/karni-charts` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
 | `@karni/impersonation-ui` | npm | `modules/karni-impersonation/ui` |
+| `@karni/charts-ui` | npm | `modules/karni-charts/ui` |
 
 Lockstep keeps "which @karni/ui goes with karni 0.4?" from ever being a
 question. A module's range on core (`karni>=0.4,<0.5`, `"@karni/ui": "^0.4.0"`)
@@ -115,7 +117,7 @@ accepts the same version twice.
 
   | Field | Value |
   |---|---|
-  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |

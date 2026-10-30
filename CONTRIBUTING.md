@@ -99,7 +99,7 @@ install `psycopg[binary]`, point `DATABASE_URL` at a server where you may
 create databases, and run pytest from the package's directory:
 
 ```sh
-cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site
+cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site, modules/karni-charts
 PYTHONPATH=../../.github/ci DATABASE_URL=postgres://postgres:postgres@localhost:5432/karni \
     ../../.venv/bin/python -m pytest --ds=karni_postgres_settings --no-migrations
 ```
