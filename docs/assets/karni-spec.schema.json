@@ -199,6 +199,19 @@
           ],
           "description": "The DATABASES alias its reads, writes and migrations go to (Karni.database). Default: default."
         },
+        "tree": {
+          "default": false,
+          "description": "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree endpoints), ordered inherits OrderedTreeModel (also a position among siblings).",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "const": "ordered",
+              "type": "string"
+            }
+          ]
+        },
         "key": {
           "anyOf": [
             {

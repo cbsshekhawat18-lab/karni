@@ -13,8 +13,8 @@ Three passes, each reporting every problem it finds:
    ``karni make model``'s own parser and renderer (``C216``), access rules,
    grants, features, pages, modules and seed counts, and every reference
    between them (``C230`` to ``C242``), then the keys of external tables and
-   other databases (``C251`` to ``C253``) and the renames written with
-   ``was`` (``C254``). Whether a ``database`` is one of the project's
+   other databases (``C251`` to ``C253``), the renames written with
+   ``was`` (``C254``) and the keys of a tree (``C460``). Whether a ``database`` is one of the project's
    aliases is checked when the caller knows them (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
@@ -70,7 +70,6 @@ MODULE_ROLES: Final = {"site": ("editor",)}
 RESERVED: Final[dict[str, dict[str, str]]] = {
     "spec": {"search": "a search block for search across entities"},
     "entity": {
-        "tree": "trees (large-apps roadmap)",
         "taxonomies": "taxonomies (large-apps roadmap)",
         "aggregate": "aggregation endpoints (large-apps item 8)",
     },
@@ -83,6 +82,8 @@ ENTITY_PAGES: Final = ("list", "detail", "form")
 NAMED_PAGES: Final = ("dashboard", "blank", "login", "code")
 #: Fields every BaseModel has, which key, order and search may name.
 BASE_FIELDS: Final = ("id", "created_at", "updated_at")
+#: Experimental. The fields ``tree: true`` (TreeModel) and ``tree: ordered`` add.
+TREE_FIELDS: Final = {True: ("parent",), "ordered": ("parent", "position")}
 _USER_TARGET: Final = "__user__"
 #: App labels a spec app may not take: Django's and Karni's own.
 TAKEN_LABELS: Final = frozenset(
@@ -308,6 +309,8 @@ def _shape_issues(check: _Checker, error: ValidationError, data: dict[str, Any])
             expected = _EXPECTED.get(kind)
             if kind == "literal_error":
                 expected = f"one of {item.get('ctx', {}).get('expected', '')}"
+                if len(path) == 5 and path[0] == "apps" and path[-1] == "tree":
+                    expected = "true, false or ordered"
             got = _value_at(data, path)
             check.add(
                 "C213",
@@ -376,6 +379,7 @@ class _Meaning:
             self.access(entity)
             self.storage(entity)
             self.renames(entity)
+            self.tree(entity)
         self.roles()
         self.features()
         self.modules_()
@@ -584,9 +588,9 @@ class _Meaning:
         return set(entity.entity.fields)
 
     def options(self, entity: _Entity) -> None:
-        names = self.field_names(entity)
-        known = names | set(BASE_FIELDS)
         e = entity.entity
+        names = self.field_names(entity) | set(TREE_FIELDS.get(e.tree, ()))
+        known = names | set(BASE_FIELDS)
 
         def missing(key: str, value: str, extra: str = "") -> None:
             fields = ", ".join(sorted(names)) or "none"
@@ -791,6 +795,32 @@ class _Meaning:
                 f'Add it in config/settings.py (DATABASES["{e.database}"] = '
                 'env.db_url("..._DATABASE_URL")), or name an alias it has.',
             )
+
+    def tree(self, entity: _Entity) -> None:
+        """Experimental. ``tree`` on an entity (``C460``)."""
+        e, path = entity.entity, entity.path
+        if not e.tree:
+            return
+        if e.external:
+            self.add(
+                "C460",
+                (*path, "tree"),
+                f"{entity.name} is external, so it cannot be a tree: a tree adds a parent column, "
+                "and Karni never changes a table another system owns.",
+                "Remove tree, or remove external and let Karni own the table.",
+                key=True,
+            )
+        for name in TREE_FIELDS[e.tree]:
+            if name in e.fields:
+                kind = "TreeModel" if e.tree is True else "OrderedTreeModel"
+                self.add(
+                    "C460",
+                    (*path, "fields", name),
+                    f"{entity.name} is a tree, and {kind} already gives it the field {name!r}.",
+                    f"Remove {name} from {entity.name}.fields, or rename your field if it means "
+                    "something else.",
+                    key=True,
+                )
 
     def renames(self, entity: _Entity) -> None:
         """``was`` on the entity and its fields (``C254``)."""
@@ -1310,3 +1340,4 @@ def iter_codes() -> Iterator[str]:
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
     yield "C324"
+    yield "C460"

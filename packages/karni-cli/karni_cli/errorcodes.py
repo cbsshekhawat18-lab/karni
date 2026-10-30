@@ -1005,6 +1005,17 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Write e.g. 'quantity:int remaining:capacity:quantity', or 'units:capacity' for a "
         "counter that starts at 0.",
     ),
+    # C460-C479 tree models in karni.yaml (experimental)
+    _c(
+        "C460",
+        "A tree entity's keys do not fit",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "tree: true makes the entity a TreeModel, which adds a parent field (tree: ordered makes "
+        "it an OrderedTreeModel, which adds position too). Karni adds that column, so it cannot "
+        "be a table another system owns, and the entity cannot declare a field of that name.",
+        "Remove tree from an external entity, and remove parent (and position) from the fields "
+        "of a tree entity, or rename a field that means something else.",
+    ),
 )
 
 

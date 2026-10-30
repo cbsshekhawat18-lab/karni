@@ -131,7 +131,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
-    ("C224", SHOP + "        tree: true\n", 7),
+    ("C224", SHOP + "        taxonomies: true\n", 7),
     ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
@@ -160,6 +160,9 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
+    ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
+    ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
 ]  # fmt: skip
 
 
@@ -176,7 +179,11 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # C460-C479: tree models.
+    assert all(
+        200 <= int(code[1:]) <= 269 or code == "C324" or 460 <= int(code[1:]) <= 479
+        for code in iter_codes()
+    )
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
@@ -224,6 +231,41 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
         """
     )
     assert report.ok, report.issues
+
+
+def test_a_tree_entity_its_fields_and_its_normal_form() -> None:
+    report = check(
+        """\
+        version: 1
+        app: {name: Shop}
+        apps:
+          shop:
+            entities:
+              Region: {fields: {name: str}, tree: true, search: [name, parent__name]}
+              Category:
+                fields: {name: str}
+                tree: ordered
+                order: [position]
+                groups: {Main: [name, parent, position]}
+              Product: {fields: {category: fk:Category, regions: "m2m:Region?"}}
+        """
+    )
+    assert report.ok, report.issues
+    assert report.spec is not None
+    entities = normalise(report.spec)["apps"]["shop"]["entities"]
+    assert entities["Region"]["tree"] is True and entities["Category"]["tree"] == "ordered"
+    assert entities["Product"]["tree"] is False
+    # position belongs to an ordered tree only
+    found = codes(
+        SHOP + "        fields: {name: str}\n        tree: true\n        order: [position]\n"
+    )
+    assert [code for code, _line in found] == ["C238"]
+
+
+def test_a_tree_value_names_the_values_it_takes() -> None:
+    (issue,) = check(SHOP + "        tree: yes please\n").issues
+    assert issue.code == "C213" and issue.line == 7
+    assert "must be true, false or ordered, got a string ('yes please')" in issue.message
 
 
 def test_owner_paths_through_relations() -> None:

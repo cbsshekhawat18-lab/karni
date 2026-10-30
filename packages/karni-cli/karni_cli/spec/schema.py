@@ -191,6 +191,17 @@ AuditValue = Annotated[
 ]
 
 
+def _tree_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=kind"
+
+
+#: Experimental. ``tree:`` of an entity: ``true`` (TreeModel), ``ordered`` or ``false``.
+TreeValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[Literal["ordered"], Tag("=kind")],
+    Discriminator(_tree_member),
+]
+
+
 class FieldEntry(_Node):
     """Experimental. A field written as a mapping, to say what it was called before.
 
@@ -256,6 +267,13 @@ class Entity(_Node):
         description=(
             "The DATABASES alias its reads, writes and migrations go to (Karni.database). "
             "Default: default."
+        ),
+    )
+    tree: TreeValue = Field(
+        False,
+        description=(
+            "Experimental. A hierarchy: true inherits TreeModel (a parent field and the tree "
+            "endpoints), ordered inherits OrderedTreeModel (also a position among siblings)."
         ),
     )
     key: str | None = Field(
