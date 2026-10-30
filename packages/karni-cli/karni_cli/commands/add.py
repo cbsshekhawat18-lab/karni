@@ -1,5 +1,12 @@
 """``karni add <module>`` — wire an optional Karni module into the project.
 
+What to wire comes from the module's manifest in the catalog
+(``karni.module.toml``, :mod:`karni_cli.catalog`): its distribution, its
+apps, the middleware and context processors it needs, whether the project's
+kind gains a site, and the URL include, extras and services it prints. A
+module without a manifest is wired by convention (``karni_<module>``,
+``karni-<module>``). ``karni remove`` reverses it.
+
 Wiring: dependency in ``pyproject.toml`` + app in the ``# karni:apps``
 marker block + the module's ``AGENTS.fragment.md`` recorded as
 ``.karni/modules/<module>.md`` (project-owned, committed), from which
@@ -30,9 +37,12 @@ from karni_cli.project import (
     require_project,
     venv_python,
 )
-from karni_cli.settings_edit import MARKER, add_entry
+from karni_cli.settings_edit import MARKER, add_entry, wire_entries
 
 if TYPE_CHECKING:  # karni_cli.generators imports this module: a runtime import would loop
+    from karni.catalog import Manifest
+
+    from karni_cli.catalog import Catalog
     from karni_cli.generators.core import Workspace
 
 SETTINGS = "config/settings.py"
@@ -120,14 +130,14 @@ def _refresh_adapters(project: Path) -> None:
         )
 
 
-def record_guidance(project: Path, module: str) -> bool:
+def record_guidance(project: Path, module: str, app: str | None = None) -> bool:
     """Record the installed module's agent guidance and refresh the adapters.
 
     Returns ``False``, after saying to run ``karni add <module>`` again, when
     the module is not importable through the project interpreter yet.
     ``karni make site`` calls this for karni-site after wiring it.
     """
-    app_name = f"karni_{module.replace('-', '_')}"
+    app_name = app or f"karni_{module.replace('-', '_')}"
     fragment = _read_agents_fragment(project, app_name)
     if fragment is None:
         typer.echo(
@@ -142,17 +152,92 @@ def record_guidance(project: Path, module: str) -> bool:
     return True
 
 
-def plan_module(ws: Workspace, module: str) -> list[str]:
+def find_manifest(project: Path, module: str) -> tuple[Manifest | None, Catalog]:
+    """The module's manifest (``None``: not in the catalog) and the catalog it came from.
+
+    The bundled catalog first, then the modules installed in the project's
+    interpreter. A built-in feature is refused (``C318``).
+    """
+    from karni_cli import catalog
+
+    loaded = catalog.load(project, ask_project=False)
+    if loaded.get(module) is None:
+        loaded = catalog.load(project)
+    found = loaded.get(module)
+    if found is not None and found.kind != "module":
+        raise CliError(
+            f"{found.name} is a built-in feature, not a module: its setting {found.switch} "
+            "turns it on and off (or its key under features: in karni.yaml).",
+            code="C318",
+        )
+    return found, loaded
+
+
+def _refuse_conflicts(loaded: Catalog, manifest: Manifest) -> None:
+    clash = sorted(
+        name
+        for name in loaded.added
+        if name != manifest.name
+        and (
+            name in manifest.conflicts
+            or manifest.name in (getattr(loaded.get(name), "conflicts", ()) or ())
+        )
+    )
+    if clash:
+        raise CliError(
+            f"{manifest.name} cannot be added next to {', '.join(clash)} (the manifests say they "
+            f"conflict). Remove {clash[0]} first: karni remove {clash[0]}.",
+            code="C315",
+        )
+
+
+def _wire(text: str, manifest: Manifest) -> tuple[str, list[str]]:
+    """Settings ``text`` with the middleware and context processors the manifest asks for.
+
+    Entries marked ``manual`` are only named, for the user to add by hand.
+    """
+    wiring = manifest.wiring
+    middleware = [(entry.path, entry.why) for entry in wiring.middleware if not entry.manual]
+    processors = [
+        (entry.path, entry.why) for entry in wiring.context_processors if not entry.manual
+    ]
+    lines: list[str] = []
+    if middleware or processors:
+        text, lines = wire_entries(
+            text,
+            SETTINGS,
+            middleware=middleware,
+            processors=processors,
+            heading=f"# --- {manifest.title} ({manifest.distribution})",
+        )
+    for entry in (*wiring.middleware, *wiring.context_processors):
+        if entry.manual and entry.path not in text:
+            setting = "MIDDLEWARE" if entry in wiring.middleware else "the context processors"
+            lines.append(f"Add {entry.path!r} to {setting} in {SETTINGS}: {entry.why}.")
+    return text, lines
+
+
+def plan_module(
+    ws: Workspace,
+    module: str,
+    *,
+    found: tuple[Manifest | None, Catalog] | None = None,
+) -> list[str]:
     """Plan ``karni add <module>``'s file edits into ``ws``; returns the lines it reports.
 
-    The dependency in ``pyproject.toml``, the app in the ``# karni:apps``
-    block, and for ``site`` its middleware, context processor and the kind
-    (an app becomes a site+app). ``karni build`` plans its modules the same
-    way, so ``--dry-run`` shows them. Recording the module's agent guidance
-    needs it installed, so :func:`record_guidance` runs after the write.
+    What to wire comes from the module's manifest (:func:`find_manifest`):
+    the dependency in ``pyproject.toml``, its apps in the ``# karni:apps``
+    block, its middleware and context processors, and for a site module the
+    kind (an app becomes a site+app). A module without a manifest is wired by
+    convention. ``karni build`` plans its modules the same way, so
+    ``--dry-run`` shows them. Recording the module's agent guidance needs it
+    installed, so :func:`record_guidance` runs after the write.
     """
-    app_name = f"karni_{module.replace('-', '_')}"
-    distribution = f"karni-{module.replace('_', '-')}"
+    manifest, loaded = found if found is not None else find_manifest(ws.root, module)
+    if manifest is not None:
+        _refuse_conflicts(loaded, manifest)
+    app_name = manifest.app if manifest else f"karni_{module.replace('-', '_')}"
+    distribution = manifest.distribution if manifest else f"karni-{module.replace('_', '-')}"
     pyproject = ws.read("pyproject.toml")
     if pyproject is None:
         raise CliError("No pyproject.toml in the project root.", code="C207")
@@ -162,29 +247,52 @@ def plan_module(ws: Workspace, module: str) -> list[str]:
     settings = ws.read(SETTINGS)
     if settings is None:
         raise CliError(f"{ws.path(SETTINGS)} not found.", code="C001")
-    with_app = add_entry(
-        settings, app_name, setting="INSTALLED_APPS", marker=MARKER, filename="settings.py"
-    )
-    if with_app is not None:
-        ws.write(SETTINGS, with_app)
+    apps = list(manifest.wiring.apps) if manifest else [app_name]
+    if app_name not in apps:
+        apps.insert(0, app_name)
+    app_added = False
+    for index, app in enumerate(apps):
+        with_app = add_entry(
+            settings, app, setting="INSTALLED_APPS", marker=MARKER, filename="settings.py"
+        )
+        if with_app is not None:
+            settings = with_app
+            app_added = app_added or index == 0
     lines = [
         f"{distribution}: {'added to' if with_dependency else 'already in'} pyproject.toml",
-        f"{app_name}: {'wired into' if with_app else 'already in'} INSTALLED_APPS",
+        f"{app_name}: {'wired into' if app_added else 'already in'} INSTALLED_APPS",
     ]
-    if module == "site":
-        from karni_cli import kinds
-        from karni_cli.generators.site import wire_site_settings
-
-        text = ws.read(SETTINGS) or ""
-        updated, notes = wire_site_settings(text, "config/settings.py")
-        if updated != text:
-            ws.write(SETTINGS, updated)
+    if manifest is not None:
+        settings, notes = _wire(settings, manifest)
         lines += notes
+    if settings != ws.read(SETTINGS):
+        ws.write(SETTINGS, settings)
+    if manifest is not None and manifest.wiring.kind == "site":
+        from karni_cli import kinds
+
         adopted = kinds.adopt_site_text(ws.read("pyproject.toml") or "", ws.root)
         if adopted is not None:
             ws.write("pyproject.toml", adopted[0])
             lines.append(kinds.adoption_note(adopted[1], adopted[2]))
     return lines
+
+
+def _next_steps(loaded: Catalog, manifest: Manifest) -> None:
+    """What the manifest says comes next: the URL include, extras, services, requirements."""
+    wiring = manifest.wiring
+    if wiring.urls:
+        typer.echo("Add its URLs to config/urls.py:")
+        typer.echo(f"  {wiring.urls}")
+    if wiring.extras:
+        extras = ", ".join(f"{name} ({why})" for name, why in wiring.extras.items())
+        typer.echo(f"Extras, e.g. {manifest.distribution}[{next(iter(wiring.extras))}]: {extras}")
+    for service in manifest.services:
+        typer.echo(f"It needs {service}.")
+    for other in manifest.requires:
+        if other not in loaded.added:
+            typer.echo(f"It requires {other}: karni modules show {other}.")
+    if manifest.asks:
+        typer.echo(f"Its options and questions: karni modules show {manifest.name}")
 
 
 def _site_next(project: Path) -> None:
@@ -202,20 +310,26 @@ def add(module: str = typer.Argument(..., help='Module short name, e.g. "payment
     from karni_cli.generators.core import Workspace
 
     project = require_project()
-    app_name = f"karni_{module.replace('-', '_')}"
+    manifest, loaded = find_manifest(project, module)
+    if manifest is not None:
+        module = manifest.name
+    app_name = manifest.app if manifest else f"karni_{module.replace('-', '_')}"
     ws = Workspace(project)
-    lines = plan_module(ws, module)
+    lines = plan_module(ws, module, found=(manifest, loaded))
     for path, _before, after in ws.changes():
         path.write_text(after, encoding="utf-8")
     for line in lines:
         typer.echo(line)
-    if module == "site":
+    if manifest is not None and manifest.wiring.kind == "site":
         _site_next(project)
 
-    record_guidance(project, module)
+    record_guidance(project, module, app_name)
 
-    typer.echo("If the module ships URLs, add the include to config/urls.py:")
-    typer.echo(f'  path("{module}/", include("{app_name}.urls"))')
+    if manifest is not None:
+        _next_steps(loaded, manifest)
+    else:
+        typer.echo("If the module ships URLs, add the include to config/urls.py:")
+        typer.echo(f'  path("{module}/", include("{app_name}.urls"))')
     typer.echo("Install it, then migrate:")
     typer.echo("  docker compose build        # container workflow")
     typer.echo("  uv pip install -r pyproject.toml   # host venv workflow")

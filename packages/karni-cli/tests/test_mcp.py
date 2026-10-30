@@ -10,6 +10,7 @@ import pytest
 
 from karni_cli import mcp_server
 from karni_cli import project as project_mod
+from karni_cli.commands.context import catalog_lines
 
 from .conftest import REPO_ROOT
 
@@ -47,12 +48,15 @@ def test_context_tool(generated_project: Path, monkeypatch) -> None:
         "run_manage",
         lambda *a, **k: subprocess.CompletedProcess([], 0, stdout=backend, stderr=""),
     )
-    # The scaffold ships one page (frontend/src/pages/home.tsx), read statically.
+    # The scaffold ships one page (frontend/src/pages/home.tsx), read statically, and the
+    # catalog comes before BASES.
+    catalog = "\n".join(catalog_lines(generated_project))
     expected = (
         "KIND: app (API + React app in frontend/)\n"
-        "MODELS: Event(title)\nPAGES: home\nBASES: BaseModel BaseViewSet"
+        f"MODELS: Event(title)\nPAGES: home\n{catalog}\nBASES: BaseModel BaseViewSet"
     )
     assert mcp_server.context_tool() == expected
+    assert "  payments module, not added: " in expected
 
 
 def test_context_tool_outside_a_project(tmp_path: Path, monkeypatch) -> None:

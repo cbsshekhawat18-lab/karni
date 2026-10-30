@@ -23,7 +23,7 @@ traceback. `KARNI_DB_CHECK=false` skips the check.
 
 ## Contents
 
-- **Project**: [new](#karni-new), [add](#karni-add), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
+- **Project**: [new](#karni-new), [add](#karni-add), [remove](#karni-remove), [modules](#karni-modules), [upgrade](#karni-upgrade), [doctor](#karni-doctor), [config](#karni-config)
 - **Frontend**: [ui](#karni-ui)
 - **Agents and checks**: [context](#karni-context), [rules](#karni-rules), [check](#karni-check), [explain](#karni-explain), [types](#karni-types), [mcp](#karni-mcp)
 - **Debugging**: [queries](#karni-queries)
@@ -73,6 +73,57 @@ karni add MODULE
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODULE` (required) |  | Module short name, e.g. "payments" |
+
+### `karni remove`
+
+Take a module out again: what karni add wired, never its data
+
+```
+karni remove [OPTIONS] MODULE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `--dry-run` |  | Print every change and each table's rows. Write nothing. |
+| `--keep-tables` |  | Take the module out although its tables exist: they stay in the database. |
+
+### `karni modules`
+
+The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
+
+```
+karni modules COMMAND [ARGS]...
+```
+
+#### `karni modules list`
+
+Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+
+Modules first, then features. A module is added (in the # karni:apps block), installed (the project's interpreter has it) or available. Each question names the setting its answer goes to.
+
+```
+karni modules list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
+
+#### `karni modules show`
+
+Experimental. One module or feature: what it provides, the questions, the wiring.
+
+For a module: what karni add writes (apps, middleware, context processors, the kind) and prints (the URL include, extras), which karni remove takes out again. For a feature: the setting that turns it on and the extra it needs.
+
+```
+karni modules show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A module or feature, e.g. payments or two_factor. |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
 
 ### `karni upgrade`
 
@@ -1130,7 +1181,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
-The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md and a standalone test suite. Works outside a project too.
+The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md, the catalog entry karni.module.toml and a standalone test suite. Works outside a project too.
 
 ```
 karni make module [OPTIONS] NAME

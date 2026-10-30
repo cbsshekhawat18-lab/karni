@@ -230,6 +230,8 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 |---|---|
 | [`karni new`](docs/REFERENCE.md#karni-new) | Create a project: a public website, an app, or both |
 | [`karni add`](docs/REFERENCE.md#karni-add) | Install an optional module and wire it into settings |
+| [`karni remove`](docs/REFERENCE.md#karni-remove) | Take a module out again: what karni add wired, never its data |
+| [`karni modules`](docs/REFERENCE.md#karni-modules) | The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show): [list](docs/REFERENCE.md#karni-modules-list), [show](docs/REFERENCE.md#karni-modules-show) |
 | [`karni upgrade`](docs/REFERENCE.md#karni-upgrade) | Upgrade across Karni versions: codemods, diff, manual-change report |
 | [`karni doctor`](docs/REFERENCE.md#karni-doctor) | Report the environment: project, interpreter, Node, adapters, history |
 | [`karni config`](docs/REFERENCE.md#karni-config) | Read and write Karni settings in the project's .karni/config.toml (committed) or, with --global, in ~/.config/karni/config.toml: [get](docs/REFERENCE.md#karni-config-get), [set](docs/REFERENCE.md#karni-config-set), [list](docs/REFERENCE.md#karni-config-list) |
@@ -408,6 +410,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` `karni explain <code>`: why an error happens and the fix, offline
 - `experimental` The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier
 - `experimental` `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier
+- `experimental` The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
 
@@ -431,7 +434,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 
-Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `query_budget`, `user_with_roles`.
+Helpers: `APITestCase`, `assert_admin_row_hidden`, `assert_crud`, `assert_isolated`, `assert_module_manifest`, `assert_pages`, `assert_row_hidden`, `assert_schema_snapshot`, `client_as`, `create_external_tables`, `query_budget`, `user_with_roles`.
 <!-- /generated:testing -->
 
 Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
@@ -442,7 +445,7 @@ Full reference: [karni.testing](docs/REFERENCE.md#karnitesting).
 An agent in a Karni project extends the framework instead of rewriting it:
 
 - **`karni context`** prints the project in a few lines: apps, models, viewsets, roles, components, hooks and pages.
-- **`karni rules`** prints the 44 conventions, each with a code, in 561 tokens (cl100k). `karni rules --check <file>` checks one file.
+- **`karni rules`** prints the 44 conventions, each with a code, in 567 tokens (cl100k). `karni rules --check <file>` checks one file.
 - **Adapter files.** `karni new` writes the file each tool reads, from one rule set: AGENTS.md, CLAUDE.md, Cursor, Copilot, Windsurf, Cline, Aider and Junie, plus slash commands such as `/new-model`.
 - **An MCP server.** `karni mcp` serves `context`, `rules` and `check` as tools.
 - **Your prompts, kept (optional).** [Gigai Chronicle](https://github.com/cbsshekhawat18-lab/gigai-chronicle) records every prompt you give an agent inside your repository, and `karni context --with-history <file>` reads it back to brief the next agent. It is MIT licensed, local-only, and made by Karni's author.

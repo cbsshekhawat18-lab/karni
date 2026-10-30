@@ -3,8 +3,9 @@
 Writes ``modules/karni-<name>/``: the ``karni-<name>`` distribution with the
 ``karni_<name>`` app (label ``karni_<name>``), a range-pinned karni
 dependency, the ``karni.settings`` fragment entry point, ``AGENTS.fragment.md``
-pinned as package data, and a standalone test suite. Projects install it
-with ``karni add <name>``.
+and the catalog entry ``karni.module.toml`` (with its ``karni.modules``
+entry point) pinned as package data, and a standalone test suite. Projects
+install it with ``karni add <name>``.
 """
 
 from __future__ import annotations
@@ -60,6 +61,11 @@ requires-python = ">=3.12"
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors may break.
 dependencies = ["{karni_pin()}"]
 
+# The catalog entry, {app}/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+{entry} = "{app}"
+
 # The settings fragment: karni_settings() merges DEFAULTS into every project
 # that installs this module (new top-level names only).
 [project.entry-points."karni.settings"]
@@ -71,10 +77,10 @@ dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
 [tool.hatch.build.targets.wheel]
 packages = ["{app}"]
 # `karni add` reads the agent guidance through importlib.resources after install.
-artifacts = ["{app}/AGENTS.fragment.md"]
+artifacts = ["{app}/AGENTS.fragment.md", "{app}/karni.module.toml"]
 
 [tool.hatch.build.targets.sdist]
-artifacts = ["{app}/AGENTS.fragment.md"]
+artifacts = ["{app}/AGENTS.fragment.md", "{app}/karni.module.toml"]
 
 [tool.ruff]
 target-version = "py312"
@@ -126,6 +132,24 @@ overridable methods, swappable classes).
 - What the module provides, and the one `config/urls.py` include line if it ships URLs.
 - Env vars it reads (prefix {upper}_).
 - Configure it only through its documented settings, never by patching its internals.
+""",
+        f"{app}/karni.module.toml": f"""# The catalog entry of {dist} (docs/modules.md#the-module-catalog): what
+# `karni modules show {entry}` prints, what `karni add {entry}` wires and
+# `karni remove {entry}` takes out. tests/test_app.py checks it against the module.
+name = "{entry}"
+kind = "module"
+title = "{title}"
+purpose = "{title} for Karni projects."
+status = "experimental"
+use_when = ["{title.lower()}"]
+
+[provides]
+models = []
+settings = {{}}
+
+[wiring]
+apps = ["{app}"]
+settings = "{app}.conf:DEFAULTS"
 """,
         f"{app}/apps.py": f'''"""Django app configuration for ``{app}``."""
 
@@ -199,6 +223,7 @@ INSTALLED_APPS += ["{app}"]  # type: ignore[name-defined]  # noqa: F821
 urlpatterns = [path("api/", include("karni.api.urls"))]
 """,
         "tests/test_app.py": f'''from django.apps import apps
+from karni.testing import assert_module_manifest
 
 from {app} import conf
 
@@ -209,6 +234,10 @@ def test_app_is_installed() -> None:
 
 def test_settings_fragment_is_a_dict() -> None:
     assert isinstance(conf.DEFAULTS, dict)
+
+
+def test_the_manifest_matches_the_module() -> None:
+    assert_module_manifest("{app}")
 ''',
     }
 
@@ -245,8 +274,9 @@ def command(
     """Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
     The karni-NAME distribution with the karni_NAME app, a range-pinned
-    karni dependency, the karni.settings fragment, AGENTS.fragment.md and a
-    standalone test suite. Works outside a project too.
+    karni dependency, the karni.settings fragment, AGENTS.fragment.md, the
+    catalog entry karni.module.toml and a standalone test suite. Works outside
+    a project too.
     """
     root = find_project() or Path.cwd()
     ws = Workspace(root, force=force)

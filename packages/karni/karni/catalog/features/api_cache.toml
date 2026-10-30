@@ -1,0 +1,19 @@
+# Response caching: a built-in feature of karni (karni.api.caching). karni.yaml has no key for it yet.
+name = "api_cache"
+kind = "feature"
+title = "API response caching"
+purpose = "Cached list and detail responses, invalidated on every write."
+status = "stable"
+use_when = ["caching", "faster lists", "read-heavy API", "slow list pages"]
+services = ["a cache every process shares (Redis, KARNI_CACHE)"]
+switch = "KARNI_API_CACHE"
+in_spec = false
+docs = "docs/api.md#response-caching"
+
+[provides]
+settings = { KARNI_API_CACHE = "boolean", KARNI_API_CACHE_TTL = "integer", KARNI_API_CACHE_ALIAS = "string" }
+
+[[asks]]
+question = "For how many seconds may a cached response be served?"
+setting = "KARNI_API_CACHE_TTL"
+default = 300

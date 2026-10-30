@@ -21,9 +21,11 @@ from karni_cli.commands.make import make_app, register_aliases
 from karni_cli.commands.manage_passthrough import manage
 from karni_cli.commands.mcp import mcp
 from karni_cli.commands.migrate import migrate
+from karni_cli.commands.modules import modules_app
 from karni_cli.commands.new import new
 from karni_cli.commands.plan import plan
 from karni_cli.commands.queries import queries
+from karni_cli.commands.remove import remove
 from karni_cli.commands.replay import replay
 from karni_cli.commands.routes import routes
 from karni_cli.commands.rules import rules_app
@@ -80,6 +82,8 @@ def _root(
 # `karni new --help` is its docstring: the kinds, --design, examples.
 app.command()(new)
 app.command(help="Install an optional module and wire it into settings")(add)
+app.command(help="Take a module out again: what karni add wired, never its data")(remove)
+app.add_typer(modules_app, name="modules")
 app.command(help="Generate TS types and typed hooks from the backend OpenAPI")(types)
 app.add_typer(ui_app, name="ui")
 app.command(help="Print a compact machine-readable project inventory")(context)

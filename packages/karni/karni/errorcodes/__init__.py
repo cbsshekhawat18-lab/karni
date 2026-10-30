@@ -1187,6 +1187,22 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "to be latest (two branches) leave no single one to follow.",
         "Run manage.py makemigrations --merge for the app, then karni build again.",
     ),
+    # E31x the module catalog
+    _e(
+        "E310",
+        "A module's manifest does not match the module",
+        "test",
+        "karni.testing.assert_module_manifest",
+        "karni.module.toml is what karni modules, karni add, karni remove and the app spec "
+        "read about a module. assert_module_manifest checks it parses, that the karni.modules "
+        "entry point names the package, that its settings are the DEFAULTS fragment's, and "
+        "that its models are the app's. Each listed line is one mismatch.",
+        "Fix the manifest or the module as the line says: list every KARNI_<NAME>_* setting of "
+        "conf.DEFAULTS under [provides.settings] with its type, list the app's models under "
+        'provides.models, and add [project.entry-points."karni.modules"] <name> = '
+        '"karni_<name>" to pyproject.toml, then reinstall the module. docs/modules.md lists '
+        "every key.",
+    ),
     # E4xx events, listeners, schedules, Celery
     _e(
         "E401",

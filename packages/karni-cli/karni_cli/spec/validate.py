@@ -50,7 +50,14 @@ from karni_cli.generators.naming import default_route
 from karni_cli.generators.pysource import pystr
 from karni_cli.project import CliError
 from karni_cli.spec import schema
-from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS
+from karni_cli.spec.catalog import (
+    FEATURES,
+    MODULES,
+    OTHER_MODELS,
+    SOCIAL_PROVIDERS,
+    KnownFeature,
+    KnownModule,
+)
 from karni_cli.spec.source import Loc, Source, YamlError, load
 
 __all__ = ["SHIPPED_ROLES", "Issue", "Report", "iter_codes", "validate_text"]
@@ -372,6 +379,7 @@ class _Meaning:
         self.roles()
         self.features()
         self.modules_()
+        self.requirements()
         self.pages()
         self.seed()
 
@@ -1061,6 +1069,39 @@ class _Meaning:
                 key=True,
             )
 
+    def requirements(self) -> None:
+        """What each listed module and feature requires and conflicts with (the catalog's)."""
+        listed: dict[str, tuple[str, KnownModule | KnownFeature]] = {
+            name: ("modules", MODULES[name]) for name in self.spec.modules if name in MODULES
+        }
+        if self.spec.app.kind != "app" and "site" in MODULES:
+            listed.setdefault("site", ("modules", MODULES["site"]))
+        for name, feature in FEATURES.items():
+            if getattr(self.spec.features, name, None):
+                listed[name] = ("features", feature)
+        reported: set[frozenset[str]] = set()
+        for name, (area, known) in listed.items():
+            for other in known.requires:
+                if other not in listed and (other in MODULES or other in FEATURES):
+                    where = "modules" if other in MODULES else "features"
+                    self.add(
+                        "C324",
+                        (area, name),
+                        f"{name} requires {other}, which the spec does not list.",
+                        f"Add {other} under {where}:, or leave {name} out.",
+                        key=True,
+                    )
+            for other in known.conflicts:
+                if other in listed and frozenset((name, other)) not in reported:
+                    reported.add(frozenset((name, other)))
+                    self.add(
+                        "C324",
+                        (area, name),
+                        f"{name} and {other} cannot be used together.",
+                        f"Leave {name} or {other} out.",
+                        key=True,
+                    )
+
     # pages, seed
 
     def find(self, name: str) -> _Entity | str:
@@ -1268,3 +1309,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C220", "C221", "C222", "C223", "C224", "C225")
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
+    yield "C324"

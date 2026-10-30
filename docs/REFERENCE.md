@@ -104,6 +104,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `karni explain <code>`: why an error happens and the fix, offline | `experimental` | Karni's own tests |
 | The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
+| The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -164,6 +165,57 @@ karni add MODULE
 | Argument / option | Default | Description |
 | --- | --- | --- |
 | `MODULE` (required) |  | Module short name, e.g. "payments" |
+
+#### `karni remove`
+
+Take a module out again: what karni add wired, never its data
+
+```
+karni remove [OPTIONS] MODULE
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `MODULE` (required) |  | Module short name, e.g. "payments" |
+| `--dry-run` |  | Print every change and each table's rows. Write nothing. |
+| `--keep-tables` |  | Take the module out although its tables exist: they stay in the database. |
+
+#### `karni modules`
+
+The module catalog (experimental): every module and built-in feature, added or not, with what it provides and the questions to ask (list, show).
+
+```
+karni modules COMMAND [ARGS]...
+```
+
+##### `karni modules list`
+
+Experimental. Every module and built-in feature: kind, status, state, purpose, questions.
+
+Modules first, then features. A module is added (in the # karni:apps block), installed (the project's interpreter has it) or available. Each question names the setting its answer goes to.
+
+```
+karni modules list [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
+
+##### `karni modules show`
+
+Experimental. One module or feature: what it provides, the questions, the wiring.
+
+For a module: what karni add writes (apps, middleware, context processors, the kind) and prints (the URL include, extras), which karni remove takes out again. For a feature: the setting that turns it on and the extra it needs.
+
+```
+karni modules show [OPTIONS] NAME
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `NAME` (required) |  | A module or feature, e.g. payments or two_factor. |
+| `--json` |  | Print the entries as JSON (every manifest key, plus state). |
 
 #### `karni upgrade`
 
@@ -1221,7 +1273,7 @@ karni make form [OPTIONS] NAME [FIELDS...]
 
 Create modules/karni-NAME/, a reusable module per docs/modules.md.
 
-The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md and a standalone test suite. Works outside a project too.
+The karni-NAME distribution with the karni_NAME app, a range-pinned karni dependency, the karni.settings fragment, AGENTS.fragment.md, the catalog entry karni.module.toml and a standalone test suite. Works outside a project too.
 
 ```
 karni make module [OPTIONS] NAME
@@ -1495,6 +1547,7 @@ The public names of the four packages a project builds on, from their `__all__`.
 | `assert_admin_row_hidden` | function | Assert `row` behaves as "does not exist" in the admin for `client`'s staff user. | `assert_admin_row_hidden(client: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), site: Any = None, search: str \| None = None, probe: type[AdminHiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_crud` | function | Assert the full CRUD surface of `resource` for `role` (see the module docstring). | `assert_crud(resource: Any, role: str \| None = None, *, user: Any = None, values: Mapping[str, Any] \| None = None, payload: Mapping[str, Any] \| None = None, expect: Mapping[str, int] \| None = None, skip: Iterable[str] = (), read_only: bool \| None = None) -> CrudReport` |
 | `assert_isolated` | function | Assert `role` cannot reach another owner's (or scope's) rows of `resource`. | `assert_isolated(resource: Any, role: str \| None = None, *, by: str \| tuple[str, ...] \| None = None, owner: str \| None = None, values: Mapping[str, Any] \| None = None) -> IsolationReport` |
+| `assert_module_manifest` | function | Experimental. Check `<package>/karni.module.toml` against the module; return it. | `assert_module_manifest(package: str) -> Manifest` |
 | `assert_pages` | function | Assert that every page in `urls` passes the page checks (see the module docstring). | `assert_pages(client: Any, urls: Iterable[str], *, follow: bool = False, check_links: bool = True, require_title: bool = True, require_description: bool = True, require_alt: bool = True, not_found_url: str \| None = '/karni-assert-pages-404/', ignore: Iterable[str \| re.Pattern[str]] = (), hosts: Iterable[str] = (), parser: type[PageParser] \| None = None) -> PagesReport` |
 | `assert_row_hidden` | function | Assert `row` is hidden from `client` on every API surface of `resource`. | `assert_row_hidden(client: Any, resource: Any, row: models.Model, *, visible: models.Model \| None = None, checks: Iterable[str] \| None = None, skip: Iterable[str] = (), search: str \| None = None, formats: Iterable[str] = ('csv', 'xlsx'), probe: type[HiddenRowProbe] \| None = None) -> HiddenRowReport` |
 | `assert_schema_snapshot` | function | Fail when the generated OpenAPI schema differs from the committed snapshot. | `assert_schema_snapshot(path: str \| Path \| None = None, *, update: bool \| None = None, urlconf: str \| None = None, hint: str = '') -> None` |
@@ -2019,6 +2072,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E303`](errors.md#e303) | exception | KARNI_ADMIN_LOGO is not a logo declaration |
 | [`E304`](errors.md#e304) | exception | karni_makemigrations --renames is not a rename list |
 | [`E305`](errors.md#e305) | exception | An app has more than one latest migration, so the renames have no place |
+| [`E310`](errors.md#e310) | test | A module's manifest does not match the module |
 | [`E401`](errors.md#e401) | exception | A queued listener is not a module-level function |
 | [`E402`](errors.md#e402) | exception | A listener registration is invalid |
 | [`E403`](errors.md#e403) | exception | A Celery task cannot be found |
@@ -2266,10 +2320,18 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C310`](errors.md#c310) | cli | karni why: the target is malformed |
 | [`C311`](errors.md#c311) | cli | karni why: --as is missing |
 | [`C312`](errors.md#c312) | cli | karni why: the project's karni is too old |
+| [`C313`](errors.md#c313) | cli | No module or feature of that name in the catalog |
+| [`C314`](errors.md#c314) | cli | A module manifest is not valid |
+| [`C315`](errors.md#c315) | cli | The module conflicts with one the project has |
+| [`C316`](errors.md#c316) | cli | Another module requires the one being removed |
+| [`C317`](errors.md#c317) | cli | The module is not in this project |
+| [`C318`](errors.md#c318) | cli | A built-in feature is switched by a setting, not added or removed |
+| [`C319`](errors.md#c319) | cli | The module's tables exist in the database |
 | [`C320`](errors.md#c320) | cli | karni explain needs a code or --failure, not both |
 | [`C321`](errors.md#c321) | cli | A --set value is not FIELD=VALUE |
 | [`C322`](errors.md#c322) | cli | The project's karni has no debugging commands |
 | [`C323`](errors.md#c323) | cli | A debugging command failed in the project |
+| [`C324`](errors.md#c324) | cli | A module or feature needs another, or cannot be next to one |
 | [`C340`](errors.md#c340) | cli | Nothing to explain |
 | [`C341`](errors.md#c341) | cli | The project's karni has no karni_queries command |
 | [`C360`](errors.md#c360) | cli | A typed-field argument in the model DSL is invalid |
@@ -2323,7 +2385,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`K304`](errors.md#k304) | rule | No extra state/form/table/HTTP/CSS library. |
 | [`K305`](errors.md#k305) | rule | Per entity: models.py and viewsets.py. |
 | [`K306`](errors.md#k306) | rule | App pages: frontend/src/pages/. Public site pages: K309. |
-| [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module. |
+| [`K307`](errors.md#k307) | rule | Cross-project code: a Karni module (karni modules list). |
 | [`K308`](errors.md#k308) | rule | Modules: configure via settings. |
 | [`K309`](errors.md#k309) | rule | Public site: a site app with Django views and templates. |
 

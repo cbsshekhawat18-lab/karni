@@ -17,7 +17,8 @@ follow what they return.
 
 | Command | What it returns |
 |---|---|
-| `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, BASES |
+| `karni context` | Live inventory: APPS, MODELS, VIEWSETS, COMPONENTS, HOOKS, PAGES, SITE (the public site's routes), MODULES, CATALOG (a line per module and built-in feature, with whether the project has it: [the module catalog](modules.md#the-module-catalog)), BASES |
+| `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
 | `karni rules` | Every convention as `CODE summary` (about 560 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
@@ -301,13 +302,15 @@ What `karni rules --procedure` returns:
 ```text
 Install Karni module: <module> (e.g. payments)
 
-1. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py, and (once installed) records the module's agent guidance.
-2. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
-3. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
-4. Configure only the settings the module documents. Do not patch its internals.
-5. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
+1. Run `karni modules show <module>`: what it provides, what it needs and the questions to settle first, each with the setting its answer goes to.
+2. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py (with any middleware its manifest wires), and (once installed) records the module's agent guidance. It prints the URL include to add, if any.
+3. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
+4. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
+5. Configure only the settings the module documents. Do not patch its internals.
+6. To take it out again: `karni remove <module>` (it never drops the tables).
+7. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 
-Rules that apply: K009, K308
+Rules that apply: K009, K307, K308
 ```
 
 ### `new-module`: Create a new local Django app following Karni conventions

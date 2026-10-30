@@ -41,6 +41,7 @@ def test_context_command_shape() -> None:
         "ACTIONS",
         "VISIBILITY",
         "PERF",
+        "FEATURES",
         "MODULES",
         "BASES",
     )

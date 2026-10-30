@@ -100,9 +100,11 @@ def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
 def _no_compose_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     """`karni add` and `karni make site` read a module's guidance through the project
     interpreter, else a running compose service: the suite never asks docker."""
+    from karni_cli import catalog
     from karni_cli.commands import add as add_command
 
     monkeypatch.setattr(add_command, "compose_service_running", lambda project, service: False)
+    monkeypatch.setattr(catalog, "compose_service_running", lambda project, service: False)
 
 
 @pytest.fixture(autouse=True)

@@ -35,6 +35,11 @@ Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 
+# The catalog entry, karni_approvals/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+approvals = "karni_approvals"
+
 # The settings fragment: karni_settings() merges DEFAULTS into every project
 # that installs this module (new top-level names only).
 [project.entry-points."karni.settings"]
@@ -54,11 +59,11 @@ dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
 [tool.hatch.build.targets.wheel]
 packages = ["karni_approvals"]
 # `karni add` reads the agent guidance through importlib.resources after install.
-artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/karni.module.toml", "karni_approvals/templates/**"]
 
 [tool.hatch.build.targets.sdist]
 exclude = ["ui/", "tests/"]
-artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/templates/**"]
+artifacts = ["karni_approvals/AGENTS.fragment.md", "karni_approvals/karni.module.toml", "karni_approvals/templates/**"]
 
 [tool.ruff]
 target-version = "py312"

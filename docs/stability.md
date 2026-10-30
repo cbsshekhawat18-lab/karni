@@ -188,6 +188,12 @@ Experimental now:
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
   blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
   `karni_cli.builder` package.
+- [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
+  manifest format and the feature manifests, the `karni.modules` entry point
+  group, `karni.catalog` (with `python -m karni.catalog`),
+  `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
+  `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
+  line of `manage.py karni_context`, and `karni_cli.catalog`.
 
 ## Supported platforms
 

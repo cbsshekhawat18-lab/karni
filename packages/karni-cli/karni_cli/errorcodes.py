@@ -550,8 +550,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C236",
         "A module Karni does not know",
         "karni spec validate (karni_cli.spec.validate)",
-        "modules lists what karni add installs, and this release knows approvals, impersonation, payments and site.",
-        "Fix the name. A module of your own is added with karni add and stays out of the spec until the module catalog lets modules declare themselves.",
+        "modules lists what karni add installs: the modules of the catalog (karni modules list), which are Karni's own (approvals, impersonation, payments and site) and any module installed next to karni-cli that ships a manifest.",
+        "Fix the name. A module of your own joins the spec once it ships a karni.module.toml (docs/modules.md). Without one, add it with karni add and leave it out of the spec.",
     ),
     _c(
         "C237",
@@ -820,6 +820,73 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Upgrade karni in the project (pip install -U karni, or rebuild the image), then ask "
         "again.",
     ),
+    # C313-C319 the module catalog: karni modules, karni add, karni remove
+    _c(
+        "C313",
+        "No module or feature of that name in the catalog",
+        "karni modules show, karni remove (karni_cli.catalog)",
+        "The catalog holds Karni's modules and built-in features, the copies karni-cli bundles "
+        "and the manifests (karni.module.toml) of the modules the project has installed.",
+        "Run `karni modules list` for the names. A module of your own joins the catalog with a "
+        "karni.module.toml and a karni.modules entry point (docs/modules.md).",
+    ),
+    _c(
+        "C314",
+        "A module manifest is not valid",
+        "karni modules, karni add, karni remove (karni.catalog)",
+        "Each module describes itself in karni.module.toml: its purpose, what it provides, the "
+        "questions to ask and the wiring karni add performs. A manifest that does not follow "
+        "the format, or that names a module or feature the catalog does not have, cannot be "
+        "used.",
+        "Fix the key the message names (docs/modules.md lists every key), then run `karni "
+        "modules show <name>`. A module's own tests check it with "
+        "karni.testing.assert_module_manifest.",
+    ),
+    _c(
+        "C315",
+        "The module conflicts with one the project has",
+        "karni add",
+        "A module's manifest lists the modules and features it cannot work next to "
+        "(conflicts). karni add refuses before it writes anything.",
+        "Remove the other one first (karni remove <name>, or turn the feature off), or choose "
+        "another module.",
+    ),
+    _c(
+        "C316",
+        "Another module requires the one being removed",
+        "karni remove",
+        "A module's manifest lists what it needs (requires). Removing a module another added "
+        "module needs would leave that one broken.",
+        "Remove the module that requires it first (the message names it), then this one.",
+    ),
+    _c(
+        "C317",
+        "The module is not in this project",
+        "karni remove",
+        "karni remove takes out what karni add wrote: the dependency in pyproject.toml, the app "
+        "in the # karni:apps block, its middleware, context processors and URL include, and "
+        "its recorded agent guidance. None of that is in this project.",
+        "Check the name with `karni modules list` (an added module says added).",
+    ),
+    _c(
+        "C318",
+        "A built-in feature is switched by a setting, not added or removed",
+        "karni add, karni remove",
+        "Features (two_factor, terms, api_cache and the others) ship with karni. There is no "
+        "package to add and nothing to take out: one setting turns each on or off.",
+        "Turn it on or off with its key under features: in karni.yaml, or its setting (karni "
+        "modules show <name> names both).",
+    ),
+    _c(
+        "C319",
+        "The module's tables exist in the database",
+        "karni remove",
+        "karni remove never drops data. Once the module is out of INSTALLED_APPS, Django can no "
+        "longer drop its tables, so the choice is made now: drop them while the module is "
+        "still added, or keep them.",
+        "To drop the tables and their rows, run the printed `karni migrate <app> zero`, then "
+        "karni remove again. To keep them in the database, run karni remove --keep-tables.",
+    ),
     # C32x debugging: trace, replay, explain --failure
     _c(
         "C320",
@@ -856,6 +923,16 @@ CODES: Final[tuple[CliCode, ...]] = (
         "error, usually because Django could not start (settings, imports, the database).",
         "Run the command it names with `karni manage ...` to see the full output, fix what "
         "it reports, then retry.",
+    ),
+    # C324-C339 the module catalog in karni.yaml
+    _c(
+        "C324",
+        "A module or feature needs another, or cannot be next to one",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The catalog's manifests say what each module and feature requires and conflicts with. "
+        "The spec lists one without what it requires, or two that conflict.",
+        "Add what the message says is required (under modules: or features:), or leave one of "
+        "the two that conflict out. karni modules show <name> lists both.",
     ),
     # C34x debugging: karni explain -, karni queries
     _c(

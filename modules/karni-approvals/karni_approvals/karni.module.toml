@@ -1,0 +1,50 @@
+# The catalog entry of karni-approvals: what `karni modules show approvals` prints,
+# what `karni add approvals` wires and `karni remove approvals` takes out.
+name = "approvals"
+kind = "module"
+title = "Approvals"
+purpose = "Maker-checker: a second person approves guarded changes before they are written."
+status = "stable"
+use_when = ["approvals", "maker-checker", "four-eyes", "sign-off before a change", "review queue"]
+services = ["a Celery worker and beat: notifications and the hourly timeout sweep"]
+docs = "modules/karni-approvals/README.md"
+
+[provides]
+models = ["PendingChange", "Decision"]
+endpoints = [
+    "/api/pending-changes/",
+    "/api/pending-changes/{id}/approve/",
+    "/api/pending-changes/{id}/reject/",
+    "/api/pending-changes/count/",
+]
+pages = ["admin: the queue of pending changes"]
+ui = "@karni/approvals-ui"
+
+[provides.settings]
+KARNI_APPROVALS_REQUIRED = "integer"
+KARNI_APPROVALS_APPROVER_ROLES = "array"
+KARNI_APPROVALS_TIMEOUT_HOURS = "integer"
+KARNI_APPROVALS_ON_TIMEOUT = "string"
+KARNI_APPROVALS_ESCALATION_ROLES = "array"
+KARNI_APPROVALS_NOTIFY = "string"
+KARNI_APPROVALS_FROM_EMAIL = "string"
+
+[[asks]]
+question = "How many people must approve a guarded change?"
+setting = "KARNI_APPROVALS_REQUIRED"
+default = 1
+
+[[asks]]
+question = "After how many hours does a pending change time out (0: never)?"
+setting = "KARNI_APPROVALS_TIMEOUT_HOURS"
+default = 0
+
+[[asks]]
+question = "When it times out, does the change expire or escalate?"
+setting = "KARNI_APPROVALS_ON_TIMEOUT"
+options = ["expire", "escalate"]
+default = "expire"
+
+[wiring]
+apps = ["karni_approvals"]
+settings = "karni_approvals.conf:DEFAULTS"

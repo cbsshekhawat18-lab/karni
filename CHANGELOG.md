@@ -51,6 +51,36 @@ apply codemods and list the manual steps. This file is the human summary.
   generated tests failed with `E605` before.
 - **The query-scaling rule measures a model on another database there**
   (`Karni.database`), instead of failing on the test database's guard.
+- **The module catalog and `karni remove` (experimental).** Every module
+  describes itself in `karni.module.toml` inside its package, found through
+  the new `karni.modules` entry point group, and every built-in feature
+  (`two_factor`, `email_code_login`, `social_login`, `terms`, `api_cache`)
+  has a manifest in `karni/catalog/features/`: purpose, what it provides
+  (models, endpoints, pages, settings with their types), the questions to
+  ask (each mapped to a setting, with options and a default), requires,
+  conflicts, services, status and, for a module, the wiring `karni add`
+  performs. `karni.catalog` parses and checks them. `karni modules list
+  [--json]` and `karni modules show <name> [--json]` print the catalog,
+  installed or not (karni-cli bundles a copy of each of Karni's manifests),
+  and `karni context` prints a `CATALOG:` line per module and feature with
+  whether the project has it (the backend adds a `FEATURES:` line). `karni
+  add` reads the manifest for what it wires, with the same result for
+  Karni's four modules: the URL include it prints comes from the manifest
+  (none for approvals), and it adds the extras and the services the module
+  needs, and refuses a module that conflicts with one the project has
+  (`C315`). The new `karni remove <name> [--dry-run] [--keep-tables]` takes
+  out what `karni add` wired, byte for byte, refuses while another module
+  requires it (`C316`), and never drops data: it counts each table's rows
+  through `manage.py karni_rows` and, while a table exists, stops with the
+  `karni migrate <app> zero` command to run deliberately first (`C319`).
+  The app spec reads its modules, their options, its features and the
+  social sign-in providers from the catalog, replacing A1's hand-made
+  table, and `karni spec validate` checks requires and conflicts (`C324`).
+  `karni.testing.assert_module_manifest` checks a module's manifest against
+  its entry point, settings fragment and models, and `karni make module`
+  writes a manifest with that test. Rule K307 and the add-module procedure
+  point agents at the catalog. New codes `C313` to `C319`, `C324` and `E310`.
+  [docs/modules.md](docs/modules.md#the-module-catalog).
 
 - **`karni plan` (experimental): what `karni build` would change, writing
   nothing.** `karni plan [--spec karni.yaml] [--json] [--offline]` validates
