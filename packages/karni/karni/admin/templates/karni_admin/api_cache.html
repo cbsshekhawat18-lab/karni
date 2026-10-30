@@ -1,0 +1,97 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% comment %}
+The admin's API cache screen (karni.admin.cache.ApiCacheScreen): how response
+caching is set up, the flush schedule, every routed resource, and the buttons
+that clear everything or one resource. Override this template, or subclass
+ApiCacheScreen and set template_name.
+{% endcomment %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="karni-page">
+  <div class="karni-scroll"><table class="karni-table">
+    <tbody>
+      <tr>
+        <th scope="row">{% translate "Caching" %}</th>
+        <td>
+          {% if enabled %}
+            {% blocktranslate trimmed with ttl=default_ttl %}
+              On (KARNI_API_CACHE). Responses live {{ ttl }} seconds unless a viewset sets its own ttl.
+            {% endblocktranslate %}
+          {% else %}
+            {% translate "Off (KARNI_API_CACHE is False): nothing is cached." %}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">{% translate "Backend" %}</th>
+        <td>{{ backend|default:"-" }} <span class="karni-muted">(CACHES["{{ alias }}"])</span></td>
+      </tr>
+      <tr>
+        <th scope="row">{% translate "Clearing" %}</th>
+        <td>
+          {% if clearing == "delete_pattern" %}
+            {% translate "The backend has delete_pattern: a clear deletes the entries." %}
+          {% else %}
+            {% translate "The backend has no delete_pattern: a clear replaces the version tokens, and the old entries expire by their TTL." %}
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">{% translate "Scheduled flush" %}</th>
+        <td>
+          {% if flush %}
+            {{ flush }} (KARNI_API_CACHE_FLUSH){% if not flush_active %} <span class="karni-muted">{% translate "not scheduled while caching is off" %}</span>{% endif %}
+          {% else %}
+            {% translate "None (KARNI_API_CACHE_FLUSH is not set)." %}
+          {% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <form method="post" class="karni-toolbar">
+    {% csrf_token %}
+    <button type="submit" name="clear" value="all" class="karni-button">{% translate "Clear everything" %}</button>
+  </form>
+
+  <div class="karni-scroll"><table class="karni-table">
+    <thead>
+      <tr>
+        <th>{% translate "Resource" %}</th>
+        <th>{% translate "Model" %}</th>
+        <th>{% translate "TTL" %}</th>
+        <th>{% translate "Reads" %}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for resource in resources %}
+        <tr>
+          <td>{{ resource.route }} <span class="karni-muted">{{ resource.viewset }}</span></td>
+          <td>{{ resource.model }}</td>
+          <td>{% if resource.cached %}{{ resource.ttl }}s{% endif %} <span class="karni-muted">{{ resource.note }}</span></td>
+          <td>{{ resource.reads|join:", " }}</td>
+          <td>
+            {% if resource.cached %}
+              <form method="post">
+                {% csrf_token %}
+                <button type="submit" name="clear" value="{{ resource.model }}" class="karni-button karni-button-secondary">{% translate "Clear" %}</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="karni-muted">{% translate "No resource is routed." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

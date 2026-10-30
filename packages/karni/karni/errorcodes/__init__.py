@@ -1278,6 +1278,41 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Read the task's own error in the message and fix the task. Then re-run it with "
         "`karni schedule run <name>`.",
     ),
+    # E410-E429 / W580-W589 response caching (karni.api.caching)
+    _e(
+        "E410",
+        "A cached viewset reads a model Karni sees no write to",
+        "check",
+        "karni.checks.check_api_cache",
+        "With KARNI_API_CACHE on, a cached response is invalidated when a model it reads is "
+        "written. An external or unmanaged model, or one on another database, is written by "
+        "another system, so no signal reaches Karni and the response would stay stale for the "
+        "whole KARNI_API_CACHE_TTL.",
+        "Bound the staleness with `cache = Cache(ttl=60)` on the viewset (any explicit ttl), or "
+        "opt it out with `cache = Uncached(reason='reads the warehouse tables')`. After a write "
+        "you can see, call karni.api.caching.invalidate(Model).",
+    ),
+    _e(
+        "E411",
+        "KARNI_API_CACHE_FLUSH is not a time of day",
+        "exception",
+        "karni.conf.validation; karni.api.caching.parse_flush",
+        "The scheduled flush of the response cache runs once a day at the time this setting "
+        "names, in its timezone or Celery's.",
+        "Write 'HH:MM' (24-hour), optionally followed by an IANA timezone: '03:30' or "
+        "'03:30 Europe/Paris'. Leave it unset (None) for no scheduled flush.",
+    ),
+    _e(
+        "W580",
+        "Cached responses live in a cache private to each process",
+        "warning",
+        "karni.checks.check_api_cache_backend",
+        "KARNI_API_CACHE keeps responses and their version tokens in KARNI_API_CACHE_ALIAS. A "
+        "per-process backend (LocMemCache) keeps them in each worker, so a write handled by "
+        "one worker leaves the other workers serving the old response until the TTL ends.",
+        "Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database "
+        "cache) in production, or silence karni.W580 for a single-process deployment.",
+    ),
     # E5xx settings and optional dependencies
     _e(
         "E501",

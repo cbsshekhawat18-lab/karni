@@ -79,7 +79,7 @@ class KarniQuerySet(models.QuerySet):
 
         with invalidation_batch():
             deleted, per_model = super().delete()
-            _invalidate_deleted(per_model)
+            _invalidate_deleted(self.model, per_model)
         return deleted, per_model
 
     delete.queryset_only = True  # type: ignore[attr-defined]
@@ -122,15 +122,20 @@ class KarniQuerySet(models.QuerySet):
     without.queryset_only = True  # type: ignore[attr-defined]
 
 
-def _invalidate_deleted(per_model: dict[str, int]) -> None:
+def _invalidate_deleted(model: type[models.Model], per_model: dict[str, int]) -> None:
     """Invalidate the response cache of each model a ``delete()`` removed rows from."""
-    from django.apps import apps
+    from karni.api.caching import cache_enabled, invalidate
 
-    from karni.api.caching import invalidate
-
+    if not cache_enabled():
+        return
+    registry = model._meta.apps
     for label, count in per_model.items():
-        if count:
-            invalidate(apps.get_model(label))
+        if not count:
+            continue
+        try:
+            invalidate(registry.get_model(label))
+        except LookupError:
+            invalidate(model)
 
 
 class TimestampedQuerySet(KarniQuerySet):

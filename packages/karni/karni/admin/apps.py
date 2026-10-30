@@ -26,7 +26,8 @@ class KarniAdminConfig(AppConfig):
 
     It also gives the admin site (``KARNI_ADMIN_SITE``) Karni's login
     template, which shows the header's logo (``KARNI_ADMIN_LOGO``) on the
-    login screen, unless the site already sets ``login_template``.
+    login screen, unless the site already sets ``login_template``, and the
+    *API cache* screen (:mod:`karni.admin.cache`).
 
     Override / escape hatch: set ``KARNI_ADMIN_AUTODISCOVER = False`` to skip
     the startup autodiscovery entirely (you can still call
@@ -47,6 +48,9 @@ class KarniAdminConfig(AppConfig):
         from karni.scoping import admin_site
 
         use_login_template(admin_site())
+        from karni.admin.cache import install
+
+        install(admin_site())  # the API cache screen (karni.admin.cache)
         if not getattr(settings, "KARNI_ADMIN_AUTODISCOVER", True):
             return
 

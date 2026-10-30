@@ -153,7 +153,7 @@ def test_equivalent_urls_share_an_entry(event: Event) -> None:
 
 def test_an_entry_key_names_its_resource(event: Event) -> None:
     _get(PublicEvents)
-    keys = [key for key in default_cache._cache if ":karni:api:r:" in key]  # type: ignore[attr-defined]
+    keys = [key for key in default_cache._cache if ":karni:api:r:" in key]
     assert len(keys) == 1 and ":karni:api:r:testapp.event:" in keys[0]
 
 

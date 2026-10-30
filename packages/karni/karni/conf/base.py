@@ -485,6 +485,8 @@ BASE: dict[str, Any] = {
     "KARNI_API_CACHE": env.bool("KARNI_API_CACHE", default=False),
     "KARNI_API_CACHE_TTL": env.int("KARNI_API_CACHE_TTL", default=300),
     "KARNI_API_CACHE_ALIAS": env("KARNI_API_CACHE_ALIAS", default="default"),
+    # A daily full flush through Celery beat: "03:30" or "03:30 Europe/Paris". Off by default.
+    "KARNI_API_CACHE_FLUSH": env("KARNI_API_CACHE_FLUSH", default=None),
     # --- Admin (karni.admin + django-unfold) --------------------------------
     "UNFOLD": {
         "SITE_TITLE": _ADMIN_TITLE,
