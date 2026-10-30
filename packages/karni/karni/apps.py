@@ -23,8 +23,10 @@ class KarniAppConfig(AppConfig):
     in web, worker and beat processes alike.
 
     Last, it connects :mod:`karni.tracing` (the request id on Celery tasks,
-    their retries and outgoing email) and the development capture's exception
-    hook (:mod:`karni.debug`, inert unless ``DEBUG`` is on).
+    their retries and outgoing email), the development capture's exception
+    hook (:mod:`karni.debug`, inert unless ``DEBUG`` is on) and the write
+    signals of the response cache (:mod:`karni.api.caching`, inert unless
+    ``KARNI_API_CACHE`` is on).
 
     Override / escape hatch: set ``KARNI_VALIDATE = False`` in the project's
     settings module to skip validation entirely, ``KARNI_EVENTS_AUTODISCOVER
@@ -61,3 +63,9 @@ class KarniAppConfig(AppConfig):
 
         tracing.connect()
         debug_middleware.connect()
+
+        # Response caching: every write invalidates while KARNI_API_CACHE is on,
+        # in every process (web, Celery worker, management command).
+        from karni.api import caching
+
+        caching.connect()

@@ -609,11 +609,17 @@ class _Loader:
     # the run
 
     def run(self) -> LoadReport:
+        from karni.api.caching import invalidation_batch
         from karni.audit.capture import change_batch
 
         started = time.perf_counter()
         plans = self.top_level(read_content(self.path))
-        with current_user(self.actor), transaction.atomic():
+        # The API response cache of every model loaded is invalidated once, at the end.
+        with (
+            invalidation_batch(discard=self.dry_run),
+            current_user(self.actor),
+            transaction.atomic(),
+        ):
             batch = (
                 nullcontext()
                 if self.dry_run

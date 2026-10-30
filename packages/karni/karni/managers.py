@@ -50,11 +50,64 @@ _LIFT_SOFT_DELETE = 'objects.without("soft_delete", reason=...)'
 
 
 class KarniQuerySet(models.QuerySet):
-    """Root of every Karni queryset: filters valid on any model."""
+    """Root of every Karni queryset: filters valid on any model.
+
+    Its bulk writes (``update()``, ``delete()``, ``bulk_create()``,
+    ``bulk_update()``) send no per-row signal, so each one invalidates the
+    API response cache of the models it wrote, once per call
+    (:mod:`karni.api.caching`, a no-op while ``KARNI_API_CACHE`` is off).
+    """
 
     def by_ids(self, ids: Any) -> Self:
         """Rows whose primary key is in ``ids`` (any iterable)."""
         return self.filter(pk__in=list(ids))
+
+    def update(self, **kwargs: Any) -> int:
+        """Django's ``update()``, then the response cache of the model is invalidated."""
+        from karni.api.caching import invalidate
+
+        count = super().update(**kwargs)
+        if count:
+            invalidate(self.model)
+        return int(count)
+
+    update.alters_data = True  # type: ignore[attr-defined]
+
+    def delete(self) -> tuple[int, dict[str, int]]:
+        """Django's ``delete()``, then the response cache of every model it deleted from."""
+        from karni.api.caching import invalidation_batch
+
+        with invalidation_batch():
+            deleted, per_model = super().delete()
+            _invalidate_deleted(per_model)
+        return deleted, per_model
+
+    delete.queryset_only = True  # type: ignore[attr-defined]
+    delete.alters_data = True  # type: ignore[attr-defined]
+
+    def bulk_create(self, objs: Any, *args: Any, **kwargs: Any) -> list[Any]:
+        """Django's ``bulk_create()``, then the response cache of the model is invalidated."""
+        from karni.api.caching import invalidate, invalidation_batch
+
+        with invalidation_batch():
+            created = super().bulk_create(objs, *args, **kwargs)
+            if created:
+                invalidate(self.model)
+        return list(created)
+
+    bulk_create.alters_data = True  # type: ignore[attr-defined]
+
+    def bulk_update(self, objs: Any, fields: Any, batch_size: int | None = None) -> int:
+        """Django's ``bulk_update()``, then the response cache of the model is invalidated."""
+        from karni.api.caching import invalidate, invalidation_batch
+
+        with invalidation_batch():
+            count = super().bulk_update(objs, fields, batch_size=batch_size)
+            if count:
+                invalidate(self.model)
+        return int(count)
+
+    bulk_update.alters_data = True  # type: ignore[attr-defined]
 
     def without(self, *names: str, reason: str = "") -> NoReturn:
         """Not on querysets: a scope is lifted on the manager, before it applies."""
@@ -67,6 +120,17 @@ class KarniQuerySet(models.QuerySet):
         )
 
     without.queryset_only = True  # type: ignore[attr-defined]
+
+
+def _invalidate_deleted(per_model: dict[str, int]) -> None:
+    """Invalidate the response cache of each model a ``delete()`` removed rows from."""
+    from django.apps import apps
+
+    from karni.api.caching import invalidate
+
+    for label, count in per_model.items():
+        if count:
+            invalidate(apps.get_model(label))
 
 
 class TimestampedQuerySet(KarniQuerySet):
@@ -110,7 +174,7 @@ class SoftDeleteQuerySet(KarniQuerySet):
 
     def hard_delete(self) -> tuple[int, dict[str, int]]:
         """Really delete the rows (Django's ``QuerySet.delete``), cascading as usual."""
-        return models.QuerySet.delete(self)
+        return KarniQuerySet.delete(self)
 
     hard_delete.queryset_only = True  # type: ignore[attr-defined]
     hard_delete.alters_data = True  # type: ignore[attr-defined]
