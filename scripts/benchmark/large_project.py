@@ -56,8 +56,10 @@ STEPS = (
     "check_cold",
     "check_cached",
     "check_one_edit",
+    "check_changed",
     "context",
     "context_summary",
+    "context_app",
     "tests",
 )
 
@@ -120,7 +122,7 @@ def spec_text(models: int, apps: int) -> str:
     return "\n".join(lines) + "\n"
 
 
-def calibrate(rounds: int = 3) -> float:
+def calibrate(rounds: int = 5) -> float:
     """Seconds this machine takes for a fixed piece of pure Python work (the best of ``rounds``)."""
     best = math.inf
     for _ in range(rounds):
@@ -177,8 +179,12 @@ def make_project(parent: Path, models: int, apps: int) -> tuple[Path, float]:
     def no_npm(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(argv, 127, stdout="", stderr="npm left out")
 
+    saved = scaffold.run_npm
     scaffold.run_npm = no_npm  # the frontend is removed below: @karni/ui is never built
-    result = CliRunner().invoke(app, ["new", "Bench", "--kind", "app", "-o", str(parent)])
+    try:
+        result = CliRunner().invoke(app, ["new", "Bench", "--kind", "app", "-o", str(parent)])
+    finally:
+        scaffold.run_npm = saved
     if result.exit_code != 0:
         raise SystemExit(f"karni new failed:\n{result.output}")
     root = parent / "bench"
@@ -186,6 +192,15 @@ def make_project(parent: Path, models: int, apps: int) -> tuple[Path, float]:
     (root / "karni.yaml").write_text(spec_text(models, apps), encoding="utf-8")
     seconds, _ = _karni(root, "build")
     return root, seconds
+
+
+def _git(project: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-c", "user.email=bench@example.com", "-c", "user.name=bench", *args],
+        cwd=project,
+        check=True,
+        capture_output=True,
+    )
 
 
 def _cache_files(project: Path) -> list[Path]:
@@ -203,8 +218,14 @@ def measure(project: Path) -> dict[str, Any]:
     edited = next(project.glob("area*/models.py"))
     edited.write_text(edited.read_text(encoding="utf-8") + "\n# edited\n", encoding="utf-8")
     times["check_one_edit"], _ = _karni(project, "check", "--no-frontend")
+    _git(project, "init", "-q")
+    _git(project, "add", "-A")
+    _git(project, "commit", "-q", "-m", "bench")
+    edited.write_text(edited.read_text(encoding="utf-8") + "# edited again\n", encoding="utf-8")
+    times["check_changed"], _ = _karni(project, "check", "--no-frontend", "--changed")
     times["context"], context = _karni(project, "context")
     times["context_summary"], _ = _karni(project, "context", "--summary")
+    times["context_app"], _ = _karni(project, "context", "--app", edited.parent.name)
     times["tests"], output = _karni(project, "test", "--", "-q", "-p", "no:cacheprovider")
     tail = [line for line in output.strip().splitlines() if " passed" in line]
     return {
