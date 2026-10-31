@@ -28,6 +28,9 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   the component schema of a tree model (:class:`karni.models.TreeModel`)
   and on every relation field that points at one, so a client shows a tree
   where it would show a list (:mod:`karni.api.tree`).
+* ``x-karni-taxonomy: "<key>"`` (experimental) on the relation field of a
+  ``class Karni: taxonomies`` key, so a client knows the field has list
+  filters and ``facets/`` counts (:mod:`karni.api.taxonomy`).
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -201,6 +204,14 @@ class KarniAutoSchema(AutoSchema):
             from karni.api.tree import tree_access_serializer
 
             return tree_access_serializer(view.get_model())
+        if action == "facets" and view is not None and view.serves_facets():
+            from karni.api.taxonomy import facets_serializer
+
+            return facets_serializer(view.get_model())
+        if action == "tagged" and view is not None and view.serves_tagged():
+            from karni.api.taxonomy import tagged_serializer
+
+            return tagged_serializer(view.get_model())
         if action == "tree" and (node := self._karni_tree_node()) is not None:
             from karni.api.tree import tree_response_serializer
 
@@ -252,6 +263,7 @@ class KarniAutoSchema(AutoSchema):
         if expand is not None:
             parameters.append(expand)
         parameters.extend(self._karni_tree_parameters())
+        parameters.extend(self._karni_taxonomy_parameters())
         if self._karni_action() in ("export", "import_template"):
             parameters.append(
                 OpenApiParameter(
@@ -321,10 +333,65 @@ class KarniAutoSchema(AutoSchema):
             ),
         ]
 
-    def get_filter_backends(self) -> list[Any]:
-        """Stock, except ``children/``, ``ancestors/`` and ``access/``: no list filters there."""
-        if self._karni_action() in ("children", "ancestors", "access_forest"):
+    def _karni_taxonomy_parameters(self) -> list[Any]:
+        """``taxonomy`` and ``rollup`` on ``facets/``, ``descendants`` on ``<key>/tagged/``."""
+        view = self._karni_view()
+        action = self._karni_action()
+        if view is None:
             return []
+        if action == "tagged" and view.serves_tagged():
+            return [
+                OpenApiParameter(
+                    name="descendants",
+                    type=bool,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description="true: count the rows tagged with the node or a node below it.",
+                )
+            ]
+        if action != "facets" or not view.serves_facets():
+            return []
+        from karni.taxonomy import taxonomies
+
+        keys = list(taxonomies(view.get_model()))
+        return [
+            OpenApiParameter(
+                name="taxonomy",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=len(keys) > 1,
+                enum=keys,
+                description="The taxonomy to count (optional when the model has one).",
+            ),
+            OpenApiParameter(
+                name="rollup",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description=(
+                    "true: a node also counts the rows tagged with any node below it, each "
+                    "row once."
+                ),
+            ),
+        ]
+
+    def get_filter_backends(self) -> list[Any]:
+        """Stock, except ``children/``, ``ancestors/`` and ``access/``: no list filters there.
+
+        ``facets/`` counts the list's rows, so it takes the list's filters and
+        search (not its ordering).
+        """
+        action = self._karni_action()
+        if action in ("children", "ancestors", "access_forest", "tagged"):
+            return []
+        if action == "facets":
+            from rest_framework.filters import OrderingFilter
+
+            return [
+                backend
+                for backend in getattr(self.view, "filter_backends", [])
+                if not issubclass(backend, OrderingFilter)
+            ]
         return list(super().get_filter_backends())
 
     def _get_paginator(self) -> Any:
@@ -338,7 +405,7 @@ class KarniAutoSchema(AutoSchema):
         action = self._karni_action()
         if action in ("history", "children", "ancestors"):
             return True
-        if action in ("tree", "move", "access_forest"):
+        if action in ("tree", "move", "access_forest", "facets", "tagged"):
             return False
         if action in (
             "export",
@@ -482,11 +549,31 @@ def _annotate_relation(schema: Any, field: Any, *, many: bool) -> Any:
     spec = tree_spec(model)
     if spec is not None:
         schema["x-karni-tree"] = spec.as_extension()
+        key = _taxonomy_key(field)
+        if key is not None:
+            schema["x-karni-taxonomy"] = key
     resource = _route_for_model(model)
     if resource is None:
         return schema
     schema["x-karni-relation"] = {"resource": resource, "many": many}
     return schema
+
+
+def _taxonomy_key(field: Any) -> str | None:
+    """The taxonomy key a serializer field carries (``class Karni: taxonomies``), else ``None``."""
+    from karni.taxonomy import get_taxonomy
+
+    parent = getattr(field, "parent", None)
+    while parent is not None and getattr(parent, "Meta", None) is None:
+        parent = getattr(parent, "parent", None)
+    model = getattr(getattr(parent, "Meta", None), "model", None)
+    name = getattr(field, "source", None) or getattr(field, "field_name", None)
+    if not isinstance(model, type) or not name:
+        return None
+    try:
+        return name if get_taxonomy(model, str(name)) is not None else None
+    except Exception:  # noqa: BLE001 - a malformed declaration fails at import (E570)
+        return None
 
 
 def _field_target_model(field: Any) -> type[Model] | None:

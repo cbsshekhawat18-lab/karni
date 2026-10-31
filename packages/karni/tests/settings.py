@@ -71,6 +71,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # External tables, a SQL view and a second database (karni.db): viewsets
     # mounted by its own URLconf only.
     "tests.externalapp",
+    # Taxonomy tagging (class Karni: taxonomies): viewsets mounted by tests.taxonomy.urls.
+    "tests.taxoapp",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that
