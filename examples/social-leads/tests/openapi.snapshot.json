@@ -2588,6 +2588,16 @@
             "crm.contact:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "contact",
+            "key": "id",
+            "label": "Leads",
+            "name": "lead_set",
+            "param": "contact",
+            "resource": "leads"
+          }
+        ],
         "x-karni-resource": "contacts"
       },
       "post": {
@@ -4543,6 +4553,16 @@
             "crm.lead:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "lead",
+            "key": "id",
+            "label": "Lead activities",
+            "name": "activities",
+            "param": "lead",
+            "resource": "lead-activities"
+          }
+        ],
         "x-karni-resource": "leads"
       },
       "post": {
@@ -6303,6 +6323,24 @@
             "crm.workspace:view"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "workspace",
+            "key": "id",
+            "label": "Contacts",
+            "name": "contact_set",
+            "param": "workspace",
+            "resource": "contacts"
+          },
+          {
+            "field": "workspace",
+            "key": "id",
+            "label": "Leads",
+            "name": "lead_set",
+            "param": "workspace",
+            "resource": "leads"
+          }
+        ],
         "x-karni-resource": "workspaces"
       },
       "post": {

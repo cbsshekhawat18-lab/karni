@@ -3810,6 +3810,24 @@
             "cancelled"
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "event",
+            "key": "id",
+            "label": "Ticket tiers",
+            "name": "tickettier_set",
+            "param": "event",
+            "resource": "ticket-tiers"
+          },
+          {
+            "field": "event",
+            "key": "id",
+            "label": "Bookings",
+            "name": "booking_set",
+            "param": "event",
+            "resource": "bookings"
+          }
+        ],
         "x-karni-resource": "events"
       },
       "post": {
@@ -4892,6 +4910,24 @@
             }
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "payment",
+            "key": "id",
+            "label": "Bookings",
+            "name": "booking_set",
+            "param": "payment",
+            "resource": "bookings"
+          },
+          {
+            "field": "payment",
+            "key": "id",
+            "label": "Refunds",
+            "name": "refunds",
+            "param": "payment",
+            "resource": "refunds"
+          }
+        ],
         "x-karni-resource": "payments"
       },
       "post": {
@@ -6719,6 +6755,16 @@
             }
           ]
         },
+        "x-karni-related": [
+          {
+            "field": "tier",
+            "key": "id",
+            "label": "Bookings",
+            "name": "booking_set",
+            "param": "tier",
+            "resource": "bookings"
+          }
+        ],
         "x-karni-resource": "ticket-tiers"
       },
       "post": {
@@ -7656,6 +7702,16 @@
         "x-karni-access": {
           "public": true
         },
+        "x-karni-related": [
+          {
+            "field": "venue",
+            "key": "id",
+            "label": "Events",
+            "name": "event_set",
+            "param": "venue",
+            "resource": "events"
+          }
+        ],
         "x-karni-resource": "venues"
       },
       "post": {
