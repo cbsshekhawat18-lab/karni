@@ -234,7 +234,7 @@ class FileView(APIView):
         return response
 
 
-class UploadRequestSerializer(serializers.Serializer):
+class StorageUploadSerializer(serializers.Serializer):
     """What the upload step takes: the file's name, type and size, before sending it."""
 
     name = serializers.CharField(max_length=255)
@@ -242,7 +242,7 @@ class UploadRequestSerializer(serializers.Serializer):
     size = serializers.IntegerField(min_value=0)
 
 
-class ConfirmRequestSerializer(serializers.Serializer):
+class StorageConfirmSerializer(serializers.Serializer):
     """What confirm takes: the token the upload step gave."""
 
     token = serializers.CharField()
@@ -269,13 +269,13 @@ class UploadView(APIView):
     permission_classes: ClassVar[list[Any]] = []
 
     @extend_schema(
-        parameters=_PATH, request=UploadRequestSerializer, responses={200: OpenApiTypes.OBJECT}
+        parameters=_PATH, request=StorageUploadSerializer, responses={200: OpenApiTypes.OBJECT}
     )
     def post(self, request: Request, resource: str, field: str) -> Response:
         """A presigned POST or PUT for one file, or ``{"method": "api"}`` on local storage."""
         target = resolve(resource, field)
         may_upload(target, request)
-        payload = UploadRequestSerializer(data=request.data)
+        payload = StorageUploadSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         name = str(payload.validated_data["name"])
         size = int(payload.validated_data["size"])
@@ -336,7 +336,7 @@ class ConfirmView(APIView):
     permission_classes: ClassVar[list[Any]] = []
 
     @extend_schema(
-        parameters=_PATH, request=ConfirmRequestSerializer, responses={200: OpenApiTypes.OBJECT}
+        parameters=_PATH, request=StorageConfirmSerializer, responses={200: OpenApiTypes.OBJECT}
     )
     def post(self, request: Request, resource: str, field: str) -> Response:
         """The object checked (exists, size, type) and a token the row's save takes."""
@@ -347,7 +347,7 @@ class ConfirmView(APIView):
                 "STORE015",
                 "Protected files are on local storage: send the file with the row instead.",
             )
-        payload = ConfirmRequestSerializer(data=request.data)
+        payload = StorageConfirmSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         label = target.model._meta.label_lower
         try:

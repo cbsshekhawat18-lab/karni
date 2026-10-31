@@ -39,9 +39,12 @@ class Product(ApiBase):
         content_types=["application/pdf", "text/plain"],
     )
     photo = ProtectedImageField(upload_to="products/photos/", blank=True)
+    #: Only staff may see or change it (Karni.field_roles): hidden from the owner.
+    invoice = ProtectedFileField(upload_to="products/invoices/", blank=True)
 
     class Karni:
         owner_field = "owner"
+        field_roles = {"invoice": ["staff"]}
 
     def __str__(self) -> str:
         return self.name

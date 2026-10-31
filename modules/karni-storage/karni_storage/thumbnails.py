@@ -80,7 +80,11 @@ def make(source: str) -> dict[str, str]:
     from karni_storage.storage import protected_storage
 
     wanted = sizes()
-    done = set(Thumbnail.objects.filter(source=source).values_list("size", flat=True))
+    rows = Thumbnail.objects.without(
+        "soft_delete", reason="a deleted thumbnail is made again, under the same unique key"
+    ).filter(source=source)
+    rows.filter(deleted_at__isnull=False).hard_delete()
+    done = set(rows.filter(deleted_at__isnull=True).values_list("size", flat=True))
     missing = {name: box for name, box in wanted.items() if name not in done}
     if not missing:
         return {}
