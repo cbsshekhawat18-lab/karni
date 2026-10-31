@@ -200,6 +200,27 @@ def test_adding_a_field_an_entity_a_page_and_a_seed(base: Project) -> None:
     assert lines[-1] == f"{len(plan.changes)} changes, 0 risky."
 
 
+def test_related_tabs_and_a_dashboard_page(base: Project) -> None:
+    """Experimental: a detail page's related tabs and a dashboard page other than home."""
+    plan = _plan(
+        _edit(
+            (
+                "  - Product: [list]\n",
+                "  - Product: [list, {detail: {related: [Order]}}]\n  - overview: dashboard\n",
+            ),
+        ),
+        base,
+    )
+    lines = plan.text().splitlines()
+    assert "  ~ Product: list -> list, detail (related shop.Order.product)" in lines
+    assert "  + overview: dashboard (rows per entity: Order, Product, Supplier)" in lines
+    pages = [change for change in plan.changes if change.area == "pages"]
+    assert all(change.managed for change in pages), pages
+    # The scaffold's home page stays the project's: never built, so not managed.
+    home = _plan(_edit(("  - home: dashboard\n", "")), base)
+    assert [c.target for c in home.changes if c.area == "pages"] == ["home"]
+
+
 def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     plan = _plan(
         _edit(

@@ -383,6 +383,39 @@ def test_the_projects_own_files_are_never_rewritten(copy: Path) -> None:
     )
 
 
+def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
+    """Experimental (page blocks): related tabs on a detail page, and a dashboard page."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            "  - Session: [list, detail, form]\n",
+            "  - Session: [list, {detail: {related: [Booking]}}, form]\n  - overview: dashboard\n",
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output.splitlines()
+    assert (
+        "  ~ Session: list, detail, form -> list, detail (related classes.Booking.session), form"
+        in plan
+    )
+    assert "  + overview: dashboard (rows per entity: Booking, Session, Studio)" in plan
+    code, out = _build()
+    assert code == 0, out
+    pages = copy / "frontend" / "src" / "pages" / "karni"
+    detail = (pages / "session-detail.tsx").read_text()
+    assert 'related={["bookings"]}' in detail
+    overview = (pages / "overview.tsx").read_text()
+    assert overview.startswith("// Written by karni build")
+    assert '    "studios", "sessions", "bookings",\n' in overview
+    assert "<ChartCard" in overview and overview.count("\n") <= 50
+    routes = (copy / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'path: "/overview", component: OverviewPage' in routes
+    assert "frontend/src/pages/karni/overview.tsx" in record.load(copy).files
+    # The export reads both back: the project matches the spec, and a rebuild writes nothing.
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
 # escape hatches, projects built by hand, keys and databases -----------------------
 
 

@@ -989,6 +989,49 @@ def test_detail_pages_expand_the_model_relations(project: Path) -> None:
     assert 'expand={["venue"]}' in page
 
 
+def test_a_detail_page_takes_related_tabs(project: Path) -> None:
+    """Experimental: --related writes ResourceDetail's related tabs."""
+    ok("make", "page", "company-detail", "--resource", "companies", "--kind", "detail",
+       "--related", "deals", "--related", "people.company")  # fmt: skip
+    page = (project / "frontend" / "src" / "pages" / "company-detail.tsx").read_text()
+    assert 'related={["deals", "people.company"]}' in page
+    assert page.count("\n") <= 50
+    fails(
+        "make",
+        "page",
+        "companies",
+        "--resource",
+        "companies",
+        "--related",
+        "deals",
+        match="--related takes a detail page",
+    )
+    fails(
+        "make", "page", "c", "--resource", "companies", "--kind", "detail", "--related", "Deal",
+        match="resource.field for a related tab",
+    )  # fmt: skip
+
+
+def test_a_dashboard_page_counts_the_routed_resources(project: Path) -> None:
+    """Experimental: --kind dashboard composes DashboardGrid and ChartCard with useResourceCounts."""
+    ok("make", "app", "shop")
+    ok("make", "model", "Product", "name:str", "--with", "viewset")
+    ok("make", "model", "Supplier", "name:str", "--with", "viewset")
+    ok("make", "page", "overview", "--kind", "dashboard")
+    page = (project / "frontend" / "src" / "pages" / "overview.tsx").read_text()
+    assert 'import { ChartCard, DashboardGrid, Page, useResourceCounts } from "@karni/ui";' in page
+    assert '    "products", "suppliers",\n' in page
+    assert "<ChartCard" in page and "<DashboardGrid>" in page and page.count("\n") <= 50
+    routes = (project / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'path: "/overview", component: OverviewPage' in routes
+    ok("make", "page", "stock", "--kind", "dashboard", "--count", "products")
+    assert '    "products",\n' in (project / "frontend" / "src" / "pages" / "stock.tsx").read_text()
+    fails(
+        "make", "page", "x", "--kind", "dashboard", "--resource", "products",
+        match="--count instead of --resource",
+    )  # fmt: skip
+
+
 def test_test_generator_never_drops_isolation_silently(project: Path) -> None:
     """A custom scope, or no partitioning grant at all, is named in the output and the file."""
     ok("make", "app", "events")
