@@ -667,3 +667,33 @@ def test_the_fixture_plan_fits_the_token_budget(empty: tuple[str, dict[str, Any]
     except Exception:  # noqa: BLE001 - encodings download on first use
         pytest.skip("tiktoken encodings unavailable offline")
     assert len(encoding.encode(text)) < TOKEN_BUDGET
+
+
+# seed volumes (experimental)
+
+
+def test_a_large_seed_count_shows_its_volume_and_time_class(base: Project) -> None:
+    assert base.facts["seed_bulk_threshold"] == 1000
+    plan = _plan(_edit(("seed: {Product: 5}", "seed: {Product: 500000, Supplier: 999}")), base)
+    lines = plan.text().splitlines()
+    assert "  ~ Product: 5 -> 500000, 500,000 rows in bulk, minutes" in lines
+    assert "  + Supplier: 999" in lines  # under the threshold: the demo path, no note
+    change = next(c for c in plan.changes if c.area == "seed" and c.target == "Product")
+    assert change.as_dict()["reason"] == "500,000 rows in bulk, minutes" and not change.risky
+    facts = {**base.facts, "seed_bulk_threshold": 100}
+    report = validate_text(_edit(("seed: {Product: 5}", "seed: {Product: 150}")))
+    assert report.spec is not None
+    moved = plan_project(report.spec, facts, base.root, file="karni.yaml")
+    assert any(c.reason == "150 rows in bulk, seconds" for c in moved.changes)
+
+
+def test_the_time_classes_match_the_seeder() -> None:
+    import pytest
+
+    from karni_cli.spec.plan import SEED_BULK_THRESHOLD, SEED_ROWS_PER_SECOND, seed_time_class
+
+    bulk = pytest.importorskip("karni.bulk_seeding")
+    assert SEED_BULK_THRESHOLD == bulk.BULK_THRESHOLD
+    assert SEED_ROWS_PER_SECOND == bulk.ROWS_PER_SECOND
+    for rows in (10, 50_000, 300_000, 1_000_000, 10_000_000):
+        assert seed_time_class(rows) == bulk.time_class(rows)

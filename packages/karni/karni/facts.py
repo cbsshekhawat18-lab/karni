@@ -282,7 +282,15 @@ def project_facts() -> dict[str, Any]:
         "shipped_roles": shipped_roles,
         "modules": _modules(),
         "seeders": _seeders(),
+        "seed_bulk_threshold": _seed_bulk_threshold(),
     }
+
+
+def _seed_bulk_threshold() -> int:
+    """Experimental. Rows per model from which karni seed inserts in bulk, for karni plan."""
+    from karni.bulk_seeding import bulk_threshold
+
+    return bulk_threshold()
 
 
 def _count(model: type[models.Model], alias: str, request: Mapping[str, Any]) -> int | None:

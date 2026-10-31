@@ -855,9 +855,14 @@ def _seed(root: Path, state: dict[str, Any], opts: Options) -> str:
     proc = _manage(root, args, opts)
     if proc.returncode != 0:
         raise Stop("C279", "karni seed failed.", None, _tail(proc))
-    seeded = re.findall(r"^\s+(\S+\.\S+)\s+(\d+)", proc.stdout or "", re.MULTILINE)
+    seeded = re.findall(
+        r"^\s+(\S+\.\S+)\s+(\d+)(?:\s+\(bulk, ([\d.]+)s)?", proc.stdout or "", re.MULTILINE
+    )
+    # a large seed count went in bulk (karni.bulk_seeding, experimental): say so, with its time
     shown = ", ".join(
-        f"{label.split('.', 1)[1]} {count}" for label, count in seeded if label in empty
+        f"{label.split('.', 1)[1]} {count}" + (f" in bulk ({seconds}s)" if seconds else "")
+        for label, count, seconds in seeded
+        if label in empty
     )
     login = re.search(r"Log in as (\S+ / \S+)", proc.stdout or "")
     return (shown or ", ".join(empty)) + (f" (demo login {login.group(1)})" if login else "")
