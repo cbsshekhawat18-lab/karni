@@ -154,7 +154,7 @@ def _limit(text: str) -> str:
     if len(text) > limit:
         raise ExtractionRefused(
             f"The source has {len(text)} characters, and at most {limit} are sent "
-            "(KARNI_AI_MAX_SOURCE_CHARS). Send a shorter part; nothing is cut silently.",
+            "(KARNI_AI_MAX_SOURCE_CHARS). Send a shorter part. Nothing is cut silently.",
             code="AI010",
         )
     return text

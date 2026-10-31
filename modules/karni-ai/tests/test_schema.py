@@ -1,4 +1,4 @@
-"""The schema: from the resource's OpenAPI request component, for the user's role; validation."""
+"""The schema from the resource's OpenAPI request component, for the user's role, and validation."""
 
 from __future__ import annotations
 

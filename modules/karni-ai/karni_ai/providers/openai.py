@@ -32,7 +32,7 @@ __all__ = ["OpenAIProvider", "strict_schema"]
 
 _INSTALL = 'pip install "karni-ai[openai]"'
 
-#: The keywords a strict schema keeps; any other is described in words.
+#: The keywords a strict schema keeps. Any other is described in words.
 _KEPT: Final = frozenset(
     {"type", "properties", "required", "items", "enum", "anyOf", "description", "const", "title"}
 )
@@ -60,8 +60,8 @@ def _installed() -> bool:
 def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Experimental. ``schema`` as OpenAI's strict mode takes it.
 
-    Every object lists all its properties as required and refuses others; a
-    property that was optional may be null; keywords outside the strict subset
+    Every object lists all its properties as required and refuses others. A
+    property that was optional may be null. Keywords outside the strict subset
     move into the description (``maxLength: 120``).
     """
     out: dict[str, Any] = {}

@@ -13,7 +13,7 @@
 The month is the calendar month in the project's ``TIME_ZONE``.
 
 Override / escape hatch: :func:`spent` and :func:`month_start` are plain
-functions; subclass :class:`karni_ai.extraction.Extractor` and override
+functions. Subclass :class:`karni_ai.extraction.Extractor` and override
 ``check_budget`` for another rule (per role, per resource).
 """
 

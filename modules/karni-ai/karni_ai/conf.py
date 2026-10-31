@@ -65,11 +65,13 @@ DEFAULTS: dict[str, Any] = {
     "KARNI_AI_MONTHLY_TOKENS_PER_USER": env.int("KARNI_AI_MONTHLY_TOKENS_PER_USER", default=None),
     # Tokens the whole project may spend in a calendar month (None: no budget, AI014).
     "KARNI_AI_MONTHLY_TOKENS": env.int("KARNI_AI_MONTHLY_TOKENS", default=None),
-    # The anthropic provider: the API key and the model name (no default).
+    # The anthropic provider's API key. From the environment only (AI004).
     "ANTHROPIC_API_KEY": env("ANTHROPIC_API_KEY", default=""),
+    # The model the anthropic provider asks. No default: name one (AI005).
     "ANTHROPIC_MODEL": env("ANTHROPIC_MODEL", default=""),
-    # The openai provider: the API key and the model name (no default).
+    # The openai provider's API key. From the environment only (AI004).
     "OPENAI_API_KEY": env("OPENAI_API_KEY", default=""),
+    # The model the openai provider asks. No default: name one (AI005).
     "OPENAI_MODEL": env("OPENAI_MODEL", default=""),
 }
 """The karni-ai settings fragment (``karni.settings`` entry point)."""

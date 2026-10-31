@@ -13,8 +13,8 @@
  * backend's words.
  *
  * Escape hatches: every `@karni/ui` Button prop passes through to the
- * trigger; `sources` limits the forms; `slots` replaces the error display
- * and the preview's parts; `useExtract` and `<ExtractPreview>` build another
+ * trigger. `sources` limits the forms. `slots` replaces the error display
+ * and the preview's parts. `useExtract` and `<ExtractPreview>` build another
  * flow.
  */
 import {

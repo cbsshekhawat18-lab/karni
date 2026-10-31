@@ -5,12 +5,12 @@ in to the server's private network (server-side request forgery). The
 :class:`Fetcher` refuses (AI011):
 
 * a scheme other than ``http`` and ``https``, a user name or password in the
-  URL, and a port outside ``KARNI_AI_FETCH_PORTS`` (80 and 443);
+  URL, and a port outside ``KARNI_AI_FETCH_PORTS`` (80 and 443).
 * a host whose addresses are not all public: private, loopback, link-local,
   shared, reserved, multicast and unspecified addresses, IPv4 inside IPv6
   included. The connection then goes to the address that was checked, never
   to a second DNS answer, and HTTPS still verifies the certificate for the
-  host name;
+  host name.
 * a redirect to any of the above, and more than
   ``KARNI_AI_FETCH_MAX_REDIRECTS`` redirects. Each one is checked like the
   first address.

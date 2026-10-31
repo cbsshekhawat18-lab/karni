@@ -19,7 +19,7 @@ class SupplierViewSet(BaseViewSet):
 
 
 class ProductViewSet(BaseViewSet):
-    """Anyone signed in reads products; only an editor creates and changes them."""
+    """Anyone signed in reads products. Only an editor creates and changes them."""
 
     model = Product
     access = Access(read=Authenticated(), write=HasRole("editor"))

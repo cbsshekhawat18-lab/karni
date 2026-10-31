@@ -11,8 +11,8 @@ property are ignored, so a source with none gives no rows.
 Tests steer it with class-level state, reset by :meth:`TestProvider.reset`:
 
 * :meth:`TestProvider.answer_with` queues the next answers verbatim (any JSON,
-  to test what the extraction does with a wrong one);
-* :meth:`TestProvider.fail_with` queues a :class:`ProviderError` instead;
+  to test what the extraction does with a wrong one).
+* :meth:`TestProvider.fail_with` queues a :class:`ProviderError` instead.
 * :attr:`TestProvider.calls` records every :class:`StructuredRequest`.
 
 Tokens are counted as one per four characters, rounded up: the instructions,

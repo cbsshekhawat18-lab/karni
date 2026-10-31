@@ -4,10 +4,10 @@ karni-ai has no default provider and no default model, and its key comes
 from the environment only. While the module is in ``INSTALLED_APPS``,
 ``karni check`` fails with one line per missing piece:
 
-* AI001: ``KARNI_AI_PROVIDER`` is not set;
-* AI002: it names nothing that loads as a provider;
-* AI003: the provider's SDK (an extra) is not installed;
-* AI004: the provider's API key is not set (``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``);
+* AI001: ``KARNI_AI_PROVIDER`` is not set.
+* AI002: it names nothing that loads as a provider.
+* AI003: the provider's SDK (an extra) is not installed.
+* AI004: the provider's API key is not set (``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``).
 * AI005: the provider's model name is not set (``ANTHROPIC_MODEL``, ``OPENAI_MODEL``).
 
 The ``test`` provider needs none of them, so CI and local work run without a key.

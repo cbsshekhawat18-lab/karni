@@ -3,17 +3,17 @@
 :meth:`Extractor.run` does, in order:
 
 1. finds the resource's routed ``BaseViewSet`` by its router prefix and
-   refuses one whose import is off or whose model is read-only (AI008);
+   refuses one whose import is off or whose model is read-only (AI008).
 2. refuses a user its ``access`` declaration does not let create rows (AI009),
-   before any token is spent;
+   before any token is spent.
 3. checks the provider is set up (AI001 to AI005) and the monthly budgets
-   (AI013, AI014);
+   (AI013, AI014).
 4. reads the source: text, a URL (:mod:`karni_ai.services.fetch`) or a PDF
-   (:mod:`karni_ai.sources`);
+   (:mod:`karni_ai.sources`).
 5. builds the JSON Schema from the resource's own writable fields
-   (:mod:`karni_ai.schema`) and asks the provider for rows that follow it;
+   (:mod:`karni_ai.schema`) and asks the provider for rows that follow it.
 6. logs the call with its tokens and cost (:mod:`karni_ai.usage`), failed
-   calls included;
+   calls included.
 7. validates the answer against the schema, then hands the rows to Karni's
    import as a file and runs its **preview** (the mandatory dry run).
 

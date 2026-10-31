@@ -10,9 +10,9 @@ Implementations:
 
 * :meth:`Provider.structured` asks the model and returns the answer, raising
   :class:`karni_ai.exceptions.ProviderError` (AI006 for a failed call, AI007
-  for an answer that cannot be used: declined, cut off, not JSON);
+  for an answer that cannot be used: declined, cut off, not JSON).
 * :meth:`Provider.problems` lists what keeps it from working in this project
-  (a missing SDK, key or model name), for ``karni check``;
+  (a missing SDK, key or model name), for ``karni check``.
 * :attr:`Provider.name` is the short name the usage log records.
 
 The model name and the API key are read per call through

@@ -1,6 +1,6 @@
 """Settings for karni-ai's standalone test suite (sqlite, eager Celery, the test provider).
 
-Names defined before :func:`karni.conf.karni_settings` win; the module's own
+Names defined before :func:`karni.conf.karni_settings` win. The module's own
 ``karni.settings`` fragment arrives through the merge. ``tests.testapp`` is
 the project under test: a product catalog with categories and tags (natural
 keys), products an ``editor`` creates, and a resource whose import is off.

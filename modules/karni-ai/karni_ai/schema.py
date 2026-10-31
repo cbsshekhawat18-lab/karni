@@ -8,11 +8,11 @@ keeps the fields the user may import (the import's own column list, built for
 this user's role), and turns them into plain JSON Schema:
 
 * text, number, boolean, date and choice fields keep their type, format,
-  choices, lengths, pattern and bounds;
+  choices, lengths, pattern and bounds.
 * a relation is the related row's natural key, as the import reads it (``"the
   name of a category"``), a to-many relation a list of them. A relation to a
-  model without a natural key is left out: a text never carries row ids;
-* files, JSON and other fields are left out;
+  model without a natural key is left out: a text never carries row ids.
+* files, JSON and other fields are left out.
 * ``null`` means "not in the source". A field that is not given is left alone.
 
 :func:`validate_rows` checks an answer against the schema and returns the
@@ -108,7 +108,7 @@ def resource_component(view: Any, prefix: str) -> tuple[str, dict[str, Any], dic
     """``(name, schema, components)`` of the create body ``view`` documents, as in ``/api/schema/``.
 
     ``view`` is a request-bound instance of the resource's viewset with
-    ``action = "create"``; ``components`` holds the other components the
+    ``action = "create"``. ``components`` holds the other components the
     schema refers to.
     """
     from drf_spectacular.plumbing import ComponentRegistry
