@@ -45,6 +45,8 @@ CELERY_TASK_EAGER_PROPAGATES = True
 KARNI_SEARCH_PROVIDER = "karni.api.search.simple.SimpleSearchProvider"
 # karni_check's cache writes to the project (.karni/local/): its own tests turn it on.
 KARNI_CHECK_CACHE = False
+# karni_seed's ledger too (.karni/local/seeded.json): the volume tests point it at a tmp file.
+KARNI_SEED_LEDGER = False
 
 # Mounts admin/, api/auth/ and api/ for the accounts, api and admin suites.
 ROOT_URLCONF = "tests.urls"

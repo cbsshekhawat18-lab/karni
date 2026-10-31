@@ -1300,6 +1300,25 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Two apps have a model of that name, so the bare name could mean either.",
         "Write app_label.Name, one of the labels the message lists.",
     ),
+    _e(
+        "E473",
+        "A volume seed refused tables that hold rows no seed run left",
+        "exception",
+        "manage.py karni_seed --volume; karni.bulk_seeding.Ledger",
+        "A seed run records how many rows each table holds when it is done "
+        "(.karni/local/seeded.json). A table that holds another number of rows was written by "
+        "someone else, and volume rows would mix with that content.",
+        "Pass --reset to wipe the project's tables first, --force to add rows anyway, or "
+        "--model to seed only the tables seed runs filled. Real content belongs in karni load.",
+    ),
+    _e(
+        "E475",
+        "karni seed --volume or --batch-size is not a positive number",
+        "exception",
+        "manage.py karni_seed",
+        "A volume and a batch size are numbers of rows.",
+        "Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.",
+    ),
     # E5xx settings and optional dependencies
     _e(
         "E501",

@@ -1046,6 +1046,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write app_label.Name, one of the labels the message lists.
 
+<a id="e473"></a>
+
+#### E473: A volume seed refused tables that hold rows no seed run left
+
+*exception* · from `manage.py karni_seed --volume; karni.bulk_seeding.Ledger`
+
+**Why Karni objects.** A seed run records how many rows each table holds when it is done (.karni/local/seeded.json). A table that holds another number of rows was written by someone else, and volume rows would mix with that content.
+
+**Fix.** Pass --reset to wipe the project's tables first, --force to add rows anyway, or --model to seed only the tables seed runs filled. Real content belongs in karni load.
+
+<a id="e475"></a>
+
+#### E475: karni seed --volume or --batch-size is not a positive number
+
+*exception* · from `manage.py karni_seed`
+
+**Why Karni objects.** A volume and a batch size are numbers of rows.
+
+**Fix.** Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.
+
 ### 5xx · Settings and optional dependencies
 
 <a id="e501"></a>
