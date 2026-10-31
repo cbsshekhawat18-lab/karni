@@ -98,7 +98,7 @@ nav:
       - Modules: modules.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
-          - Overview: recipes/index.md
+          - All recipes: recipes/index.md
           - Online shop: recipes/shop.md
           - Booking: recipes/booking.md
           - CRM: recipes/crm.md
