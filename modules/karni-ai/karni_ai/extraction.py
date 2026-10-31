@@ -58,13 +58,8 @@ class Extraction:
     problems: list[Problem]
     job: Any
     call: AICall
-
-    def commit_path(self) -> str:
-        """The import's own confirm path for this preview."""
-        try:
-            return reverse(f"{self.resource}-import-commit", kwargs={"job": str(self.job.pk)})
-        except NoReverseMatch:
-            return f"/api/{self.resource}/import/{self.job.pk}/commit/"
+    #: The import's own commit path for this preview.
+    commit: str
 
     def to_dict(self, request: Any) -> dict[str, Any]:
         """The endpoint's answer."""
@@ -78,7 +73,7 @@ class Extraction:
             "rows": self.rows,
             "problems": [problem.to_dict() for problem in self.problems],
             "result": self.job.result,
-            "commit": self.commit_path(),
+            "commit": self.commit,
             "job": job_state(self.job, request),
             "usage": {
                 "provider": self.call.provider,
@@ -105,9 +100,13 @@ class Extractor:
         from karni.api.viewsets import BaseViewSet
 
         router = resolve_router()
-        viewset_class = next(
-            (vs for prefix, vs, _ in getattr(router, "registry", ()) if prefix == resource),
-            None,
+        viewset_class, basename = next(
+            (
+                (viewset, name)
+                for prefix, viewset, name in getattr(router, "registry", ())
+                if prefix == resource
+            ),
+            (None, ""),
         )
         if viewset_class is None or not issubclass(viewset_class, BaseViewSet):
             raise ExtractionRefused(
@@ -128,6 +127,7 @@ class Extractor:
         view.format_kwarg = None
         view.action = "create"
         view.action_map = {"post": "create"}
+        view.basename = basename
         if view.is_read_only():
             raise ExtractionRefused(f"{resource} is read-only.", code="AI008")
         return view
@@ -190,7 +190,9 @@ class Extractor:
         return "\n".join(lines)
 
     def source_message(self, source: Source) -> str:
-        return f"<source>\n{source.text}\n</source>"
+        """The user message: the source between tags it cannot close itself."""
+        text = source.text.replace("</source>", "</ source>")
+        return f"<source>\n{text}\n</source>"
 
     # the run
 
@@ -246,7 +248,15 @@ class Extractor:
             problems=problems + preview_problems,
             job=job,
             call=call,
+            commit=self.commit_path(view, resource, job),
         )
+
+    def commit_path(self, view: Any, resource: str, job: Any) -> str:
+        """The import's own commit path for ``job``, as the router names it."""
+        try:
+            return str(reverse(f"{view.basename}-import-commit", kwargs={"job": str(job.pk)}))
+        except NoReverseMatch:
+            return f"/api/{resource}/import/{job.pk}/commit/"
 
     def preview(
         self, schema: ResourceSchema, source: Source, rows: list[dict[str, Any]]

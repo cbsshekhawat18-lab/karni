@@ -177,6 +177,11 @@ declaration, the row scope, the fields the role may write, the audit batch.
 Another user cannot commit the job. The extraction has no write path of
 its own.
 
+The preview runs inside the request, as a file import's does. When the rows
+outnumber `KARNI_IMPORT_INLINE_ROWS`, it runs in Celery instead: the answer
+says `previewing`, and `GET /api/<resource>/import/<id>/` gives the counts and
+the problems once it is done.
+
 ### Who may extract
 
 The caller must be signed in, and the resource's `access` declaration must

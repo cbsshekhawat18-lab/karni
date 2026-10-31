@@ -6,10 +6,10 @@ from typing import Any
 
 from rest_framework import serializers
 
-__all__ = ["ExtractRequestSerializer"]
+__all__ = ["ExtractSerializer"]
 
 
-class ExtractRequestSerializer(serializers.Serializer[Any]):
+class ExtractSerializer(serializers.Serializer[Any]):
     """Experimental. ``resource`` (a router prefix) and exactly one of ``text``, ``url``, ``file``.
 
     ``file`` is a PDF upload (multipart). Which one is given, and its limits,

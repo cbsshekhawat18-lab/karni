@@ -22,7 +22,7 @@ from typing import Any
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from karni.api import Access, Authenticated, BaseViewSet, Budget, Owned, Throttle
+from karni.api import Access, Authenticated, BaseViewSet, Owned, Throttle
 from rest_framework.decorators import action
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -32,7 +32,7 @@ from rest_framework.response import Response
 from karni_ai.exceptions import ExtractionRefused, ProviderError
 from karni_ai.extraction import get_extractor
 from karni_ai.models import AICall
-from karni_ai.serializers import ExtractRequestSerializer
+from karni_ai.serializers import ExtractSerializer
 
 __all__ = ["AICallViewSet"]
 
@@ -48,10 +48,9 @@ class AICallViewSet(BaseViewSet):
     route = "ai"
     access = Access(read=Owned("user"), write=Owned("user"))
     throttle = Throttle(extract="30/hour")
-    query_budget = Budget(
-        extract=800,
-        reason="the preview validates and writes every proposed row in a rolled-back transaction",
-    )
+    #: The extraction previews every proposed row, so its queries grow with the rows,
+    #: like the import's own actions: unbudgeted.
+    unbudgeted_actions = BaseViewSet.unbudgeted_actions | {"extract"}
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         raise MethodNotAllowed("POST", detail="Calls are logged by extract/, never posted.")
@@ -64,8 +63,8 @@ class AICallViewSet(BaseViewSet):
 
     @extend_schema(
         request={
-            "multipart/form-data": ExtractRequestSerializer,
-            "application/json": ExtractRequestSerializer,
+            "multipart/form-data": ExtractSerializer,
+            "application/json": ExtractSerializer,
         },
         responses={201: OpenApiTypes.OBJECT},
     )
@@ -78,7 +77,7 @@ class AICallViewSet(BaseViewSet):
     )
     def extract(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Experimental. Rows of a resource read from a source, as the import's preview."""
-        body = ExtractRequestSerializer(data=request.data)
+        body = ExtractSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
         try:

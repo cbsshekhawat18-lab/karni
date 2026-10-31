@@ -203,7 +203,9 @@ class Fetcher:
                 target.host, target.port, address=address, timeout=timeout
             )
         connection.request("GET", target.path, headers=self.headers())
-        return connection.getresponse()
+        response = connection.getresponse()
+        response.karni_connection = connection  # type: ignore[attr-defined]  # closed with it
+        return response
 
     def fetch(self, url: str) -> Fetched:
         """Fetch ``url``, following checked redirects, within the size and time limits."""
@@ -230,6 +232,9 @@ class Fetcher:
                 return Fetched(url=target.url, content_type=media_type, charset=charset, body=body)
             finally:
                 response.close()
+                connection = getattr(response, "karni_connection", None)
+                if connection is not None:
+                    connection.close()
         raise ExtractionRefused(
             f"{url} redirects more than {self.max_redirects} times (KARNI_AI_FETCH_MAX_REDIRECTS).",
             code="AI011",
@@ -271,8 +276,11 @@ class Fetcher:
             raise ExtractionRefused(self._too_large(target), code="AI012")
         chunks: list[bytes] = []
         size = 0
+        connection = getattr(response, "karni_connection", None)
         while True:
-            self._remaining(target, deadline)
+            remaining = self._remaining(target, deadline)
+            if connection is not None and connection.sock is not None:
+                connection.sock.settimeout(remaining)  # one deadline, not one per read
             try:
                 chunk = response.read(_CHUNK)
             except TimeoutError as exc:
