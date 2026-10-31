@@ -611,7 +611,10 @@ RULES: tuple[Rule, ...] = (
             "`LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees "
             "its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial "
             "or audited models). `karni schema <app>` shows every column, constraint and index "
-            "and why it exists."
+            "and why it exists. Long text a page shows formatted is `MarkdownField` "
+            "(`name:markdown`). A model with many fields declares `class Karni: field_groups` "
+            "(form and detail sections or tabs) and `column_sets` (table presets) instead of "
+            "hand-built screens."
         ),
         rationale=(
             "Float money, free-text codes and case-sensitive unique emails pass every test and "

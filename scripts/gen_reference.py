@@ -269,6 +269,13 @@ CAPABILITIES: tuple[Capability, ...] = (
         "`ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the "
         "`x-karni-related` extension of the OpenAPI schema. Experimental tier",
     ),
+    Capability(
+        "ui",
+        "Wide models: `MarkdownField` (edited with a preview, shown sanitized), "
+        "`class Karni: field_groups` (form and detail sections or tabs, admin fieldsets) and "
+        "`column_sets` (table presets kept per user), with `karni.E550` to `E553`. "
+        "Experimental tier",
+    ),
     # permissions
     Capability(
         "permissions",

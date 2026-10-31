@@ -79,6 +79,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 | Page blocks beyond CRUD: `DashboardGrid`, `ChartCard`, `DataTable` (computed rows: sorting, a sticky header and first column, CSV and XLSX export, only the rows in view rendered), `ComparisonTable`, `Accordion`, `MarkdownView` (sanitized, loaded on first use) and `useResourceCounts`. Experimental tier | `experimental` | Karni's own tests |
 | `ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the `x-karni-related` extension of the OpenAPI schema. Experimental tier | `experimental` | Karni's own tests |
+| Wide models: `MarkdownField` (edited with a preview, shown sanitized), `class Karni: field_groups` (form and detail sections or tabs, admin fieldsets) and `column_sets` (table presets kept per user), with `karni.E550` to `E553`. Experimental tier | `experimental` | Karni's own tests |
 
 ### Permissions
 
@@ -854,6 +855,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `email:email[:unique]` | EmailField(), where unique=True is case-insensitive (LOWER index) |
 | `slug:slug[:source]` | SlugField(populate_from="source"), unique among live rows (:len too) |
 | `phone:phone` | PhoneField(): E.164, CHECK format |
+| `notes:markdown` | MarkdownField(): text, edited with a preview and shown formatted in @karni/ui |
 | `country:country / currency:currency` | CountryField() / CurrencyField() with a CHECK against the ISO list |
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
@@ -1605,6 +1607,9 @@ class Lead(BaseModel):
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
 | `dashboard` | karni | `None` | Put the model on the staff app's dashboard: counts (all rows, new ones, one per state) and the newest rows. `True` for the defaults, or a dict ([API: dashboard](api.md#the-staff-dashboard)). | `dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}` |
+| `field_groups` | karni | `{}` | Experimental. Titled groups of fields: sections (or tabs) in ResourceForm and ResourceDetail, fieldsets in the admin. The fields in no group go into a last group, Other ([UI: field groups](ui.md#field-groups-and-column-sets-experimental)). | `field_groups = {"Overview": ["name", "summary"], "Financials": ["price", "cost"]}` |
+| `field_group_layout` | karni | `"sections"` | Experimental. How ResourceForm and ResourceDetail show `field_groups`: `"sections"` or `"tabs"`. | `field_group_layout = "tabs"` |
+| `column_sets` | karni | `{}` | Experimental. Named column presets of ResourceTable, with a selector that remembers each user's choice. The set named `default` is shown first, else the first set. | `column_sets = {"default": ["name", "price"], "financial": ["name", "price", "cost"]}` |
 | `append_only` | karni | `False` | The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` timestamps (`True`) or on the listed columns. | `append_only = True` |
 | `cascade` | karni | `{}` | Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited model, each with the reason (silences `karni.W965` for that field). | `cascade = {"order": "a line item cannot outlive its order"}` |
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
@@ -2148,6 +2153,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
 | [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
 | [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
+| [`E550`](errors.md#e550) | check | Karni.field_groups or Karni.field_group_layout is malformed |
+| [`E551`](errors.md#e551) | check | A field group or a column set names a field the model does not have |
+| [`E552`](errors.md#e552) | check | A field is in two field groups |
+| [`E553`](errors.md#e553) | check | Karni.column_sets is malformed |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |
@@ -2387,6 +2396,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C561`](errors.md#c561) | cli | A related tab names an entity with no fk to this one |
 | [`C562`](errors.md#c562) | cli | A related tab could be either of two relations |
 | [`C563`](errors.md#c563) | cli | A related tab is listed twice |
+| [`C680`](errors.md#c680) | cli | A column set names a field the entity does not have, or one twice |
+| [`C681`](errors.md#c681) | cli | A column set has no columns, or a name that is not snake_case |
 
 ### Agent rules (`K`)
 

@@ -11,6 +11,44 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Wide models (experimental), large-apps item 12: `MarkdownField`, field
+  groups and column sets.** `karni.fields.MarkdownField` is a `TextField`
+  whose OpenAPI property says `format: markdown` (`karni.api.formats`: any
+  model field with an `openapi_format` publishes one). `ResourceForm` edits
+  it with Write and Preview tabs, `ResourceDetail` shows it formatted and
+  sanitized through `MarkdownView`, `ResourceTable` leaves it out of its
+  default columns, and it is searched like any text field. `class Karni:
+  field_groups = {"Overview": [...], "Financials": [...]}` lays out
+  `ResourceForm` and `ResourceDetail` as sections, or tabs with
+  `field_group_layout = "tabs"` (a tab with a failing field is marked and
+  opens when focus moves to it), and the admin's change form as fieldsets.
+  The fields in no group come last, under Other. `column_sets = {"default":
+  [...], "financial": [...]}` gives `ResourceTable` a Columns menu whose
+  choice is kept per user and table. The schema publishes both as
+  `x-karni-field-groups` and `x-karni-column-sets` on the list operation,
+  limited to the fields the requester may read. `karni check` refuses a
+  malformed declaration, a group or set naming a field the model does not
+  have and a field in two groups (`karni.E550` to `karni.E553`). A 120-field
+  test model keeps a list page of 25 rows under 200,000 bytes and a detail
+  under 8,000, and renders ResourceForm under 1,000 ms and ResourceDetail
+  under 600 ms in the UI suite. New props: `fieldGroups` and `groupLayout`
+  (ResourceForm, ResourceDetail), `columnSets`, `columnSet` and
+  `onColumnSetChange` (ResourceTable). [docs/fields.md](docs/fields.md#markdownfield),
+  [docs/ui.md](docs/ui.md#field-groups-and-column-sets-experimental).
+- **The spec takes `markdown`, `groups` and `column_sets` (experimental).**
+  `karni make model` and the spec take the field type `markdown` (no longer
+  reserved, `C224`). `karni build` writes an entity's `groups` as
+  `Karni.field_groups` in the Karni-owned model base instead of the admin's
+  fieldsets, and the new entity key `column_sets` as `Karni.column_sets`
+  (`C680` and `C681` refuse an unknown or repeated column and a set without
+  columns or a snake_case name). `karni plan` shows both and treats a change
+  between `text` and `markdown` as the same column. `karni spec export`
+  reads them back. The published JSON Schema is regenerated.
+- **`@karni/ui` reads a formatted string that may be blank.** drf-spectacular
+  publishes a blank email, URL or markdown field as `oneOf [{format},
+  {maxLength: 0}]`. The schema parser read it as kind `unknown` and the
+  form had no input for it. It is now that string.
+
 - **Page blocks beyond CRUD in `@karni/ui` (experimental), large-apps item
   11.** `DashboardGrid` and `DashboardCard` (a responsive grid of titled
   cards with spans, and loading, empty and error states), `ChartCard` (a

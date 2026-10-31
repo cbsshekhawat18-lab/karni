@@ -954,6 +954,19 @@ nullable, required from blank/default) and adds:
     {"name": "events", "resource": "events", "field": "venue", "param": "venue", "key": "id", "label": "Events"}
   ]
   ```
+- `x-karni-field-groups` and `x-karni-column-sets` (experimental) on the list
+  operation of a model that declares `Karni.field_groups` or
+  `Karni.column_sets`: `{"layout": "sections" | "tabs", "groups": [{"label",
+  "fields"}]}` and `{"default": "<set>", "sets": [{"name", "label",
+  "columns"}]}`. Each group and set lists only the fields the requester's
+  serializer has, so a field `Karni.field_roles` hides is never named, and
+  one left empty is dropped. `@karni/ui` lays out ResourceForm,
+  ResourceDetail and ResourceTable with them
+  ([field groups and column sets](ui.md#field-groups-and-column-sets-experimental)).
+  Override `KarniAutoSchema.get_karni_field_groups()` or
+  `get_karni_column_sets()` to publish others.
+- A `MarkdownField`'s property carries `"format": "markdown"`
+  ([typed fields](fields.md#markdownfield)).
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

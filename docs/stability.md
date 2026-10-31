@@ -203,6 +203,19 @@ Experimental now:
   and dashboard pages other than `home`, `karni make page --kind dashboard`
   (`--count`) and `--related`, and the `components` key of `karni ui detect
   --json`.
+- [Field groups and column sets](ui.md#field-groups-and-column-sets-experimental):
+  `karni.fields.MarkdownField` (and its `markdown` type in `karni make
+  model` and the spec), `karni.api.formats` (`FormattedCharField`, a model
+  field's `openapi_format`), the `class Karni` options `field_groups`,
+  `field_group_layout` and `column_sets`, `karni.layout`, the
+  `x-karni-field-groups` and `x-karni-column-sets` OpenAPI extensions with
+  `KarniAutoSchema.get_karni_field_groups` and `get_karni_column_sets`,
+  `KarniAdminMixin.derive_fieldsets`, the spec's entity `groups` (now
+  `Karni.field_groups`) and `column_sets`, the `fieldGroups` and
+  `groupLayout` props of ResourceForm and ResourceDetail, ResourceTable's
+  `columnSets`, `columnSet` and `onColumnSetChange`, and the `FieldGroupDef`,
+  `FieldGroupLayout`, `FieldGroupsDef`, `ColumnSetDef` and `ColumnSetsDef`
+  types in `@karni/ui`.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

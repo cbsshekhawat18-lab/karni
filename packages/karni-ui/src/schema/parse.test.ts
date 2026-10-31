@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { openApiFixture, openApiFixtureWithAuthMode } from "../../tests/msw/openapi";
-import { parseOpenApi } from "./parse";
+import { parseColumnSets, parseFieldGroups, parseOpenApi } from "./parse";
 import type { FieldDef, ResourceSchema } from "./types";
 
 function fieldOf(schema: ResourceSchema, name: string): FieldDef {
@@ -517,5 +517,119 @@ describe("parseOpenApi — a StateField's lifecycle", () => {
     expect(status?.initial).toEqual(["draft"]);
     const id = parseOpenApi(doc).resources["orders"]?.fields.find((field) => field.name === "id");
     expect(id?.transitions).toBeUndefined();
+  });
+});
+
+describe("parseOpenApi — wide models (experimental)", () => {
+  // A MarkdownField, a blank email, and the list operation's layout extensions.
+  const doc = {
+    openapi: "3.0.3",
+    paths: {
+      "/api/products/": {
+        get: {
+          "x-karni-resource": "products",
+          "x-karni-field-groups": {
+            layout: "tabs",
+            groups: [
+              { label: "Overview", fields: ["name", "summary"] },
+              { label: "", fields: ["contact"] },
+              { label: "Again", fields: ["name"] },
+              "not a group",
+            ],
+          },
+          "x-karni-column-sets": {
+            default: "missing",
+            sets: [
+              { name: "default", label: "Default", columns: ["name"] },
+              { name: "financial_view", columns: ["name", "contact"] },
+              { name: "empty", columns: [] },
+            ],
+          },
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      results: { type: "array", items: { $ref: "#/components/schemas/Product" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        Product: {
+          type: "object",
+          properties: {
+            name: { type: "string", maxLength: 200 },
+            summary: {
+              oneOf: [
+                { type: "string", format: "markdown" },
+                { type: "string", maxLength: 0 },
+              ],
+              description: "What the product is.",
+            },
+            faq: { type: "string", format: "markdown" },
+            contact: {
+              oneOf: [
+                { type: "string", format: "email", maxLength: 254 },
+                { type: "string", maxLength: 0 },
+              ],
+            },
+          },
+        },
+      },
+    },
+  };
+  const products = parseOpenApi(doc).resources["products"];
+
+  it("reads format markdown as text, blank or not", () => {
+    expect(products && fieldOf(products, "faq")).toMatchObject({
+      kind: "text",
+      format: "markdown",
+    });
+    expect(products && fieldOf(products, "summary")).toMatchObject({
+      kind: "text",
+      format: "markdown",
+      description: "What the product is.",
+    });
+  });
+
+  it("reads a formatted string that may be blank as that string", () => {
+    expect(products && fieldOf(products, "contact")).toMatchObject({
+      kind: "string",
+      format: "email",
+      maxLength: 254,
+    });
+  });
+
+  it("keeps the well-formed groups and sets, a field in one group only", () => {
+    expect(products?.fieldGroups).toEqual({
+      layout: "tabs",
+      groups: [{ label: "Overview", fields: ["name", "summary"] }],
+    });
+    expect(products?.columnSets).toEqual({
+      default: "default",
+      sets: [
+        { name: "default", label: "Default", columns: ["name"] },
+        { name: "financial_view", label: "Financial view", columns: ["name", "contact"] },
+      ],
+    });
+  });
+
+  it("drops malformed extensions", () => {
+    expect(parseFieldGroups({ groups: "x" })).toBeUndefined();
+    expect(parseFieldGroups({ layout: "grid", groups: [{ label: "A", fields: ["a"] }] })).toEqual({
+      layout: "sections",
+      groups: [{ label: "A", fields: ["a"] }],
+    });
+    expect(parseColumnSets({ sets: [{ name: "", columns: ["a"] }] })).toBeUndefined();
+    expect(parseColumnSets(null)).toBeUndefined();
   });
 });
