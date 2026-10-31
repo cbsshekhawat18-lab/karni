@@ -34,7 +34,7 @@ _INSTALL = 'pip install "karni-ai[openai]"'
 
 #: The keywords a strict schema keeps; any other is described in words.
 _KEPT: Final = frozenset(
-    {"type", "properties", "required", "items", "enum", "anyOf", "description", "const"}
+    {"type", "properties", "required", "items", "enum", "anyOf", "description", "const", "title"}
 )
 
 

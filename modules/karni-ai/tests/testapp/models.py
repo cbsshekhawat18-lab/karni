@@ -17,7 +17,7 @@ if TEST_PK not in ("uuid", "bigint"):
     raise RuntimeError(f"KARNI_TEST_PK must be uuid or bigint, not {TEST_PK!r}.")
 
 if TYPE_CHECKING:
-    ApiBase: TypeAlias = BaseModel
+    ApiBase: TypeAlias = BaseModel  # noqa: UP040 - a base class, not a `type` alias
 else:
     ApiBase = BigIntBaseModel if TEST_PK == "bigint" else BaseModel
 
@@ -75,6 +75,8 @@ class Product(ApiBase):
 
     class Karni:
         import_key = "sku"
+        # Only staff marks a product featured: an editor's schema leaves it out.
+        field_roles = {"featured": {"read": ["staff", "editor", "buyer"], "write": ["staff"]}}
 
     def __str__(self) -> str:
         return self.name
