@@ -642,6 +642,7 @@ declaration:
 | `GET <key>/ancestors/` | the nodes above, root first (a plain list) |
 | `POST <key>/move/` | `{"parent": <key or null>, "position": <n>}`: the moved node |
 | `DELETE <key>/?branch=true` | deletes the node and its branch (`delete_branch()`) |
+| `GET access/?permission=<pattern>` | the requester's access forest: the nodes their `tree:<path>` grants name, with their ancestors and every other root ([the tree scope](accounts.md#the-access-forest)) |
 
 The list also takes `?parent=<key>`, `?parent=null` (the roots) and
 `?descendants_of=<key>`, which combine with every other filter. Each node in

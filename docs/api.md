@@ -388,7 +388,8 @@ override it to serve writes from one viewset.
 
 A viewset whose model is a [tree model](models.md#tree-models) also serves
 `tree/` (nested, a few levels at a time), `<id>/children/`,
-`<id>/ancestors/` and `<id>/move/`, and its list takes `?parent=<id>`,
+`<id>/ancestors/`, `<id>/move/` and `access/` (the requester's access forest,
+[the tree scope](accounts.md#the-tree-scope)), and its list takes `?parent=<id>`,
 `?parent=null` and `?descendants_of=<id>`. A node with live children
 answers `DELETE` with 409 (`E341`) unless the request says `?branch=true`.
 Access applies to each of them, and `tree_max_nodes`, `tree_default_depth`

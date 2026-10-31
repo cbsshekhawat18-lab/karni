@@ -195,6 +195,7 @@ The scopes are Karni's own:
 | `own:<field>` | the same as `own`, written with the owner field it uses. The field must be the entity's `owner` (`C234`) |
 | `related:<key>` | rows whose scope path `<key>` (the entity's `scope_paths`) equals the user's attribute `<key>` |
 | `custom:<name>` | the rows a scope registered with `register_scope(name, fn)` returns |
+| `tree:<path>` | rows whose `<path>` is a node the user holds or a node below it ([the tree scope](accounts.md#the-tree-scope), experimental). The path follows the entity's relation fields to an entity with `tree: true` or `tree: ordered` (`C620`) |
 
 `related:` takes a scope path key, not a path. For rows reached through a
 relation to the user (the bookings of an instructor's sessions), name the
@@ -406,6 +407,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C460](errors.md#c460) | a tree entity's keys do not fit (`external`, a `parent` or `position` field) |
+| [C620](errors.md#c620) | a role grant's `tree:<path>` does not lead to a tree entity |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |

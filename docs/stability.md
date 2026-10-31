@@ -212,6 +212,13 @@ Experimental now:
   `use<Name>Tree` hooks of `karni types`, and `TreeView`, `TreeSelect`,
   `TreeBreadcrumb`, `useResourceTree`, `useResourceChildren`,
   `useResourceAncestors` and `useTreeMutations` in `@karni/ui`.
+- [The tree scope](accounts.md#the-tree-scope): the `tree:<path>` scope (with
+  the `tree` value of `RolePermission.scope`), `karni.accounts.tree_scope`,
+  `karni.accounts.grants.user_key`, the `access/` endpoint of a tree
+  resource (`BaseViewSet.access_forest`, `karni.api.tree.tree_access_serializer`),
+  the `tree:<field>` options of the permission matrix, the `tree` entry of a
+  `karni why` grant in `--json`, `tree:<path>` in a `karni.yaml` role grant,
+  and `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`.
 
 ## Supported platforms
 

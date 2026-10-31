@@ -307,6 +307,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
         "Experimental tier",
     ),
+    Capability(
+        "permissions",
+        "The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` "
+        "in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, "
+        "`TreeView`'s `access`). Experimental tier",
+    ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),
     Capability(

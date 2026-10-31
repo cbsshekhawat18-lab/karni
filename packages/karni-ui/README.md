@@ -730,8 +730,14 @@ it, so a tree needs no code of its own:
   the next node whose label starts with the typed text.
 - `reveal` opens the path to a node, `root` starts below one, `slots` replaces
   `Node`, `Loading`, `Empty` and `Error` (`defaultTreeViewSlots`).
-- `useResourceTree`, `useResourceChildren`, `useResourceAncestors` and
-  `useTreeMutations` (`move`, `removeBranch`) are the hooks underneath.
+- `access` (experimental) shows the requester's access forest instead
+  (`GET /<resource>/access/`, the `tree:<path>` scope): granted nodes and the
+  nodes below them can be chosen, their ancestors and the other roots are
+  greyed (`aria-disabled`). `access={{ permission: "shop.order:view" }}`
+  keeps one permission's grants.
+- `useResourceTree`, `useResourceChildren`, `useResourceAncestors`,
+  `useResourceAccessForest` and `useTreeMutations` (`move`, `removeBranch`)
+  are the hooks underneath.
   `--karni-tree-indent` and `--karni-tree-max-height` theme it.
 
 ## Hooks

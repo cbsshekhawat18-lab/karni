@@ -520,7 +520,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The role declaration is the single source of what each role may do. A malformed entry cannot be reconciled into the role tables.
 
-**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or 'custom:<name>'.
+**Fix.** Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, 'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'.
 
 <a id="e206"></a>
 
@@ -1020,7 +1020,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.accounts.grants.check`
 
-**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:<key>' or 'custom:<name>'. 'own' needs the model's owner field, 'related:<key>' its Karni.scope_paths[key] and 'custom:<name>' a scope registered with register_scope(). An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
+**Why Karni objects.** The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and 'tree:<path>' a path from the model to a tree model. An explicit key whose model lacks it is refused, and a wildcard pattern must keep at least one model that has it.
 
 **Fix.** Pick a scope from the model's options in GET permissions/matrix/, declare the owner field or scope path in `class Karni`, or register the custom scope at startup.
 
@@ -1030,7 +1030,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *exception* · from `karni.accounts.grants.check`
 
-**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
+**Why Karni objects.** targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a 'tree:<path>' grant the rows under those nodes of the tree. Targets are a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value the scope path's field takes.
 
 **Fix.** Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop targets for an 'all', 'own' or 'custom:' grant, or grant 'related:<key>' instead.
 
@@ -1145,6 +1145,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** `karni schedule run` executes the task in-process so failures show immediately.
 
 **Fix.** Read the task's own error in the message and fix the task. Then re-run it with `karni schedule run <name>`.
+
+<a id="e490"></a>
+
+#### E490: A tree:<path> scope does not end at a tree model
+
+*system check (error)* · from `karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); tree_scope() in a Where`
+
+**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, so each step of the path must be a relation of the model before it (a foreign key, a one-to-one, a many-to-many or a reverse relation) and the last one must point at a model on karni.models.TreeModel. A path that does not resolve could only ever reach no row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.
+
+**Fix.** Name the row's relation to the tree model, through relations when needed: tree:region, tree:product__categories. Make the target a tree model (class Region(TreeModel, BaseModel)), or grant another scope.
+
+<a id="e491"></a>
+
+#### E491: The access/ endpoint of a tree resource got a parameter it cannot use
+
+*API 400 response* · from `karni.api.tree (GET <resource>/access/?permission=)`
+
+**Why Karni objects.** ?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything else would match no grant and answer an empty forest without saying why.
+
+**Fix.** Send a permission key such as ?permission=shop.order:view (or a pattern such as shop.order:*), or leave the parameter out to count every tree grant.
 
 ### 5xx · Settings and optional dependencies
 
@@ -1599,6 +1619,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** With no page to request, every check would pass without checking anything.
 
 **Fix.** Pass the site's pages, for example assert_pages(client, ["/", "/about/"]).
+
+<a id="w620"></a>
+
+#### W620: A role grant of a tree scope gives its members no node
+
+*system check (warning)* · from `karni.checks.check_tree_scopes (karni check)`
+
+**Why Karni objects.** A role grant of tree:<path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:<key> compares user.<key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
+
+**Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the nodes on purpose.
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
@@ -2952,7 +2982,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key> or custom:<name>. A spec grants the standard actions view, add, change and delete.
+**Why Karni objects.** Grants map onto KARNI_ROLES: a pattern app.entity[:action] (with * for a part, or * alone) to a scope all, own, own:<owner field>, related:<scope path key>, custom:<name> or tree:<path>. A spec grants the standard actions view, add, change and delete.
 
 **Fix.** Fix the pattern or the scope. An entity's own actions, and a grant on a model outside the spec, go in KARNI_ROLES by hand.
 
@@ -3656,6 +3686,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Remove tree from an external entity, and remove parent (and position) from the fields of a tree entity, or rename a field that means something else.
 
+<a id="c620"></a>
+
+### C620: A role grant's tree:<path> does not lead to a tree entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o), each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
+
+**Fix.** Name the entity's relation to the tree, through relations when needed: tree:region, tree:product__categories. Add tree: true to the entity the path ends at, or grant another scope.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -3942,7 +3982,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `access-override`
 
-**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <why>`.
+**Rule.** Express who sees which rows in `access` (`Where(...)` for custom logic, `@action(..., access=...)` for one action). An overridden `get_queryset` is still read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs `# karni: allow(access-override): <why>`. Rows under the nodes of a tree a user was granted are the `tree:<path>` scope of a grant, never a hand-written subtree filter.
 
 **Why Karni objects.** The queryset is the authoritative layer: lists, details, actions, relation PKs and ?expand= all go through the read scope, so a bypass leaks everywhere.
 

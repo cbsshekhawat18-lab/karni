@@ -69,6 +69,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
+- `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
 - `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
 - `useResourceChildren`: Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).
 - `useResourceItem`: One row by id, optionally expanded.

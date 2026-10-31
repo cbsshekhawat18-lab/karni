@@ -549,7 +549,9 @@ RULES: tuple[Rule, ...] = (
             "Express who sees which rows in `access` (`Where(...)` for custom logic, "
             "`@action(..., access=...)` for one action). An overridden `get_queryset` is still "
             "read-scoped, so never use it to widen. Overriding `filter_queryset_for_user` needs "
-            "`# karni: allow(access-override): <why>`."
+            "`# karni: allow(access-override): <why>`. Rows under the nodes of a tree a user "
+            "was granted are the `tree:<path>` scope of a grant, never a hand-written subtree "
+            "filter."
         ),
         rationale=(
             "The queryset is the authoritative layer: lists, details, actions, relation "

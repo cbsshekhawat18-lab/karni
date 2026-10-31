@@ -93,6 +93,35 @@ apply codemods and list the manual steps. This file is the human summary.
   `karni plan` and `karni build`. `Grant` gains `targets` and `grant_id`,
   and `GrantSource` the user grant's fields, all defaulting to empty.
   [docs/accounts.md](docs/accounts.md#per-user-grants).
+- **The tree scope (experimental): a grant on a node reaches every row under
+  it.** `tree:<path>` is a new scope for `KARNI_ROLES`, user grants,
+  `Granted()`, `Can`, `user.can` and the admin's row scope. `<path>` is the
+  row's foreign key or many-to-many to a tree model, through relations when
+  needed (`tree:region`, `tree:product__categories`). A user grant's targets
+  are its nodes, and a role grant (or a user grant without targets) reaches
+  the node in the user attribute named after the path's last step
+  (`user.region`). No node gives no row, never every row. The rows compile
+  to one subquery, the cycle-safe walk of the tree models started from every
+  granted node at once, and the nodes are read once per request, so list,
+  detail, custom actions, export, import relation lookups and the admin keep
+  flat query counts. `karni.accounts.tree_scope` holds `resolve_path`,
+  `subtree_rows`, `tree_rows`, `granted_targets`, `SubtreeKeys`, `tree_scope()`
+  for a `Where`, `access_forest` and `explain_row`. `RolePermission.scope`
+  takes `tree` (migration `0010`, choices and help texts only), `tree` joins
+  `TARGETED_SCOPES`, a user who holds a node may grant a node below it, and
+  the permission matrix offers `tree:<field>` for each relation to a tree
+  model. A path that does not end at a tree model is `E490` at startup, and
+  a role grant whose members have no such attribute is the warning `W620`.
+  A tree resource serves `GET access/?permission=`: the requester's granted
+  nodes, their ancestors and every other root, each flagged `granted`
+  (`E491` for a bad pattern). `karni why` and `karni why-empty` name the
+  grant and the node: "user grant 12 targets Europe, and this row's region
+  Lyon is under it". In `karni.yaml` a role grant takes `tree:<path>`,
+  checked against the spec's tree entities (`C620`), and `karni plan` and
+  `karni build` carry it into `KARNI_ROLES`. `@karni/ui` adds
+  `useResourceAccessForest`, and `TreeView` takes `access` to show the
+  forest, granted nodes selectable and their ancestors greyed.
+  [docs/accounts.md](docs/accounts.md#the-tree-scope).
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

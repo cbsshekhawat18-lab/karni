@@ -239,6 +239,7 @@ wins over an earlier wildcard. Scopes:
 | `own` | rows whose `Karni.owner_field` is the user (`created_by` by default). The field may be a path, through foreign keys and many-to-manys |
 | `related:<key>` | rows whose `Karni.scope_paths[key]` equals `user.<key>` (`user.venue` → `event.venue`) |
 | `custom:<name>` | the `Q` a scope registered with `karni.accounts.roles.register_scope(name, fn)` returns |
+| `tree:<path>` | rows whose `<path>` (a relation to a tree model) is a node the user holds or a node below it ([the tree scope](#the-tree-scope), experimental) |
 
 The model side lives in `class Karni`, next to `Meta` and `APIMeta`:
 
@@ -475,8 +476,8 @@ value that is not a bool ([`E504`](errors.md#e504)).
 |---|---|
 | `user` | Who the grant is for. |
 | `permission` | A pattern as in `KARNI_ROLES`: `app_label.model:action`, with `*` for either part, or `*` alone. |
-| `scope` | A scope a role grant takes: `all`, `own`, `related:<key>` or `custom:<name>`. |
-| `targets` | Row ids, stored as text, for a scope that points at rows. A `related:<key>` grant with targets reaches the rows whose `Karni.scope_paths[key]` is one of them, in place of `user.<key>`. |
+| `scope` | A scope a role grant takes: `all`, `own`, `related:<key>`, `custom:<name>` or `tree:<path>`. |
+| `targets` | Row ids, stored as text, for a scope that points at rows. A `related:<key>` grant with targets reaches the rows whose `Karni.scope_paths[key]` is one of them, in place of `user.<key>`. A `tree:<path>` grant's targets are nodes of the tree, and it reaches the rows under them. |
 | `expires_at` | When the grant ends. Empty means never. |
 | `granted_by` | Who gave it. Karni fills it in from the operator. |
 | `reason` | Why, in a few words. |
@@ -576,7 +577,7 @@ so they never query the grant tables themselves. It costs one query for the
 roles' side, and the user grants come from the request's cache. Each item is
 a `TargetGrant`, and `to_dict()` gives it as JSON. The scopes that take
 targets are listed in `karni.accounts.grants.TARGETED_SCOPES` (`related`
-now), which a new scope that points at rows joins.
+and `tree`), which a new scope that points at rows joins.
 
 ### In the admin
 
@@ -636,6 +637,192 @@ one fix names the user grant to widen.
 `KARNI_USER_GRANTS = False` stops reading the rows. Nothing is deleted, and
 the grants count again when it is back on. To stop using the feature, revoke
 the grants first, then turn it off.
+
+## The tree scope
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    the `tree:<path>` scope, `karni.accounts.tree_scope`, the `access/`
+    endpoint of a tree resource, the matrix's `tree:<field>` options, the
+    `tree` entry of `karni why --json`, `tree:<path>` in `karni.yaml`, and
+    `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`. They
+    may change in a minor release, and each change is in the CHANGELOG. The
+    error codes keep their meaning.
+
+Large apps grant access node by node in a hierarchy: this buyer sees the
+products of the Food category, that analyst the orders of Europe. A row is
+visible when it is tagged with a granted node or with any node below it.
+`tree:<path>` is that scope. `<path>` is the row's foreign key or
+many-to-many to a [tree model](models.md#tree-models), through relations
+when needed:
+
+```python
+# config/settings.py, after karni_settings(globals())
+KARNI_ROLES = {
+    "buyer": {
+        "grants": {
+            "catalog.product:view": "tree:category",             # Product.category, a foreign key
+            "catalog.listing:view": "tree:product__category",    # through Listing.product
+            "catalog.product:change": "tree:regions",            # Product.regions, a many-to-many
+        },
+    },
+}
+```
+
+Each step of the path is a relation of the model before it (a foreign key,
+a one-to-one, a many-to-many or a reverse relation), and the last one points
+at a model on `TreeModel`. A path that ends anywhere else is refused at
+startup ([`E490`](errors.md#e490)), and a wildcard pattern skips the models
+that have no such path, as it does for `related:<key>`. The scope works
+wherever a scope does: `Granted()`, `Can(...)`, `user.can(...)`,
+`@requires(...)`, the admin's row scope, exports, and the relation lookups
+of an import.
+
+### Where the nodes come from
+
+The nodes come from `karni.accounts.grants.scope_targets(user,
+"tree:<path>")`, the interface of [per-user grants](#per-user-grants):
+
+- A user grant of the scope gives its targets: the nodes, and every node
+  below each.
+- A role grant gives the node the user holds in the attribute named after the
+  path's last step: `tree:category` and `tree:product__category` both read
+  `user.category` (a field or a property holding a node). A user grant
+  without targets reads the same attribute.
+
+```python
+from karni.accounts import grants
+
+grants.grant(request.user, buyer, "catalog.product:view", "tree:category",
+             targets=[food.pk, books.pk], reason="the food and book buyer")
+```
+
+No node gives no row. A tree grant never falls back to every row.
+`karni check` warns about a role grant whose members cannot hold a node,
+because the user model has no such attribute ([`W620`](errors.md#w620)): give
+the nodes with user grants, or add the attribute. An expired or revoked user
+grant stops counting from the next request. A user who holds a node may
+grant a node below it: under a tree scope the operator's own nodes cover
+their subtrees ([`E363`](errors.md#e363) otherwise).
+
+### The rows, in SQL
+
+The grants of one path compile to one filter on the path, whose value is a
+subquery: the cycle-safe recursive walk of the tree models, started from
+every granted node at once (`WITH RECURSIVE ... CYCLE` on PostgreSQL, a path
+of keys on SQLite).
+
+```sql
+SELECT ... FROM catalog_product
+WHERE catalog_product.category_id IN (
+  WITH RECURSIVE karni_tree(node_id, parent_id, depth) AS (
+    SELECT id, parent_id, 0 FROM catalog_category
+    WHERE id IN (%s, %s) AND deleted_at IS NULL
+    UNION ALL
+    SELECT ... FROM catalog_category JOIN karni_tree w ON parent_id = w.node_id ...
+  ) CYCLE node_id SET is_cycle USING cycle_path
+  SELECT node_id FROM karni_tree WHERE NOT is_cycle
+)
+```
+
+The nodes are read once per request, cached on the user with the grants:
+one query for the roles' side when the user holds the attribute, none for
+the user grants (they come with the request's grants). The walk runs inside
+the statement that reads the rows, so a list, a detail or an export costs
+the same queries whatever the number of nodes and rows. Overlapping grants
+and a many-to-many give each row once. The walk follows the live nodes: a
+soft-deleted node hides its branch, as it does on the tree endpoints. A
+cycle in the data never loops.
+
+In an `Access` declaration, `tree_scope()` gives a `Where` function:
+
+```python
+from karni.accounts.tree_scope import tree_scope
+from karni.api import Access, BaseViewSet, HasRole, Where
+
+class ListingViewSet(BaseViewSet):
+    model = Listing
+    access = Access(
+        read=Where(tree_scope(Listing, "product__category", permission="catalog.listing:view")),
+        write=HasRole("staff"),
+    )
+```
+
+It checks the path when the class is defined, so a typo fails at startup.
+Without `permission`, every grant of the scope counts. A signed-in user
+without a node gets an empty list, and an anonymous request is refused.
+`subtree_rows(model, path, nodes)` is the filter for any nodes you choose,
+and `tree_rows(user, model, path)` the filter for a user's nodes.
+
+### The access forest
+
+A tree resource serves `GET <resource>/access/?permission=<pattern>`: the
+nodes the requester's tree grants name, the path from each one's root, and
+every other root. Any signed-in user may ask about their own grants.
+
+```json
+{
+  "results": [
+    {"id": "…", "label": "Everything", "parent": null, "granted": false, "has_children": true,
+     "children": [
+       {"id": "…", "label": "Food", "parent": "…", "granted": true, "has_children": true,
+        "children": null}
+     ]},
+    {"id": "…", "label": "Books", "parent": null, "granted": false, "has_children": false,
+     "children": []}
+  ],
+  "all": false,
+  "truncated": false
+}
+```
+
+`granted` is true for a node a grant names. Its ancestors and the other
+roots are there for navigation only. A granted node below another granted
+node is inside it already, so the forest shows the upper one, and a granted
+node's children (`null`) load from `tree/?root=<id>`. `?permission=` keeps
+the grants of the permissions it matches (`shop.order:view`, `shop.order:*`),
+and a malformed one is a 400 ([`E491`](errors.md#e491)). Without it, every
+tree grant whose path ends at this tree counts. `all` is true for a
+superuser, and for a grant of scope `all` of the permission asked about:
+every root is then granted. The answer costs the same queries whatever the
+number of nodes: the grants, one walk up from every granted node, one read
+of their rows and one of the roots. At most `tree_max_nodes` roots that are
+not on a granted path are listed (`truncated`).
+
+In `@karni/ui`, `useResourceAccessForest(resource, { permission })` reads it,
+and `TreeView` shows it with `access`:
+
+```tsx
+<TreeView resource="categories" access={{ permission: "catalog.product:view" }}
+          value={category} onChange={setCategory} />
+```
+
+Granted nodes and every node below them can be chosen. Their ancestors and
+the other roots are greyed (`aria-disabled`), and a click opens them.
+
+### Why a row is in or out
+
+`karni why` and `karni why-empty` name the grant and the node that decided:
+
+```text
+grants   catalog.product:view  scope tree:category on 7  (user grant 4b1c..., reason 'the food buyer', no expiry)  → category under 'Food'  ← reaches this row
+             user grant 4b1c... targets Food, and this row's category Apples is under it
+         catalog.product:view  scope tree:category  (role 'buyer', KARNI_ROLES)  → no row
+             role 'buyer' (through ana@example.com.category) gives no node, so this row's category Apples is outside it
+```
+
+For a row out of reach the line says "is under none of them", and the fix
+names the user grant to widen or the attribute to set. `--json` carries
+`tree` for each tree grant: its `nodes`, the row's `values` and the pair it
+is `under`.
+
+### In karni.yaml
+
+A role grant takes `tree:<path>`, checked against the spec's entities: the
+path follows the entity's relation fields to an entity with `tree: true`
+or `tree: ordered` ([`C620`](errors.md#c620)). `karni plan` shows the grant,
+and `karni build` writes it into `KARNI_ROLES`
+([the app spec](app-spec.md#roles)).
 
 ## Rate limiting
 

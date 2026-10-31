@@ -81,6 +81,8 @@ const HOOKS = {
     "Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).",
   useResourceAncestors:
     "Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).",
+  useResourceAccessForest:
+    "Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.",
   useTreeMutations:
     "Experimental. `move({ id, parent, position })` (`POST /<resource>/<id>/move/`) and `removeBranch(id)` (`DELETE ?branch=true`) for a tree resource.",
   useChangeHistory:

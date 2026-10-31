@@ -91,6 +91,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Membership through a path: `owner_field = "workspace__members"` | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500 | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Per-user grants next to the role grants: a pattern and a scope for one user, with targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). Experimental tier | `experimental` | Karni's own tests |
+| The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, `TreeView`'s `access`). Experimental tier | `experimental` | Karni's own tests |
 | Field visibility per role (`class Karni: field_roles`) | `experimental` | Karni's own tests |
 | Row scope in the admin, from the same grants as the API | `experimental` | Karni's own tests |
 | Change history: who changed which field, when, from what to what | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
@@ -1632,7 +1633,7 @@ class Lead(BaseModel):
 | `KARNI_ACCOUNTS_REGISTRATION` | `KARNI_ACCOUNTS_REGISTRATION` | `True` | Whether anyone may open an account through `register/`. `False` leaves the route out (404) and out of the OpenAPI schema, for a project whose staff create every account. While it is `True`, `karni.W102` warns for a viewset that lets every signed-in user change and delete every row. See [closing registration](accounts.md#closing-registration). |
 | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `KARNI_ACCOUNTS_DEFAULT_ROLES` | `[]` | Roles (Django groups) every self-registered user starts with, e.g. `attendee`. |
 | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `KARNI_ACCOUNTS_HONEYPOT_FIELD` | `"website"` | Name of the hidden registration field no person fills in. A request that fills it is accepted (202) without creating a user. `""` turns the honeypot off. See [security](security.md#what-karni-does-by-default). |
-| `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>`. See [roles](accounts.md#roles-as-data). |
+| `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>` / `tree:<path>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
 | `KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
@@ -1901,6 +1902,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useResourceTree` | `resource: string`, `params?: ResourceTreeParams \| undefined`, `options?: Omit<UseQueryOptions<TreeResponse<T>, Error, TreeResponse<T>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The nested nodes of a tree resource (`GET /<resource>/tree/`), under `root` or from the roots. | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
 | `useResourceChildren` | `resource: string`, `id: string \| number`, `params?: ResourceChildrenParams \| undefined`, `options?: Omit<UseQueryOptions<Paginated<TreeNode<T>>, Error, Paginated<TreeNode<T>>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. One page of a node's children (`GET /<resource>/<id>/children/`). | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
 | `useResourceAncestors` | `resource: string`, `id: string \| number`, `options?: Omit<UseQueryOptions<TreeNode<T>[], Error, TreeNode<T>[], readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The nodes above one node, root first (`GET /<resource>/<id>/ancestors/`). | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
+| `useResourceAccessForest` | `resource: string`, `params?: AccessForestParams \| undefined`, `options?: Omit<UseQueryOptions<AccessForest, Error, AccessForest, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/`): the nodes their `tree:<path>` grants name, the ancestors of each and every other root. | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
 | `useTreeMutations` | `resource: string` | Experimental. Move a node or delete a branch. | [useResourceTree.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceTree.ts) |
 | `useChangeHistory` | `resource: string`, `id: string \| number`, `params?: ChangeHistoryParams \| undefined`, `options?: Omit<UseQueryOptions<ChangeHistoryPage, Error, ChangeHistoryPage, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row's field-level change history (`GET /<resource>/<id>/history/`) for models with `audit = True`. | [useChangeHistory.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useChangeHistory.ts) |
 | `useImportDescribe` | `resource: string`, `options?: Omit<UseQueryOptions<ImportDescription, Error, ImportDescription, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches what a resource's import accepts: its columns, required fields and allowed values. | [useResourceImport.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceImport.ts) |
@@ -2108,6 +2110,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E406`](errors.md#e406) | check | Two schedules share a name |
 | [`E407`](errors.md#e407) | exception | No schedule has that name |
 | [`E408`](errors.md#e408) | exception | A scheduled task failed when run by hand |
+| [`E490`](errors.md#e490) | check | A tree:&lt;path&gt; scope does not end at a tree model |
+| [`E491`](errors.md#e491) | api | The access/ endpoint of a tree resource got a parameter it cannot use |
 | [`E501`](errors.md#e501) | exception | An optional dependency is not installed |
 | [`W501`](errors.md#w501) | warning | The throttle cache is private to each process |
 | [`E502`](errors.md#e502) | exception | Unknown settings profile |
@@ -2153,6 +2157,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E617`](errors.md#e617) | exception | karni seed refuses to add demo rows to a table that already has rows |
 | [`E618`](errors.md#e618) | test | A public page fails the page checks |
 | [`E619`](errors.md#e619) | exception | assert_pages was given no URLs |
+| [`W620`](errors.md#w620) | warning | A role grant of a tree scope gives its members no node |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |
@@ -2367,6 +2372,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C371`](errors.md#c371) | cli | A range field spec is invalid |
 | [`C372`](errors.md#c372) | cli | A capacity field spec is invalid |
 | [`C460`](errors.md#c460) | cli | A tree entity's keys do not fit |
+| [`C620`](errors.md#c620) | cli | A role grant's tree:&lt;path&gt; does not lead to a tree entity |
 
 ### Agent rules (`K`)
 
