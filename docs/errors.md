@@ -1976,6 +1976,168 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Inherit karni.models.BaseModel (which includes GuardedModel), or add karni.models.GuardedModel to the model's bases.
 
+## AI (`AI`)
+
+<a id="ai001"></a>
+
+### AI001: KARNI_AI_PROVIDER is not set
+
+*system check (error)* · from `karni_ai.checks (and providers.base.get_provider)`
+
+**Why Karni objects.** karni-ai has no default provider: every extraction goes through the one the project names.
+
+**Fix.** Set KARNI_AI_PROVIDER to 'anthropic', 'openai' or 'test' (in .env, or in karni.yaml as modules: ai: provider), or to the dotted path of a karni_ai.providers.base.Provider subclass.
+
+<a id="ai002"></a>
+
+### AI002: KARNI_AI_PROVIDER cannot be loaded
+
+*exception* · from `karni_ai.providers.base.get_provider`
+
+**Why Karni objects.** The setting names something that is not a shortcut and does not import as a Provider subclass.
+
+**Fix.** Use 'anthropic', 'openai' or 'test', or the dotted path of a karni_ai.providers.base.Provider subclass.
+
+<a id="ai003"></a>
+
+### AI003: The provider's SDK is not installed
+
+*system check (error)* · from `karni_ai.providers (anthropic, openai)`
+
+**Why Karni objects.** Provider SDKs are optional extras, so a project installs only the one it uses.
+
+**Fix.** Install the extra: pip install 'karni-ai[anthropic]' or 'karni-ai[openai]'.
+
+<a id="ai004"></a>
+
+### AI004: The provider's API key is not set
+
+*system check (error)* · from `karni_ai.providers (anthropic, openai)`
+
+**Why Karni objects.** The provider cannot answer without its key. The key comes from the environment only, never from code or karni.yaml.
+
+**Fix.** Set ANTHROPIC_API_KEY or OPENAI_API_KEY in the environment (.env in development). Use the 'test' provider for local work and CI without a key.
+
+<a id="ai005"></a>
+
+### AI005: The provider's model name is not set
+
+*system check (error)* · from `karni_ai.providers (anthropic, openai)`
+
+**Why Karni objects.** karni-ai has no default model: model names change, and the choice of one is a cost and quality decision for the project.
+
+**Fix.** Set ANTHROPIC_MODEL or OPENAI_MODEL in the environment to the model the provider should use.
+
+<a id="ai006"></a>
+
+### AI006: The provider call failed
+
+*API 400 response* · from `karni_ai.providers (answered with HTTP 502)`
+
+**Why Karni objects.** The provider refused the request, timed out or could not be reached. The call is logged with this code and nothing is previewed.
+
+**Fix.** Read the message for the provider's own reason (a rate limit, a bad key, an unknown model). Raise KARNI_AI_TIMEOUT for slow answers.
+
+<a id="ai007"></a>
+
+### AI007: The model's answer cannot be used
+
+*API 400 response* · from `karni_ai.providers (answered with HTTP 502)`
+
+**Why Karni objects.** The model declined, its answer was cut off at KARNI_AI_MAX_OUTPUT_TOKENS, or it was not the JSON the schema asks for.
+
+**Fix.** Send a shorter source, raise KARNI_AI_MAX_OUTPUT_TOKENS, or try another model.
+
+<a id="ai008"></a>
+
+### AI008: The resource cannot be extracted into
+
+*API 400 response* · from `karni_ai.extraction (answered with HTTP 400)`
+
+**Why Karni objects.** Extraction ends in the resource's import preview, so it needs a routed BaseViewSet whose import is on and whose model is writable.
+
+**Fix.** Name the resource by its router prefix (products, not Product), and keep its viewset's import_data on.
+
+<a id="ai009"></a>
+
+### AI009: You may not create rows of this resource
+
+*API 400 response* · from `karni_ai.extraction (answered with HTTP 403)`
+
+**Why Karni objects.** Only a user the resource's access declaration lets create may extract into it, so nobody spends tokens on rows they could never save.
+
+**Fix.** Ask for a role the resource's create access admits.
+
+<a id="ai010"></a>
+
+### AI010: The source cannot be read
+
+*API 400 response* · from `karni_ai.sources (answered with HTTP 400)`
+
+**Why Karni objects.** Give exactly one of text, url or file. The text has a size limit (KARNI_AI_MAX_SOURCE_CHARS), and a file must be a PDF with text in it, within KARNI_AI_MAX_UPLOAD_BYTES and KARNI_AI_MAX_PDF_PAGES.
+
+**Fix.** Send one source within the limits. A scanned PDF needs text recognition first.
+
+<a id="ai011"></a>
+
+### AI011: The URL is refused
+
+*API 400 response* · from `karni_ai.services.fetch (answered with HTTP 400)`
+
+**Why Karni objects.** A URL the server fetches must not reach the server's own network: only http and https, no user name or password, a port of KARNI_AI_FETCH_PORTS, a public address, and every redirect checked the same way, at most KARNI_AI_FETCH_MAX_REDIRECTS of them.
+
+**Fix.** Use a public http or https address. Paste the text instead for a page on a private network.
+
+<a id="ai012"></a>
+
+### AI012: The URL's response is refused
+
+*API 400 response* · from `karni_ai.services.fetch (answered with HTTP 400)`
+
+**Why Karni objects.** The response was larger than KARNI_AI_FETCH_MAX_BYTES, slower than KARNI_AI_FETCH_TIMEOUT, an HTTP error, or not HTML, plain text or a PDF.
+
+**Fix.** Download the document and send it as a file, or paste its text.
+
+<a id="ai013"></a>
+
+### AI013: Your monthly token budget is spent
+
+*API 400 response* · from `karni_ai.usage (answered with HTTP 429)`
+
+**Why Karni objects.** KARNI_AI_MONTHLY_TOKENS_PER_USER caps the tokens one user spends in a calendar month.
+
+**Fix.** Wait for the next month, or ask for the budget to be raised.
+
+<a id="ai014"></a>
+
+### AI014: The project's monthly token budget is spent
+
+*API 400 response* · from `karni_ai.usage (answered with HTTP 429)`
+
+**Why Karni objects.** KARNI_AI_MONTHLY_TOKENS caps the tokens the whole project spends in a calendar month.
+
+**Fix.** Wait for the next month, or raise KARNI_AI_MONTHLY_TOKENS.
+
+<a id="ai015"></a>
+
+### AI015: The resource has no field extraction can fill
+
+*API 400 response* · from `karni_ai.schema (answered with HTTP 400)`
+
+**Why Karni objects.** Extraction fills text, number, date, choice and boolean fields, and relations to a model with a natural key. Files, JSON and relations without a natural key are left out.
+
+**Fix.** Give the related model a natural key (class Karni: natural_key = 'name'), or import the resource from a file.
+
+<a id="ai016"></a>
+
+### AI016: KARNI_AI_EXTRACTOR or KARNI_AI_FETCHER cannot be loaded
+
+*exception* · from `karni_ai.extraction.get_extractor, karni_ai.sources`
+
+**Why Karni objects.** Both settings are escape hatches: dotted paths to a subclass of the class they replace.
+
+**Fix.** Point KARNI_AI_EXTRACTOR at a karni_ai.extraction.Extractor subclass and KARNI_AI_FETCHER at a karni_ai.services.fetch.Fetcher subclass, or remove the setting.
+
 ## APR (`APR`)
 
 <a id="apr001"></a>

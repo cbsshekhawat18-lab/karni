@@ -96,6 +96,7 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - "AI extraction (karni-ai)": ai-extraction.md
       - "App spec (karni.yaml)": app-spec.md
   - Debugging:
       - Request ids and capture: debugging/capture.md

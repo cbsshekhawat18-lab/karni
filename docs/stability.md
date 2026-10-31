@@ -192,6 +192,13 @@ Experimental now:
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
   blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
   `karni_cli.builder` package.
+- [AI extraction](ai-extraction.md): the karni-ai module (`karni_ai`, its
+  `POST /api/ai/extract/` endpoint and answer, `/api/ai/`, the `AICall`
+  model, the `KARNI_AI_*` settings and the providers' `ANTHROPIC_*` and
+  `OPENAI_*` settings, the `ai.extract` throttle scope, `karni_ai.providers`,
+  `karni_ai.extraction`, `karni_ai.schema`, `karni_ai.sources`,
+  `karni_ai.services.fetch`, `karni_ai.usage`) and `@karni/ai-ui`
+  (`ExtractButton`, `ExtractPreview`, `useExtract`).
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),

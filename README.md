@@ -310,6 +310,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `stable` CSV and XLSX export of any list (`/export/?format=`)
 - `stable` Import from CSV or XLSX with a mandatory preview (`/import/`)
 - `experimental` Response caching per viewset (`Cache`, `Uncached`)
+- `experimental` Rows of any resource read from text, a web page or a PDF by a language model, always through the import preview (`karni add ai`, `POST /api/ai/extract/`, usage, costs and budgets). Experimental tier
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
@@ -388,6 +389,7 @@ Full reference: [capabilities](docs/REFERENCE.md#permissions) and [settings](doc
 A module is a separate package for anything with its own service or a real memory cost. Install it, then `karni add <name>` wires it in.
 
 <!-- generated:modules -->
+- `experimental` `karni add ai`: Rows for any resource read from text, a web page or a PDF by a language model, always through the import preview
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI

@@ -498,6 +498,7 @@
         "anyOf": [
           {
             "enum": [
+              "ai",
               "approvals",
               "impersonation",
               "payments",

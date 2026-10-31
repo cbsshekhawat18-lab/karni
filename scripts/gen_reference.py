@@ -168,6 +168,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability("api", "Response caching per viewset (`Cache`, `Uncached`)"),
     Capability(
         "api",
+        "Rows of any resource read from text, a web page or a PDF by a language model, "
+        "always through the import preview (`karni add ai`, `POST /api/ai/extract/`, usage, "
+        "costs and budgets). Experimental tier",
+    ),
+    Capability(
+        "api",
         "Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode "
         "(`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier",
     ),

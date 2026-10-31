@@ -11,6 +11,32 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **karni-ai (experimental): structured extraction with a language model,
+  always through the import preview.** A new optional module, `pip install
+  "karni-ai[anthropic]"` (or `[openai]`) and `karni add ai`, with
+  `@karni/ai-ui`. `POST /api/ai/extract/` takes a resource (its router
+  prefix) and one source: text, a URL or a PDF. A language model reads it
+  into rows that follow the JSON Schema of the resource's own writable fields
+  (its OpenAPI request component, for the caller's role), the answer is
+  validated against that schema, and the rows go through Karni's import
+  preview. The endpoint answers the proposed rows, a problem per field, the
+  preview's counts and the import job's id. Nothing is written until the user
+  confirms through the import's own commit. Only a user the resource's access
+  lets create may call it, 30 times an hour each (throttle scope
+  `ai.extract`). A URL is fetched only over http or https, to a public
+  address (redirects checked the same way), within a size limit and a
+  timeout. PDF text comes from pypdf. Providers: `anthropic`, `openai` (SDK
+  extras) and a deterministic `test` provider. The provider, the model name
+  and the key come from settings and the environment only, with no default
+  model: `karni check` fails (`AI001` to `AI005`) until they are set. Every
+  call is logged (`AICall`, read-only in the admin) with its tokens and a
+  cost from `KARNI_AI_PRICES`, and optional monthly token budgets per user
+  and per project refuse a call when spent (`AI013`, `AI014`). In karni.yaml,
+  `modules: ai: {provider: ...}` is planned, asked by `karni plan
+  --questions` and wired by `karni build`. `ExtractButton` and `useExtract`
+  in `@karni/ai-ui` read a source into the preview and commit it.
+  Karni core never imports the module. Codes `AI001` to `AI016`.
+  [docs/ai-extraction.md](docs/ai-extraction.md).
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5
