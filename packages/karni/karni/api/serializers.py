@@ -62,6 +62,7 @@ from rest_framework.relations import (
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from karni.api.expansion import DEFAULT_MAX_EXPAND_DEPTH, is_forward_relation
+from karni.api.formats import FormattedCharField, format_of
 from karni.api.lifecycle import StateChoiceField, lifecycle_errors, serializer_field
 from karni.api.related import readable_related, related_scope
 from karni.exceptions import KarniImproperlyConfigured
@@ -296,6 +297,10 @@ class KarniModelSerializer(serializers.ModelSerializer):
             kwargs.update(lifecycle[1])
             if field_class is not StateChoiceField:
                 kwargs.pop("choices", None)
+        openapi_format = format_of(model_field)  # MarkdownField (karni.api.formats)
+        if openapi_format is not None and issubclass(field_class, serializers.CharField):
+            field_class = FormattedCharField
+            kwargs["openapi_format"] = openapi_format
         default = model_field.default if model_field.has_default() else None
         if (
             model_field.has_default()

@@ -23,7 +23,8 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 ``karni queries``) · ``E96x``/``E97x`` typed fields and database guarantees
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
 (``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
-tables, SQL views and a second database (``karni.db``).
+tables, SQL views and a second database (``karni.db``) · ``E55x`` field
+groups and column sets (``karni.layout``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1556,6 +1557,51 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "database's major version (the backup image's POSTGRES_VERSION), the free space in "
         "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
         "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
+    ),
+    # E55x wide models: field groups and column sets (karni.layout, experimental)
+    _e(
+        "E550",
+        "Karni.field_groups or Karni.field_group_layout is malformed",
+        "check",
+        "karni.layout.field_groups; karni.checks.check_layouts",
+        "The groups are published in the OpenAPI schema as x-karni-field-groups and lay out "
+        "@karni/ui's ResourceForm and ResourceDetail and the admin's change form. A group "
+        "without a title or without fields cannot be shown, so the declaration is refused at "
+        "boot.",
+        "Map each group's title to a list of field names, e.g. field_groups = {'Overview': "
+        "['name', 'summary'], 'Financials': ['price', 'cost']}, and write field_group_layout "
+        "= 'sections' (the default) or 'tabs'.",
+    ),
+    _e(
+        "E551",
+        "A field group or a column set names a field the model does not have",
+        "check",
+        "karni.layout.field_groups; karni.layout.column_sets; karni.checks.check_layouts",
+        "A name with a typo would leave its field out of every form section, or show an "
+        "empty column, without an error anywhere, so a group or column set must name the "
+        "model's own fields.",
+        "Correct the name to a field of the model (the message names the model, the group or "
+        "set, and the field), or remove it from the group or set.",
+    ),
+    _e(
+        "E552",
+        "A field is in two field groups",
+        "check",
+        "karni.layout.field_groups; karni.checks.check_layouts",
+        "A form shows each field once, in one group. A field listed in two groups would be "
+        "edited in two places at once, so each field belongs to one group.",
+        "Keep the field in one group and remove it from the other (the message names both).",
+    ),
+    _e(
+        "E553",
+        "Karni.column_sets is malformed",
+        "check",
+        "karni.layout.column_sets; karni.checks.check_layouts",
+        "The column sets are published as x-karni-column-sets and ResourceTable offers them "
+        "in a selector. A set without a name or without columns, or one that lists a column "
+        "twice, cannot be shown.",
+        "Map each set's name to a list of field names, each once, e.g. column_sets = "
+        "{'default': ['name', 'price'], 'financial': ['name', 'price', 'cost']}.",
     ),
     # E6xx testing and seeding
     _e(

@@ -71,6 +71,9 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # External tables, a SQL view and a second database (karni.db): viewsets
     # mounted by its own URLconf only.
     "tests.externalapp",
+    # A 120-field model with markdown sections, field groups and column sets
+    # (karni.layout): viewsets mounted by its own URLconf only.
+    "tests.wideapp",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that

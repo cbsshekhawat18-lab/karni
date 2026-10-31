@@ -33,6 +33,12 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   this model whose value the parameter takes, and the related rows in words.
   ``@karni/ui``'s ResourceDetail builds its related tabs from it
   (:meth:`KarniAutoSchema.get_karni_related`).
+* ``x-karni-field-groups`` and ``x-karni-column-sets`` (experimental) on the
+  list operation of a model that declares ``Karni.field_groups`` /
+  ``Karni.column_sets`` (:mod:`karni.layout`): the groups ResourceForm and
+  ResourceDetail show and the column presets ResourceTable offers, limited
+  to the fields the requester's serializer has
+  (:meth:`KarniAutoSchema.get_karni_field_groups`, ``get_karni_column_sets``).
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -126,6 +132,12 @@ class KarniAutoSchema(AutoSchema):
                 related = self.get_karni_related()
                 if related:
                     operation["x-karni-related"] = related
+                groups = self.get_karni_field_groups()
+                if groups is not None:
+                    operation["x-karni-field-groups"] = groups
+                sets = self.get_karni_column_sets()
+                if sets is not None:
+                    operation["x-karni-column-sets"] = sets
         view = self._karni_view()
         if view is not None:
             declaration, predicate = self._karni_access(view)
@@ -204,6 +216,81 @@ class KarniAutoSchema(AutoSchema):
                 }
             )
         return entries
+
+    def get_karni_field_groups(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-field-groups``: ``Karni.field_groups``.
+
+        ``{"layout": "sections" | "tabs", "groups": [{"label", "fields"}]}``,
+        each group limited to the fields this request's serializer has (a
+        field the role may not read is never named), and a group left empty
+        dropped. The fields in no group are the client's last group.
+        ``None`` when the model declares no groups, or a malformed declaration
+        (``karni check`` reports it: E550 to E552). Override to publish other
+        groups.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import field_group_layout, field_groups
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            groups = field_groups(model)
+            layout = field_group_layout(model)
+        except KarniError:
+            return None
+        shown = [
+            {"label": group.label, "fields": [name for name in group.fields if name in names]}
+            for group in groups
+        ]
+        shown = [group for group in shown if group["fields"]]
+        return {"layout": layout, "groups": shown} if shown else None
+
+    def get_karni_column_sets(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-column-sets``: ``Karni.column_sets``.
+
+        ``{"default": "<name>", "sets": [{"name", "label", "columns"}]}``, each
+        set limited to the fields this request's serializer has and a set
+        left empty dropped. ``default`` is the set named ``default``, else the
+        first. ``None`` when the model declares no sets, or a malformed
+        declaration (E551, E553). Override to publish other sets.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import ColumnSet, column_sets, default_column_set
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            declared = column_sets(model)
+        except KarniError:
+            return None
+        kept = [
+            ColumnSet(found.name, found.label, tuple(c for c in found.columns if c in names))
+            for found in declared
+        ]
+        kept = [found for found in kept if found.columns]
+        if not kept:
+            return None
+        return {
+            "default": default_column_set(kept),
+            "sets": [
+                {"name": found.name, "label": found.label, "columns": list(found.columns)}
+                for found in kept
+            ],
+        }
+
+    def _karni_model_and_fields(self) -> tuple[type[Model] | None, set[str]]:
+        """The view's model and the field names its serializer has for this request."""
+        view = self._karni_view()
+        if view is None:
+            return None, set()
+        try:
+            model = view.get_model()
+            serializer = view.get_serializer()
+        except (ImproperlyConfigured, AssertionError):
+            return None, set()
+        return model, set(getattr(serializer, "fields", {}))
 
     #: The detail routes drf-spectacular already names apart from the list.
     _DETAIL_ACTIONS = frozenset({"retrieve", "update", "partial_update", "destroy"})

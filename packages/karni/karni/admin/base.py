@@ -369,6 +369,16 @@ class KarniAdminMixin(admin.ModelAdmin):
         return [n for n in super().get_fields(request, obj) if self._head(n) not in hidden]
 
     def get_fieldsets(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
+        """``Karni.field_groups`` as fieldsets, unless the admin declares ``fieldsets`` itself.
+
+        Each group is a fieldset of the form's fields it lists, and the fields
+        in no group the last one, "Other" (:func:`karni.layout.fieldsets`).
+        A field the user may not read is left out of every fieldset.
+        """
+        if not self.fieldsets:
+            grouped = self.derive_fieldsets(request, obj)
+            if grouped is not None:
+                return grouped
         hidden = self.hidden_fields(request)
         if not hidden:
             return super().get_fieldsets(request, obj)
@@ -381,6 +391,22 @@ class KarniAdminMixin(admin.ModelAdmin):
             ]
             kept.append((title, {**options, "fields": fields}))
         return kept
+
+    def derive_fieldsets(
+        self, request: HttpRequest, obj: models.Model | None = None
+    ) -> list[tuple[str | None, dict[str, Any]]] | None:
+        """The fieldsets ``Karni.field_groups`` gives (experimental), or ``None`` without groups.
+
+        A malformed declaration also gives ``None`` (Django's single fieldset):
+        ``karni check`` reports it (E550 to E552). Override to group otherwise.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import fieldsets
+
+        try:
+            return fieldsets(self.model, self.get_fields(request, obj))
+        except KarniError:
+            return None
 
     def get_readonly_fields(self, request: HttpRequest, obj: models.Model | None = None) -> Any:
         protected = self.protected_fields(request) - self.hidden_fields(request)

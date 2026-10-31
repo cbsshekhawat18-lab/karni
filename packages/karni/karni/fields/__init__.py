@@ -24,6 +24,7 @@ Field                  Column, constraint, index                     Backends
 ``EmailField``         unique on LOWER(email), domain lower-cased    all
 ``SlugField``          unique (live rows), generated from a field    all
 ``PhoneField``         E.164, CHECK format                           PG, SQLite
+``MarkdownField``      text, OpenAPI format "markdown"               all
 ``CountryField``       char(2), CHECK IN ISO 3166-1 alpha-2          all
 ``CurrencyField``      char(3), CHECK IN ISO 4217                    all
 ``JSONField``          jsonb; GIN when ``queried=True``              GIN on PG
@@ -74,7 +75,14 @@ from karni.fields.numbers import PercentField, QuantityField
 from karni.fields.search import SearchField
 from karni.fields.state import StateField
 from karni.fields.structured import JSONField
-from karni.fields.text import E164Format, EmailField, PhoneField, SlugField, normalize_phone
+from karni.fields.text import (
+    E164Format,
+    EmailField,
+    MarkdownField,
+    PhoneField,
+    SlugField,
+    normalize_phone,
+)
 
 # ArrayField and the range fields are lazy re-exports (module __getattr__
 # below): they need a PostgreSQL driver, and karni.fields must import without one.
@@ -94,6 +102,7 @@ __all__ = [  # noqa: F822
     "JSONField",
     "KarniField",
     "LiveUniqueConstraint",
+    "MarkdownField",
     "MoneyField",
     "PercentField",
     "PhoneField",

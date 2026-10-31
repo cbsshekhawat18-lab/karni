@@ -1,4 +1,4 @@
-"""Text with rules: case-insensitive emails, generated slugs, E.164 phone numbers.
+"""Text with rules: case-insensitive emails, generated slugs, E.164 phone numbers, markdown.
 
 * :class:`EmailField`: ``unique=True`` means unique **case-insensitively**,
   enforced by a unique index on ``LOWER(email)`` (partial on soft-deletable
@@ -22,8 +22,16 @@
   ``validators=[...]`` built on it when you need to know that a number is
   assignable, not just well-formed.
 
-Override / escape hatch: ``models.EmailField``/``SlugField``/``CharField``
-are the plain replacements; ``unique=False`` drops the constraint.
+* :class:`MarkdownField` (experimental): a ``TextField`` whose value is
+  markdown. The column is plain text and nothing is rendered on the server:
+  the OpenAPI schema says ``format: markdown``, so ``@karni/ui``'s
+  ResourceForm edits it with Write and Preview tabs and ResourceDetail shows
+  it formatted and sanitized (MarkdownView). It is searched like any text
+  field (list it in a viewset's ``search_fields``).
+
+Override / escape hatch: ``models.EmailField``/``SlugField``/``CharField``/
+``TextField`` are the plain replacements; ``unique=False`` drops the
+constraint.
 """
 
 from __future__ import annotations
@@ -44,6 +52,7 @@ __all__ = [
     "E164",
     "E164Format",
     "EmailField",
+    "MarkdownField",
     "PhoneField",
     "SlugField",
     "normalize_email",
@@ -267,3 +276,28 @@ class PhoneField(KarniField, models.CharField):
         # Area code 555 is not assigned in the North American plan: never a real number.
         number = ctx.n if ctx.unique else ctx.random.randint(0, 9_999_999)
         return f"+1555{number:07d}"
+
+
+class MarkdownField(KarniField, models.TextField):
+    """Experimental. Long-form text written in markdown (see the module docstring).
+
+    A ``TextField`` in the database, in forms and in search. The API publishes
+    it as ``{"type": "string", "format": "markdown"}``, and that is the only
+    difference a client sees.
+    """
+
+    plain_django = "models.TextField()"
+    #: The OpenAPI ``format`` of its property in the API schema (what ``@karni/ui`` reads).
+    openapi_format = "markdown"
+
+    def karni_column(self) -> str:
+        return "MarkdownField: text, markdown that @karni/ui renders sanitized"
+
+    def deconstruct(self) -> tuple[str, str, list[Any], dict[str, Any]]:
+        name, path, args, kwargs = super().deconstruct()
+        return name, self._public_path(path), args, kwargs
+
+    def karni_sample(self, ctx: Any) -> Any:
+        heading = ctx.fake.sentence(nb_words=3).rstrip(".")
+        items = "\n".join(f"- {ctx.fake.sentence(nb_words=5)}" for _ in range(3))
+        return ctx.fit(f"## {heading}\n\n{ctx.fake.paragraph(nb_sentences=3)}\n\n{items}")
