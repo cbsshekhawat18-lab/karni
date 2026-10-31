@@ -13,7 +13,7 @@ from django.test.utils import CaptureQueriesContext
 from karni.accounts import grants
 from karni.testing import client_as
 from karni.transfer.services import PREVIEW, create_job, run_stage
-from tests.testapp.models import Category, Listing, Product
+from tests.testapp.models import Category, Listing, Product, Region
 from tests.transfer.conftest import api_request, csv_file
 from tests.treescope import LISTING_VIEW, PRODUCT_VIEW
 from tests.treescope.conftest import Catalog, fresh, make_user
@@ -120,6 +120,22 @@ class TestReads:
             holder(catalog, catalog.food, catalog.tools, catalog.books, email="many@example.com")
         )
         assert many == one
+
+    def test_the_detail_query_count_stays_flat_with_the_regions(self, catalog: Catalog) -> None:
+        user = make_user("regions@example.com")
+        grants.grant(None, user, PRODUCT_VIEW, "tree:regions", targets=[catalog.world.pk])
+
+        def count(product: Product) -> int:
+            client = client_as(user=fresh(user))
+            with CaptureQueriesContext(connection) as captured:
+                ok(client.get(f"/api/products/{product.pk}/"))
+            return len(captured)
+
+        few = count(catalog.milk)  # one region
+        busy = Product.objects.create(name="Everywhere", category=catalog.food)
+        extra = [Region.objects.create(name=f"Town {n}", parent=catalog.lyon) for n in range(12)]
+        busy.regions.set([catalog.france, *extra])
+        assert count(busy) == few
 
 
 class TestExportAndImport:
