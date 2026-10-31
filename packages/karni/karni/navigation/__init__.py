@@ -27,8 +27,8 @@ An item has a ``label``, an ``icon`` name, a ``route`` (an app path such as
 ``/products``), an ``order`` among its siblings (default 0, then the list
 order) and what it ``requires``:
 
-* ``"public"``: everyone, signed in or not;
-* ``"authenticated"`` (the default): every signed-in user;
+* ``"public"``: everyone, signed in or not.
+* ``"authenticated"`` (the default): every signed-in user.
 * a permission pattern written as in ``KARNI_ROLES`` grants
   (``"catalog.product:view"``, ``"catalog.*:view"``, ``"*"``): a user who
   holds a grant for a permission the pattern names, from a role or a live
