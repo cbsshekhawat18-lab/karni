@@ -736,10 +736,15 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Screens compose `@karni/ui` components (`Page`, `ResourceTable`, "
             "`ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw "
-            "`<table>/<form>/<input>/<select>/<textarea>`."
+            "`<table>/<form>/<input>/<select>/<textarea>/<details>`. Dashboards and reports "
+            "compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), "
+            "`ComparisonTable`, `Accordion` and `MarkdownView`."
         ),
         rationale="The components already handle data, validation, a11y and theming.",
-        fix="Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.",
+        fix=(
+            "Compose ResourceTable / DataTable / ComparisonTable / Accordion / ResourceForm / "
+            "Input / Select from @karni/ui."
+        ),
         enforced_by=("karni/no-raw-elements",),
     ),
     Rule(
