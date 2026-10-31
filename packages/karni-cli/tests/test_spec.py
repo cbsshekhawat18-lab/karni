@@ -19,6 +19,7 @@ import yaml
 from typer.testing import CliRunner
 
 from karni_cli import project as project_mod
+from karni_cli.builder.render import _search_option
 from karni_cli.errorcodes import CODES
 from karni_cli.generators.naming import default_route
 from karni_cli.main import app
@@ -160,6 +161,16 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C213", SHOP + "        fields: {name: str}\n        global_search: {weight: 0}\n", 8),
+    ("C540", SHOP + "        fields: {name: str, stock: int}\n"
+     "        global_search: {fields: [stock]}\n", 8),
+    ("C540", SHOP + "        fields: {name: str, maker: fk:User}\n        search: [maker__email]\n"
+     "        global_search: true\n", 9),
+    ("C541", SHOP + "        fields: {name: str}\n        global_search: true\n", 8),
+    ("C542", SHOP + "        fields: {name: str}\n"
+     "        global_search: {fields: [name], subtitle: maker__name}\n", 8),
+    ("C542", SHOP + "        fields: {name: str, sku: str}\n"
+     "        global_search: {fields: [name], title: sku__code}\n", 8),
 ]  # fmt: skip
 
 
@@ -175,8 +186,12 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # The spec's own codes (C540 to C559: global_search), and C324, the module catalog's
+    # code for requires and conflicts.
+    assert all(
+        200 <= int(code[1:]) <= 269 or 540 <= int(code[1:]) <= 559 or code == "C324"
+        for code in iter_codes()
+    )
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
@@ -442,6 +457,7 @@ apps:
           meta: json:queried?
         key: slug
         search: name
+        global_search: true
         access: {read: public, write: "role:staff"}
       Session:
         fields:
@@ -470,6 +486,7 @@ apps:
         order: starts_at
         audit: true
         search: [title, level]
+        global_search: {fields: [title], subtitle: studio__name, weight: 2}
         access: {read: "owned:instructor", write: "owned:instructor"}
       Booking:
         fields:
@@ -573,6 +590,8 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
                 options.append(f"audit = {entity.audit!r}")
             if entity.scope_paths:
                 options.append(f"scope_paths = {entity.scope_paths!r}")
+            if entity.global_search:
+                options.append(f"search = {_search_option(entity)!r}")
             if options:
                 _insert(models, name, "Karni", options)
             if entity.groups:

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from karni_cli.project import CliError
-from karni_cli.typegen import generate_hooks, resource_components
+from karni_cli.typegen import generate_hooks, resource_components, search_resources
 
 FIXTURE = Path(__file__).parent / "fixtures" / "schema.fixture.json"
 
@@ -46,3 +46,17 @@ def test_no_karni_resources_errors(schema: dict) -> None:
 def test_detail_op_without_pagination_is_skipped(schema: dict) -> None:
     # the detail path has no x-karni-resource and a non-paginated response: ignored
     assert "events" in resource_components(schema)
+
+
+def test_cross_model_search_gets_a_typed_hook(schema: dict) -> None:
+    assert "useGlobalSearch" not in generate_hooks(schema)  # no search operation, no hook
+    schema["paths"]["/api/search/"] = {
+        "get": {"x-karni-search": {"resources": ["venues", "events"]}, "responses": {}}
+    }
+    assert search_resources(schema) == ["events", "venues"]
+    out = generate_hooks(schema)
+    assert 'export type SearchResource = "events" | "venues";' in out
+    assert "  useGlobalSearch as useKarniGlobalSearch," in out
+    assert ") => useKarniGlobalSearch<SearchResource>(params, options);" in out
+    schema["paths"]["/api/search/"]["get"]["x-karni-search"]["resources"] = []
+    assert "export type SearchResource = never;" in generate_hooks(schema)

@@ -16,7 +16,7 @@ in the spec and is listed as a note. A field whose column the syntax cannot
 make (a ``SearchField``, Django's own ``EmailField``, a ``MoneyField`` with
 other digits) is left out and listed. So are access declarations other than
 the spec's shapes (written ``access: code``), ``class Karni`` options the
-spec has no key for, hand-written pages and grants the spec cannot name. The
+spec has no key for (``search`` is ``global_search``), hand-written pages and grants the spec cannot name. The
 list is printed, and written as comments at the top of the file.
 
 An entity is a model on ``BaseModel`` or ``BigIntBaseModel`` (its ``pk``
@@ -448,6 +448,10 @@ def _one(items: list[str]) -> str | list[str]:
     return items[0] if len(items) == 1 else items
 
 
+def _names_of(value: Any) -> list[str]:
+    return [value] if isinstance(value, str) else list(value or [])
+
+
 def _access(viewset: dict[str, Any] | None, label: str, left_out: list[str]) -> Any:
     if viewset is None:
         left_out.append(f"{label}: no viewset (no API), so access is code")
@@ -614,10 +618,17 @@ def _entity(
             value = karni.pop(option)
             if value not in (None, False, {}, []):
                 entity[key] = value
+    searched = karni.pop("search", None)
     for option in sorted(karni):
         ctx.left_out.append(f"{label}: class Karni {option}")
     if viewset is not None and viewset["search_fields"]:
         entity["search"] = _one(viewset["search_fields"])
+    if searched not in (None, False):
+        value = _global_search(searched, entity.get("search"))
+        if value is None:
+            ctx.left_out.append(f"{label}: class Karni search (a shape the spec cannot write)")
+        else:
+            entity["global_search"] = value
     admin = dict(model["admin_meta"])
     extra = dict(admin.pop("extra", None) or {})
     fieldsets = extra.pop("fieldsets", None)
@@ -646,6 +657,31 @@ def _entity(
     return entity
 
 
+def _global_search(declared: Any, search: Any) -> Any:
+    """``Karni.search`` as the spec's ``global_search``: ``true`` when it is the defaults.
+
+    ``None`` for a declaration the key cannot carry (no list of fields).
+    """
+    if not isinstance(declared, dict):
+        return None
+    raw = declared.get("fields")
+    fields = [raw] if isinstance(raw, str) else raw
+    if not isinstance(fields, list) or not fields or not all(isinstance(f, str) for f in fields):
+        return None
+    searched = [search] if isinstance(search, str) else list(search or [])
+    written: dict[str, Any] = {}
+    if fields != searched:
+        written["fields"] = fields
+    title, subtitle, weight = (declared.get(key) for key in ("title", "subtitle", "weight"))
+    if isinstance(title, str) and title != fields[0]:
+        written["title"] = title
+    if isinstance(subtitle, str):
+        written["subtitle"] = subtitle
+    if isinstance(weight, int | float) and not isinstance(weight, bool) and weight != 1:
+        written["weight"] = weight
+    return written or True
+
+
 def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> None:
     """Drop what names a field the spec left out, so the export always validates."""
     fields = set(entity["fields"])
@@ -654,6 +690,7 @@ def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> No
     def keep(value: str, names: set[str]) -> bool:
         return value.lstrip("-^=@$").split("__", 1)[0] in names
 
+    original_search = _names_of(entity.get("search"))
     for key, names in (("search", known), ("order", known), ("audit", fields)):
         value = entity.get(key)
         if not isinstance(value, list | str):
@@ -672,12 +709,39 @@ def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> No
         if isinstance(value, str) and not keep(value, known | {"created_by"}):
             left_out.append(f"{label}: {key} {value}, a field the spec leaves out")
             entity.pop(key)
+    _drop_unknown_search(entity, label, left_out, original_search)
     for title, members in list(entity.get("groups", {}).items()):
         if any(member not in fields for member in members):
             left_out.append(f"{label}: the field group {title}, with a field the spec leaves out")
             entity["groups"].pop(title)
     if entity.get("groups") == {}:
         entity.pop("groups")
+
+
+def _drop_unknown_search(
+    entity: dict[str, Any], label: str, left_out: list[str], original_search: list[str]
+) -> None:
+    """Drop ``global_search`` when it names a field the spec left out.
+
+    ``original_search`` is the ``search`` list before :func:`_drop_unknown`
+    trimmed it: ``global_search: true`` takes its fields from it, so a
+    trimmed list turns ``true`` into the fields it stood for.
+    """
+    searched = entity.get("global_search")
+    if searched is None:
+        return
+    mapping: dict[str, Any] = searched if isinstance(searched, dict) else {}
+    names = _names_of(mapping["fields"]) if "fields" in mapping else original_search
+    shown = [path for path in (mapping.get("title"), mapping.get("subtitle")) if path]
+    known = set(entity["fields"]) | {"id", "created_at", "updated_at"}
+    if any(name not in entity["fields"] for name in names) or any(
+        str(path).split("__", 1)[0] not in known for path in shown
+    ):
+        left_out.append(f"{label}: class Karni search, with a field the spec leaves out")
+        entity.pop("global_search")
+        return
+    if "fields" not in mapping and _names_of(entity.get("search")) != original_search:
+        entity["global_search"] = {**mapping, "fields": names}
 
 
 def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:

@@ -3146,6 +3146,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
 
+<a id="c540"></a>
+
+### C540: global_search names a field that is not a text field of the entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Search across entities (class Karni: search) matches the query against the entity's own text fields and gives each a trigram index. Its fields come from global_search.fields, else from the entity's search list, which may name a related path (venue__name) or a non-text field that it cannot search.
+
+**Fix.** List the entity's own text fields (str, text, email, url, slug, choice, phone, country, currency, state) under global_search.fields, e.g. global_search: {fields: [name, sku]}.
+
+<a id="c541"></a>
+
+### C541: global_search has no fields to search
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** global_search takes its fields from global_search.fields, else from the entity's search list. With both empty there is nothing to match the query against.
+
+**Fix.** Name the text fields under global_search.fields, or list them under search.
+
+<a id="c542"></a>
+
+### C542: global_search's title or subtitle is not a field of the entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each hit of search across entities shows its title and subtitle, read from the entity's fields. A name the entity does not have, or a __ path through something that is not a foreign key, cannot be read.
+
+**Fix.** Name a field of the entity, or a path through one of its foreign keys (supplier__name). Leave title out to use the first searched field.
+
 <a id="c270"></a>
 
 ### C270: A risky change without --allow-destructive

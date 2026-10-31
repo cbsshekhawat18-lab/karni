@@ -4,6 +4,11 @@ The item component for each resource is resolved by following the list
 operation's 200 response ``$ref`` through the paginated wrapper to
 ``properties.results.items.$ref`` — never derived from the resource name
 (component names are app-qualified, e.g. ``TestappEvent``).
+
+When the schema has cross-model search (the operation marked
+``x-karni-search``, experimental), ``hooks.ts`` also exports
+``SearchResource``, the union of the resources it covers, and a
+``useGlobalSearch`` typed with it (``@karni/ui``'s hook, narrowed).
 """
 
 from __future__ import annotations
@@ -59,6 +64,29 @@ def resource_components(doc: dict[str, Any]) -> dict[str, str]:
     return out
 
 
+def search_resources(doc: dict[str, Any]) -> list[str] | None:
+    """Experimental. The resources ``GET /api/search/`` covers, or ``None`` without the endpoint."""
+    for _path, item in sorted(doc.get("paths", {}).items()):
+        op = item.get("get") if isinstance(item, dict) else None
+        marker = op.get("x-karni-search") if isinstance(op, dict) else None
+        if isinstance(marker, dict):
+            return sorted(str(name) for name in marker.get("resources") or [])
+    return None
+
+
+def _search_lines(resources: list[str]) -> list[str]:
+    union = " | ".join(json.dumps(name) for name in resources) or "never"
+    return [
+        "/** The resources cross-model search covers (GET /api/search/). */",
+        f"export type SearchResource = {union};",
+        "export const useGlobalSearch = (",
+        "  params: GlobalSearchParams<SearchResource>,",
+        "  options?: UseGlobalSearchOptions<SearchResource>,",
+        ") => useKarniGlobalSearch<SearchResource>(params, options);",
+        "",
+    ]
+
+
 def _pascal(resource: str) -> str:
     return "".join(part.capitalize() for part in resource.replace("-", "_").split("_"))
 
@@ -67,13 +95,20 @@ def generate_hooks(doc: dict[str, Any]) -> str:
     resources = resource_components(doc)
     if not resources:
         raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
+    searched = search_resources(doc)
+    hooks = ["useResourceItem", "useResourceList", "useResourceMutations"]
+    types = ["ResourceItemParams", "ResourceListParams", "ResourceMutationsOptions"]
+    if searched is not None:
+        hooks.insert(0, "useGlobalSearch as useKarniGlobalSearch")
+        types[:0] = ["GlobalSearchParams"]
+        types.append("UseGlobalSearchOptions")
     lines = [
         HEADER.rstrip("\n"),
-        'import { useResourceItem, useResourceList, useResourceMutations } from "@karni/ui";',
+        "import {",
+        *(f"  {name}," for name in hooks),
+        '} from "@karni/ui";',
         "import type {",
-        "  ResourceItemParams,",
-        "  ResourceListParams,",
-        "  ResourceMutationsOptions,",
+        *(f"  {name}," for name in types),
         '} from "@karni/ui";',
         'import type { components } from "./types";',
         "",
@@ -91,6 +126,8 @@ def generate_hooks(doc: dict[str, Any]) -> str:
             f'  useResourceMutations<{item}>("{resource}", options);',
             "",
         ]
+    if searched is not None:
+        lines += _search_lines(searched)
     return "\n".join(lines)
 
 

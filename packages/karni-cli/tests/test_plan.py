@@ -219,6 +219,45 @@ def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     assert not plan.risky
 
 
+def test_global_search_is_shown_and_its_indexes_are_a_migration(base: Project) -> None:
+    plan = _plan(
+        _edit(
+            ("        search: name\n", "        search: name\n        global_search: true\n"),
+            (
+                "      Supplier:\n        fields: {name: str}\n",
+                (
+                    "      Supplier:\n        fields: {name: str}\n"
+                    "        global_search: {fields: [name], weight: 0.5}\n"
+                ),
+            ),
+            (
+                "pages:\n",
+                (
+                    "      Brand:\n        fields: {name: str, country: str}\n"
+                    "        global_search: {fields: [name], subtitle: country}\npages:\n"
+                ),
+            ),
+        ),
+        base,
+    )
+    assert _only(plan, "shop.Product global_search").detail == "none -> name"
+    assert _only(plan, "shop.Supplier global_search").detail == "none -> name (weight 0.5)"
+    assert "global_search name (subtitle country)" in str(_only(plan, "shop.Brand").detail)
+    assert [c.target for c in plan.changes if c.area == "migrations"] == ["shop"]
+    assert not plan.risky
+
+
+def test_only_a_change_of_the_searched_fields_writes_a_migration() -> None:
+    from karni_cli.spec.plan import _search_indexes_change
+
+    one = {"global_search": {"fields": ["name"], "title": "name", "subtitle": None, "weight": 1}}
+    other = {"global_search": {**one["global_search"], "subtitle": "sku", "weight": 2.0}}
+    assert not _search_indexes_change(one, other)  # class Karni only
+    assert _search_indexes_change(one, {"global_search": None})  # the indexes go
+    assert _search_indexes_change({}, one)
+    assert not _search_indexes_change({}, {**one, "external": True})  # no migration touches it
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

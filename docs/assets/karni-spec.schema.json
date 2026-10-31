@@ -224,6 +224,18 @@
           ],
           "description": "The viewset's search_fields."
         },
+        "global_search": {
+          "default": false,
+          "description": "Cross-model search (class Karni: search, GET /api/search/): true, or a mapping {fields, title, subtitle, weight}. The fields default to search.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/GlobalSearch"
+            }
+          ]
+        },
         "owner": {
           "anyOf": [
             {
@@ -367,6 +379,57 @@
       "required": [
         "type"
       ],
+      "type": "object"
+    },
+    "GlobalSearch": {
+      "additionalProperties": false,
+      "description": "Experimental. ``global_search:`` of an entity as a mapping: ``class Karni: search``.\n\nEvery key is optional. ``fields`` defaults to the entity's ``search``\nlist, ``title`` to the first field, ``weight`` to 1.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "fields": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The text fields the query is matched with (default: search)."
+        },
+        "subtitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A field shown under the title, or a path through a relation."
+        },
+        "weight": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "default": 1,
+          "description": "Multiplies the entity's scores across entities (default 1).",
+          "gt": 0
+        }
+      },
       "type": "object"
     },
     "Role": {

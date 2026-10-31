@@ -118,6 +118,7 @@ _OPTIONS: Final = (
     "search",
     "owner",
     "audit",
+    "global_search",
     "groups",
     "order",
     "scope_paths",
@@ -454,6 +455,21 @@ def _target(token: str, label: str, resolve: Callable[[str, str], str]) -> str |
 # comparing ------------------------------------------------------------------------
 
 
+def _search_text(value: Any) -> str:
+    """``global_search`` (normal form) in one phrase: its fields, then what is not a default."""
+    if not isinstance(value, dict):
+        return _show(value)
+    fields = list(value.get("fields") or [])
+    extra = []
+    if value.get("title") not in (None, fields[0] if fields else None):
+        extra.append(f"title {value['title']}")
+    if value.get("subtitle"):
+        extra.append(f"subtitle {value['subtitle']}")
+    if value.get("weight", 1) != 1:
+        extra.append(f"weight {value['weight']:g}")
+    return (", ".join(fields) or "none") + (f" ({', '.join(extra)})" if extra else "")
+
+
 def _show(value: Any) -> str:
     if value is None:
         return "none"
@@ -732,6 +748,8 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             options.append(key)
         elif key in ("groups", "scope_paths"):
             options.append(f"{key} {', '.join(value)}")
+        elif key == "global_search":
+            options.append(f"{key} {_search_text(value)}")
         else:
             options.append(f"{key} {_show(value)}")
     return f"({fields}) {', '.join(options)}".rstrip()
@@ -844,19 +862,28 @@ def _options(
         elif key == "database" and not after.get("external") and not before.get("external"):
             risky = True
             reason = f"the rows stay on {old or 'default'}, karni build does not move them"
+        show = _search_text if key == "global_search" else _show
         ctx.add(
             Change(
                 "entities",
                 "change",
                 f"{label} {key}",
-                f"{_show(old)} -> {_show(new)}",
+                f"{show(old)} -> {show(new)}",
                 risky=risky,
                 reason=reason,
                 counts=(Count(old_label),) if risky else (),
             )
         )
-        if key in _MIGRATED:
+        if key in _MIGRATED or (key == "global_search" and _search_indexes_change(before, after)):
             ctx.migrate(label)
+
+
+def _search_indexes_change(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """Whether ``global_search`` changes the trigram indexes a migration writes."""
+    if after.get("external"):
+        return False  # no migration touches a table another system owns
+    old, new = before.get("global_search"), after.get("global_search")
+    return set((old or {}).get("fields") or []) != set((new or {}).get("fields") or [])
 
 
 def _fields(

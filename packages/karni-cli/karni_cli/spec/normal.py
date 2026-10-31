@@ -8,8 +8,10 @@ its explicit moves), a field written as ``{type, was}`` as its type, an
 entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order, and the site
-module listed whenever the kind has a site. What carries meaning in its
-order stays in order: fields, pages, search fields and the ordering.
+module listed whenever the kind has a site, ``global_search`` as its full
+mapping (fields from ``search``, the title, the subtitle, the weight) or none.
+What carries meaning in its order stays in order: fields, pages, search fields
+and the ordering.
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -31,7 +33,7 @@ from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.project import CliError
 from karni_cli.spec.schema import Spec
 
-__all__ = ["canonical_field", "normalise", "role_name"]
+__all__ = ["canonical_field", "global_search", "normalise", "role_name"]
 
 _ENTITY_PAGES = ("list", "detail", "form")
 
@@ -89,6 +91,24 @@ def _access(rule: Any) -> Any:
     return out
 
 
+def global_search(value: Any, search: list[str]) -> dict[str, Any] | None:
+    """Experimental. ``global_search`` with every default written out, or ``None`` when off.
+
+    ``value`` is the dumped key (``False``, ``True`` or its mapping) and
+    ``search`` the entity's ``search`` list, where the fields default to.
+    """
+    if value is False or value is None:
+        return None
+    mapping: dict[str, Any] = value if isinstance(value, dict) else {}
+    fields = list(mapping.get("fields") or search)
+    return {
+        "fields": fields,
+        "title": mapping.get("title") or (fields[0] if fields else None),
+        "subtitle": mapping.get("subtitle"),
+        "weight": float(mapping.get("weight", 1)),
+    }
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -122,6 +142,7 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             if isinstance(entity["audit"], list):
                 entity["audit"] = sorted(entity["audit"])
             entity["scope_paths"] = dict(sorted(entity["scope_paths"].items()))
+            entity["global_search"] = global_search(entity["global_search"], entity["search"])
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []
