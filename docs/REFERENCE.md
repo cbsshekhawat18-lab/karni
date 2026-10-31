@@ -51,6 +51,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
+| Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -74,6 +75,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `ChangeHistory`, `DataChart` and `FileUpload` | `experimental` | Karni's own tests |
 | `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier | `experimental` | Karni's own tests |
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
+| `GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search across models, grouped per resource, each hit linking to its ResourceDetail page (`<Layout search>`). Experimental tier | `experimental` | Karni's own tests |
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
@@ -1600,6 +1602,7 @@ class Lead(BaseModel):
 | `import_transform` | karni | `None` | A callable, or its dotted path, that rewrites each imported row before validation. | `import_transform = "shop.imports.clean_order_row"` |
 | `after_import` | karni | `None` | A callable, or its dotted path, run once an import commits, with the result. | `after_import = "shop.imports.reindex"` |
 | `dashboard` | karni | `None` | Put the model on the staff app's dashboard: counts (all rows, new ones, one per state) and the newest rows. `True` for the defaults, or a dict ([API: dashboard](api.md#the-staff-dashboard)). | `dashboard = {"by": "status", "counts": {"Due today": {"due_on": "today"}}}` |
+| `search` | karni | `None` | Experimental. Put the model in cross-model search (`GET /api/search/`): the text `fields` to match, the `title` and `subtitle` a hit shows, a `weight` across models. Each field gets a GIN trigram index ([search across models](global-search.md)). | `search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}` |
 | `append_only` | karni | `False` | The table only grows: a BRIN index replaces the B-tree on its `auto_now_add` timestamps (`True`) or on the listed columns. | `append_only = True` |
 | `cascade` | karni | `{}` | Foreign keys whose `on_delete=CASCADE` is deliberate on a financial or audited model, each with the reason (silences `karni.W965` for that field). | `cascade = {"order": "a line item cannot outlive its order"}` |
 | `financial` | karni | inferred | Whether the model holds money for the CASCADE check. It is inferred from money fields and payments-like model names. | `financial = True` |
@@ -1669,6 +1672,10 @@ class Lead(BaseModel):
 |---|---|---|---|
 | `KARNI_SEARCH_PROVIDER` | `KARNI_SEARCH_PROVIDER` | `"karni.api.search.postgres.PostgresSearchProvider"` | Dotted path of the `SearchProvider` behind `?search=`. The PostgreSQL provider falls back to portable search on other databases. |
 | `KARNI_API_MAX_EXPAND_DEPTH` | `KARNI_API_MAX_EXPAND_DEPTH` | `2` | Deepest `?expand=` path allowed (levels of nesting). |
+| `KARNI_GLOBAL_SEARCH_MIN_LENGTH` | `KARNI_GLOBAL_SEARCH_MIN_LENGTH` | `2` | Experimental. The shortest query `GET /api/search/` searches for. A shorter one answers no groups. See [search across models](global-search.md). |
+| `KARNI_GLOBAL_SEARCH_LIMIT` | `KARNI_GLOBAL_SEARCH_LIMIT` | `5` | Experimental. Hits per model `GET /api/search/` returns when the request does not say (`?limit=`). |
+| `KARNI_GLOBAL_SEARCH_MAX_LIMIT` | `KARNI_GLOBAL_SEARCH_MAX_LIMIT` | `20` | Experimental. The most hits per model a request may ask for. A larger `?limit=` is lowered to it. |
+| `KARNI_GLOBAL_SEARCH_THRESHOLD` | `KARNI_GLOBAL_SEARCH_THRESHOLD` | `0.3` | Experimental. The trigram similarity (0 to 1) a row needs on PostgreSQL to match without containing the query. pg_trgm's own `pg_trgm.similarity_threshold` (0.3) is the floor: the index answers it first. |
 | `KARNI_API_ROUTER` | `KARNI_API_ROUTER` | `"karni.api.routers.get_default_router"` | Zero-argument factory returning the router `karni.api.urls` exposes. |
 | `KARNI_PUBLIC_CREATE_RATE` | `KARNI_PUBLIC_CREATE_RATE` | `"10/hour"` | The limit on each caller (the user, else the client IP) of a `create` anyone may call (`create=Public()`), unless the viewset declares `throttle = Throttle(create=...)`. `None` or `""` turns this default off. See [rate limits](api.md#rate-limits). |
 | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `KARNI_PUBLIC_CREATE_HONEYPOT_FIELD` | `"homepage"` | Name of the hidden form field on a public `create`. A request that fills it is answered 202 and nothing is saved. Off for a model that has a field of that name. `""` turns it off. See [rate limits](api.md#rate-limits). |
@@ -1885,6 +1892,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `OtpLoginForm` |  | Experimental. Passwordless sign-in: an email step, then a code step with one input for the code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
 | `TermsGate` |  | Experimental. Renders its children once the signed-in user has accepted the current terms, and the terms with an accept button until then. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `Page` | `title: React.ReactNode` | Standard page chrome: an `<h1>` title row with an actions slot, then the content. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
+| `GlobalSearch` |  | Experimental. A command palette over cross-model search (`GET /search/`). | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
 | `Layout` |  | App shell: sidebar navigation + header slot + content area. | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `KarniMark` |  | The Karni mark as inline SVG, so there is no asset to load or bundle. | [karni-mark.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/brand/karni-mark.tsx) |
 | `Modal` | `title: React.ReactNode` | Themed Radix Dialog. | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
@@ -1914,6 +1922,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useResourceList` | `resource: string`, `params?: ResourceListParams \| undefined`, `options?: Omit<UseQueryOptions<Paginated<T>, Error, Paginated<T>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one page of a resource's list (`GET /<resource>/`) with filters, search, ordering and `?expand=`. | [useResourceList.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceList.ts) |
 | `useResourceItem` | `resource: string`, `id: string \| number`, `params?: ResourceItemParams \| undefined`, `options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row of a resource (`GET /<resource>/<id>/`), optionally expanded. | [useResourceItem.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceItem.ts) |
 | `useResourceMutations` | `resource: string`, `options?: ResourceMutationsOptions \| undefined` | Create, update and remove mutations for a resource that refresh the resource's cached lists and items on each success. | [useResourceMutations.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceMutations.ts) |
+| `useGlobalSearch` | `params: GlobalSearchParams<R>`, `options?: UseGlobalSearchOptions<R> \| undefined` | Experimental. Searches every model that opts in (`GET /search/?q=`), grouped per resource. | [useGlobalSearch.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useGlobalSearch.ts) |
 | `useKarniClient` |  | Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
@@ -1955,6 +1964,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `EMPTY_VALUE_LABEL` | constant | What a screen reader says for a field that has no value. | [empty-value.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/empty-value.tsx) |
 | `AUDIT_FIELDS` | constant | The audit field names (`created_at`, `created_by`, …) that tables hide and detail views group last. | [audit-fields.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/resource/audit-fields.ts) |
 | `karniKeys` | constant | TanStack Query keys for the schema, a resource, its lists and its items (invalidate `karniKeys.resource(name)` to refresh every view of a resource). | [keys.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/keys.ts) |
+| `globalSearchQuery` | function | Experimental. The query string `GET /search/` is sent. | [useGlobalSearch.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useGlobalSearch.ts) |
+| `GLOBAL_SEARCH_PATH` | constant | Experimental. The search path, relative to the client's base URL. | [useGlobalSearch.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useGlobalSearch.ts) |
 | `createKarniClient` | function | Creates the fetch client every hook in this package uses: base URL, JSON and multipart bodies, DRF errors as `KarniApiError`, and auth hooks. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `KarniApiError` | class | Thrown for non-2xx responses, with the parsed DRF error body in `data`. | [client.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/client.ts) |
 | `zodFor` | function | Builds a Zod validator for a resource's create or update payload from its schema. | [zod.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/zod.ts) |
@@ -1968,6 +1979,8 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `describeOtpError` | function | Experimental. A sign-in-by-code failure in plain words, from the Karni code of the refusal (E235, E226, E236), never a status code. | [OtpLoginForm.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/OtpLoginForm.tsx) |
 | `defaultTermsGateSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
+| `defaultGlobalSearchSlots` | constant | Experimental. The default pieces of the palette, for wrapping one. | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
+| `defaultHitHref` | function | Experimental. The default link of a hit: `/<resource>/<id>`. | [global-search.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/global-search/global-search.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
 | `routeLabel` | function | `/orders/line-items` → "Line items", `/` → "Home". | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
@@ -2100,6 +2113,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E406`](errors.md#e406) | check | Two schedules share a name |
 | [`E407`](errors.md#e407) | exception | No schedule has that name |
 | [`E408`](errors.md#e408) | exception | A scheduled task failed when run by hand |
+| [`E430`](errors.md#e430) | check | Karni.search is malformed or names a field the model does not have |
+| [`E431`](errors.md#e431) | api | ?models= names a resource cross-model search does not cover |
 | [`E501`](errors.md#e501) | exception | An optional dependency is not installed |
 | [`W501`](errors.md#w501) | warning | The throttle cache is private to each process |
 | [`E502`](errors.md#e502) | exception | Unknown settings profile |
@@ -2126,6 +2141,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
 | [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
 | [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
+| [`W590`](errors.md#w590) | warning | A field cross-model search searches has no trigram index |
+| [`W591`](errors.md#w591) | warning | A model declares Karni.search but no routed viewset serves it |
 | [`E601`](errors.md#e601) | test | The resource under test is not routed |
 | [`E602`](errors.md#e602) | test | The API does not behave as its access declaration promises |
 | [`E603`](errors.md#e603) | exception | checks=/skip= names unknown checks |
@@ -2316,6 +2333,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C252`](errors.md#c252) | cli | database names an alias the project does not have |
 | [`C253`](errors.md#c253) | cli | A relation joins two databases |
 | [`C254`](errors.md#c254) | cli | A rename (was) is not valid |
+| [`C540`](errors.md#c540) | cli | global_search names a field that is not a text field of the entity |
+| [`C541`](errors.md#c541) | cli | global_search has no fields to search |
+| [`C542`](errors.md#c542) | cli | global_search's title or subtitle is not a field of the entity |
 | [`C270`](errors.md#c270) | cli | A risky change without --allow-destructive |
 | [`C271`](errors.md#c271) | cli | A module removal |
 | [`C272`](errors.md#c272) | cli | A key type switch |

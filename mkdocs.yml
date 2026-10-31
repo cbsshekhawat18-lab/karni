@@ -78,6 +78,7 @@ nav:
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
       - API: api.md
+      - Search across models: global-search.md
       - Accounts: accounts.md
       - Admin: admin.md
       - Change history: change-history.md

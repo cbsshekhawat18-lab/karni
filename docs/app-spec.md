@@ -211,6 +211,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `fields` | name to type, or to `{type, was}` | `karni make model <Entity> name:type ...` |
 | `key` | a field | `karni make model --key` (`Karni.import_key`) |
 | `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`) |
+| `global_search` | `true`, or `{fields, title, subtitle, weight}` | `Karni.search`, [search across models](global-search.md) (experimental). `fields` defaults to `search` |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |
 | `audit` | `true`, or a list of fields | `Karni.audit`, [change history](change-history.md) |
 | `groups` | title to fields | the admin form's fieldsets (`AdminMeta.extra = {"fieldsets": ...}`) |
@@ -376,6 +377,9 @@ means. `karni explain <code>` prints any code's entry.
 | [C252](errors.md#c252) | `database` names an alias the project does not have |
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
+| [C540](errors.md#c540) | `global_search` searches a field that is not a text field of the entity |
+| [C541](errors.md#c541) | `global_search` has no fields (none given and `search` is empty) |
+| [C542](errors.md#c542) | `global_search`'s `title` or `subtitle` is not a field of the entity |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -402,7 +406,8 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   on `UUIDModel` or `IntegerKeyModel`.
 - **key, owner, audit, scope_paths** come from `class Karni`, **order** from
   `Meta.ordering`, **groups** from `AdminMeta`'s fieldsets, **search** from
-  the viewset's `search_fields`.
+  the viewset's `search_fields`, **global_search** from `Karni.search`
+  (`true` when it is the defaults).
 - **access** comes from the viewset when it is one of the shapes above, else
   it is `access: code`. A model without a viewset is `access: code` too.
 - **roles** come from `KARNI_ROLES` (left out when it is Karni's default),
@@ -465,8 +470,8 @@ entities
 
 The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
-entities with their fields and options (key, search, owner, audit, groups,
-order, pk, external, table, writable, database), field changes of existing
+entities with their fields and options (key, search, owner, audit,
+global_search, groups, order, pk, external, table, writable, database), field changes of existing
 entities, access, pages and navigation, the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.

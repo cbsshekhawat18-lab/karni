@@ -677,7 +677,8 @@ class _Meaning:
         where: Loc = (*entity.path, "global_search")
         mapping = value if isinstance(value, schema.GlobalSearch) else None
         explicit = mapping is not None and mapping.fields is not None
-        fields = list(mapping.fields or []) if explicit and mapping else list(entity.entity.search)
+        given = mapping.fields if mapping is not None else None
+        fields = list(given) if given is not None else list(entity.entity.search)
         source = "global_search.fields" if explicit else "search (global_search's default)"
         texts = sorted(
             name

@@ -64,6 +64,7 @@ export interface GlobalSearchSlots<R extends string = string> {
   ResultLink: React.ComponentType<GlobalSearchResultLinkProps<R>>;
 }
 
+/** Experimental. The props of GlobalSearch. */
 export interface GlobalSearchProps<R extends string = string> {
   /** Controlled open state (pair with onOpenChange). */
   open?: boolean;
@@ -143,7 +144,7 @@ export const defaultGlobalSearchSlots: GlobalSearchSlots = {
   ResultLink: DefaultResultLink,
 };
 
-/** The default link of a hit: `/<resource>/<id>`. */
+/** Experimental. The default link of a hit: `/<resource>/<id>`. */
 export function defaultHitHref(hit: GlobalSearchHit): string {
   return `/${hit.resource}/${encodeURIComponent(String(hit.id))}`;
 }

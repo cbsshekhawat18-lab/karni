@@ -313,6 +313,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
+- `experimental` Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -350,11 +351,12 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `experimental` `ChangeHistory`, `DataChart` and `FileUpload`
 - `experimental` `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier
 - `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
+- `experimental` `GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search across models, grouped per resource, each hit linking to its ResourceDetail page (`<Layout search>`). Experimental tier
 - `experimental` `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier
 - `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives
 - `experimental` `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions
 
-62 components and 19 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
+63 components and 20 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useGlobalSearch`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).

@@ -46,7 +46,7 @@ cannot start before the item it names is done.
 | 7 | Taxonomy tagging: one declaration tags a model to a tree, with filters, facet counts, import columns and the access scope. | 4, 5 | planned |
 | 8 | Aggregation endpoints and saved charts: grouped counts and sums under the list's filters and access, and charts defined in the admin. | none | planned |
 | 9 | Response caching to stable: keys that never mix access scopes, invalidation derived from relations, and an admin screen. | none | planned |
-| 10 | Cross-model search: one ranked search endpoint over every model that opts in, with access applied per model. | none | planned |
+| 10 | Cross-model search: one ranked search endpoint over every model that opts in, with access applied per model. | none | done |
 
 ### Phase 3: pages for large apps
 
