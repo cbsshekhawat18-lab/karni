@@ -131,7 +131,7 @@ def declared_taxonomies(model: type[models.Model]) -> dict[str, str]:
                 f"ending in {DESCENDANTS_SUFFIX}).",
             )
         if isinstance(target, type) and issubclass(target, models.Model):
-            found[key] = str(target._meta.label)
+            found[key] = str(cast("type[models.Model]", target)._meta.label)
         elif isinstance(target, str) and target.strip():
             found[key] = target.strip()
         else:
@@ -259,9 +259,9 @@ class Taxonomy:
                 f"{name} adopts {self.model.__name__}.{self.key}, which is {kind}, not a "
                 f"many-to-many to {self.target}.",
             )
-        related = field.related_model
-        if not isinstance(related, type):
+        if not isinstance(field.related_model, type):
             return None  # Django's own check reports a target it cannot resolve (fields.E300)
+        related = cast("type[models.Model]", field.related_model)
         if getattr(field, GENERATED_ATTR, None) != self.key and not _same_model(
             related, self.target, self.model
         ):
