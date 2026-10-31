@@ -65,6 +65,10 @@ PREFIXES = {
         "Public websites for Karni: every text, image and menu editable in the admin, "
         "public forms, redirects, and error pages that cannot fail."
     ),
+    "modules/karni-reports/pyproject.toml": (
+        "Reports for Karni: a row printed to PDF from an HTML template in the background, "
+        "cached by template and data, served only to users who may see the row."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -76,6 +80,9 @@ PREFIXES = {
     ),
     "modules/karni-impersonation/ui/package.json": (
         "React components for the Karni impersonation module: ImpersonationBanner and its hook."
+    ),
+    "modules/karni-reports/ui/package.json": (
+        "React components for the Karni reports module: ReportButton and its useReport hook."
     ),
 }
 

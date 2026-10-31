@@ -54,6 +54,8 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 Status = GeneratedReport.Status
+#: The code of a failed render, stored on the row and logged.
+RENDER_FAILED = "REPORT007"
 #: The statuses of a render that has not finished.
 IN_FLIGHT = (Status.PENDING, Status.RENDERING)
 
@@ -193,7 +195,11 @@ def render(
         pdf = report.get_renderer().render(html, base_url=BASE_URL)
     except Exception as exc:  # noqa: BLE001 - stored on the row for the admin
         logger.warning(
-            "REPORT007: report %r of %s failed to render", row.report, row.object_id, exc_info=True
+            "%s: report %r of %s failed to render",
+            RENDER_FAILED,
+            row.report,
+            row.object_id,
+            exc_info=True,
         )
         row.status, row.error = Status.FAILED, f"{type(exc).__name__}: {exc}"[:4000]
         row.save(update_fields=["status", "error", "updated_at"])

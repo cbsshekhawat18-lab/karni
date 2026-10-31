@@ -8,6 +8,8 @@ from __future__ import annotations
 
 __all__ = ["run_checks"]
 
+MISSING_TEMPLATE = "REPORT010"
+
 
 def run_checks() -> list[str]:
     from django.apps import apps
@@ -32,7 +34,7 @@ def run_checks() -> list[str]:
             get_template(template)
         except TemplateDoesNotExist:
             failures.append(
-                f"REPORT010: report {name!r} names the template {template!r}, which does not "
+                f"{MISSING_TEMPLATE}: report {name!r} names the template {template!r}, which does not "
                 "exist. Create it (it usually extends karni_reports/base.html)."
             )
     return failures

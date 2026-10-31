@@ -3,7 +3,7 @@
 name = "reports"
 kind = "module"
 title = "Reports (PDF)"
-purpose = "A row printed to PDF from a template, rendered in the background and cached."
+purpose = "A row printed to PDF from a template, in the background, and cached."
 status = "experimental"
 use_when = [
     "PDF reports",
