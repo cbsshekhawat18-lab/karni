@@ -391,10 +391,13 @@ export type {
   PageSlotContentProps,
 } from "./components/page/page";
 
-export { Layout, defaultLayoutSlots } from "./components/layout/layout";
+export { Layout, defaultLayoutSlots, isNavGroup } from "./components/layout/layout";
 export type {
   LayoutProps,
   LayoutNavItem,
+  LayoutNavGroup,
+  LayoutNavEntry,
+  LayoutNavGroupProps,
   LayoutSlots,
   LayoutHeaderProps,
   LayoutSidebarProps,
@@ -405,6 +408,11 @@ export type {
 } from "./components/layout/layout";
 export { isSignInRoute, routeLabel, routeNavItems } from "./components/layout/route-nav";
 export type { RouteNavOptions } from "./components/layout/route-nav";
+export { activeRoute, navigationEntries } from "./components/layout/navigation";
+export type { NavigationEntriesOptions } from "./components/layout/navigation";
+export { defaultNavIcons, navIcon } from "./components/layout/nav-icons";
+export { NAVIGATION_PATH, useNavigation } from "./hooks/useNavigation";
+export type { NavigationItem, NavigationMenu } from "./hooks/useNavigation";
 
 export { KarniMark } from "./components/brand/karni-mark";
 export type { KarniMarkProps } from "./components/brand/karni-mark";

@@ -971,17 +971,17 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 </Layout>;
 ```
 
-| Component    | Slots                                                               |
-| ------------ | ------------------------------------------------------------------- |
-| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink`          |
-| `Page`       | `Header`, `Title`, `Description`, `Actions`                         |
-| `Modal`      | `Header`, `Footer`, `CloseButton`                                   |
-| `Toaster`    | `Title`, `Description`, `CloseButton`                               |
-| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                           |
-| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                                   |
-| `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error` |
-| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                             |
-| `FileUpload` | `Dropzone`, `FileRow`                                               |
+| Component    | Slots                                                                  |
+| ------------ | ---------------------------------------------------------------------- |
+| `Layout`     | `Header`, `Sidebar`, `NavLink`, `NavGroup`, `MobileDrawer`, `SkipLink` |
+| `Page`       | `Header`, `Title`, `Description`, `Actions`                            |
+| `Modal`      | `Header`, `Footer`, `CloseButton`                                      |
+| `Toaster`    | `Title`, `Description`, `CloseButton`                                  |
+| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                              |
+| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                                      |
+| `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error`    |
+| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                                |
+| `FileUpload` | `Dropzone`, `FileRow`                                                  |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
@@ -1000,6 +1000,17 @@ sign-in page (`isSignInRoute`: `/login`, `/sign-in`) listed only while nobody
 is signed in. `label`, `hidden` and `signIn` replace each rule. The scaffold's
 `layout.tsx` uses it, with `<AuthGuard explain>` around every page but the
 sign-in page.
+
+Navigation from data (experimental): `navItems` also takes groups,
+`{ label, icon, children: [...] }`, which collapse behind a button (Enter or
+Space) and open while they hold the current page. `<Layout navSource="server"
+pathname={pathname} />` renders the menu the server gives the signed-in user
+instead (`useNavigation()`, `GET /navigation/`, Django's `KARNI_NAVIGATION`),
+filtered by the same grants as the API: icons come by name from
+`defaultNavIcons`, or from the `icons` prop over them, and `navItems` shows if
+the request fails. `navigationEntries(items, { pathname, icons })` is the
+conversion on its own. See
+[navigation](https://cbsshekhawat18-lab.github.io/karni/navigation/).
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take
