@@ -58,13 +58,13 @@ def cost_of(model: str, usage: Usage) -> Decimal | None:
 
 
 def month_start(now: datetime | None = None) -> datetime:
-    """The start of the current calendar month in the project's time zone."""
+    """Experimental. The start of the current calendar month in the project's time zone."""
     local = timezone.localtime(now or timezone.now())
     return local.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
 def spent(user: Any = None, *, since: datetime | None = None) -> int:
-    """Tokens spent since ``since`` (this month): by ``user``, or by everyone when ``None``."""
+    """Experimental. Tokens spent since ``since`` (this month), by ``user`` or everyone."""
     calls = AICall.objects.filter(created_at__gte=since or month_start())
     if user is not None:
         calls = calls.filter(user=user)

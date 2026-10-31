@@ -8,10 +8,10 @@
    before any token is spent.
 3. checks the provider is set up (AI001 to AI005) and the monthly budgets
    (AI013, AI014).
-4. reads the source: text, a URL (:mod:`karni_ai.services.fetch`) or a PDF
-   (:mod:`karni_ai.sources`).
-5. builds the JSON Schema from the resource's own writable fields
-   (:mod:`karni_ai.schema`) and asks the provider for rows that follow it.
+4. builds the JSON Schema from the resource's own writable fields
+   (:mod:`karni_ai.schema`).
+5. reads the source: text, a URL (:mod:`karni_ai.services.fetch`) or a PDF
+   (:mod:`karni_ai.sources`), and asks the provider for rows that follow the schema.
 6. logs the call with its tokens and cost (:mod:`karni_ai.usage`), failed
    calls included.
 7. validates the answer against the schema, then hands the rows to Karni's
@@ -204,8 +204,8 @@ class Extractor:
         importer = self.check_access(view)
         provider = self.provider()
         self.check_budget()
+        schema = self.schema_for(view, resource, importer)  # AI015 before any fetch
         source = read_source(text=text, url=url, file=file)
-        schema = self.schema_for(view, resource, importer)
         asked = StructuredRequest(
             instructions=self.instructions(schema),
             source=self.source_message(source),

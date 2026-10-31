@@ -37,7 +37,7 @@ import { ExtractPreview, type ExtractPreviewSlots } from "./ExtractPreview";
 import { extractRefusal, useExtract } from "./hooks";
 import type { ExtractInput, ExtractResult, ExtractSourceKind } from "./types";
 
-/** What the `Error` slot receives: why the extraction was refused or failed. */
+/** Experimental. What the `Error` slot receives: why the extraction was refused or failed. */
 export interface ExtractErrorProps {
   error: unknown;
   resourceLabel: string;

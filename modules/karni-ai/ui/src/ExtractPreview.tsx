@@ -26,18 +26,18 @@ import {
 import * as React from "react";
 import type { ExtractProblem, ExtractResult } from "./types";
 
-/** What the `Rows` slot receives: the proposed rows and the fields they use, in order. */
+/** Experimental. What the `Rows` slot receives: the proposed rows and their fields. */
 export interface ExtractRowsProps {
   rows: ReadonlyArray<Record<string, unknown>>;
   fields: readonly string[];
 }
 
-/** What the `Problems` slot receives: one problem per field, rows numbered from 1. */
+/** Experimental. What the `Problems` slot receives: one problem per field, rows from 1. */
 export interface ExtractProblemsProps {
   problems: readonly ExtractProblem[];
 }
 
-/** The replaceable parts of ExtractPreview. */
+/** Experimental. The replaceable parts of ExtractPreview. */
 export interface ExtractPreviewSlots {
   Rows: React.ComponentType<ExtractRowsProps>;
   Problems: React.ComponentType<ExtractProblemsProps>;
@@ -71,7 +71,7 @@ function cell(value: unknown): React.ReactNode {
   return String(value);
 }
 
-/** The fields the rows use, in the order they first appear. */
+/** Experimental. The fields the rows use, in the order they first appear. */
 export function rowFields(rows: ReadonlyArray<Record<string, unknown>>): string[] {
   const seen: string[] = [];
   for (const row of rows) {
@@ -165,7 +165,7 @@ function DefaultProblems({ problems }: ExtractProblemsProps): React.ReactElement
   );
 }
 
-/** Karni's own slots, exported so a project can wrap one instead of rewriting it. */
+/** Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. */
 export const defaultExtractPreviewSlots: ExtractPreviewSlots = {
   Rows: DefaultRows,
   Problems: DefaultProblems,

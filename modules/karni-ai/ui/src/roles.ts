@@ -20,7 +20,7 @@ export const AI_COMPONENT_ROLES: readonly ComponentRoleDefinition[] = [
 
 type RegisterComponentRole = (role: string, definition: ComponentRoleDefinition) => void;
 
-/** Registers the package's components in @karni/ui's role registry, when it has one. */
+/** Experimental. Registers the package's components in @karni/ui's role registry, if any. */
 export function registerAiRoles(registry: unknown = karniUi): boolean {
   if (typeof registry !== "object" || registry === null) return false;
   const candidate = (registry as Record<string, unknown>)["registerComponentRole"];

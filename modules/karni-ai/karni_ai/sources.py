@@ -94,7 +94,7 @@ class _Visible(HTMLParser):
 
 
 def visible_text(html: str) -> str:
-    """The text a reader sees on an HTML page, one line per block."""
+    """Experimental. The text a reader sees on an HTML page, one line per block."""
     parser = _Visible()
     parser.feed(html)
     parser.close()
@@ -112,7 +112,7 @@ def _lines(text: str) -> str:
 
 
 def pdf_text(data: bytes) -> str:
-    """The text layer of a PDF, page by page (AI010 when it is not one, locked or too long)."""
+    """Experimental. A PDF's text layer, page by page (AI010: not one, locked, too long)."""
     from pypdf import PdfReader
     from pypdf.errors import PyPdfError
 

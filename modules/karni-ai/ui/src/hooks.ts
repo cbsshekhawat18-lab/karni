@@ -11,10 +11,10 @@ import { importJobKey, KarniApiError, karniKeys, useKarniClient } from "@karni/u
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 import type { ExtractInput, ExtractRefusal, ExtractResult } from "./types";
 
-/** The extraction endpoint, relative to the client's base URL (which carries `/api`). */
+/** Experimental. The extraction endpoint, relative to the client's base URL (it carries `/api`). */
 export const EXTRACT_PATH = "/ai/extract/";
 
-/** The refusal an extraction answered with (`{code, detail}` with an AI code), else undefined. */
+/** Experimental. The refusal an extraction answered with (`{code, detail}`), else undefined. */
 export function extractRefusal(error: unknown): ExtractRefusal | undefined {
   if (!(error instanceof KarniApiError) || typeof error.data !== "object" || error.data === null) {
     return undefined;
@@ -28,7 +28,7 @@ export function extractRefusal(error: unknown): ExtractRefusal | undefined {
   return undefined;
 }
 
-/** Posts one source for `resource` (a router prefix) and resolves with the preview. */
+/** Experimental. Posts one source for `resource` (a router prefix) and resolves with the preview. */
 export function useExtract(
   resource: string,
 ): UseMutationResult<ExtractResult, unknown, ExtractInput> {

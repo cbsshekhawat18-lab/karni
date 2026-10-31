@@ -48,7 +48,7 @@ _CHUNK: Final = 64 * 1024
 
 @dataclass(frozen=True)
 class Target:
-    """One checked URL: what to connect to and what to ask for."""
+    """Experimental. One checked URL: what to connect to and what to ask for."""
 
     url: str
     scheme: str
@@ -68,7 +68,7 @@ class Fetched:
 
 
 def public_address(address: str) -> bool:
-    """Whether ``address`` is a public unicast address (IPv4 inside IPv6 unwrapped)."""
+    """Experimental. Whether ``address`` is public unicast (IPv4 inside IPv6 unwrapped)."""
     try:
         ip: Any = ipaddress.ip_address(address.split("%", 1)[0])
     except ValueError:

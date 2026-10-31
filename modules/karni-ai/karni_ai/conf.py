@@ -78,7 +78,7 @@ DEFAULTS: dict[str, Any] = {
 
 
 def get(name: str) -> Any:
-    """``settings.<name>`` if the project defines it, else the module default.
+    """Experimental. ``settings.<name>`` if the project defines it, else the module default.
 
     :raises KeyError: when ``name`` is not a karni-ai setting and the project
         does not define it either.
@@ -87,7 +87,7 @@ def get(name: str) -> Any:
 
 
 def load_class(name: str, base: type[Any]) -> type[Any]:
-    """The class the dotted-path setting ``name`` names, a subclass of ``base`` (else AI016)."""
+    """Experimental. The class the dotted-path setting ``name`` names (AI016 if not ``base``)."""
     from django.utils.module_loading import import_string
     from karni.exceptions import KarniImproperlyConfigured
 

@@ -105,7 +105,7 @@ class ResourceSchema:
 
 
 def resource_component(view: Any, prefix: str) -> tuple[str, dict[str, Any], dict[str, Any]]:
-    """``(name, schema, components)`` of the create body ``view`` documents, as in ``/api/schema/``.
+    """Experimental. ``(name, schema, components)`` of the create body, as ``/api/schema/``.
 
     ``view`` is a request-bound instance of the resource's viewset with
     ``action = "create"``. ``components`` holds the other components the
