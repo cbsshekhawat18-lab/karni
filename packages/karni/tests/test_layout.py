@@ -100,8 +100,9 @@ def test_a_required_markdown_field_is_one_formatted_string(monkeypatch: pytest.M
 @WIDE
 def test_the_list_search_finds_text_inside_a_markdown_section() -> None:
     rows = make_products(3)
-    rows[1].overview = "## Overview\n\nThe only one made of **walnut**."
-    rows[1].save()
+    Product.objects.filter(pk=rows[1].pk).update(
+        overview="## Overview\n\nThe only one made of **walnut**."
+    )
     response = APIClient().get("/api/products/", {"search": "walnut"})
     assert response.status_code == 200
     assert [row["name"] for row in response.json()["results"]] == ["Product 001"]
