@@ -494,7 +494,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C224",
         "A key reserved for a later release",
         "karni spec validate (karni_cli.spec.validate)",
-        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.",
+        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and markdown is a field type now.",
         "Remove the key, and write that part by hand in the project until the feature ships.",
     ),
     _c(
@@ -557,7 +557,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C237",
         "A field group names a field the entity does not have",
         "karni spec validate (karni_cli.spec.validate)",
-        "groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.",
+        "groups become Karni.field_groups (the sections of the React form and detail page and the admin's fieldsets), and karni check refuses a name that is not a field or a field in two groups (karni.E551, karni.E552).",
         "Name the entity's fields, each in one group.",
     ),
     _c(
@@ -1071,6 +1071,23 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Each related tab is one relation. Deal and Deal.company name the same one when Deal has "
         "one fk to the page's entity.",
         "List each related tab once.",
+    ),
+    _c(
+        "C680",
+        "A column set names a field the entity does not have, or one twice",
+        "karni spec validate (karni_cli.spec.validate)",
+        "column_sets become Karni.column_sets, the presets of the React table's Columns menu, "
+        "and karni check refuses a set that names a field the model does not have (karni.E551) "
+        "or lists one twice (karni.E553).",
+        "Name fields the entity declares (or id, created_at and updated_at), each once per set.",
+    ),
+    _c(
+        "C681",
+        "A column set has no columns, or a name that is not snake_case",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A set's name is what a user's choice is remembered by and its label in the Columns "
+        "menu (financial reads Financial), and a set without columns shows an empty table.",
+        "Name the set in snake_case (default, financial) and list at least one field.",
     ),
 )
 

@@ -106,6 +106,8 @@ _FEATURE_SETTINGS: Final = {
     "social_login": "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "terms": "KARNI_TERMS",
 }
+#: A text column becoming a markdown one, or back: the same column, only its rendering changes.
+_TEXT_SWAPS: Final = frozenset({("text", "markdown"), ("markdown", "text")})
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
 _MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database"})
 _OPTIONS: Final = (
@@ -119,6 +121,7 @@ _OPTIONS: Final = (
     "owner",
     "audit",
     "groups",
+    "column_sets",
     "order",
     "scope_paths",
 )
@@ -530,9 +533,10 @@ def _field_risk(
     """``(reason, count kind, count arg)`` for a changed field. ``reason`` ``None``: not risky."""
     a, b = _Field.parse(old), _Field.parse(new)
     if a.kind != b.kind:
-        if (a.kind, b.kind) == ("str", "text"):
+        if (a.kind, b.kind) in (("str", "text"), ("str", "markdown")):
             return None, "set", None
-        return f"its type changes from {a.kind} to {b.kind}", "set", None
+        if (a.kind, b.kind) not in _TEXT_SWAPS:
+            return f"its type changes from {a.kind} to {b.kind}", "set", None
     if a.kind in _RELATIONS and old_target != new_target:
         return f"it points at {new_target} instead of {old_target}", "set", None
     if a.kind in _LENGTHS:
@@ -730,7 +734,7 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             continue
         if value is True:
             options.append(key)
-        elif key in ("groups", "scope_paths"):
+        elif key in ("groups", "column_sets", "scope_paths"):
             options.append(f"{key} {', '.join(value)}")
         else:
             options.append(f"{key} {_show(value)}")

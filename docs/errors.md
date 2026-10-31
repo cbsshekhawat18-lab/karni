@@ -1288,6 +1288,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
+<a id="e550"></a>
+
+#### E550: Karni.field_groups or Karni.field_group_layout is malformed
+
+*system check (error)* · from `karni.layout.field_groups; karni.checks.check_layouts`
+
+**Why Karni objects.** The groups are published in the OpenAPI schema as x-karni-field-groups and lay out @karni/ui's ResourceForm and ResourceDetail and the admin's change form. A group without a title or without fields cannot be shown, so the declaration is refused at boot.
+
+**Fix.** Map each group's title to a list of field names, e.g. field_groups = {'Overview': ['name', 'summary'], 'Financials': ['price', 'cost']}, and write field_group_layout = 'sections' (the default) or 'tabs'.
+
+<a id="e551"></a>
+
+#### E551: A field group or a column set names a field the model does not have
+
+*system check (error)* · from `karni.layout.field_groups; karni.layout.column_sets; karni.checks.check_layouts`
+
+**Why Karni objects.** A name with a typo would leave its field out of every form section, or show an empty column, without an error anywhere, so a group or column set must name the model's own fields.
+
+**Fix.** Correct the name to a field of the model (the message names the model, the group or set, and the field), or remove it from the group or set.
+
+<a id="e552"></a>
+
+#### E552: A field is in two field groups
+
+*system check (error)* · from `karni.layout.field_groups; karni.checks.check_layouts`
+
+**Why Karni objects.** A form shows each field once, in one group. A field listed in two groups would be edited in two places at once, so each field belongs to one group.
+
+**Fix.** Keep the field in one group and remove it from the other (the message names both).
+
+<a id="e553"></a>
+
+#### E553: Karni.column_sets is malformed
+
+*system check (error)* · from `karni.layout.column_sets; karni.checks.check_layouts`
+
+**Why Karni objects.** The column sets are published as x-karni-column-sets and ResourceTable offers them in a selector. A set without a name or without columns, or one that lists a column twice, cannot be shown.
+
+**Fix.** Map each set's name to a list of field names, each once, e.g. column_sets = {'default': ['name', 'price'], 'financial': ['name', 'price', 'cost']}.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>
@@ -2892,7 +2932,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.
+**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and markdown is a field type now.
 
 **Fix.** Remove the key, and write that part by hand in the project until the feature ships.
 
@@ -2982,7 +3022,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.
+**Why Karni objects.** groups become Karni.field_groups (the sections of the React form and detail page and the admin's fieldsets), and karni check refuses a name that is not a field or a field in two groups (karni.E551, karni.E552).
 
 **Fix.** Name the entity's fields, each in one group.
 
@@ -3595,6 +3635,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Each related tab is one relation. Deal and Deal.company name the same one when Deal has one fk to the page's entity.
 
 **Fix.** List each related tab once.
+
+<a id="c680"></a>
+
+### C680: A column set names a field the entity does not have, or one twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** column_sets become Karni.column_sets, the presets of the React table's Columns menu, and karni check refuses a set that names a field the model does not have (karni.E551) or lists one twice (karni.E553).
+
+**Fix.** Name fields the entity declares (or id, created_at and updated_at), each once per set.
+
+<a id="c681"></a>
+
+### C681: A column set has no columns, or a name that is not snake_case
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A set's name is what a user's choice is remembered by and its label in the Columns menu (financial reads Financial), and a set without columns shows an empty table.
+
+**Fix.** Name the set in snake_case (default, financial) and list at least one field.
 
 ## Agent rules (`K`)
 

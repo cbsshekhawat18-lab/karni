@@ -274,7 +274,18 @@ class Entity(_Node):
     )
     groups: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Field groups: title -> fields (the admin form's fieldsets).",
+        description=(
+            "Field groups: title -> fields (Karni.field_groups): sections of the React form and "
+            "detail page and fieldsets of the admin. The fields in no group come last, in Other."
+        ),
+    )
+    column_sets: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Column presets of the React table: name -> fields (Karni.column_sets). The set "
+            "named default shows first, else the first set."
+        ),
+        json_schema_extra={"propertyNames": {"pattern": f"^{FIELD_NAME}$"}},
     )
     order: Names = Field(
         default_factory=list, description="Default ordering (Meta.ordering), - for descending."

@@ -111,6 +111,7 @@ KINDS: Final = {
     "karni.fields.text.EmailField": "email",
     "karni.fields.text.SlugField": "slug",
     "karni.fields.text.PhoneField": "phone",
+    "karni.fields.text.MarkdownField": "markdown",
     "karni.fields.iso.CountryField": "country",
     "karni.fields.iso.CurrencyField": "currency",
     "karni.fields.structured.JSONField": "json",
@@ -122,7 +123,7 @@ KINDS: Final = {
 }
 _STRINGISH: Final = frozenset(
     {"str", "text", "email", "url", "slug", "file", "image", "choice", "phone", "country"}
-    | {"currency"}
+    | {"currency", "markdown"}
 )
 _ARRAY_BASES: Final = {
     "django.db.models.CharField": "str",
@@ -141,6 +142,8 @@ KARNI_KEYS: Final = {
     "owner_field": "owner",
     "audit": "audit",
     "scope_paths": "scope_paths",
+    "field_groups": "groups",
+    "column_sets": "column_sets",
 }
 _IMPORT: Final = re.compile(
     r"""^import\s+(\w+)\s+from\s+["']\./pages/([\w./-]+)["'];?""", re.MULTILINE
@@ -623,7 +626,8 @@ def _entity(
     admin = dict(model["admin_meta"])
     extra = dict(admin.pop("extra", None) or {})
     fieldsets = extra.pop("fieldsets", None)
-    if fieldsets:
+    # Before Karni.field_groups, karni build wrote the groups as the admin's fieldsets.
+    if fieldsets and "groups" not in entity:
         groups = {}
         for title, options in fieldsets:
             if not title:
@@ -632,6 +636,8 @@ def _entity(
             groups[str(title)] = list(options.get("fields", []))
         if groups:
             entity["groups"] = groups
+    elif fieldsets:
+        ctx.left_out.append(f"{label}: AdminMeta fieldsets (the spec's groups are field_groups)")
     for option in sorted([*admin, *extra]):
         ctx.left_out.append(f"{label}: AdminMeta {option}")
     for option in model["api_meta"]:
@@ -680,6 +686,12 @@ def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> No
             entity["groups"].pop(title)
     if entity.get("groups") == {}:
         entity.pop("groups")
+    for name, columns in list(entity.get("column_sets", {}).items()):
+        if any(column not in known for column in columns):
+            left_out.append(f"{label}: the column set {name}, with a field the spec leaves out")
+            entity["column_sets"].pop(name)
+    if entity.get("column_sets") == {}:
+        entity.pop("column_sets")
 
 
 def _features(settings: dict[str, Any], left_out: list[str]) -> dict[str, Any]:

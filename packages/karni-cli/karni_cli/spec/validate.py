@@ -75,8 +75,8 @@ RESERVED: Final[dict[str, dict[str, str]]] = {
         "aggregate": "aggregation endpoints (large-apps item 8)",
     },
 }
-#: Field types a later release adds.
-RESERVED_TYPES: Final = {"markdown": "markdown fields (large-apps item 12)"}
+#: Field types a later release adds (``markdown`` was one until large-apps item 12 shipped it).
+RESERVED_TYPES: Final[dict[str, str]] = {}
 ACCESS_WORDS: Final = ("public", "authenticated", "granted")
 STANDARD_ACTIONS: Final = ("view", "add", "change", "delete")
 ENTITY_PAGES: Final = ("list", "detail", "form")
@@ -655,6 +655,35 @@ class _Meaning:
                     )
                 else:
                     seen[name] = title
+        for set_name, columns in e.column_sets.items():
+            where = (*entity.path, "column_sets", set_name)
+            if not re.fullmatch(schema.FIELD_NAME, set_name) or not columns:
+                self.add(
+                    "C681",
+                    where,
+                    f"Column set {set_name!r} of {entity.name} needs a snake_case name and at "
+                    "least one column.",
+                    "Name it like default or financial, and list the fields it shows.",
+                    key=not re.fullmatch(schema.FIELD_NAME, set_name),
+                )
+            listed: set[str] = set()
+            for name in columns:
+                if name not in known:
+                    self.add(
+                        "C680",
+                        where,
+                        f"Column set {set_name!r} of {entity.name} names {name!r}, which is not a "
+                        f"field of {entity.name}.",
+                        "Name a field the entity declares (or id, created_at, updated_at).",
+                    )
+                elif name in listed:
+                    self.add(
+                        "C680",
+                        where,
+                        f"Column set {set_name!r} of {entity.name} lists {name!r} twice.",
+                        "List each column once.",
+                    )
+                listed.add(name)
         if e.owner is not None and not self.leads_to_user(entity, e.owner):
             self.add(
                 "C239",
@@ -1388,4 +1417,5 @@ def iter_codes() -> Iterator[str]:
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
     yield from ("C560", "C561", "C562", "C563")
+    yield from ("C680", "C681")
     yield "C324"

@@ -758,6 +758,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `email:email[:unique]` | EmailField(), where unique=True is case-insensitive (LOWER index) |
 | `slug:slug[:source]` | SlugField(populate_from="source"), unique among live rows (:len too) |
 | `phone:phone` | PhoneField(): E.164, CHECK format |
+| `notes:markdown` | MarkdownField(): text, edited with a preview and shown formatted in @karni/ui |
 | `country:country / currency:currency` | CountryField() / CurrencyField() with a CHECK against the ISO list |
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |

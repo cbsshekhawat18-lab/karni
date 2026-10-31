@@ -132,7 +132,6 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
     ("C224", SHOP + "        tree: true\n", 7),
-    ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
     ("C231", HEAD + "apps:\n  a: {entities: {Tag: {}, Post: {fields: {tag: fk:b.Tag}}}}\n"
@@ -143,6 +142,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C235", HEAD + "pages:\n  - Product: list\n", 4),
     ("C236", HEAD + "modules: {chat: {}}\n", 3),
     ("C237", SHOP + "        fields: {name: str}\n        groups: {Main: [name, price]}\n", 8),
+    ("C237", SHOP + "        fields: {name: str}\n        groups: {A: [name], B: [name]}\n", 8),
     ("C238", SHOP + "        fields: {name: str}\n        key: sku\n", 8),
     ("C239", SHOP + "        fields: {name: str}\n        owner: name\n", 8),
     ("C240", SHOP + "        fields: {name: str}\n        access: {read: 'owned:name'}\n", 8),
@@ -172,6 +172,11 @@ INVALID: list[tuple[str, str, int | None]] = [
      "pages:\n  - Product: [{detail: {related: [Swap]}}]\n", 10),
     ("C563", SHOP + "        fields: {name: str}\n      Review: {fields: {product: fk:Product}}\n"
      "pages:\n  - Product: [{detail: {related: [Review, Review.product]}}]\n", 10),
+    # wide models (experimental): column sets
+    ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, prcie]}\n", 8),
+    ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, name]}\n", 8),
+    ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
+    ("C681", SHOP + "        fields: {name: str}\n        column_sets: {Money: [name]}\n", 8),
 ]  # fmt: skip
 
 
@@ -188,9 +193,12 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, C324 (the module catalog's code for requires and conflicts),
-    # and C560 to C579 (the page blocks' related tabs).
+    # C560 to C579 (the page blocks' related tabs) and C680 to C699 (wide models).
     assert all(
-        200 <= int(code[1:]) <= 269 or 560 <= int(code[1:]) <= 579 or code == "C324"
+        200 <= int(code[1:]) <= 269
+        or 560 <= int(code[1:]) <= 579
+        or 680 <= int(code[1:]) <= 699
+        or code == "C324"
         for code in iter_codes()
     )
 
@@ -493,12 +501,14 @@ apps:
           member: fk:User
           status: state:pending>paid|pending>cancelled|paid>refunded
           note: text?
+          details: markdown?
           payment: fk:karni_payments.Payment?
           helpers: m2m:User?
           currency: currency?
         owner: member
         audit: [note, status]
-        groups: {Booking: [session, member, status], Notes: [note]}
+        groups: {Booking: [session, member, status], Notes: [note, details]}
+        column_sets: {default: [session, status], money: [session, currency, created_at]}
         scope_paths: {studio: session__studio}
         access: {read: authenticated, write: authenticated}
   shop:
@@ -589,11 +599,12 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
                 options.append(f"audit = {entity.audit!r}")
             if entity.scope_paths:
                 options.append(f"scope_paths = {entity.scope_paths!r}")
+            if entity.groups:
+                options.append(f"field_groups = {entity.groups!r}")
+            if entity.column_sets:
+                options.append(f"column_sets = {entity.column_sets!r}")
             if options:
                 _insert(models, name, "Karni", options)
-            if entity.groups:
-                sets = [(title, {"fields": names}) for title, names in entity.groups.items()]
-                _insert(models, name, "AdminMeta", [f"extra = {{'fieldsets': {sets!r}}}"])
             if entity.access == "code":
                 viewsets = root / label / "viewsets.py"
                 text = viewsets.read_text().replace(

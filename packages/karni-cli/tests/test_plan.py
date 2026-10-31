@@ -240,6 +240,33 @@ def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     assert not plan.risky
 
 
+def test_text_and_markdown_swap_safely_and_the_layout_keys(base: Project) -> None:
+    """Experimental (wide models): the markdown type, groups and column sets."""
+    plan = _plan(
+        _edit(
+            ("          note: text?\n", "          note: markdown?\n"),
+            (
+                "      Supplier:\n",
+                (
+                    "      Supplier:\n        groups: {Main: [name]}\n"
+                    "        column_sets: {default: [name], codes: [id, name]}\n"
+                ),
+            ),
+        ),
+        base,
+    )
+    note = _only(plan, "shop.Product.note")
+    assert note.detail == "text? -> markdown?" and not note.risky  # the same text column
+    assert _only(plan, "shop.Supplier groups").detail == "none -> Main name"
+    assert _only(plan, "shop.Supplier column_sets").detail == "none -> default name, codes id, name"
+    assert not plan.risky
+    required = _only(
+        _plan(_edit(("          note: text?\n", "          note: markdown\n")), base),
+        "shop.Product.note",
+    )
+    assert required.risky and required.reason == "it becomes required"
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

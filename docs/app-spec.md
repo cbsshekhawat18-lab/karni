@@ -213,7 +213,8 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`) |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |
 | `audit` | `true`, or a list of fields | `Karni.audit`, [change history](change-history.md) |
-| `groups` | title to fields | the admin form's fieldsets (`AdminMeta.extra = {"fieldsets": ...}`) |
+| `groups` | title to fields | `Karni.field_groups`: sections of the React form and detail page, fieldsets of the admin (experimental) |
+| `column_sets` | name to fields | `Karni.column_sets`: column presets of the React table (experimental) |
 | `order` | a field or a list, `-` for descending | `karni make model --order` (`Meta.ordering`) |
 | `scope_paths` | key to lookup path | `Karni.scope_paths`, for the `related:<key>` scope |
 | `access` | `{read, write, create}`, or `code` | the viewset's `access` |
@@ -230,6 +231,7 @@ parser and renderer, so the spec and the generator can never disagree:
 `datetime`, `url`, `file`, `image`, `uuid`, `choice:a|b`, `fk:Model`,
 `m2m:Model`, `o2o:Model`, `money[:CUR]`, `percent[:min:max]`, `quantity`,
 `email[:unique]`, `slug[:source]`, `phone`, `country`, `currency`,
+`markdown` (a `MarkdownField`, experimental),
 `json[:queried]`, `array:str[:len]`, `state:<a>><b>|...` (a `StateField`,
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
@@ -257,10 +259,30 @@ user and the modules' models are on `default`. A managed entity on another
 database is built without the audit users, whose relations would point at
 `default`.
 
-`groups` become the admin change form's fieldsets today. Field groups in the
-React forms and detail pages (item 12 of the
-[large-apps roadmap](roadmap/large-apps.md)) will read the same key. A field
-left out of every group goes in a last group without a title.
+`groups` and `column_sets` are experimental. `karni build` writes `groups`
+as the model's `Karni.field_groups`: sections of ResourceForm and
+ResourceDetail and fieldsets of the admin, in the order written, and a field
+left out of every group goes in a last group, Other. `column_sets` become
+`Karni.column_sets`: the presets of ResourceTable's Columns menu, where the
+set named `default` shows first. A group names fields of the entity, each
+field in one group (`C237`). A set names fields of the entity or `id`,
+`created_at` and `updated_at`, each once (`C680`), under a snake_case name
+(`C681`). Both lay out a model with many fields
+([field groups and column sets](ui.md#field-groups-and-column-sets-experimental)):
+
+```yaml
+      Product:
+        fields:
+          name: "str:200"
+          summary: "markdown?"
+          price: "money:EUR"
+          cost: "money:EUR"
+        groups: {Overview: [name, summary], Financials: [price, cost]}
+        column_sets: {default: [name, price], financial: [name, price, cost]}
+```
+
+To show the groups as tabs, set `field_group_layout = "tabs"` in the
+project's subclass: `class Karni(karni.Product.Karni)`.
 
 ### Access
 
@@ -356,7 +378,6 @@ they arrive:
 | `tree: true`, `taxonomies:` | entity | hierarchies and taxonomies |
 | `aggregate:` | entity | aggregation endpoints (large-apps item 8) |
 | `search:` | top level | a search block across entities |
-| `markdown` | field type | markdown fields (large-apps item 12) |
 
 ## Validation
 
@@ -412,6 +433,8 @@ means. `karni explain <code>` prints any code's entry.
 | [C561](errors.md#c561) | a related tab names an entity with no fk to the page's |
 | [C562](errors.md#c562) | a related tab could be either of two fks |
 | [C563](errors.md#c563) | a related tab listed twice |
+| [C680](errors.md#c680) | a column set names a field the entity does not have, or one twice |
+| [C681](errors.md#c681) | a column set with no columns, or a name that is not snake_case |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -436,9 +459,10 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   `external`, `table` (from `Meta.db_table`), `writable` and `database`,
   and so is a model Karni manages on another database (`Karni.database`)
   on `UUIDModel` or `IntegerKeyModel`.
-- **key, owner, audit, scope_paths** come from `class Karni`, **order** from
-  `Meta.ordering`, **groups** from `AdminMeta`'s fieldsets, **search** from
-  the viewset's `search_fields`.
+- **key, owner, audit, scope_paths** come from `class Karni`, **groups** and
+  **column_sets** from its `field_groups` and `column_sets` (groups from
+  `AdminMeta`'s fieldsets when it has no `field_groups`), **order** from
+  `Meta.ordering`, **search** from the viewset's `search_fields`.
 - **access** comes from the viewset when it is one of the shapes above, else
   it is `access: code`. A model without a viewset is `access: code` too.
 - **roles** come from `KARNI_ROLES` (left out when it is Karni's default),
@@ -502,7 +526,7 @@ entities
 The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit, groups,
-order, pk, external, table, writable, database), field changes of existing
+column_sets, order, pk, external, table, writable, database), field changes of existing
 entities, access, pages and navigation, the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.

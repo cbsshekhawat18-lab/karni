@@ -110,6 +110,8 @@ def test_typed_field_types_render(ws: Workspace) -> None:
             "stock:quantity",
             "email:email:unique",
             "phone:phone?",
+            "notes:markdown?",
+            "faq:markdown",
             "country:country?",
             "currency:currency",
             "meta:json:queried",
@@ -130,6 +132,8 @@ def test_typed_field_types_render(ws: Workspace) -> None:
         "stock = QuantityField(default=0)",
         "email = EmailField(unique=True)",
         "phone = PhoneField(blank=True)",
+        "notes = MarkdownField(blank=True)",
+        "faq = MarkdownField()",
         "country = CountryField(blank=True)",
         "currency = CurrencyField()",
         "meta = JSONField(default=dict, queried=True)",
@@ -138,8 +142,8 @@ def test_typed_field_types_render(ws: Workspace) -> None:
         assert f"    {line}" in body, line
     names = {imp.name for imp in rendered.imports if imp.module == "karni.fields"}
     assert names == {
-        "ArrayField", "CountryField", "CurrencyField", "EmailField", "JSONField", "MoneyField",
-        "PercentField", "PhoneField", "QuantityField", "SlugField",
+        "ArrayField", "CountryField", "CurrencyField", "EmailField", "JSONField", "MarkdownField",
+        "MoneyField", "PercentField", "PhoneField", "QuantityField", "SlugField",
     }  # fmt: skip
     assert any("PostgreSQL only" in note for note in rendered.notes)
     assert _body(ws, "code:slug:40") == "    code = SlugField(max_length=40)"  # a length, as before

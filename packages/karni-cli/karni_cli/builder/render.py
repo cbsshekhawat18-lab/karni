@@ -9,7 +9,7 @@ so ``karni build`` and ``karni make`` write the same code.
 
 For one entity, ``Session`` in the app ``classes``::
 
-    classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni, AdminMeta
+    classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni
                                 (abstract: Django migrates the project's subclass)
     classes/models.py           class Session(karni.Session): the project's methods
     classes/karni/api.py        class SessionViewSet(BaseViewSet): model, access, search
@@ -261,19 +261,14 @@ def _model_class(
         options.append(("audit", entity.audit if entity.audit is True else list(entity.audit)))
     if entity.scope_paths:
         options.append(("scope_paths", dict(entity.scope_paths)))
+    # wide models (karni.layout): sections and tabs of the forms, presets of the table
+    if entity.groups:
+        options.append(("field_groups", {t: list(names) for t, names in entity.groups.items()}))
+    if entity.column_sets:
+        options.append(("column_sets", {n: list(cols) for n, cols in entity.column_sets.items()}))
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
-    if entity.groups:
-        sets: list[Any] = [
-            (title, {"fields": list(names)}) for title, names in entity.groups.items()
-        ]
-        grouped = {member for names in entity.groups.values() for member in names}
-        rest = [s.name for s in specs if s.name not in grouped]
-        if rest:
-            sets.append((None, {"fields": rest}))
-        lines += ["", "    class AdminMeta:"]
-        lines.append(_literal({"fieldsets": sets}, "        ", line, "extra = "))
     shown = next((s.name for s in specs if s.is_text), None)
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]

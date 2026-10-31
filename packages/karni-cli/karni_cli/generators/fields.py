@@ -45,6 +45,10 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
     ("slug:slug[:source]", 'SlugField(populate_from="source"), unique among live rows (:len too)'),
     ("phone:phone", "PhoneField(): E.164, CHECK format"),
     (
+        "notes:markdown",
+        "MarkdownField(): text, edited with a preview and shown formatted in @karni/ui",
+    ),
+    (
         "country:country / currency:currency",
         "CountryField() / CurrencyField() with a CHECK against the ISO list",
     ),
@@ -132,6 +136,7 @@ _STRINGISH = frozenset(
         "phone",
         "country",
         "currency",
+        "markdown",
     }
 )
 _RELATIONS = {"fk": "ForeignKey", "o2o": "OneToOneField", "m2m": "ManyToManyField"}
@@ -633,6 +638,7 @@ TYPED: dict[str, TypedRenderer] = {
     "email": _render_email,
     "slug": _render_slug,
     "phone": _code_renderer("PhoneField"),
+    "markdown": _code_renderer("MarkdownField"),
     "country": _code_renderer("CountryField"),
     "currency": _code_renderer("CurrencyField"),
     "json": _render_json,
