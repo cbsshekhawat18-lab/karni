@@ -23,6 +23,7 @@ from __future__ import annotations
 import ast
 import hashlib
 from collections import defaultdict
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -101,9 +102,7 @@ def _collect(paths: list[Path], origin: str) -> dict[str, list[tuple[str, Path, 
     cache = checkcache.active()
     cache.extra("duplicate", str(min_statements))
     for path in paths:
-        found = cache.per_file(
-            "duplicate", path, lambda path=path: _fingerprints(path, min_statements)
-        )
+        found = cache.per_file("duplicate", path, partial(_fingerprints, path, min_statements))
         for fingerprint, lineno in found:
             groups[fingerprint].append((origin, path, lineno))
     return groups

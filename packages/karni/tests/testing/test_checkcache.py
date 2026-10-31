@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from io import StringIO
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from karni.testing import architecture, checkcache, duplication
 from karni.testing.checkcache import CheckCache
 
 
-def _counter() -> tuple[list[int], object]:
+def _counter() -> tuple[list[int], Callable[[], list[str]]]:
     calls: list[int] = []
 
     def compute() -> list[str]:
