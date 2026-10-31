@@ -34,15 +34,22 @@ PYTHON_PACKAGES = (
     "modules/karni-approvals",
     "modules/karni-impersonation",
     "modules/karni-site",
+    "modules/karni-storage",
 )
 MODULES = (
     "modules/karni-payments",
     "modules/karni-approvals",
     "modules/karni-impersonation",
     "modules/karni-site",
+    "modules/karni-storage",
 )
 #: The modules that ship a React package in ui/.
-UI_MODULES = ("modules/karni-payments", "modules/karni-approvals", "modules/karni-impersonation")
+UI_MODULES = (
+    "modules/karni-payments",
+    "modules/karni-approvals",
+    "modules/karni-impersonation",
+    "modules/karni-storage",
+)
 NPM_PACKAGES = ("packages/karni-ui", *(f"{module}/ui" for module in UI_MODULES))
 TAG = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
 
@@ -120,12 +127,14 @@ def check_module_ranges(version: str) -> list[str]:
     for module in MODULES:
         for requirement in _pyproject(module).get("dependencies") or []:
             assert isinstance(requirement, str)
-            match = re.match(r"^karni(?![\w-])\s*(?P<spec>[^;]*)", requirement)
+            match = re.match(r"^karni(?![\w-])(?:\[[^\]]*\])?\s*(?P<spec>[^;]*)", requirement)
             if match and not SpecifierSet(match["spec"].strip()).contains(Version(version)):
                 problems.append(
                     f"{module} requires {requirement!r}, which excludes karni "
                     f"{version}. Widen the range in its pyproject.toml (docs/modules.md)."
                 )
+        if module not in UI_MODULES:  # karni-site ships no React package
+            continue
         peers = _package_json(f"{module}/ui").get("peerDependencies") or {}
         spec = peers.get("@karni/ui") if isinstance(peers, dict) else None
         if isinstance(spec, str) and not _caret_allows(spec, version):

@@ -65,6 +65,10 @@ PREFIXES = {
         "Public websites for Karni: every text, image and menu editable in the admin, "
         "public forms, redirects, and error pages that cannot fail."
     ),
+    "modules/karni-storage/pyproject.toml": (
+        "Protected files for Karni: kept in S3 or an S3-compatible service, served only to "
+        "whoever may read the row that owns them, with direct uploads and thumbnails."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -76,6 +80,10 @@ PREFIXES = {
     ),
     "modules/karni-impersonation/ui/package.json": (
         "React components for the Karni impersonation module: ImpersonationBanner and its hook."
+    ),
+    "modules/karni-storage/ui/package.json": (
+        "React components for the Karni storage module: protected uploads straight to the "
+        "bucket, download links and images."
     ),
 }
 
