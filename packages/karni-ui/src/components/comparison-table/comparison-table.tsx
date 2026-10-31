@@ -7,9 +7,9 @@
  * scrolls down). A metric that declares `better: "higher"` or `"lower"`
  * marks its best value: bold, and "best" for a screen reader.
  *
- * Escape hatches: per metric `value`, `format`, `render` and `better`;
- * `entityKey` and `entityLabel` read any shape of entity; `slots` replaces
- * the loading and empty states; `className` merges on the root.
+ * Escape hatches: per metric `value`, `format`, `render` and `better`.
+ * `entityKey` and `entityLabel` read any shape of entity, `slots` replaces
+ * the loading and empty states, and `className` merges on the root.
  */
 import * as React from "react";
 import { cn } from "../../lib/cn";

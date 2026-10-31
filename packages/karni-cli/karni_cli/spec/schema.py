@@ -409,10 +409,10 @@ class Spec(_Node):
         default_factory=list,
         description=(
             "karni make page, in navigation order. Each item is one key: an entity with its "
-            "pages (list, detail, form; {detail: {related: [Deal]}} adds related tabs), or a "
-            "page name with its kind (dashboard: home is the scaffold's, any other name a page "
-            "of charts; blank, login, or code: a page of the project's own at /<name>, which "
-            "karni build leaves alone)."
+            "pages (list, detail, form, or {detail: {related: [Deal]}} for related tabs), or a "
+            "page name with its kind (blank, login, dashboard: the scaffold's home page for "
+            "home and a page of charts for any other name, or code: a page of the project's "
+            "own at /<name>, which karni build leaves alone)."
         ),
     )
     seed: dict[str, int] = Field(

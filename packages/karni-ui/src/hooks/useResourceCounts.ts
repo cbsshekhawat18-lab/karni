@@ -61,7 +61,7 @@ export function useResourceCounts(
   targets: ReadonlyArray<string | ResourceCountTarget>,
 ): ResourceCounts {
   const client = useKarniClient();
-  // A 4xx never succeeds on a retry; anything else follows the app's own rule.
+  // A 4xx never succeeds on a retry. Anything else follows the app's own rule.
   const appRetry = useQueryClient().getDefaultOptions().queries?.retry;
   const retry = listRetry(appRetry);
   const normalized = targets.map((target) =>

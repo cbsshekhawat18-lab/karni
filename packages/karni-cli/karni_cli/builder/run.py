@@ -432,7 +432,7 @@ def _pages(
         for name, kinds in entry.items():
             for kind in schema.page_kind_names(kinds):
                 key = f"{ident(name, labels)}:{kind}"
-                # The scaffold's home page is the project's; any other dashboard is built.
+                # The scaffold's home page is the project's. Any other dashboard is built.
                 if kind == "code" or (kind == "dashboard" and name == "home") or key in theirs:
                     continue
                 found.add(key)

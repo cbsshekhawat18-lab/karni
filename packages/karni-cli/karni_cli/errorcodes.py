@@ -466,7 +466,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C220",
         "A page entry is not valid",
         "karni spec validate (karni_cli.spec.validate)",
-        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (dashboard: the scaffold's home at /, or a page of charts at /<name>; blank, login, code).",
+        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (blank, login, code, or dashboard: the scaffold's home at /, or a page of charts at /<name>).",
         "Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.",
     ),
     _c(

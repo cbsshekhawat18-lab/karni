@@ -1202,7 +1202,7 @@ class _Meaning:
                         f"Write e.g. - {name}: blank (or - home: dashboard, - login: login).",
                     )
                     continue
-                # home: dashboard is the scaffold's home page; any other dashboard is built.
+                # home: dashboard is the scaffold's home page. Any other dashboard is built.
                 paths = ["/"] if kinds[0] == "dashboard" and name == "home" else [f"/{name}"]
             for path in paths:
                 if path in routes:

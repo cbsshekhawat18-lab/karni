@@ -40,7 +40,7 @@ describe("ResourceDetail related tabs", () => {
     const tab = await screen.findByRole("tab", { name: "Events" });
     expect(tab).toHaveAttribute("aria-selected", "true");
     const panel = screen.getByRole("tabpanel", { name: "Events" });
-    // Venue 2 holds events 1, 7 and 10 (tests/msw/handlers.ts); no other event shows.
+    // Venue 2 holds events 1, 7 and 10 (tests/msw/handlers.ts), and no other event shows.
     expect((await titles(panel)).sort()).toEqual(
       ["Annual Conference", "Community Picnic", "Office Hours"].sort(),
     );

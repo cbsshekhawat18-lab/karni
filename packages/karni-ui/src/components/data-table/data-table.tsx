@@ -12,12 +12,12 @@
  * reader knows the whole size while only a window of rows is in the page.
  *
  * Escape hatches: per column `value` (what sorts and exports), `render`
- * (what the cell shows), `format`, `compare`, `align` and `exportValue`;
- * `sort` and `onSortChange` control sorting; `exportFormats={false}` drops
- * the export buttons and `toolbar` adds controls; `virtualize={false}`
- * renders every row; the `--karni-data-table-max-height` and
- * `--karni-data-table-row-height` tokens size it; `slots` replaces the
- * loading and empty states; `className` merges on the root.
+ * (what the cell shows), `format`, `compare`, `align` and `exportValue`.
+ * `sort` and `onSortChange` control sorting, `exportFormats={false}` drops
+ * the export buttons and `toolbar` adds controls, and `virtualize={false}`
+ * renders every row. The `--karni-data-table-max-height` and
+ * `--karni-data-table-row-height` tokens size it, `slots` replaces the
+ * loading and empty states, and `className` merges on the root.
  */
 import * as React from "react";
 import { cn } from "../../lib/cn";

@@ -93,7 +93,7 @@ describe("DataTable", () => {
     expect(orders.closest("th")).not.toHaveAttribute("aria-sort");
     expect(firstColumn()).toEqual(["North", "south", "East", "West"]);
     expect(onSortChange).toHaveBeenLastCalledWith(null);
-    // text sorts naturally and case-insensitively, dates by time; an unsortable header is plain
+    // Text sorts naturally and case-insensitively, dates by time, and an unsortable header is plain.
     await user.click(screen.getByRole("button", { name: "Region" }));
     expect(firstColumn()).toEqual(["East", "North", "south", "West"]);
     await user.click(screen.getByRole("button", { name: "Opened" }));

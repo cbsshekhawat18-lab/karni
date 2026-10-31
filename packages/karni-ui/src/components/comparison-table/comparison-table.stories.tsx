@@ -44,7 +44,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Three plans side by side; the best price, seats and storage are marked. */
+/** Three plans side by side, with the best price, seats and storage marked. */
 export const Plans: Story = {};
 
 export const Loading: Story = { args: { loading: true } };
