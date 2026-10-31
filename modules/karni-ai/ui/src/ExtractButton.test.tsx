@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { jobFixture, state } from "../tests/msw/server";
+import { extractFixture, jobFixture, state } from "../tests/msw/server";
 import { renderWithKarni } from "../tests/test-utils";
 import { ExtractButton } from "./ExtractButton";
 
@@ -102,6 +102,21 @@ describe("ExtractButton", () => {
     await openAndExtract(user);
     await user.click(await screen.findByRole("button", { name: "Read another source" }));
     expect(screen.getByLabelText("Text to read")).toBeInTheDocument();
+  });
+
+  it("shows the progress of a preview running in Celery, then its counts", async () => {
+    const running = { ...jobFixture, status: "previewing" as const, result: null, rows_done: 0 };
+    state.answer = { ...extractFixture, status: "previewing", result: null, job: running };
+    state.running = { job: running, times: 1 };
+    const user = userEvent.setup();
+    renderWithKarni(<ExtractButton resource="products" />);
+    await openAndExtract(user);
+    expect(await screen.findByRole("progressbar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Commit" })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Commit" })).toBeEnabled(), {
+      timeout: 4000,
+    });
+    expect(screen.getByTestId("import-stats")).toHaveTextContent("Created1");
   });
 
   it("marks the trigger with its component role and passes Button props through", () => {

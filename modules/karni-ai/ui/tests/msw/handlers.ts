@@ -59,7 +59,16 @@ export const state: {
   bodies: Array<Record<string, unknown>>;
   commits: number;
   job: ImportJob;
-} = { answer: extractFixture, status: 201, bodies: [], commits: 0, job: jobFixture };
+  /** Answer the job's GET with this one first, so many times (a preview still running). */
+  running: { job: ImportJob; times: number } | null;
+} = {
+  answer: extractFixture,
+  status: 201,
+  bodies: [],
+  commits: 0,
+  job: jobFixture,
+  running: null,
+};
 
 export function resetMswData(): void {
   state.answer = extractFixture;
@@ -67,6 +76,7 @@ export function resetMswData(): void {
   state.bodies = [];
   state.commits = 0;
   state.job = jobFixture;
+  state.running = null;
 }
 
 export const handlers = [
@@ -84,5 +94,11 @@ export const handlers = [
     state.job = { ...jobFixture, status: "done" };
     return HttpResponse.json(state.job);
   }),
-  http.get(`${API_BASE}/products/import/:job/`, () => HttpResponse.json(state.job)),
+  http.get(`${API_BASE}/products/import/:job/`, () => {
+    if (state.running !== null && state.running.times > 0) {
+      state.running.times -= 1;
+      return HttpResponse.json(state.running.job);
+    }
+    return HttpResponse.json(state.job);
+  }),
 ];

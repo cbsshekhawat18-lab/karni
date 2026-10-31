@@ -9,16 +9,18 @@
  * The counts and the confirmation reuse `@karni/ui`'s import slots
  * (`defaultResourceImportSlots.Summary` and `.ConfirmCommit`), so an
  * extraction reads like a file import. Escape hatch: replace any part with
- * `slots` (Rows, Problems, Summary, ConfirmCommit).
+ * `slots` (Rows, Problems, Summary, ConfirmCommit, Progress).
  */
 import {
   Button,
   EmptyValue,
   defaultResourceImportSlots,
+  isImportInFlight,
   useImportActions,
   useImportJob,
   type ImportConfirmProps,
   type ImportJob,
+  type ImportProgressProps,
   type ImportSummaryProps,
 } from "@karni/ui";
 import * as React from "react";
@@ -41,6 +43,8 @@ export interface ExtractPreviewSlots {
   Problems: React.ComponentType<ExtractProblemsProps>;
   Summary: React.ComponentType<ImportSummaryProps>;
   ConfirmCommit: React.ComponentType<ImportConfirmProps>;
+  /** A preview or commit running in Celery (more rows than KARNI_IMPORT_INLINE_ROWS). */
+  Progress: React.ComponentType<ImportProgressProps>;
 }
 
 export interface ExtractPreviewProps {
@@ -167,6 +171,7 @@ export const defaultExtractPreviewSlots: ExtractPreviewSlots = {
   Problems: DefaultProblems,
   Summary: defaultResourceImportSlots.Summary,
   ConfirmCommit: defaultResourceImportSlots.ConfirmCommit,
+  Progress: defaultResourceImportSlots.Progress,
 };
 
 /** Experimental. The preview of an extraction, with the import's own commit. */
@@ -204,6 +209,7 @@ export function ExtractPreview({
           : `Read ${plural(result.rows.length, "row", "rows")} from ${result.source.label}. Nothing is saved yet.`}
       </p>
       {result.rows.length > 0 ? <Slots.Rows rows={result.rows} fields={fields} /> : null}
+      {isImportInFlight(job) ? <Slots.Progress job={job} /> : null}
       {counts !== null ? <Slots.Summary job={job} result={counts} /> : null}
       {result.problems.length > 0 && !done ? <Slots.Problems problems={result.problems} /> : null}
       <div className="flex flex-wrap gap-2">

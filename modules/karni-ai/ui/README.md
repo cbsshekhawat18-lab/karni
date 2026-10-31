@@ -33,14 +33,14 @@ import { ExtractButton } from "@karni/ai-ui";
 />;
 ```
 
-| Prop | Meaning |
-| --- | --- |
-| `resource` | the router prefix (`products`) |
-| `resourceLabel` | the resource in words, plural. Default: `resource` |
-| `sources` | the forms offered: `text`, `url`, `pdf` (default: all three) |
-| `onExtracted(result)` | the preview arrived |
-| `onDone(job)` | the commit saved the rows |
-| `slots` | replace `Error`, `Rows`, `Problems`, `Summary` or `ConfirmCommit` |
+| Prop                  | Meaning                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| `resource`            | the router prefix (`products`)                                    |
+| `resourceLabel`       | the resource in words, plural. Default: `resource`                |
+| `sources`             | the forms offered: `text`, `url`, `pdf` (default: all three)      |
+| `onExtracted(result)` | the preview arrived                                               |
+| `onDone(job)`         | the commit saved the rows                                         |
+| `slots`               | replace `Error`, `Rows`, `Problems`, `Summary` or `ConfirmCommit` |
 
 Every other `@karni/ui` Button prop goes to the trigger. A refusal (an AI code:
 a source that cannot be read, a refused address, a spent budget) shows the
@@ -55,9 +55,9 @@ import { useExtract } from "@karni/ai-ui";
 const extract = useExtract("products");
 const { commit } = useImportActions("products");
 
-const preview = await extract.mutateAsync({ text });   // or { url } or { file }
+const preview = await extract.mutateAsync({ text }); // or { url } or { file }
 // preview.rows, preview.problems, preview.result: nothing is saved yet
-commit.mutate(preview.id);                             // the import's own commit
+commit.mutate(preview.id); // the import's own commit
 ```
 
 `extractRefusal(error)` returns `{code, detail}` for a refused extraction.
