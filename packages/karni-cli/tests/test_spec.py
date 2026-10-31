@@ -129,6 +129,9 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C220", SHOP + "        fields: {name: str}\npages:\n  - Product: [list, table]\n", 9),
     ("C221", HEAD + "modules: {payments: {colour: red}}\n", 3),
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
+    # karni-ai's model name and key stay in the environment, never in karni.yaml.
+    ("C221", HEAD + "modules: {ai: {model: some-model}}\n", 3),
+    ("C221", HEAD + "modules: {ai: {api_key: secret}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
     ("C224", SHOP + "        tree: true\n", 7),
