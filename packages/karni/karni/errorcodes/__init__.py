@@ -1340,6 +1340,28 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), "
         "seconds=0.5), and the same pair in KARNI_SCALING_ROWS.",
     ),
+    _e(
+        "W610",
+        "karni queries --explain analyses plans on PostgreSQL only",
+        "warning",
+        "karni.api.diagnose; karni queries --explain",
+        "EXPLAIN ANALYZE with a plan Karni reads, and the sequential scans it flags, need "
+        "PostgreSQL. On another database --explain prints that database's plain EXPLAIN of the "
+        "slowest statements.",
+        "Run karni queries --explain against PostgreSQL, with data at a realistic volume "
+        "(karni seed --volume N).",
+    ),
+    _e(
+        "W611",
+        "A query reads a large table from start to end",
+        "warning",
+        "karni.api.explain; karni queries --explain",
+        "The plan has a sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more "
+        "(default 1000). It reads every row, so it slows down as the table grows.",
+        "Add the index the finding names to the model's Meta.indexes and make a migration. "
+        "When the finding says the filter keeps most rows, narrow the filter or paginate "
+        "instead: an index would not help.",
+    ),
     # E5xx settings and optional dependencies
     _e(
         "E501",

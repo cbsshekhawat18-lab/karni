@@ -1440,6 +1440,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass a concrete model class or an 'app_label.Model' string.
 
+<a id="w610"></a>
+
+#### W610: karni queries --explain analyses plans on PostgreSQL only
+
+*system check (warning)* · from `karni.api.diagnose; karni queries --explain`
+
+**Why Karni objects.** EXPLAIN ANALYZE with a plan Karni reads, and the sequential scans it flags, need PostgreSQL. On another database --explain prints that database's plain EXPLAIN of the slowest statements.
+
+**Fix.** Run karni queries --explain against PostgreSQL, with data at a realistic volume (karni seed --volume N).
+
 <a id="e610"></a>
 
 #### E610: A factory cannot generate a value for a field
@@ -1449,6 +1459,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Values are inferred from field types and names, and some custom fields have no safe default.
 
 **Fix.** Pass the value (create(Model, field=...)) or define an explicit factory in <app>/factories.py.
+
+<a id="w611"></a>
+
+#### W611: A query reads a large table from start to end
+
+*system check (warning)* · from `karni.api.explain; karni queries --explain`
+
+**Why Karni objects.** The plan has a sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more (default 1000). It reads every row, so it slows down as the table grows.
+
+**Fix.** Add the index the finding names to the model's Meta.indexes and make a migration. When the finding says the filter keeps most rows, narrow the filter or paginate instead: an index would not help.
 
 <a id="e611"></a>
 
