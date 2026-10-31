@@ -212,6 +212,15 @@ Experimental now:
   `use<Name>Tree` hooks of `karni types`, and `TreeView`, `TreeSelect`,
   `TreeBreadcrumb`, `useResourceTree`, `useResourceChildren`,
   `useResourceAncestors` and `useTreeMutations` in `@karni/ui`.
+- [Navigation from data](navigation.md): the `KARNI_NAVIGATION` and
+  `KARNI_NAVIGATION_PAGES` settings, `karni.navigation` (with
+  `karni.navigation.api`, `karni.navigation.checks` and
+  `karni.navigation.admin`), the `karni.navigation` app and its `NavItem`
+  model, the `navigation/` endpoint, the `navigation` key of `karni.yaml` and
+  `karni_cli.spec.navigation`, and `useNavigation`, `karniKeys.navigation`,
+  `navigationEntries`, `activeRoute`, `defaultNavIcons`, `navIcon`,
+  `isNavGroup`, `LayoutNavGroup`, the `NavGroup` slot and `Layout`'s
+  `navSource`, `pathname` and `icons` in `@karni/ui`.
 
 ## Supported platforms
 

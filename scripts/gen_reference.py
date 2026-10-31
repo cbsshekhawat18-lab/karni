@@ -266,6 +266,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "ui",
+        "`Layout`'s server menu (`navSource=\"server\"`, `useNavigation`): collapsible groups, "
+        "icons by name and the current page marked. Experimental tier",
+    ),
+    Capability(
+        "ui",
         "`karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or "
         "Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui "
         "components as Karni's primitives",
@@ -306,6 +311,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Per-user grants next to the role grants: a pattern and a scope for one user, with "
         "targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). "
         "Experimental tier",
+    ),
+    Capability(
+        "permissions",
+        "Navigation from data: each user's menu from `KARNI_NAVIGATION` or a `NavItem` tree "
+        "edited in the admin, opened by the same role and per-user grants as the API "
+        "(`GET /api/navigation/`). Experimental tier",
     ),
     Capability("permissions", "Field visibility per role (`class Karni: field_roles`)"),
     Capability("permissions", "Row scope in the admin, from the same grants as the API"),

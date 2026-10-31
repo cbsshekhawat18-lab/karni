@@ -54,7 +54,7 @@ cannot start before the item it names is done.
 |---|---|---|---|
 | 11 | Page blocks beyond CRUD in `@karni/ui`: dashboard grid, chart card, accordion, markdown view, data table, comparison table and related tabs. | none | planned |
 | 12 | Markdown fields, field groups and column sets, so a model with 100+ columns still has usable forms, detail pages and tables. | none | planned |
-| 13 | Navigation from data: a menu each user gets from their roles and grants, edited in the admin. | 6 | planned |
+| 13 | Navigation from data: a menu each user gets from their roles and grants, edited in the admin. | 6 | done |
 
 ### Phase 4: scale and production
 
@@ -77,8 +77,10 @@ Notes on the order:
   the target ids a user's role grants and user grants hold under a scope,
   with the grant behind each. A tree scope adds itself to
   `TARGETED_SCOPES`, and item 13 reads the same function.
-- Item 13 may store the menu as a tree model when item 4 is done. Settings
-  alone work without it.
+- Item 13 stores the database menu as a tree model (item 4's
+  `OrderedTreeModel`), in the `karni.navigation` app a project installs only
+  for that source. Settings alone work without it. It reads `grants_for`,
+  the union of role and user grants that `Granted()` reads.
 - Item 6 uses the `Can("area:action")` slot that ADR 0001 reserved for a
   grants tier. Declarations written with `HasRole` keep working.
 - Item 8's saved charts and item 15's three modules are modules

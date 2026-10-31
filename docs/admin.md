@@ -219,6 +219,10 @@ sorted by a column is flat, and so is one with more than
 `tree_changelist_max_rows` (10,000) rows. Set it to 0 on an admin to turn
 tree order off.
 
+The menu of [navigation from data](navigation.md) (`KARNI_NAVIGATION =
+"db"`, experimental) is such a tree: *Navigation items* lists the entries in
+tree order, and its *Menu preview* button shows the menu one user gets.
+
 ## Soft-deleted models in the admin
 
 For `karni.models.SoftDeleteModel` subclasses the derived admin is

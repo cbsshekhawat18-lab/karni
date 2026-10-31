@@ -14,7 +14,7 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
     change is in the CHANGELOG. The error codes keep their meaning.
 
 A spec is one small file that describes a Karni app: its apps and entities,
-roles, built-in features, modules and pages. An AI agent turns a one-line
+roles, built-in features, modules, pages and menu. An AI agent turns a one-line
 request into a spec, and Karni turns the spec into code without a language
 model. This release reads and checks a spec (`karni spec validate`),
 writes the spec of an existing project (`karni spec export`), shows what
@@ -337,6 +337,63 @@ computed `get_access()`.
 
 Two pages may not share a route (`C242`).
 
+### `navigation`
+
+!!! warning "Experimental"
+    The `navigation` key is experimental, like the
+    [navigation from data](navigation.md) it writes.
+
+`navigation` is the menu: `karni build` writes it to `KARNI_NAVIGATION` in
+the settings block, and `GET /api/navigation/` gives each user the entries
+their grants open. Without it, the spec writes no menu.
+
+`navigation: true` lists every page of `pages` that has a route of its own,
+in the order of `pages`: an entity's list page, the dashboard and each named
+page. A sign-in page and an entity without a `list` page are left out. A
+list says the order and the groups:
+
+```yaml
+navigation:
+  - home                                   # a page of pages, by its key
+  - Catalog: [Product, Category]           # a group: a label and its entries
+  - Region: {icon: map}                    # a page with its options
+  - Admin: {icon: settings, items: [reports], requires: "shop.*:change"}
+```
+
+| Entry | Means |
+|---|---|
+| `- <page>` | the page whose key in `pages` is `<page>` (`Product`, `shop.Product`, `home`) |
+| `- <page>: {label, icon, requires}` | the page, with its label, icon or requirement replaced |
+| `- <label>: [entries]` | a group: a label that names no page, and its entries |
+| `- <label>: {items, icon, requires}` | a group with an icon or a requirement |
+
+Each page's requirement comes from its access, the way the API reads it:
+
+| The entity's `read` | The entry requires |
+|---|---|
+| `public` among them | `public` |
+| `authenticated` or `owned:<field>` among them | `authenticated` |
+| `granted`, `role:<slug>`, or `access: code` | the entity's view permission, `shop.product:view` |
+
+A role opens the entry through its grants, as it opens the API: give the role
+the view grant, or write `requires`. A named page requires `authenticated`,
+and a sign-in page `public`. A group requires `public` when one of its
+entries does, else `authenticated`. Labels come from the page: `Products` for
+`Product`'s list, `Home` for `home`.
+
+| Code | Problem |
+|---|---|
+| [C640](errors.md#c640) | an entry names a page `pages` does not have, or an entity without a list page |
+| [C641](errors.md#c641) | an entry that is not valid: a page listed twice, a group without entries, an icon that is not a name |
+| [C642](errors.md#c642) | a `requires` that is not valid, or names an entity the spec does not have |
+
+`karni plan` shows the menu in the pages area as the setting it writes,
+`+ KARNI_NAVIGATION: Home /, Catalog (Products /products, Categories /categories)`,
+and `karni spec export` writes `navigation` from a `KARNI_NAVIGATION` list,
+each item as the page whose route it links to. A menu the spec cannot say (a
+route no page has, `KARNI_NAVIGATION = "db"`) is listed and stays in the
+settings.
+
 ### `seed`
 
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make
@@ -406,6 +463,9 @@ means. `karni explain <code>` prints any code's entry.
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C460](errors.md#c460) | a tree entity's keys do not fit (`external`, a `parent` or `position` field) |
+| [C640](errors.md#c640) | `navigation` names a page the spec does not have |
+| [C641](errors.md#c641) | a `navigation` entry that is not valid |
+| [C642](errors.md#c642) | a `navigation` requirement that is not valid |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -438,6 +498,8 @@ built with `karni make` or by hand. It prints the spec, or writes it with
   the viewset's `search_fields`.
 - **access** comes from the viewset when it is one of the shapes above, else
   it is `access: code`. A model without a viewset is `access: code` too.
+- **navigation** comes from a `KARNI_NAVIGATION` list: each item is the
+  page whose route it links to.
 - **roles** come from `KARNI_ROLES` (left out when it is Karni's default),
   with `KARNI_ACCOUNTS_DEFAULT_ROLES` as `default`. **features** come from
   their settings, **modules** from the installed modules and the settings that
@@ -500,7 +562,8 @@ The areas, in order: the app (kind, name), modules to add or remove,
 features with the setting each one sets, roles and their grants, apps,
 entities with their fields and options (key, search, owner, audit, groups,
 order, pk, external, table, writable, database, tree), field changes of existing
-entities, access, pages and navigation, the apps that get migrations, seed
+entities, access, pages and navigation (the page order, and the menu as
+`KARNI_NAVIGATION`), the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.
 
@@ -687,7 +750,8 @@ The settings block sits right above `karni_settings(globals())`, where every
 setting takes effect, `KARNI_2FA` included. It sets every feature of the
 spec (`KARNI_2FA`, `KARNI_EMAIL_OTP`, `KARNI_SOCIAL_TOKEN_PROVIDERS`,
 `KARNI_TERMS`), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
-spec has roles, and each module option. A social provider's client ids come
+spec has roles, `KARNI_NAVIGATION` when it has `navigation`, and each module
+option. A social provider's client ids come
 from the environment: `KARNI_SOCIAL_GOOGLE_CLIENT_IDS` (comma-separated) for
 `google`, and so on. A setting assigned again below the call wins over the
 block, so leave the spec's settings to the spec.
