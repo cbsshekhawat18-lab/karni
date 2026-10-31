@@ -69,3 +69,21 @@ def test_no_karni_resources_errors(schema: dict) -> None:
 def test_detail_op_without_pagination_is_skipped(schema: dict) -> None:
     # the detail path has no x-karni-resource and a non-paginated response: ignored
     assert "events" in resource_components(schema)
+
+
+def test_the_navigation_endpoint_is_no_resource(schema: dict) -> None:
+    """``GET /api/navigation/`` (experimental) is typed by types.ts alone, never a resource hook."""
+    schema["paths"]["/api/navigation/"] = {
+        "get": {
+            "operationId": "navigation",
+            "responses": {
+                "200": {
+                    "content": {
+                        "application/json": {"schema": {"$ref": "#/components/schemas/Navigation"}}
+                    }
+                }
+            },
+        }
+    }
+    assert "navigation" not in resource_components(schema)
+    assert "Navigation" not in generate_hooks(schema)
