@@ -686,6 +686,10 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (isRecord(treeItem) && isRecord(treeItem.get)) {
       operations.tree = operationDef(doc, `${path}tree/`, "get", treeItem.get);
     }
+    const accessItem = paths[`${path}access/`];
+    if (isRecord(accessItem) && isRecord(accessItem.get)) {
+      operations.access = operationDef(doc, `${path}access/`, "get", accessItem.get);
+    }
     if (itemPath !== undefined) {
       const base = itemPath.endsWith("/") ? itemPath : `${itemPath}/`;
       const nested: ReadonlyArray<["children" | "ancestors" | "move", "get" | "post"]> = [

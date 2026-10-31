@@ -7,6 +7,7 @@
  * - `useResourceAncestors` → `GET /<resource>/<id>/ancestors/` (root first)
  * - `useTreeMutations` → `POST /<resource>/<id>/move/` and
  *   `DELETE /<resource>/<id>/?branch=true`
+ * - `useResourceAccessForest` → `GET /<resource>/access/?permission=`
  *
  * Every key lives under `karniKeys.resource(resource)`, so any mutation of
  * the resource (these, or `useResourceMutations`) refreshes them.
@@ -77,6 +78,38 @@ export interface TreeMutations<T extends object = Record<string, unknown>> {
   removeBranch: UseMutationResult<void, unknown, string | number>;
 }
 
+/**
+ * Experimental. One node of the access forest: its id, label and parent, and
+ * whether a grant names it (`granted`). Its ancestors and the other roots are
+ * there for navigation, with `granted: false`. A granted node's children are
+ * `null` when it has some: load them from `tree/?root=<id>`.
+ */
+export type AccessForestNode = TreeNode<{
+  id: string | number;
+  label: string;
+  parent: string | number | null;
+  granted: boolean;
+}>;
+
+/**
+ * Experimental. The `access/` answer: the requester's granted nodes with the
+ * path from their roots, then every other root. `all` is true when the
+ * requester reaches every node (every root is then granted).
+ */
+export interface AccessForest {
+  results: AccessForestNode[];
+  all: boolean;
+  truncated: boolean;
+}
+
+/** Experimental. What `useResourceAccessForest` asks for. */
+export interface AccessForestParams {
+  /** A permission key or pattern (`shop.order:view`): only its grants count. Default: every tree grant. */
+  permission?: string;
+  /** Set false to wait. Default true. */
+  enabled?: boolean;
+}
+
 /** The query string of a `tree/` request. */
 export function treeQuery(params?: ResourceTreeParams): Record<string, string> {
   const query: Record<string, string> = {};
@@ -101,6 +134,31 @@ export function useResourceTree<T extends object = Record<string, unknown>>(
         query: treeQuery(params),
         signal,
       }),
+  });
+}
+
+/**
+ * Experimental. The requester's access forest of a tree resource
+ * (`GET /<resource>/access/`): the nodes their `tree:<path>` grants name,
+ * the ancestors of each and every other root. `TreeView`'s `access` prop
+ * shows it.
+ */
+export function useResourceAccessForest(
+  resource: string,
+  params?: AccessForestParams,
+  options?: Omit<UseQueryOptions<AccessForest>, "queryKey" | "queryFn">,
+): UseQueryResult<AccessForest> {
+  const client = useKarniClient();
+  const query: Record<string, string> = {};
+  if (params?.permission !== undefined && params.permission !== "") {
+    query.permission = params.permission;
+  }
+  return useQuery<AccessForest>({
+    ...options,
+    enabled: (options?.enabled ?? true) && params?.enabled !== false,
+    queryKey: karniKeys.accessForest(resource, { permission: params?.permission }),
+    queryFn: ({ signal }) =>
+      client.request<AccessForest>(`${listPath(resource)}access/`, { query, signal }),
   });
 }
 

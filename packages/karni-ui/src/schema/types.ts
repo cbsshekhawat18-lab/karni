@@ -176,6 +176,8 @@ export interface ResourceSchema {
     ancestors?: OperationDef;
     /** Experimental. `POST /<resource>/<id>/move/`: a new parent (and position) for a node. */
     move?: OperationDef;
+    /** Experimental. `GET /<resource>/access/`: the requester's access forest (the `tree:<path>` scope). */
+    access?: OperationDef;
   };
   /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];

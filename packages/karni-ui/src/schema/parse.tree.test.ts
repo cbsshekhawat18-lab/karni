@@ -99,6 +99,7 @@ describe.each(SNAPSHOTS)("x-karni-tree in the generated snapshot %s", (file) => 
         expect(tree?.operations.children?.method).toBe("get");
         expect(tree?.operations.ancestors?.method).toBe("get");
         expect(tree?.operations.move?.method).toBe("post");
+        expect(tree?.operations.access?.method).toBe("get");
         const parent = tree?.fields.find((field) => field.name === "parent");
         expect(parent?.kind).toBe("relation");
         expect(parent?.tree).toBeDefined();
@@ -106,6 +107,7 @@ describe.each(SNAPSHOTS)("x-karni-tree in the generated snapshot %s", (file) => 
       expect(category?.fields.find((field) => field.name === "position")?.readOnly).toBe(true);
       expect(product?.tree).toBeUndefined();
       expect(product?.operations.tree).toBeUndefined();
+      expect(product?.operations.access).toBeUndefined();
       const fk = product?.fields.find((field) => field.name === "category");
       expect(fk?.relation?.many).toBe(false);
       expect(fk?.tree).toEqual({ parent: "parent", ordered: true });

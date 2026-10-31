@@ -96,4 +96,14 @@ export const karniKeys = {
   ancestors(resource: string, id: string | number): readonly unknown[] {
     return ["karni", resource, "ancestors", String(id)] as const;
   },
+
+  /** Experimental. Key for the requester's `access/` forest, for one permission or every one. */
+  accessForest(resource: string, params?: { permission?: string }): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "access",
+      normalizeParams({ permission: params?.permission }),
+    ] as const;
+  },
 };

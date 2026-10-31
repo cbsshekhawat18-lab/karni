@@ -201,9 +201,13 @@ export {
   useResourceTree,
   useResourceChildren,
   useResourceAncestors,
+  useResourceAccessForest,
   useTreeMutations,
 } from "./hooks/useResourceTree";
 export type {
+  AccessForest,
+  AccessForestNode,
+  AccessForestParams,
   TreeNode,
   TreeResponse,
   ResourceTreeParams,

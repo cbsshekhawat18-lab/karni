@@ -5,8 +5,10 @@ import { listPath } from "../../../hooks/params";
 import { useResourceList } from "../../../hooks/useResourceList";
 import {
   treeQuery,
+  useResourceAccessForest,
   useResourceAncestors,
   useResourceTree,
+  type AccessForestParams,
   type TreeResponse,
 } from "../../../hooks/useResourceTree";
 import { cn } from "../../../lib/cn";
@@ -56,6 +58,14 @@ export interface TreeViewProps {
   multiple?: boolean;
   /** Called when a node is activated (Enter, or a click). */
   onActivate?: (node: Node) => void;
+  /**
+   * Experimental. Show the requester's access forest (`GET /<resource>/access/`)
+   * instead of the whole tree: the nodes their `tree:<path>` grants name, and
+   * every node below them, can be chosen; their ancestors and the other roots
+   * are shown greyed (`aria-disabled`) for navigation. `{ permission }` keeps
+   * one permission's grants. Search narrows the loaded nodes.
+   */
+  access?: boolean | Omit<AccessForestParams, "enabled">;
   /** Ids open at first. */
   defaultExpanded?: ReadonlyArray<string | number>;
   /** Open the path to this node (its ancestors load from `ancestors/`). */
@@ -121,8 +131,13 @@ function asLeaf(row: Record<string, unknown>): Node {
  * label starts with the typed text. Each item carries `aria-level`,
  * `aria-setsize`, `aria-posinset` and `aria-expanded`.
  *
+ * With `access`, it shows the requester's access forest instead
+ * (`GET /<resource>/access/`): granted nodes and the nodes below them can be
+ * chosen, and their ancestors are greyed, shown for navigation only.
+ *
  * Escape hatches: `getNodeLabel`, `slots` (Node, Loading, Empty, Error), and
- * the hooks it is built on (`useResourceTree`, `useResourceAncestors`).
+ * the hooks it is built on (`useResourceTree`, `useResourceAncestors`,
+ * `useResourceAccessForest`).
  */
 export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
   function TreeView(props, forwardedRef): React.ReactElement {
@@ -134,6 +149,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
       onChange,
       multiple = false,
       onActivate,
+      access = false,
       defaultExpanded,
       reveal = null,
       autoFocus = false,
@@ -154,7 +170,11 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
     const selectable = onChange !== undefined;
 
     // --- data ---------------------------------------------------------------
-    const top = useResourceTree(resource, { root, depth });
+    const accessMode = access !== false;
+    const permission = typeof access === "object" ? access.permission : undefined;
+    const wholeTree = useResourceTree(resource, { root, depth, enabled: !accessMode });
+    const forest = useResourceAccessForest(resource, { permission, enabled: accessMode });
+    const top: UseQueryResult<TreeResponse> = accessMode ? forest : wholeTree;
     const [expanded, setExpanded] = React.useState<ReadonlySet<string>>(
       () => new Set((defaultExpanded ?? []).map(String)),
     );
@@ -180,6 +200,25 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
 
     const tops: readonly Node[] = top.data?.results ?? [];
     const treeRows = visibleRows(tops, expanded, kidsOf);
+
+    // In access mode, what a grant reaches: a granted node and every node below it.
+    const everything = accessMode && forest.data?.all === true;
+    const reachable: ReadonlySet<string> = ((): ReadonlySet<string> => {
+      const found = new Set<string>();
+      if (!accessMode) return found;
+      const visit = (nodes: readonly Node[], inherited: boolean): void => {
+        for (const node of nodes) {
+          const key = keyOf(node);
+          if (found.has(key)) continue;
+          const reached = inherited || everything || node["granted"] === true;
+          if (reached) found.add(key);
+          visit(kidsOf(node) ?? [], reached);
+        }
+      };
+      visit(tops, false);
+      return found;
+    })();
+    const choosable = (key: string): boolean => !accessMode || reachable.has(key);
 
     // An open branch whose children are not known yet loads them.
     const missingKey = treeRows
@@ -229,7 +268,8 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
     // --- search -------------------------------------------------------------
     const parsed = useParsedSchema();
     const listOperation = parsed.data?.resources[resource]?.operations.list;
-    const serverSearch = listOperation === undefined || listOperation.hasSearch === true;
+    const serverSearch =
+      !accessMode && (listOperation === undefined || listOperation.hasSearch === true);
     const [term, setTerm] = React.useState("");
     const debounced = useDebouncedValue(term.trim(), searchDebounceMs);
     const searching = searchable && debounced !== "";
@@ -272,7 +312,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
     const isSelected = (key: string): boolean => selected.some((sel) => String(sel) === key);
 
     const choose = (row: VisibleRow): void => {
-      if (onChange === undefined) return;
+      if (onChange === undefined || !choosable(row.key)) return;
       const raw = row.node["id"];
       const nodeId = typeof raw === "number" || typeof raw === "string" ? raw : row.key;
       if (multiple) {
@@ -480,6 +520,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
           const branch = lazy.get(row.key);
           const branchLoading = row.expanded && branch?.isPending === true;
           const branchFailed = branch?.isError === true;
+          const greyed = !choosable(row.key);
           return (
             <div
               key={row.key}
@@ -494,6 +535,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
               aria-posinset={row.posinset}
               aria-expanded={row.expandable ? row.expanded : undefined}
               aria-selected={selectable ? rowSelected : undefined}
+              aria-disabled={greyed || undefined}
               aria-busy={branchLoading || undefined}
               tabIndex={row.key === tabKey ? 0 : -1}
               onFocus={(event) => {
@@ -501,11 +543,14 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeViewProps>(
               }}
               onClick={() => {
                 moveFocus(row.key);
-                if (selectable) choose(row);
+                if (selectable && choosable(row.key)) choose(row);
                 else toggle(row);
                 onActivate?.(row.node);
               }}
-              className="flex h-8 cursor-default select-none items-center gap-1 rounded-sm px-2 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-selected:bg-accent aria-selected:text-accent-foreground"
+              className={cn(
+                "flex h-8 cursor-default select-none items-center gap-1 rounded-sm px-2 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-selected:bg-accent aria-selected:text-accent-foreground",
+                greyed && "text-muted-foreground",
+              )}
             >
               <span
                 aria-hidden="true"

@@ -4,9 +4,9 @@
  * (ordered siblings), and `products`, which points at both (an FK
  * `category` and an M2M `regions`). It serves the OpenAPI document with
  * `x-karni-tree`, the list (with `?search=`, `?parent=` and
- * `?descendants_of=`), `tree/`, `children/`, `ancestors/`, `move/` and the
- * delete rules of a tree model, plus failures and delays on demand. Every
- * request is logged.
+ * `?descendants_of=`), `tree/`, `children/`, `ancestors/`, `move/`,
+ * `access/` (the requester's access forest) and the delete rules of a tree
+ * model, plus failures and delays on demand. Every request is logged.
  *
  * Test and story support only: never imported by shipped component code.
  */
@@ -112,6 +112,10 @@ export interface TreeBackendOptions {
   lazyDelay?: Delay;
   /** Whether the region list documents `?search=`. Default true. */
   search?: boolean;
+  /** The ids each resource's `access/` answers as granted. Default none. */
+  granted?: Partial<Record<"regions" | "categories", number[]>>;
+  /** `access/` answers `all: true`: the requester reaches every node. */
+  accessAll?: boolean;
 }
 
 export interface TreeBackend {
@@ -496,6 +500,55 @@ function ancestorsOf(store: Store, row: TreeRow): TreeRow[] {
   return path;
 }
 
+/** access/: the granted nodes (each with its path from the root) and every other root. */
+function forestAnswer(store: Store, granted: number[], all: boolean) {
+  const rows = live(store);
+  const roots = sortSiblings(
+    store,
+    rows.filter((row) => row.parent === null),
+  );
+  const forestNode = (row: TreeRow, isGranted: boolean, children: unknown[] | null) => ({
+    id: row.id,
+    label: row.name,
+    parent: row.parent,
+    granted: isGranted,
+    has_children: children === null ? childrenOf(store, row.id).length > 0 : children.length > 0,
+    children,
+  });
+  if (all) {
+    return {
+      results: roots.map((row) =>
+        forestNode(row, true, childrenOf(store, row.id).length > 0 ? null : []),
+      ),
+      all: true,
+      truncated: false,
+    };
+  }
+  const wanted = new Set(granted);
+  const tops = rows.filter(
+    (row) => wanted.has(row.id) && !ancestorsOf(store, row).some((up) => wanted.has(up.id)),
+  );
+  const onPath = new Set<number>();
+  for (const row of tops) for (const up of ancestorsOf(store, row)) onPath.add(up.id);
+  const topIds = new Set(tops.map((row) => row.id));
+  const build = (row: TreeRow): Record<string, unknown> => {
+    if (topIds.has(row.id)) {
+      return forestNode(row, true, childrenOf(store, row.id).length > 0 ? null : []);
+    }
+    const kids = childrenOf(store, row.id).filter(
+      (kid) => onPath.has(kid.id) || topIds.has(kid.id),
+    );
+    return forestNode(row, false, kids.map(build));
+  };
+  return {
+    results: roots.map((row) =>
+      onPath.has(row.id) || topIds.has(row.id) ? build(row) : forestNode(row, false, []),
+    ),
+    all: false,
+    truncated: false,
+  };
+}
+
 function renumber(store: Store, parent: number | null): void {
   if (!store.ordered) return;
   childrenOf(store, parent).forEach((row, index) => {
@@ -527,6 +580,8 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
     treeDelay,
     lazyDelay,
     search = true,
+    granted = {},
+    accessAll = false,
   } = options;
   const regions = options.regions ?? makeRegions();
   const categories = options.categories ?? makeCategories();
@@ -560,6 +615,11 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
         return HttpResponse.json(
           treeAnswer(store, rootParam === null ? null : Number(rootParam), depth, maxNodes),
         );
+      }),
+      http.get(`*/api/${resource}/access/`, ({ request }) => {
+        requests.push(new URL(request.url));
+        const ids = granted[resource as "regions" | "categories"] ?? [];
+        return HttpResponse.json(forestAnswer(store, ids, accessAll));
       }),
       http.get(`*/api/${resource}/:id/children/`, ({ request, params }) => {
         const url = new URL(request.url);
