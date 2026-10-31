@@ -21,7 +21,7 @@ __all__ = ["explain_failure", "parse_sets", "replay_args", "run_debug_command"]
 
 #: Django prints a command error as "<ExceptionClass>: <message>".
 _MANAGEMENT_ERROR = re.compile(r"^\w*(?:Error|Exception): ")
-_CODED = re.compile(r"^([A-Z]{1,5}\d{3}): (.*?)(?:\s+See https?://\S+)?$", re.DOTALL)
+_CODED = re.compile(r"^([A-Z]{1,6}\d{3}): (.*?)(?:\s+See https?://\S+)?$", re.DOTALL)
 
 
 def run_debug_command(

@@ -398,9 +398,9 @@ def _finding(
 # 1. registered codes
 
 #: ``E104: …`` at the start of a line or after ``<Exception>: `` / ``error: ``.
-_CODE_COLON = re.compile(r"(?:^\s*|: )(?P<code>[A-Z]{1,5}\d{3}): (?P<message>\S.*)")
+_CODE_COLON = re.compile(r"(?:^\s*|: )(?P<code>[A-Z]{1,6}\d{3}): (?P<message>\S.*)")
 _CHECK_ID = re.compile(r"\(?karni\.(?P<code>[EW]\d{3})\)?:?\s*(?P<message>.*)")
-_DOCS_LINK = re.compile(r"/errors/#(?P<code>[a-z]{1,5}\d{3})\b")
+_DOCS_LINK = re.compile(r"/errors/#(?P<code>[a-z]{1,6}\d{3})\b")
 #: Codes that summarise other failures; the specific ones are listed first.
 _SUMMARY_CODES = frozenset({"E702", "C009"})
 _BUDGET_CODES = frozenset({"E117", "E129"})

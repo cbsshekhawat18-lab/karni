@@ -96,7 +96,7 @@ ERRORS_PAGE: Final[str] = "errors/"
 #: from the API naming the bad parameter · ``test``: a karni.testing failure.
 KINDS: Final[tuple[str, ...]] = ("exception", "check", "warning", "api", "test")
 
-_CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,5}\d{3})$")
+_CODE = re.compile(r"^(?:[EW]\d{3}|[A-Z]{2,6}\d{3})$")
 
 
 def docs_url(code: str) -> str:

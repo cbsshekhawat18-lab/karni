@@ -51,8 +51,8 @@ logger = logging.getLogger("karni.debug")
 #: Version of the request record contract.
 RECORD_VERSION: Final = 1
 
-_KARNI_CODE: Final = re.compile(r"^(?:[EWC]\d{3}|[A-Z]{2,5}\d{3})$")
-_CODE_PREFIX: Final = re.compile(r"^((?:[EWC]\d{3}|[A-Z]{2,5}\d{3})): ")
+_KARNI_CODE: Final = re.compile(r"^(?:[EWC]\d{3}|[A-Z]{2,6}\d{3})$")
+_CODE_PREFIX: Final = re.compile(r"^((?:[EWC]\d{3}|[A-Z]{2,6}\d{3})): ")
 _JSON_TYPES: Final = ("application/json", "+json")
 _FORM_TYPES: Final = ("application/x-www-form-urlencoded", "multipart/form-data")
 _UNPARSED: Final = object()
