@@ -52,7 +52,7 @@ cannot start before the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| 11 | Page blocks beyond CRUD in `@karni/ui`: dashboard grid, chart card, accordion, markdown view, data table, comparison table and related tabs. | none | planned |
+| 11 | Page blocks beyond CRUD in `@karni/ui`: dashboard grid, chart card, accordion, markdown view, data table, comparison table and related tabs. | none | done |
 | 12 | Markdown fields, field groups and column sets, so a model with 100+ columns still has usable forms, detail pages and tables. | none | planned |
 | 13 | Navigation from data: a menu each user gets from their roles and grants, edited in the admin. | 6 | planned |
 

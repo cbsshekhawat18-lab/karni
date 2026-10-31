@@ -47,6 +47,88 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `TermsGate` (role `terms-gate`, experimental)
 - `KarniProvider`
 
+## Page blocks (experimental)
+
+!!! warning "Experimental"
+    The page blocks, `useResourceCounts` and ResourceDetail's `related` prop are
+    [experimental](stability.md#experimental-names): they may change in a minor
+    release, and each change is in the CHANGELOG.
+
+Pages for large apps are dashboards, comparisons and reports, not only resource
+tables. These components keep such a page within the 50-line cap
+(`karni/max-page-lines`), and `karni/no-raw-elements` names them where a page
+writes a raw `<table>` or `<details>`.
+
+- `DashboardGrid` (role `dashboard-grid`): a responsive grid of cards: one column on phones, two on `md` screens, `columns` (2, 3 or 4) on `xl`. Each card takes a `span` (1 to 4, or `"full"`). Use it for the layout of a dashboard or a report.
+- `DashboardCard`: one card of the grid: a region named by its title, with a description, actions, and the loading, empty and error states every data card needs. Put a DataTable, a ComparisonTable or anything else in it.
+- `ChartCard` (role `chart-card`): a DashboardCard around a DataChart (every DataChart prop passes through). The title names the chart for a screen reader too.
+- `DataTable` (role `computed-table`): rows the page computed (a summary, a breakdown, a report): sorting, a sticky header and first column, CSV and XLSX export of every row in the order shown, and only the rows in view rendered past 100, so 10,000 rows scroll smoothly. A resource's rows are a ResourceTable: it pages, filters and checks permissions through the API.
+- `ComparisonTable` (role `comparison-table`): entities side by side: one column per entity, one row per metric, the best value of a metric marked (`better: "higher"` or `"lower"`). Use it to compare plans, regions or products.
+- `Accordion` (role `accordion`): sections that open and close, after the WAI-ARIA accordion pattern (Down, Up, Home and End move between the headers). Use it where a page would write a raw `<details>`.
+- `MarkdownView` (role `markdown`): markdown shown as formatted HTML, sanitized: raw HTML shows as text unless `allowHtml`, and never a script, an event handler or a `javascript:` link. The parser and the sanitizer (marked, DOMPurify) load on first use.
+- `useResourceCounts(resources)`: the rows of each resource the user can read, as chart points (one list request each, `page_size=1`). The dashboard pages `karni build` writes chart it.
+- ResourceDetail's `related={["deals", "people"]}`: a tab per reverse relation, each a ResourceTable of the related rows filtered to the record. The backend publishes each model's reverse relations and the list parameter that filters by each one as `x-karni-related` on its list operation, so nothing is guessed. A name is the relation's name, its resource, or `resource.field` when two relations lead to one resource.
+
+Their sizes are tokens: `--karni-dashboard-gap` (the space between cards),
+`--karni-data-table-max-height` (the box DataTable and ComparisonTable scroll inside:
+keep it a length, since DataTable needs a height to render only the rows in view) and
+`--karni-data-table-row-height`. `karni ui detect` lists them.
+
+### An example page
+
+EventHub's venue overview (`examples/eventhub/frontend/src/pages/venue-overview.tsx`, 47 lines)
+computes its rows from one list request and lays them out with a DashboardGrid:
+
+```tsx
+import { ChartCard, ComparisonTable, DashboardCard, DashboardGrid, DataTable } from "@karni/ui";
+import { Page, useResourceList } from "@karni/ui";
+
+type Venue = { id: string; name: string; city: string; capacity: number };
+type City = { city: string; venues: number; seats: number };
+
+const columns = [
+    { key: "city", header: "City" },
+    { key: "venues", header: "Venues" },
+    { key: "seats", header: "Seats" },
+];
+const metrics = [
+    { key: "city", label: "City" },
+    { key: "capacity", label: "Seats", better: "higher" as const },
+];
+
+/** Seats by venue and by city: rows the page computes from one list request. */
+export default function VenueOverviewPage() {
+    const venues = useResourceList<Venue>("venues", { pageSize: 100, ordering: "-capacity" });
+    const rows = venues.data?.results ?? [];
+    const top = rows.slice(0, 3);
+    const byCity = new Map<string, City>();
+    for (const { city, capacity } of rows) {
+        const seen = byCity.get(city) ?? { city, venues: 0, seats: 0 };
+        byCity.set(city, { city, venues: seen.venues + 1, seats: seen.seats + capacity });
+    }
+    const state = { loading: venues.isPending, error: venues.error, onRetry: venues.refetch };
+    return (
+        <Page title="Venues" description="Seats by venue and by city.">
+            <DashboardGrid>
+                <ChartCard
+                    title="Seats per venue"
+                    kind="bar"
+                    span={2}
+                    {...state}
+                    data={rows.map((venue) => ({ label: venue.name, value: venue.capacity }))}
+                />
+                <DashboardCard title="Largest venues" {...state} empty={rows.length === 0}>
+                    <ComparisonTable caption="Largest venues" entities={top} metrics={metrics} />
+                </DashboardCard>
+                <DashboardCard title="Cities" span="full" {...state} empty={rows.length === 0}>
+                    <DataTable caption="Cities" columns={columns} rows={[...byCity.values()]} />
+                </DashboardCard>
+            </DashboardGrid>
+        </Page>
+    );
+}
+```
+
 ## Primitives
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.
@@ -66,6 +148,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.
+- `useResourceCounts`: Experimental. `{ data, loading, error, refetch }`: the rows of each resource the user can read, as chart points (one list request each with `page_size=1`).
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
@@ -82,12 +165,17 @@ role that another component holds (compose it instead), and `karni context` list
 
 | Role | Component |
 |---|---|
+| `accordion` | `Accordion` |
 | `async-select` | `ResourceSelect` |
 | `auth-guard` | `AuthGuard` |
 | `change-history` | `ChangeHistory` |
 | `chart` | `DataChart` |
+| `chart-card` | `ChartCard` |
 | `code-sign-in` | `OtpLoginForm` |
+| `comparison-table` | `ComparisonTable` |
+| `computed-table` | `DataTable` |
 | `dashboard` | `Dashboard` |
+| `dashboard-grid` | `DashboardGrid` |
 | `data-table` | `ResourceTable` |
 | `detail-view` | `ResourceDetail` |
 | `empty-state` | `EmptyState` |
@@ -95,6 +183,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `file-upload` | `FileUpload` |
 | `layout-shell` | `Layout` |
 | `login-form` | `LoginForm` |
+| `markdown` | `MarkdownView` |
 | `modal` | `Modal` |
 | `page-shell` | `Page` |
 | `permission-denied` | `PermissionDenied` |

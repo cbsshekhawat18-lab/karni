@@ -77,6 +77,8 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
+| Page blocks beyond CRUD: `DashboardGrid`, `ChartCard`, `DataTable` (computed rows: sorting, a sticky header and first column, CSV and XLSX export, only the rows in view rendered), `ComparisonTable`, `Accordion`, `MarkdownView` (sanitized, loaded on first use) and `useResourceCounts`. Experimental tier | `experimental` | Karni's own tests |
+| `ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the `x-karni-related` extension of the OpenAPI schema. Experimental tier | `experimental` | Karni's own tests |
 
 ### Permissions
 
@@ -105,6 +107,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | The app spec, `karni.yaml`, with a published JSON Schema: `karni spec validate` (every problem with its code and line), `karni spec export` (the spec of an existing project) and `karni plan` (what `karni build` would change, risky changes with their row counts). Experimental tier | `experimental` | Karni's own tests |
 | Clarifying questions: `karni plan --questions` lists the few gaps of `karni.yaml` worth asking the user (owners, access, the sign-up role, the kind, each module's and feature's asks), chosen by fixed rules, and `karni spec answer` writes an answer keeping the file's comments. Experimental tier | `experimental` | Karni's own tests |
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
+| Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, in `karni plan`, `karni build`, `karni spec export` and `karni make page`. Experimental tier | `experimental` | Karni's own tests |
 | The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
@@ -1147,7 +1150,7 @@ karni make middleware [OPTIONS] NAME
 
 Add frontend/src/pages/NAME.tsx (at most 50 lines) and register its route.
 
-With --resource R --kind list|detail|form the page composes ResourceTable / ResourceDetail / ResourceForm for the API resource R. Without --resource the page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at `<base>/new` and `<base>/$id/edit`, where the base is --path or `/<resource>`.
+With --resource R --kind list|detail|form the page composes ResourceTable / ResourceDetail / ResourceForm for the API resource R (a detail page takes --related tabs). --kind dashboard composes DashboardGrid and ChartCard with the rows of each --count resource. Without --resource the page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at `<base>/new` and `<base>/$id/edit`, where the base is --path or `/<resource>`, and a dashboard at `/<name>`.
 
 ```
 karni make page [OPTIONS] NAME
@@ -1157,9 +1160,11 @@ karni make page [OPTIONS] NAME
 | --- | --- | --- |
 | `NAME` (required) |  | Page file name, kebab-case (e.g. events). |
 | `--resource` TEXT |  | API resource (router prefix, e.g. events). |
-| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource. |
+| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, and a dashboard (experimental) counts resources (--count). |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
+| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it. |
+| `--count` TEXT (repeatable) |  | Experimental. With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |
@@ -1897,6 +1902,13 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `Stat` | `label: React.ReactNode`, `value: React.ReactNode` | KPI tile: label, value, optional delta and icon. | [stat.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/stat/stat.tsx) |
 | `Dashboard` |  | The staff app's home page: a Stat per count and the newest rows of every model that opts in with `Karni.dashboard`. | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `DataChart` | `kind: DataChartKind`, `title: string` | Minimal line/bar chart driven by `{label, value}` points or named series. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `DashboardGrid` |  | Experimental. A responsive grid of cards (`DashboardCard`, `ChartCard`, or any element). | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
+| `DashboardCard` | `title: string` | Experimental. One card of a DashboardGrid: a labelled region with a heading, optional description and actions, and loading, empty and error states. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
+| `ChartCard` | `title: string`, `kind: DataChartKind` | Experimental. A dashboard card holding one DataChart, with loading, empty and error states. | [chart-card.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/chart-card.tsx) |
+| `Accordion` | `items: readonly AccordionItem[]` | Experimental. Sections that open and close (the WAI-ARIA accordion pattern). | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
+| `MarkdownView` | `source: string \| null \| undefined` | Experimental. Markdown shown as formatted, sanitized HTML (the parser loads on first use). | [markdown-view.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/markdown/markdown-view.tsx) |
+| `DataTable` | `caption: string`, `columns: readonly DataTableColumn<T>[]`, `rows: readonly T[]` | Experimental. A sortable, exportable table of rows the page computed, with a sticky header and first column, virtualized past `virtualizeAfter` rows. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
+| `ComparisonTable` | `caption: string`, `entities: readonly T[]`, `metrics: readonly ComparisonMetric<T>[]` | Experimental. Entities side by side: metrics as rows, entities as columns, the best value marked. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
 
 ### Hooks
 
@@ -1914,6 +1926,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `useResourceList` | `resource: string`, `params?: ResourceListParams \| undefined`, `options?: Omit<UseQueryOptions<Paginated<T>, Error, Paginated<T>, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one page of a resource's list (`GET /<resource>/`) with filters, search, ordering and `?expand=`. | [useResourceList.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceList.ts) |
 | `useResourceItem` | `resource: string`, `id: string \| number`, `params?: ResourceItemParams \| undefined`, `options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Fetches one row of a resource (`GET /<resource>/<id>/`), optionally expanded. | [useResourceItem.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceItem.ts) |
 | `useResourceMutations` | `resource: string`, `options?: ResourceMutationsOptions \| undefined` | Create, update and remove mutations for a resource that refresh the resource's cached lists and items on each success. | [useResourceMutations.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceMutations.ts) |
+| `useResourceCounts` | `targets: readonly (string \| ResourceCountTarget)[]` | Experimental. The row count of each resource (`page_size=1` list requests), as chart points. | [useResourceCounts.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useResourceCounts.ts) |
 | `useKarniClient` |  | Returns the Karni client from `KarniProvider` and throws a descriptive error outside one. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/provider.tsx) |
 | `useSchema` | `resource: string` | Returns one resource's parsed schema (fields, types, relations, operations) from the backend's OpenAPI document, fetched once per app. | [useSchema.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/schema/useSchema.ts) |
 | `useAuth` |  | Returns the signed-in user, auth status, `login` and `logout`, and throws a descriptive error outside `AuthProvider`. | [provider.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/provider.tsx) |
@@ -1982,6 +1995,15 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `resolveRelativeDate` | function | A declared filter value: `"today"`, `"today-7"` and `"today+1"` become the date they name (local time, `YYYY-MM-DD`). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `resolveSection` | function | The counts and table of one resource, from its declaration (exported for tests and overrides). | [dashboard.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard/dashboard.tsx) |
 | `defaultDataChartSlots` | constant | The default pieces of the chart, for wrapping one. | [data-chart.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/chart/data-chart.tsx) |
+| `defaultDashboardCardSlots` | constant | The card's default states, exported so a project can wrap one. | [dashboard-grid.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/dashboard-grid/dashboard-grid.tsx) |
+| `defaultAccordionSlots` | constant | The accordion's default slots, exported so a project can wrap one. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
+| `toggleAccordion` | function | The ids open after `id` was toggled, by the accordion's rules. | [accordion.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/accordion/accordion.tsx) |
+| `defaultMarkdownViewSlots` | constant | MarkdownView's default slots, exported so a project can wrap one. | [markdown-view.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/markdown/markdown-view.tsx) |
+| `preloadMarkdown` | function | Experimental. Loads MarkdownView's renderer ahead of time (on hover of a link to a page that shows markdown, say). | [markdown-view.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/markdown/markdown-view.tsx) |
+| `defaultDataTableSlots` | constant | DataTable's default states, exported so a project can wrap one. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
+| `compareValues` | function | Ascending order of two values: empty values last, numbers and dates by size, text naturally. | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
+| `sortRows` | function | The rows in `sort`'s order (a stable sort: equal rows keep their order). | [data-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/data-table/data-table.tsx) |
+| `defaultComparisonTableSlots` | constant | ComparisonTable's default states, exported so a project can wrap one. | [comparison-table.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/comparison-table/comparison-table.tsx) |
 
 ## Modules
 
@@ -2361,6 +2383,10 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C400`](errors.md#c400) | cli | No open question has this id |
 | [`C401`](errors.md#c401) | cli | The value is not an answer the question takes |
 | [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
+| [`C560`](errors.md#c560) | cli | A related tab names no entity |
+| [`C561`](errors.md#c561) | cli | A related tab names an entity with no fk to this one |
+| [`C562`](errors.md#c562) | cli | A related tab could be either of two relations |
+| [`C563`](errors.md#c563) | cli | A related tab is listed twice |
 
 ### Agent rules (`K`)
 
@@ -2416,7 +2442,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 
 | Code | Kind | Meaning |
 |---|---|---|
-| [`karni/no-raw-elements`](errors.md#karni-no-raw-elements) | lint | Raw &lt;table&gt;/&lt;form&gt;/&lt;input&gt;/&lt;select&gt;/&lt;textarea&gt; in project code |
+| [`karni/no-raw-elements`](errors.md#karni-no-raw-elements) | lint | Raw &lt;table&gt;/&lt;form&gt;/&lt;input&gt;/&lt;select&gt;/&lt;textarea&gt;/&lt;details&gt; in project code |
 | [`karni/max-page-lines`](errors.md#karni-max-page-lines) | lint | A page file is longer than its cap (50 lines by default) |
 | [`karni/no-deep-imports`](errors.md#karni-no-deep-imports) | lint | An import reaches into @karni/ui internals |
 | [`karni/no-direct-http`](errors.md#karni-no-direct-http) | lint | fetch / axios / XMLHttpRequest / WebSocket outside the api client |

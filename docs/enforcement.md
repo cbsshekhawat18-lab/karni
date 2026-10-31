@@ -164,8 +164,8 @@ ESLint >= 9, via `configs.recommended`) ships four rules, all `"error"`:
 
 | Rule | Fails when | Fix |
 |---|---|---|
-| `karni/no-raw-elements` | raw `<table>/<form>/<input>/<select>/<textarea>` JSX outside the UI package | compose `ResourceTable`/`ResourceForm`/`Input`/… |
-| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props, and move logic into hooks |
+| `karni/no-raw-elements` | raw `<table>/<form>/<input>/<select>/<textarea>/<details>` JSX outside the UI package | compose `ResourceTable` (a resource) or `DataTable` / `ComparisonTable` (computed rows), `Accordion` for `<details>`, `ResourceForm`/`Input`/… |
+| `karni/max-page-lines` | a file under `**/pages/**` exceeds 50 physical lines (option `maxLines`) | use the components' props (on a dashboard the [page blocks](ui.md#page-blocks-experimental)), and move logic into hooks |
 | `karni/no-deep-imports` | any import from `@karni/ui/dist/*` or `@karni/ui/src/*` | import the public barrel `@karni/ui` |
 | `karni/no-direct-http` | `fetch`/`axios`/`XMLHttpRequest`/`new WebSocket` outside `allowPatterns` (default `**/api/**`) | use the generated typed hooks / `KarniClient` |
 

@@ -11,6 +11,44 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Page blocks beyond CRUD in `@karni/ui` (experimental), large-apps item
+  11.** `DashboardGrid` and `DashboardCard` (a responsive grid of titled
+  cards with spans, and loading, empty and error states), `ChartCard` (a
+  card around `DataChart`), `DataTable` (rows a page computed: sorting, a
+  sticky header and first column, CSV and XLSX export, and only the rows in
+  view rendered past 100 rows, so 10,000 rows scroll smoothly),
+  `ComparisonTable` (entities as columns, metrics as rows, the best value
+  marked), `Accordion` (the WAI-ARIA accordion pattern) and `MarkdownView`
+  (sanitized markdown). Each has a component role, stories in the axe suite
+  and tests. MarkdownView loads its parser and sanitizer (`marked` and
+  `DOMPurify`, new dependencies of `@karni/ui`) on first use, and DataTable
+  loads its XLSX writer (written in Karni, no dependency) on the first
+  export, so pages that do not use them pay nothing. `useResourceCounts`
+  counts the rows of each resource for a chart. New tokens:
+  `--karni-dashboard-gap`, `--karni-data-table-max-height` and
+  `--karni-data-table-row-height`, which `karni ui detect` lists.
+  [docs/ui.md](docs/ui.md#page-blocks-experimental).
+- **Related tabs on ResourceDetail (experimental).** `related={["deals",
+  "people"]}` shows a tab per reverse relation, each a ResourceTable
+  filtered to the record. The OpenAPI schema publishes each model's reverse
+  relations as `x-karni-related` on its list operation, with the list
+  parameter that filters each one (`null` when its list has none), so the
+  UI guesses nothing. [docs/api.md](docs/api.md).
+- **The spec takes related tabs and dashboard pages (experimental).** A
+  detail page written `{detail: {related: [Booking]}}` gets the tabs (`C560`
+  to `C563` refuse a tab that names no entity, an entity with no fk to the
+  page's, an ambiguous fk, or a tab listed twice), and a page of kind
+  `dashboard` named anything but `home` is a DashboardGrid with a ChartCard
+  of each entity's rows. `karni plan` shows both, `karni build` writes them,
+  `karni spec export` reads them back, and `karni make page` takes `--kind
+  dashboard` (with `--count`) and `--related`. The published JSON Schema is
+  regenerated. [docs/app-spec.md](docs/app-spec.md#pages).
+- **`karni/no-raw-elements` flags a raw `<details>` too**, and its messages
+  name the page blocks: a `<table>` is a ResourceTable, a DataTable or a
+  ComparisonTable, and a `<details>` an Accordion. `karni rules --check` and
+  rule `K201` say the same. A page that writes a raw `<details>` fails the
+  lint until it uses `Accordion` or carries a disable comment with a reason.
+
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

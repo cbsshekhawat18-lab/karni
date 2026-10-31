@@ -2852,9 +2852,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).
+**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (dashboard: the scaffold's home at /, or a page of charts at /<name>; blank, login, code).
 
-**Fix.** Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.
+**Fix.** Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.
 
 <a id="c221"></a>
 
@@ -3556,6 +3556,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
 
+<a id="c560"></a>
+
+### C560: A related tab names no entity
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A detail page's related tabs ({detail: {related: [...]}}) each list the rows of another entity that point at the page's entity. The name is not an entity of the spec, or several apps define it.
+
+**Fix.** Name an entity of the spec (app.Entity when two apps define it), or Entity.field.
+
+<a id="c561"></a>
+
+### C561: A related tab names an entity with no fk to this one
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A related tab is a table of the other entity's rows filtered to this record, and the list of that entity filters by its fk fields. The entity has no fk to the page's entity, or the field named is not one (a m2m or an o2o cannot back a tab).
+
+**Fix.** Add a fk field to the page's entity on the other entity, or name the fk it has.
+
+<a id="c562"></a>
+
+### C562: A related tab could be either of two relations
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The entity named has two or more fks to the page's entity (a deal's company and its partner), so the tab must say which rows it lists.
+
+**Fix.** Write Entity.field, one tab for each relation you want.
+
+<a id="c563"></a>
+
+### C563: A related tab is listed twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each related tab is one relation. Deal and Deal.company name the same one when Deal has one fk to the page's entity.
+
+**Fix.** List each related tab once.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -3914,11 +3954,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `karni/no-raw-elements`
 
-**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw `<table>/<form>/<input>/<select>/<textarea>`.
+**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw `<table>/<form>/<input>/<select>/<textarea>/<details>`. Dashboards and reports compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), `ComparisonTable`, `Accordion` and `MarkdownView`.
 
 **Why Karni objects.** The components already handle data, validation, a11y and theming.
 
-**Fix.** Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.
+**Fix.** Compose ResourceTable / DataTable / ComparisonTable / Accordion / ResourceForm / Input / Select from @karni/ui.
 
 <a id="k202"></a>
 
@@ -4106,11 +4146,11 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 <a id="karni-no-raw-elements"></a>
 
-### `karni/no-raw-elements`: Raw <table>/<form>/<input>/<select>/<textarea> in project code
+### `karni/no-raw-elements`: Raw <table>/<form>/<input>/<select>/<textarea>/<details> in project code
 
-**Why Karni objects.** @karni/ui ships these as schema-driven components (sorting, pagination, validation, accessibility). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.
+**Why Karni objects.** @karni/ui ships these as components (sorting, pagination, validation, export, keyboard and screen-reader support). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.
 
-**Fix.** Compose the component the message names: ResourceTable for <table>, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`.
+**Fix.** Compose the component the message names: ResourceTable for a resource's rows, DataTable for rows the page computed, ComparisonTable for entities side by side, Accordion for a <details> disclosure, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`.
 
 <a id="karni-max-page-lines"></a>
 
@@ -4118,7 +4158,7 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** Pages compose @karni/ui components. A long page is rebuilding something Karni ships.
 
-**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail and their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`.
+**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail, and on a dashboard DashboardGrid / ChartCard / DataTable / ComparisonTable, with their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`.
 
 <a id="karni-no-deep-imports"></a>
 

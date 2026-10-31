@@ -301,12 +301,44 @@ computed `get_access()`.
 | Entry | Pages |
 |---|---|
 | `- Session: [list, detail, form]` | the entity's list at `/sessions`, detail at `/sessions/$id`, form at `/sessions/new` and `/sessions/$id/edit` |
+| `- Session: [list, {detail: {related: [Booking]}}]` | the same, with a related tab on the detail page (below) |
 | `- home: dashboard` | the scaffold's home page at `/`, the staff dashboard |
+| `- overview: dashboard` | `karni make page overview --kind dashboard`: a page of charts at `/overview` (below) |
 | `- about: blank` | `karni make page about`: a bare page at `/about` |
 | `- login: login` | `karni make page login --kind login` |
 | `- reports: code` | a page of the project's own at `/reports`: `karni build` leaves it alone |
 
 Two pages may not share a route (`C242`).
+
+#### Related tabs and dashboard pages
+
+!!! warning "Experimental"
+    A detail page's `related` and a dashboard page other than `home` are
+    [experimental](stability.md#experimental-names), like the
+    [page blocks](ui.md#page-blocks-experimental) they compose.
+
+A detail page written as `{detail: {related: [...]}}` shows a tab per
+related entity, each a table of that entity's rows filtered to the record
+(ResourceDetail's `related`, `karni make page --kind detail --related`):
+
+```yaml
+pages:
+  - Session:
+      - list
+      - detail: {related: [Booking]}
+      - form
+```
+
+Each name is an entity with a fk to the page's entity. When it has two
+(`Swap: {fields: {given: fk:Product, taken: fk:Product}}`), name the field:
+`Swap.given`. A many-to-many or one-to-one field cannot back a tab: the
+entity's list filters only by its fks.
+
+A page named anything but `home` with the kind `dashboard` is a page of
+charts at `/<name>`: a `DashboardGrid` with a `ChartCard` of the rows of every
+entity of the spec, each counted with one list request (`useResourceCounts`),
+under the user's access. `- home: dashboard` stays the scaffold's own home
+page, which `karni build` leaves to the project.
 
 ### `seed`
 
@@ -376,6 +408,10 @@ means. `karni explain <code>` prints any code's entry.
 | [C252](errors.md#c252) | `database` names an alias the project does not have |
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
+| [C560](errors.md#c560) | a related tab names no entity |
+| [C561](errors.md#c561) | a related tab names an entity with no fk to the page's |
+| [C562](errors.md#c562) | a related tab could be either of two fks |
+| [C563](errors.md#c563) | a related tab listed twice |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -470,6 +506,15 @@ order, pk, external, table, writable, database), field changes of existing
 entities, access, pages and navigation, the apps that get migrations, seed
 counts, and the API tests `karni make test` writes for new entities. The
 plan of the example above on a fresh project is about 400 tokens.
+
+A detail page's related tabs show as `app.Entity.field`, and a dashboard page
+what its chart counts:
+
+```text
+pages
+  ~ Session: list, detail, form -> list, detail (related classes.Booking.session), form
+  + overview: dashboard (rows per entity: Booking, Session, Studio)
+```
 
 ### Risky changes
 

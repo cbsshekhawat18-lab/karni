@@ -465,6 +465,33 @@ replaces any part: `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`,
 `Error`. The declaration's keys are in the backend docs
 ([api.md: the staff dashboard](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/api.md#the-staff-dashboard)).
 
+### Page blocks: dashboards, comparisons and reports (experimental)
+
+Pages beyond CRUD compose these, so a dashboard stays under the 50-line page
+cap: `DashboardGrid` and `DashboardCard` (a responsive grid of titled cards
+with loading, empty and error states), `ChartCard` (a card around a
+`DataChart`), `DataTable` (rows the page computed: sorting, a sticky header and
+first column, CSV and XLSX export, and only the rows in view rendered past 100
+rows), `ComparisonTable` (entities side by side, metrics as rows, the best value
+marked), `Accordion` (the WAI-ARIA accordion pattern) and `MarkdownView`
+(sanitized markdown, with the parser and the sanitizer loaded on first use).
+`useResourceCounts` counts the rows of each resource for a chart.
+
+```tsx
+<DashboardGrid>
+  <ChartCard title="Orders per region" kind="bar" data={points} span={2} />
+  <DashboardCard title="Regions">
+    <DataTable caption="Regions" columns={columns} rows={regions} />
+  </DashboardCard>
+</DashboardGrid>
+```
+
+`ResourceDetail`'s `related={["deals", "people"]}` adds a tab per reverse
+relation, each a `ResourceTable` of the related rows filtered to the record,
+from the `x-karni-related` extension the backend publishes. Every component,
+when to use it and an example page are in
+[docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#page-blocks-experimental).
+
 ### ResourceTable in every state
 
 Each state is its own screen, and each is a slot you can replace:

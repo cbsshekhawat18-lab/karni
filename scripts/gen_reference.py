@@ -257,6 +257,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         "`Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s "
         "buttons for a `StateField`'s transitions",
     ),
+    Capability(
+        "ui",
+        "Page blocks beyond CRUD: `DashboardGrid`, `ChartCard`, `DataTable` (computed rows: "
+        "sorting, a sticky header and first column, CSV and XLSX export, only the rows in view "
+        "rendered), `ComparisonTable`, `Accordion`, `MarkdownView` (sanitized, loaded on first "
+        "use) and `useResourceCounts`. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`ResourceDetail`'s related tabs (`related`): a table per reverse relation, from the "
+        "`x-karni-related` extension of the OpenAPI schema. Experimental tier",
+    ),
     # permissions
     Capability(
         "permissions",
@@ -338,6 +350,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit "
         "found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and "
         "`karni check`. Experimental tier",
+    ),
+    Capability(
+        "agents",
+        "Spec pages beyond CRUD: a detail page's related tabs and dashboard pages of charts, "
+        "in `karni plan`, `karni build`, `karni spec export` and `karni make page`. "
+        "Experimental tier",
     ),
     Capability(
         "agents",

@@ -935,6 +935,25 @@ nullable, required from blank/default) and adds:
   ([lifecycle](lifecycle-and-capacity.md#the-api-the-admin-and-the-schema)),
   and `x-karni-dashboard` on the list operation of a model that declares
   [`Karni.dashboard`](#the-staff-dashboard).
+- `x-karni-related` (experimental) on the list operation: the model's
+  reverse relations (a reverse fk or many-to-many) whose model has a route,
+  each `{"name", "resource", "field", "param", "key", "label"}`. `name` is
+  the relation's name on this model (`deals`, or Django's `deal_set`),
+  `resource` the related rows' router prefix, `field` their field that points
+  here, `param` the query parameter their list filters it with (`null` when
+  the list has no such filter, read from the filterset the list applies),
+  `key` the field of this model whose value the parameter takes (its primary
+  key), and `label` the related rows in words. A one-to-one and a hidden
+  relation (`related_name="+"`) are left out. `@karni/ui`'s
+  [ResourceDetail](ui.md#page-blocks-experimental) builds its `related` tabs
+  from it. Override `KarniAutoSchema.get_karni_related()` to drop or relabel
+  an entry.
+
+  ```json
+  "x-karni-related": [
+    {"name": "events", "resource": "events", "field": "venue", "param": "venue", "key": "id", "label": "Events"}
+  ]
+  ```
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

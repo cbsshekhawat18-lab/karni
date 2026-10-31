@@ -300,3 +300,15 @@ also by its id. keep_ids creates rows with the file's ids. karni_transfer migrat
 0002 adds both options to ImportJob: run `karni migrate`."""
 mechanical = false
 migration = "migrations/0.4.1.md#imports-match-ids-only-when-asked"
+
+[[change]]
+id = "no-raw-details"
+kind = "behaviour"
+symbol = "@karni/ui ESLint rule karni/no-raw-elements"
+summary = """\
+The rule flags a raw <details> as well (compose Accordion), and its messages name \
+DataTable and ComparisonTable next to ResourceTable for a raw <table>. A page with \
+a raw <details> fails the lint until it uses Accordion or carries \
+`// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
+mechanical = false
+migration = "migrations/0.4.1.md#a-raw-details-fails-karnino-raw-elements"

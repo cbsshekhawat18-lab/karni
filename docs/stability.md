@@ -192,6 +192,17 @@ Experimental now:
   `<app>/tests/karni/`, `frontend/src/pages/karni/`, the `karni:spec`
   blocks), `.karni/build.json`, `manage.py karni_makemigrations` and the
   `karni_cli.builder` package.
+- [Page blocks](ui.md#page-blocks-experimental): `DashboardGrid`,
+  `DashboardCard`, `ChartCard`, `DataTable`, `ComparisonTable`, `Accordion`,
+  `MarkdownView` (with `preloadMarkdown`), `useResourceCounts`, their slots,
+  props and types, ResourceDetail's `related` prop and `Related` slot, the
+  `RelatedDef` schema type, the `--karni-dashboard-gap`,
+  `--karni-data-table-max-height` and `--karni-data-table-row-height` tokens,
+  the `x-karni-related` OpenAPI extension and
+  `KarniAutoSchema.get_karni_related`, the spec's `{detail: {related: [...]}}`
+  and dashboard pages other than `home`, `karni make page --kind dashboard`
+  (`--count`) and `--related`, and the `components` key of `karni ui detect
+  --json`.
 - [The module catalog](modules.md#the-module-catalog): the `karni.module.toml`
   manifest format and the feature manifests, the `karni.modules` entry point
   group, `karni.catalog` (with `python -m karni.catalog`),
