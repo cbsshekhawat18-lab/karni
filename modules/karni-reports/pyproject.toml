@@ -35,7 +35,7 @@ dependencies = ["karni>=0.4,<0.5", "weasyprint>=70"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
-Documentation = "https://cbsshekhawat18-lab.github.io/karni/reports/"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/"
 Repository = "https://github.com/cbsshekhawat18-lab/karni"
 Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
 Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"

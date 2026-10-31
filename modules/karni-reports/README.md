@@ -8,8 +8,6 @@ so a changed row or template gives a new file and an unchanged one is served
 again without rendering. The API serves it only to users who may retrieve
 the row through its own viewset.
 
-The full guide is [docs/reports.md](https://cbsshekhawat18-lab.github.io/karni/reports/).
-
 ## Install
 
 ```sh

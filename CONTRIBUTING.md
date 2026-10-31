@@ -99,7 +99,7 @@ install `psycopg[binary]`, point `DATABASE_URL` at a server where you may
 create databases, and run pytest from the package's directory:
 
 ```sh
-cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site
+cd modules/karni-approvals   # or packages/karni, modules/karni-payments, modules/karni-impersonation, modules/karni-site, modules/karni-reports
 PYTHONPATH=../../.github/ci DATABASE_URL=postgres://postgres:postgres@localhost:5432/karni \
     ../../.venv/bin/python -m pytest --ds=karni_postgres_settings --no-migrations
 ```
@@ -119,6 +119,9 @@ parser tests also use:
 cd packages/karni
 KARNI_TEST_PK=bigint ../../.venv/bin/python -m pytest
 ```
+
+`modules/karni-reports` reads the same variable: its test catalog moves to
+integer keys, and CI runs that suite both ways too.
 
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for

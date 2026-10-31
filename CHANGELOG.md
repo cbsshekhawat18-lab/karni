@@ -11,6 +11,36 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **karni-reports (experimental): PDF reports of a row.** A new module,
+  `karni add reports`, with `@karni/reports-ui`. A report is declared in
+  `<app>/reports.py`: `@register` on a `Report` naming the model, the
+  template (which extends the shipped base print template,
+  `karni_reports/base.html`, with the page size, margins and header and
+  footer blocks) and `get_context(obj)`. A Celery task renders the template
+  to HTML, then to PDF with WeasyPrint, and stores the file through Django's
+  storage. The file is cached by the report, the row, a template version
+  (the template's sources, what it extends or includes, the page size and
+  the renderer) and a data version (a hash of the context), so a changed row
+  or template gives a new file and an unchanged one is served again without
+  rendering. `POST /api/reports/<report>/<id>/` answers 200 with the
+  download path when cached and 202 otherwise, `status/` follows it and
+  `download/` streams the PDF. Each one retrieves the row through its
+  model's own viewset first, so another user's row is a 404, and each is
+  throttled per caller. While rendering, only `data:` URLs and static and
+  media files are read, never the network. `manage.py karni_pregenerate`
+  renders every row, given ids or only stale ones, in batches with counts
+  and times. The admin lists the generated files with their status, size,
+  data version and errors, with a Regenerate action. `karni check` fails for
+  a report without a viewset (`REPORT004`) or a template (`REPORT010`).
+  `KARNI_REPORTS_RENDERER = "fake"` renders in tests without system
+  libraries. Codes `REPORT001` to `REPORT011`. In karni.yaml,
+  `modules: {reports: {page_size: letter}}`: `karni plan --questions` asks
+  the page size and `karni build` wires the module. WeasyPrint needs Pango,
+  a system library (`libpango-1.0-0 libpangoft2-1.0-0`), which CI installs.
+  [docs/modules.md](docs/modules.md#modules-in-this-repository).
+- **Error codes may have a six-letter prefix.** The registry, `karni
+  explain`, the failure briefs and the debug middleware accept `REPORT001`
+  like `PAY001`.
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

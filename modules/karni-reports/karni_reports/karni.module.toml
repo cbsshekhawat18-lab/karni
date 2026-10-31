@@ -17,7 +17,7 @@ services = [
     "a Celery worker: reports render as tasks",
     "Pango, a system library WeasyPrint draws with (in the Docker image)",
 ]
-docs = "docs/reports.md"
+docs = "modules/karni-reports/README.md"
 
 [provides]
 models = ["GeneratedReport"]
