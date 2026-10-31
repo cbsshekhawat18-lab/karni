@@ -31,6 +31,7 @@ const GROUPS = [
     "App shell and pages",
     [
       "Layout",
+      "GlobalSearch",
       "Page",
       "EmptyState",
       "Modal",
@@ -59,7 +60,7 @@ const GROUPS = [
 ];
 
 /** Components and hooks under the experimental tier (docs/stability.md#experimental-names). */
-const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm", "TermsGate"]);
+const EXPERIMENTAL = new Set(["SocialButton", "OtpLoginForm", "TermsGate", "GlobalSearch"]);
 
 const HOOKS = {
   useResourceList:
@@ -83,6 +84,8 @@ const HOOKS = {
     "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
   useSocialLogin:
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
+  useGlobalSearch:
+    "Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
   useToast: "Show a toast through the mounted `Toaster`.",
   useUnsavedChangesGuard:
     "`{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",

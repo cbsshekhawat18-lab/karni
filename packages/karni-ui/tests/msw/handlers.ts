@@ -25,6 +25,8 @@
  *   `authTestControls.setTerms(...)`: then `/me/` carries `terms`, the gated
  *   endpoint answers 403 E245 until the current version is accepted, and
  *   accepting another version is a 400 E246
+ * - GET *\/api/search/ → cross-model search over events and venues, grouped
+ *   per resource (400 E431 for a resource it does not cover, 500 for q=boom)
  *
  * State: module-level in-memory DB + token registry. Vitest isolates test
  * files, so state is fresh per file; within a file call `resetMswData()` in
@@ -1019,8 +1021,109 @@ const authHandlers = [
   ),
 ];
 
+// --- cross-model search ------------------------------------------------------
+
+/** What the simulated `GET /api/search/` covers: events by title, venues by name and city. */
+const SEARCHED = {
+  events: { label: "Events", weight: 1 },
+  venues: { label: "Venues", weight: 2 },
+} as const;
+type SearchedResource = keyof typeof SEARCHED;
+
+function searchScore(text: string, needle: string): number | null {
+  const value = text.toLowerCase();
+  if (value === needle) return 1;
+  if (value.startsWith(needle)) return 0.75;
+  return value.includes(needle) ? 0.5 : null;
+}
+
+function searchRows(
+  resource: SearchedResource,
+  needle: string,
+): Array<{ id: number; title: string; subtitle: string | null; raw: number }> {
+  const rows =
+    resource === "events"
+      ? mswDb.events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          subtitle: e.starts_at.slice(0, 10),
+          texts: [e.title],
+        }))
+      : mswDb.venues.map((v) => ({
+          id: v.id,
+          title: v.name,
+          subtitle: v.city,
+          texts: [v.name, v.city],
+        }));
+  const hits: Array<{ id: number; title: string; subtitle: string | null; raw: number }> = [];
+  for (const row of rows) {
+    const scores = row.texts
+      .map((text) => searchScore(text, needle))
+      .filter((score): score is number => score !== null);
+    if (scores.length > 0) {
+      hits.push({ id: row.id, title: row.title, subtitle: row.subtitle, raw: Math.max(...scores) });
+    }
+  }
+  return hits.sort((a, b) => b.raw - a.raw || a.title.localeCompare(b.title));
+}
+
+/**
+ * `GET *\/api/search/?q=&models=&limit=`, shaped like Karni's: groups per
+ * resource ordered by their best hit, an empty answer under two characters,
+ * 400 E431 for a resource it does not cover. `q=boom` answers 500.
+ */
+const searchHandlers = [
+  http.get("*/api/search/", ({ request }) => {
+    const url = new URL(request.url);
+    const query = (url.searchParams.get("q") ?? "").trim();
+    const wanted = url.searchParams
+      .getAll("models")
+      .flatMap((value) => value.split(","))
+      .map((name) => name.trim())
+      .filter((name) => name !== "");
+    const unknown = wanted.filter((name) => !(name in SEARCHED));
+    if (unknown.length > 0) {
+      return HttpResponse.json(
+        {
+          code: "E431",
+          detail: `?models= names ${unknown.join(", ")}, which search does not cover.`,
+          resources: Object.keys(SEARCHED),
+        },
+        { status: 400 },
+      );
+    }
+    if (query === "boom") return HttpResponse.json({ detail: "Server error." }, { status: 500 });
+    if (query.length < 2) return HttpResponse.json({ query, groups: [] });
+    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? "5") || 5, 1), 20);
+    const selected = (wanted.length > 0 ? wanted : Object.keys(SEARCHED)) as SearchedResource[];
+    const groups = selected
+      .map((resource) => ({
+        resource,
+        label: SEARCHED[resource].label,
+        hits: searchRows(resource, query.toLowerCase())
+          .slice(0, limit)
+          .map((hit) => ({
+            resource,
+            id: hit.id,
+            title: hit.title,
+            subtitle: hit.subtitle,
+            score: hit.raw * SEARCHED[resource].weight,
+          })),
+      }))
+      .filter((group) => group.hits.length > 0)
+      .sort((a, b) => (b.hits[0]?.score ?? 0) - (a.hits[0]?.score ?? 0));
+    return HttpResponse.json({ query, groups });
+  }),
+];
+
 // --- schema + export ---------------------------------------------------------
 
 const schemaHandler = http.get("*/api/schema/", () => HttpResponse.json(openApiFixture));
 
-export const handlers = [schemaHandler, ...eventHandlers, ...readOnlyHandlers, ...authHandlers];
+export const handlers = [
+  schemaHandler,
+  ...eventHandlers,
+  ...readOnlyHandlers,
+  ...searchHandlers,
+  ...authHandlers,
+];

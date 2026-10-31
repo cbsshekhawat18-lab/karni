@@ -222,6 +222,11 @@
      lets the page scroll instead. */
   --karni-table-max-height: 70vh;
 
+  /* GlobalSearch, the command palette: its widest, and the tallest its results
+     list grows before it scrolls. */
+  --karni-search-width: 40rem;
+  --karni-search-max-height: 60vh;
+
   --karni-z-raised: 10;
   --karni-z-drawer: 40;
   --karni-z-popover: 50;

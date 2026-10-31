@@ -19,6 +19,7 @@ import * as chart from "../src/components/chart/data-chart.stories";
 import * as dashboard from "../src/components/dashboard/dashboard.stories";
 import * as emptyState from "../src/components/empty-state/empty-state.stories";
 import * as fileUpload from "../src/components/file-upload/file-upload.stories";
+import * as globalSearch from "../src/components/global-search/global-search.stories";
 import * as layout from "../src/components/layout/layout.stories";
 import * as modal from "../src/components/modal/modal.stories";
 import * as page from "../src/components/page/page.stories";
@@ -42,6 +43,7 @@ const MODULES = {
   DataChart: composeStories(chart),
   EmptyState: composeStories(emptyState),
   FileUpload: composeStories(fileUpload),
+  GlobalSearch: composeStories(globalSearch),
   KarniMark: composeStories(karniMark),
   Layout: composeStories(layout),
   Modal: composeStories(modal),

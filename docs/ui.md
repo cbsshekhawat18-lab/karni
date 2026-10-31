@@ -25,6 +25,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 ## App shell and pages
 
 - `Layout` (role `layout-shell`)
+- `GlobalSearch` (role `global-search`, experimental)
 - `Page` (role `page-shell`)
 - `EmptyState` (role `empty-state`)
 - `Modal` (role `modal`)
@@ -58,6 +59,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDelayedFlag`: See the package README.
+- `useGlobalSearch`: Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.
 - `useImportActions`: `upload`, `preview` (the dry run) and `commit` mutations of an import.
 - `useImportDescribe`: The importable fields of a resource and the user's remembered column mapping.
 - `useImportJob`: One import job's state. It polls while the backend previews or commits it.
@@ -93,6 +95,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `empty-state` | `EmptyState` |
 | `error-state` | `ErrorState` |
 | `file-upload` | `FileUpload` |
+| `global-search` | `GlobalSearch` |
 | `layout-shell` | `Layout` |
 | `login-form` | `LoginForm` |
 | `modal` | `Modal` |

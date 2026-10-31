@@ -60,14 +60,14 @@ the schema root (`x-karni-auth-mode`). Override it with `mode="jwt" | "session"`
 Every visual value in every component resolves from a `--karni-*` CSS custom
 property defined in `@karni/ui/styles.css`:
 
-| Family             | What it holds                                                                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades |
-| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                           |
-| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                           |
-| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                        |
-| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                             |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box)       |
+| Family             | What it holds                                                                                                                                                                                                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--karni-color-*`  | colours: background, foreground, card, popover, primary, secondary, muted, accent, destructive, border, input, ring, overlay, chart-1 … chart-5, and the derived `-foreground`, `-hover`, `-subtle` and `-border` shades                              |
+| `--karni-space-*`  | the spacing scale: `--karni-space-unit` (0.25rem), or any step `--karni-space-<n>` (`--karni-space-4` is 1rem)                                                                                                                                        |
+| `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                        |
+| `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                     |
+| `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                          |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-search-*` (GlobalSearch) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -932,17 +932,18 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 </Layout>;
 ```
 
-| Component    | Slots                                                               |
-| ------------ | ------------------------------------------------------------------- |
-| `Layout`     | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink`          |
-| `Page`       | `Header`, `Title`, `Description`, `Actions`                         |
-| `Modal`      | `Header`, `Footer`, `CloseButton`                                   |
-| `Toaster`    | `Title`, `Description`, `CloseButton`                               |
-| `EmptyState` | `Icon`, `Title`, `Description`, `Actions`                           |
-| `Stat`       | `Label`, `Value`, `Delta`, `Icon`                                   |
-| `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error` |
-| `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                             |
-| `FileUpload` | `Dropzone`, `FileRow`                                               |
+| Component      | Slots                                                               |
+| -------------- | ------------------------------------------------------------------- |
+| `Layout`       | `Header`, `Sidebar`, `NavLink`, `MobileDrawer`, `SkipLink`          |
+| `Page`         | `Header`, `Title`, `Description`, `Actions`                         |
+| `Modal`        | `Header`, `Footer`, `CloseButton`                                   |
+| `Toaster`      | `Title`, `Description`, `CloseButton`                               |
+| `EmptyState`   | `Icon`, `Title`, `Description`, `Actions`                           |
+| `Stat`         | `Label`, `Value`, `Delta`, `Icon`                                   |
+| `Dashboard`    | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error` |
+| `DataChart`    | `Tooltip`, `Legend`, `Empty`, `Loading`                             |
+| `FileUpload`   | `Dropzone`, `FileRow`                                               |
+| `GlobalSearch` | `Trigger`, `ResultLink`                                             |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
@@ -961,6 +962,39 @@ sign-in page (`isSignInRoute`: `/login`, `/sign-in`) listed only while nobody
 is signed in. `label`, `hidden` and `signIn` replace each rule. The scaffold's
 `layout.tsx` uses it, with `<AuthGuard explain>` around every page but the
 sign-in page.
+
+### GlobalSearch: one search box over every model (experimental)
+
+`<GlobalSearch />` is a command palette over cross-model search
+(`GET /api/search/`, every model with `class Karni: search`). Cmd+K on macOS,
+Ctrl+K elsewhere, or its button opens it. Typing searches after a 200 ms pause
+(`debounceMs`) once the query has `minLength` (2) characters, and the hits come
+grouped per resource, best first. Each hit links to its ResourceDetail page,
+`/<resource>/<id>` (`hrefFor` changes it). The server applies each model's own
+list access, so a user never sees a model or a row they cannot list.
+
+It follows the WAI-ARIA combobox pattern: the input is a combobox that owns a
+listbox of grouped options, Arrow Down and Arrow Up move the active option
+while focus stays in the input, Enter opens it, Escape closes the palette and
+a polite live region says how many hits there are. `<Layout search>` mounts it
+in the top bar (`search={{ onSelect, models }}` passes its props).
+
+```tsx
+import { GlobalSearch, type GlobalSearchResultLinkProps } from "@karni/ui";
+import { Link } from "@tanstack/react-router";
+
+function ResultLink({ hit, href, ...props }: GlobalSearchResultLinkProps) {
+  return <Link to={href} {...props} />;
+}
+
+<GlobalSearch models={["products", "suppliers"]} slots={{ ResultLink }} />;
+```
+
+`useGlobalSearch({ q, models, limit })` is the data underneath, for a search
+page of your own. `karni types` generates a `useGlobalSearch` typed with the
+project's `SearchResource` names. The palette's width and the height its list
+grows to are the `--karni-search-width` (40rem) and `--karni-search-max-height`
+(60vh) tokens.
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take

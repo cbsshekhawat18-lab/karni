@@ -5,6 +5,8 @@
  * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
+ * - `["karni", "$search", normalizedParams]`: one cross-model search
+ *   (experimental, `useGlobalSearch`).
  * - `["karni", resource, "detail", String(id)]`: one item. When the item was
  *   fetched with params (e.g. `expand`), the normalized params are appended as
  *   a fifth element so differently-shaped payloads never share a cache entry.
@@ -46,6 +48,14 @@ export const karniKeys = {
    */
   list(resource: string, params?: ResourceListParams): readonly unknown[] {
     return ["karni", resource, "list", normalizeParams(buildListQuery(params))] as const;
+  },
+
+  /**
+   * Experimental. Key for one cross-model search (`GET /search/`). Params are
+   * normalized like a list's, so the order of `models` keys never matters.
+   */
+  search(params: Record<string, unknown>): readonly unknown[] {
+    return ["karni", "$search", normalizeParams(params)] as const;
   },
 
   /**
