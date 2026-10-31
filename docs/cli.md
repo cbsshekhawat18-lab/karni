@@ -244,7 +244,15 @@ karni ui detect [OPTIONS]
 
 ### `karni context`
 
-Print a compact machine-readable project inventory
+Print a compact machine-readable project inventory.
+
+On a large project read one area at a time: --summary first, then --app or --model.
+
+Example:
+
+```sh
+karni context --app catalog --max-tokens 1500
+```
 
 ```
 karni context [OPTIONS] [PATH]
@@ -257,6 +265,10 @@ karni context [OPTIONS] [PATH]
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--manifest` PATH |  | Explicit manifest.json path |
+| `--app` TEXT (repeatable) |  | Only this app, in full: every model with its fields, the relations in and out, its viewsets with route and access, its roles and pages (repeatable). Experimental. |
+| `--model` TEXT (repeatable) |  | One model in depth: Name or app_label.Name. Every field, the relations that point at it, its viewsets and pages (repeatable). Experimental. |
+| `--summary` |  | One line per app: its models, viewsets and pages, with their counts. Experimental. |
+| `--max-tokens` INT RANGE |  | Cut the output at whole sections to about N tokens (4 characters each). The last line names what was left out and the command that prints it. Experimental. |
 
 ### `karni rules`
 
@@ -288,19 +300,30 @@ karni rules sync [OPTIONS]
 
 ### `karni check`
 
-Run architecture and system checks
+Run architecture and system checks.
+
+An unchanged file is not checked again: the results of the file checks are cached in .karni/local/ (--no-cache turns that off).
+
+Example:
+
+```sh
+karni check --changed main
+```
 
 ```
-karni check [OPTIONS]
+karni check [OPTIONS] [REF]
 ```
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
+| `REF` |  | With --changed: the git ref to compare with (a branch, a tag, a commit) instead of HEAD. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 | `--frontend/--no-frontend` | on |  |
 | `--quiet`, `-q` |  | Do not print the optional tip. |
 | `--deploy` |  | Also run the deploy checks (DEBUG, SECRET_KEY, hosts, HSTS, cookies, admin path, CORS, CSP) and fail on warnings. Run it with the production environment. |
+| `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
+| `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. Experimental. |
 
 ### `karni explain`
 
@@ -362,7 +385,7 @@ karni queries [OPTIONS] ENDPOINT
 | `--method` TEXT | `GET` | HTTP method. |
 | `--data` TEXT |  | JSON request body (the request's writes are rolled back). |
 | `--json` |  | Machine-readable output. |
-| `--explain` |  | Add EXPLAIN plans for the slowest queries. |
+| `--explain` |  | Add the plans. On PostgreSQL: EXPLAIN ANALYZE of every query, rolled back with the request, and each sequential scan on a table of KARNI_EXPLAIN_SEQ_SCAN_ROWS rows or more (default 1000) with the index that would serve it. Elsewhere: plain EXPLAIN of the slowest queries. |
 | `--all` |  | List every statement, not only repeats. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
@@ -550,6 +573,8 @@ Values come from field names and types (an `email` gets an email, `price` money,
 
 It first prints the models it will write to, and refuses when one of their tables already holds rows (users aside), because demo rows would mix with real content. Pass --reset to wipe the tables first or --force to add rows on top. Real content belongs in `karni load`.
 
+--volume N (experimental) writes N rows per model in bulk, for performance work: relation targets first, foreign keys drawn from existing rows, in batches (--batch-size), with the rows and the time per model. It refuses when a table holds rows no seed run left there, unless --reset or --force. A model whose seed count reaches KARNI_SEED_BULK_THRESHOLD takes the bulk path in a plain run too.
+
 Example:
 
 ```sh
@@ -562,7 +587,7 @@ karni seed [OPTIONS] [ARGS...]
 
 | Argument / option | Default | Description |
 | --- | --- | --- |
-| `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force. |
+| `ARGS...` |  | Passed to manage.py karni_seed: --count N, --seed S, --reset, --model app.Model, --json, --force, --volume N, --batch-size N. |
 | `--docker/--no-docker` |  |  |
 | `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
 

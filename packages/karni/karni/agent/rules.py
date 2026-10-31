@@ -95,7 +95,9 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Run `karni context` before reading any files. It prints the current apps, "
             "models, viewsets, UI components, hooks, pages, public site routes and installed "
-            "modules in a few hundred tokens. Trust it."
+            "modules in a few hundred tokens. Trust it. On a large project read one area at a "
+            "time: `karni context --summary`, then `karni context --app <label>` or "
+            "`--model <name>` (`--max-tokens N` caps any of them)."
         ),
         rationale=(
             "The inventory is derived live from the app registry, the router and the "

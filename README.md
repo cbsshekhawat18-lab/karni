@@ -315,7 +315,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
-Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
+Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Scaling`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
 <!-- /generated:api -->
 
 Full reference: [karni.api](docs/REFERENCE.md#karniapi).
@@ -414,6 +414,7 @@ The same rule set produces every adapter file, so the tools never disagree.
 - `experimental` The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier
 - `experimental` `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it
 - `experimental` MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools
+- `experimental` Large projects, one area at a time: `karni context --summary`, `--app`, `--model` and `--max-tokens`, and a `karni check` that skips unchanged files (a cache per check and file, `--changed [REF]` for the files git reports). Experimental tier
 
 Slash commands: `/new-model`, `/new-page`, `/add-module`, `/new-module`, `/site-from-design`.
 <!-- /generated:agents -->
@@ -432,6 +433,7 @@ Full reference: [slash commands](docs/REFERENCE.md#slash-commands) and [agent ru
 - `stable` OpenAPI snapshot test (`assert_schema_snapshot`)
 - `stable` Clients per role (`client_as`)
 - `experimental` `query_budget` and `user_with_roles` helpers
+- `experimental` Performance at volume: `karni seed --volume` (bulk rows that keep their relations), scaling row counts and a time budget per viewset (`Scaling`), `karni queries --explain` with the index a sequential scan wants (PostgreSQL), and a CI benchmark on 100 models. Experimental tier
 - `experimental` `assert_pages`: a public site's pages, their title, description, alt text and links, in one call
 - `stable` Architecture rules that fail the build (`karni check`, the ESLint preset)
 

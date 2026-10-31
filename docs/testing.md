@@ -720,10 +720,43 @@ Outcomes other than pass/fail are explicit:
       ...
   ```
 
+The row counts move, and a viewset can carry a time budget (experimental:
+`KARNI_SCALING_ROWS`, `karni.performance.Scaling` and `query_scaling`):
+
+```python
+# config/settings.py: every viewset compares 2 rows with 50
+KARNI_SCALING_ROWS = [2, 50]
+```
+
+```python
+# events/viewsets.py
+from karni.api import Scaling
+
+
+class EventViewSet(karni.EventViewSet):
+    query_scaling = Scaling(rows=(5, 500), seconds=0.3)
+```
+
+`rows` overrides the setting for one viewset. `seconds` is a time budget:
+the request at the large row count (the faster of two runs) must take no
+longer. A failed budget is [E476](errors.md#e476) and names the endpoint,
+the rows, the time and the queries, with the statements:
+
+```text
+EventViewSet.list (GET /api/events/): 500 rows took 0.412s against a time budget of 0.3s, in 4 queries.
+```
+
+`karni queries <endpoint> --explain` then shows each statement's plan on
+PostgreSQL ([query plans](debugging/queries.md#query-plans-explain)). A
+declaration that is not two row counts (small then large) or a positive
+number of seconds is [E477](errors.md#e477). `karni context` lists every
+`query_scaling` on its `PERF` line.
+
 The pieces are public for project tests: `scaling_cases()` (the
 `ScalingCase`s found), `check_scaling(case) -> ScalingResult` (`small`,
-`large`, `grows`, `skipped`, `message()`), and the constants
-`SCALING_SMALL = 2`, `SCALING_LARGE = 12`.
+`large`, `grows`, `skipped`, `message()`, and experimental `rows`,
+`seconds`, `budget`, `endpoint`, `too_slow`, `slow_message()`), and the
+constants `SCALING_SMALL = 2`, `SCALING_LARGE = 12` (the defaults).
 
 ```python
 from karni.testing.performance import ScalingCase, check_scaling

@@ -120,6 +120,22 @@ cd packages/karni
 KARNI_TEST_PK=bigint ../../.venv/bin/python -m pytest
 ```
 
+The tooling must keep up with large projects (experimental). The benchmark
+`scripts/benchmark/large_project.py` makes a 100-model project the way a user
+does (`karni new` without `frontend/`, a `karni.yaml` of 100 entities over 10
+apps, `karni build`) and times `karni check` (cold, cached, after one edit,
+`--changed`), `karni context` (whole, `--summary`, `--app`) and the
+project's tests. It compares each time with `scripts/benchmark/baseline.json`,
+scaled by a calibration run, and fails when one is above 1.5 times the
+baseline plus 1 s. CI's `Benchmark (100 models)` job runs it. When a change
+makes a step slower on purpose, record a new baseline and commit it:
+
+```sh
+.venv/bin/python scripts/benchmark/large_project.py                       # against the baseline
+.venv/bin/python scripts/benchmark/large_project.py --models 5 --apps 1   # a quick run
+.venv/bin/python scripts/benchmark/large_project.py --record              # write the baseline
+```
+
 `examples/eventhub` is the reference application, and CI builds, seeds and
 tests it end to end. If your change breaks it, the change breaks Karni for
 real users. Fix the framework, not the example.

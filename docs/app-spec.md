@@ -313,6 +313,18 @@ Two pages may not share a route (`C242`).
 `seed` maps an entity to its demo rows per `karni seed` run (`karni make
 seeder <Entity> --count <n>`, a Seeder's `Meta.count`). `0` skips it.
 
+A large count (experimental) is seeded in bulk: from the project's
+`KARNI_SEED_BULK_THRESHOLD` (default 1000) rows, `karni seed` writes the
+entity's rows in batches, relation targets first and foreign keys drawn from
+existing rows ([volume seeding](seeding.md#volume-seeding)). `karni plan`
+shows the volume and the expected time class on the change (`seconds`,
+`about a minute`, `minutes`, `an hour or more`):
+
+```text
+seed
+  + Booking: 200000, 200,000 rows in bulk, about a minute
+```
+
 ## Coming later
 
 These keys are reserved for features on the roadmap. A spec that uses one
@@ -852,6 +864,8 @@ rows). Then the hash check, then the steps:
 4. **migrate**: on `default` and on every alias an entity names.
 5. **seed**: only the tables this build created, only while they hold no
    row, with the spec's `seed` counts. Demo rows never mix with real data.
+   A count at the bulk threshold is inserted in bulk, and the step says so
+   with its time (`Booking 200000 in bulk (61.2s)`, experimental).
 6. **types**: `karni types`, when the project has a frontend.
 7. **test**: the project's own tests (`karni test`). The API changed on
    purpose, so the contract snapshot (`tests/openapi.snapshot.json`)
