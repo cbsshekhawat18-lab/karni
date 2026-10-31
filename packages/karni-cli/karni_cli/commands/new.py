@@ -17,6 +17,15 @@ client sees editable except what becomes rows, the staff app and the admin
 themed from the design's CSS). It prints the rest of the site-from-design
 procedure as the next steps.
 
+``--recipe <name>`` (experimental) starts the app from a recipe
+(:mod:`karni_cli.recipes`): the project as above, the recipe's karni.yaml
+with this project's name, the recipe named in ``.karni/build.json``, then
+``karni build``, which writes the recipe's own files (its domain code, seeds
+and tests) over its stubs and runs the migrations, the seed, the tests and
+``karni check``. Without an interpreter that has Django and karni for the
+project, or without its database, it stops after karni.yaml and says to run
+``karni build``.
+
 The template carries no agent guidance files: they are generated afterwards
 by the same code as ``karni rules sync`` (AGENTS.md, CLAUDE.md, Cursor,
 Windsurf, Copilot, Cline, Aider, Junie adapters + slash commands), and they
@@ -36,10 +45,12 @@ needs none of it.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 import typer
@@ -51,6 +62,9 @@ from karni_cli.generators import deploy
 from karni_cli.generators.naming import require_snake
 from karni_cli.project import CliError
 from karni_cli.scaffold import resolve_template, validate_name
+
+if TYPE_CHECKING:
+    from karni_cli.recipes import Recipe
 
 #: The site app a kind with a site gets (``--site-app`` names another).
 SITE_APP = "website"

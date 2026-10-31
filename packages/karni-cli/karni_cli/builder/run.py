@@ -15,7 +15,9 @@
    its recorded sha256. One edited by hand stops the build (``C273``), with
    its changed lines and three ways on: move the change into the project's
    file, ``--force`` (a ``.orig`` backup is kept), or ``--adopt <file>``.
-4. **The steps.** ``modules`` (``karni add``), ``files``, ``migrations``
+4. **The steps.** ``modules`` (``karni add``), ``files`` (after ``karni new
+   --recipe``, the recipe's own files over build's stubs, by the stub rule of
+   :mod:`karni_cli.recipes.apply`), ``migrations``
    (``manage.py karni_makemigrations``: renames first), ``migrate``, ``seed``
    (only tables this build created, only while empty), ``types``, ``test``
    and ``check``. The first failure stops the build with its code, what was
@@ -205,6 +207,7 @@ def build(root: Path, spec: schema.Spec, facts: dict[str, Any], file: str, opts:
         ws = Workspace(root)
         module_lines = _plan_modules(ws, plan)
         rendered = render.render(ws, inputs)
+        _recipe_files(ws, rec)
         deletes = _deletions(root, rec, rendered)
         edits = _hand_edits(root, rec, rendered, deletes)
     except Stop as stop:
@@ -447,6 +450,25 @@ def _plan_modules(ws: Workspace, plan: plan_mod.Plan) -> list[str]:
             plan_module(ws, change.target)
             lines.append(change.target)
     return lines
+
+
+def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
+    """The recipe's own files over build's stubs, when ``karni new --recipe`` left one to write."""
+    if not rec.recipe:
+        return []
+    from karni_cli import recipes
+    from karni_cli.recipes import apply
+
+    try:
+        recipe = recipes.load().require(rec.recipe)
+    except CliError as exc:
+        raise CliError(
+            f"{layout.RECORD} names the recipe {rec.recipe!r}, whose own files this build writes "
+            f"over its stubs: {exc.message} Install it, or delete \"{apply.RECORD_KEY}\" from "
+            f"{layout.RECORD} to build without them.",
+            code=exc.code,
+        ) from None
+    return apply.stage(ws, recipe) if recipe is not None else []
 
 
 def _deletions(root: Path, rec: Record, rendered: render.Output) -> list[str]:

@@ -72,6 +72,7 @@ __all__ = [
     "Inputs",
     "Output",
     "access_expression",
+    "is_stub_file",
     "render",
     "settings_block",
 ]
@@ -477,6 +478,41 @@ def _is_stub(node: ast.ClassDef) -> bool:
         and not stmt.value.args
         for stmt in rest
     )
+
+
+def is_stub_file(rel: str, text: str) -> bool:
+    """Experimental. Whether the project file ``rel`` still holds only what build writes in it.
+
+    That is the docstring build gives it, imports, and classes that extend a
+    Karni base with build's stub body (:data:`STUB_LINE`, and ``access =
+    Granted()`` for ``access: code``). A recipe writes its own file over such
+    a file (:mod:`karni_cli.recipes.apply`), and never over anything else.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    purposes = {" ".join(purpose.split()) for purpose in _purposes(rel.split("/", 1)[0]).values()}
+    for index, stmt in enumerate(tree.body):
+        if isinstance(stmt, ast.Import | ast.ImportFrom):
+            continue
+        if (
+            index == 0
+            and isinstance(stmt, ast.Expr)
+            and isinstance(stmt.value, ast.Constant)
+            and isinstance(stmt.value.value, str)
+            and " ".join(stmt.value.value.split()) in purposes
+        ):
+            continue
+        if (
+            isinstance(stmt, ast.ClassDef)
+            and not stmt.decorator_list
+            and _karni_base(stmt) is not None
+            and _is_stub(stmt)
+        ):
+            continue
+        return False
+    return True
 
 
 def _project_file(

@@ -11,8 +11,13 @@ and pages Karni manages, and the files the project adopted::
       "pages": ["classes.Session:detail", "classes.Session:list"],
       "files": {"classes/karni/models.py": "<sha256>", ...},
       "blocks": {"config/settings.py": "<sha256>", ...},
-      "adopted": ["classes/karni/api.py"]
+      "adopted": ["classes/karni/api.py"],
+      "recipe": "booking"
     }
+
+``recipe`` is there only between ``karni new --recipe`` and the first build
+that writes: it names the recipe whose own files (its domain code, seeds and
+tests) that build writes over its stubs (:mod:`karni_cli.recipes.apply`).
 
 Before it writes anything, ``karni build`` compares every recorded hash
 with the file on disk. A Karni-owned file whose content differs was edited
@@ -74,6 +79,8 @@ class Record:
     files: dict[str, str] = field(default_factory=dict)
     blocks: dict[str, str] = field(default_factory=dict)
     adopted: list[str] = field(default_factory=list)
+    #: Experimental. The recipe whose own files the next build writes (``karni new --recipe``).
+    recipe: str = ""
 
     @property
     def owned(self) -> dict[str, str]:
@@ -93,6 +100,7 @@ class Record:
             "files": dict(sorted(self.files.items())),
             "blocks": dict(sorted(self.blocks.items())),
             "adopted": sorted(self.adopted),
+            **({"recipe": self.recipe} if self.recipe else {}),
         }
 
     def text(self) -> str:
@@ -136,6 +144,7 @@ def load(root: Path) -> Record:
         files=hashes("files"),
         blocks=hashes("blocks"),
         adopted=strings("adopted"),
+        recipe=str(data.get("recipe") or ""),
     )
 
 

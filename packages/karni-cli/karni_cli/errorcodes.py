@@ -1058,6 +1058,29 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename "
         "the recipe, then run karni recipes show <name>.",
     ),
+    # C440-C459 a new project from a recipe: karni new --recipe
+    _c(
+        "C440",
+        "karni new --recipe with an option it cannot go with",
+        "karni new --recipe (karni_cli.commands.new)",
+        "A recipe is an app: its karni.yaml has entities, roles and pages for signed-in users. "
+        "--design builds a public site from a designer's pages instead, and --kind site or "
+        "--no-staff-app leave out the React app the recipe's pages live in.",
+        "Leave the option out (--kind app or site+app go with a recipe), or make the project "
+        "without --recipe and start karni.yaml from karni recipes show <name>.",
+    ),
+    _c(
+        "C441",
+        "A recipe's file would replace code of the project's",
+        "karni build after karni new --recipe (karni_cli.recipes.apply)",
+        "The first karni build after karni new --recipe writes the recipe's own files (its "
+        "domain code, seeds and tests) over the stubs it writes itself. It never writes over "
+        "anything else: a file that holds code of the project's stops the build, and nothing "
+        "is written.",
+        "Move your code out of the way (rename the file), run karni build again, then put your "
+        "code back into the recipe's file. To build without the recipe's files, delete "
+        '"recipe" from .karni/build.json.',
+    ),
 )
 
 

@@ -41,6 +41,7 @@ supplies its own.
 
 from __future__ import annotations
 
+import difflib
 import re
 import tomllib
 from collections.abc import Iterable
@@ -74,6 +75,7 @@ __all__ = [
     "blank_spec",
     "builtin_root",
     "json_schema",
+    "karni_owned",
     "load",
     "match",
     "parse",
@@ -217,7 +219,7 @@ class Loaded:
         """Experimental. The recipe ``name`` (``None`` for the blank start).
 
         :raises CliError: ``C421`` when it is there but cannot be used, ``C420``
-            when there is none of that name.
+            when there is none of that name (naming the closest names).
         """
         from karni_cli.project import CliError
 
@@ -228,8 +230,16 @@ class Loaded:
             return recipe
         if name in self.broken:
             raise CliError(f"The recipe {name!r} cannot be used: {self.broken[name]}", code="C421")
-        known = ", ".join([*sorted(self.recipes), BLANK])
-        raise CliError(f"There is no recipe {name!r} (there are: {known}).", code="C420")
+        names = [*sorted(self.recipes), BLANK]
+        closest = difflib.get_close_matches(name, names, n=MATCH_LIMIT)
+        near = (
+            f": the closest {'is' if len(closest) == 1 else 'are'} {', '.join(closest)}"
+            if closest
+            else ""
+        )
+        raise CliError(
+            f"There is no recipe {name!r}{near} (there are: {', '.join(names)}).", code="C420"
+        )
 
 
 @dataclass(frozen=True)
@@ -286,11 +296,34 @@ def _files(folder: Traversable) -> tuple[str, ...]:
     return tuple(found)
 
 
+#: Paths of a project that karni build writes itself, so no recipe file may take them.
+_BUILD_FILES: Final = frozenset(
+    {SPEC_FILE, ".karni/build.json", "config/settings.py", "frontend/src/routes.tsx"}
+)
+
+
+def karni_owned(rel: str) -> bool:
+    """Experimental. Whether ``karni build`` owns the project path ``rel`` (so a recipe file cannot).
+
+    ``<app>/karni/``, ``<app>/tests/karni/``, ``frontend/src/pages/karni/``,
+    ``.karni/``, karni.yaml, and the files with a ``karni:spec`` block.
+    """
+    parts = rel.split("/")
+    return (
+        rel in _BUILD_FILES
+        or parts[0] == ".karni"
+        or (len(parts) > 2 and parts[1] == "karni")
+        or (len(parts) > 3 and parts[1:3] == ["tests", "karni"])
+        or rel.startswith("frontend/src/pages/karni/")
+    )
+
+
 def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
     """Experimental. The recipe in ``folder``, whose name must be ``name``.
 
     :raises RecipeError: for a missing or invalid ``recipe.toml``, a name that
-        is not ``name``, or a missing ``karni.yaml``.
+        is not ``name``, a missing ``karni.yaml``, or a file at a path karni build
+        owns (:func:`karni_owned`).
     """
     manifest = folder.joinpath(RECIPE_FILE)
     if not manifest.is_file():
@@ -302,6 +335,14 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
         )
     if not folder.joinpath(SPEC_FILE).is_file():
         raise RecipeError(f"{source}: no {SPEC_FILE}.")
+    files = _files(folder)
+    owned = [rel for rel in files if karni_owned(rel)]
+    if owned:
+        raise RecipeError(
+            f"{source}: {FILES_DIR}/{owned[0]}: karni build writes {owned[0]} itself. A recipe's "
+            "files go where the project owns the code: <app>/models.py, viewsets.py, seeds.py "
+            "and tests of its own."
+        )
     return Recipe(
         name=found.name,
         title=found.title,
@@ -310,7 +351,7 @@ def read_folder(folder: Traversable, *, name: str, source: str) -> Recipe:
         usually_changed=tuple(found.usually_changed),
         source=source,
         folder=folder,
-        files=_files(folder),
+        files=files,
     )
 
 
