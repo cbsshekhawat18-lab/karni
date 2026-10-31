@@ -387,6 +387,88 @@
       ],
       "type": "object"
     },
+    "NavigationEntry": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/NavigationEntry"
+                },
+                "type": "array"
+              },
+              {
+                "$ref": "#/$defs/NavigationOptions"
+              }
+            ]
+          },
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 1
+        }
+      ]
+    },
+    "NavigationOptions": {
+      "additionalProperties": false,
+      "description": "Experimental. A ``navigation:`` entry written as a mapping's value: a page's or a group's options.\n\nA page takes ``label``, ``icon`` and ``requires``. A group takes\n``items`` (its entries), ``icon`` and ``requires``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A page's label in the menu (default: its title)."
+        },
+        "icon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "An icon name the frontend knows, e.g. home."
+        },
+        "requires": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "public, authenticated or a permission pattern (app.entity:action). Default: from the page's access, and for a group public when one of its entries is."
+        },
+        "items": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/NavigationEntry"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A group's entries."
+        }
+      },
+      "type": "object"
+    },
     "Role": {
       "additionalProperties": false,
       "description": "Experimental. One role of ``roles:``: an entry of ``KARNI_ROLES``.",
@@ -574,6 +656,21 @@
         "maxProperties": 1
       },
       "type": "array"
+    },
+    "navigation": {
+      "default": false,
+      "description": "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page of pages in their order, or a list of pages (by their key) and groups ({label: [entries]}), each page with optional {label, icon, requires}.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/NavigationEntry"
+          },
+          "type": "array"
+        }
+      ]
     },
     "seed": {
       "additionalProperties": {

@@ -8,8 +8,10 @@ its explicit moves), a field written as ``{type, was}`` as its type, an
 entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order, and the site
-module listed whenever the kind has a site. What carries meaning in its
-order stays in order: fields, pages, search fields and the ordering.
+module listed whenever the kind has a site, and ``navigation`` as the
+``KARNI_NAVIGATION`` list it gives (``None`` without it). What carries
+meaning in its order stays in order: fields, pages, the menu, search fields
+and the ordering.
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -29,6 +31,7 @@ from typing import Any
 from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.project import CliError
+from karni_cli.spec import navigation
 from karni_cli.spec.schema import Spec
 
 __all__ = ["canonical_field", "normalise", "role_name"]
@@ -132,6 +135,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
         pages.append({name: kinds})
     data["pages"] = pages
     data["seed"] = dict(sorted(data["seed"].items()))
+    # The menu as KARNI_NAVIGATION gets it: `true` and the list it means compare equal.
+    data["navigation"] = navigation.menu(spec)
     social = data["features"]["social_login"]
     data["features"]["social_login"] = sorted(set(social))
     return data

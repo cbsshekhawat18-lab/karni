@@ -1016,6 +1016,37 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Remove tree from an external entity, and remove parent (and position) from the fields "
         "of a tree entity, or rename a field that means something else.",
     ),
+    # C640-C659 navigation from data in karni.yaml (experimental)
+    _c(
+        "C640",
+        "A navigation entry names a page the spec does not have",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Each menu entry links to the route of a page of pages: an entity's list page, or a "
+        "named page. An entity whose pages all take an id (detail, form) has no route a menu can "
+        "link to.",
+        "Name a page of pages by its key (Product, shop.Product, home), add the page to pages, "
+        "or add list to the entity's pages.",
+    ),
+    _c(
+        "C641",
+        "A navigation entry is not valid",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "An entry is a page's key, a page with its options ({label, icon, requires}), or a group: "
+        "a label that names no page, with its entries (a list, or {items, icon, requires}). Each "
+        "page is listed once, a group has entries, and an icon is a name such as home.",
+        "Write e.g. - home, - Catalog: [Product, Category] or - Region: {icon: map}.",
+    ),
+    _c(
+        "C642",
+        "A navigation requirement is not valid",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "requires is public, authenticated or a permission pattern as in grants (app.entity:"
+        "action, with * for a part), so role grants and per-user grants open the entry the way "
+        "they open the API. A pattern that names an entity the spec does not have opens it for "
+        "nobody.",
+        "Write public, authenticated, or a pattern such as shop.product:view, or leave requires "
+        "out: each page takes its requirement from its access.",
+    ),
 )
 
 

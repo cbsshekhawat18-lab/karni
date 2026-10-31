@@ -44,6 +44,9 @@ __all__ = [
     "Entity",
     "Features",
     "FieldEntry",
+    "NavigationEntry",
+    "NavigationOptions",
+    "NavigationValue",
     "Role",
     "Spec",
     "Terms",
@@ -338,6 +341,62 @@ ModuleOptions = Annotated[
 ]
 
 
+class NavigationOptions(_Node):
+    """Experimental. A ``navigation:`` entry written as a mapping's value: a page's or a group's options.
+
+    A page takes ``label``, ``icon`` and ``requires``. A group takes
+    ``items`` (its entries), ``icon`` and ``requires``.
+    """
+
+    label: str | None = Field(None, description="A page's label in the menu (default: its title).")
+    icon: str | None = Field(None, description="An icon name the frontend knows, e.g. home.")
+    requires: str | None = Field(
+        None,
+        description=(
+            "public, authenticated or a permission pattern (app.entity:action). Default: from "
+            "the page's access, and for a group public when one of its entries is."
+        ),
+    )
+    items: list[NavigationEntry] | None = Field(None, description="A group's entries.")
+
+
+def _navigation_member(value: Any) -> str:
+    return "=page" if isinstance(value, str) else "=entry"
+
+
+def _navigation_value(value: Any) -> str:
+    return "=items" if isinstance(value, list) else "=options"
+
+
+def _navigation_switch(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=list"
+
+
+#: Experimental. One ``navigation:`` entry: a page's key, or a one-key mapping to a page's
+#: options or to a group's entries.
+type NavigationEntry = Annotated[
+    Annotated[str, Tag("=page")]
+    | Annotated[
+        dict[
+            str,
+            Annotated[
+                Annotated[list[NavigationEntry], Tag("=items")]
+                | Annotated[NavigationOptions, Tag("=options")],
+                Discriminator(_navigation_value),
+            ],
+        ],
+        Tag("=entry"),
+    ],
+    Discriminator(_navigation_member),
+]
+
+#: Experimental. ``navigation:``: ``true`` (every page, in order) or a list of entries.
+NavigationValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[list[NavigationEntry], Tag("=list")],
+    Discriminator(_navigation_switch),
+]
+
+
 class Spec(_Node):
     """Experimental. A whole ``karni.yaml``."""
 
@@ -371,6 +430,14 @@ class Spec(_Node):
             "or code: a page of the project's own at /<name>, which karni build leaves alone)."
         ),
     )
+    navigation: NavigationValue = Field(
+        False,
+        description=(
+            "Experimental. The menu karni build writes to KARNI_NAVIGATION: true for every page "
+            "of pages in their order, or a list of pages (by their key) and groups "
+            "({label: [entries]}), each page with optional {label, icon, requires}."
+        ),
+    )
     seed: dict[str, int] = Field(
         default_factory=dict,
         description="Entity -> demo rows per karni seed run (a Seeder's Meta.count).",
@@ -397,6 +464,8 @@ def json_schema() -> dict[str, Any]:
     schema = _tidy(Spec.model_json_schema())
     # Each page entry is one key: an entity with its pages, or a page name with its kind.
     schema["properties"]["pages"]["items"] |= {"minProperties": 1, "maxProperties": 1}
+    # So is each navigation entry written as a mapping: a page with its options, or a group.
+    schema["$defs"]["NavigationEntry"]["oneOf"][1] |= {"minProperties": 1, "maxProperties": 1}
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": SCHEMA_URL,

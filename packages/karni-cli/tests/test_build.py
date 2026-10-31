@@ -252,6 +252,39 @@ def test_a_feature_turned_on_is_planned_and_written_to_the_settings_block(copy: 
     assert again.output == "No changes: the project matches karni.yaml.\n"
 
 
+def test_navigation_is_written_to_the_settings_block_and_reads_back(copy: Path) -> None:
+    """The menu (experimental): planned, written as KARNI_NAVIGATION, exported as the spec."""
+    spec = copy / "karni.yaml"
+    text = spec.read_text()
+    spec.write_text(
+        text + "navigation:\n  - home\n  - Classes: {icon: calendar, items: [Session, Booking]}\n"
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert (
+        "  + KARNI_NAVIGATION: Home /, Classes (Sessions /sessions, Bookings /bookings)" in plan
+    ), plan
+    code, out = _build()
+    assert code == 0, out
+    settings = (copy / "config" / "settings.py").read_text()
+    block = settings[settings.index("# karni:spec start") : settings.index("# karni:spec end")]
+    assert "KARNI_NAVIGATION = [\n" in block
+    assert '"route": "/bookings", "requires": "authenticated"' in block  # owned reads
+    assert '"label": "Sessions", "route": "/sessions", "requires": "public"' in block
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+    exported = CliRunner().invoke(app, ["spec", "export"]).output
+    assert "navigation:\n  - home\n  - Classes: {icon: calendar, items: [Session, Booking]}" in (
+        exported
+    ), exported
+    spec.write_text(text + "navigation: true\n")
+    changed = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  ~ KARNI_NAVIGATION: Home /, Sessions /sessions, Bookings /bookings" in changed
+    spec.write_text(text)
+    code, out = _build()
+    assert code == 0, out
+    assert "KARNI_NAVIGATION" not in (copy / "config" / "settings.py").read_text()
+
+
 def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path) -> None:
     spec = copy / "karni.yaml"
     _edit(

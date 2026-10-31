@@ -109,6 +109,7 @@ def test_x_keys_are_kept_and_ignored_everywhere() -> None:
 
 HEAD = "version: 1\napp: {name: Shop}\n"
 SHOP = HEAD + "apps:\n  shop:\n    entities:\n      Product:\n"
+NAV = SHOP + "        fields: {name: str}\npages:\n  - home: dashboard\n  - Product: list\n"
 
 INVALID: list[tuple[str, str, int | None]] = [
     ("C211", "version: 1\napp: [unclosed\n", 3),
@@ -164,6 +165,15 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
     ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
     ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
+    ("C640", NAV + "navigation: [home, Products]\n", 11),
+    ("C640", SHOP + "        fields: {name: str}\npages:\n  - Product: [detail]\nnavigation: [Product]\n", 10),
+    ("C641", NAV + "navigation:\n  - Catalog: []\n", 12),
+    ("C641", NAV + "navigation:\n  - Product: {icon: Big Box}\n", 12),
+    ("C641", NAV + "navigation:\n  - home\n  - Catalog: [Product, home]\n", 13),
+    ("C641", NAV + "navigation:\n  - Product: [home]\n", 12),
+    ("C641", NAV + "navigation:\n  - {Catalog: [Product], Other: [home]}\n", 12),
+    ("C642", NAV + "navigation:\n  - Product: {requires: staff}\n", 12),
+    ("C642", NAV + "navigation:\n  - Product: {requires: 'shop.prodct:view'}\n", 12),
 ]  # fmt: skip
 
 
@@ -180,9 +190,12 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    # C460-C479: tree models.
+    # C460-C479: tree models. C640-C659: navigation.
     assert all(
-        200 <= int(code[1:]) <= 269 or code == "C324" or 460 <= int(code[1:]) <= 479
+        200 <= int(code[1:]) <= 269
+        or code == "C324"
+        or 460 <= int(code[1:]) <= 479
+        or 640 <= int(code[1:]) <= 659
         for code in iter_codes()
     )
 
@@ -296,6 +309,10 @@ def test_the_json_schema_agrees_with_the_validator() -> None:
     for text in (HEAD + "colour: blue\n", SHOP + "        serch: [x]\n", "app: {name: x}\n"):
         assert list(validator.iter_errors(yaml.safe_load(text))), text
         assert not validate_text(text).ok
+    menu = NAV + "navigation:\n  - home\n  - Catalog: {icon: box, items: [Product]}\n"
+    assert not list(validator.iter_errors(yaml.safe_load(menu))) and validate_text(menu).ok
+    two_keys = NAV + "navigation:\n  - {Catalog: [Product], Other: [home]}\n"
+    assert list(validator.iter_errors(yaml.safe_load(two_keys)))
 
 
 def test_export_writes_the_schema_line_first() -> None:

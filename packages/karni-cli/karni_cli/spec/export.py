@@ -6,7 +6,9 @@ their class and ``deconstruct()`` arguments, ``Meta.ordering``, ``class
 Karni`` and ``AdminMeta``, each viewset's access and search fields, the
 settings behind roles and features, the installed modules' settings and the
 seeders. The pages come from ``frontend/src/routes.tsx`` and the page files
-it imports, read as text.
+it imports, read as text. ``navigation`` (experimental) comes from a
+``KARNI_NAVIGATION`` list: each item names the page whose route it links to
+(:func:`karni_cli.spec.navigation.entries_from_setting`).
 
 A field is written in the field syntax when the type it names makes the same
 column: the same class and the same length, digits, null, choices, states,
@@ -45,7 +47,7 @@ from karni_cli import project as project_mod
 from karni_cli.generators.naming import default_route, snake
 from karni_cli.kinds import project_kind
 from karni_cli.project import CliError
-from karni_cli.spec import emit, schema
+from karni_cli.spec import emit, navigation, schema
 from karni_cli.spec.catalog import MODULES, OTHER_MODELS, SOCIAL_PROVIDERS, module_setting
 from karni_cli.spec.normal import role_name
 from karni_cli.spec.validate import TREE_FIELDS
@@ -567,6 +569,13 @@ def build(facts: dict[str, Any], root: Path) -> Exported:
     pages = _pages(root, routes, entities, names_count, left_out)
     if pages:
         data["pages"] = pages
+    menu = navigation.entries_from_setting(
+        settings.get("KARNI_NAVIGATION"),
+        navigation.pages(schema.Spec.model_validate(data)),
+        left_out,
+    )
+    if menu:
+        data["navigation"] = menu
     seed = {
         _entity_ref(label, names_count): count
         for label, count in facts["seeders"].items()

@@ -14,7 +14,8 @@ Three passes, each reporting every problem it finds:
    grants, features, pages, modules and seed counts, and every reference
    between them (``C230`` to ``C242``), then the keys of external tables and
    other databases (``C251`` to ``C253``), the renames written with
-   ``was`` (``C254``) and the keys of a tree (``C460``). Whether a ``database`` is one of the project's
+   ``was`` (``C254``), the keys of a tree (``C460``) and the menu
+   (``navigation``, ``C640`` to ``C642``). Whether a ``database`` is one of the project's
    aliases is checked when the caller knows them (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
@@ -272,6 +273,8 @@ def _known_keys(path: Loc) -> list[str]:
         (("apps", None, "entities", None, "access"), schema.Access),
     ]
     parent = path[:-1]
+    if parent[:1] == ("navigation",) and len(parent) >= 3:
+        return list(schema.NavigationOptions.model_fields)  # a navigation entry's options
     for pattern, model in shapes:
         if len(pattern) == len(parent) and all(
             want is None or want == got for want, got in zip(pattern, parent, strict=True)
@@ -385,6 +388,7 @@ class _Meaning:
         self.modules_()
         self.requirements()
         self.pages()
+        self.navigation()
         self.seed()
 
     # names and fields
@@ -1240,6 +1244,152 @@ class _Meaning:
                     )
                 routes[path] = index
 
+    def navigation(self) -> None:
+        """``navigation:`` (experimental): each entry names a page with a route, or is a group."""
+        from karni_cli.spec import navigation as nav
+
+        if isinstance(self.spec.navigation, bool):
+            return
+        known = nav.pages(self.spec)
+        seen: set[str] = set()
+
+        def options(where: Loc, value: schema.NavigationOptions, *, group: bool) -> None:
+            if value.label is not None and not 0 < len(value.label.strip()) <= nav.LABEL_MAX:
+                self.add(
+                    "C641",
+                    (*where, "label"),
+                    f"The label {value.label!r} must be a text of 1 to {nav.LABEL_MAX} characters.",
+                    "Write a short label, e.g. label: Products.",
+                )
+            if value.icon is not None and not nav.ICON_NAME.match(value.icon):
+                self.add(
+                    "C641",
+                    (*where, "icon"),
+                    f"The icon {value.icon!r} must be a name: lowercase letters, digits, - and _.",
+                    "Write an icon name the frontend knows, e.g. icon: home or icon: bar-chart.",
+                )
+            if value.requires is not None:
+                self.requirement((*where, "requires"), value.requires)
+            if group and not value.items:
+                self.add(
+                    "C641",
+                    where,
+                    "A group needs entries: items lists them.",
+                    "Write e.g. Catalog: {icon: box, items: [Product, Category]}.",
+                )
+            if not group and value.items is not None:
+                self.add(
+                    "C641",
+                    (*where, "items"),
+                    f"{where[-1]} is a page, which links to its route and holds no entries.",
+                    "Make a group with a label that names no page, and list the page in it.",
+                )
+
+        def page(where: Loc, key: str) -> None:
+            found = known.get(key)
+            if found is None:
+                self.add(
+                    "C640",
+                    where,
+                    f"navigation names {key!r}, but pages has no entry {key!r}.",
+                    "Name a page of pages by its key (Product, shop.Product, home), or add the "
+                    "page to pages.",
+                )
+            elif found.route is None:
+                self.add(
+                    "C640",
+                    where,
+                    f"{key}'s pages take an id (no list page), so no menu entry can link to them.",
+                    f"Add list to {key}'s pages, or leave {key} out of navigation.",
+                )
+            elif key in seen:
+                self.add(
+                    "C641",
+                    where,
+                    f"{key} is listed twice in navigation.",
+                    "List each page once.",
+                )
+            seen.add(key)
+
+        def entries(where: Loc, items: list[Any]) -> None:
+            for index, entry in enumerate(items):
+                here: Loc = (*where, index)
+                if isinstance(entry, str):
+                    page(here, entry)
+                    continue
+                if len(entry) != 1:
+                    self.add(
+                        "C641",
+                        here,
+                        f"Navigation entry {index + 1} has {len(entry)} keys: each entry is one "
+                        "key, a page with its options or a group with its entries.",
+                        "Write one entry per line, e.g. - Catalog: [Product, Category].",
+                    )
+                    continue
+                ((key, value),) = entry.items()
+                inner: Loc = (*here, key)
+                if key in known:
+                    page(inner, key)
+                    if isinstance(value, schema.NavigationOptions):
+                        options(inner, value, group=False)
+                    else:
+                        self.add(
+                            "C641",
+                            inner,
+                            f"{key} is a page, which links to its route and holds no entries.",
+                            "Give a page its options ({icon: box}), or make a group with a "
+                            "label that names no page.",
+                        )
+                    continue
+                if not key.strip() or len(key) > nav.LABEL_MAX:
+                    self.add(
+                        "C641",
+                        inner,
+                        f"The group label {key!r} must be a text of 1 to {nav.LABEL_MAX} "
+                        "characters.",
+                        "Write a short label, e.g. Catalog.",
+                    )
+                if isinstance(value, schema.NavigationOptions):
+                    options(inner, value, group=True)
+                    entries((*inner, "items"), value.items or [])
+                elif not value:
+                    self.add(
+                        "C641",
+                        inner,
+                        f"The group {key} has no entries.",
+                        f"List its entries, e.g. {key}: [Product, Category].",
+                    )
+                else:
+                    entries(inner, value)
+
+        entries(("navigation",), self.spec.navigation)
+
+    def requirement(self, where: Loc, value: str) -> None:
+        """A navigation entry's ``requires`` (experimental): a pattern the spec can name."""
+        from karni_cli.spec import navigation as nav
+
+        problem = nav.requirement_problem(value)
+        if problem is not None:
+            self.add("C642", where, f"{problem[0].upper()}{problem[1:]}.", _REQUIRES_FIX)
+            return
+        if value in ("public", "authenticated", "*"):
+            return
+        label = value.rpartition(":")[0]
+        app, _, model = label.partition(".")
+        if "*" in label or app not in self.spec.apps:
+            return  # a pattern, or a model outside the spec (a module's)
+        if not any(
+            fnmatch.fnmatchcase(entity.name.lower(), model.lower())
+            for entity in self.entities.values()
+            if entity.app == app
+        ):
+            self.add(
+                "C642",
+                where,
+                f"requires {value!r} names {label}, but the app {app} has no entity {model}.",
+                _REQUIRES_FIX,
+            )
+
     def seed(self) -> None:
         for name, count in self.spec.seed.items():
             entity = self.find(name)
@@ -1269,6 +1419,10 @@ class _Meaning:
                 )
 
 
+_REQUIRES_FIX: Final = (
+    "Write public, authenticated, or a permission pattern such as shop.product:view (app, "
+    "entity and action, with * for a part)."
+)
 _FIELD_FIX: Final = (
     "Write the type as karni make model takes it: name: type[:arg...], a trailing ? for "
     "optional (karni make model --help lists the types)."
@@ -1341,3 +1495,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C251", "C252", "C253", "C254")
     yield "C324"
     yield "C460"
+    yield from ("C640", "C641", "C642")
