@@ -75,3 +75,25 @@ describe("useNavigation", () => {
     expect(karniKeys.navigation()).toEqual(["karni", "$navigation", null]);
   });
 });
+
+describe("useNavigation on a server without a menu", () => {
+  it("does not retry a 404", async () => {
+    let calls = 0;
+    server.use(
+      http.get(`${BASE}/navigation/`, () => {
+        calls += 1;
+        return HttpResponse.json({ code: "E535", detail: "E535: off" }, { status: 404 });
+      }),
+    );
+    const client = createKarniClient({ baseUrl: BASE });
+    const queryClient = new QueryClient(); // the app's defaults: retries on
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <KarniProvider client={client} queryClient={queryClient}>
+        {children}
+      </KarniProvider>
+    );
+    const { result } = renderHook(() => useNavigation(), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(calls).toBe(1);
+  });
+});

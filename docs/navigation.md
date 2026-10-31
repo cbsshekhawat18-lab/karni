@@ -153,7 +153,8 @@ const pathname = useRouterState({ select: (state) => state.location.pathname });
   `user`, `users`, `box`, `calendar`, `map`, `tag` and `search`. The `icons`
   prop adds names or replaces these. An unknown name shows no icon.
 - While the menu loads, the nav shows placeholders. When the request fails,
-  it shows `navItems`.
+  it shows `navItems`. A server without a menu answers 404, which is never
+  retried, so the same layout works with and without `KARNI_NAVIGATION`.
 
 Static menus take groups too: `navItems` accepts `{ label, icon, children }`
 next to links. `navigationEntries(items, { pathname, icons })` turns the

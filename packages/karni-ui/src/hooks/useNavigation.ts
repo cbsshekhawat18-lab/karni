@@ -8,12 +8,21 @@
  * `AuthProvider` when there is one, so signing in or out reads the menu
  * again. Outside `AuthProvider` the key holds no user.
  *
+ * A 4xx answer is final (a server without a menu answers 404 `E535`), so it
+ * is not retried and Layout shows its `navItems` at once.
+ *
  * Escape hatch: `options` forwards every TanStack Query option except
- * `queryKey`/`queryFn` (e.g. `enabled`, `staleTime`).
+ * `queryKey`/`queryFn` (e.g. `enabled`, `staleTime`, `retry`).
  */
-import { useQuery, type UseQueryOptions, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type UseQueryOptions,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { useContext } from "react";
 import { AuthContext } from "../auth/provider";
+import { KarniApiError } from "../schema/client";
 import { useKarniClient } from "../schema/provider";
 import { karniKeys } from "./keys";
 
@@ -42,11 +51,20 @@ export function useNavigation(
 ): UseQueryResult<NavigationMenu> {
   const client = useKarniClient();
   const auth = useContext(AuthContext);
+  const fallback = useQueryClient().getDefaultOptions().queries?.retry ?? 3;
   const user = auth?.status === "authenticated" ? (auth.user?.id ?? null) : null;
   return useQuery<NavigationMenu>({
     staleTime: 5 * 60 * 1000,
+    // A 4xx (no menu on this server: 404 E535) is an answer, not a hiccup: no retries.
+    // Anything else retries as the QueryClient's defaults say.
+    retry: (failures, error) => {
+      if (error instanceof KarniApiError && error.status < 500) return false;
+      if (typeof fallback === "function") return fallback(failures, error);
+      if (typeof fallback === "boolean") return fallback;
+      return failures < fallback;
+    },
     ...options,
-    enabled: (options?.enabled ?? true) && auth?.status !== "loading",
+    enabled: auth?.status === "loading" ? false : (options?.enabled ?? true),
     queryKey: karniKeys.navigation(user),
     queryFn: ({ signal }) => client.request<NavigationMenu>(NAVIGATION_PATH, { signal }),
   });
