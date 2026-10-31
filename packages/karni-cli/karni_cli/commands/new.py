@@ -304,8 +304,8 @@ def choose_recipe(
 ) -> tuple[Recipe | None, str | None]:
     """The recipe ``--recipe`` names and the kind it gives, checked before anything is written.
 
-    ``(None, None)`` without ``--recipe``. The blank start is ``(None, kind)``,
-    an app unless ``--kind`` says otherwise.
+    ``(None, None)`` without ``--recipe``, and ``(None, kind)`` for the blank
+    start, which goes with any kind and option.
 
     :raises CliError: ``C420`` (with the closest names) or ``C421`` for a
         recipe that is not there or cannot be used, ``C440`` for an option a
@@ -316,6 +316,8 @@ def choose_recipe(
     from karni_cli import recipes
     from karni_cli.spec.source import load
 
+    if recipe == recipes.BLANK:
+        return None, kind
     clash = (
         "--design builds a public site from a designer's pages"
         if design is not None
@@ -332,8 +334,8 @@ def choose_recipe(
             code="C440",
         )
     found = recipes.load().require(recipe)
-    if found is None:
-        return None, kind or kinds.DEFAULT
+    if found is None:  # pragma: no cover - require returns None only for the blank start
+        return None, kind
     data = load(found.spec()).data
     app = data.get("app") if isinstance(data, dict) else None
     given = app.get("kind") if isinstance(app, dict) else None

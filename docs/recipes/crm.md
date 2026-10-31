@@ -13,7 +13,7 @@ and the calls, emails and meetings on each deal. A salesperson sees their
 own deals, a manager sees every deal, and an admin sees everything.
 
 ```sh
-karni new "Northwind Sales" --recipe crm
+karni new "Acme Sales" --recipe crm
 ```
 
 ## Entities and roles

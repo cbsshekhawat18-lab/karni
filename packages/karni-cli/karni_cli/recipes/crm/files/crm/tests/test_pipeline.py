@@ -31,11 +31,9 @@ def test_an_import_updates_contacts_by_their_email(
         tmp_path
     )  # the uploaded file is kept until the import is done
     client = client_as("sales")
-    create(Contact, email="ada@example.com", first_name="Ada", last_name="Old")
+    create(Contact, email="pat@example.com", first_name="Pat", last_name="Old")
     rows = (
-        "first_name,last_name,email\n"
-        "Ada,Lovelace,ada@example.com\n"
-        "Alan,Turing,alan@example.com\n"
+        "first_name,last_name,email\nPat,New,pat@example.com\nLee,Doe,lee@example.com\n"
     )
     upload = SimpleUploadedFile("contacts.csv", rows.encode(), content_type="text/csv")
     job = client.post(
@@ -54,6 +52,6 @@ def test_an_import_updates_contacts_by_their_email(
         f"/api/contacts/import/{job['id']}/commit/", {}, format="json"
     )
     assert committed.json()["status"] == "done", committed.content
-    assert Contact.objects.get(email="ada@example.com").last_name == "Lovelace"
+    assert Contact.objects.get(email="pat@example.com").last_name == "New"
     exported = client.get("/api/contacts/export/?format=csv")
-    assert exported.status_code == 200 and b"alan@example.com" in b"".join(exported)
+    assert exported.status_code == 200 and b"lee@example.com" in b"".join(exported)

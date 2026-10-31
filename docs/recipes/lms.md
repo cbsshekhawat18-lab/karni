@@ -13,7 +13,7 @@ students own, and the lessons each student has completed. A course knows
 how far a student is, in percent.
 
 ```sh
-karni new "Open Classroom" --recipe lms
+karni new "Evening Classes" --recipe lms
 ```
 
 ## Entities and roles

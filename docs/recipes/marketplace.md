@@ -12,7 +12,7 @@ Sellers list items, buyers order and pay for them, and each paid order owes
 its seller a payout: the order's amount less the marketplace's fee.
 
 ```sh
-karni new "Maker Market" --recipe marketplace
+karni new "Craft Market" --recipe marketplace
 ```
 
 ## Entities and roles
