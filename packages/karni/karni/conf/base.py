@@ -321,6 +321,12 @@ BASE: dict[str, Any] = {
     # Per-user grants (experimental): while True, each user's UserGrant rows join their
     # role grants (one more query per request). Off, they grant nothing and cost nothing.
     "KARNI_USER_GRANTS": env.bool("KARNI_USER_GRANTS", default=False),
+    # Navigation from data (experimental): a list of menu items and groups, "db" (the
+    # NavItem table of the karni.navigation app) or None (no menu, no navigation/ route).
+    "KARNI_NAVIGATION": None,
+    # The frontend files whose `path:` entries are the app's pages: karni check reports
+    # a menu item whose route none of them serves. [] turns that comparison off.
+    "KARNI_NAVIGATION_PAGES": ["frontend/src/routes.tsx"],
     "KARNI_ACCOUNTS_TOKEN_TTL": {
         "verify_email": 86400,
         "reset_password": 3600,

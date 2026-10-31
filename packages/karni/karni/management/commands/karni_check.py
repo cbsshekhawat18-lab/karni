@@ -17,6 +17,12 @@ experimental) with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
 fail, ``karni.W540`` (a database that does not answer) is printed. Not with
 ``--deploy``, which the production image runs before ``migrate``.
+
+While ``KARNI_NAVIGATION`` is set (experimental), it compares the menu with
+the frontend's pages and the project's permissions
+(:func:`karni.navigation.checks.check_navigation`): ``karni.E533`` and
+``E534`` fail, ``W630`` and ``W631`` are printed. Not with ``--deploy``
+either.
 """
 
 from __future__ import annotations
@@ -91,6 +97,15 @@ class Command(BaseCommand):
             for warning in warnings:
                 self.stdout.write(f"external tables: {warning}")
             failures.extend(f"external tables: {error}" for error in errors)
+
+            # The menu (experimental): each route has a page, each requirement a
+            # permission. The database menu is read where the database answers.
+            from karni.navigation.checks import navigation_check_failures
+
+            errors, warnings = navigation_check_failures()
+            for warning in warnings:
+                self.stdout.write(f"navigation: {warning}")
+            failures.extend(f"navigation: {error}" for error in errors)
 
         for ep in sorted(entry_points(group="karni.checks"), key=lambda e: e.name):
             try:
