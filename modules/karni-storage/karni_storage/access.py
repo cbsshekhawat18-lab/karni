@@ -21,7 +21,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from rest_framework.exceptions import NotFound, PermissionDenied
+from django.core.exceptions import FieldDoesNotExist
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
 from karni_storage.errorcodes import coded
 from karni_storage.fields import ProtectedFieldMixin
@@ -80,7 +81,7 @@ def resolve(resource: str, field: str) -> Target:
         model = _served_model(viewset)
         try:
             found = model._meta.get_field(field) if model is not None else None
-        except Exception:  # noqa: BLE001 - FieldDoesNotExist and friends: not a field
+        except FieldDoesNotExist:
             found = None
         if model is not None and isinstance(found, ProtectedFieldMixin):
             return Target(resource, viewset, model, found)
@@ -133,12 +134,12 @@ def may_upload(target: Target, request: Any) -> None:
     """
     from karni.accounts.visibility import protected_fields
 
-    refusal: Exception | None = None
+    refusal: APIException | None = None
     for action in ("create", "partial_update"):
         view = _view(target, request, action)
         try:
             view.check_permissions(request)
-        except Exception as exc:  # noqa: BLE001 - NotAuthenticated/PermissionDenied: try the next
+        except APIException as exc:  # NotAuthenticated, PermissionDenied: ask the next action
             refusal = refusal or exc
             continue
         if _hidden(target, request) or target.field.name in protected_fields(
@@ -146,5 +147,4 @@ def may_upload(target: Target, request: Any) -> None:
         ):
             raise PermissionDenied(f"You may not change {target.field.name}.")
         return
-    assert refusal is not None
-    raise refusal
+    raise refusal or PermissionDenied()

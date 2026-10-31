@@ -28,6 +28,7 @@ from __future__ import annotations
 import mimetypes
 from typing import Any, Final
 
+from django.core.exceptions import FieldDoesNotExist
 from django.core.files.uploadedfile import UploadedFile
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from rest_framework import serializers
@@ -172,7 +173,7 @@ class ProtectedFileFieldExtension(OpenApiSerializerFieldExtension):
         schema = auto_schema._map_serializer_field(self.target, direction, bypass_extensions=True)
         try:
             field = self.target.model_field()
-        except Exception:  # noqa: BLE001 - an unbound field: the plain file schema
+        except (AttributeError, LookupError, FieldDoesNotExist):  # an unbound field
             return schema
         if isinstance(schema, dict):
             schema["x-karni-storage"] = describe(field)
