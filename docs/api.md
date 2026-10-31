@@ -396,6 +396,21 @@ Access applies to each of them, and `tree_max_nodes`, `tree_default_depth`
 and `tree_max_depth` bound `tree/`. See
 [the API of tree models](models.md#the-api).
 
+## Taxonomies
+
+!!! warning "Experimental"
+    The taxonomy filters and endpoints are [experimental](stability.md#experimental-names).
+
+A viewset whose model declares [`class Karni: taxonomies`](models.md#taxonomies)
+takes `?<key>=<id>,<id>` and `?<key>_descendants=true` on its list and serves
+`facets/?taxonomy=<key>&rollup=true`: the rows per node under the list's
+filters, search and access, in two queries. A tree resource that a taxonomy
+points at serves `<id>/tagged/?descendants=true`: the rows tagged with the
+node, per tagging model, each under its own access. `facet_queryset()` is
+the escape hatch for the rows the facets count, and `taxonomy_actions` turns
+the routes off. The relation field of a taxonomy carries
+`x-karni-taxonomy: "<key>"` in the OpenAPI document.
+
 ## Deferred writes
 
 When a `karni.signals.pre_write` receiver defers a write (the

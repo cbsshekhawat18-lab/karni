@@ -223,6 +223,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 | `writable` | `true` / `false` | `Karni.writable`, with `external` only |
 | `database` | an alias of `DATABASES` | `Karni.database` (default: `default`) |
 | `tree` | `true`, `ordered` or `false` | a [tree model](models.md#tree-models): `TreeModel` (`true`) or `OrderedTreeModel` (`ordered`), listed before the base |
+| `taxonomies` | key to a tree entity | `Karni.taxonomies`, [taxonomy tagging](models.md#taxonomies): a many-to-many per key, its filters, facets and the `tree:<key>` scope |
 | `was` | the entity's old name | a rename that keeps the table and its rows (`karni plan`) |
 
 Field types are exactly `karni make model`'s syntax, checked by its own
@@ -291,6 +292,35 @@ a risky change, and so is `ordered` back to `true`, which drops `position`.
 React forms and detail pages (item 12 of the
 [large-apps roadmap](roadmap/large-apps.md)) will read the same key. A field
 left out of every group goes in a last group without a title.
+
+### Taxonomies
+
+!!! warning "Experimental"
+    The `taxonomies` key is experimental, like the
+    [taxonomies](models.md#taxonomies) it builds.
+
+`taxonomies` tags an entity to tree entities: each key becomes a
+many-to-many of that name, with the list filters `?<key>=` and
+`?<key>_descendants=`, the `facets/` counts and the `tree:<key>` scope.
+`karni build` writes `class Karni: taxonomies` into the entity's model base,
+each target as `app_label.Name`, and the field comes from it:
+
+```yaml
+Region: {fields: {name: str}, tree: true}
+Category: {fields: {name: str}, tree: ordered}
+Product:
+  fields: {name: str}
+  taxonomies: {region: Region, category: Category}
+```
+
+Each target is a tree entity of the spec, by name or `app.Name` (`C701`). A
+key is a field name the entity can take (`C700`). A field of the same name
+is adopted only when it is an `m2m` to the same tree (`C702`), and an
+external entity takes no taxonomies (`C703`). A role grant's `tree:<path>`
+may follow a taxonomy key (`tree:region`). `karni spec export` writes the
+taxonomies back from the model facts. In `karni plan` a taxonomy added writes
+a migration, and a taxonomy removed or pointed at another tree is a risky
+change: its tags go with its table.
 
 ### Access
 
@@ -536,6 +566,7 @@ karni build refuses the risky (!) changes without --allow-destructive.
 | an entity made a tree (`tree: true` or `ordered`) | its rows, which all become roots |
 | an entity made flat again (`tree` removed) | rows whose `parent` is set |
 | `tree: ordered` back to `true` (drops `position`) | the entity's rows |
+| a taxonomy removed or pointed at another tree (its tags are dropped) | the entity's rows |
 | access widened: reads to `public`, writes or creates from a role to `authenticated` or `public` | the entity's rows (none for creates) |
 | a grant's scope widened to `all` | the rows of the entity the grant names (none for a pattern with `*`) |
 

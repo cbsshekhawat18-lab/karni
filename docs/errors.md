@@ -4314,7 +4314,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `hand-written-tree`
 
-**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect.
+**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect. Tag a model to a tree with `class Karni: taxonomies = {"region": "geo.Region"}` (`taxonomies:` in karni.yaml), never a hand-written many-to-many with its own subtree filter or counts: the list filters `?region=` and `?region_descendants=`, facets/ and the tree:region scope come with it.
 
 **Why Karni objects.** Hand-written trees loop on cyclic data, cost one query per level and repeat the same endpoints and widgets in every project. TreeModel's walks are one cycle-safe query each.
 

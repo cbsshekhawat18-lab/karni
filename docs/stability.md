@@ -219,6 +219,14 @@ Experimental now:
   the `tree:<field>` options of the permission matrix, the `tree` entry of a
   `karni why` grant in `--json`, `tree:<path>` in a `karni.yaml` role grant,
   and `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`.
+- [Taxonomies](models.md#taxonomies): `class Karni: taxonomies`,
+  `karni.taxonomy`, `karni.api.taxonomy` (the `?<key>=` and
+  `?<key>_descendants=` filters, the `facets/` and `tagged/` endpoints),
+  `BaseViewSet.facet_queryset()`, `taxonomy_actions`, `serves_facets()` and
+  `serves_tagged()`, the `x-karni-taxonomy` extension, `origin` of
+  `karni.tree.walk_sql`, the `taxonomies` fact, the `taxonomies` key of
+  `karni.yaml`, and `FacetPanel`, `useResourceFacets` and `ResourceTable`'s
+  `facets` in `@karni/ui`.
 
 ## Supported platforms
 
