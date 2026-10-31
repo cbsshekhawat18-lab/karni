@@ -841,7 +841,7 @@ tree's natural key, several in one cell with `|` between them
 cannot read) as a problem of that row. `FacetPanel` and `ResourceTable`'s
 `facets` show the counts in `@karni/ui` (see [the UI](ui.md)).
 
-### Checks and codes
+### Taxonomy codes
 
 | Code | When |
 |---|---|
