@@ -3676,7 +3676,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it.
+**Rule.** Run `karni context` before reading any files. It prints the current apps, models, viewsets, UI components, hooks, pages, public site routes and installed modules in a few hundred tokens. Trust it. On a large project read one area at a time: `karni context --summary`, then `karni context --app <label>` or `--model <name>` (`--max-tokens N` caps any of them).
 
 **Why Karni objects.** The inventory is derived live from the app registry, the router and the @karni/ui manifest, so it is never stale and costs far fewer tokens than crawling source.
 
