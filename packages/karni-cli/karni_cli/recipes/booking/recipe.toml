@@ -1,0 +1,17 @@
+name = "booking"
+title = "Booking"
+purpose = "Resources with time slots that members book and pay for, never over capacity."
+use_when = [
+    "book a class",
+    "book a slot",
+    "booking",
+    "appointments",
+    "reservations",
+    "class schedule",
+    "rooms and resources",
+]
+usually_changed = [
+    "what a resource is (a class, a room, a court, a person) and its fields",
+    "the booking states",
+    "whether a booking is paid, and the payment provider and currency",
+]

@@ -812,6 +812,8 @@ def render(ws: Workspace, inputs: Inputs) -> Output:
     for label in managed:
         app, name, _entity = entities[label]
         apps.setdefault(app, []).append(name)
+    # the settings block first: the tests of a Granted() viewset take their role from its roles
+    _render_settings(ws, out, inputs)
     existing = {app.label for app in local_apps(ws)}
     for app in apps:
         if app not in existing and not ws.is_dir(app):
@@ -834,7 +836,6 @@ def render(ws: Workspace, inputs: Inputs) -> Output:
         _render_app(
             ws, out, inputs, app, names, renames_by_app.get(app, {}), removed_by_app.get(app, set())
         )
-    _render_settings(ws, out, inputs)
     _render_pages(ws, out, inputs)
     return out
 

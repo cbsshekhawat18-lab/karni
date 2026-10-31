@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Marketplace
+  kind: app
+  recipe: marketplace
+modules:
+  payments: {provider: stripe, currency: usd}
+features:
+  two_factor: true
+  terms: {version: "2026-01", url: /terms/, required: true}
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  seller:
+    name: Seller
+    description: Sells through their own shop, sees its orders and payouts.
+    default: false
+    grants: {market.seller: own, market.listing: own}
+  buyer:
+    name: Buyer
+    description: Buys listings and sees their own orders.
+    default: true
+    grants: {market.order: own}
+apps:
+  market:
+    entities:
+      Seller:
+        fields:
+          user: fk:User
+          name: "str:120"
+          slug: "slug:name"
+          about: "text?"
+        owner: user
+        key: slug
+        search: [name]
+        order: name
+        access:
+          read: public
+          write: ["owned:user", "role:staff"]
+          create: authenticated
+      Listing:
+        fields:
+          seller: fk:Seller
+          title: "str:200"
+          slug: "slug:title"
+          description: "text?"
+          price: "money:USD"
+          active: bool
+        owner: seller__user
+        key: slug
+        search: [title, description]
+        order: -created_at
+        access:
+          read: public
+          write: ["owned:seller__user", "role:staff"]
+      Order:
+        fields:
+          listing: fk:Listing
+          buyer: fk:User
+          quantity: int
+          amount: "money:USD"
+          status: "state:pending>paid|pending>cancelled|paid>shipped|paid>refunded|shipped>delivered"
+          payment: "fk:karni_payments.Payment?"
+        owner: buyer
+        audit: [status]
+        order: -created_at
+        access:
+          read: ["owned:buyer", "owned:listing__seller__user", "role:staff"]
+          write: ["owned:buyer", "role:staff"]
+      Payout:
+        fields:
+          seller: fk:Seller
+          order: "o2o:Order"
+          amount: "money:USD"
+          fee: "money:USD"
+          status: "state:pending>paid"
+        owner: seller__user
+        audit: [status]
+        order: -created_at
+        access:
+          read: ["owned:seller__user", "role:staff"]
+          write: "role:staff"
+pages:
+  - home: dashboard
+  - Listing: [list, detail, form]
+  - Seller: [list, detail, form]
+  - Order: [list, detail]
+  - Payout: [list]
+seed: {Seller: 5, Listing: 30, Order: 40, Payout: 0}

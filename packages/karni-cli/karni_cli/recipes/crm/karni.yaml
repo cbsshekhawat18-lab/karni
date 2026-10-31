@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: CRM
+  kind: app
+  recipe: crm
+features:
+  two_factor: true
+roles:
+  admin: {name: Admin, description: "Everything, users and roles too.", system: true, grants: {"*": all}}
+  manager:
+    name: Manager
+    description: Sees and changes every deal and activity.
+    default: false
+    grants: {"crm.*": all}
+  sales:
+    name: Sales
+    description: Works their own deals and activities, and every company and contact.
+    default: false
+    grants: {crm.company: all, crm.contact: all, crm.deal: own, crm.activity: own}
+apps:
+  crm:
+    entities:
+      Company:
+        fields:
+          name: "str:200"
+          website: "url?"
+          industry: "str:80?"
+          phone: "phone?"
+          notes: "text?"
+        key: name
+        search: [name, industry]
+        order: name
+        audit: true
+        access: {read: granted, write: granted}
+      Contact:
+        fields:
+          company: "fk:Company?"
+          first_name: "str:80"
+          last_name: "str:80"
+          email: "email:unique"
+          phone: "phone?"
+          title: "str:120?"
+        key: email
+        search: [first_name, last_name, email]
+        order: [last_name, first_name]
+        audit: true
+        access: {read: granted, write: granted}
+      Deal:
+        fields:
+          company: fk:Company
+          contact: "fk:Contact?"
+          title: "str:200"
+          value: "money:USD"
+          salesperson: fk:User
+          stage: "state:lead>qualified|lead>lost|qualified>proposal|qualified>lost|proposal>won|proposal>lost"
+          expected_close: "date?"
+        owner: salesperson
+        search: [title]
+        order: -created_at
+        audit: true
+        access: {read: granted, write: granted}
+      Activity:
+        fields:
+          deal: fk:Deal
+          salesperson: fk:User
+          kind: "choice:call|email|meeting|note"
+          due_at: "datetime?"
+          done: bool
+          notes: "text?"
+        owner: salesperson
+        order: due_at
+        access: {read: granted, write: granted}
+pages:
+  - home: dashboard
+  - Company: [list, detail, form]
+  - Contact: [list, detail, form]
+  - Deal: [list, detail, form]
+  - Activity: [list, form]
+seed: {Company: 20, Contact: 60, Deal: 40, Activity: 120}
