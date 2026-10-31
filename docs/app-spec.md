@@ -351,7 +351,6 @@ they arrive:
 
 | Key | Where | For |
 |---|---|---|
-| `taxonomies:` | entity | taxonomies |
 | `aggregate:` | entity | aggregation endpoints (large-apps item 8) |
 | `search:` | top level | a search block across entities |
 | `markdown` | field type | markdown fields (large-apps item 12) |

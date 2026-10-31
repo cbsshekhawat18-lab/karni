@@ -615,6 +615,56 @@ def test_a_tree_scope_grant_is_planned_and_checked(base: Project) -> None:
     assert [issue.code for issue in bad.issues] == ["C620"]
 
 
+def _tagged_facts(base: Project, taxonomies: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    facts = _tree_facts(base)
+    facts["apps"][-1]["models"][1]["ordering"] = ["position"]
+    facts["apps"][-1]["models"].append(
+        _model("geo.Store", base_model=True, pk="uuid", taxonomies=taxonomies)
+    )
+    return facts
+
+
+def _tagged_plan(base: Project, facts: dict[str, Any], store: str) -> Plan:
+    text = BASE.replace("pages:\n", TREES + store + "pages:\n")
+    report = validate_text(text)
+    assert report.ok and report.spec is not None, report.issues
+    return plan_project(report.spec, facts, base.root, file="karni.yaml")
+
+
+def test_taxonomies_are_exported_and_planned(base: Project) -> None:
+    tagged = {
+        "region": {"to": "geo.Region", "generated": True},
+        "category": {"to": "geo.Category", "generated": True},
+    }
+    facts = _tagged_facts(base, tagged)
+    exported = build(facts, base.root).data["apps"]["geo"]["entities"]["Store"]
+    assert exported["taxonomies"] == {"region": "geo.Region", "category": "geo.Category"}
+    assert exported["fields"] == {"sku": "str:20"}
+    same = "      Store:\n        fields: {sku: 'str:20'}\n        access: code\n"
+    both = same + "        taxonomies: {region: Region, category: geo.Category}\n"
+    assert _tagged_plan(base, facts, both).changes == []
+    # one taxonomy added: a migration adds its table, nothing is lost
+    plan = _tagged_plan(base, _tagged_facts(base, {"region": tagged["region"]}), both)
+    added = _only(plan, "geo.Store taxonomies")
+    assert added.detail == "region geo.Region -> category geo.Category, region geo.Region"
+    assert not added.risky
+    assert [c.target for c in plan.changes if c.area == "migrations"] == ["geo"]
+    # one removed: its tags go with its table
+    removed = _only(
+        _tagged_plan(base, facts, same + "        taxonomies: {region: Region}\n"),
+        "geo.Store taxonomies",
+    )
+    assert (
+        removed.risky and removed.reason == "the tags under category are dropped with their table"
+    )
+    new = _tagged_plan(
+        base,
+        _tree_facts(base),
+        "      Shop: {fields: {name: str}, taxonomies: {region: Region}}\n",
+    )
+    assert _only(new, "geo.Shop").detail == "(name str) taxonomies region geo.Region"
+
+
 def test_database_must_be_an_alias_the_project_has(
     base: Project, monkeypatch: pytest.MonkeyPatch
 ) -> None:

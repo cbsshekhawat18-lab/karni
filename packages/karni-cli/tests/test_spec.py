@@ -119,6 +119,18 @@ TREES = (
     + "roles:\n  buyer:\n    grants:\n"
 )
 
+
+def tagged(taxonomies: str) -> str:
+    """A product with ``taxonomies``, a category tree and flat tags."""
+    return (
+        SHOP
+        + "        fields: {name: str, tags: 'm2m:Tag?'}\n"
+        + f"        taxonomies: {taxonomies}\n"
+        + "      Category: {fields: {name: str}, tree: true}\n"
+        + "      Tag: {fields: {name: str}}\n"
+    )
+
+
 INVALID: list[tuple[str, str, int | None]] = [
     ("C211", "version: 1\napp: [unclosed\n", 3),
     ("C212", HEAD + "colour: blue\n", 3),
@@ -141,7 +153,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
-    ("C224", SHOP + "        taxonomies: true\n", 7),
+    ("C224", SHOP + "        aggregate: true\n", 7),
     ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
@@ -179,6 +191,15 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C620", TREES + "      shop.listing:view: 'tree:product__Category'\n", 14),
     ("C620", TREES + "      shop.tag:*: 'tree:category'\n", 14),
     ("C620", TREES + "      shop.*: 'tree:region'\n", 14),
+    ("C700", tagged("{region_descendants: Category}"), 8),
+    ("C700", tagged("{created_by: Category}"), 8),
+    ("C700", tagged("{Region: Category}"), 8),
+    ("C701", tagged("{tag: Tag}"), 8),
+    ("C230", tagged("{area: Area}"), 8),
+    ("C702", tagged("{tags: Category}"), 8),
+    ("C702", tagged("{name: Category}"), 8),
+    ("C703", SHOP + "        {external: true, table: sales, taxonomies: {category: Category}}\n"
+     "      Category: {fields: {name: str}, tree: true}\n", 7),
 ]  # fmt: skip
 
 
@@ -195,12 +216,13 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    # C460-C479: tree models. C620-C639: the tree scope.
+    # C460-C479: tree models. C620-C639: the tree scope. C700-C719: taxonomies.
     assert all(
         200 <= int(code[1:]) <= 269
         or code == "C324"
         or 460 <= int(code[1:]) <= 479
         or 620 <= int(code[1:]) <= 639
+        or 700 <= int(code[1:]) <= 719
         for code in iter_codes()
     )
 
@@ -297,6 +319,30 @@ def test_a_tree_scope_follows_relations_to_a_tree_entity() -> None:
     assert grants["shop.listing:*"] == "tree:product__category"
     (issue,) = check(TREES + "      shop.listing:view: 'tree:product'\n").issues
     assert "'product' does not lead from Listing to an entity with tree: true" in issue.message
+
+
+def test_taxonomies_point_at_tree_entities_and_normalise_to_labels() -> None:
+    text = (
+        SHOP
+        + "        fields: {name: str, region: 'm2m:geo.Region?'}\n"
+        + "        taxonomies: {region: geo.Region, category: Category}\n"
+        + "      Category: {fields: {name: str}, tree: ordered}\n"
+        + "  geo:\n    entities:\n      Region: {fields: {name: str}, tree: true}\n"
+        + "roles:\n  buyer:\n    grants:\n"
+        + "      shop.product:view: 'tree:category'\n"
+        + "      shop.product:change: 'tree:region'\n"
+    )
+    report = check(text)
+    assert report.ok, [issue.render("x") for issue in report.issues]
+    assert report.spec is not None
+    product = normalise(report.spec)["apps"]["shop"]["entities"]["Product"]
+    assert product["taxonomies"] == {"category": "shop.Category", "region": "geo.Region"}
+    # the adopted field must point at the same tree
+    found = check(text.replace("'m2m:geo.Region?'", "'m2m:Category?'")).issues
+    assert [issue.code for issue in found] == ["C702"]
+    assert "adopts the field Product.region, which is not an m2m to Region" in found[0].message
+    (issue,) = check(tagged("{tag: Tag}")).issues
+    assert "points at Tag, which is not an entity with tree: true" in issue.message
 
 
 def test_a_tree_value_names_the_values_it_takes() -> None:

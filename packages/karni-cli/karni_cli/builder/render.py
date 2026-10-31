@@ -12,7 +12,8 @@ For one entity, ``Session`` in the app ``classes``::
     classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni, AdminMeta
                                 (abstract: Django migrates the project's subclass;
                                 tree: true lists TreeModel first, tree: ordered
-                                OrderedTreeModel)
+                                OrderedTreeModel; taxonomies: class Karni: taxonomies,
+                                whose fields the subclass gets)
     classes/models.py           class Session(karni.Session): the project's methods
     classes/karni/api.py        class SessionViewSet(BaseViewSet): model, access, search
     classes/viewsets.py         class SessionViewSet(karni.SessionViewSet): the project's actions
@@ -176,6 +177,20 @@ def _targets(
     return found
 
 
+def _taxonomies(spec: schema.Spec, app: str, entity: schema.Entity) -> dict[str, str]:
+    """``class Karni: taxonomies``: each key with its tree entity as ``app_label.Name``."""
+    found: dict[str, str] = {}
+    for key, raw in entity.taxonomies.items():
+        if "." in raw:
+            found[key] = raw
+        elif raw in spec.apps[app].entities:
+            found[key] = f"{app}.{raw}"
+        else:
+            owners = [label for label, other in spec.apps.items() if raw in other.entities]
+            found[key] = f"{owners[0]}.{raw}" if len(owners) == 1 else raw
+    return found
+
+
 def _db_table(table: str) -> str:
     """The spec's ``schema.table`` as ``Meta.db_table`` (``schema"."table``)."""
     return table.replace(".", '"."')
@@ -269,6 +284,8 @@ def _model_class(
         options.append(("audit", entity.audit if entity.audit is True else list(entity.audit)))
     if entity.scope_paths:
         options.append(("scope_paths", dict(entity.scope_paths)))
+    if entity.taxonomies:
+        options.append(("taxonomies", _taxonomies(spec, app, entity)))
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
@@ -278,6 +295,7 @@ def _model_class(
         ]
         grouped = {member for names in entity.groups.values() for member in names}
         own = [s.name for s in specs] + list(TREE_FIELDS.get(entity.tree, ()))
+        own += [key for key in entity.taxonomies if key not in own]
         rest = [name for name in own if name not in grouped]
         if rest:
             sets.append((None, {"fields": rest}))

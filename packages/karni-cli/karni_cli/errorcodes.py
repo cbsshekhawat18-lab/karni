@@ -494,7 +494,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C224",
         "A key reserved for a later release",
         "karni spec validate (karni_cli.spec.validate)",
-        "Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.",
+        "Some keys are reserved for features Karni adds later (trees, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so is taxonomies.",
         "Remove the key, and write that part by hand in the project until the feature ships.",
     ),
     _c(
@@ -1022,12 +1022,51 @@ CODES: Final[tuple[CliCode, ...]] = (
         "A role grant's tree:<path> does not lead to a tree entity",
         "karni spec validate and karni plan (karni_cli.spec.validate)",
         "tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. "
-        "The path follows the entity's relation fields (fk, m2m, o2o), each to an entity of the "
-        "spec, and the last one must point at an entity with tree: true or tree: ordered. "
+        "The path follows the entity's relation fields (fk, m2m, o2o) and taxonomies, each to an "
+        "entity of the spec, and the last one must point at an entity with tree: true or tree: "
+        "ordered. "
         "Karni refuses any other path at startup (E490).",
         "Name the entity's relation to the tree, through relations when needed: tree:region, "
         "tree:product__categories. Add tree: true to the entity the path ends at, or grant "
         "another scope.",
+    ),
+    # C700-C719 taxonomies in karni.yaml (experimental)
+    _c(
+        "C700",
+        "A taxonomy key is not a field name the entity can take",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Each key of taxonomies becomes a many-to-many field of that name and the list parameters "
+        "?<key>= and ?<key>_descendants=, so it is a lowercase field name that does not end in "
+        "_descendants, and it is not a field a mixin or the tree already gives the entity.",
+        "Rename the key, e.g. taxonomies: {region: Region}.",
+    ),
+    _c(
+        "C701",
+        "A taxonomy does not point at a tree entity",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "A taxonomy tags rows with the nodes of a hierarchy, and its filters, facets and the "
+        "tree:<key> scope walk the tree below a node. The target must be an entity of the spec "
+        "with tree: true or tree: ordered. Karni refuses another target at startup (E571).",
+        "Point the key at a tree entity (Name or app.Name), or add tree: true to the entity it "
+        "names. For tags without a hierarchy, declare a plain m2m field instead.",
+    ),
+    _c(
+        "C702",
+        "A taxonomy key names a field that is not a many-to-many to its tree",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "When the entity declares a field under a taxonomy's key, Karni adopts that field instead "
+        "of generating one. Only an m2m to the same tree entity can be adopted (E572).",
+        "Remove the field and let the taxonomy generate it, declare it as m2m:<the tree entity>, "
+        "or rename one of them.",
+    ),
+    _c(
+        "C703",
+        "An external entity declares taxonomies",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "A taxonomy adds a table of tags next to the entity's table and joins them. An external "
+        "entity's table belongs to another system, and Karni never writes tables for it.",
+        "Remove taxonomies from the external entity, or remove external and let Karni own the "
+        "table.",
     ),
 )
 
