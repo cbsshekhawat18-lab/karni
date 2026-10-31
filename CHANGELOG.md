@@ -23,7 +23,7 @@ apply codemods and list the manual steps. This file is the human summary.
   `field_group_layout = "tabs"` (a tab with a failing field is marked and
   opens when focus moves to it), and the admin's change form as fieldsets.
   The fields in no group come last, under Other. `column_sets = {"default":
-  [...], "financial": [...]}` gives `ResourceTable` a Columns menu whose
+  [...], "financial": [...]}` gives `ResourceTable` a column set menu whose
   choice is kept per user and table. The schema publishes both as
   `x-karni-field-groups` and `x-karni-column-sets` on the list operation,
   limited to the fields the requester may read. `karni check` refuses a

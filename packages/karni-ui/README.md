@@ -502,7 +502,7 @@ and sanitized by `ResourceDetail`. A model's `Karni.field_groups`
 sections, or tabs with `field_group_layout = "tabs"`, the fields in no group
 last under "Other". A tab with a failing field is marked and opens when focus
 moves to it. A model's `Karni.column_sets` (`x-karni-column-sets`) gives
-`ResourceTable` a "Columns" menu of presets, the choice remembered per user
+`ResourceTable` a column set menu (a button named after the set shown), the choice remembered per user
 and table. Each screen can override them:
 
 ```tsx

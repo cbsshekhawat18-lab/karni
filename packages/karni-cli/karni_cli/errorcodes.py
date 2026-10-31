@@ -1076,7 +1076,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C680",
         "A column set names a field the entity does not have, or one twice",
         "karni spec validate (karni_cli.spec.validate)",
-        "column_sets become Karni.column_sets, the presets of the React table's Columns menu, "
+        "column_sets become Karni.column_sets, the presets of the React table's column set menu, "
         "and karni check refuses a set that names a field the model does not have (karni.E551) "
         "or lists one twice (karni.E553).",
         "Name fields the entity declares (or id, created_at and updated_at), each once per set.",

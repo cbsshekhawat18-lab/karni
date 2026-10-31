@@ -20,7 +20,7 @@
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user. A model with `Karni.column_sets` (experimental) gets a "Columns"
+ * user. A model with `Karni.column_sets` (experimental) gets a column set
  * menu that switches between its presets, the choice remembered per user
  * and table. A MarkdownField's long text is no default column. In the table layout the rows are a WAI-ARIA grid: the whole table
  * is one Tab stop and the arrow keys move between rows and cells
@@ -240,7 +240,7 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   /** The "View" menu (density, column visibility). Default true. */
   viewOptions?: boolean;
   /**
-   * Experimental. Column presets, offered in a "Columns" menu whose choice is
+   * Experimental. Column presets, offered in a column set menu whose choice is
    * remembered per user and table. Default: the model's `Karni.column_sets`
    * (`x-karni-column-sets`). `false` offers none (every derived column shows).
    */

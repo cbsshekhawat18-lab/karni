@@ -1,6 +1,7 @@
 /**
- * ResourceTable's column set selector (experimental): a "Columns" menu with
- * one choice per preset of the model's `Karni.column_sets`. The choice is
+ * ResourceTable's column set selector (experimental): a menu button named
+ * after the set shown, with one choice per preset of the model's
+ * `Karni.column_sets`. The choice is
  * remembered per user and table (see ./preferences). A Radix dropdown with
  * radio items, so it is operable by keyboard (arrows, Enter, Escape).
  * Internal to @karni/ui. ResourceTable's `columnSets={false}` hides it.

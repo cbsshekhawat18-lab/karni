@@ -198,7 +198,7 @@ function wideModels() {
     "  tabs, a tab with a failing field is marked, and moving focus to a field (the error",
     "  summary, a failed submit) opens its tab. `fieldGroups={false}` shows one list, and",
     "  `fieldGroups={[...]}` or `groupLayout` replace the model's in one screen.",
-    '- **Column sets.** ResourceTable gets a "Columns" menu with one choice per set. The',
+    "- **Column sets.** ResourceTable gets a column set menu, one choice per set. The",
     "  set named `default` shows first, else the first set, and the user's choice is",
     "  remembered per user and table in the browser. `columnSet` and `onColumnSetChange`",
     "  control it, and `columnSets={false}` shows every derived column. `columns`",

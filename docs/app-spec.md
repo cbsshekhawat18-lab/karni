@@ -263,7 +263,7 @@ database is built without the audit users, whose relations would point at
 as the model's `Karni.field_groups`: sections of ResourceForm and
 ResourceDetail and fieldsets of the admin, in the order written, and a field
 left out of every group goes in a last group, Other. `column_sets` become
-`Karni.column_sets`: the presets of ResourceTable's Columns menu, where the
+`Karni.column_sets`: the presets of ResourceTable's column set menu, where the
 set named `default` shows first. A group names fields of the entity, each
 field in one group (`C237`). A set names fields of the entity or `id`,
 `created_at` and `updated_at`, each once (`C680`), under a snake_case name

@@ -3642,7 +3642,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** column_sets become Karni.column_sets, the presets of the React table's Columns menu, and karni check refuses a set that names a field the model does not have (karni.E551) or lists one twice (karni.E553).
+**Why Karni objects.** column_sets become Karni.column_sets, the presets of the React table's column set menu, and karni check refuses a set that names a field the model does not have (karni.E551) or lists one twice (karni.E553).
 
 **Fix.** Name fields the entity declares (or id, created_at and updated_at), each once per set.
 
@@ -3978,7 +3978,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists.
+**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists. Long text a page shows formatted is `MarkdownField` (`name:markdown`). A model with many fields declares `class Karni: field_groups` (form and detail sections or tabs) and `column_sets` (table presets) instead of hand-built screens.
 
 **Why Karni objects.** Float money, free-text codes and case-sensitive unique emails pass every test and fail in production. A database constraint is the one layer raw SQL, bulk updates and other services cannot skip.
 
