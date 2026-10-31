@@ -198,6 +198,14 @@ Experimental now:
   `karni.testing.assert_module_manifest`, `karni modules list` and `show`,
   `karni remove`, the `CATALOG:` lines of `karni context`, the `FEATURES:`
   line of `manage.py karni_context`, and `karni_cli.catalog`.
+- [The `karni-storage` module](storage.md): the whole of `karni_storage`
+  (`ProtectedFileField`, `ProtectedImageField`, the presets, the storage, the
+  tokens, `Thumbnail`, `karni_storage.thumbnails`), the `KARNI_STORAGE_*`
+  settings, the `<resource>/<id>/files/<field>/`, `upload/` and `confirm/`
+  endpoints and their answers, `x-karni-storage` in the schema, the
+  `application/vnd.karni.upload` reference part, `manage.py
+  karni_thumbnails`, the `file:protected` and `image:protected` field types,
+  and everything in `@karni/storage-ui`.
 
 ## Supported platforms
 

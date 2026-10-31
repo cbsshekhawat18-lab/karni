@@ -96,6 +96,7 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - Protected files (S3): storage.md
       - "App spec (karni.yaml)": app-spec.md
   - Debugging:
       - Request ids and capture: debugging/capture.md

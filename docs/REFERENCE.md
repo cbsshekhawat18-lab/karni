@@ -51,6 +51,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier | `experimental` | Karni's own tests |
 | Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier | `experimental` | Karni's own tests |
 | A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier | `experimental` | Karni's own tests |
+| Protected files (the `storage` module): kept in a private S3-compatible bucket or on disk, downloaded only through the row's own viewset by a signed URL, with direct uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 
 ### Admin
@@ -855,6 +856,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
 | `doc:file / photo:image` | FileField / ImageField with `upload_to="<app>/<model>/"`. An image field makes pyproject.toml depend on `karni[images]` (Pillow) |
+| `doc:file:protected / photo:image:protected` | ProtectedFileField / ProtectedImageField (karni-storage, experimental): stored privately, downloaded only through the row's viewset. Needs `karni add storage` |
 | `ref:uuid` | UUIDField(default=uuid.uuid4) |
 | `status:choice:draft\|live` | a TextChoices class + CharField(choices=..., default=first) |
 | `status:state:draft,confirmed,cancelled` | StateField(states=[...], transitions={...}): each state moves to the next (edit the dict), or declare the moves with &gt;: 'status:state:draft&gt;confirmed\|draft&gt;cancelled' |
@@ -1827,6 +1829,24 @@ class Lead(BaseModel):
 | `KARNI_SITE_FORM_PAGE_TEMPLATE` |  | `"karni_site/forms/page.html"` | The page that shows a form with its errors when the page it was sent from cannot be rendered again (no page, a page that needs a POST, a page that fails). |
 | `KARNI_SITE_NOTIFY_FROM` |  | `""` | The sender of karni_site.notify emails. Empty: Django's DEFAULT_FROM_EMAIL. |
 
+### Module: karni-storage
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_STORAGE_PROVIDER` | `KARNI_STORAGE_PROVIDER` | `"aws"` | The S3-compatible service the files go to when KARNI_STORAGE is "s3": aws, r2, minio, spaces, b2 or gcs-interop (karni_storage.presets). |
+| `KARNI_STORAGE_CREDENTIALS` | `KARNI_STORAGE_CREDENTIALS` | `"keys"` | "keys": AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set. "chain": boto3 finds them itself (an AWS instance or task role, a profile). |
+| `KARNI_STORAGE_BUCKET` | `KARNI_STORAGE_BUCKET` | `""` | The bucket of protected files. Empty: AWS_STORAGE_BUCKET_NAME. |
+| `KARNI_STORAGE_LOCATION` | `KARNI_STORAGE_LOCATION` | `"protected"` | The key prefix of protected files inside the bucket. |
+| `KARNI_STORAGE_ROOT` | `KARNI_STORAGE_ROOT` | `""` | The directory of protected files on local storage. Empty: "protected" next to MEDIA_ROOT, so the media URL never serves them. |
+| `KARNI_STORAGE_URL_EXPIRY` | `KARNI_STORAGE_URL_EXPIRY` | `300` | Seconds a signed download URL lives. |
+| `KARNI_STORAGE_UPLOAD_EXPIRY` | `KARNI_STORAGE_UPLOAD_EXPIRY` | `900` | Seconds a direct upload's presigned POST (or PUT) lives. |
+| `KARNI_STORAGE_UPLOAD_METHOD` | `KARNI_STORAGE_UPLOAD_METHOD` | `""` | "post" or "put". Empty: the preset's (POST where the service takes a POST policy). |
+| `KARNI_STORAGE_MAX_SIZE` | `KARNI_STORAGE_MAX_SIZE` | `10 * 1024 * 1024` | The size limit of a protected field without max_size, in bytes (10 MiB). |
+| `KARNI_STORAGE_THUMBNAIL_SIZES` | `KARNI_STORAGE_THUMBNAIL_SIZES` | `{"small": [160, 160], "medium": [640, 640]}` | Thumbnails of protected images: name -&gt; [width, height] (a bounding box). |
+| `KARNI_STORAGE_THUMBNAIL_FORMAT` | `KARNI_STORAGE_THUMBNAIL_FORMAT` | `"WEBP"` | The format thumbnails are written in (Pillow's name). |
+| `KARNI_STORAGE_ALIAS` | `KARNI_STORAGE_ALIAS` | `"protected"` | The STORAGES alias that, when the project defines it, replaces the module's storage (an escape hatch: any backend). |
+| `R2_ACCOUNT_ID` | `R2_ACCOUNT_ID` | `""` | Cloudflare R2's account id: the r2 preset's endpoint is built from it. |
+
 ## Components and hooks
 
 Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the TypeScript compiler. *Required props* are the props without a default. Every component takes more ([UI guide](ui.md)).
@@ -1993,6 +2013,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
 | [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. |
+| [`karni-storage`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-storage) | experimental | `karni add storage` | `@karni/storage-ui` | Files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
 ## Error codes
@@ -2236,6 +2257,23 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`SITE021`](errors.md#site021) | exception | {% karni_form %} is written wrongly |
 | [`SITE022`](errors.md#site022) | exception | The form view is not routed |
 | [`SITE023`](errors.md#site023) | exception | A notification does not say who to email |
+| [`STORE001`](errors.md#store001) | check | KARNI_STORAGE_PROVIDER names no preset |
+| [`STORE002`](errors.md#store002) | check | The storage provider has no credentials |
+| [`STORE003`](errors.md#store003) | check | The storage preset needs a value it does not have |
+| [`STORE004`](errors.md#store004) | check | karni_storage.urls is not included |
+| [`STORE005`](errors.md#store005) | check | A karni-storage setting has a value it does not take |
+| [`STORE006`](errors.md#store006) | check | A model with protected files has no viewset on the API |
+| [`STORE010`](errors.md#store010) | api | No protected file field there |
+| [`STORE011`](errors.md#store011) | api | The file is larger than the field allows |
+| [`STORE012`](errors.md#store012) | api | The field does not take files of that type |
+| [`STORE013`](errors.md#store013) | api | The upload token is not valid |
+| [`STORE014`](errors.md#store014) | api | The uploaded file is not in the bucket |
+| [`STORE015`](errors.md#store015) | api | Direct uploads need the bucket |
+| [`STORE016`](errors.md#store016) | api | No thumbnail size of that name |
+| [`STORE017`](errors.md#store017) | api | The thumbnail is not ready |
+| [`STORE018`](errors.md#store018) | api | The row has no file in that field |
+| [`STORE019`](errors.md#store019) | api | The download link is not valid |
+| [`STORE020`](errors.md#store020) | exception | A protected file's download path cannot be built |
 
 ### The `karni` command (`C`)
 
@@ -2361,6 +2399,7 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C400`](errors.md#c400) | cli | No open question has this id |
 | [`C401`](errors.md#c401) | cli | The value is not an answer the question takes |
 | [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
+| [`C720`](errors.md#c720) | cli | A protected file field needs the storage module |
 
 ### Agent rules (`K`)
 

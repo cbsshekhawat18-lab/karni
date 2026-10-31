@@ -313,6 +313,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
+- `experimental` Protected files (the `storage` module): kept in a private S3-compatible bucket or on disk, downloaded only through the row's own viewset by a signed URL, with direct uploads and thumbnails (`ProtectedFileField`, `<resource>/<id>/files/<field>/`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -392,6 +393,7 @@ A module is a separate package for anything with its own service or a real memor
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
 - `experimental` `karni add site`: Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail
+- `experimental` `karni add storage`: Files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->
 

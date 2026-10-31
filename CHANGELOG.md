@@ -11,6 +11,43 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **karni-storage (experimental): protected files in S3 or an
+  S3-compatible service.** A new module, `karni add storage`, with
+  `@karni/storage-ui`. `ProtectedFileField` and `ProtectedImageField`
+  (`file:protected` and `image:protected` in karni.yaml and `karni make
+  model`) keep their files in a private bucket or, in development, in a
+  directory no URL serves. The API gives each one as the row's download
+  path, `<resource>/<id>/files/<field>/`, which retrieves the row through
+  the model's own viewset first (another user's row, a soft-deleted row and
+  a hidden field are a 404), then redirects to a signed URL that lives
+  `KARNI_STORAGE_URL_EXPIRY` seconds, or streams the file on local storage.
+  With `Accept: application/json` it answers a link that opens without
+  credentials, for token auth. One setting, `KARNI_STORAGE_PROVIDER`
+  (`aws`, `r2`, `minio`, `spaces`, `b2`, `gcs-interop`), gives core's S3
+  backend the endpoint, region and addressing style, with the credentials
+  in the environment. Direct uploads: `POST <resource>/files/<field>/upload/`
+  answers a presigned POST with the field's size limit and content type (a
+  presigned PUT where the service takes no POST policy), the browser sends
+  the file to the bucket, and `POST .../confirm/` checks the object's
+  existence, size and type before a row may point at it, through a token
+  only that user may use for that field. Thumbnails of protected images are
+  made by a Celery task with core's thumbnailer and served through the same
+  path (`?size=small`). `karni check` fails for an unknown preset
+  (`STORE001`), missing credentials (`STORE002`), a missing region, account
+  id, endpoint or bucket (`STORE003`) and a missing URL include
+  (`STORE004`). Codes `STORE001` to `STORE020`, and `C720` for a protected
+  field without the module. `@karni/storage-ui` has `ProtectedFileInput` for
+  `ResourceForm` (the upload with progress and the confirm),
+  `ProtectedFileLink`, `ProtectedImage` and their hooks. In karni.yaml,
+  `modules: {storage: {provider: r2}}`: `karni plan --questions` asks the
+  provider, and `karni build` wires the module and places its URL include.
+  [docs/storage.md](docs/storage.md).
+- **`karni build` places a module's URL include.** When a build adds a
+  module whose manifest names one (`wiring.urls`), the line goes at the
+  `# karni:urls` marker of `config/urls.py`, so the code the build generates
+  works at once. `karni add` still prints it, and `karni remove` takes it
+  out.
+
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

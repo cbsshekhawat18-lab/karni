@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "karni-storage"
 version = "0.4.0"
-description = "Protected files for Karni: kept in S3 or an S3-compatible service, served only to whoever may read the row that owns them, with direct uploads and thumbnails. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+description = "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, served only to whoever may read that row, with direct uploads and thumbnails. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"

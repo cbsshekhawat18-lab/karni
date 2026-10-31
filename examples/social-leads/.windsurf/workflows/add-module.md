@@ -4,12 +4,13 @@ description: Install an optional Karni module and wire it into settings
 Install Karni module: the request typed after the command
 
 1. Run `karni modules show <module>`: what it provides, what it needs and the questions to settle first, each with the setting its answer goes to.
-2. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py (with any middleware its manifest wires), and (once installed) records the module's agent guidance. It prints the URL include to add, if any.
-3. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
-4. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
-5. Configure only the settings the module documents. Do not patch its internals.
-6. To take it out again: `karni remove <module>` (it never drops the tables).
-7. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
+2. A file only the row's readers may download (a contract scan, an ID photo) is the `storage` module: `ProtectedFileField` or `ProtectedImageField` (karni.yaml: `file:protected`), never a hand-written download view, presigned URL or boto3 call.
+3. Run `karni add <module>`. It adds the `karni-<module>` dependency to pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked `# karni:apps` in config/settings.py (with any middleware its manifest wires), and (once installed) records the module's agent guidance. It prints the URL include to add, if any.
+4. Rebuild/install: `docker compose build` (or `uv pip install -r pyproject.toml` in a host venv), then `make migrate`. Run `karni add <module>` again if it asked you to.
+5. Run `karni context`. The module must appear under MODULES, and `karni rules` now includes its guidance.
+6. Configure only the settings the module documents. Do not patch its internals.
+7. To take it out again: `karni remove <module>` (it never drops the tables).
+8. To create a new reusable module instead: `karni make module <name>` (modules/karni-<name>/, docs/modules.md).
 
 Rules that apply: K009, K307, K308 (`karni rules --explain <code>`).
 

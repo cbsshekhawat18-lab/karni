@@ -66,8 +66,8 @@ PREFIXES = {
         "public forms, redirects, and error pages that cannot fail."
     ),
     "modules/karni-storage/pyproject.toml": (
-        "Protected files for Karni: kept in S3 or an S3-compatible service, served only to "
-        "whoever may read the row that owns them, with direct uploads and thumbnails."
+        "Protected files for Karni: files a row owns, in S3 or an S3-compatible service, "
+        "served only to whoever may read that row, with direct uploads and thumbnails."
     ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
