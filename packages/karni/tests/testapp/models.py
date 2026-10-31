@@ -177,6 +177,9 @@ class Listing(ApiBase):
     title = models.CharField(max_length=100)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="listings")
 
+    class Karni:
+        import_lookup = {"product": "name"}
+
     def __str__(self) -> str:
         return self.title
 

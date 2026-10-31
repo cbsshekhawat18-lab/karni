@@ -344,12 +344,17 @@ def tree_scope(
     orders under every node the user holds under ``tree:region``, whatever
     permission the grant names, and ``permission="shop.order:view"`` keeps
     that permission's grants only. The path is checked now (``E490``), so a
-    typo fails at startup. Anonymous requests reach no row.
+    typo fails at startup. A signed-in user without a node gets an empty list,
+    and an anonymous request is refused (the function answers ``False``).
     """
     resolve_path(model, path)
 
     def rows(request: Any) -> Q | bool:
-        return tree_rows(getattr(request, "user", None), model, path, permission=permission)
+        user = getattr(request, "user", None)
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        found = tree_rows(user, model, path, permission=permission)
+        return Q(pk__in=[]) if found is False else found
 
     rows.__name__ = f"tree_scope_{path}"
     rows.__qualname__ = rows.__name__

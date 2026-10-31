@@ -290,7 +290,7 @@ def check(
             what = (
                 "an owner field"
                 if kind == "own"
-                else f"a path {path!r} to a tree model"
+                else f"path {path!r} to a tree model"
                 if kind == "tree"
                 else f"the scope path {path!r}"
             )
