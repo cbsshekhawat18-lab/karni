@@ -355,6 +355,14 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "agents",
+        "Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "
+        '"<Name>" --recipe <name>`: the recipe\'s karni.yaml, then `karni build`, which writes '
+        "the recipe's domain code, seeds and tests over its own stubs, never over the "
+        "project's code, and runs the tests and `karni check`. Each is built from scratch in "
+        "CI. Experimental tier",
+    ),
+    Capability(
+        "agents",
         "`karni why` / `karni why-empty`: why a row, field or action is refused or missing for "
         "a user, from the code that decides it",
     ),

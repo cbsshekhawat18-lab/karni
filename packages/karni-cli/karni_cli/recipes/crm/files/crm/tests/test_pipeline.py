@@ -1,18 +1,18 @@
-"""The CRM rules: sales see their own deals, managers all of them, and contacts import by email."""
+"""The CRM rules: sales see their own deals, managers all, contacts import by email."""
 
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
+from crm.models import Contact, Deal
 from django.core.files.uploadedfile import SimpleUploadedFile
 from karni.testing.factories import create
-
-from crm.models import Contact, Deal
 
 pytestmark = pytest.mark.django_db
 
 
-def test_the_pipeline_counts_the_deals_each_role_may_see(client_as) -> None:  # type: ignore[no-untyped-def]
+def test_the_pipeline_counts_the_deals_each_role_may_see(client_as: Any) -> None:
     sales = client_as("sales")
     create(Deal, salesperson=sales.user, value=Decimal("100.00"))
     create(Deal, salesperson=sales.user, value=Decimal("50.00"))
@@ -24,18 +24,35 @@ def test_the_pipeline_counts_the_deals_each_role_may_see(client_as) -> None:  # 
     assert every == [{"stage": "lead", "deals": 3, "value": "1050.00"}]
 
 
-def test_an_import_updates_contacts_by_their_email(client_as, settings, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
-    settings.MEDIA_ROOT = str(tmp_path)  # the uploaded file is kept until the import is done
+def test_an_import_updates_contacts_by_their_email(
+    client_as: Any, settings: Any, tmp_path: Path
+) -> None:
+    settings.MEDIA_ROOT = str(
+        tmp_path
+    )  # the uploaded file is kept until the import is done
     client = client_as("sales")
     create(Contact, email="ada@example.com", first_name="Ada", last_name="Old")
-    rows = "first_name,last_name,email\nAda,Lovelace,ada@example.com\nAlan,Turing,alan@example.com\n"
-    upload = SimpleUploadedFile("contacts.csv", rows.encode(), content_type="text/csv")
-    job = client.post("/api/contacts/import/", {"file": upload}, format="multipart").json()
-    preview = client.post(
-        f"/api/contacts/import/{job['id']}/preview/", {"mapping": job["mapping"]}, format="json"
+    rows = (
+        "first_name,last_name,email\n"
+        "Ada,Lovelace,ada@example.com\n"
+        "Alan,Turing,alan@example.com\n"
     )
-    assert preview.json()["result"]["updated"] == 1 and preview.json()["result"]["created"] == 1
-    committed = client.post(f"/api/contacts/import/{job['id']}/commit/", {}, format="json")
+    upload = SimpleUploadedFile("contacts.csv", rows.encode(), content_type="text/csv")
+    job = client.post(
+        "/api/contacts/import/", {"file": upload}, format="multipart"
+    ).json()
+    preview = client.post(
+        f"/api/contacts/import/{job['id']}/preview/",
+        {"mapping": job["mapping"]},
+        format="json",
+    )
+    assert (
+        preview.json()["result"]["updated"] == 1
+        and preview.json()["result"]["created"] == 1
+    )
+    committed = client.post(
+        f"/api/contacts/import/{job['id']}/commit/", {}, format="json"
+    )
     assert committed.json()["status"] == "done", committed.content
     assert Contact.objects.get(email="ada@example.com").last_name == "Lovelace"
     exported = client.get("/api/contacts/export/?format=csv")

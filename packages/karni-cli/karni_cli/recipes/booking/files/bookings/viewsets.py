@@ -1,14 +1,13 @@
-"""bookings API. Each viewset extends the one karni build writes in bookings/karni/api.py from
-karni.yaml: add your actions here.
+"""bookings API. Each viewset extends the one karni build writes in
+bookings/karni/api.py from karni.yaml: add your actions here.
 """
 
+from bookings.karni import api as karni
 from django.conf import settings
 from karni_payments.services import create_checkout
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from bookings.karni import api as karni
 
 
 class ResourceViewSet(karni.ResourceViewSet):
@@ -24,7 +23,7 @@ class BookingViewSet(karni.BookingViewSet):
 
     @action(detail=True, methods=["post"])
     def pay(self, request: Request, pk: str | None = None) -> Response:
-        """Open the booking's payment at the provider. The webhook confirms the booking."""
+        """Open the payment at the provider. Its webhook confirms the booking."""
         booking = self.get_object()
         back = f"{settings.KARNI_FRONTEND_URL}/bookings/{booking.pk}"
         payment, session = create_checkout(

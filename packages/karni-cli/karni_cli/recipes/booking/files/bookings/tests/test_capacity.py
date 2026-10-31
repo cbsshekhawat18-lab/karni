@@ -1,4 +1,6 @@
-"""The booking rules: a slot never takes more bookings than its capacity, and a paid one is confirmed."""
+"""The booking rules: a slot takes no more than its capacity, and payment confirms."""
+
+from typing import Any
 
 import pytest
 from karni.testing.factories import create
@@ -11,15 +13,17 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def _test_payments(settings: pytest.FixtureRequest) -> None:
+def _test_payments(settings: Any) -> None:
     settings.KARNI_PAYMENTS_PROVIDER = "test"
     TestProvider.reset()
 
 
-def test_a_slot_never_takes_more_bookings_than_its_capacity(client_as) -> None:  # type: ignore[no-untyped-def]
+def test_a_slot_never_takes_more_bookings_than_its_capacity(client_as: Any) -> None:
     slot = create(Slot, capacity=2)
     client = client_as("member")
-    first, second = (client.post("/api/bookings/", {"slot": str(slot.pk)}) for _ in range(2))
+    first, second = (
+        client.post("/api/bookings/", {"slot": str(slot.pk)}) for _ in range(2)
+    )
     assert first.status_code == second.status_code == 201, first.content
     full = client.post("/api/bookings/", {"slot": str(slot.pk)})
     assert full.status_code == 409 and full.json()["code"] == "E985"
@@ -30,7 +34,7 @@ def test_a_slot_never_takes_more_bookings_than_its_capacity(client_as) -> None: 
     assert client.post("/api/bookings/", {"slot": str(slot.pk)}).status_code == 201
 
 
-def test_a_paid_booking_is_confirmed(client_as) -> None:  # type: ignore[no-untyped-def]
+def test_a_paid_booking_is_confirmed(client_as: Any) -> None:
     client = client_as("member")
     booked = client.post("/api/bookings/", {"slot": str(create(Slot, capacity=5).pk)})
     paid = client.post(f"/api/bookings/{booked.json()['id']}/pay/")

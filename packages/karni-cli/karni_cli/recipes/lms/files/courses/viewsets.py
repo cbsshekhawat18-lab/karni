@@ -1,12 +1,11 @@
-"""courses API. Each viewset extends the one karni build writes in courses/karni/api.py from
-karni.yaml: add your actions here.
+"""courses API. Each viewset extends the one karni build writes in courses/karni/api.py
+from karni.yaml: add your actions here.
 """
 
+from courses.karni import api as karni
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from courses.karni import api as karni
 
 
 class CourseViewSet(karni.CourseViewSet):

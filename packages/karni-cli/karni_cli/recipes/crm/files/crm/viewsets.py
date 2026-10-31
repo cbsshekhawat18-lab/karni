@@ -4,12 +4,11 @@ karni.yaml: add your actions here.
 
 from typing import Any
 
+from crm.karni import api as karni
 from django.db.models import Count, Sum
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from crm.karni import api as karni
 
 
 class CompanyViewSet(karni.CompanyViewSet):
@@ -29,7 +28,10 @@ class DealViewSet(karni.DealViewSet):
         deals = self.filter_queryset(self.get_queryset()).order_by("stage")
         rows = deals.values("stage").annotate(deals=Count("id"), value=Sum("value"))
         return Response(
-            [{"stage": r["stage"], "deals": r["deals"], "value": f"{r['value']:.2f}"} for r in rows]
+            [
+                {"stage": r["stage"], "deals": r["deals"], "value": f"{r['value']:.2f}"}
+                for r in rows
+            ]
         )
 
 

@@ -1,6 +1,7 @@
-"""The shop's own rules: an order's total is its items', and checkout opens the payment."""
+"""The shop's rules: an order's total is its items', and checkout opens the payment."""
 
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from karni.testing.factories import create
@@ -13,7 +14,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def _test_payments(settings: pytest.FixtureRequest) -> None:
+def _test_payments(settings: Any) -> None:
     settings.KARNI_PAYMENTS_PROVIDER = "test"
     TestProvider.reset()
 
@@ -29,10 +30,12 @@ def test_an_order_total_is_the_sum_of_its_items() -> None:
     assert order.total == Decimal("10.00")
 
 
-def test_checkout_makes_the_order_and_opens_its_payment(client_as) -> None:  # type: ignore[no-untyped-def]
+def test_checkout_makes_the_order_and_opens_its_payment(client_as: Any) -> None:
     client = client_as("customer")
     cart = create(Cart, customer=client.user)
-    create(CartItem, cart=cart, quantity=3, product=create(Product, price=Decimal("2.00")))
+    create(
+        CartItem, cart=cart, quantity=3, product=create(Product, price=Decimal("2.00"))
+    )
     response = client.post(f"/api/carts/{cart.pk}/checkout/")
     assert response.status_code == 201, response.content
     order = Order.objects.get(pk=response.json()["order"])
@@ -46,7 +49,7 @@ def test_checkout_makes_the_order_and_opens_its_payment(client_as) -> None:  # t
     assert order.status == "paid"
 
 
-def test_an_empty_cart_has_nothing_to_check_out(client_as) -> None:  # type: ignore[no-untyped-def]
+def test_an_empty_cart_has_nothing_to_check_out(client_as: Any) -> None:
     client = client_as("customer")
     cart = create(Cart, customer=client.user)
     assert client.post(f"/api/carts/{cart.pk}/checkout/").status_code == 400

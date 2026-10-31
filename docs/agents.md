@@ -277,6 +277,12 @@ gives them:
    tests.
 7. **Done** when `karni check` and `karni test` pass.
 
+A new project can also start from a recipe with its domain code in place:
+`karni new "<Name>" --recipe <name>` writes the recipe's `karni.yaml` and
+runs `karni build`, which writes the recipe's own methods, actions, seeders
+and tests too ([recipes](recipes/index.md)). The flow then goes on from the
+questions, for what the request changes.
+
 Rule K311 says it in every adapter: never hand-write what `karni.yaml` can
 express. Change `karni.yaml` and run `karni build` again. `karni new` ends
 with the same two lines, and so does the welcome page of a new project.

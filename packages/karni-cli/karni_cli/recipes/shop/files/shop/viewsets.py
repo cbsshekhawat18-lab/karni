@@ -7,7 +7,6 @@ from karni_payments.services import create_checkout
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
 from shop.karni import api as karni
 
 

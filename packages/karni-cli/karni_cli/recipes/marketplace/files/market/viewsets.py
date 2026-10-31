@@ -1,14 +1,13 @@
-"""market API. Each viewset extends the one karni build writes in market/karni/api.py from
-karni.yaml: add your actions here.
+"""market API. Each viewset extends the one karni build writes in market/karni/api.py
+from karni.yaml: add your actions here.
 """
 
 from django.conf import settings
 from karni_payments.services import create_checkout
+from market.karni import api as karni
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from market.karni import api as karni
 
 
 class SellerViewSet(karni.SellerViewSet):
@@ -24,7 +23,7 @@ class OrderViewSet(karni.OrderViewSet):
 
     @action(detail=True, methods=["post"])
     def pay(self, request: Request, pk: str | None = None) -> Response:
-        """Open the order's payment at the provider. The webhook marks the order paid."""
+        """Open the payment at the provider. Its webhook marks the order paid."""
         order = self.get_object()
         back = f"{settings.KARNI_FRONTEND_URL}/orders/{order.pk}"
         payment, session = create_checkout(

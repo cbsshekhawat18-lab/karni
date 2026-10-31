@@ -1,6 +1,7 @@
-"""The marketplace rules: an order costs the listing's price, and the seller is paid less the fee."""
+"""The marketplace rules: an order's amount, and the payout less the fee."""
 
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from karni.testing.factories import create
@@ -13,12 +14,14 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
-def _test_payments(settings: pytest.FixtureRequest) -> None:
+def _test_payments(settings: Any) -> None:
     settings.KARNI_PAYMENTS_PROVIDER = "test"
     TestProvider.reset()
 
 
-def test_a_paid_order_pays_its_seller_less_the_fee(client_as, settings) -> None:  # type: ignore[no-untyped-def]
+def test_a_paid_order_pays_its_seller_less_the_fee(
+    client_as: Any, settings: Any
+) -> None:
     settings.MARKETPLACE_FEE_PERCENT = 12.5
     listing = create(Listing, price=Decimal("40.00"))
     buyer = client_as("buyer")
@@ -32,7 +35,11 @@ def test_a_paid_order_pays_its_seller_less_the_fee(client_as, settings) -> None:
     payment.status = Payment.Status.SUCCEEDED  # what the provider's webhook does
     payment.save()
     payout = Payout.objects.get(order=order)
-    assert (payout.seller, payout.amount, payout.fee) == (listing.seller, Decimal("70.00"), Decimal("10.00"))
+    assert (payout.seller, payout.amount, payout.fee) == (
+        listing.seller,
+        Decimal("70.00"),
+        Decimal("10.00"),
+    )
 
 
 def test_the_fee_is_ten_percent_unless_the_settings_say() -> None:

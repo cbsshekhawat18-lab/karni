@@ -5,10 +5,10 @@ courses/karni/seeds.py: steer a field's values here.
 from typing import Any
 
 import factory
+from courses.karni import seeds as karni
 from django.utils import timezone
 from karni.seeding import SeedContext
 
-from courses.karni import seeds as karni
 from courses.models import Enrolment
 
 
@@ -29,7 +29,7 @@ class EnrolmentSeeder(karni.EnrolmentSeeder):
 
 
 class LessonProgressSeeder(karni.LessonProgressSeeder):
-    """Each student has done the first lessons of their own course, some more than others."""
+    """Each student did the first lessons of their own course, some more than others."""
 
     def seed(self, context: SeedContext) -> list[Any]:
         rows: list[Any] = []

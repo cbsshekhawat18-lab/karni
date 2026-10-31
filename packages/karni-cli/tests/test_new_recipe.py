@@ -10,6 +10,7 @@ in tests/test_recipe_builds.py, behind the ``recipes`` marker.
 
 from __future__ import annotations
 
+import ast
 import json
 import sys
 from collections.abc import Iterator
@@ -117,6 +118,10 @@ def test_a_recipe_validates_and_leaves_no_question_open(name: str, runner: CliRu
     assert recipe.files
     assert all(rel.split("/")[0] == RECIPES[name] for rel in recipe.files)
     assert not [rel for rel in recipe.files if recipes_mod.karni_owned(rel)]
+    # a project's code, at the 88 columns Karni's generators write (ruff format in a project)
+    for rel, text in apply.contents(recipe).items():
+        ast.parse(text, rel)
+        assert max(len(line) for line in text.splitlines()) <= 88, rel
 
 
 @pytest.mark.parametrize(("request_line", "name"), sorted(REQUESTS.items()))
@@ -243,9 +248,7 @@ def test_a_recipe_never_writes_over_code_of_the_projects(tmp_path: Path) -> None
     with pytest.raises(CliError) as raised:
         apply.stage(ws, recipe)
     assert raised.value.code == "C441"
-    assert "shop/models.py, shop/tests/test_shop.py hold code of the project's" in str(
-        raised.value
-    )
+    assert "shop/models.py, shop/tests/test_shop.py hold code of the project's" in str(raised.value)
     assert ws.changes() == []
 
 

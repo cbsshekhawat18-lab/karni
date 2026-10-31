@@ -43,10 +43,18 @@ Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defau
 
 With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
 
+With --recipe (experimental), the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
+
 Example:
 
 ```sh
 karni new "Crumb Bakery" --kind site --design ../design
+```
+
+Example:
+
+```sh
+karni new "Corner Shop" --recipe shop
 ```
 
 ```
@@ -62,6 +70,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 ### `karni add`
 

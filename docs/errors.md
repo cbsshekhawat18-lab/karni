@@ -3576,6 +3576,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Fix the key the message names (docs/app-spec.md#recipes lists every key), or rename the recipe, then run karni recipes show <name>.
 
+<a id="c440"></a>
+
+### C440: karni new --recipe with an option it cannot go with
+
+*karni command* · from `karni new --recipe (karni_cli.commands.new)`
+
+**Why Karni objects.** A recipe is an app: its karni.yaml has entities, roles and pages for signed-in users. --design builds a public site from a designer's pages instead, and --kind site or --no-staff-app leave out the React app the recipe's pages live in.
+
+**Fix.** Leave the option out (--kind app or site+app go with a recipe), or make the project without --recipe and start karni.yaml from karni recipes show <name>.
+
+<a id="c441"></a>
+
+### C441: A recipe's file would replace code of the project's
+
+*karni command* · from `karni build after karni new --recipe (karni_cli.recipes.apply)`
+
+**Why Karni objects.** The first karni build after karni new --recipe writes the recipe's own files (its domain code, seeds and tests) over the stubs it writes itself. It never writes over anything else: a file that holds code of the project's stops the build, and nothing is written.
+
+**Fix.** Move your code out of the way (rename the file), run karni build again, then put your code back into the recipe's file. To build without the recipe's files, delete "recipe" from .karni/build.json.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.

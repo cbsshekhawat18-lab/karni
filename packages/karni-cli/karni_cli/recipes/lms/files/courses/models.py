@@ -1,5 +1,5 @@
-"""courses models. Each class extends the one karni build writes in courses/karni/models.py
-from karni.yaml: add your methods here.
+"""courses models. Each class extends the one karni build writes in
+courses/karni/models.py from karni.yaml: add your methods here.
 """
 
 from typing import Any
@@ -11,7 +11,7 @@ class Course(karni.Course):
     """A course: its lessons in order, and how far each student is."""
 
     def completion(self, student: Any) -> int:
-        """The share of this course's lessons the student has completed, as a whole percent."""
+        """The share of the lessons the student completed, as a whole percent."""
         lessons = self.lesson_set.count()
         if not lessons:
             return 0

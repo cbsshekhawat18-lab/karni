@@ -1,5 +1,5 @@
-"""market models. Each class extends the one karni build writes in market/karni/models.py
-from karni.yaml: add your methods here.
+"""market models. Each class extends the one karni build writes in
+market/karni/models.py from karni.yaml: add your methods here.
 """
 
 from decimal import Decimal
@@ -8,10 +8,9 @@ from typing import Any
 from django.conf import settings
 from karni.events import on_transition, on_updated
 from karni_payments.models import Payment
-
 from market.karni import models as karni
 
-#: The marketplace's share of an order, in percent, unless settings.MARKETPLACE_FEE_PERCENT says.
+#: The marketplace's share of an order in percent, unless MARKETPLACE_FEE_PERCENT says.
 DEFAULT_FEE_PERCENT = Decimal("10")
 CENT = Decimal("0.01")
 
@@ -36,8 +35,10 @@ class Order(karni.Order):
         super().save(*args, **kwargs)
 
     def fee(self) -> Decimal:
-        """The marketplace's share: MARKETPLACE_FEE_PERCENT of the amount, to the cent."""
-        percent = Decimal(str(getattr(settings, "MARKETPLACE_FEE_PERCENT", DEFAULT_FEE_PERCENT)))
+        """The marketplace's share: MARKETPLACE_FEE_PERCENT of the amount, in cents."""
+        percent = Decimal(
+            str(getattr(settings, "MARKETPLACE_FEE_PERCENT", DEFAULT_FEE_PERCENT))
+        )
         return (self.amount * percent / 100).quantize(CENT)
 
     def payout_amount(self) -> Decimal:
@@ -53,7 +54,10 @@ class Payout(karni.Payout):
 def owe_the_seller(order: Order) -> None:
     """A paid order owes its seller the payout."""
     Payout.objects.create(
-        seller=order.listing.seller, order=order, amount=order.payout_amount(), fee=order.fee()
+        seller=order.listing.seller,
+        order=order,
+        amount=order.payout_amount(),
+        fee=order.fee(),
     )
 
 

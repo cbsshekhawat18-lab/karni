@@ -9,7 +9,6 @@ from django.db.models import DecimalField, F, Sum
 from karni.events import on_created, on_deleted, on_updated
 from karni_payments.models import Payment
 from rest_framework.exceptions import ValidationError
-
 from shop.karni import models as karni
 
 
@@ -26,14 +25,19 @@ class Cart(karni.Cart):
 
     @transaction.atomic
     def checkout(self) -> "Order":
-        """An order with an item per cart item at the current price. The cart is emptied."""
+        """An order with an item per cart item at today's price. The cart empties."""
         items = list(self.cartitem_set.select_related("product"))
         if not items:
             raise ValidationError({"cart": ["The cart is empty."]})
         total = sum((i.product.price * i.quantity for i in items), Decimal("0.00"))
         order = Order.objects.create(customer=self.customer, total=total)
         OrderItem.objects.bulk_create(
-            OrderItem(order=order, product=i.product, quantity=i.quantity, unit_price=i.product.price)
+            OrderItem(
+                order=order,
+                product=i.product,
+                quantity=i.quantity,
+                unit_price=i.product.price,
+            )
             for i in items
         )
         self.cartitem_set.all().delete()

@@ -107,6 +107,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `karni build`: the spec applied in one command, idempotently. Karni's code in files of its own (`<app>/karni/`), the project's created once and never rewritten, a hand edit found by its sha256 (`.karni/build.json`), then migrations, seed, types, tests and `karni check`. Experimental tier | `experimental` | Karni's own tests |
 | The module catalog: a manifest per module and built-in feature, `karni modules list` and `show`, a `CATALOG:` line per entry in `karni context`, `karni add` wiring from the manifest and `karni remove`, which never drops data. Experimental tier | `experimental` | Karni's own tests |
 | The `/new-app` flow, from a one-line request to a running app: recipes (`karni recipes list --match`, `show`, the `karni.recipes` entry points, the blank start), the `new-app` procedure and rule K311 in every adapter, and the MCP tools `recipes`, `spec_validate`, `questions`, `answer`, `plan`, `build` and `modules`, each returning JSON with a published schema. Experimental tier | `experimental` | Karni's own tests |
+| Five recipes, `shop`, `booking`, `crm`, `lms` and `marketplace`, and `karni new "<Name>" --recipe <name>`: the recipe's karni.yaml, then `karni build`, which writes the recipe's domain code, seeds and tests over its own stubs, never over the project's code, and runs the tests and `karni check`. Each is built from scratch in CI. Experimental tier | `experimental` | Karni's own tests |
 | `karni why` / `karni why-empty`: why a row, field or action is refused or missing for a user, from the code that decides it | `experimental` | Karni's own tests |
 | MCP server exposing `context`, `rules`, `check`, `why` and `why_empty` as tools | `experimental` | Karni's own tests |
 
@@ -136,10 +137,18 @@ Every kind has the API, the admin, PostgreSQL, Redis, Celery, the security defau
 
 With --design, the site is built from a designer's pages, and the next steps say what is left: the models, the real content and the loops (karni rules --procedure site-from-design).
 
+With --recipe (experimental), the app starts from a recipe's karni.yaml, and karni build makes it: the models and the API, the recipe's own domain code, seeds and tests, the migrations, demo data, the tests and karni check.
+
 Example:
 
 ```sh
 karni new "Crumb Bakery" --kind site --design ../design
+```
+
+Example:
+
+```sh
+karni new "Corner Shop" --recipe shop
 ```
 
 ```
@@ -155,6 +164,7 @@ karni new [OPTIONS] NAME
 | `--design` PATH |  | A designer's folder of static pages (index.html, css/, img/): the site is built from it (karni design analyze, karni import design --editable), and the next steps are the rest of the site-from-design procedure. Implies a kind with a site. |
 | `--staff-app/--no-staff-app` |  | The React staff app in frontend/. An app always has it. A site has it unless --no-staff-app, and then staff work in the admin. |
 | `--site-app` TEXT | `website` | The label of the site app a kind with a site gets. |
+| `--recipe` TEXT |  | Experimental. Start the app from a recipe (karni recipes list, or blank): its karni.yaml with this name, then karni build, which also writes the recipe's own domain code, seeds and tests and runs the tests and karni check. Without the project's interpreter or database it stops after karni.yaml: run karni build next. |
 
 #### `karni add`
 
@@ -2404,6 +2414,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C402`](errors.md#c402) | cli | The answer cannot be written into karni.yaml |
 | [`C420`](errors.md#c420) | cli | No recipe of that name |
 | [`C421`](errors.md#c421) | cli | A recipe cannot be used |
+| [`C440`](errors.md#c440) | cli | karni new --recipe with an option it cannot go with |
+| [`C441`](errors.md#c441) | cli | A recipe's file would replace code of the project's |
 
 ### Agent rules (`K`)
 

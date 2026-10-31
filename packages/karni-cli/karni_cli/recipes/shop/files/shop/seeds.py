@@ -5,7 +5,6 @@ shop/karni/seeds.py: steer a field's values here.
 from decimal import Decimal
 
 import factory
-
 from shop.karni import seeds as karni
 
 

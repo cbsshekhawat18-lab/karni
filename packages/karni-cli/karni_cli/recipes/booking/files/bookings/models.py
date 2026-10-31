@@ -1,16 +1,15 @@
-"""bookings models. Each class extends the one karni build writes in bookings/karni/models.py
-from karni.yaml: add your methods here.
+"""bookings models. Each class extends the one karni build writes in
+bookings/karni/models.py from karni.yaml: add your methods here.
 """
 
 from typing import Any
 
+from bookings.karni import models as karni
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from karni.capacity import release, reserve
 from karni.events import on_deleted, on_restored, on_transition, on_updated
 from karni_payments.models import Payment
-
-from bookings.karni import models as karni
 
 
 class Resource(karni.Resource):
@@ -18,7 +17,7 @@ class Resource(karni.Resource):
 
 
 class Slot(karni.Slot):
-    """A time on a resource. It takes at most ``capacity`` bookings: ``remaining`` counts down."""
+    """A time on a resource, for at most ``capacity`` bookings."""
 
     def clean(self) -> None:
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
@@ -26,7 +25,7 @@ class Slot(karni.Slot):
 
 
 class Booking(karni.Booking):
-    """A member's place in a slot. A slot never takes more bookings than its capacity."""
+    """A member's place in a slot. A slot takes no more bookings than its capacity."""
 
     class APIMeta:
         read_only = ["status", "payment"]
@@ -57,7 +56,7 @@ def take_the_place_again(booking: Booking) -> None:
 
 @on_updated(Payment)
 def confirm_the_paid_booking(payment: Payment) -> None:
-    """The payment provider's webhook settled the payment: its pending booking is confirmed."""
+    """The provider's webhook settled the payment: its pending booking is confirmed."""
     if payment.status != Payment.Status.SUCCEEDED:
         return
     for booking in Booking.objects.filter(payment=payment, status="pending"):

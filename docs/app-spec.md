@@ -12,7 +12,8 @@ description: "The Karni app spec, karni.yaml (experimental): one small file that
     karni_makemigrations`, `karni.facts`, the `karni_cli.spec` and
     `karni_cli.builder` packages, `.karni/build.json`, [recipes](#recipes)
     (`karni recipes`, the recipe format, the `karni.recipes` entry points,
-    `karni_cli.recipes`), [the MCP tools](#mcp-tools) of the flow
+    `karni_cli.recipes`, the [built-in recipes](recipes/index.md) and `karni
+    new --recipe`), [the MCP tools](#mcp-tools) of the flow
     (`karni_cli.agent_tools`) and the seven JSON Schemas. They may change in
     a minor release, and each change is in the CHANGELOG. The error codes
     keep their meaning.
@@ -849,6 +850,9 @@ rows). Then the hash check, then the steps:
    catalog.
 2. **files**: the Karni-owned files and blocks, the project's files once
    (an app the spec adds gets its skeleton as `karni make app` writes it).
+   After `karni new --recipe`, `.karni/build.json` names the recipe, and
+   this step also writes the recipe's own files over the stubs (experimental,
+   [the stub rule](recipes/index.md#the-stub-rule)).
 3. **migrations**: `manage.py karni_makemigrations`, which writes the
    renames (`was:`) as `RenameModel` and `RenameField` first, so the data
    stays even when the type changes too, then runs Django's
@@ -935,6 +939,13 @@ A recipe is a ready-made `karni.yaml` for a kind of app that many people
 ask for. A new app starts from the closest recipe, or from the blank start
 when none fits, and the agent changes what the request asks for.
 
+Karni ships five: `shop`, `booking`, `crm`, `lms` and `marketplace`
+([recipes](recipes/index.md) has a page for each). `karni new "<Name>"
+--recipe <name>` makes a new project from one: the recipe's `karni.yaml`
+with the project's name, then `karni build`, which also writes the recipe's
+own domain code, seeds and tests over its stubs and runs the tests and
+`karni check`.
+
 ```sh
 karni recipes list                                  # every recipe, and the blank start
 karni recipes list --match "a booking app for a yoga studio"
@@ -958,6 +969,9 @@ A recipe is a folder:
 The files under `files/` go where the project owns the code: the methods of
 `<app>/models.py`, the actions of `<app>/viewsets.py`, `<app>/seeds.py` and
 tests of its own ([what Karni owns](#what-karni-owns-and-what-the-project-owns)).
+The first `karni build` after `karni new --recipe` writes them over its own
+stubs, only while each is still exactly what it wrote ([the stub
+rule](recipes/index.md#the-stub-rule)).
 
 `recipe.toml`, every key:
 
@@ -1049,8 +1063,10 @@ change of the output.
 
 | Code | Problem |
 |---|---|
-| [C420](errors.md#c420) | no recipe of that name |
-| [C421](errors.md#c421) | a recipe cannot be used: the list leaves it out, and `show` names its problem |
+| [C420](errors.md#c420) | no recipe of that name (the message names the closest) |
+| [C421](errors.md#c421) | a recipe cannot be used: the list leaves it out, and `show` names its problem. A file of the recipe at a path karni build writes is one |
+| [C440](errors.md#c440) | `karni new --recipe` with `--design`, `--kind site` or `--no-staff-app` |
+| [C441](errors.md#c441) | a recipe's file would replace code of the project's ([the stub rule](recipes/index.md#the-stub-rule)) |
 
 ## MCP tools
 

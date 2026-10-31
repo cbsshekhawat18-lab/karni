@@ -11,6 +11,26 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Five recipes, and `karni new --recipe` (experimental).** `shop`,
+  `booking`, `crm`, `lms` and `marketplace` ship in karni-cli. Each is a
+  `karni.yaml` that leaves no question open, with the modules and features
+  that suit it and demo volumes, plus the little domain code a spec cannot
+  express, with tests of its own: an order's total and checkout, a slot
+  that never takes more bookings than its capacity, a deal pipeline, a
+  course's completion for a student, a payout after a fee from a setting.
+  `karni new "<Name>" --recipe <name>` renders the project, writes the
+  recipe's spec with the project's name and runs `karni build`, which
+  writes the recipe's files over its own stubs before it migrates, seeds
+  with the recipe's seeders, runs the tests and `karni check`. Without an
+  interpreter or a database for the project it stops after the spec and
+  says to run `karni build`. A recipe's file replaces a stub only while it
+  is exactly what build wrote, else the build stops with `C441` and writes
+  nothing. `C420` now names the closest recipes, a recipe with a file where
+  karni build writes its own code is `C421`, and `C440` refuses `--recipe`
+  with `--design`, `--kind site` or `--no-staff-app`. `karni build` now
+  writes the settings block before the apps, so the test of a `Granted()`
+  entity acts as a role the spec declares. A new `recipes` CI job builds
+  each recipe from scratch. [docs/recipes/index.md](docs/recipes/index.md).
 - **The /new-app flow (experimental): from a one-line request to a running
   app.** A new procedure, `new-app`, takes an agent through the flow: a
   recipe or the blank start (`karni recipes list --match`), the questions
@@ -32,8 +52,8 @@ apply codemods and list the manual steps. This file is the human summary.
   through the `karni.recipes` entry point group. `--match` ranks them by
   plain word overlap with the request (2 for a `use_when` word, 1 for a
   purpose word), with no language model, and when none scores 2 it names
-  the blank start: a karni.yaml with the version and the app's name. No
-  recipe ships yet. `--json` follows the published
+  the blank start: a karni.yaml with the version and the app's name. Five
+  recipes ship with it (above). `--json` follows the published
   `docs/assets/karni-recipes.schema.json`, `recipe.toml` follows
   `docs/assets/karni-recipe.schema.json`, and `C420` and `C421` are new.
   [docs/app-spec.md](docs/app-spec.md#recipes).
