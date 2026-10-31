@@ -1,13 +1,17 @@
 /**
  * karni/no-raw-elements — raw data-entry/table JSX elements are banned in
  * project code; @karni/ui is their only home. Each message names the
- * component to compose instead.
+ * component to compose instead: a table is a ResourceTable (a resource), a
+ * DataTable (rows the page computed) or a ComparisonTable (entities side by
+ * side), and a <details> disclosure is an Accordion.
  */
 import { docsUrl } from "../lib/docs.js";
 import { matchesAny } from "../lib/glob.js";
 
 const REPLACEMENTS = {
-  table: "ResourceTable",
+  table:
+    "ResourceTable (a resource's rows), DataTable (rows the page computed) or ComparisonTable (entities side by side)",
+  details: "Accordion",
   form: "ResourceForm",
   input: "Input (or ResourceForm, which renders the right field for you)",
   select: "Select / ResourceSelect",
@@ -20,7 +24,7 @@ export default {
     docs: {
       url: docsUrl("no-raw-elements"),
       description:
-        "Ban raw <table>/<form>/<input>/<select>/<textarea> JSX outside @karni/ui: compose the shipped components instead of rebuilding them.",
+        "Ban raw <table>/<form>/<input>/<select>/<textarea>/<details> JSX outside @karni/ui: compose the shipped components instead of rebuilding them.",
     },
     schema: [
       {
