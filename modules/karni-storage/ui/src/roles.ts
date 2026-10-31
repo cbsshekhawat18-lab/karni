@@ -13,6 +13,7 @@ export interface ComponentRoleDefinition {
   description: string;
 }
 
+/** Experimental. The component roles this package registers. */
 export const STORAGE_COMPONENT_ROLES: readonly ComponentRoleDefinition[] = [
   {
     role: "protected-file-input",
@@ -36,7 +37,7 @@ export const STORAGE_COMPONENT_ROLES: readonly ComponentRoleDefinition[] = [
 
 type RegisterComponentRole = (role: string, definition: ComponentRoleDefinition) => void;
 
-/** Registers the roles on `registry.registerComponentRole` when present (G8). */
+/** Experimental. Registers the roles on `registry.registerComponentRole` when present (G8). */
 export function registerStorageRoles(registry: unknown = karniUi): boolean {
   if (typeof registry !== "object" || registry === null) return false;
   const candidate = (registry as Record<string, unknown>)["registerComponentRole"];
