@@ -22,7 +22,10 @@ frame (``myapp/serializers.py:42 in get_tag_names``).
 
 Override / escape hatches: ``KARNI_QUERY_BUDGET`` (partial dict merged over
 :data:`DEFAULT_QUERY_BUDGET`), ``KARNI_QUERY_BUDGET_MODE``, and per viewset
-``query_budget = Budget(list=25, reason="...")``.
+``query_budget = Budget(list=25, reason="...")``. The scaling check's row
+counts are ``KARNI_SCALING_ROWS`` and, per viewset, ``query_scaling =
+Scaling(rows=(5, 500), seconds=0.3)`` (experimental), which also sets a time
+budget.
 """
 
 from __future__ import annotations
@@ -47,18 +50,21 @@ from karni.exceptions import KarniAssertionError, KarniImproperlyConfigured
 __all__ = [
     "BUDGET_MODES",
     "DEFAULT_QUERY_BUDGET",
+    "DEFAULT_SCALING_ROWS",
     "Budget",
     "QueryBudgetExceeded",
     "QueryGroup",
     "QueryRecorder",
     "QueryReport",
     "RecordedQuery",
+    "Scaling",
     "budget_mode",
     "budget_limits",
     "field_label",
     "is_project_frame",
     "record_queries",
     "rendering_field",
+    "scaling_rows",
     "short_path",
     "short_sql",
 ]
@@ -407,6 +413,85 @@ class Budget:
     def describe(self) -> str:
         """``list=25, *=None`` — for ``karni context``."""
         return ", ".join(f"{action}={value}" for action, value in self.limits.items())
+
+
+#: Experimental. The rows the scaling check compares, small then large (``KARNI_SCALING_ROWS``).
+DEFAULT_SCALING_ROWS: Final[tuple[int, int]] = (2, 12)
+
+
+def _scaling_rows(value: Any, where: str) -> tuple[int, int]:
+    """``value`` as ``(small, large)``: two integers, 1 or more, the second larger (``E477``)."""
+    try:
+        small, large = value
+    except (TypeError, ValueError):
+        small = large = None
+    if not (
+        isinstance(small, int)
+        and isinstance(large, int)
+        and not isinstance(small, bool)
+        and not isinstance(large, bool)
+        and 1 <= small < large
+    ):
+        raise KarniImproperlyConfigured(
+            f"{where} = {value!r} must be two row counts, small then large, each 1 or more and "
+            "the second larger, e.g. (2, 50).",
+            code="E477",
+        )
+    return small, large
+
+
+@dataclass(frozen=True, init=False)
+class Scaling:
+    """Experimental. ``query_scaling = Scaling(rows=(5, 500), seconds=0.3)``: a viewset's scaling.
+
+    ``rows`` are the row counts the scaling check compares (default
+    ``KARNI_SCALING_ROWS``, else :data:`DEFAULT_SCALING_ROWS`): a list is
+    measured with ``small`` and with ``large`` rows, a detail with that many
+    related rows per to-many relation, and the query count must not grow.
+    ``seconds`` is a time budget: the request at ``large`` rows (the faster
+    of two runs) must take no longer, or the check fails (``E476``) naming
+    the endpoint, the rows, the time and the queries.
+    """
+
+    rows: tuple[int, int] | None
+    seconds: float | None
+
+    def __init__(self, *, rows: Any = None, seconds: float | None = None) -> None:
+        if rows is not None:
+            rows = _scaling_rows(rows, "Scaling(rows)")
+        if seconds is not None and (
+            isinstance(seconds, bool) or not isinstance(seconds, int | float) or seconds <= 0
+        ):
+            raise KarniImproperlyConfigured(
+                f"Scaling(seconds={seconds!r}) must be a positive number of seconds, e.g. 0.5.",
+                code="E477",
+            )
+        if rows is None and seconds is None:
+            raise KarniImproperlyConfigured(
+                "Scaling() sets nothing. Give rows=(small, large), seconds=<budget>, or both.",
+                code="E477",
+            )
+        object.__setattr__(self, "rows", rows)
+        object.__setattr__(self, "seconds", float(seconds) if seconds is not None else None)
+
+    def describe(self) -> str:
+        """``rows 5/500, 0.3s`` — for ``karni context``."""
+        parts = []
+        if self.rows is not None:
+            parts.append(f"rows {self.rows[0]}/{self.rows[1]}")
+        if self.seconds is not None:
+            parts.append(f"{self.seconds:g}s")
+        return ", ".join(parts)
+
+
+def scaling_rows(declared: Scaling | None = None) -> tuple[int, int]:
+    """Experimental. ``(small, large)``: the viewset's ``Scaling(rows=)``, else the setting."""
+    if declared is not None and declared.rows is not None:
+        return declared.rows
+    configured = getattr(settings, "KARNI_SCALING_ROWS", None)
+    if configured is None:
+        return DEFAULT_SCALING_ROWS
+    return _scaling_rows(configured, "KARNI_SCALING_ROWS")
 
 
 def budget_limits() -> dict[str, int]:

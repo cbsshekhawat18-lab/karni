@@ -1066,6 +1066,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.
 
+<a id="e476"></a>
+
+#### E476: An endpoint is slower than its time budget at the large row count
+
+*test failure* · from `karni.testing.performance (the scaling check); query_scaling = Scaling(seconds=...)`
+
+**Why Karni objects.** The viewset declares a time budget: the request at the scaling check's large row count (the faster of two runs) must take no longer. It took longer.
+
+**Fix.** Read the statements in the message. karni queries <endpoint> --explain shows each plan on PostgreSQL and names the index a sequential scan wants. Raise Scaling(seconds=...) only when the work is real.
+
+<a id="e477"></a>
+
+#### E477: A scaling declaration or KARNI_SCALING_ROWS is not valid
+
+*exception* · from `karni.performance.Scaling; karni.performance.scaling_rows`
+
+**Why Karni objects.** The scaling check compares two row counts, small then large, and a time budget is a number of seconds.
+
+**Fix.** Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), seconds=0.5), and the same pair in KARNI_SCALING_ROWS.
+
 ### 5xx · Settings and optional dependencies
 
 <a id="e501"></a>

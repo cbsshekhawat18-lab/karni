@@ -1319,6 +1319,27 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A volume and a batch size are numbers of rows.",
         "Pass 1 or more, e.g. karni seed --volume 100000 --batch-size 2000.",
     ),
+    _e(
+        "E476",
+        "An endpoint is slower than its time budget at the large row count",
+        "test",
+        "karni.testing.performance (the scaling check); query_scaling = Scaling(seconds=...)",
+        "The viewset declares a time budget: the request at the scaling check's large row count "
+        "(the faster of two runs) must take no longer. It took longer.",
+        "Read the statements in the message. karni queries <endpoint> --explain shows each plan "
+        "on PostgreSQL and names the index a sequential scan wants. Raise "
+        "Scaling(seconds=...) only when the work is real.",
+    ),
+    _e(
+        "E477",
+        "A scaling declaration or KARNI_SCALING_ROWS is not valid",
+        "exception",
+        "karni.performance.Scaling; karni.performance.scaling_rows",
+        "The scaling check compares two row counts, small then large, and a time budget is a "
+        "number of seconds.",
+        "Write rows=(small, large) with 1 <= small < large, e.g. Scaling(rows=(2, 50), "
+        "seconds=0.5), and the same pair in KARNI_SCALING_ROWS.",
+    ),
     # E5xx settings and optional dependencies
     _e(
         "E501",

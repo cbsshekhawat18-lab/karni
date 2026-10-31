@@ -238,3 +238,90 @@ def test_scaling_cases_carry_an_expanded_list_case(monkeypatch: pytest.MonkeyPat
     )
     ids = {case.id for case in scaling_cases()}
     assert any(case_id.startswith("EventViewSet.list?expand=") for case_id in ids), ids
+
+
+# configurable rows and the time budget (experimental)
+
+
+@pytest.mark.django_db
+def test_the_setting_moves_the_row_counts(settings) -> None:
+    settings.KARNI_SCALING_ROWS = (3, 7)
+    result = check_scaling(ScalingCase(LeakyNovelViewSet, "list"))
+    assert result.rows == (3, 7) and result.grows
+    assert result.large - result.small == 2 * (7 - 3)
+    assert "with 3 rows" in result.message() and "with 7: the query count grows" in result.message()
+
+
+@pytest.mark.django_db
+def test_a_viewset_override_wins_over_the_setting(settings) -> None:
+    from karni.api import Scaling
+
+    settings.KARNI_SCALING_ROWS = (3, 7)
+
+    class WideNovelViewSet(LeakyNovelViewSet):
+        query_scaling = Scaling(rows=(2, 20))
+
+    result = check_scaling(ScalingCase(WideNovelViewSet, "list"))
+    assert result.rows == (2, 20) and result.large - result.small == 2 * 18
+    assert result.budget is None and not result.too_slow
+
+
+@pytest.mark.django_db
+def test_a_failed_time_budget_names_the_endpoint_rows_time_and_queries(monkeypatch) -> None:
+    from karni.api import Scaling
+
+    class TimedNovelViewSet(NovelViewSet):
+        query_scaling = Scaling(rows=(2, 6), seconds=0.000001)
+
+    monkeypatch.setattr(performance, "_endpoint", lambda viewset, action: "GET /api/novels/")
+    result = check_scaling(ScalingCase(TimedNovelViewSet, "list"))
+    assert not result.grows and result.too_slow and result.budget == 0.000001
+    message = result.slow_message()
+    assert message.startswith("TimedNovelViewSet.list (GET /api/novels/): 6 rows took ")
+    assert f"against a time budget of 1e-06s, in {result.large} queries." in message
+    assert "karni queries <endpoint> --explain" in message
+    with pytest.raises(AssertionError) as caught:
+        performance.test_list_and_retrieve_queries_do_not_grow_with_rows(
+            None, ScalingCase(TimedNovelViewSet, "list")
+        )
+    assert getattr(caught.value, "code", None) == "E476"
+
+
+@pytest.mark.django_db
+def test_a_generous_time_budget_passes() -> None:
+    from karni.api import Scaling
+
+    class TimedWriterViewSet(WriterViewSet):
+        query_scaling = Scaling(seconds=30)
+
+    result = check_scaling(ScalingCase(TimedWriterViewSet, "retrieve"))
+    assert result.rows == (2, 12) and not result.too_slow and 0 < result.seconds < 30
+
+
+def test_scaling_declarations_are_checked() -> None:
+    from karni.exceptions import KarniImproperlyConfigured
+    from karni.performance import Scaling, scaling_rows
+
+    assert Scaling(rows=[5, 500], seconds=1).describe() == "rows 5/500, 1s"
+    for bad in ({"rows": (5, 5)}, {"rows": (0, 3)}, {"rows": 5}, {"seconds": 0}, {}):
+        with pytest.raises(KarniImproperlyConfigured) as caught:
+            Scaling(**bad)
+        assert caught.value.code == "E477"
+    assert scaling_rows() == (2, 12)
+
+
+def test_a_bad_setting_is_named(settings) -> None:
+    from karni.exceptions import KarniImproperlyConfigured
+    from karni.performance import scaling_rows
+
+    settings.KARNI_SCALING_ROWS = (12, 2)
+    with pytest.raises(KarniImproperlyConfigured, match="KARNI_SCALING_ROWS"):
+        scaling_rows()
+
+
+def test_the_endpoint_is_the_routed_path() -> None:
+    from tests.testapp.viewsets import EventViewSet
+
+    assert performance._endpoint(EventViewSet, "list") == "GET /api/events/"
+    assert performance._endpoint(EventViewSet, "retrieve") == "GET /api/events/{id}/"
+    assert performance._endpoint(NovelViewSet, "list") == ""

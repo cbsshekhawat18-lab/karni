@@ -244,8 +244,9 @@ def _routed_viewsets() -> list[type]:
 def performance_section() -> str | None:
     """Declared performance exceptions (ADR 0001 §3.4), so an agent sees them first.
 
-    Relaxed query budgets, unpaginated viewsets, cache opt-outs and
-    ``optimize = False`` — each with its reason. Omitted when there are none
+    Relaxed query budgets, unpaginated viewsets, cache opt-outs,
+    ``optimize = False`` and the scaling declarations (``query_scaling``,
+    experimental) — each with its reason or numbers. Omitted when there are none
     (or the router cannot be built).
     """
     from karni.api.caching import Uncached
@@ -269,6 +270,9 @@ def performance_section() -> str | None:
             notes.append(f"uncached({cache.reason})")
         if getattr(viewset, "optimize", True) is False:
             notes.append("optimize=False")
+        scaling = getattr(viewset, "query_scaling", None)
+        if scaling is not None and hasattr(scaling, "describe"):
+            notes.append(f"scaling({scaling.describe()})")
         if notes:
             parts.append(f"{viewset.__name__} " + " ".join(notes))
     return "PERF: " + "; ".join(parts) if parts else None
