@@ -44,6 +44,21 @@ function parsed(change?: (schema: ResourceSchema) => ResourceSchema): ParsedSche
   };
 }
 
+/**
+ * The product with only `names` (and the groups and sets as published): the
+ * interaction tests type and query through a few fields, not 120, so they
+ * stay fast on a busy machine. The 120 fields are the budgets' (below).
+ */
+function only(...names: string[]): ParsedSchema {
+  return parsed((schema) => ({
+    ...schema,
+    fields: schema.fields.filter((field) => names.includes(field.name)),
+  }));
+}
+
+/** Queries over the 120-field page are slow in jsdom: a busy machine needs time. */
+const SLOW = { timeout: 30_000 };
+
 function mount(
   ui: React.ReactElement,
   schema: ParsedSchema = parsed(),
@@ -95,10 +110,13 @@ describe("the wide schema", () => {
   });
 });
 
-describe("a MarkdownField in ResourceForm", () => {
+describe("a MarkdownField in ResourceForm", SLOW, () => {
   it("is edited with Write and Preview tabs, and the preview is sanitized", async () => {
     const user = userEvent.setup();
-    mount(<ResourceForm resource="products" fieldGroups={false} />);
+    mount(
+      <ResourceForm resource="products" fieldGroups={false} />,
+      only("name", "sku", "overview", "faq"),
+    );
     const editor = screen.getByRole("tablist", { name: "Overview: write or preview" });
     const text = screen.getByLabelText("Overview");
     expect(text.tagName).toBe("TEXTAREA");
@@ -124,9 +142,9 @@ describe("a MarkdownField in ResourceForm", () => {
     const user = userEvent.setup();
     const required = parsed((schema) => ({
       ...schema,
-      fields: schema.fields.map((field) =>
-        field.name === "faq" ? { ...field, required: true } : field,
-      ),
+      fields: schema.fields
+        .filter((field) => ["name", "sku", "overview", "faq"].includes(field.name))
+        .map((field) => (field.name === "faq" ? { ...field, required: true } : field)),
     }));
     mount(<ResourceForm resource="products" fieldGroups={false} />, required);
     await user.type(screen.getByLabelText(/^Name/), "Desk");
@@ -144,7 +162,7 @@ describe("a MarkdownField in ResourceForm", () => {
   });
 });
 
-describe("field groups in ResourceForm", () => {
+describe("field groups in ResourceForm", SLOW, () => {
   it("shows each group as a fieldset with its legend, the rest last under Other", () => {
     mount(<ResourceForm resource="products" />);
     const legends = Array.from(document.querySelectorAll("legend")).map(
@@ -179,6 +197,7 @@ describe("field groups in ResourceForm", () => {
           { label: "Naming", fields: ["name", "status"] },
         ]}
       />,
+      only("name", "sku", "status", "grade", "label_01"),
     );
     const tabs = screen.getByRole("tablist", { name: "Product fields" });
     expect(
@@ -208,7 +227,7 @@ describe("field groups in ResourceForm", () => {
   });
 });
 
-describe("ResourceDetail of a wide model", () => {
+describe("ResourceDetail of a wide model", SLOW, () => {
   it("shows the groups as sections and markdown formatted", async () => {
     mount(<ResourceDetail resource="products" id={String(ROWS[0]?.["id"])} />);
     const overview = await screen.findByRole("region", { name: "Overview" });
@@ -267,7 +286,7 @@ describe("ResourceDetail of a wide model", () => {
   });
 });
 
-describe("column sets in ResourceTable", () => {
+describe("column sets in ResourceTable", SLOW, () => {
   function headers(): string[] {
     return screen
       .getAllByRole("columnheader")
@@ -315,7 +334,7 @@ describe("column sets in ResourceTable", () => {
   });
 });
 
-describe("accessibility of the groups", () => {
+describe("accessibility of the groups", SLOW, () => {
   it("passes axe as form tabs and as detail sections", async () => {
     const form = mount(
       <ResourceForm
