@@ -572,6 +572,39 @@ GEO = """\
     """
 
 
+def test_a_tree_scope_grant_is_built_into_the_settings_block(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    roles = (
+        "    roles:\n"
+        '      staff: {name: Staff, system: true, grants: {"*": all}}\n'
+        "      buyer:\n"
+        "        grants: {geo.product:view: 'tree:category', geo.product:change: 'tree:regions'}\n"
+    )
+    root = _project(
+        tmp_path, monkeypatch, "Geo Shop", GEO.replace("    apps:\n", roles + "    apps:\n")
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "+ buyer: grants geo.product:change tree:regions, geo.product:view tree:category" in (
+        plan
+    ), plan
+    code, out = _build()
+    assert code == 0, out
+    text = (root / "config" / "settings.py").read_text()
+    block = text[text.index("# karni:spec start") : text.index("# karni:spec end")]
+    assert '"geo.product:view": "tree:category"' in block, block
+    assert '"geo.product:change": "tree:regions"' in block
+    # the sync after migrate resolved both paths to the tree models (E490 otherwise)
+    assert _rows(
+        root,
+        "select scope, scope_path from karni_accounts_rolepermission r "
+        "join karni_accounts_role o on o.id = r.role_id where o.slug = 'buyer' "
+        "order by scope_path",
+    ) == [("tree", "category"), ("tree", "regions")]
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n"
+
+
 def test_a_tree_entity_builds_a_tree_model_and_a_switch_back_is_risky(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

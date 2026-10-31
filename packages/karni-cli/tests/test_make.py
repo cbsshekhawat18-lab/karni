@@ -1005,6 +1005,21 @@ def test_test_generator_never_drops_isolation_silently(project: Path) -> None:
     assert "isolation: NOT generated" in result.output and "owner_field" in result.output
 
 
+def test_a_tree_scope_is_named_where_isolation_is_not_generated(project: Path) -> None:
+    """A tree scope partitions rows by the nodes each user holds: the test says so."""
+    ok("make", "app", "events")
+    settings = project / "config" / "settings.py"
+    settings.write_text(
+        settings.read_text()
+        + '\nKARNI_ROLES = {"staff": {"system": True, "grants": {"*": "all"}}, '
+        + '"member": {"grants": {"events.event:view": "tree:region"}}}\n'
+    )
+    ok("make", "model", "Event", "title:str", "--with", "viewset,test")
+    text = (project / "events" / "tests" / "test_event.py").read_text()
+    assert "# No assert_isolated: 'member' (tree:region)" in text
+    assert "with a user grant" in " ".join(text.replace("#", " ").split())
+
+
 def test_a_model_names_itself_in_its_own_command(project: Path) -> None:
     """karni design analyze proposes `related:m2m:website.Course?` in Course's own command."""
     ok("make", "app", "website")

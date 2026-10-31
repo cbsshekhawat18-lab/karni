@@ -150,7 +150,7 @@ class Role(_Node):
         description=(
             'Permission pattern -> scope. Patterns: "*", app.entity, app.entity:action, with * '
             "for a part. Scopes: all, own, own:<owner field>, related:<scope path key>, "
-            "custom:<registered name>."
+            "custom:<registered name>, tree:<path to a tree entity> (experimental)."
         ),
     )
 

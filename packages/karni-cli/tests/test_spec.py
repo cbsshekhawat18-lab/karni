@@ -109,6 +109,15 @@ def test_x_keys_are_kept_and_ignored_everywhere() -> None:
 
 HEAD = "version: 1\napp: {name: Shop}\n"
 SHOP = HEAD + "apps:\n  shop:\n    entities:\n      Product:\n"
+#: A product on a category tree, a listing on a product and a flat tag (the tree scope).
+TREES = (
+    SHOP
+    + "        fields: {category: fk:Category, tags: 'm2m:Tag?'}\n"
+    + "      Category: {fields: {name: str}, tree: true}\n"
+    + "      Tag: {fields: {name: str}}\n"
+    + "      Listing: {fields: {product: fk:Product}}\n"
+    + "roles:\n  buyer:\n    grants:\n"
+)
 
 INVALID: list[tuple[str, str, int | None]] = [
     ("C211", "version: 1\napp: [unclosed\n", 3),
@@ -164,6 +173,12 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C460", SHOP + "        {external: true, table: sales, tree: true}\n", 7),
     ("C460", SHOP + "        fields: {name: str, parent: 'fk:Product?'}\n        tree: true\n", 7),
     ("C460", SHOP + "        fields: {position: int}\n        tree: ordered\n", 7),
+    ("C620", TREES + "      shop.product:view: 'tree:tags'\n", 14),
+    ("C620", TREES + "      shop.product:view: 'tree:name'\n", 14),
+    ("C620", TREES + "      shop.listing:view: 'tree:product'\n", 14),
+    ("C620", TREES + "      shop.listing:view: 'tree:product__Category'\n", 14),
+    ("C620", TREES + "      shop.tag:*: 'tree:category'\n", 14),
+    ("C620", TREES + "      shop.*: 'tree:region'\n", 14),
 ]  # fmt: skip
 
 
@@ -180,9 +195,12 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    # C460-C479: tree models.
+    # C460-C479: tree models. C620-C639: the tree scope.
     assert all(
-        200 <= int(code[1:]) <= 269 or code == "C324" or 460 <= int(code[1:]) <= 479
+        200 <= int(code[1:]) <= 269
+        or code == "C324"
+        or 460 <= int(code[1:]) <= 479
+        or 620 <= int(code[1:]) <= 639
         for code in iter_codes()
     )
 
@@ -261,6 +279,24 @@ def test_a_tree_entity_its_fields_and_its_normal_form() -> None:
         SHOP + "        fields: {name: str}\n        tree: true\n        order: [position]\n"
     )
     assert [code for code, _line in found] == ["C238"]
+
+
+def test_a_tree_scope_follows_relations_to_a_tree_entity() -> None:
+    text = (
+        TREES
+        + "      shop.product:view: 'tree:category'\n"
+        + "      shop.listing:*: 'tree:product__category'\n"
+        + "      shop.*:view: 'tree:category'\n"
+        + "      '*': 'tree:product__category'\n"
+    )
+    report = check(text)
+    assert report.ok, [issue.render("x") for issue in report.issues]
+    assert report.spec is not None
+    grants = normalise(report.spec)["roles"]["buyer"]["grants"]
+    assert grants["shop.product:view"] == "tree:category"
+    assert grants["shop.listing:*"] == "tree:product__category"
+    (issue,) = check(TREES + "      shop.listing:view: 'tree:product'\n").issues
+    assert "'product' does not lead from Listing to an entity with tree: true" in issue.message
 
 
 def test_a_tree_value_names_the_values_it_takes() -> None:

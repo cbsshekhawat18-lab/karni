@@ -911,9 +911,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     def access_forest(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.
 
-        Experimental. The nodes the requester's ``tree:<path>`` grants name,
-        their ancestors and every other root (:mod:`karni.accounts.tree_scope`).
-        Any signed-in user may ask about their own grants.
+        Experimental. The nodes the requester's tree:<path> grants name, their
+        ancestors and every other root. Any signed-in user may ask about their
+        own grants (karni.accounts.tree_scope).
         """
         from karni.api.tree import access_forest_response
 

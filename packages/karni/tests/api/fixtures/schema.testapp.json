@@ -1257,6 +1257,77 @@
           "parent": "parent"
         }
       },
+      "TestappCategoryAccessForest": {
+        "description": "The requester's access forest: the granted nodes with their ancestors, then every other root. all is true when every node is reached.",
+        "properties": {
+          "all": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryAccessNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "all",
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappCategoryAccessNode": {
+        "description": "A node of the access forest. granted is true for a node a grant names; its ancestors and the other roots are there for navigation.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappCategoryAccessNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "granted": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "parent": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "children",
+          "granted",
+          "has_children",
+          "id",
+          "label",
+          "parent"
+        ],
+        "type": "object"
+      },
       "TestappCategoryMoveRequest": {
         "description": "Where to move a node: its new parent (null for a root) and position.",
         "properties": {
@@ -1872,6 +1943,77 @@
           "ordered": false,
           "parent": "parent"
         }
+      },
+      "TestappRegionAccessForest": {
+        "description": "The requester's access forest: the granted nodes with their ancestors, then every other root. all is true when every node is reached.",
+        "properties": {
+          "all": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionAccessNode"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "truncated": {
+            "readOnly": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "all",
+          "results",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "TestappRegionAccessNode": {
+        "description": "A node of the access forest. granted is true for a node a grant names; its ancestors and the other roots are there for navigation.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/TestappRegionAccessNode"
+            },
+            "nullable": true,
+            "readOnly": true,
+            "type": "array"
+          },
+          "granted": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "has_children": {
+            "readOnly": true,
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "label": {
+            "readOnly": true,
+            "type": "string"
+          },
+          "parent": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "children",
+          "granted",
+          "has_children",
+          "id",
+          "label",
+          "parent"
+        ],
+        "type": "object"
       },
       "TestappRegionMoveRequest": {
         "description": "Where to move a node: its new parent (null for a root) and position.",
@@ -3199,6 +3341,48 @@
           "role": [
             "staff"
           ]
+        }
+      }
+    },
+    "/api/categories/access/": {
+      "get": {
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "operationId": "categories_access_retrieve",
+        "parameters": [
+          {
+            "description": "A permission key or pattern (shop.order:view, shop.order:*): only the grants of the permissions it matches count. Default: every tree grant.",
+            "in": "query",
+            "name": "permission",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappCategoryAccessForest"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "categories"
+        ],
+        "x-karni-access": {
+          "authenticated": true
         }
       }
     },
@@ -6722,6 +6906,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TestappRegion"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "regions"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/regions/access/": {
+      "get": {
+        "description": "``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.\n\nExperimental. The nodes the requester's tree:<path> grants name, their\nancestors and every other root. Any signed-in user may ask about their\nown grants (karni.accounts.tree_scope).",
+        "operationId": "regions_access_retrieve",
+        "parameters": [
+          {
+            "description": "A permission key or pattern (shop.order:view, shop.order:*): only the grants of the permissions it matches count. Default: every tree grant.",
+            "in": "query",
+            "name": "permission",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestappRegionAccessForest"
                 }
               }
             },

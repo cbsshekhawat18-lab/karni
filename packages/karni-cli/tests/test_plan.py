@@ -593,6 +593,28 @@ def test_a_change_between_flat_and_tree_is_risky(base: Project) -> None:
     assert _only(new, "geo.Area").detail == "(name str) tree ordered"
 
 
+def test_a_tree_scope_grant_is_planned_and_checked(base: Project) -> None:
+    store = TREES + "      Store: {fields: {region: fk:Region}, access: code}\n"
+    member = "  member: {name: Member, default: true, grants: {shop.order: own}}\n"
+
+    def planned(scope: str) -> Plan:
+        grant = member.replace("shop.order: own}", f"shop.order: own, geo.store:view: '{scope}'}}")
+        text = BASE.replace(member, grant).replace("pages:\n", store + "pages:\n")
+        report = validate_text(text)
+        assert report.ok and report.spec is not None, report.issues
+        return plan_project(report.spec, _tree_facts(base), base.root, file="karni.yaml")
+
+    added = _only(planned("tree:region"), "member grant geo.store:view")
+    assert (added.action, added.detail, added.risky) == ("add", "tree:region", False)
+    assert "  + member grant geo.store:view: tree:region" in planned("tree:region").text()
+    bad = validate_text(
+        BASE.replace(member, member.replace("own}", "own, geo.store:view: 'tree:sku'}")).replace(
+            "pages:\n", store + "pages:\n"
+        )
+    )
+    assert [issue.code for issue in bad.issues] == ["C620"]
+
+
 def test_database_must_be_an_alias_the_project_has(
     base: Project, monkeypatch: pytest.MonkeyPatch
 ) -> None:

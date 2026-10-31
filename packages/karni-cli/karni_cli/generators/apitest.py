@@ -116,6 +116,16 @@ def no_isolation_reason(ws: Workspace, model: ModelInfo, *, explicit: bool) -> s
     custom = sorted(
         f"{slug!r} ({scope})" for slug, scope in scopes.items() if scope.startswith("custom:")
     )
+    trees = sorted(
+        f"{slug!r} ({scope})" for slug, scope in scopes.items() if scope.startswith("tree:")
+    )
+    if trees and not custom:
+        return (
+            f"{', '.join(trees)} reach {key} through a tree scope, which assert_isolated "
+            "cannot drive: the rows depend on the nodes each user holds. Test the subtree in a "
+            "test of your own, with a user grant (karni.accounts.grants.grant(..., "
+            "targets=[node.pk]))."
+        )
     if custom:
         return (
             f"{', '.join(custom)} reach {key} through a custom scope, which assert_isolated "

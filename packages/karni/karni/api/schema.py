@@ -196,10 +196,10 @@ class KarniAutoSchema(AutoSchema):
         tree nodes and ``access/`` with the access forest (experimental).
         """
         action = self._karni_action()
-        if action == "access_forest" and self._karni_tree_node() is not None:
+        view = self._karni_view()
+        if action == "access_forest" and view is not None and view.serves_tree():
             from karni.api.tree import tree_access_serializer
 
-            view = self._karni_view()
             return tree_access_serializer(view.get_model())
         if action == "tree" and (node := self._karni_tree_node()) is not None:
             from karni.api.tree import tree_response_serializer

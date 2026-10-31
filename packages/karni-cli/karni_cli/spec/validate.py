@@ -989,12 +989,69 @@ class _Meaning:
             return
         if kind == "custom" and arg:
             return
+        if kind == "tree" and arg:
+            self.tree_grant(where, slug, pattern, arg, matched, explicit)
+            return
         self.add(
             "C218",
             where,
             f"Role {slug!r}: scope {scope!r} on {pattern!r} is not a scope.",
-            "Use all, own, own:<owner field>, related:<scope path key> or custom:<name>.",
+            "Use all, own, own:<owner field>, related:<scope path key>, custom:<name> or "
+            "tree:<path>.",
         )
+
+    def tree_grant(
+        self,
+        where: Loc,
+        slug: str,
+        pattern: str,
+        path: str,
+        matched: list[_Entity | None],
+        explicit: _Entity | None,
+    ) -> None:
+        """Experimental. ``tree:<path>``: from the entity, through relations, to a tree entity."""
+        if explicit is not None:
+            tree = self.leads_to_tree(explicit, path)
+            if tree is None:
+                self.add(
+                    "C620",
+                    where,
+                    f"Role {slug!r}: tree:{path} on {pattern!r}, but {path!r} does not lead from "
+                    f"{explicit.name} to an entity with tree: true.",
+                    f"Name {explicit.name}'s relation to a tree entity (e.g. tree:region for "
+                    "region: fk:Region), or add tree: true to the entity the path ends at.",
+                )
+            return
+        candidates = (
+            list(self.entities.values())
+            if pattern == "*"
+            else [entity for entity in matched if entity is not None]
+        )
+        if not any(self.leads_to_tree(entity, path) for entity in candidates):
+            self.add(
+                "C620",
+                where,
+                f"Role {slug!r}: tree:{path} on {pattern!r}, but no entity the pattern names has "
+                f"a path {path!r} to an entity with tree: true.",
+                "Name a relation to a tree entity that one of them declares, or grant another "
+                "scope.",
+            )
+
+    def leads_to_tree(self, entity: _Entity, path: str) -> _Entity | None:
+        """Experimental. The tree entity ``path`` (``a__b``) reaches from ``entity``, else ``None``."""
+        if not _PATH.match(path):
+            return None
+        current: _Entity | None = entity
+        for part in path.split("__"):
+            if current is None:
+                return None
+            spec = current.fields.get(part)
+            if spec is None or not spec.is_relation:
+                return None
+            current = self.entities.get(current.targets.get(part) or "")
+        if current is None or not current.entity.tree:
+            return None
+        return current
 
     def matching(self, app: str, model: str) -> list[_Entity | None]:
         found: list[_Entity | None] = [
@@ -1341,3 +1398,4 @@ def iter_codes() -> Iterator[str]:
     yield from ("C251", "C252", "C253", "C254")
     yield "C324"
     yield "C460"
+    yield "C620"
