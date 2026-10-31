@@ -184,6 +184,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "PDF reports of a row (the `reports` module): a template rendered in the background "
+        "with WeasyPrint, cached by template and data, served only to users who may retrieve "
+        "the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),

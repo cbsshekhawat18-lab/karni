@@ -2222,6 +2222,118 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Usually nothing: the retry succeeds. If it keeps failing, the payment was created outside Karni (or in another environment sharing the webhook): check the provider ids in the message.
 
+## REPORT (`REPORT`)
+
+<a id="report001"></a>
+
+### REPORT001: No report has that name
+
+*exception* · from `karni_reports.registry.get_report (the endpoints answer it with HTTP 404)`
+
+**Why Karni objects.** A report is requested by the name its class declares, and none is registered under this one.
+
+**Fix.** Use a name `manage.py karni_pregenerate --list` prints, or declare the report in <app>/reports.py with @register.
+
+<a id="report002"></a>
+
+### REPORT002: A report declaration is incomplete
+
+*exception* · from `karni_reports.registry.register`
+
+**Why Karni objects.** A report prints rows of one model through one template, so both must be named.
+
+**Fix.** Set `model` to a model class and `template` to a template name on the Report subclass, and give it a name of lowercase letters, digits, - and _.
+
+<a id="report003"></a>
+
+### REPORT003: Two reports have the same name
+
+*exception* · from `karni_reports.registry.register`
+
+**Why Karni objects.** The name is the report's address in the API, so it must be unique.
+
+**Fix.** Give one of them another `name`.
+
+<a id="report004"></a>
+
+### REPORT004: No viewset serves the report's model
+
+*system check (error)* · from `karni_reports.report.Report.get_viewset and karni check`
+
+**Why Karni objects.** Who may see a row's report is decided by who may retrieve the row through its model's viewset. Without one, nobody can be checked, so the report is refused.
+
+**Fix.** Add a BaseViewSet for the model (karni make viewset <Model>), or set `viewset` on the Report to the viewset class or its dotted path.
+
+<a id="report005"></a>
+
+### REPORT005: KARNI_REPORTS_RENDERER cannot be loaded
+
+*exception* · from `karni_reports.rendering.get_renderer`
+
+**Why Karni objects.** Every report goes through the configured renderer to become a PDF.
+
+**Fix.** Set KARNI_REPORTS_RENDERER to 'weasyprint', 'fake' (tests) or the dotted path of a karni_reports.rendering.Renderer subclass.
+
+<a id="report006"></a>
+
+### REPORT006: WeasyPrint or the system libraries it needs are missing
+
+*exception* · from `karni_reports.rendering.WeasyPrintRenderer`
+
+**Why Karni objects.** WeasyPrint draws the PDF with Pango, which is a system library, not a Python package.
+
+**Fix.** Install Pango: apt-get install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-dejavu-core (Debian, Ubuntu), apk add pango font-dejavu (Alpine) or brew install pango (macOS). Set KARNI_REPORTS_RENDERER = 'fake' in tests.
+
+<a id="report007"></a>
+
+### REPORT007: A report failed to render
+
+*exception* · from `karni_reports.services.render (stored on the GeneratedReport row)`
+
+**Why Karni objects.** The template, the report's get_context or the renderer raised. The row keeps the error and the API answers status 'failed'.
+
+**Fix.** Read the error on the row in the admin (Generated reports, filter by status failed), fix the template or get_context, then use the Regenerate action or request the report again.
+
+<a id="report008"></a>
+
+### REPORT008: No file is ready for this report and row yet
+
+*exception* · from `karni_reports.viewsets.GeneratedReportViewSet.download_report (answered with HTTP 404)`
+
+**Why Karni objects.** The download serves a rendered file. This row's report was never requested, or is still rendering, or failed.
+
+**Fix.** POST /api/reports/<report>/<id>/ to request it, poll its status/ until it says ready, then download.
+
+<a id="report009"></a>
+
+### REPORT009: A template referenced a URL the renderer does not fetch
+
+*exception* · from `karni_reports.rendering.WeasyPrintRenderer (logged as a warning, the URL is left out of the PDF)`
+
+**Why Karni objects.** Fetching any URL while rendering would let a value in a row make the server call another host. The renderer reads only data: URLs and files under STATIC_URL and MEDIA_URL, and leaves the rest out of the PDF.
+
+**Fix.** Serve the image or stylesheet from your static or media files, or subclass WeasyPrintRenderer with allow_network = True and name it in KARNI_REPORTS_RENDERER.
+
+<a id="report010"></a>
+
+### REPORT010: A report's template does not exist
+
+*system check (error)* · from `karni_reports.checks.run_checks`
+
+**Why Karni objects.** Every render loads the template, so a missing one fails every request.
+
+**Fix.** Create the template the report names, or correct its `template`.
+
+<a id="report011"></a>
+
+### REPORT011: A report's context holds a value with no stable text
+
+*exception* · from `karni_reports.versions.encode`
+
+**Why Karni objects.** The data version is a hash of the context. A value whose text changes on every run (an object without __str__) would make every request render again.
+
+**Fix.** Put plain data in the context (dicts, lists, model instances, querysets), give the class a __str__, or override Report.get_data_version.
+
 ## SITE (`SITE`)
 
 <a id="site001"></a>

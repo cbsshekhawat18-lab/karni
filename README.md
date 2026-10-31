@@ -313,6 +313,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Sign-in with a Google, Microsoft or Apple ID token in JWT and session mode (`social/<provider>/`, `KARNI_SOCIAL_TOKEN_PROVIDERS`). Experimental tier
 - `experimental` Sign-in with a one-time code sent by email, in JWT and session mode (`otp/send/`, `otp/verify/`, `KARNI_EMAIL_OTP`). Experimental tier
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
+- `experimental` PDF reports of a row (the `reports` module): a template rendered in the background with WeasyPrint, cached by template and data, served only to users who may retrieve the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 
 Declarations: `Access`, `Authenticated`, `Budget`, `Cache`, `Can`, `Granted`, `HasRole`, `Owned`, `Public`, `Throttle`, `Uncached`, `Unpaginated`, `Unscoped`, `Where`.
@@ -391,6 +392,7 @@ A module is a separate package for anything with its own service or a real memor
 - `experimental` `karni add approvals`: A second person approves high-value changes before they are written, with a queue, an API and an audit trail
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
+- `experimental` `karni add reports`: A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row
 - `experimental` `karni add site`: Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->

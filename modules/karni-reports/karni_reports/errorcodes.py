@@ -19,8 +19,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ErrorCode(
         code="REPORT001",
         title="No report has that name",
-        kind="api",
-        source=f"{_SOURCE}.registry.get_report (the endpoints answer 404)",
+        kind="exception",
+        source=f"{_SOURCE}.registry.get_report (the endpoints answer it with HTTP 404)",
         why="A report is requested by the name its class declares, and none is registered "
         "under this one.",
         fix="Use a name `manage.py karni_pregenerate --list` prints, or declare the report in "
@@ -86,8 +86,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ErrorCode(
         code="REPORT008",
         title="No file is ready for this report and row yet",
-        kind="api",
-        source=f"{_SOURCE}.viewsets.GeneratedReportViewSet.download_report",
+        kind="exception",
+        source=f"{_SOURCE}.viewsets.GeneratedReportViewSet.download_report (answered with "
+        "HTTP 404)",
         why="The download serves a rendered file. This row's report was never requested, or "
         "is still rendering, or failed.",
         fix="POST /api/reports/<report>/<id>/ to request it, poll its status/ until it says "
@@ -96,8 +97,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
     ErrorCode(
         code="REPORT009",
         title="A template referenced a URL the renderer does not fetch",
-        kind="warning",
-        source=f"{_SOURCE}.rendering.WeasyPrintRenderer.fetch",
+        kind="exception",
+        source=f"{_SOURCE}.rendering.WeasyPrintRenderer (logged as a warning, the URL is "
+        "left out of the PDF)",
         why="Fetching any URL while rendering would let a value in a row make the server "
         "call another host. The renderer reads only data: URLs and files under STATIC_URL "
         "and MEDIA_URL, and leaves the rest out of the PDF.",
