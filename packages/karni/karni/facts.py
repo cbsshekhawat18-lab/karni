@@ -40,13 +40,14 @@ from django.utils.functional import Promise
 
 __all__ = ["COUNT_KINDS", "count_rows", "project_apps", "project_facts"]
 
-#: The settings a spec's ``features`` and ``roles`` come from, and the default key type.
+#: The settings a spec's ``features``, ``roles`` and ``navigation`` come from, and the key type.
 FEATURE_SETTINGS: tuple[str, ...] = (
     "KARNI_2FA",
     "KARNI_EMAIL_OTP",
     "KARNI_SOCIAL_TOKEN_PROVIDERS",
     "KARNI_TERMS",
     "KARNI_USER_GRANTS",
+    "KARNI_NAVIGATION",
     "KARNI_ROLES",
     "KARNI_ACCOUNTS_DEFAULT_ROLES",
     "KARNI_PK",
