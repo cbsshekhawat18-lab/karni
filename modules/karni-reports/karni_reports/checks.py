@@ -34,7 +34,7 @@ def run_checks() -> list[str]:
             get_template(template)
         except TemplateDoesNotExist:
             failures.append(
-                f"{MISSING_TEMPLATE}: report {name!r} names the template {template!r}, which does not "
-                "exist. Create it (it usually extends karni_reports/base.html)."
+                f"{MISSING_TEMPLATE}: report {name!r} names the template {template!r}, which "
+                "does not exist. Create it (it usually extends karni_reports/base.html)."
             )
     return failures
