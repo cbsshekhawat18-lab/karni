@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "karni-ai"
+version = "0.4.0"
+description = "Structured extraction for Karni: rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
+readme = "README.md"
+requires-python = ">=3.12"
+# PEP 639 licence expression; no "License ::" classifier (deprecated alongside it).
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Chandrabhan Shekhawat", email = "cbsshekhawat18@gmail.com" }]
+keywords = ["django", "karni", "ai", "llm", "extraction", "structured-output", "import", "react"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+# Range-pinned per the module contract (docs/modules.md): karni 0.x minors may
+# break, so a module pins the minor it was built against. pypdf reads a PDF's
+# text (pure Python); jsonschema validates answers (drf-spectacular needs it too).
+dependencies = ["karni>=0.4,<0.5", "pypdf>=5", "jsonschema>=4.18"]
+
+[project.urls]
+Homepage = "https://github.com/cbsshekhawat18-lab/karni"
+Documentation = "https://cbsshekhawat18-lab.github.io/karni/ai-extraction/"
+Repository = "https://github.com/cbsshekhawat18-lab/karni"
+Issues = "https://github.com/cbsshekhawat18-lab/karni/issues"
+Changelog = "https://github.com/cbsshekhawat18-lab/karni/tree/main/docs/migrations"
+
+# The provider SDKs: a project installs the one it uses.
+[project.optional-dependencies]
+anthropic = ["anthropic>=2,<3"]
+openai = ["openai>=3,<4"]
+
+# The catalog entry, karni_ai/karni.module.toml: `karni modules`, `karni add`
+# and `karni remove` read it.
+[project.entry-points."karni.modules"]
+ai = "karni_ai"
+
+# The settings fragment: karni_settings() merges DEFAULTS into every project
+# that installs this module (new top-level names only).
+[project.entry-points."karni.settings"]
+ai = "karni_ai.conf:DEFAULTS"
+
+# Error codes (AI001...) for `karni explain` and docs/errors.md.
+[project.entry-points."karni.errorcodes"]
+ai = "karni_ai.errorcodes:CODES"
+
+# `karni check` fails while the provider, its model name or its key is missing.
+[project.entry-points."karni.checks"]
+ai = "karni_ai.checks:run_checks"
+
+[dependency-groups]
+dev = ["pytest>=8.2", "pytest-django>=4.8", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["karni_ai"]
+# `karni add` reads the agent guidance through importlib.resources after install.
+artifacts = ["karni_ai/AGENTS.fragment.md", "karni_ai/karni.module.toml"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["ui/", "tests/"]
+artifacts = ["karni_ai/AGENTS.fragment.md", "karni_ai/karni.module.toml"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["karni_ai/migrations", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+# Inside a project checkout, never pick up the project's manage.py / tests package.
+django_find_project = false
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
