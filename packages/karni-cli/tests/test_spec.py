@@ -609,7 +609,7 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         if name[:1].isupper():
             route = default_route(name)
             singular = route.removesuffix("s")
-            for kind in kinds:
+            for kind in schema.page_kind_names(kinds):
                 page = route if kind == "list" else f"{singular}-{kind}"
                 ok("make", "page", page, "--resource", route, "--kind", kind)
         elif kinds == ["login"]:
