@@ -221,9 +221,6 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
       the optimiser's derived lookups; ``optimize = False`` keeps only them.
     * ``query_budget`` — ``Budget(list=25, reason=...)``; ``None`` uses
       ``KARNI_QUERY_BUDGET``.
-    * ``query_scaling`` — experimental, ``Scaling(rows=(5, 500), seconds=0.3)``:
-      the rows the scaling check compares and a time budget; ``None`` uses
-      ``KARNI_SCALING_ROWS`` and no time budget.
     * ``pagination`` — ``Unpaginated(max_rows=N, reason=...)`` to return
       plain (still bounded) lists; ``None`` keeps ``pagination_class``.
     * ``cache`` — ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;
