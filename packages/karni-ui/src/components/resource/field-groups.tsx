@@ -8,7 +8,8 @@
  * into those groups, and the ones in no group form a last group, "Other". A
  * form shows each group as a `<fieldset>` with its legend, a detail page as a
  * `<section>` with a heading. As tabs, every panel stays mounted (a form keeps
- * its inputs registered and focusable) and only the open one shows.
+ * its inputs registered) and only the open one shows. A form opens a field's
+ * tab before it moves focus there.
  *
  * Internal to @karni/ui. The public surface is the `fieldGroups` and
  * `groupLayout` props of ResourceForm and ResourceDetail.
@@ -175,7 +176,7 @@ export function GroupedFields(props: GroupedFieldsProps): React.ReactElement | n
         ))}
       </TabsList>
       {panels.map((panel) => (
-        // Mounted while closed: a form's inputs stay registered, and focus can reach them.
+        // Mounted while closed (hidden): a form's inputs stay registered with their values.
         <TabsContent
           key={panel.key}
           value={panel.key}
