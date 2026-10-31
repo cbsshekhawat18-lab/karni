@@ -14,6 +14,7 @@ import BookingDetailPage from "./pages/booking-detail";
 import BookingsPage from "./pages/bookings";
 import LoginPage from "./pages/login";
 import EventDashboardPage from "./pages/event-dashboard";
+import VenueOverviewPage from "./pages/venue-overview";
 // karni:page-imports
 
 const root = createRootRoute({ component: AppLayout });
@@ -30,6 +31,7 @@ const routes = [
     createRoute({ getParentRoute: () => root, path: "/bookings", component: BookingsPage }),
     createRoute({ getParentRoute: () => root, path: "/login", component: LoginPage }),
     createRoute({ getParentRoute: () => root, path: "/events/$id/dashboard", component: EventDashboardPage }),
+    createRoute({ getParentRoute: () => root, path: "/venue-overview", component: VenueOverviewPage }),
     // karni:routes
 ];
 
