@@ -55,6 +55,11 @@ def test_several_nodes_read_the_rows_tagged_with_any_once(catalog: Catalog) -> N
     assert data["count"] == 3
 
 
+def test_a_repeated_key_reads_like_a_list(catalog: Catalog) -> None:
+    url = f"/api/products/?region={catalog.france.pk}&region={catalog.japan.pk}"
+    assert names(ok(client_as(None).get(url))) == ["Saw", "Wine"]
+
+
 def test_descendants_add_the_rows_tagged_under_the_nodes(catalog: Catalog) -> None:
     url = f"/api/products/?region={catalog.europe.pk}"
     assert names(ok(client_as(None).get(url))) == []

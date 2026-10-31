@@ -116,9 +116,10 @@ def readable_nodes(taxonomy: Taxonomy, request: Any) -> models.QuerySet[Any]:
 class TaxonomyFilter(django_filters.CharFilter):
     """Experimental. ``?<key>=<node>,<node>``: the rows tagged with any of those nodes.
 
-    With ``?<key>_descendants=true`` it also reads the rows tagged with any
-    node below them. Nodes the requester may not read match nothing, and
-    hide their branch.
+    The key may also repeat (``?region=1&region=2``). With
+    ``?<key>_descendants=true`` it also reads the rows tagged with any node
+    below them. Nodes the requester may not read match nothing, and hide
+    their branch.
     """
 
     def filter(self, qs: Any, value: Any) -> Any:
@@ -127,9 +128,12 @@ class TaxonomyFilter(django_filters.CharFilter):
         taxonomy = get_taxonomy(self.model, self.field_name)
         if taxonomy is None:
             return qs
-        keys = parse_nodes(taxonomy.tree, value, self.field_name)
         parent = getattr(self, "parent", None)
         data = getattr(parent, "data", None) or {}
+        if hasattr(data, "getlist"):
+            # ?region=1&region=2 (a client's repeated key) reads like ?region=1,2.
+            value = ",".join(str(item) for item in data.getlist(self.field_name))
+        keys = parse_nodes(taxonomy.tree, value, self.field_name)
         param = taxonomy.descendants_param
         descendants = parse_flag(data.get(param), param)
         within = readable_nodes(taxonomy, getattr(parent, "request", None))

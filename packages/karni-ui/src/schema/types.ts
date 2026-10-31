@@ -85,6 +85,12 @@ export interface FieldDef {
    * (`x-karni-tree`): ResourceForm edits it with TreeSelect.
    */
   tree?: TreeRef;
+  /**
+   * Experimental. The key of a `class Karni: taxonomies` entry (`x-karni-taxonomy`),
+   * set on its relation: the list filters `?<key>=` and `?<key>_descendants=`
+   * and the `facets/` counts exist for it (FacetPanel).
+   */
+  taxonomy?: string;
   /** Declaration order in the schema (response props first, request-only appended). */
   order: number;
 }
@@ -178,6 +184,8 @@ export interface ResourceSchema {
     move?: OperationDef;
     /** Experimental. `GET /<resource>/access/`: the requester's access forest (the `tree:<path>` scope). */
     access?: OperationDef;
+    /** Experimental. `GET /<resource>/facets/`: rows per node of a taxonomy, under the list's filters. */
+    facets?: OperationDef;
   };
   /** Ordered by declaration. Unknown constructs land as kind "unknown". */
   fields: readonly FieldDef[];

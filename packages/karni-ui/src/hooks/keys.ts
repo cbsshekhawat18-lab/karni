@@ -97,6 +97,26 @@ export const karniKeys = {
     return ["karni", resource, "ancestors", String(id)] as const;
   },
 
+  /**
+   * Experimental. Key for one `facets/` request: a taxonomy's counts under
+   * the list's filters (`params`, normalized like a list's).
+   */
+  facets(
+    resource: string,
+    params?: { taxonomy?: string; rollup?: boolean; query?: Record<string, unknown> },
+  ): readonly unknown[] {
+    return [
+      "karni",
+      resource,
+      "facets",
+      normalizeParams({
+        taxonomy: params?.taxonomy,
+        rollup: params?.rollup === true ? "true" : undefined,
+        query: params?.query,
+      }),
+    ] as const;
+  },
+
   /** Experimental. Key for the requester's `access/` forest, for one permission or every one. */
   accessForest(resource: string, params?: { permission?: string }): readonly unknown[] {
     return [
