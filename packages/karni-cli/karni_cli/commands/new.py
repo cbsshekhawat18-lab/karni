@@ -299,6 +299,153 @@ def _procedure_lines(project: Path, design: Path, site_app: str) -> list[str]:
     return lines
 
 
+def choose_recipe(
+    recipe: str | None, *, kind: str | None, design: Path | None, staff_app: bool | None
+) -> tuple[Recipe | None, str | None]:
+    """The recipe ``--recipe`` names and the kind it gives, checked before anything is written.
+
+    ``(None, None)`` without ``--recipe``. The blank start is ``(None, kind)``,
+    an app unless ``--kind`` says otherwise.
+
+    :raises CliError: ``C420`` (with the closest names) or ``C421`` for a
+        recipe that is not there or cannot be used, ``C440`` for an option a
+        recipe cannot go with.
+    """
+    if recipe is None:
+        return None, None
+    from karni_cli import recipes
+    from karni_cli.spec.source import load
+
+    clash = (
+        "--design builds a public site from a designer's pages"
+        if design is not None
+        else "--kind site has no React app for the recipe's pages"
+        if kind == "site"
+        else "--no-staff-app leaves out the React app the recipe's pages live in"
+        if staff_app is False
+        else None
+    )
+    if clash is not None:
+        raise CliError(
+            f"--recipe {recipe} makes an app from the recipe's karni.yaml, and {clash}. Leave "
+            "that option out (--kind app or site+app go with a recipe).",
+            code="C440",
+        )
+    found = recipes.load().require(recipe)
+    if found is None:
+        return None, kind or kinds.DEFAULT
+    data = load(found.spec()).data
+    app = data.get("app") if isinstance(data, dict) else None
+    given = app.get("kind") if isinstance(app, dict) else None
+    return found, kind or (str(given) if given else kinds.DEFAULT)
+
+
+def write_recipe_spec(project: Path, name: str, kind: str, recipe: Recipe | None) -> Path:
+    """karni.yaml from ``recipe`` (the blank start when ``None``) with this project's name and kind.
+
+    A recipe is also named in ``.karni/build.json``, so the first ``karni
+    build`` writes its own files (:mod:`karni_cli.recipes.apply`).
+    """
+    from karni_cli import recipes
+    from karni_cli.builder import layout, record
+    from karni_cli.spec import edit
+
+    path = project / recipes.SPEC_FILE
+    if recipe is None:
+        path.write_text(recipes.blank_spec(name), encoding="utf-8")
+        return path
+    text = edit.set_values(
+        recipe.spec(),
+        [(("app", "name"), name), (("app", "kind"), kind), (("app", "recipe"), recipe.name)],
+    )
+    path.write_text(text, encoding="utf-8")
+    pending = project / layout.RECORD
+    pending.parent.mkdir(parents=True, exist_ok=True)
+    pending.write_text(record.Record(recipe=recipe.name).text(), encoding="utf-8")
+    return path
+
+
+def build_blocker(project: Path) -> str | None:
+    """Why ``karni build`` cannot run in the new project now (``None``: it can).
+
+    It needs an interpreter with Django and karni for the project (its
+    ``.venv``, the active virtualenv, or the one running karni-cli) and a
+    database it can open (the probe of :mod:`karni_cli.database`).
+    """
+    from karni_cli import database
+    from karni_cli import project as project_mod
+
+    python = project_mod.venv_python(project)
+    if python is None:
+        return (
+            "no interpreter here has Django and karni for the project (no .venv in it, no "
+            "active virtualenv)"
+        )
+    if not database.enabled():
+        return None
+    finding = database.probe(project, python, "connect")
+    if finding is None:
+        return None
+    if finding.problem == "driver":
+        return f"the database driver for {finding.engine} does not load ({finding.error})"
+    where = f" ({finding.address})" if finding.address else ""
+    return f"the database{where} cannot be reached ({finding.error})"
+
+
+def _recipe_line(recipe: Recipe | None, spec: Path) -> str:
+    if recipe is None:
+        return f"Blank start: wrote {spec.name} with the version and the app's name, nothing else."
+    from karni_cli.builder import layout
+
+    return (
+        f"Recipe {recipe.name} ({recipe.title}): wrote {spec.name} (app.recipe: {recipe.name}) "
+        f"and named the recipe in {layout.RECORD}. The first karni build writes its own files "
+        f"over its stubs: {', '.join(recipe.files) or 'none'}."
+    )
+
+
+def _run_build(project: Path) -> None:
+    """``karni build`` in the new project, as if run there. Raises ``typer.Exit(1)`` when it stops."""
+    from karni_cli.commands.build import build as build_command
+
+    typer.echo("")
+    typer.echo("$ karni build")
+    with contextlib.chdir(project):
+        build_command(
+            spec=None,
+            dry_run=False,
+            allow_destructive=False,
+            force=False,
+            adopt=None,
+            as_json=False,
+            docker=None,
+            service="django",
+        )
+
+
+def _recipe_next(picked: Recipe | None, blocker: str | None, setup: list[str]) -> None:
+    typer.echo("Next steps:")
+    for line in setup:
+        typer.echo(line)
+    if picked is None:
+        typer.echo(
+            "  # write in karni.yaml what the app needs, then karni plan --questions and karni build"
+        )
+    elif blocker is not None:
+        typer.echo(
+            "  karni build  # karni.yaml and the recipe's own files, the migrations, demo data, "
+            "the tests and karni check"
+        )
+        typer.echo(f"karni build did not run here: {blocker}.")
+        typer.echo("next: karni build")
+    else:
+        changed = "; ".join(picked.usually_changed) or "what the app needs"
+        typer.echo(
+            f"  # change karni.yaml ({changed}), then karni build. karni recipes show "
+            f"{picked.name} says what each one is."
+        )
+
+
 def new(
     name: str = typer.Argument(..., help="Project name (slug is derived from it)"),
     output_dir: Path = typer.Option(Path("."), "--output-dir", "-o"),
@@ -335,6 +482,17 @@ def new(
     site_app: str = typer.Option(
         SITE_APP, "--site-app", help="The label of the site app a kind with a site gets."
     ),
+    recipe: str | None = typer.Option(
+        None,
+        "--recipe",
+        help=(
+            "Experimental. Start the app from a recipe (karni recipes list, or blank): its "
+            "karni.yaml with this name, then karni build, which also writes the recipe's own "
+            "domain code, seeds and tests and runs the tests and karni check. Without the "
+            "project's interpreter or database it stops after karni.yaml: run karni build next."
+        ),
+        show_default=False,
+    ),
 ) -> None:
     """Create a project: a public website, an app, or both.
 
@@ -349,15 +507,23 @@ def new(
     steps say what is left: the models, the real content and the loops
     (karni rules --procedure site-from-design).
 
+    With --recipe (experimental), the app starts from a recipe's karni.yaml,
+    and karni build makes it: the models and the API, the recipe's own
+    domain code, seeds and tests, the migrations, demo data, the tests and
+    karni check.
+
     Example: karni new "Crumb Bakery" --kind site --design ../design
+
+    Example: karni new "Corner Shop" --recipe shop
     """
     from cookiecutter.main import cookiecutter  # lazy: heavy import
 
     slug = validate_name(name)
     require_snake(site_app, "Site app name")
+    picked, recipe_kind = choose_recipe(recipe, kind=kind, design=design, staff_app=staff_app)
     source = _design_folder(design) if design is not None else None
     ask = interactive()
-    chosen = choose_kind(kind, source, ask=ask)
+    chosen = choose_kind(recipe_kind or kind, source, ask=ask)
     with_staff_app = choose_staff_app(chosen, staff_app, ask=ask)
     site = kinds.has_site(chosen)
     print_mark()
@@ -404,6 +570,17 @@ def new(
             f"@karni/ui: {scaffold.UI_REGISTRY_SPEC} from npm "
             "(KARNI_UI_SRC=/path/to/Karni/packages/karni-ui uses a checkout instead)"
         )
+    if recipe is not None:
+        typer.echo(_recipe_line(picked, write_recipe_spec(project, name, chosen, picked)))
+        blocker = build_blocker(project) if picked is not None else None
+        if picked is not None and blocker is None:
+            try:
+                _run_build(project)
+            except typer.Exit:
+                typer.echo(f"The project is in {project}: run karni build there again.")
+                raise
+        _recipe_next(picked, blocker, _setup_lines(slug, project, with_staff_app, site))
+        return
     typer.echo("Next steps:")
     for line in _setup_lines(slug, project, with_staff_app, site):
         typer.echo(line)

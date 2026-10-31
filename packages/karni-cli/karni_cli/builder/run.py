@@ -464,7 +464,7 @@ def _recipe_files(ws: Workspace, rec: Record) -> list[str]:
     except CliError as exc:
         raise CliError(
             f"{layout.RECORD} names the recipe {rec.recipe!r}, whose own files this build writes "
-            f"over its stubs: {exc.message} Install it, or delete \"{apply.RECORD_KEY}\" from "
+            f'over its stubs: {exc.message} Install it, or delete "{apply.RECORD_KEY}" from '
             f"{layout.RECORD} to build without them.",
             code=exc.code,
         ) from None
