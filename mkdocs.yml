@@ -87,6 +87,7 @@ nav:
       - Scheduling: scheduling.md
       - Testing: testing.md
       - Seeding: seeding.md
+      - Large projects: large-projects.md
       - Settings: settings.md
       - "@karni/ui": ui.md
       - Theming (karni ui detect): theming.md
