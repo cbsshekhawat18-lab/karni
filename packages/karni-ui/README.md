@@ -492,6 +492,27 @@ from the `x-karni-related` extension the backend publishes. Every component,
 when to use it and an example page are in
 [docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#page-blocks-experimental).
 
+### Wide models: markdown, field groups and column sets (experimental)
+
+A model with a hundred fields and long markdown sections stays usable
+without any page code. A `MarkdownField` (`format: "markdown"` in the schema)
+is edited in `ResourceForm` with Write and Preview tabs and shown formatted
+and sanitized by `ResourceDetail`. A model's `Karni.field_groups`
+(`x-karni-field-groups`) splits `ResourceForm` and `ResourceDetail` into
+sections, or tabs with `field_group_layout = "tabs"`, the fields in no group
+last under "Other". A tab with a failing field is marked and opens when focus
+moves to it. A model's `Karni.column_sets` (`x-karni-column-sets`) gives
+`ResourceTable` a "Columns" menu of presets, the choice remembered per user
+and table. Each screen can override them:
+
+```tsx
+<ResourceForm resource="products" groupLayout="tabs" />
+<ResourceDetail resource="products" id={id} fieldGroups={false} />
+<ResourceTable resource="products" columnSet="financial" onColumnSetChange={save} />
+```
+
+See [docs/ui.md](https://github.com/cbsshekhawat18-lab/karni/blob/main/docs/ui.md#field-groups-and-column-sets-experimental).
+
 ### ResourceTable in every state
 
 Each state is its own screen, and each is a slot you can replace:

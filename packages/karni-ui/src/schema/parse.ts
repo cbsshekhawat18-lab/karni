@@ -15,6 +15,9 @@
  *   fall back to response-only, all readOnly,
  * - kind "file" = request-side `format: binary` (the response-side format: uri
  *   is just the display URL),
+ * - a formatted string that may be blank, `oneOf [{format}, {maxLength: 0}]`
+ *   (drf-spectacular's form for a blank email, URL or markdown field), is
+ *   that string. `format: markdown` (a MarkdownField) is kind "text",
  * - unknown/unsupported constructs land as kind "unknown" (never crash).
  *
  * This module is internal to @karni/ui (not re-exported from the barrel), but
@@ -22,9 +25,13 @@
  */
 
 import type {
+  ColumnSetDef,
+  ColumnSetsDef,
   DashboardCountDef,
   DashboardDef,
   FieldDef,
+  FieldGroupDef,
+  FieldGroupsDef,
   FieldKind,
   OperationDef,
   ParsedSchema,
@@ -318,8 +325,37 @@ function isAnySchema(schema: SchemaObject): boolean {
   );
 }
 
+/** True for drf-spectacular's "may be blank" member: `{type: "string", maxLength: 0}`. */
+function isBlankString(schema: SchemaObject | undefined): boolean {
+  return schema !== undefined && schema.type === "string" && schema.maxLength === 0;
+}
+
+/**
+ * `oneOf [<formatted string>, {type: string, maxLength: 0}]`: drf-spectacular's
+ * schema for a formatted string field that may be blank. Returns the string
+ * member with the outer keys (readOnly, nullable, description, ...) merged in.
+ */
+function blankableString(
+  doc: OpenApiDocument,
+  schema: SchemaObject,
+  members: readonly SchemaObject[],
+): SchemaObject | undefined {
+  if (members.length !== 2) return undefined;
+  const resolved = members.map((member) => resolveSchema(doc, member));
+  const blank = resolved.findIndex(isBlankString);
+  const value = resolved[blank === 0 ? 1 : 0];
+  if (blank === -1 || value === undefined || value.type !== "string") return undefined;
+  const outer: SchemaObject = { ...schema };
+  delete outer.oneOf;
+  delete outer.anyOf;
+  return { ...value, ...outer };
+}
+
 function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo {
-  const resolved = resolveSchema(doc, raw) ?? {};
+  const found = resolveSchema(doc, raw) ?? {};
+  const members = found.oneOf ?? found.anyOf;
+  const resolved =
+    (Array.isArray(members) ? blankableString(doc, found, members) : undefined) ?? found;
   const relation = relationFromExtension(resolved);
   const { type, nullable: typeNullable } = normalizeType(resolved);
 
@@ -379,6 +415,9 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
         info.kind = "date";
       } else if (resolved.format === "date-time") {
         info.kind = "datetime";
+      } else if (resolved.format === "markdown") {
+        // A MarkdownField: long text, edited with a preview and shown formatted.
+        info.kind = "text";
       } else if (resolved.format === undefined && resolved.maxLength === undefined) {
         // CharField always emits maxLength; a bare string is a TextField.
         info.kind = "text";
@@ -575,6 +614,48 @@ export function parseRelated(raw: unknown): RelatedDef[] | undefined {
   return found;
 }
 
+// field groups and column sets (x-karni-field-groups, x-karni-column-sets)
+
+/**
+ * Experimental. The `x-karni-field-groups` extension of a list operation. A
+ * group without a label or a field is dropped, and so is a field already in
+ * an earlier group.
+ */
+export function parseFieldGroups(raw: unknown): FieldGroupsDef | undefined {
+  if (!isRecord(raw) || !Array.isArray(raw.groups)) return undefined;
+  const seen = new Set<string>();
+  const groups: FieldGroupDef[] = [];
+  for (const entry of raw.groups) {
+    if (!isRecord(entry) || typeof entry.label !== "string" || entry.label === "") continue;
+    const fields = (stringList(entry.fields) ?? []).filter((name) => !seen.has(name));
+    for (const name of fields) seen.add(name);
+    if (fields.length > 0) groups.push({ label: entry.label, fields });
+  }
+  if (groups.length === 0) return undefined;
+  return { layout: raw.layout === "tabs" ? "tabs" : "sections", groups };
+}
+
+/**
+ * Experimental. The `x-karni-column-sets` extension of a list operation. A set
+ * without a name or a column is dropped. `default` falls back to the first set.
+ */
+export function parseColumnSets(raw: unknown): ColumnSetsDef | undefined {
+  if (!isRecord(raw) || !Array.isArray(raw.sets)) return undefined;
+  const sets: ColumnSetDef[] = [];
+  for (const entry of raw.sets) {
+    if (!isRecord(entry) || typeof entry.name !== "string" || entry.name === "") continue;
+    const columns = stringList(entry.columns) ?? [];
+    if (columns.length === 0 || sets.some((found) => found.name === entry.name)) continue;
+    const label =
+      typeof entry.label === "string" && entry.label !== "" ? entry.label : humanize(entry.name);
+    sets.push({ name: entry.name, label, columns });
+  }
+  const first = sets[0];
+  if (first === undefined) return undefined;
+  const chosen = sets.find((found) => found.name === raw.default) ?? first;
+  return { default: chosen.name, sets };
+}
+
 // operation extraction
 
 function operationDef(
@@ -740,6 +821,10 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     if (dashboard !== undefined) parsedResource.dashboard = dashboard;
     const related = parseRelated(listOp["x-karni-related"]);
     if (related !== undefined) parsedResource.related = related;
+    const fieldGroups = parseFieldGroups(listOp["x-karni-field-groups"]);
+    if (fieldGroups !== undefined) parsedResource.fieldGroups = fieldGroups;
+    const columnSets = parseColumnSets(listOp["x-karni-column-sets"]);
+    if (columnSets !== undefined) parsedResource.columnSets = columnSets;
     resources[resource] = parsedResource;
   }
 

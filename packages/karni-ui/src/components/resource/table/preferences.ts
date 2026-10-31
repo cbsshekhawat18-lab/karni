@@ -1,6 +1,7 @@
 /**
  * Per-user table preferences kept in localStorage: row density (one choice
- * per user, for every table) and the columns a user hid (per table). The key
+ * per user, for every table), the columns a user hid (per table) and the
+ * column set a user chose (per table, experimental). The key
  * carries the signed-in user's id when an AuthProvider knows it, so people
  * sharing a browser keep their own. Without one it is "anonymous".
  *
@@ -21,6 +22,10 @@ export function densityKey(userId: string | number | undefined): string {
 
 export function hiddenColumnsKey(namespace: string, userId: string | number | undefined): string {
   return `${PREFIX}:columns:${namespace}:${userId === undefined ? "anonymous" : String(userId)}`;
+}
+
+export function columnSetKey(namespace: string, userId: string | number | undefined): string {
+  return `${PREFIX}:column-set:${namespace}:${userId === undefined ? "anonymous" : String(userId)}`;
 }
 
 function readStorage(key: string): string | null {

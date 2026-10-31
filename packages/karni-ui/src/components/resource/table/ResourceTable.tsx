@@ -20,7 +20,9 @@
  * Below `cardBreakpoint` (its container's width, not the viewport's) rows
  * render as cards. Wide tables scroll inside their box with a sticky header
  * and a frozen first column. Density and hidden columns are remembered per
- * user. In the table layout the rows are a WAI-ARIA grid: the whole table
+ * user. A model with `Karni.column_sets` (experimental) gets a "Columns"
+ * menu that switches between its presets, the choice remembered per user
+ * and table. A MarkdownField's long text is no default column. In the table layout the rows are a WAI-ARIA grid: the whole table
  * is one Tab stop and the arrow keys move between rows and cells
  * (`keyboardNavigation="native"` makes every control a Tab stop again).
  *
@@ -37,7 +39,7 @@
  * `rowActions`, `bulkActions`, `filters`, `slots` (every state screen and
  * part), `toolbar` / `empty` / `footer`, `canCreate` / `canEdit` /
  * `canDelete` (over the schema's access rules), `stateStore`, `getRowLabel`,
- * and `className`.
+ * `columnSets` / `columnSet` / `onColumnSetChange`, and `className`.
  */
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import {
@@ -61,7 +63,7 @@ import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
 import type { KarniQueryValue } from "../../../schema/client";
 import { humanize } from "../../../schema/parse";
-import type { FieldDef } from "../../../schema/types";
+import type { ColumnSetDef, FieldDef } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { Button } from "../../primitives/button";
@@ -70,6 +72,7 @@ import { displayLabel } from "../displayLabel";
 import { evaluateAccess, type AccessIdentity } from "./access";
 import type { BulkAction, BulkOutcome, BulkResult } from "./BulkActionsBar";
 import { CardList } from "./CardList";
+import { ColumnSetMenu } from "./ColumnSetMenu";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { deriveColumns, type ResourceColumn } from "./derive-columns";
 import { ExportButtons } from "./ExportButtons";
@@ -77,6 +80,7 @@ import { FilterBar } from "./FilterBar";
 import { DENSITY_CLASSES } from "./layout";
 import {
   asString,
+  columnSetKey,
   densityKey,
   hiddenColumnsKey,
   parseColumnList,
@@ -235,6 +239,16 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
   onDensityChange?: (density: ResourceTableDensity) => void;
   /** The "View" menu (density, column visibility). Default true. */
   viewOptions?: boolean;
+  /**
+   * Experimental. Column presets, offered in a "Columns" menu whose choice is
+   * remembered per user and table. Default: the model's `Karni.column_sets`
+   * (`x-karni-column-sets`). `false` offers none (every derived column shows).
+   */
+  columnSets?: false | readonly ColumnSetDef[];
+  /** Experimental. The preset shown, controlled. Uncontrolled, the user's choice, else the default. */
+  columnSet?: string;
+  /** Experimental. Called with the preset the user picks. */
+  onColumnSetChange?: (name: string) => void;
   /** Below this container width (px) rows render as cards. Default 640, and 0 means never. */
   cardBreakpoint?: number;
   /**
@@ -380,6 +394,9 @@ export function ResourceTable<T = Record<string, unknown>>(
     defaultDensity = "comfortable",
     onDensityChange,
     viewOptions = true,
+    columnSets: columnSetsProp,
+    columnSet: columnSetProp,
+    onColumnSetChange,
     cardBreakpoint = DEFAULT_CARD_BREAKPOINT,
     keyboardNavigation = "grid",
     className,
@@ -609,6 +626,30 @@ export function ResourceTable<T = Record<string, unknown>>(
     serializeColumnList,
   );
 
+  // column sets (experimental): the presets, the one shown, the user's choice
+  const presets: readonly ColumnSetDef[] =
+    columnSetsProp === false ? [] : (columnSetsProp ?? schema?.columnSets?.sets ?? []);
+  const [storedSet, setStoredSet] = useStoredPreference(
+    columnSetKey(namespace, userId),
+    "",
+    asString,
+    asString,
+  );
+  const fallbackSet = columnSetsProp === undefined ? schema?.columnSets?.default : presets[0]?.name;
+  const activeSet =
+    presets.find((found) => found.name === columnSetProp) ??
+    presets.find((found) => found.name === storedSet) ??
+    presets.find((found) => found.name === fallbackSet) ??
+    presets[0];
+  const changeColumnSet = React.useCallback(
+    (name: string) => {
+      if (columnSetProp === undefined) setStoredSet(name);
+      onColumnSetChange?.(name);
+    },
+    [columnSetProp, setStoredSet, onColumnSetChange],
+  );
+  const onlyColumns = activeSet?.columns;
+
   // permissions: explicit props win over the schema's access rules
   const rowLabel = React.useCallback(
     (row: T) => (getRowLabel ?? displayLabel)(asRecord(row)),
@@ -667,7 +708,13 @@ export function ResourceTable<T = Record<string, unknown>>(
 
   const columnDefs = React.useMemo<Array<ColumnDef<T>>>(() => {
     if (schema === undefined) return [];
-    let defs = deriveColumns<T>({ fields: schema.fields, columns, getRowLabel, showAuditFields });
+    let defs = deriveColumns<T>({
+      fields: schema.fields,
+      columns,
+      getRowLabel,
+      showAuditFields,
+      only: onlyColumns,
+    });
     if (extraColumns !== undefined) defs = [...defs, ...extraColumns];
     if (columnsOverride !== undefined) defs = columnsOverride(defs);
     const leading: Array<ColumnDef<T>> = hasBulkSelect
@@ -691,6 +738,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     columns,
     getRowLabel,
     showAuditFields,
+    onlyColumns,
     extraColumns,
     columnsOverride,
     hasBulkSelect,
@@ -1073,6 +1121,7 @@ export function ResourceTable<T = Record<string, unknown>>(
       toolbar !== undefined ||
       exportEnabled ||
       viewOptions ||
+      presets.length > 0 ||
       createAllowed);
 
   const liveText = slow ? `Loading ${plural}…` : announcement;
@@ -1094,6 +1143,9 @@ export function ResourceTable<T = Record<string, unknown>>(
             className="min-w-64 flex-1"
           />
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {presets.length > 0 && activeSet !== undefined && (
+              <ColumnSetMenu sets={presets} value={activeSet.name} onChange={changeColumnSet} />
+            )}
             {viewOptions && (
               <ViewOptionsMenu
                 density={density}

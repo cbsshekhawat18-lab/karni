@@ -7,12 +7,13 @@ import { useResourceItem } from "../../../hooks/useResourceItem";
 import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
-import type { FieldDef } from "../../../schema/types";
+import type { FieldDef, FieldGroupDef, FieldGroupLayout } from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { describeError } from "../../../states/describe-error";
 import { ErrorState, type ErrorSlotProps } from "../../../states/ErrorState";
 import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { PendingButton } from "../../../states/PendingButton";
+import { MarkdownView } from "../../markdown/markdown-view";
 import { Modal, ModalClose } from "../../modal/modal";
 import { Button } from "../../primitives/button";
 import { CheckIcon, SearchIcon } from "../../primitives/icons";
@@ -20,7 +21,9 @@ import { Skeleton } from "../../primitives/skeleton";
 import { partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
+import { chosenGroups, chosenLayout, groupFields, GroupedFields } from "../field-groups";
 import { humanizeValue } from "../form/prepare";
+import { isMarkdownField } from "../markdown-field";
 import { singularNoun } from "../nouns";
 import { formatNumberValue } from "../number-value";
 import { offlineError, useRetryUnlessClientError, useRetryWhenOnline } from "../query-state";
@@ -183,6 +186,14 @@ export interface ResourceDetailProps {
   onTransition?: (item: Item, field: string, target: string) => void;
   /** Replace parts of the view: Loading, Error, NotFound, EmptyValue, DeleteDialog, Deleted. */
   slots?: Partial<ResourceDetailSlots>;
+  /**
+   * Experimental. The groups the fields show in, as sections or tabs. Default:
+   * the model's `Karni.field_groups` (`x-karni-field-groups`). The fields in no
+   * group come last, under "Other". `false` shows one list.
+   */
+  fieldGroups?: false | readonly FieldGroupDef[];
+  /** Experimental. `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
+  groupLayout?: FieldGroupLayout;
   className?: string;
 }
 
@@ -249,6 +260,8 @@ function DefaultValue(props: {
 }): React.ReactElement {
   const { field, value, Empty } = props;
   if (isEmpty(value)) return <Empty field={field} />;
+  // A MarkdownField: formatted, sanitized HTML (raw HTML in it shows as text).
+  if (isMarkdownField(field)) return <MarkdownView source={String(value)} />;
   switch (field.kind) {
     case "boolean":
       return <>{value ? "Yes" : "No"}</>;
@@ -490,15 +503,24 @@ function DetailRow(props: {
 }): React.ReactElement {
   const { field, item, override, muted, Empty } = props;
   const value = item[field.name];
+  // Long-form markdown reads across the whole width, under its label.
+  const wide = isMarkdownField(field) && override?.render === undefined;
   return (
     <div
       className={cn(
-        "grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-4",
+        "grid grid-cols-1 gap-1",
+        !wide && "sm:grid-cols-3 sm:gap-4",
         muted ? "py-2 text-xs" : "py-3 text-sm",
       )}
+      data-karni-field={field.name}
     >
       <dt className="font-medium text-muted-foreground">{override?.label ?? field.label}</dt>
-      <dd className={cn("sm:col-span-2", muted ? "text-muted-foreground" : "text-foreground")}>
+      <dd
+        className={cn(
+          !wide && "sm:col-span-2",
+          muted ? "text-muted-foreground" : "text-foreground",
+        )}
+      >
         {override?.render !== undefined ? (
           override.render(value, item)
         ) : (
@@ -574,9 +596,14 @@ function shownFields(
  * when it can help (it refetches the schema too when that failed). Offline
  * says so and reloads when the connection returns.
  *
+ * A MarkdownField shows formatted and sanitized (MarkdownView), across the
+ * width. A model with `Karni.field_groups` shows its domain fields in those
+ * groups, as sections or tabs (experimental), the fields in no group last.
+ *
  * Escape hatches: per-field `fields` overrides (label/hidden/render, audit
  * fields included), appended `sections`, the title/actions header, the
- * `canEdit`/`canDelete` predicates, and `slots` for every state.
+ * `canEdit`/`canDelete` predicates, `fieldGroups` / `groupLayout`, and
+ * `slots` for every state.
  */
 export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   const {
@@ -598,6 +625,8 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
     transitions = true,
     onTransition,
     slots,
+    fieldGroups,
+    groupLayout,
     className,
   } = props;
   const Slots: ResourceDetailSlots = { ...defaultResourceDetailSlots, ...slots };
@@ -875,6 +904,21 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
   }
 
   const { domain, audit } = domainAndAudit;
+  const grouped = groupFields(domain, chosenGroups(fieldGroups, schema));
+  const fieldList = (shown: readonly FieldDef[]): React.ReactElement => (
+    <dl className="[&>*+*]:border-t [&>*+*]:border-border">
+      {shown.map((field) => (
+        <DetailRow
+          key={field.name}
+          field={field}
+          item={item}
+          override={fields?.[field.name]}
+          muted={false}
+          Empty={Slots.EmptyValue}
+        />
+      ))}
+    </dl>
+  );
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -888,18 +932,20 @@ export function ResourceDetail(props: ResourceDetailProps): React.ReactElement {
           message={transitionError(moveFailure.error, moveFailure.field.name)}
         />
       ) : null}
-      <dl className="[&>*+*]:border-t [&>*+*]:border-border">
-        {domain.map((field) => (
-          <DetailRow
-            key={field.name}
-            field={field}
-            item={item}
-            override={fields?.[field.name]}
-            muted={false}
-            Empty={Slots.EmptyValue}
-          />
-        ))}
-      </dl>
+      {grouped === null ? (
+        fieldList(domain)
+      ) : (
+        <GroupedFields
+          layout={chosenLayout(groupLayout, schema)}
+          as="section"
+          label={`${humanizeValue(label)} details`}
+          panels={grouped.map((group) => ({
+            key: group.key,
+            label: group.label,
+            content: fieldList(group.fields),
+          }))}
+        />
+      )}
       {audit.length > 0 ? (
         <section
           aria-labelledby={recordHeadingId}

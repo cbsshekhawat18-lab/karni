@@ -2,8 +2,11 @@
  * Schema → TanStack column derivation (contract "ResourceTable" + D5).
  *
  * - Domain fields first, in declaration order. writeOnly / json / file /
- *   unknown fields are skipped unless the consumer explicitly names them in
- *   the `columns` prop.
+ *   unknown fields and markdown (a MarkdownField's long text) are skipped
+ *   unless the consumer explicitly names them in the `columns` prop.
+ * - A column set (`only`, experimental) shows exactly its fields, in its
+ *   order, whatever their kind. `columns` still overrides them, and its
+ *   entries naming fields the schema does not declare are still appended.
  * - Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
  *   updated_by) are hidden by default. A `columns` entry naming one (without
  *   `hidden: true`) or `showAuditFields` brings it back, after the domain
@@ -13,6 +16,7 @@
  * - relation / json / file / array / unknown columns are unsortable by
  *   default. The per-field `sortable` override wins both ways.
  * - Cells: booleans → check icon, dates localized, enum labels prettified,
+ *   markdown → a one-line plain-text excerpt,
  *   relations → displayLabel of the expanded object else the raw id in
  *   <code>. The label heuristic is overridable via `getRowLabel`.
  */
@@ -24,6 +28,7 @@ import { CheckIcon } from "../../primitives/icons";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
 import { EmptyValue } from "../empty-value";
+import { isMarkdownField, markdownExcerpt } from "../markdown-field";
 import { formatNumberValue } from "../number-value";
 import { asRecord, enumLabel } from "./table-utils";
 
@@ -163,12 +168,14 @@ export function renderFieldCell(
       return <JsonCell value={value} />;
     case "array":
       return Array.isArray(value) ? value.map((item) => String(item)).join(", ") : String(value);
-    case "text":
+    case "text": {
+      const text = isMarkdownField(field) ? markdownExcerpt(String(value)) : String(value);
       return (
-        <span className="block max-w-80 truncate" title={String(value)}>
-          {String(value)}
+        <span className="block max-w-80 truncate" title={text}>
+          {text}
         </span>
       );
+    }
     default:
       return String(value);
   }
@@ -185,6 +192,8 @@ export interface DeriveColumnsArgs<T> {
   getRowLabel?: RowLabeler;
   /** Show every audit field (AUDIT_FIELDS) without naming each in `columns`. */
   showAuditFields?: boolean;
+  /** Experimental. A column set: exactly these fields, in this order. */
+  only?: readonly string[];
 }
 
 function columnForField<T>(
@@ -218,13 +227,22 @@ export function deriveColumns<T>(args: DeriveColumnsArgs<T>): Array<ColumnDef<T>
   );
   const defs: Array<ColumnDef<T>> = [];
   const { domain, audit } = partitionAuditFields(args.fields);
+  const byName = new Map(args.fields.map((field) => [field.name, field]));
+  const only = args.only;
+  const ordered =
+    only !== undefined
+      ? only
+          .map((name) => byName.get(name))
+          .filter((field): field is FieldDef => field !== undefined && !field.writeOnly)
+      : [...domain, ...audit];
 
-  for (const field of [...domain, ...audit]) {
+  for (const field of ordered) {
     const override = pending.get(field.name);
     pending.delete(field.name);
     if (override?.hidden === true) continue;
-    if (override === undefined) {
+    if (override === undefined && only === undefined) {
       if (field.writeOnly || DEFAULT_SKIPPED_KINDS.has(field.kind)) continue;
+      if (isMarkdownField(field)) continue;
       if (args.showAuditFields !== true && isAuditField(field)) continue;
     }
     defs.push(columnForField(field, override, args.getRowLabel));
@@ -232,6 +250,8 @@ export function deriveColumns<T>(args: DeriveColumnsArgs<T>): Array<ColumnDef<T>
 
   for (const [name, override] of pending) {
     if (override.hidden === true) continue;
+    // With a column set, the set decides which schema fields show.
+    if (only !== undefined && byName.has(name)) continue;
     const customCell = override.cell;
     defs.push({
       id: name,

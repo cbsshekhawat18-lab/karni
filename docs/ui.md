@@ -129,6 +129,78 @@ export default function VenueOverviewPage() {
 }
 ```
 
+## Field groups and column sets (experimental)
+
+!!! warning "Experimental"
+    `Karni.field_groups`, `field_group_layout` and `column_sets`, their
+    `x-karni-field-groups` and `x-karni-column-sets` extensions, the `fieldGroups` and
+    `groupLayout` props of ResourceForm and ResourceDetail, ResourceTable's `columnSets`,
+    `columnSet` and `onColumnSetChange`, and the `FieldGroupDef`, `FieldGroupLayout`,
+    `FieldGroupsDef`, `ColumnSetDef` and `ColumnSetsDef` types are
+    [experimental](stability.md#experimental-names).
+
+A model with a hundred columns and a dozen long markdown sections makes a generated form
+or detail page one endless list, and its table a hundred columns. Declare the layout on
+the model and every screen follows, with no page code:
+
+```python
+from karni.fields import MarkdownField, MoneyField
+
+class Product(BaseModel):
+    name = models.CharField(max_length=200)
+    summary = MarkdownField(blank=True)
+    price = MoneyField(currency="EUR")
+    cost = MoneyField(currency="EUR")
+
+    class Karni:
+        field_groups = {"Overview": ["name", "summary"], "Financials": ["price", "cost"]}
+        field_group_layout = "tabs"  # or "sections", the default
+        column_sets = {
+            "default": ["name", "price"],
+            "financial": ["name", "price", "cost"],
+        }
+```
+
+- **Field groups.** ResourceForm shows each group as a fieldset with its legend,
+  ResourceDetail as a section with a heading, and the admin as a fieldset. The groups
+  keep the declaration's order, and the fields in no group come last, under Other. As
+  tabs, a tab with a failing field is marked, and moving focus to a field (the error
+  summary, a failed submit) opens its tab. `fieldGroups={false}` shows one list, and
+  `fieldGroups={[...]}` or `groupLayout` replace the model's in one screen.
+- **Column sets.** ResourceTable gets a "Columns" menu with one choice per set. The
+  set named `default` shows first, else the first set, and the user's choice is
+  remembered per user and table in the browser. `columnSet` and `onColumnSetChange`
+  control it, and `columnSets={false}` shows every derived column. `columns`
+  overrides still apply to a set's columns.
+- **MarkdownField.** ResourceForm edits it with Write and Preview tabs (the preview is
+  MarkdownView), ResourceDetail shows it formatted and sanitized across the width, and
+  it is no default table column (a column set or `columns` can name it: it shows a
+  one-line excerpt). See [typed fields](fields.md#markdownfield).
+
+The backend publishes both on the model's list operation, limited to the fields the
+user's role may read, so a hidden field is never named:
+
+```json
+"x-karni-field-groups": {"layout": "tabs", "groups": [
+  {"label": "Overview", "fields": ["name", "summary"]},
+  {"label": "Financials", "fields": ["price", "cost"]}
+]},
+"x-karni-column-sets": {"default": "default", "sets": [
+  {"name": "default", "label": "Default", "columns": ["name", "price"]},
+  {"name": "financial", "label": "Financial", "columns": ["name", "price", "cost"]}
+]}
+```
+
+`karni check` refuses a malformed declaration (`karni.E550`, `karni.E553`), a group or
+set that names a field the model does not have (`karni.E551`) and a field in two groups
+(`karni.E552`), naming the model, the group or set, and the field. In `karni.yaml` an
+entity's `groups` and `column_sets` write them ([the app spec](app-spec.md#apps-and-their-entities)).
+
+A 120-field test model with twelve markdown sections keeps these budgets: a list page of
+25 rows under 200,000 bytes of JSON and a detail under 8,000 (the API suite), and
+ResourceForm under 1,000 ms and ResourceDetail under 600 ms to render in jsdom (the UI
+suite).
+
 ## Primitives
 
 Styled Radix parts and basics. Each one always merges `className` and forwards refs.

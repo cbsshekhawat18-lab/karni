@@ -49,6 +49,7 @@ export interface FieldDef {
   maxLength?: number;
   min?: number;
   max?: number;
+  /** The string format (`email`, `uri`, `date-time`, and `markdown` for a MarkdownField). */
   format?: string;
   /** Schema `description`, surfaced as field help text. */
   description?: string;
@@ -132,6 +133,48 @@ export interface RelatedDef {
 }
 
 /**
+ * Experimental. One titled group of fields, from `x-karni-field-groups` (the
+ * model's `Karni.field_groups`): a section or a tab of ResourceForm and
+ * ResourceDetail.
+ */
+export interface FieldGroupDef {
+  /** The group's title ("Financials"). */
+  label: string;
+  /** Its fields, in the order shown. */
+  fields: readonly string[];
+}
+
+/** Experimental. How ResourceForm and ResourceDetail show the field groups. */
+export type FieldGroupLayout = "sections" | "tabs";
+
+/**
+ * Experimental. A model's field groups as `x-karni-field-groups` publishes them,
+ * limited to the fields this role has. The fields in no group form a last
+ * group, "Other".
+ */
+export interface FieldGroupsDef {
+  layout: FieldGroupLayout;
+  groups: readonly FieldGroupDef[];
+}
+
+/** Experimental. One named column preset of ResourceTable, from `x-karni-column-sets`. */
+export interface ColumnSetDef {
+  /** Its name in the model's `Karni.column_sets` ("financial"), kept per user when chosen. */
+  name: string;
+  /** Its name in words ("Financial"). */
+  label: string;
+  /** The columns it shows, in order. */
+  columns: readonly string[];
+}
+
+/** Experimental. A model's column sets as `x-karni-column-sets` publishes them. */
+export interface ColumnSetsDef {
+  /** The set shown first: the one named `default`, else the first. */
+  default: string;
+  sets: readonly ColumnSetDef[];
+}
+
+/**
  * An operation's `x-karni-access` rule as the backend publishes it: the access
  * predicate governing the operation, e.g. `{"role": ["staff"]}`,
  * `{"owned": "organizer"}`, `{"any": [...]}`. A display hint only: the server
@@ -178,6 +221,10 @@ export interface ResourceSchema {
   dashboard?: DashboardDef;
   /** Experimental. Its reverse relations (`x-karni-related`), when the backend publishes them. */
   related?: readonly RelatedDef[];
+  /** Experimental. Its field groups (`x-karni-field-groups`), when the model declares them. */
+  fieldGroups?: FieldGroupsDef;
+  /** Experimental. Its column presets (`x-karni-column-sets`), when the model declares them. */
+  columnSets?: ColumnSetsDef;
 }
 
 /** The whole parsed registry, produced once per schema fetch by parseOpenApi. */

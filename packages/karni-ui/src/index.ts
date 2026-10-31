@@ -293,6 +293,11 @@ export type {
   DashboardDef,
   DashboardCountDef,
   RelatedDef,
+  FieldGroupDef,
+  FieldGroupLayout,
+  FieldGroupsDef,
+  ColumnSetDef,
+  ColumnSetsDef,
 } from "./schema/types";
 
 // auth

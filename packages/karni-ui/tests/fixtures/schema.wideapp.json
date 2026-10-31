@@ -1,0 +1,5981 @@
+{
+  "components": {
+    "schemas": {
+      "BlankEnum": {
+        "enum": [
+          ""
+        ]
+      },
+      "GradeEnum": {
+        "description": "* `a` - A\n* `b` - B\n* `c` - C",
+        "enum": [
+          "a",
+          "b",
+          "c"
+        ],
+        "type": "string"
+      },
+      "ImportColumn": {
+        "properties": {
+          "choices": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "help": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "lookup": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "readable": {
+            "type": "boolean"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "target": {
+            "nullable": true,
+            "type": "string"
+          },
+          "writable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "choices",
+          "help",
+          "kind",
+          "label",
+          "lookup",
+          "name",
+          "readable",
+          "required",
+          "target",
+          "writable"
+        ],
+        "type": "object"
+      },
+      "ImportDescribe": {
+        "description": "``GET /<resource>/import/``: the importable fields and the remembered mapping.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "type": "array"
+          },
+          "inline_rows": {
+            "type": "integer"
+          },
+          "key": {
+            "nullable": true,
+            "type": "string"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "max_rows": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fields",
+          "inline_rows",
+          "key",
+          "mapping",
+          "max_rows"
+        ],
+        "type": "object"
+      },
+      "ImportJob": {
+        "description": "The state of one import job (``services.job_state``).",
+        "properties": {
+          "async_": {
+            "title": "Async ",
+            "type": "boolean"
+          },
+          "batch": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "nullable": true,
+            "type": "string"
+          },
+          "error": {
+            "nullable": true,
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "type": "array"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "keep_ids": {
+            "type": "boolean"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
+          },
+          "model": {
+            "nullable": true,
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "result": {
+            "additionalProperties": {},
+            "nullable": true,
+            "type": "object"
+          },
+          "rows_done": {
+            "type": "integer"
+          },
+          "rows_total": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "async_",
+          "batch",
+          "columns",
+          "created_at",
+          "error",
+          "file_name",
+          "format",
+          "id",
+          "keep_ids",
+          "mapping",
+          "match_ids",
+          "model",
+          "problems",
+          "result",
+          "rows_done",
+          "rows_total",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ImportMappingRequest": {
+        "description": "``POST \u2026/import/<job>/preview/``: header \u2192 field (``\"\"`` ignores a column), id options.\n\n``match_ids`` matches existing rows by the file's id column and\n``keep_ids`` creates rows with the file's ids. Both are off unless sent,\nand a value sent is kept for the job's commit.",
+        "properties": {
+          "keep_ids": {
+            "type": "boolean"
+          },
+          "mapping": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "match_ids": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ImportUploadRequest": {
+        "description": "``POST /<resource>/import/``: the file, optionally with a mapping.",
+        "properties": {
+          "file": {
+            "format": "binary",
+            "type": "string"
+          },
+          "mapping": {}
+        },
+        "required": [
+          "file"
+        ],
+        "type": "object"
+      },
+      "PaginatedWideappBrandList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WideappBrand"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PaginatedWideappProductList": {
+        "properties": {
+          "count": {
+            "example": 123,
+            "type": "integer"
+          },
+          "next": {
+            "example": "http://api.example.org/accounts/?page=4",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "previous": {
+            "example": "http://api.example.org/accounts/?page=2",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WideappProduct"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "type": "object"
+      },
+      "PatchedWideappBrandRequest": {
+        "description": "Auto-generated serializer for wideapp.Brand. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PatchedWideappProductRequest": {
+        "description": "Auto-generated serializer for wideapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "assembly": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "brand": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "brands"
+            }
+          },
+          "care": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "date_01": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_02": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_03": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_04": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_05": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_06": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_07": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_08": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_09": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_10": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "dimension_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_07": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_08": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_09": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_10": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_11": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_12": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_13": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_14": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_15": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_16": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_17": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_18": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_19": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_20": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "faq": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "features": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "flag_01": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_02": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_03": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_04": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_05": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_06": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_07": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_08": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_09": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_10": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_11": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_12": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_13": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_14": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_15": {
+            "default": false,
+            "type": "boolean"
+          },
+          "grade": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GradeEnum"
+              },
+              {
+                "$ref": "#/components/schemas/BlankEnum"
+              }
+            ]
+          },
+          "label_01": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_02": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_03": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_04": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_05": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_06": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_07": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_08": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_09": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_10": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_11": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_12": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_13": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_14": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_15": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_16": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_17": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_18": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_19": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_20": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_21": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_22": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_23": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_24": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_25": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_26": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_27": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_28": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "materials": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "metric_01": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_02": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_03": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_04": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_05": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_06": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_07": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_08": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_09": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_10": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_11": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_12": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_13": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_14": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_15": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_16": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_17": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_18": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_19": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_20": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "overview": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "price_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "rate_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "returns": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "safety": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "shipping": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "sku": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "specifications": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusEnum"
+              }
+            ],
+            "default": "draft"
+          },
+          "sustainability": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "warranty": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "StatusEnum": {
+        "description": "* `draft` - Draft\n* `active` - Active\n* `retired` - Retired",
+        "enum": [
+          "draft",
+          "active",
+          "retired"
+        ],
+        "type": "string"
+      },
+      "WideappBrand": {
+        "description": "Auto-generated serializer for wideapp.Brand. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object"
+      },
+      "WideappBrandRequest": {
+        "description": "Auto-generated serializer for wideapp.Brand. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "WideappProduct": {
+        "description": "Auto-generated serializer for wideapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "assembly": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "brand": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "brands"
+            }
+          },
+          "care": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "date_01": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_02": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_03": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_04": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_05": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_06": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_07": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_08": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_09": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_10": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "dimension_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_07": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_08": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_09": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_10": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_11": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_12": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_13": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_14": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_15": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_16": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_17": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_18": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_19": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_20": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "faq": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "features": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "flag_01": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_02": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_03": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_04": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_05": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_06": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_07": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_08": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_09": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_10": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_11": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_12": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_13": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_14": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_15": {
+            "default": false,
+            "type": "boolean"
+          },
+          "grade": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GradeEnum"
+              },
+              {
+                "$ref": "#/components/schemas/BlankEnum"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "readOnly": true,
+            "type": "string"
+          },
+          "label_01": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_02": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_03": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_04": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_05": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_06": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_07": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_08": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_09": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_10": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_11": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_12": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_13": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_14": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_15": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_16": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_17": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_18": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_19": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_20": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_21": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_22": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_23": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_24": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_25": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_26": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_27": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_28": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "materials": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "metric_01": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_02": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_03": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_04": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_05": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_06": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_07": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_08": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_09": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_10": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_11": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_12": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_13": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_14": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_15": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_16": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_17": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_18": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_19": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_20": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "overview": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "price_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "rate_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "returns": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "safety": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "shipping": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "sku": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "specifications": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusEnum"
+              }
+            ],
+            "default": "draft"
+          },
+          "sustainability": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "updated_at": {
+            "format": "date-time",
+            "readOnly": true,
+            "type": "string"
+          },
+          "updated_by": {
+            "format": "uuid",
+            "nullable": true,
+            "readOnly": true,
+            "type": "string"
+          },
+          "warranty": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "sku",
+          "updated_at",
+          "updated_by"
+        ],
+        "type": "object"
+      },
+      "WideappProductRequest": {
+        "description": "Auto-generated serializer for wideapp.Product. See karni.api.serializers.build_serializer.",
+        "properties": {
+          "assembly": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "brand": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string",
+            "x-karni-relation": {
+              "many": false,
+              "resource": "brands"
+            }
+          },
+          "care": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "date_01": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_02": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_03": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_04": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_05": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_06": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_07": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_08": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_09": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "date_10": {
+            "format": "date",
+            "nullable": true,
+            "type": "string"
+          },
+          "dimension_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_07": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_08": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_09": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_10": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_11": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_12": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_13": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_14": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_15": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_16": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_17": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_18": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_19": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "dimension_20": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "faq": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "features": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "flag_01": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_02": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_03": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_04": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_05": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_06": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_07": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_08": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_09": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_10": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_11": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_12": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_13": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_14": {
+            "default": false,
+            "type": "boolean"
+          },
+          "flag_15": {
+            "default": false,
+            "type": "boolean"
+          },
+          "grade": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GradeEnum"
+              },
+              {
+                "$ref": "#/components/schemas/BlankEnum"
+              }
+            ]
+          },
+          "label_01": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_02": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_03": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_04": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_05": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_06": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_07": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_08": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_09": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_10": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_11": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_12": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_13": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_14": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_15": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_16": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_17": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_18": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_19": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_20": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_21": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_22": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_23": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_24": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_25": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_26": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_27": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "label_28": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "materials": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "metric_01": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_02": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_03": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_04": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_05": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_06": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_07": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_08": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_09": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_10": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_11": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_12": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_13": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_14": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_15": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_16": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_17": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_18": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_19": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "metric_20": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "overview": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "price_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_05": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "price_06": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,15}(?:\\.\\d{0,4})?$",
+            "type": "string"
+          },
+          "rate_01": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_02": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_03": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "rate_04": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "returns": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "safety": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "shipping": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "sku": {
+            "maxLength": 40,
+            "minLength": 1,
+            "type": "string"
+          },
+          "specifications": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StatusEnum"
+              }
+            ],
+            "default": "draft"
+          },
+          "sustainability": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          },
+          "warranty": {
+            "oneOf": [
+              {
+                "format": "markdown",
+                "type": "string"
+              },
+              {
+                "maxLength": 0,
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "sku"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "in": "cookie",
+        "name": "sessionid",
+        "type": "apiKey"
+      },
+      "jwtAuth": {
+        "bearerFormat": "JWT",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "karni-project API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/brands/": {
+      "get": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "created_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which field to use when ordering the results.",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedWideappBrandList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "public": true
+        },
+        "x-karni-related": [
+          {
+            "field": "brand",
+            "key": "id",
+            "label": "Products",
+            "name": "products",
+            "param": "brand",
+            "resource": "products"
+          }
+        ],
+        "x-karni-resource": "brands"
+      },
+      "post": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappBrand"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/brands/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "brands_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/brands/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "brands_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "brands_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/brands/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "brands_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/brands/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "brands_import_by_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/brands/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "brands_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/brands/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "brands_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/brands/{id}/": {
+      "delete": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_destroy",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this brand.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "get": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_retrieve",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this brand.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappBrand"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      },
+      "patch": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_partial_update",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this brand.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappBrandRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappBrandRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappBrandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappBrand"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "put": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "brands_update",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this brand.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappBrandRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappBrand"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "brands"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/products/": {
+      "get": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_01",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_01__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_01__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_02",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_02__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_02__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_03",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_03__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_03__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_04",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_04__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_04__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_05",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_05__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_05__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_06",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_06__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_06__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_07",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_07__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_07__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_08",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_08__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_08__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_09",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_09__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_09__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_10",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_10__gte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "date_10__lte",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_01",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_01__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_01__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_02",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_02__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_02__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_03",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_03__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_03__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_04",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_04__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_04__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_05",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_05__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_05__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_06",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_06__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_06__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_07",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_07__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_07__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_08",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_08__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_08__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_09",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_09__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_09__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_10",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_10__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_10__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_11",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_11__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_11__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_12",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_12__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_12__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_13",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_13__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_13__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_14",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_14__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_14__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_15",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_15__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_15__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_16",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_16__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_16__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_17",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_17__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_17__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_18",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_18__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_18__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_19",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_19__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_19__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_20",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_20__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dimension_20__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: brand.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "brand"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "flag_01",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_02",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_03",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_04",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_05",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_06",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_07",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_08",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_09",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_10",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_11",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_12",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_13",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_14",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "flag_15",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "* `a` - A\n* `b` - B\n* `c` - C",
+            "in": "query",
+            "name": "grade",
+            "schema": {
+              "enum": [
+                "a",
+                "b",
+                "c"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_01",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_01__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_02",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_02__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_03",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_03__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_04",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_04__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_05",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_05__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_06",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_06__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_07",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_07__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_08",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_08__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_09",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_09__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_10",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_10__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_11",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_11__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_12",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_12__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_13",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_13__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_14",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_14__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_15",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_15__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_16",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_16__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_17",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_17__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_18",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_18__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_19",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_19__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_20",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_20__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_21",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_21__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_22",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_22__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_23",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_23__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_24",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_24__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_25",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_25__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_26",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_26__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_27",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_27__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_28",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "label_28__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_01",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_01__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_01__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_02",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_02__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_02__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_03",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_03__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_03__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_04",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_04__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_04__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_05",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_05__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_05__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_06",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_06__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_06__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_07",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_07__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_07__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_08",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_08__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_08__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_09",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_09__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_09__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_10",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_10__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_10__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_11",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_11__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_11__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_12",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_12__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_12__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_13",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_13__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_13__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_14",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_14__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_14__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_15",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_15__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_15__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_16",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_16__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_16__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_17",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_17__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_17__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_18",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_18__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_18__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_19",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_19__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_19__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_20",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_20__gte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric_20__lte",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Which field to use when ordering the results.",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "A page number within the paginated result set.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of results to return per page.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_01",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_01__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_01__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_02",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_02__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_02__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_03",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_03__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_03__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_04",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_04__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_04__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_05",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_05__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_05__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_06",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_06__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "price_06__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_01",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_01__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_01__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_02",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_02__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_02__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_03",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_03__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_03__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_04",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_04__gte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rate_04__lte",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "A search term.",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sku",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sku__icontains",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "* `draft` - Draft\n* `active` - Active\n* `retired` - Retired",
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "enum": [
+                "active",
+                "draft",
+                "retired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__gte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_at__lte",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_by",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedWideappProductList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        },
+        "x-karni-column-sets": {
+          "default": "default",
+          "sets": [
+            {
+              "columns": [
+                "name",
+                "sku",
+                "brand",
+                "status",
+                "price_01"
+              ],
+              "label": "Default",
+              "name": "default"
+            },
+            {
+              "columns": [
+                "name",
+                "price_01",
+                "price_02",
+                "price_03",
+                "price_04",
+                "price_05",
+                "price_06",
+                "rate_01",
+                "rate_02",
+                "rate_03",
+                "rate_04"
+              ],
+              "label": "Financial",
+              "name": "financial"
+            },
+            {
+              "columns": [
+                "name",
+                "dimension_01",
+                "dimension_02",
+                "dimension_03",
+                "date_01"
+              ],
+              "label": "Logistics",
+              "name": "logistics"
+            }
+          ]
+        },
+        "x-karni-field-groups": {
+          "groups": [
+            {
+              "fields": [
+                "name",
+                "sku",
+                "brand",
+                "status",
+                "overview",
+                "features"
+              ],
+              "label": "Overview"
+            },
+            {
+              "fields": [
+                "specifications",
+                "materials",
+                "assembly",
+                "dimension_01",
+                "dimension_02",
+                "dimension_03",
+                "dimension_04",
+                "dimension_05",
+                "dimension_06",
+                "dimension_07",
+                "dimension_08",
+                "dimension_09",
+                "dimension_10",
+                "dimension_11",
+                "dimension_12",
+                "dimension_13",
+                "dimension_14",
+                "dimension_15",
+                "dimension_16",
+                "dimension_17",
+                "dimension_18",
+                "dimension_19",
+                "dimension_20"
+              ],
+              "label": "Specifications"
+            },
+            {
+              "fields": [
+                "price_01",
+                "price_02",
+                "price_03",
+                "price_04",
+                "price_05",
+                "price_06",
+                "rate_01",
+                "rate_02",
+                "rate_03",
+                "rate_04"
+              ],
+              "label": "Financials"
+            },
+            {
+              "fields": [
+                "care",
+                "safety",
+                "warranty",
+                "shipping",
+                "returns",
+                "sustainability",
+                "faq"
+              ],
+              "label": "Content"
+            },
+            {
+              "fields": [
+                "metric_01",
+                "metric_02",
+                "metric_03",
+                "metric_04",
+                "metric_05",
+                "metric_06",
+                "metric_07",
+                "metric_08",
+                "metric_09",
+                "metric_10",
+                "metric_11",
+                "metric_12",
+                "metric_13",
+                "metric_14",
+                "metric_15",
+                "metric_16",
+                "metric_17",
+                "metric_18",
+                "metric_19",
+                "metric_20"
+              ],
+              "label": "Measurements"
+            }
+          ],
+          "layout": "sections"
+        },
+        "x-karni-resource": "products"
+      },
+      "post": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    },
+    "/api/products/export/": {
+      "get": {
+        "description": "``GET /<resource>/export/?format=csv|xlsx``: the list, as a file.\n\nThe same rows the list would show for this request \u2014 its filters,\n``?search=`` and ``?ordering=`` applied, the read scope applied \u2014\nand the columns the requester may read; relations are written as\nthe target's ``Karni.natural_key`` so the file imports back.",
+        "operationId": "products_export_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/products/import/": {
+      "get": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "products_import_retrieve",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportDescribe"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      },
+      "post": {
+        "description": "``GET /<resource>/import/``: the importable fields; ``POST``: upload a file.\n\n``POST`` (multipart ``file``, optional ``mapping``) creates an import\njob and answers with its state \u2014 the file's columns and the mapping\nsuggested from the headers or remembered from the user's last\nimport. Preview it (the mandatory dry run) before committing.",
+        "operationId": "products_import_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/template/": {
+      "get": {
+        "description": "``GET /<resource>/import/template/``: headers, an example row, the allowed values.",
+        "operationId": "products_import_template_retrieve",
+        "parameters": [
+          {
+            "description": "File format (csv by default for an export, xlsx for a template).",
+            "in": "query",
+            "name": "format",
+            "schema": {
+              "enum": [
+                "csv",
+                "xlsx"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      }
+    },
+    "/api/products/import/{job}/": {
+      "get": {
+        "description": "``GET /<resource>/import/<job>/``: the job's state and progress.",
+        "operationId": "products_import_by_job_retrieve",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/{job}/commit/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/commit/``: write it, after a preview, atomically.",
+        "operationId": "products_import_commit_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/import/{job}/preview/": {
+      "post": {
+        "description": "``POST /<resource>/import/<job>/preview/``: the dry run, with ``{\"mapping\": \u2026}``.\n\n``\"match_ids\": true`` matches existing rows by the file's id column, and\n``\"keep_ids\": true`` creates rows with the file's ids (both off by default).\n\nEvery row is validated and written inside a transaction that is\nrolled back, so the counts and the per-row errors are exactly what\nthe commit will do. Large files run in Celery: poll the job.",
+        "operationId": "products_import_preview_create",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job",
+            "required": true,
+            "schema": {
+              "pattern": "^[0-9a-f-]{36}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMappingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJob"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "any": [
+            {
+              "authenticated": true
+            },
+            {
+              "authenticated": true
+            }
+          ]
+        }
+      }
+    },
+    "/api/products/{id}/": {
+      "delete": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_destroy",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "get": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_retrieve",
+        "parameters": [
+          {
+            "description": "Comma-separated relations to embed as nested objects instead of primary keys (dotted paths nest deeper, e.g. `a.b`). Allowed keys: brand.",
+            "explode": false,
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "items": {
+                "enum": [
+                  "brand"
+                ],
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "A UUID string identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "public": true
+        }
+      },
+      "patch": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_partial_update",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedWideappProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      },
+      "put": {
+        "description": "Model-driven ``ModelViewSet``: declare ``model`` and ``access``, get a full API.\n\nDeclarative attributes (see the module docstring for the escape\nhatches):\n\n* ``model`` \u2014 required unless ``queryset`` is set (or ``get_queryset``\n  overridden).\n* ``access`` \u2014 required: ``Granted()`` (the roles' grants for this model\n  and the current action, row-scoped; shorthand for ``Access(read=Granted(),\n  write=Granted())``), ``Access(read=..., write=..., create=...)`` or\n  ``Unscoped(reason=...)``. Without it every request is denied with a 403\n  naming the fix.\n* ``scope_exempt`` \u2014 ``True`` (with ``scope_exempt_reason``) keeps the\n  gate and shows every row it admits; ``karni check`` lists each one.\n* ``serializer_class`` \u2014 explicit serializer; ``None`` generates one via\n  :func:`karni.api.serializers.build_serializer`.\n* ``queryset`` \u2014 explicit base queryset; ``None`` uses\n  ``model._default_manager.all()``.\n* ``expand_depth`` \u2014 ``0`` defers to ``KARNI_API_MAX_EXPAND_DEPTH``; a\n  positive value overrides the expansion depth limit for this viewset.\n* ``expandable_fields`` \u2014 mapping of expand key \u2192 model relation name;\n  ``None`` allows every forward FK/O2O/M2M under its own name.\n* ``auto_register`` \u2014 ``False`` hides the viewset from router\n  autodiscovery.\n* ``route`` \u2014 router prefix; ``None`` derives the kebab-cased plural of\n  the model name.\n* ``search_fields`` \u2014 fields searched by ``?search=`` through the\n  configured search provider.\n\n* ``select_related`` / ``prefetch_related`` \u2014 query hints merged into\n  the optimiser's derived lookups; ``optimize = False`` keeps only them.\n* ``query_budget`` \u2014 ``Budget(list=25, reason=...)``; ``None`` uses\n  ``KARNI_QUERY_BUDGET``.\n* ``pagination`` \u2014 ``Unpaginated(max_rows=N, reason=...)`` to return\n  plain (still bounded) lists; ``None`` keeps ``pagination_class``.\n* ``cache`` \u2014 ``Uncached(reason=...)`` or ``Cache(ttl=..., depends_on=...)``;\n  ``None`` follows ``KARNI_API_CACHE``.\n\nThe read pipeline is fixed (ADR 0001 \u00a74): the model's default manager\n(model-level scopes such as soft delete) \u2192 ``queryset`` / an overridden\n``get_queryset`` \u2192 the ``access.read`` row filter \u2192\n``filter_queryset_for_user`` \u2192 the optimiser (``list``/``retrieve``:\nlookups derived from the serializer, each prefetch through its target's\nread scope) \u2192 filter backends \u2192 pagination. No access predicate can lift\na model-level scope.\n\nPagination always applies (a :class:`karni.pagination.KarniPagination`;\n``pagination_class = None`` without ``Unpaginated`` is a class-definition\nerror), and every request is counted against its query budget unless\n``KARNI_QUERY_BUDGET_MODE`` is ``\"off\"``. Throttling comes from the DRF\ndefaults that ``karni.conf`` configures.\n``REST_FRAMEWORK[\"DEFAULT_PERMISSION_CLASSES\"]`` does **not** apply to a\nviewset with an ``Access`` declaration \u2014 the declaration is\nthe gate; only ``Unscoped`` viewsets fall back to it. The filter backends\nare pinned on the class so they keep working even when a project\nreplaces the DRF defaults.",
+        "operationId": "products_update",
+        "parameters": [
+          {
+            "description": "A UUID string identifying this product.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/WideappProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WideappProduct"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "tags": [
+          "products"
+        ],
+        "x-karni-access": {
+          "authenticated": true
+        }
+      }
+    }
+  },
+  "x-karni-auth-mode": "jwt"
+}
