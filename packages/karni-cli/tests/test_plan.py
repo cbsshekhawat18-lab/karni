@@ -304,6 +304,33 @@ def test_a_module_removed_is_risky_with_its_tables(base: Project) -> None:
     assert _only(added, "approvals").line() == "  + approvals: required 2"
 
 
+def test_the_reports_module_is_planned_with_its_options(base: Project) -> None:
+    added = _plan(
+        BASE.replace("roles:\n", "modules: {reports: {page_size: letter, keep: 2}}\nroles:\n"),
+        base,
+    )
+    change = _only(added, "reports")
+    assert change.action == "add" and not change.risky
+    assert change.line() == "  + reports: page_size letter, keep 2"
+    facts = json.loads(json.dumps(base.facts))
+    facts["modules"].append(
+        {"name": "reports", "settings": {"KARNI_REPORTS_PAGE_SIZE": "A4"}, "defaults": {}}
+    )
+    report = validate_text(BASE)
+    assert report.spec is not None
+    plan = plan_project(report.spec, facts, base.root, file="karni.yaml")
+    asked: list[list[dict[str, Any]]] = []
+
+    def counter(requests: list[dict[str, Any]]) -> dict[str, Any]:
+        asked.append(requests)
+        return {"rows": [4], "unreachable": {}}
+
+    apply_counts(plan, counter)
+    removed = _only(plan, "reports")
+    assert removed.risky and removed.action == "remove" and removed.rows == 4
+    assert asked == [[{"model": "karni_reports.GeneratedReport"}]]
+
+
 def test_counts_say_why_when_the_database_does_not_answer(
     base: Project, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

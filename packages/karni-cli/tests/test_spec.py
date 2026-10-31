@@ -129,6 +129,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C220", SHOP + "        fields: {name: str}\npages:\n  - Product: [list, table]\n", 9),
     ("C221", HEAD + "modules: {payments: {colour: red}}\n", 3),
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
+    ("C221", HEAD + "modules: {reports: {keep: '3'}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
     ("C224", SHOP + "        tree: true\n", 7),
@@ -224,6 +225,35 @@ def test_relations_reach_users_modules_and_other_apps() -> None:
         """
     )
     assert report.ok, report.issues
+
+
+def test_the_reports_module_and_its_options() -> None:
+    reports = catalog.MODULES["reports"]
+    assert reports.models == ("GeneratedReport",)
+    assert reports.setting("page_size") == "KARNI_REPORTS_PAGE_SIZE"
+    assert reports.options["keep"] == ("integer",) and reports.options["renderer"] == ("string",)
+    text = HEAD + textwrap.dedent(
+        """\
+        modules:
+          reports: {page_size: letter, keep: 3, renderer: weasyprint}
+        apps:
+          shop:
+            entities:
+              Order:
+                fields: {total: "money:EUR", copy: "fk:karni_reports.GeneratedReport?"}
+        """
+    )
+    report = validate_text(text)
+    assert report.ok, [issue.render("x") for issue in report.issues]
+    assert report.spec is not None
+    assert report.spec.modules["reports"] == {
+        "page_size": "letter",
+        "keep": 3,
+        "renderer": "weasyprint",
+    }
+    unknown = validate_text(HEAD + "modules: {reports: {paper: A4}}\n")
+    assert [issue.code for issue in unknown.issues] == ["C221"]
+    assert "page_size" in unknown.issues[0].render("karni.yaml")
 
 
 def test_owner_paths_through_relations() -> None:

@@ -501,6 +501,7 @@
               "approvals",
               "impersonation",
               "payments",
+              "reports",
               "site"
             ]
           },

@@ -445,6 +445,16 @@ def test_free_values_take_their_type() -> None:
     assert "modules: {approvals: {required: 2}}" in text
 
 
+def test_the_reports_page_size_is_asked_until_answered() -> None:
+    reports = "version: 1\napp: {name: X, kind: app}\nmodules: {reports: {}}\n"
+    found = {question.id: question for question in ask(reports)}
+    page = found["modules.reports.page_size"]
+    assert [option.value for option in page.options] == ["A4", "letter"] and page.default == "A4"
+    text = answer(reports, "modules.reports.page_size", "letter")
+    assert "modules: {reports: {page_size: letter}}" in text
+    assert "modules.reports.page_size" not in {question.id for question in ask(text)}
+
+
 def test_a_hand_edit_settles_a_question() -> None:
     assert "club.Lesson.owner" in ids(GAPS)
     edited = GAPS.replace(
