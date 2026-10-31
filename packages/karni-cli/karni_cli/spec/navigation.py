@@ -35,7 +35,6 @@ Override / escape hatch: leave ``navigation`` out and write
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, Final
 
@@ -50,7 +49,6 @@ __all__ = [
     "pages",
     "requirement_problem",
     "summary",
-    "walk",
 ]
 
 #: The setting ``karni build`` writes the menu to.
@@ -196,12 +194,6 @@ def menu(spec: schema.Spec) -> list[dict[str, Any]] | None:
     return [item for item in found if item is not None]
 
 
-def _walk(items: list[dict[str, Any]]) -> Iterator[dict[str, Any]]:
-    for item in items:
-        yield item
-        yield from _walk(item.get("children") or [])
-
-
 def summary(items: list[dict[str, Any]] | None) -> str:
     """Experimental. ``Home /, Catalog (Products /products, Categories /categories)``."""
 
@@ -286,8 +278,3 @@ def entries_from_setting(
 
     out = [found[0] for found in map(convert, ordered(value)) if found is not None]
     return out
-
-
-def walk(items: list[dict[str, Any]]) -> Iterator[dict[str, Any]]:
-    """Experimental. Every entry of a ``KARNI_NAVIGATION`` list, depth first."""
-    return _walk(items)
