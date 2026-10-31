@@ -483,7 +483,9 @@ class RolePermission(BaseModel):
     ``scope`` is ``all``, ``own`` (rows whose ``Karni.owner_field`` is the
     user), ``related`` (rows whose ``Karni.scope_paths[scope_path]`` equals
     ``user.<scope_path>``), ``custom`` (``scope_path`` names a scope
-    registered with :func:`karni.accounts.roles.register_scope`) or ``none``
+    registered with :func:`karni.accounts.roles.register_scope`), ``tree``
+    (``scope_path`` is a path to a tree model, and the rows under the user's
+    nodes are reached, experimental) or ``none``
     — a declared grant the permission matrix revoked, kept as a row so the
     next ``karni sync-roles`` does not quietly restore it.
 
@@ -498,6 +500,7 @@ class RolePermission(BaseModel):
         OWN = "own", "Own rows"
         RELATED = "related", "Rows related through a scope path"
         CUSTOM = "custom", "Rows a registered scope returns"
+        TREE = "tree", "Rows under the user's nodes of a tree"
         NONE = "none", "No rows (revoked in the permission matrix)"
 
     class Origin(models.TextChoices):
@@ -559,10 +562,11 @@ class UserGrant(BaseModel):
     ``permission`` is a pattern written as in ``KARNI_ROLES``
     (``app_label.model:action``, with ``*`` for either part, or ``*`` alone)
     and ``scope`` a scope a role grant takes (``all``, ``own``,
-    ``related:<key>``, ``custom:<name>``). ``targets`` lists row ids, as
-    text, for a scope that points at rows: a ``related:<key>`` grant with
-    targets reaches the rows whose ``Karni.scope_paths[key]`` is one of them,
-    in place of ``user.<key>``. ``expires_at`` ends the grant (``None``
+    ``related:<key>``, ``custom:<name>``, ``tree:<path>``). ``targets`` lists
+    row ids, as text, for a scope that points at rows: a ``related:<key>``
+    grant with targets reaches the rows whose ``Karni.scope_paths[key]`` is
+    one of them, in place of ``user.<key>``, and a ``tree:<path>`` grant the
+    rows under those nodes. ``expires_at`` ends the grant (``None``
     never). ``granted_by`` is who gave it and ``reason`` why.
 
     While ``KARNI_USER_GRANTS`` is on, :func:`karni.accounts.roles.grants_for`
@@ -591,12 +595,18 @@ class UserGrant(BaseModel):
     scope = models.CharField(
         max_length=120,
         default="all",
-        help_text="all, own, related:<scope path key> or custom:<registered name>.",
+        help_text=(
+            "all, own, related:<scope path key>, custom:<registered name> or tree:<path to a "
+            "tree model>."
+        ),
     )
     targets = models.JSONField(
         default=list,
         blank=True,
-        help_text="Row ids (for a related:<key> scope): the rows the grant points at.",
+        help_text=(
+            "Row ids (for a related:<key> or tree:<path> scope): the rows or nodes the grant "
+            "points at."
+        ),
     )
     expires_at = models.DateTimeField(
         null=True, blank=True, db_index=True, help_text="Empty: the grant never expires."

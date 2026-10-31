@@ -220,7 +220,7 @@ def grant_form(operator: Any) -> type[Any]:
     class UserGrantForm(forms.ModelForm):  # type: ignore[type-arg]
         targets = forms.CharField(
             required=False,
-            help_text="Row ids, separated by commas, for a related:<key> scope.",
+            help_text="Row ids, separated by commas, for a related:<key> or tree:<path> scope.",
         )
         expire_now = forms.BooleanField(required=False, label="Expire now")
 

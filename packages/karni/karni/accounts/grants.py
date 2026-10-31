@@ -17,8 +17,10 @@ and a request pays no query for it.
 
 Targets: a ``related:<key>`` grant reaches the rows whose
 ``Karni.scope_paths[key]`` equals ``user.<key>``. With targets it reaches the
-rows whose scope path is one of the targets instead. A scope that points at
-no row (``all``, ``own``, ``custom:<name>``) takes no targets
+rows whose scope path is one of the targets instead. A ``tree:<path>`` grant
+(experimental, :mod:`karni.accounts.tree_scope`) reaches the rows under its
+target nodes, or under ``user.<path>`` without targets. A scope that points
+at no row (``all``, ``own``, ``custom:<name>``) takes no targets
 (:data:`TARGETED_SCOPES`).
 
 Writing: :func:`grant`, :func:`bulk_grant`, :func:`change`, :func:`expire`
@@ -30,8 +32,8 @@ nothing is refused for it and ``granted_by`` stays empty.
 
 Reading: :func:`scope_targets` answers, for one user and one scope, which
 target ids the user's role grants and user grants give, and which grant gave
-each. A scope that compiles to "these rows" (``related:<key>`` now, a tree
-scope later) and a menu built from grants read it.
+each. A scope that compiles to "these rows" (``related:<key>`` and
+``tree:<path>``) and a menu built from grants read it.
 
 Override / escape hatch: ``KARNI_USER_GRANTS = False`` turns the tier off
 without touching the rows. Every function here is plain data in and out, so
@@ -52,6 +54,7 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 
 from karni.accounts.roles import (
+    _PATH_SCOPES,
     NONE_SCOPE,
     SCOPES,
     Grant,
@@ -89,6 +92,7 @@ __all__ = [
     "scope_targets",
     "sources",
     "user_grants",
+    "user_key",
     "widens",
 ]
 
@@ -99,7 +103,7 @@ ORIGIN: Final = "user_grant"
 #: The permission the admin screen and the API gate on: ``:view``, ``:add``, ...
 GRANT_PERMISSION: Final = "karni_accounts.usergrant"
 #: Scopes that point at rows, so a grant of them takes ``targets``.
-TARGETED_SCOPES: Final[tuple[str, ...]] = ("related",)
+TARGETED_SCOPES: Final[tuple[str, ...]] = ("related", "tree")
 
 _ROWS_ATTR: Final = "_karni_user_grants"
 _GRANTS_ATTR: Final = "_karni_grants"
@@ -114,7 +118,9 @@ def forget(user: Any) -> None:
     """Experimental. Drop the grants cached on ``user``, so its next check reads them again."""
     if user is None:
         return
-    for name in (_GRANTS_ATTR, _ROWS_ATTR):
+    from karni.accounts.tree_scope import CACHE_ATTR
+
+    for name in (_GRANTS_ATTR, _ROWS_ATTR, CACHE_ATTR):
         if hasattr(user, name):
             delattr(user, name)
 
@@ -170,11 +176,12 @@ def _error(code: str, message: str) -> KarniValueError:
 
 def _parse_scope(scope: Any) -> tuple[str, str]:
     kind, _, path = str(scope or "").partition(":")
-    if kind not in SCOPES or (kind in ("related", "custom")) != bool(path):
+    if kind not in SCOPES or (kind in _PATH_SCOPES) != bool(path):
         raise _error(
             "E361",
             f"A user grant has scope {scope!r}. A scope is 'all', 'own', "
-            "'related:<scope path key>' or 'custom:<registered name>', as in KARNI_ROLES.",
+            "'related:<scope path key>', 'custom:<registered name>' or 'tree:<path to a tree "
+            "model>', as in KARNI_ROLES.",
         )
     return kind, path
 
@@ -193,6 +200,10 @@ def _scope_fits(model: type[models.Model], kind: str, path: str) -> bool:
         return owner_field(model) is not None
     if kind == "related":
         return path in scope_paths(model)
+    if kind == "tree":
+        from karni.accounts.tree_scope import tree_path
+
+        return tree_path(model, path) is not None
     return True
 
 
@@ -276,30 +287,37 @@ def check(
         if _scope_fits(model, kind, path):
             reached.append(key)
         elif explicit:
-            what = "an owner field" if kind == "own" else f"the scope path {path!r}"
+            what = (
+                "an owner field"
+                if kind == "own"
+                else f"a path {path!r} to a tree model"
+                if kind == "tree"
+                else f"the scope path {path!r}"
+            )
             raise _error(
                 "E361",
                 f"The user grant {permission!r} has scope {scope_label(kind, path)!r}, but "
                 f"{model.__name__} has no {what}. Declare it in `class Karni` "
-                "(owner_field or scope_paths), or grant another scope.",
+                "(owner_field or scope_paths), name a relation to a tree model, or grant "
+                "another scope.",
             )
     if not reached:
         raise _error(
             "E361",
             f"No permission {permission!r} matches takes scope {scope_label(kind, path)!r}: "
-            "none of their models has the owner field or scope path it needs.",
+            "none of their models has the owner field, scope path or tree path it needs.",
         )
     found = normalise_targets(targets)
     if found and kind not in TARGETED_SCOPES:
         raise _error(
             "E362",
             f"A user grant with scope {scope_label(kind, path)!r} takes no targets: only a "
-            f"scope that points at rows does ({', '.join(f'{s}:<key>' for s in TARGETED_SCOPES)}).",
+            "scope that points at rows does (related:<key>, tree:<path>).",
         )
     if found:
         for key in reached:
             model = _model_of(key, keys)
-            lookup = scope_paths(model)[path]
+            lookup = path if kind == "tree" else scope_paths(model)[path]
             bad = _bad_target(model, lookup, found)
             if bad is not None:
                 raise _error(
@@ -424,6 +442,16 @@ class TargetGrant:
         }
 
 
+def user_key(kind: str, path: str) -> str:
+    """Experimental. The user attribute a grant of ``<kind>:<path>`` without targets reaches.
+
+    ``related:<key>`` reads ``user.<key>``. ``tree:<path>`` reads the path's
+    last step: ``tree:region`` and ``tree:store__region`` both read
+    ``user.region``, the node the user holds.
+    """
+    return path.rsplit("__", 1)[-1] if kind == "tree" else path
+
+
 def _attribute_target(user: Any, path: str) -> str | None:
     """The id ``user.<path>`` holds, which a grant of ``<kind>:<path>`` without targets reaches."""
     value = getattr(user, path, None)
@@ -445,9 +473,10 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
     """Experimental. The target ids ``user`` holds under ``scope``, and which grant gives each.
 
     ``scope`` is a scope that points at rows, as a grant writes it
-    (``"related:region"``). A role grant of that scope without targets gives
-    the id ``user.<key>`` holds. A user grant gives its ``targets``, or
-    ``user.<key>`` when it has none (only while ``KARNI_USER_GRANTS`` is on).
+    (``"related:region"``, ``"tree:region"``). A role grant of that scope gives
+    the id ``user.<key>`` holds (for ``tree:<path>``, the path's last step,
+    :func:`user_key`). A user grant gives its ``targets``, or ``user.<key>``
+    when it has none (only while ``KARNI_USER_GRANTS`` is on).
     ``permission`` (a key or a ``KARNI_ROLES`` pattern) keeps only the grants
     of the permissions it matches. Expired, deleted and revoked grants give
     nothing.
@@ -471,7 +500,7 @@ def scope_targets(user: Any, scope: str, *, permission: str | None = None) -> li
     from karni.accounts.models import RolePermission
 
     found: list[TargetGrant] = []
-    own_target = _attribute_target(user, path) if path else None
+    own_target = _attribute_target(user, user_key(kind, path)) if path else None
     rows = (
         RolePermission.objects.filter(
             role__group__in=user.groups.all(), scope=kind, scope_path=path
@@ -523,12 +552,30 @@ def _held_targets(operator: Any, grants: list[Grant], kind: str, path: str) -> s
         if (held.scope, held.scope_path) != (kind, path):
             continue
         if not held.targets:
-            own = _attribute_target(operator, path)
+            own = _attribute_target(operator, user_key(kind, path))
             if own is None:
                 continue
             found.add(own)
         found.update(held.targets)
     return found
+
+
+def _tree_covered(key: str, path: str, held: set[str], cache: dict[Any, set[str]]) -> set[str]:
+    """The nodes under the nodes ``held`` (themselves included), as text: one walk per tree."""
+    from karni.accounts.tree_scope import tree_path
+
+    resolved = tree_path(_model_of(key, None), path)
+    if resolved is None or not held:
+        return set(held)
+    marker = (resolved.tree_model, frozenset(held))
+    if marker not in cache:
+        manager = resolved.tree_model._default_manager
+        from karni.accounts.tree_scope import _node_keys
+
+        nodes = _node_keys(resolved.tree_model, held)
+        found = manager.subtree_ids(nodes) if nodes else set()  # type: ignore[attr-defined]
+        cache[marker] = {str(node) for node in found} | set(held)
+    return cache[marker]
 
 
 def refusals(operator: Any, checked: Checked) -> list[str]:
@@ -538,11 +585,14 @@ def refusals(operator: Any, checked: Checked) -> list[str]:
     permission the pattern reaches, at scope ``all`` or at the same scope.
     For a grant with targets, the operator's own targets under that scope
     (their user grants' targets, or ``operator.<key>``) must include every one.
+    Under a ``tree:<path>`` scope a target below one of the operator's nodes
+    counts as held: who holds a region may grant a part of it.
     """
     if operator is None or getattr(operator, "is_superuser", False):
         return []
     held = grants_for(operator)
     reasons: list[str] = []
+    subtrees: dict[Any, set[str]] = {}
     for key in checked.keys:
         mine = held.get(key, [])
         if not mine:
@@ -560,6 +610,8 @@ def refusals(operator: Any, checked: Checked) -> list[str]:
             continue
         if checked.targets:
             covered = _held_targets(operator, same, checked.scope, checked.scope_path)
+            if checked.scope == "tree":
+                covered = _tree_covered(key, checked.scope_path, covered, subtrees)
             missing = [target for target in checked.targets if target not in covered]
             if missing:
                 reasons.append(

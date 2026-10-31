@@ -24,7 +24,8 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 (``karni.fields``) · ``E98x``/``W98x`` lifecycle and limited resources
 (``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
 tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
-tree models (``karni.tree``).
+tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
+(``karni.accounts.tree_scope``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -667,8 +668,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "cannot be reconciled into the role tables.",
         "Write KARNI_ROLES = {'<slug>': {'name': ..., 'description': ..., 'system': bool, "
         "'grants': {'app_label.model:action': '<scope>'}}}. A pattern may use '*' for the model "
-        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>' or "
-        "'custom:<name>'.",
+        "or the action (or '*' alone). A scope is 'all', 'own', 'related:<key>', "
+        "'custom:<name>' or 'tree:<path>'.",
     ),
     _e(
         "E206",
@@ -1294,9 +1295,10 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "A user grant's scope does not fit the permissions it covers",
         "exception",
         "karni.accounts.grants.check",
-        "The scope is one a role grant takes: 'all', 'own', 'related:<key>' or "
-        "'custom:<name>'. 'own' needs the model's owner field, 'related:<key>' its "
-        "Karni.scope_paths[key] and 'custom:<name>' a scope registered with register_scope(). "
+        "The scope is one a role grant takes: 'all', 'own', 'related:<key>', 'custom:<name>' "
+        "or 'tree:<path>'. 'own' needs the model's owner field, 'related:<key>' its "
+        "Karni.scope_paths[key], 'custom:<name>' a scope registered with register_scope() and "
+        "'tree:<path>' a path from the model to a tree model. "
         "An explicit key whose model lacks it is refused, and a wildcard pattern must keep at "
         "least one model that has it.",
         "Pick a scope from the model's options in GET permissions/matrix/, declare the owner "
@@ -1308,7 +1310,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "exception",
         "karni.accounts.grants.check",
         "targets lists the row ids a scope that points at rows reaches: a 'related:<key>' grant "
-        "with targets reaches the rows whose Karni.scope_paths[key] is one of them. Targets are "
+        "with targets reaches the rows whose Karni.scope_paths[key] is one of them, and a "
+        "'tree:<path>' grant the rows under those nodes of the tree. Targets are "
         "a list of ids (text, integers or UUIDs), only for such a scope, and each must be a value "
         "the scope path's field takes.",
         "Pass a list of ids of the related model, e.g. targets=[3, 7] for an integer key, drop "
@@ -1348,6 +1351,49 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "another user is a new grant, and granted_by follows the operator.",
         "Pass only permission, scope, targets, expires_at or reason. To move access to another "
         "user, revoke() this grant and grant() a new one.",
+    ),
+    # E490-E499 / W620-W629 the tree scope (karni.accounts.tree_scope, experimental)
+    _e(
+        "E490",
+        "A tree:<path> scope does not end at a tree model",
+        "check",
+        "karni.accounts.tree_scope.resolve_path; karni.checks.check_tree_scopes (KARNI_ROLES); "
+        "tree_scope() in a Where",
+        "tree:<path> reaches the rows whose <path> is a node the user holds or a node below it, "
+        "so each step of the path must be a relation of the model before it (a foreign key, a "
+        "one-to-one, a many-to-many or a reverse relation) and the last one must point at a "
+        "model on karni.models.TreeModel. A path that does not resolve could only ever reach no "
+        "row, so Karni refuses it at startup, in KARNI_ROLES and wherever tree_scope() names it.",
+        "Name the row's relation to the tree model, through relations when needed: "
+        "tree:region, tree:product__categories. Make the target a tree model (class "
+        "Region(TreeModel, BaseModel)), or grant another scope.",
+    ),
+    _e(
+        "E491",
+        "The access/ endpoint of a tree resource got a parameter it cannot use",
+        "api",
+        "karni.api.tree (GET <resource>/access/?permission=)",
+        "?permission= keeps the grants of the permissions it matches, written as a KARNI_ROLES "
+        "pattern: 'app_label.model:action' with '*' for either part, or '*' alone. Anything "
+        "else would match no grant and answer an empty forest without saying why.",
+        "Send a permission key such as ?permission=shop.order:view (or a pattern such as "
+        "shop.order:*), or leave the parameter out to count every tree grant.",
+    ),
+    _e(
+        "W620",
+        "A role grant of a tree scope gives its members no node",
+        "warning",
+        "karni.checks.check_tree_scopes (karni check)",
+        "A role grant of tree:<path> reaches the rows under the node the user holds in the "
+        "attribute named after the path's last step (tree:region and tree:store__region read "
+        "user.region), as related:<key> compares user.<key>. The user model has no such "
+        "attribute, so the role gives each member no node and no row. A tree grant never "
+        "falls back to every row.",
+        "Give the user model the attribute (a field or a property holding a node of the tree, "
+        "e.g. region), or give each user their nodes with user grants of the same scope "
+        "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
+        "Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the "
+        "nodes on purpose.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(

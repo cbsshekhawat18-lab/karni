@@ -456,6 +456,21 @@ def _can_fixes(leaf: Explained, *, user: Any, model: type[Model], row: Model | N
                 f"set {who}.{source.scope_path} to the row's {path} "
                 f"({row_value(row, path, you=user)}) for the 'related:{source.scope_path}' scope"
             )
+        elif source.scope == "tree":
+            path = source.scope_path
+            value = row_value(row, path, you=user)
+            if source.origin == USER_GRANT:
+                fixes.append(
+                    f"add the row's {path} ({value}) or a node above it to the targets of user "
+                    f"grant {source.grant_id}"
+                )
+            else:
+                from karni.accounts.grants import user_key
+
+                fixes.append(
+                    f"set {who}.{user_key('tree', path)} to the row's {path} ({value}) or a node "
+                    f"above it for the 'tree:{path}' scope"
+                )
         if source.role:
             role_where = settings_location("KARNI_ROLES", f'"{source.role}"')
             at = f" ({role_where})" if role_where else ""
@@ -485,6 +500,29 @@ def _grant_rows(source: Any, rows_by_grant: list[tuple[Any, Any]]) -> Any:
         elif not grant_id and (grant.scope, grant.scope_path) == (source.scope, source.scope_path):
             return rows
     return False
+
+
+def _given(source: Any, user: Any) -> str:
+    """``user grant 12`` or ``role 'manager' (through you.region)``: who gives the nodes."""
+    if source.origin == USER_GRANT:
+        return f"user grant {source.grant_id}"
+    from karni.accounts.grants import user_key
+
+    attribute = user_key("tree", source.scope_path)
+    return f"role {source.role!r} (through {display_user(user)}.{attribute})"
+
+
+def _tree_line(
+    source: Any, key: str, *, user: Any, model: type[Model], row: Model | None
+) -> tuple[str, dict[str, Any]]:
+    """The nodes behind a tree grant, in words, and for a row the granted node it is under."""
+    from karni.accounts.tree_scope import explain_row, source_nodes, tree_path
+
+    path = source.scope_path
+    if tree_path(model, path) is None:
+        return f"tree:{path} does not resolve on {model.__name__}", {"path": path}
+    verdict = explain_row(model, path, row, source_nodes(user, path, key, source))
+    return verdict.text(_given(source, user)), verdict.to_dict()
 
 
 def grant_lines(
@@ -523,6 +561,10 @@ def grant_lines(
                     f"{key}  scope {source.scope_label}{_targets(source)}  {origin}  → "
                     f"{q_text(rows, you=user)}{mark}"
                 )
+            tree: dict[str, Any] | None = None
+            if source.scope == "tree":
+                said, tree = _tree_line(source, key, user=user, model=model, row=row)
+                text.append(f"    {said}")
             entry: dict[str, Any] = {
                 "permission": key,
                 "role": source.role,
@@ -537,6 +579,8 @@ def grant_lines(
                 entry["reason"] = source.reason
                 entry["expires_at"] = source.expires_at.isoformat() if source.expires_at else None
                 entry["targets"] = list(source.targets)
+            if tree is not None:
+                entry["tree"] = tree
             entries.append(entry)
         found.append(GrantLine(key, text, {"permission": key, "grants": entries}))
     return found

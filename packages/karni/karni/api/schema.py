@@ -192,10 +192,15 @@ class KarniAutoSchema(AutoSchema):
     def get_response_serializers(self) -> Any:
         """History answers with change-log entries; export and import with files and job states.
 
-        ``tree/`` answers with the nested tree and ``ancestors/`` with a list
-        of tree nodes (experimental).
+        ``tree/`` answers with the nested tree, ``ancestors/`` with a list of
+        tree nodes and ``access/`` with the access forest (experimental).
         """
         action = self._karni_action()
+        if action == "access_forest" and self._karni_tree_node() is not None:
+            from karni.api.tree import tree_access_serializer
+
+            view = self._karni_view()
+            return tree_access_serializer(view.get_model())
         if action == "tree" and (node := self._karni_tree_node()) is not None:
             from karni.api.tree import tree_response_serializer
 
@@ -261,11 +266,28 @@ class KarniAutoSchema(AutoSchema):
         return parameters
 
     def _karni_tree_parameters(self) -> list[Any]:
-        """``root`` and ``depth`` on ``tree/``, ``branch`` on a tree node's ``DELETE``."""
+        """The tree parameters: ``root``/``depth``, ``branch`` on DELETE, ``permission``."""
         view = self._karni_view()
         action = self._karni_action()
-        if view is None or action not in ("tree", "destroy") or not view.serves_tree():
+        if (
+            view is None
+            or action not in ("tree", "destroy", "access_forest")
+            or not view.serves_tree()
+        ):
             return []
+        if action == "access_forest":
+            return [
+                OpenApiParameter(
+                    name="permission",
+                    type=str,
+                    location=OpenApiParameter.QUERY,
+                    required=False,
+                    description=(
+                        "A permission key or pattern (shop.order:view, shop.order:*): only the "
+                        "grants of the permissions it matches count. Default: every tree grant."
+                    ),
+                )
+            ]
         if action == "destroy":
             return [
                 OpenApiParameter(
@@ -300,8 +322,8 @@ class KarniAutoSchema(AutoSchema):
         ]
 
     def get_filter_backends(self) -> list[Any]:
-        """Stock, except ``children/`` and ``ancestors/``: the list filters do not apply there."""
-        if self._karni_action() in ("children", "ancestors"):
+        """Stock, except ``children/``, ``ancestors/`` and ``access/``: no list filters there."""
+        if self._karni_action() in ("children", "ancestors", "access_forest"):
             return []
         return list(super().get_filter_backends())
 
@@ -316,7 +338,7 @@ class KarniAutoSchema(AutoSchema):
         action = self._karni_action()
         if action in ("history", "children", "ancestors"):
             return True
-        if action in ("tree", "move"):
+        if action in ("tree", "move", "access_forest"):
             return False
         if action in (
             "export",

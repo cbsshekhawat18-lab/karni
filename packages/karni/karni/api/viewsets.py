@@ -93,6 +93,7 @@ from karni.accounts.permissions import ObjectPermissionsMixin
 from karni.api.access import (
     Access,
     AccessPermission,
+    Authenticated,
     Granted,
     Predicate,
     RowFilter,
@@ -296,7 +297,9 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     #: Experimental. The actions a viewset serves only when its model is a
     #: :class:`karni.models.TreeModel` (:mod:`karni.api.tree`).
-    tree_actions: ClassVar[frozenset[str]] = frozenset({"tree", "children", "ancestors", "move"})
+    tree_actions: ClassVar[frozenset[str]] = frozenset(
+        {"tree", "children", "ancestors", "move", "access_forest"}
+    )
     #: Experimental. The most nodes one ``tree/`` answer holds.
     tree_max_nodes: ClassVar[int] = 1000
     #: Experimental. The levels ``tree/`` returns without ``?depth=``.
@@ -903,6 +906,18 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             return move_response(self, request)
         except KarniWriteDeferred as exc:
             return self.deferred_response(exc)
+
+    @action(detail=False, methods=["get"], url_path="access", access=Authenticated())
+    def access_forest(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/access/?permission=``: the requester's granted nodes and their paths.
+
+        Experimental. The nodes the requester's ``tree:<path>`` grants name,
+        their ancestors and every other root (:mod:`karni.accounts.tree_scope`).
+        Any signed-in user may ask about their own grants.
+        """
+        from karni.api.tree import access_forest_response
+
+        return access_forest_response(self, request)
 
     def tree_top_level(self, readable: QuerySet[Any], filtered: bool, base: QuerySet[Any]) -> Any:
         """Experimental. The top level of ``tree/`` without ``?root=`` .

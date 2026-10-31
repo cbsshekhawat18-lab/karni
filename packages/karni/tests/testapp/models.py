@@ -171,6 +171,16 @@ class Product(ApiBase):
         return self.name
 
 
+class Listing(ApiBase):
+    """A row that reaches the trees through a relation: tree:product__category (tests/treescope)."""
+
+    title = models.CharField(max_length=100)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="listings")
+
+    def __str__(self) -> str:
+        return self.title
+
+
 # model layer (tests/test_model_layer.py)
 
 

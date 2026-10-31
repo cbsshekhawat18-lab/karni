@@ -17,6 +17,9 @@ either part) to a **scope** — which rows the action reaches:
 ``related:<key>``       rows whose ``Karni.scope_paths[key]`` equals the user's
                         attribute of the same name (``user.branch`` → ``order.branch``)
 ``custom:<name>``       a callable registered with :func:`register_scope`
+``tree:<path>``         rows whose ``<path>`` (a relation to a tree model) is a
+                        node the user holds or a node below it (experimental,
+                        :mod:`karni.accounts.tree_scope`)
 ======================  =====================================================
 
 ``karni sync-roles`` (``manage.py karni_sync_roles``) expands the patterns
@@ -88,7 +91,9 @@ __all__ = [
 SETTING: Final = "KARNI_ROLES"
 #: The entry point group through which an installed module declares roles.
 ENTRY_POINT_GROUP: Final = "karni.roles"
-SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom")
+SCOPES: Final[tuple[str, ...]] = ("all", "own", "related", "custom", "tree")
+#: The scopes written with a path or name after the colon.
+_PATH_SCOPES: Final[tuple[str, ...]] = ("related", "custom", "tree")
 
 #: The scope of a declared grant the permission matrix revoked: a row that
 #: grants nothing, kept so the sync does not restore the declaration.
@@ -138,10 +143,11 @@ class Grant:
 
 def _scope_parts(scope: str, where: str) -> tuple[str, str]:
     kind, _, path = str(scope).partition(":")
-    if kind not in SCOPES or (kind in ("related", "custom")) != bool(path):
+    if kind not in SCOPES or (kind in _PATH_SCOPES) != bool(path):
         raise KarniImproperlyConfigured(
             f"{SETTING}: {where} has scope {scope!r}. A scope is 'all', 'own', "
-            "'related:<scope path key>' or 'custom:<registered name>'.",
+            "'related:<scope path key>', 'custom:<registered name>' or 'tree:<path to a tree "
+            "model>'.",
             code="E205",
         )
     return kind, path
@@ -267,7 +273,8 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
     explicit key whose model cannot carry the scope (``own`` without an owner
     field, ``related:branch`` without that scope path) is an error too; a
     wildcard simply skips such models — ``"*": "own"`` means "everything
-    that can be owned".
+    that can be owned". A ``tree:<path>`` on an explicit key whose model has
+    no such path to a tree model is ``E490``, and a wildcard skips the model.
     """
     resolved: dict[str, Grant] = {}
     for pattern, scope in spec.grants.items():
@@ -302,6 +309,20 @@ def expand_grants(spec: RoleSpec, keys: Mapping[str, type[models.Model]]) -> lis
                     f"{path!r}. Add `class Karni: scope_paths = {{{path!r}: '<lookup>'}}`.",
                     code="E206",
                 )
+            if kind == "tree":
+                from karni.accounts.tree_scope import resolve_path, tree_path
+
+                if tree_path(model, path) is None:
+                    if not explicit:
+                        continue
+                    try:
+                        resolve_path(model, path)
+                    except KarniImproperlyConfigured as exc:
+                        raise KarniImproperlyConfigured(
+                            f"{SETTING}[{spec.slug!r}]: {key!r} is granted with scope "
+                            f"'tree:{path}'. {exc.message}",
+                            code="E490",
+                        ) from exc
             resolved[key] = Grant(key, kind, path)
     return list(resolved.values())
 
@@ -554,13 +575,20 @@ def grant_rows(user: Any, model: type[models.Model], grant: Grant) -> Q | bool:
 
     ``all`` → every row; ``own`` → ``Karni.owner_field`` is the user;
     ``related:<key>`` → ``Karni.scope_paths[key]`` equals ``user.<key>`` (no
-    value on the user: no row); ``custom:<name>`` → the registered callable.
-    A per-user grant with ``targets`` reaches the rows whose scope path is one
-    of them instead. :func:`rows_for` unions these, and ``karni why`` shows
-    each one.
+    value on the user: no row); ``custom:<name>`` → the registered callable;
+    ``tree:<path>`` → ``<path>`` is under the grant's nodes (experimental,
+    :mod:`karni.accounts.tree_scope`; no node: no row). A per-user grant with
+    ``targets`` reaches the rows whose scope path is one of them instead.
+    :func:`rows_for` unions these, and ``karni why`` shows each one.
     """
     if grant.scope == "all":
         return True
+    if grant.scope == "tree":
+        from karni.accounts.tree_scope import grant_nodes, subtree_rows, tree_path
+
+        if tree_path(model, grant.scope_path) is None:
+            return False  # fail closed: the model has no such path (any more)
+        return subtree_rows(model, grant.scope_path, grant_nodes(user, grant))
     if grant.scope == "own":
         owner = owner_field(model)
         return Q(**{owner: user}) if owner else False
@@ -587,16 +615,33 @@ def rows_for(user: Any, model: type[models.Model], action: str) -> Q | bool:
     """The rows ``user`` reaches for ``action`` on ``model``: ``True``, ``False`` or a ``Q``.
 
     The union of the user's grants for that permission; no grant → ``False``.
+    The ``tree:<path>`` grants of one path compile together: one subtree
+    subquery from every node they give (:func:`karni.accounts.tree_scope.tree_rows`).
     """
-    grants = grants_for(user).get(permission_key(model, action), [])
+    key = permission_key(model, action)
+    grants = grants_for(user).get(key, [])
     rows: Q | bool = False
+    trees: list[str] = []
     for grant in grants:
+        if grant.scope == "tree":
+            if grant.scope_path not in trees:
+                trees.append(grant.scope_path)
+            continue
         part = grant_rows(user, model, grant)
         if part is True:
             return True
         if part is False:
             continue
         rows = part if rows is False else rows | part
+    if trees:
+        from karni.accounts.tree_scope import tree_path, tree_rows
+
+        for path in trees:
+            if tree_path(model, path) is None:
+                continue  # fail closed, as grant_rows() does
+            part = tree_rows(user, model, path, permission=key)
+            if part is not False:
+                rows = part if rows is False else rows | part
     return rows
 
 

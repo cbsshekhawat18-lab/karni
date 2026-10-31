@@ -17,6 +17,13 @@ routes, and its list two more filters, with no declaration:
 * ``POST <key>/move/`` with ``{"parent": <key or null>, "position": <n>}``:
   write access to the node and a readable new parent. A parent below the
   node is a 400 on ``parent`` (``E340``).
+* ``GET access/?permission=<pattern>``: the requester's access forest (the
+  ``tree:<path>`` scope, :mod:`karni.accounts.tree_scope`): the nodes their
+  grants name, flagged ``granted``, the ancestors of each and every other
+  root, flagged ``granted=false``, for navigation. Any signed-in user may
+  ask about their own grants. Each node is ``{id, label, parent, granted,
+  has_children, children}``, and a granted node's children load from
+  ``tree/?root=<id>``.
 * ``?parent=<key>``, ``?parent=null`` (the roots) and ``?descendants_of=<key>``
   on the list.
 
@@ -33,7 +40,8 @@ serializer renders it, plus ``has_children`` and ``children``
 Override / escape hatch: the viewset attributes ``tree_max_nodes``,
 ``tree_default_depth`` and ``tree_max_depth``, the methods
 ``tree_top_level()`` and ``get_tree_node_serializer_class()``, or the actions
-themselves (``tree``, ``children``, ``ancestors``, ``move``) on a subclass.
+themselves (``tree``, ``children``, ``ancestors``, ``move``, ``access_forest``) on
+a subclass.
 """
 
 from __future__ import annotations
@@ -61,6 +69,7 @@ __all__ = [
     "DescendantsFilter",
     "TreeChildrenField",
     "TreeParentFilter",
+    "tree_access_serializer",
     "tree_move_serializer",
     "tree_node_serializer",
     "tree_response_serializer",
@@ -72,6 +81,7 @@ HAS_CHILDREN: Final = "tree_has_children"
 _NODE_CACHE: dict[type[Any], type[serializers.Serializer[Any]]] = {}
 _RESPONSE_CACHE: dict[type[Any], type[serializers.Serializer[Any]]] = {}
 _MOVE_CACHE: dict[type[models.Model], type[serializers.Serializer[Any]]] = {}
+_ACCESS_CACHE: dict[type[models.Model], type[serializers.Serializer[Any]]] = {}
 
 
 # serializers
@@ -187,14 +197,7 @@ def tree_move_serializer(model: type[models.Model]) -> type[serializers.Serializ
         return cached
     from karni.api.serializers import serializer_name
 
-    pk = model._meta.pk
-    key: serializers.Field[Any, Any, Any, Any]
-    if isinstance(pk, models.UUIDField):
-        key = serializers.UUIDField(allow_null=True)
-    elif isinstance(pk, models.IntegerField | models.AutoField):
-        key = serializers.IntegerField(allow_null=True)
-    else:
-        key = serializers.CharField(allow_null=True)
+    key = _key_field(model, allow_null=True)
     move: type[serializers.Serializer[Any]] = type(
         serializer_name(model).removesuffix("Serializer") + "MoveSerializer",
         (serializers.Serializer,),
@@ -209,6 +212,65 @@ def tree_move_serializer(model: type[models.Model]) -> type[serializers.Serializ
     )
     _MOVE_CACHE[model] = move
     return move
+
+
+def _key_field(model: type[models.Model], **kwargs: Any) -> serializers.Field[Any, Any, Any, Any]:
+    """A serializer field of ``model``'s key type: a UUID, an integer or text."""
+    pk = model._meta.pk
+    if isinstance(pk, models.UUIDField):
+        return serializers.UUIDField(**kwargs)
+    if isinstance(pk, models.IntegerField | models.AutoField):
+        return serializers.IntegerField(**kwargs)
+    return serializers.CharField(**kwargs)
+
+
+def tree_access_serializer(model: type[models.Model]) -> type[serializers.Serializer[Any]]:
+    """Experimental. The ``access/`` answer: ``{"results": [node], "all", "truncated"}``.
+
+    A node is ``{id, label, parent, granted, has_children, children}``. The
+    serializers describe the answer in the OpenAPI document (components
+    ``<Stem>AccessNode`` and ``<Stem>AccessForest``), and
+    :meth:`karni.accounts.tree_scope.Forest.to_dict` writes it.
+    """
+    cached = _ACCESS_CACHE.get(model)
+    if cached is not None:
+        return cached
+    from karni.api.serializers import serializer_name
+
+    stem = serializer_name(model).removesuffix("Serializer")
+    node: type[serializers.Serializer[Any]] = type(
+        f"{stem}AccessNodeSerializer",
+        (serializers.Serializer,),
+        {
+            "__module__": __name__,
+            "__doc__": (
+                "A node of the access forest. granted is true for a node a grant names; its "
+                "ancestors and the other roots are there for navigation."
+            ),
+            "id": _key_field(model, read_only=True),
+            "label": serializers.CharField(read_only=True),
+            "parent": _key_field(model, read_only=True, allow_null=True),
+            "granted": serializers.BooleanField(read_only=True),
+            "has_children": serializers.BooleanField(read_only=True),
+            "children": TreeChildrenField(),
+        },
+    )
+    forest: type[serializers.Serializer[Any]] = type(
+        f"{stem}AccessForestSerializer",
+        (serializers.Serializer,),
+        {
+            "__module__": __name__,
+            "__doc__": (
+                "The requester's access forest: the granted nodes with their ancestors, then "
+                "every other root. all is true when every node is reached."
+            ),
+            "results": node(many=True, read_only=True),
+            "all": serializers.BooleanField(read_only=True),
+            "truncated": serializers.BooleanField(read_only=True),
+        },
+    )
+    _ACCESS_CACHE[model] = forest
+    return forest
 
 
 # reading the request
@@ -415,6 +477,38 @@ def move_response(view: Any, request: Request) -> Response:
     readable = view.get_queryset()
     moved = with_has_children(readable.filter(pk=node.pk), readable).first() or node
     return Response(render_nodes(view, [moved])[0])
+
+
+def parse_permission(value: str | None) -> str | None:
+    """``?permission=``: a ``KARNI_ROLES`` pattern, or absent (every tree grant)."""
+    if value in (None, ""):
+        return None
+    text = str(value)
+    if text == "*":
+        return text
+    label, sep, action = text.rpartition(":")
+    if not (sep and action and (label == "*" or "." in label and all(label.split(".")))):
+        raise api_error(
+            "E491",
+            f"?permission={text!r} is not a permission pattern. Write app_label.model:action, "
+            "with * for either part, or * alone.",
+            field="permission",
+        )
+    return text
+
+
+def access_forest_response(view: Any, request: Request) -> Response:
+    """``GET access/``: the requester's access forest (see the module docstring)."""
+    from karni.accounts.tree_scope import access_forest
+
+    permission = parse_permission(request.query_params.get("permission"))
+    forest = access_forest(
+        request.user,
+        view.get_model(),
+        permission=permission,
+        max_nodes=max(1, int(view.tree_max_nodes)),
+    )
+    return Response(forest.to_dict())
 
 
 def _require_walks(view: Any, queryset: Any) -> None:
