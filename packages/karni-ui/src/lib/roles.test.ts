@@ -121,6 +121,7 @@ describe("package self-registrations", () => {
       "empty-state": "EmptyState",
       "error-state": "ErrorState",
       "file-upload": "FileUpload",
+      "global-search": "GlobalSearch",
       "layout-shell": "Layout",
       "login-form": "LoginForm",
       modal: "Modal",
