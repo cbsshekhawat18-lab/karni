@@ -22,8 +22,9 @@
  * and a frozen first column. Density and hidden columns are remembered per
  * user. A model with `Karni.column_sets` (experimental) gets a column set
  * menu that switches between its presets, the choice remembered per user
- * and table. A MarkdownField's long text is no default column. In the table layout the rows are a WAI-ARIA grid: the whole table
- * is one Tab stop and the arrow keys move between rows and cells
+ * and table. A MarkdownField's long text is no default column. In the
+ * table layout the rows are a WAI-ARIA grid: the whole table is one Tab
+ * stop and the arrow keys move between rows and cells
  * (`keyboardNavigation="native"` makes every control a Tab stop again).
  *
  * Audit fields (AUDIT_FIELDS: id, created_at, updated_at, created_by,
