@@ -483,26 +483,29 @@ def _is_stub(node: ast.ClassDef) -> bool:
 def is_stub_file(rel: str, text: str) -> bool:
     """Experimental. Whether the project file ``rel`` still holds only what build writes in it.
 
-    That is the docstring build gives it, imports, and classes that extend a
-    Karni base with build's stub body (:data:`STUB_LINE`, and ``access =
-    Granted()`` for ``access: code``). A recipe writes its own file over such
-    a file (:mod:`karni_cli.recipes.apply`), and never over anything else.
+    ``rel`` is one of the files build creates for an app (``<app>/models.py``,
+    ``viewsets.py``, ``seeds.py``), and ``text`` is the docstring build gives
+    it, imports, and classes that extend a Karni base with build's stub body
+    (:data:`STUB_LINE`, and ``access = Granted()`` for ``access: code``). A
+    recipe writes its own file over such a file
+    (:mod:`karni_cli.recipes.apply`), and never over anything else.
     """
+    purpose = _purposes(rel.split("/", 1)[0]).get(rel)
     try:
         tree = ast.parse(text)
     except SyntaxError:
         return False
-    purposes = {" ".join(purpose.split()) for purpose in _purposes(rel.split("/", 1)[0]).values()}
-    for index, stmt in enumerate(tree.body):
+    first = tree.body[0] if tree.body else None
+    if (
+        purpose is None
+        or not isinstance(first, ast.Expr)
+        or not isinstance(first.value, ast.Constant)
+        or not isinstance(first.value.value, str)
+        or " ".join(first.value.value.split()) != " ".join(purpose.split())
+    ):
+        return False
+    for stmt in tree.body[1:]:
         if isinstance(stmt, ast.Import | ast.ImportFrom):
-            continue
-        if (
-            index == 0
-            and isinstance(stmt, ast.Expr)
-            and isinstance(stmt.value, ast.Constant)
-            and isinstance(stmt.value.value, str)
-            and " ".join(stmt.value.value.split()) in purposes
-        ):
             continue
         if (
             isinstance(stmt, ast.ClassDef)
