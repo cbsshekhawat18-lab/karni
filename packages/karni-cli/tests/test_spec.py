@@ -160,6 +160,18 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    # page blocks (experimental): a detail page's related tabs
+    ("C212", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {tabs: [Note]}}]\n", 9),
+    ("C220", SHOP + "        fields: {name: str}\npages:\n  - about: {detail: {related: [Product]}}\n", 9),
+    ("C560", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {related: [Ghost]}}]\n", 9),
+    ("C561", SHOP + "        fields: {name: str}\n      Tag: {fields: {name: str}}\n"
+     "pages:\n  - Product: [{detail: {related: [Tag]}}]\n", 10),
+    ("C561", SHOP + "        fields: {name: str}\n      Tag: {fields: {items: m2m:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Tag.items]}}]\n", 10),
+    ("C562", SHOP + "        fields: {name: str}\n      Swap: {fields: {given: fk:Product, taken: fk:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Swap]}}]\n", 10),
+    ("C563", SHOP + "        fields: {name: str}\n      Review: {fields: {product: fk:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Review, Review.product]}}]\n", 10),
 ]  # fmt: skip
 
 
@@ -175,8 +187,12 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # The spec's own codes, C324 (the module catalog's code for requires and conflicts),
+    # and C560 to C579 (the page blocks' related tabs).
+    assert all(
+        200 <= int(code[1:]) <= 269 or 560 <= int(code[1:]) <= 579 or code == "C324"
+        for code in iter_codes()
+    )
 
 
 def test_issues_name_the_fix_and_the_path() -> None:

@@ -269,6 +269,8 @@ def _known_keys(path: Loc) -> list[str]:
         (("apps", None, "entities", None), schema.Entity),
         (("apps", None, "entities", None, "fields", None), schema.FieldEntry),
         (("apps", None, "entities", None, "access"), schema.Access),
+        (("pages", None, None, None), schema.DetailPage),
+        (("pages", None, None, None, "detail"), schema.DetailOptions),
     ]
     parent = path[:-1]
     for pattern, model in shapes:
@@ -1130,7 +1132,8 @@ class _Meaning:
                     "Write one entry per line, e.g. - Session: [list, detail, form].",
                 )
                 continue
-            ((name, kinds),) = item.items()
+            ((name, written),) = item.items()
+            kinds = schema.page_kind_names(written)
             where = ("pages", index, name)
             if name in seen:
                 self.add(
@@ -1164,6 +1167,12 @@ class _Meaning:
                         f"Write e.g. - {name}: [list, detail, form].",
                     )
                     continue
+                detail_at = next(
+                    (i for i, kind in enumerate(written) if isinstance(kind, schema.DetailPage)),
+                    None,
+                )
+                if detail_at is not None:
+                    self.related(entity, schema.page_related(written), (*where, detail_at))
                 base = f"/{default_route(entity.name)}"
                 paths = [
                     *([base] if "list" in kinds else []),
@@ -1180,7 +1189,11 @@ class _Meaning:
                         key=True,
                     )
                     continue
-                if len(kinds) != 1 or kinds[0] not in NAMED_PAGES:
+                if (
+                    len(kinds) != 1
+                    or not isinstance(written[0], str)
+                    or kinds[0] not in NAMED_PAGES
+                ):
                     self.add(
                         "C220",
                         where,
@@ -1189,16 +1202,8 @@ class _Meaning:
                         f"Write e.g. - {name}: blank (or - home: dashboard, - login: login).",
                     )
                     continue
-                if kinds[0] == "dashboard" and name != "home":
-                    self.add(
-                        "C220",
-                        where,
-                        f"Page {name!r} is a dashboard. The dashboard is the scaffold's home page, "
-                        "at /.",
-                        "Write - home: dashboard, and blank for a page of your own.",
-                    )
-                    continue
-                paths = ["/"] if kinds[0] == "dashboard" else [f"/{name}"]
+                # home: dashboard is the scaffold's home page; any other dashboard is built.
+                paths = ["/"] if kinds[0] == "dashboard" and name == "home" else [f"/{name}"]
             for path in paths:
                 if path in routes:
                     self.add(
@@ -1209,6 +1214,79 @@ class _Meaning:
                         key=True,
                     )
                 routes[path] = index
+
+    def related(self, entity: _Entity, refs: list[str], where: Loc) -> None:
+        """``{detail: {related: [...]}}``: each a fk of another entity to ``entity``, once."""
+        seen: set[str] = set()
+        for position, ref in enumerate(refs):
+            at: Loc = (*where, "detail", "related", position)
+            parts = ref.split(".")
+            field = parts[-1] if len(parts) > 1 and parts[-1][:1].islower() else None
+            name = ".".join(parts[:-1]) if field is not None else ref
+            target = self.find(name)
+            if not isinstance(target, _Entity):
+                self.add(
+                    "C560",
+                    at,
+                    f"{entity.name}'s related tab {ref!r} names the entity {name}, but {target}.",
+                    "Name an entity of the spec with a fk to "
+                    f"{entity.name} (Entity, or Entity.field when it has two).",
+                )
+                continue
+            pointing = [f for f, label in target.targets.items() if label == entity.label]
+            kinds = {f: target.fields[f].kind for f in pointing if f in target.fields}
+            fks = [f for f in pointing if kinds.get(f) == "fk"]
+            if field is not None:
+                problem = None
+                if field not in target.fields:
+                    problem = f"{target.name} has no field {field}"
+                elif field not in pointing:
+                    problem = f"{target.name}.{field} does not point at {entity.name}"
+                elif kinds.get(field) != "fk":
+                    problem = (
+                        f"{target.name}.{field} is a {kinds.get(field)} field, and only a fk "
+                        f"lists {target.name} rows per {entity.name} (its list filters by it)"
+                    )
+                if problem is not None:
+                    self.add(
+                        "C561",
+                        at,
+                        f"{entity.name}'s related tab {ref!r}: {problem}.",
+                        f"Name a fk of {target.name} to {entity.name}"
+                        + (f": {', '.join(f'{target.name}.{f}' for f in fks)}." if fks else "."),
+                    )
+                    continue
+                chosen = f"{target.label}.{field}"
+            elif not fks:
+                other = f" ({', '.join(f'{f}: {kinds[f]}' for f in pointing)})" if pointing else ""
+                self.add(
+                    "C561",
+                    at,
+                    f"{entity.name}'s related tab {ref!r}: {target.name} has no fk to "
+                    f"{entity.name}{other}.",
+                    f"Add a fk:{entity.name} field to {target.name}, or drop the tab.",
+                )
+                continue
+            elif len(fks) > 1:
+                self.add(
+                    "C562",
+                    at,
+                    f"{entity.name}'s related tab {ref!r}: {target.name} has {len(fks)} fks to "
+                    f"{entity.name} ({', '.join(fks)}), so the tab must say which.",
+                    "Write " + " or ".join(f"{target.name}.{f}" for f in fks) + ", one tab each.",
+                )
+                continue
+            else:
+                chosen = f"{target.label}.{fks[0]}"
+            if chosen in seen:
+                self.add(
+                    "C563",
+                    at,
+                    f"{entity.name}'s related tab {ref!r} is listed twice.",
+                    "List each related tab once.",
+                )
+                continue
+            seen.add(chosen)
 
     def seed(self) -> None:
         for name, count in self.spec.seed.items():
@@ -1309,4 +1387,5 @@ def iter_codes() -> Iterator[str]:
     yield from ("C220", "C221", "C222", "C223", "C224", "C225")
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
+    yield from ("C560", "C561", "C562", "C563")
     yield "C324"

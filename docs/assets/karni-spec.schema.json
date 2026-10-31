@@ -117,6 +117,47 @@
       ],
       "type": "object"
     },
+    "DetailOptions": {
+      "additionalProperties": false,
+      "description": "Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "related": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "A tab per reverse relation, each a table of the related rows filtered to the record: an entity with a fk to this one (Deal), or Entity.field when it has two (Deal.partner)."
+        }
+      },
+      "type": "object"
+    },
+    "DetailPage": {
+      "additionalProperties": false,
+      "description": "Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "detail": {
+          "$ref": "#/$defs/DetailOptions",
+          "description": "The detail page's options."
+        }
+      },
+      "required": [
+        "detail"
+      ],
+      "type": "object"
+    },
     "Entity": {
       "additionalProperties": false,
       "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
@@ -536,7 +577,7 @@
       "type": "object"
     },
     "pages": {
-      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form), or a page name with its kind (dashboard, blank, login, or code: a page of the project's own at /<name>, which karni build leaves alone).",
+      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form; {detail: {related: [Deal]}} adds related tabs), or a page name with its kind (dashboard: home is the scaffold's, any other name a page of charts; blank, login, or code: a page of the project's own at /<name>, which karni build leaves alone).",
       "items": {
         "additionalProperties": {
           "anyOf": [
@@ -545,7 +586,14 @@
             },
             {
               "items": {
-                "type": "string"
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/DetailPage"
+                  }
+                ]
               },
               "type": "array"
             }

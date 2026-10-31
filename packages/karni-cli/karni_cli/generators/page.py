@@ -6,6 +6,13 @@ Kinds (``--resource R --kind ...``), with routes under a base path
 * ``list``   → ``<base>``: ``<Page><ResourceTable resource=R /></Page>``
 * ``detail`` → ``<base>/$id``: ``<ResourceDetail resource=R id={id} />``
 * ``form``   → ``<base>/new`` and ``<base>/$id/edit``: ``<ResourceForm />``
+* ``dashboard`` (experimental) → ``/<name>``: a ``DashboardGrid`` with a
+  ``ChartCard`` of the rows of each resource (``--count``, default: every
+  resource the project routes), counted by ``useResourceCounts``
+
+A detail page takes ``--related <name>`` (experimental, repeatable): a tab
+per reverse relation, each a table of the related rows filtered to the
+record (ResourceDetail's ``related``).
 
 Pages link to their siblings only when those routes exist (or are generated
 in the same run) — TanStack Router's typed ``navigate`` rejects unknown
@@ -42,7 +49,7 @@ from karni_cli.project import CliError
 NAME = "page"
 SUMMARY = "Add a frontend page (<= 50 lines) composing @karni/ui, with its route."
 
-KINDS = ("list", "detail", "form", "login")
+KINDS = ("list", "detail", "form", "login", "dashboard")
 MAX_LINES = 50
 PAGES = FRONTEND / "src" / "pages"
 ROUTES = FRONTEND / "src" / "routes.tsx"
@@ -63,6 +70,10 @@ class PageSpec:
     title: str
     #: Relation fields a detail page asks the API to expand (labels, not raw ids).
     expand: tuple[str, ...] = ()
+    #: Experimental. A detail page's related tabs (ResourceDetail's ``related``).
+    related: tuple[str, ...] = ()
+    #: Experimental. The resources a dashboard counts, in chart order.
+    counts: tuple[str, ...] = ()
 
     @property
     def component(self) -> str:
@@ -90,11 +101,29 @@ def spec_for(
     path: str | None,
     title: str | None = None,
     expand: tuple[str, ...] | list[str] | None = None,
+    related: tuple[str, ...] | list[str] | None = None,
+    counts: tuple[str, ...] | list[str] | None = None,
 ) -> PageSpec:
     require_kebab(name, "Page name")
     if kind is not None and kind not in KINDS:
         raise CliError(f"--kind {kind!r}: choose one of {', '.join(KINDS)}.", code="C106")
-    if kind is not None and kind != "login" and resource is None:
+    if related and kind != "detail":
+        raise CliError("--related takes a detail page: add --kind detail.", code="C106")
+    if counts and kind != "dashboard":
+        raise CliError("--count takes a dashboard page: add --kind dashboard.", code="C106")
+    for entry in (*(related or ()), *(counts or ())):
+        if not re.fullmatch(r"[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_]*)?", entry):
+            raise CliError(
+                f"{entry!r}: a resource (deals), or resource.field for a related tab "
+                "(deals.partner).",
+                code="C106",
+            )
+    if kind == "dashboard" and resource is not None:
+        raise CliError(
+            "A dashboard counts resources: pass each with --count instead of --resource.",
+            code="C106",
+        )
+    if kind is not None and kind not in ("login", "dashboard") and resource is None:
         raise CliError(
             f"--kind {kind} needs --resource <route>, e.g. --resource events.", code="C004"
         )
@@ -118,7 +147,16 @@ def spec_for(
             f"--title {title!r}: plain text only (no quotes, braces or angle brackets).",
             code="C106",
         )
-    return PageSpec(name, kind, resource, base, title, tuple(expand or ()))
+    return PageSpec(
+        name,
+        kind,
+        resource,
+        base,
+        title,
+        tuple(expand or ()),
+        tuple(related or ()),
+        tuple(counts or ()),
+    )
 
 
 def known_routes(ws: Workspace) -> set[str]:
@@ -182,6 +220,8 @@ def render(spec: PageSpec, routes: set[str]) -> str:
             f'    return <Page title="{spec.title}" />;\n'
             "}\n"
         )
+    if spec.kind == "dashboard":
+        return _dashboard(spec)
     if spec.kind == "login":
         home = "/" if "/" in routes or not routes else min(routes)
         props = [f"onSuccess={{() => {_go(home)}}}"]
@@ -205,6 +245,9 @@ def render(spec: PageSpec, routes: set[str]) -> str:
         if spec.expand:
             names = ", ".join(f'"{name}"' for name in spec.expand)
             props.append(f"expand={{[{names}]}}")
+        if spec.related:
+            names = ", ".join(f'"{name}"' for name in spec.related)
+            props.append(f"related={{[{names}]}}")
         return _shell(spec, "ResourceDetail", props, actions, hooks=hooks, ui={"ResourceDetail"})
     hooks = ["const { id } = useParams({ strict: false });"]
     props = [f'resource="{resource}"', "id={id}"]
@@ -215,6 +258,61 @@ def render(spec: PageSpec, routes: set[str]) -> str:
     noun = spec.title.lower()
     title = f'{{id === undefined ? "New {noun}" : "Edit {noun}"}}'
     return _shell(spec, "ResourceForm", props, None, hooks=hooks, ui={"ResourceForm"}, title=title)
+
+
+def _string_list(names: tuple[str, ...], indent: str, width: int = 96) -> list[str]:
+    """``names`` as quoted strings, several to a line, each line at most ``width`` wide."""
+    lines: list[str] = []
+    line = ""
+    for name in names:
+        item = f'"{name}",'
+        if line and len(indent) + len(line) + 1 + len(item) > width:
+            lines.append(indent + line)
+            line = item
+        else:
+            line = f"{line} {item}" if line else item
+    if line:
+        lines.append(indent + line)
+    return lines
+
+
+def _dashboard(spec: PageSpec) -> str:
+    """A dashboard page: a DashboardGrid holding a ChartCard of each resource's rows.
+
+    The data seam: ``useResourceCounts`` asks each list for its count (one
+    request each). When an aggregation endpoint can count grouped rows in one
+    request (large-apps item 8), this is the one function that changes: the
+    ChartCards it writes take that endpoint's data instead.
+    """
+    lines = [
+        _ui_import({"ChartCard", "DashboardGrid", "Page", "useResourceCounts"}),
+        "",
+        "// The rows of each resource the user can read: one list request each (page_size=1).",
+        "const COUNTED = [",
+        *_string_list(spec.counts, "    "),
+        "];",
+        "",
+        f"export default function {spec.component}() {{",
+        "    const counts = useResourceCounts(COUNTED);",
+        "    return (",
+        f'        <Page title="{spec.title}">',
+        "            <DashboardGrid>",
+        "                <ChartCard",
+        '                    title="Rows per resource"',
+        '                    kind="bar"',
+        "                    data={counts.data}",
+        "                    loading={counts.loading}",
+        "                    error={counts.error}",
+        "                    onRetry={counts.refetch}",
+        '                    span="full"',
+        "                />",
+        "            </DashboardGrid>",
+        "        </Page>",
+        "    );",
+        "}",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def _indent(text: str, spaces: int) -> str:
@@ -349,7 +447,8 @@ def command(
     kind: str | None = typer.Option(
         None,
         "--kind",
-        help="With --resource: list (default), detail or form. A login page needs no resource.",
+        help="With --resource: list (default), detail or form. A login page needs no resource, "
+        "and a dashboard (experimental) counts resources (--count).",
     ),
     path: str | None = typer.Option(
         None,
@@ -357,6 +456,17 @@ def command(
         help="Route path. For resource pages it is the base (default `/<resource>`).",
     ),
     title: str | None = typer.Option(None, "--title", help="Page title (default: from the name)."),
+    related: list[str] = typer.Option(
+        [],
+        "--related",
+        help="Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it.",
+    ),
+    count: list[str] = typer.Option(
+        [],
+        "--count",
+        help="Experimental. With --kind dashboard: a resource to count. Repeat it (default: "
+        "every resource the project routes).",
+    ),
     no_route: bool = typer.Option(
         False, "--no-route", help="Do not register the route in frontend/src/routes.tsx."
     ),
@@ -366,12 +476,18 @@ def command(
     """Add frontend/src/pages/NAME.tsx (at most 50 lines) and register its route.
 
     With --resource R --kind list|detail|form the page composes ResourceTable /
-    ResourceDetail / ResourceForm for the API resource R. Without --resource the
-    page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`,
-    form at `<base>/new` and `<base>/$id/edit`, where the base is --path or
-    `/<resource>`.
+    ResourceDetail / ResourceForm for the API resource R (a detail page takes
+    --related tabs). --kind dashboard composes DashboardGrid and ChartCard with
+    the rows of each --count resource. Without --resource the page is a bare
+    `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at
+    `<base>/new` and `<base>/$id/edit`, where the base is --path or
+    `/<resource>`, and a dashboard at `/<name>`.
     """
     ws = project_workspace(force)
-    spec = spec_for(name, resource=resource, kind=kind, path=path, title=title)
+    if kind == "dashboard" and not count:
+        count = sorted(_routed_resources(ws))
+    spec = spec_for(
+        name, resource=resource, kind=kind, path=path, title=title, related=related, counts=count
+    )
     plan(ws, spec, register=not no_route)
     ws.commit(dry_run=dry_run)

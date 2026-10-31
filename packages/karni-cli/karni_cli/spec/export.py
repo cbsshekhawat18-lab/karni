@@ -150,6 +150,8 @@ _RESOURCE: Final = re.compile(
     r"""<(ResourceTable|ResourceDetail|ResourceForm)\b[^>]*?resource=["']([\w-]+)["']"""
 )
 _PAGE_KINDS: Final = {"ResourceTable": "list", "ResourceDetail": "detail", "ResourceForm": "form"}
+#: A detail page's related tabs: ``related={["deals", "deals.partner"]}``.
+_RELATED: Final = re.compile(r"""\brelated=\{\[([^\]]*)\]\}""")
 
 
 @dataclass
@@ -780,7 +782,7 @@ def _pages(
         else ""
     )
     files = {component: file for component, file in _IMPORT.findall(text)}
-    pages: dict[str, list[str]] = {}
+    pages: dict[str, list[Any]] = {}
     for path, component in _ROUTE.findall(text):
         file = files.get(component)
         source = ""
@@ -800,9 +802,30 @@ def _pages(
     out = []
     for key, kinds in pages.items():
         if key[:1].isupper():
-            kinds = [kind for kind in ("list", "detail", "form") if kind in kinds]
-        out.append({key: _one(kinds)})
+            kinds = [
+                kind
+                for name in ("list", "detail", "form")
+                for kind in kinds
+                if kind == name or (isinstance(kind, dict) and name in kind)
+            ]
+        out.append({key: kinds[0] if len(kinds) == 1 and isinstance(kinds[0], str) else kinds})
     return out
+
+
+def _related(source: str, routes: dict[str, str], names_count: dict[str, int]) -> list[str]:
+    """A detail page's related tabs as the spec writes them (Deal, Deal.partner)."""
+    found = _RELATED.search(source)
+    if found is None:
+        return []
+    refs: list[str] = []
+    for name in re.findall(r"""["']([\w.-]+)["']""", found.group(1)):
+        resource, _, field = name.partition(".")
+        label = routes.get(resource)
+        if label is None:
+            continue
+        ref = _entity_ref(label, names_count)
+        refs.append(f"{ref}.{field}" if field else ref)
+    return refs
 
 
 def _page_entry(
@@ -811,7 +834,7 @@ def _page_entry(
     routes: dict[str, str],
     entities: dict[str, Any],
     names_count: dict[str, int],
-) -> tuple[str, str] | None:
+) -> tuple[str, Any] | None:
     if path == "/" and "<Dashboard" in source:
         return "home", "dashboard"
     found = _RESOURCE.search(source)
@@ -829,6 +852,9 @@ def _page_entry(
         }
         if path not in expected[kind] or resource != base[1:]:
             return None
+        related = _related(source, routes, names_count) if kind == "detail" else []
+        if related:
+            return _entity_ref(label, names_count), {"detail": {"related": related}}
         return _entity_ref(label, names_count), kind
     name = path.lstrip("/")
     if not re.fullmatch(schema.PAGE_NAME, name):
@@ -838,4 +864,6 @@ def _page_entry(
     components = set(re.findall(r"<([A-Z]\w*)", source))
     if components == {"Page"}:
         return name, "blank"
+    if components == {"Page", "DashboardGrid", "ChartCard"} and "useResourceCounts(" in source:
+        return name, "dashboard"  # the dashboard karni make page --kind dashboard writes
     return name, "code"  # a page of the project's own: karni build leaves it alone

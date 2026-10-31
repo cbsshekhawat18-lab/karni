@@ -466,8 +466,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C220",
         "A page entry is not valid",
         "karni spec validate (karni_cli.spec.validate)",
-        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).",
-        "Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.",
+        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (dashboard: the scaffold's home at /, or a page of charts at /<name>; blank, login, code).",
+        "Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.",
     ),
     _c(
         "C221",
@@ -1036,6 +1036,41 @@ CODES: Final[tuple[CliCode, ...]] = (
         "spec validate.",
         "Set the key the message names in karni.yaml by hand, then run karni spec validate and "
         "karni plan --questions.",
+    ),
+    # C560-C579 page blocks (large-apps item 11): related tabs on a detail page
+    _c(
+        "C560",
+        "A related tab names no entity",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A detail page's related tabs ({detail: {related: [...]}}) each list the rows of another "
+        "entity that point at the page's entity. The name is not an entity of the spec, or "
+        "several apps define it.",
+        "Name an entity of the spec (app.Entity when two apps define it), or Entity.field.",
+    ),
+    _c(
+        "C561",
+        "A related tab names an entity with no fk to this one",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A related tab is a table of the other entity's rows filtered to this record, and the "
+        "list of that entity filters by its fk fields. The entity has no fk to the page's "
+        "entity, or the field named is not one (a m2m or an o2o cannot back a tab).",
+        "Add a fk field to the page's entity on the other entity, or name the fk it has.",
+    ),
+    _c(
+        "C562",
+        "A related tab could be either of two relations",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The entity named has two or more fks to the page's entity (a deal's company and its "
+        "partner), so the tab must say which rows it lists.",
+        "Write Entity.field, one tab for each relation you want.",
+    ),
+    _c(
+        "C563",
+        "A related tab is listed twice",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Each related tab is one relation. Deal and Deal.company name the same one when Deal has "
+        "one fk to the page's entity.",
+        "List each related tab once.",
     ),
 )
 

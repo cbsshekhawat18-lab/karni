@@ -64,6 +64,7 @@ from karni_cli.generators.pysource import (
 )
 from karni_cli.project import CliError
 from karni_cli.spec import catalog, schema
+from karni_cli.spec.normal import related_tab
 
 __all__ = [
     "BLOCK_END",
@@ -701,9 +702,11 @@ def _pages(inputs: Inputs) -> list[_Page]:
     """The pages Karni writes, in the spec's navigation order."""
     entities = _entities(inputs.spec)
     by_name = {name: label for label, (_a, name, _e) in entities.items()}
+    apps = inputs.spec.model_dump(mode="json")["apps"]
     found: list[_Page] = []
     for item in inputs.spec.pages:
-        ((name, kinds),) = item.items()
+        ((name, written),) = item.items()
+        kinds = schema.page_kind_names(written)
         if name[:1].isupper():
             label = name if "." in name else by_name.get(name, name)
             _app, entity_name, entity = entities[label]
@@ -723,11 +726,21 @@ def _pages(inputs: Inputs) -> list[_Page]:
                         kind=kind,
                         path=None,
                         expand=expand if kind == "detail" else None,
+                        related=(
+                            [related_tab(ref, label, apps) for ref in schema.page_related(written)]
+                            if kind == "detail"
+                            else None
+                        ),
                     )
                     found.append(_Page(key, spec))
             continue
         kind = kinds[0]
         key = f"{name}:{kind}"
+        if kind == "dashboard" and name != "home" and key in inputs.pages:
+            counted = [default_route(entity_name) for _a, entity_name, _e in entities.values()]
+            spec = page_gen.spec_for(name, resource=None, kind=kind, path=None, counts=counted)
+            found.append(_Page(key, spec))
+            continue
         if key not in inputs.pages or kind not in ("blank", "login"):
             continue
         found.append(
@@ -743,7 +756,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
 
 def _ordered(pages: list[_Page], spec: schema.Spec) -> list[_Page]:
     """``pages`` in navigation order: the spec's entries, and list, detail, form within one."""
-    rank = {"list": 0, "detail": 1, "form": 2, "blank": 0, "login": 0}
+    rank = {"list": 0, "detail": 1, "form": 2, "blank": 0, "login": 0, "dashboard": 0}
     order: dict[str, int] = {}
     for index, item in enumerate(spec.pages):
         ((name, _kinds),) = item.items()

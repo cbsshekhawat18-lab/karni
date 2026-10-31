@@ -7,8 +7,9 @@ written out, ``own:<field>`` read as ``own``, access rules sorted and their
 its explicit moves), a field written as ``{type, was}`` as its type, an
 entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
-no database, an entity's pages in list, detail, form order, and the site
-module listed whenever the kind has a site. What carries meaning in its
+no database, an entity's pages in list, detail, form order (a detail
+page's related tabs each as ``app.Entity.field``), and the site module
+listed whenever the kind has a site. What carries meaning in its
 order stays in order: fields, pages, search fields and the ordering.
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
@@ -28,10 +29,11 @@ from typing import Any
 
 from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
+from karni_cli.generators.naming import default_route
 from karni_cli.project import CliError
 from karni_cli.spec.schema import Spec
 
-__all__ = ["canonical_field", "normalise", "role_name"]
+__all__ = ["canonical_field", "normalise", "related_ref", "related_tab", "role_name"]
 
 _ENTITY_PAGES = ("list", "detail", "form")
 
@@ -89,6 +91,78 @@ def _access(rule: Any) -> Any:
     return out
 
 
+def _label(name: str, apps: dict[str, Any], app: str | None = None) -> str | None:
+    """``app.Name`` for ``Name`` or ``app.Name`` (``app``'s own entity first), else None."""
+    if "." in name:
+        label, entity = name.split(".", 1)
+        return name if entity in apps.get(label, {}).get("entities", {}) else None
+    if app is not None and name in apps.get(app, {}).get("entities", {}):
+        return f"{app}.{name}"
+    found = [f"{label}.{name}" for label, a in apps.items() if name in a.get("entities", {})]
+    return found[0] if len(found) == 1 else None
+
+
+def _fks(label: str, target: str, apps: dict[str, Any]) -> list[str]:
+    """The fk fields of the entity ``label`` that point at the entity ``target``."""
+    app, entity = label.split(".", 1)
+    fields = apps[app]["entities"][entity].get("fields", {})
+    found = []
+    for name, token in fields.items():
+        raw = (token if isinstance(token, str) else token.get("type", "")).rstrip("?")
+        kind, _, to = raw.partition(":")
+        if kind == "fk" and _label(to, apps, app) == target:
+            found.append(name)
+    return found
+
+
+def related_tab(ref: str, page: str, apps: dict[str, Any]) -> str:
+    """Experimental. What ResourceDetail's ``related`` takes for ``ref``.
+
+    The related entity's resource (``deals``), or ``resource.field``
+    (``deals.partner``) when that entity has more than one fk to ``page``.
+    """
+    canonical = related_ref(ref, page, apps)
+    label, _, field = canonical.rpartition(".")
+    target = _label(page, apps)
+    if not label or target is None or _label(label, apps) is None:
+        return ref
+    resource = default_route(label.split(".", 1)[1])
+    return resource if len(_fks(label, target, apps)) == 1 else f"{resource}.{field}"
+
+
+def related_ref(ref: str, page: str, apps: dict[str, Any]) -> str:
+    """Experimental. A related tab as ``app.Entity.field`` (unchanged when it names none).
+
+    ``page`` is the detail page's entity (``Name`` or ``app.Name``). A tab that names an
+    entity alone takes its one fk to that entity.
+    """
+    parts = ref.split(".")
+    field = parts[-1] if len(parts) > 1 and parts[-1][:1].islower() else None
+    label = _label(".".join(parts[:-1]) if field is not None else ref, apps)
+    target = _label(page, apps)
+    if label is None or target is None:
+        return ref
+    if field is None:
+        fks = _fks(label, target, apps)
+        if len(fks) != 1:
+            return ref
+        field = fks[0]
+    return f"{label}.{field}"
+
+
+def _entity_page(kind: str, kinds: list[Any], page: str, apps: dict[str, Any]) -> Any:
+    """``kind`` as the entry writes it (``detail`` with its related tabs), or None when absent."""
+    for written in kinds:
+        if written == kind:
+            return kind
+        if isinstance(written, dict) and kind in written:
+            related = written[kind].get("related") or []
+            if not related:
+                return kind
+            return {kind: {"related": [related_ref(ref, page, apps) for ref in related]}}
+    return None
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -128,7 +202,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     for item in data["pages"]:
         ((name, kinds),) = item.items()
         if name[:1].isupper():
-            kinds = [kind for kind in _ENTITY_PAGES if kind in kinds]
+            kinds = [_entity_page(kind, kinds, name, data["apps"]) for kind in _ENTITY_PAGES]
+            kinds = [kind for kind in kinds if kind is not None]
         pages.append({name: kinds})
     data["pages"] = pages
     data["seed"] = dict(sorted(data["seed"].items()))

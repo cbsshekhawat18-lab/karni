@@ -1002,18 +1002,47 @@ def _pages(ctx: _Context) -> None:
         for n, k in e.items()
     }
     new = {ident(n, resolve_new, {}): (n, k) for e in ctx.desired["pages"] for n, k in e.items()}
+    counted = ", ".join(sorted(name for _label, name in _entity_names(ctx.desired)))
     for ident_, (name, kinds) in new.items():
         if ident_ not in old:
-            ctx.add(Change("pages", "add", name, _show(kinds)))
+            ctx.add(Change("pages", "add", name, _show_page(name, kinds, counted)))
         elif old[ident_][1] != kinds:
-            ctx.add(Change("pages", "change", name, f"{_show(old[ident_][1])} -> {_show(kinds)}"))
+            before = _show_page(name, old[ident_][1], "")
+            ctx.add(Change("pages", "change", name, f"{before} -> {_show_page(name, kinds, '')}"))
     for ident_, (name, kinds) in old.items():
         if ident_ not in new:
-            ctx.add(Change("pages", "remove", name, _show(kinds)))
+            ctx.add(Change("pages", "remove", name, _show_page(name, kinds, "")))
     common_old = [i for i in old if i in new]
     common_new = [i for i in new if i in old]
     if common_old != common_new:
         ctx.add(Change("pages", "change", "navigation", ", ".join(new[i][0] for i in new)))
+
+
+def _entity_names(data: dict[str, Any]) -> list[tuple[str, str]]:
+    """``(app.Name, Name)`` of every entity of ``data`` (a normal form)."""
+    return [
+        (f"{app}.{name}", name)
+        for app, application in data.get("apps", {}).items()
+        for name in application.get("entities", {})
+    ]
+
+
+def _show_page(name: str, kinds: list[Any], counted: str) -> str:
+    """A page entry's kinds in words: ``list, detail (related crm.Deal.company), form``.
+
+    A dashboard other than the scaffold's home names what its chart counts (``counted``).
+    """
+    shown: list[str] = []
+    for kind in kinds:
+        if isinstance(kind, dict):
+            for key, options in kind.items():
+                related = ", ".join(options.get("related") or [])
+                shown.append(f"{key} (related {related})" if related else key)
+        elif kind == "dashboard" and name != "home" and counted:
+            shown.append(f"dashboard (rows per entity: {counted})")
+        else:
+            shown.append(str(kind))
+    return ", ".join(shown) or "none"
 
 
 def _seed(ctx: _Context) -> None:
@@ -1120,12 +1149,12 @@ def _page_managed(
     name = change.target
     ident = resolve(name, "") if name[:1].isupper() else name
     before = old_pages.get(ident, [])
-    after: list[str] = next(
-        (k for e in ctx.desired["pages"] for n, k in e.items() if n == name), []
+    after = schema.page_kind_names(
+        next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
     )
-    if change.action == "add" and set(after) & {"code", "dashboard"}:
+    if change.action == "add" and ("code" in after or ("dashboard" in after and name == "home")):
         return False  # the project's page (code), or the scaffold's home page (dashboard)
-    dropped = [kind for kind in before if kind not in after]
+    dropped = [kind for kind in schema.page_kind_names(before) if kind not in after]
     return all(f"{ident}:{kind}" in managed.pages for kind in dropped)
 
 

@@ -425,14 +425,15 @@ def _pages(
         for name, kinds in entry.items():
             label = ident(name, current_names)
             label = back.get(label, label)
-            theirs |= {f"{label}:{kind}" for kind in kinds}
+            theirs |= {f"{label}:{kind}" for kind in schema.page_kind_names(kinds)}
     theirs -= owned
     found = set()
     for entry in spec.pages:
         for name, kinds in entry.items():
-            for kind in kinds:
+            for kind in schema.page_kind_names(kinds):
                 key = f"{ident(name, labels)}:{kind}"
-                if kind in ("code", "dashboard") or key in theirs:
+                # The scaffold's home page is the project's; any other dashboard is built.
+                if kind == "code" or (kind == "dashboard" and name == "home") or key in theirs:
                     continue
                 found.add(key)
     return found
