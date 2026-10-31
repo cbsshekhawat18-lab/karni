@@ -287,7 +287,9 @@ def _search_option(entity: schema.Entity) -> dict[str, Any] | None:
     value = entity.global_search
     if value is False:
         return None
-    mapping = value if isinstance(value, schema.GlobalSearch) else schema.GlobalSearch.model_validate({})
+    mapping = (
+        value if isinstance(value, schema.GlobalSearch) else schema.GlobalSearch.model_validate({})
+    )
     fields = list(mapping.fields) if mapping.fields else list(entity.search)
     option: dict[str, Any] = {"fields": fields, "title": mapping.title or fields[0]}
     if mapping.subtitle:

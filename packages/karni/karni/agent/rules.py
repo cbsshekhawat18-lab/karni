@@ -296,8 +296,8 @@ RULES: tuple[Rule, ...] = (
         ),
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
-            "settings, Docker/Compose config, Celery config, HTML tables, forms, detail "
-            "views, or a search over several models (declare `class Karni: search` on each "
+            "settings, Docker/Compose config, Celery config, HTML tables, forms, or detail "
+            "views, nor a search over several models (declare `class Karni: search` on each "
             "model: `GET /api/search/` and `<GlobalSearch>` serve it). Karni provides all of "
             "these. If you think you need one, you need an "
             "override on an existing Karni base instead. The tables, forms and detail views "
