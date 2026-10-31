@@ -445,8 +445,39 @@ def _plan_modules(ws: Workspace, plan: plan_mod.Plan) -> list[str]:
     for change in plan.changes:
         if change.area == "modules" and change.action == "add":
             plan_module(ws, change.target)
+            _plan_module_urls(ws, change.target)
             lines.append(change.target)
     return lines
+
+
+def _plan_module_urls(ws: Workspace, module: str) -> None:
+    """The module's URL include (its manifest's ``wiring.urls``) at config/urls.py's marker.
+
+    ``karni add`` prints the line for you to place. A build places it, so the
+    code it generates (a protected file's download path, a webhook) works at
+    once. ``karni remove`` takes it out again. A config/urls.py without the
+    ``# karni:urls`` marker is left alone.
+    """
+    from karni_cli.commands.add import find_manifest
+    from karni_cli.generators.pysource import Import, ensure_imports
+    from karni_cli.urls_edit import add_route, has_marker, routes
+
+    manifest, _loaded = find_manifest(ws.root, module)
+    entry = manifest.wiring.urls if manifest is not None else ""
+    text = ws.read(_URLS)
+    if not entry or text is None or not has_marker(text):
+        return
+    included = re.search(r"""include\(\s*["']([^"']+)["']""", entry)
+    if included and any(found == included.group(1) for _r, _n, found in routes(text)):
+        return
+    text = ensure_imports(ws, _URLS, text, [Import("django.urls", "include")])
+    added = add_route(text, f"{entry},", filename=_URLS, manual="")
+    if added is not None:
+        ws.write(_URLS, added)
+
+
+#: The project's root URLconf, where a module's include goes.
+_URLS: Final = "config/urls.py"
 
 
 def _deletions(root: Path, rec: Record, rendered: render.Output) -> list[str]:

@@ -11,7 +11,13 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
-MODULES = ("karni-payments", "karni-approvals", "karni-impersonation", "karni-site")
+MODULES = (
+    "karni-payments",
+    "karni-approvals",
+    "karni-impersonation",
+    "karni-site",
+    "karni-storage",
+)
 #: Set where every module is installed (CI's Python jobs): a test that needs a
 #: module fails without it instead of skipping, so the coverage cannot drop out.
 REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"

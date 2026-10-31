@@ -304,6 +304,35 @@ def test_a_module_removed_is_risky_with_its_tables(base: Project) -> None:
     assert _only(added, "approvals").line() == "  + approvals: required 2"
 
 
+def test_the_storage_module_is_planned_with_its_provider_and_protected_fields(
+    base: Project,
+) -> None:
+    added = _plan(
+        _edit(
+            ("roles:\n", "modules: {storage: {provider: r2}}\nroles:\n"),
+            (
+                "          kind: str:30?\n",
+                "          kind: str:30?\n          manual: file:protected?\n",
+            ),
+        ),
+        base,
+    )
+    change = _only(added, "storage")
+    assert change.action == "add" and not change.risky
+    assert change.line() == "  + storage: provider r2"
+    assert _only(added, "shop.Product.manual").line() == "  + shop.Product.manual: file:protected?"
+    facts = json.loads(json.dumps(base.facts))
+    facts["modules"].append(
+        {"name": "storage", "settings": {"KARNI_STORAGE_PROVIDER": "aws"}, "defaults": {}}
+    )
+    report = validate_text(BASE)
+    assert report.spec is not None
+    plan = plan_project(report.spec, facts, base.root, file="karni.yaml")
+    apply_counts(plan, lambda requests: {"rows": [3], "unreachable": {}})
+    removed = _only(plan, "storage")
+    assert removed.risky and removed.action == "remove" and removed.rows == 3
+
+
 def test_counts_say_why_when_the_database_does_not_answer(
     base: Project, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

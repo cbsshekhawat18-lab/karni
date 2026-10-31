@@ -119,6 +119,9 @@ KINDS: Final = {
     "karni.fields.ranges.DateRangeField": "daterange",
     "karni.fields.ranges.DateTimeRangeField": "datetimerange",
     "karni.fields.capacity.CapacityField": "capacity",
+    # karni-storage's protected fields: file:protected and image:protected
+    "karni_storage.fields.ProtectedFileField": "file",
+    "karni_storage.fields.ProtectedImageField": "image",
 }
 _STRINGISH: Final = frozenset(
     {"str", "text", "email", "url", "slug", "file", "image", "choice", "phone", "country"}
@@ -306,6 +309,8 @@ def field_token(
         expected["default"] = "uuid.uuid4"
     elif kind in ("file", "image"):
         expected["upload_to"] = f"{app}/{snake(model)}/"
+        if str(fact["class"]).startswith("karni_storage."):
+            args = ["protected"]
     elif kind in ("fk", "o2o", "m2m"):
         target = _target(fact, app, model, ctx)
         if target is None:

@@ -41,6 +41,7 @@ from karni_cli.generators.fields import (
     FieldSpec,
     RelationTarget,
     images_extra_note,
+    is_protected,
     is_user_target,
     parse_fields,
     pillow_note,
@@ -170,6 +171,7 @@ def plan(
     base = _base_class(ws, pk)
     model = require_pascal(name, "Model name")
     specs = parse_fields(field_tokens)
+    _require_storage(ws, specs)
     path = models_file(ws, app)
     rel = ws.rel(path)
     body = render_model_body(
@@ -208,6 +210,26 @@ def plan(
     if body.images:
         plan_images_extra(ws, body.images)
     return model
+
+
+def _require_storage(ws: Workspace, specs: list[FieldSpec]) -> None:
+    """``file:protected`` / ``image:protected`` need karni-storage added (``C720``)."""
+    protected = [spec.name for spec in specs if is_protected(spec)]
+    if not protected:
+        return
+    from karni_cli.settings_edit import block_entries
+
+    settings = ws.read("config/settings.py")
+    try:
+        apps = block_entries(settings) if settings is not None else []
+    except CliError:
+        apps = []
+    if "karni_storage" not in apps:
+        raise CliError(
+            f"{', '.join(protected)}: a protected file field needs the storage module. Add it "
+            "first: karni add storage (then pip install karni-storage).",
+            code="C720",
+        )
 
 
 def _base_class(ws: Workspace, pk: str | None) -> str:

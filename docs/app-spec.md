@@ -142,7 +142,7 @@ published file differs from the code: regenerate it with
 
 Each key is a module `karni add <name>` installs, one of the modules of
 [the module catalog](modules.md#the-module-catalog) (`karni modules list`):
-Karni's `approvals`, `impersonation`, `payments` and `site`, and any module
+Karni's `approvals`, `impersonation`, `payments`, `site` and `storage`, and any module
 installed next to karni-cli that ships a manifest. The value is a mapping of
 the module's options, or nothing. An option is one of the module's own
 settings its manifest lists, lowercased and without its prefix, with the
@@ -234,6 +234,9 @@ parser and renderer, so the spec and the generator can never disagree:
 written as `karni make form --states` takes it), `daterange`,
 `datetimerange` and `capacity[:total]`, with a trailing `?` for optional.
 See [the karni command](cli.md) for what each one generates.
+`file:protected` and `image:protected` are a file only the row's readers may
+download ([protected files](storage.md)): they need `modules: {storage: ...}`
+(`C720`).
 
 A relation points at an entity of the same app (`fk:Studio`), of another app
 (`fk:shop.Product`), at the user (`fk:User`), at itself (`fk:self`), or at a
@@ -377,6 +380,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
+| [C720](errors.md#c720) | `file:protected` or `image:protected` without the storage module |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
 

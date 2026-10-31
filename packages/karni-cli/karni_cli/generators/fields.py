@@ -57,6 +57,13 @@ FIELD_DOCS: tuple[tuple[str, str], ...] = (
             "pyproject.toml depend on `karni[images]` (Pillow)"
         ),
     ),
+    (
+        "doc:file:protected / photo:image:protected",
+        (
+            "ProtectedFileField / ProtectedImageField (karni-storage, experimental): stored "
+            "privately, downloaded only through the row's viewset. Needs `karni add storage`"
+        ),
+    ),
     ("ref:uuid", "UUIDField(default=uuid.uuid4)"),
     ("status:choice:draft|live", "a TextChoices class + CharField(choices=..., default=first)"),
     *lifecycle_fields.FIELD_DOCS,  # state, ranges, capacity
@@ -370,7 +377,12 @@ def render_field(
         django = "FileField" if spec.kind == "file" else "ImageField"
         upload = pystr(f"{app_label}/{snake(model)}/")
         args = [f"upload_to={upload}", *_optional_kwargs(spec)]
-        out.lines.append(call(head + django, args, indent, line_length))
+        if is_protected(spec):
+            django = f"Protected{django}"
+            out.imports.append(Import(PROTECTED_MODULE, django))
+            out.lines.append(call(f"{spec.name} = {django}", args, indent, line_length))
+        else:
+            out.lines.append(call(head + django, args, indent, line_length))
         if spec.kind == "image":
             # The caller asks the project's interpreter and notes Pillow only if it is missing.
             out.images.append(f"{model}.{spec.name}")
@@ -431,6 +443,27 @@ def _render_choice(spec: FieldSpec, out: Rendered, indent: str, line_length: int
     args = [f"max_length={length}", f"choices={enum}.choices"]
     args += _optional_kwargs(spec) or [f"default={enum}.{members[0][0]}"]
     out.lines.append(call(f"{spec.name} = models.CharField", args, indent, line_length))
+
+
+#: Where ``file:protected`` and ``image:protected`` come from (the karni-storage module).
+PROTECTED_MODULE = "karni_storage.fields"
+
+
+def is_protected(spec: FieldSpec) -> bool:
+    """Experimental. True for ``file:protected`` / ``image:protected`` (karni-storage).
+
+    :raises CliError: ``C104`` for any other argument of a file or image field, so
+        a misspelt ``protected`` never leaves a file public without a word.
+    """
+    if spec.kind not in {"file", "image"} or not spec.args:
+        return False
+    if spec.args != ("protected",):
+        raise CliError(
+            f"Field {spec.name}: {spec.kind} takes one argument, protected "
+            f"({spec.name}:{spec.kind}:protected), not {':'.join(spec.args)!r}.",
+            code="C104",
+        )
+    return True
 
 
 def relation_name(spec: FieldSpec) -> str:
