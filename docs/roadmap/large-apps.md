@@ -70,7 +70,7 @@ cannot start before the item it names is done.
 
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
-| 17 | A medical-intelligence reference app (`examples/medintel`) that uses every item above, with synthetic data and a friction log. | 1a to 5 to start, then each later item | planned |
+| 17 | A medical-intelligence reference app (`examples/medintel`) that uses every item above, with synthetic data and a friction log. | 1a to 5 to start, then each later item | done |
 
 Notes on the order:
 

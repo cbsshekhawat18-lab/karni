@@ -27,7 +27,11 @@ pagination, `?expand=`, an N+1-free query plan, an admin page, a generated
 form and table in the frontend, and a test that proves the whole surface in
 one line (`assert_crud`). The reference application,
 [EventHub](tutorial.md), is an event ticketing platform with payments, a
-Celery email and four roles in **617 lines of project code**, measured.
+Celery email and four roles in **617 lines of project code**, measured. A
+second reference, [Medintel](https://github.com/cbsshekhawat18-lab/karni/tree/main/examples/medintel)
+(trees, per-user grants, taxonomies, aggregates, search, two sign-in methods),
+records what a large data app still needs in its
+[friction log](friction/medintel.md).
 
 ## Where to go
 

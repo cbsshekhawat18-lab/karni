@@ -303,6 +303,29 @@ def _resolve(model: Any) -> type[models.Model]:
     return model  # type: ignore[no-any-return]
 
 
+def _wipe(model: type[models.Model]) -> None:
+    """Delete every row of ``model``. A tree's ``parent`` protects its children: leaves first."""
+    rows = model._base_manager
+    parent = next(
+        (
+            f
+            for f in model._meta.concrete_fields
+            if f.is_relation
+            and f.related_model is model
+            and f.remote_field.on_delete is models.PROTECT
+        ),
+        None,
+    )
+    while parent is not None and rows.exists():
+        leaves = rows.exclude(
+            pk__in=rows.filter(**{f"{parent.name}__isnull": False}).values(parent.attname)
+        )
+        if not leaves.exists():  # a cycle: no leaf to start from, delete() reports it
+            break
+        leaves.delete()
+    rows.all().delete()
+
+
 def _edges(model: type[models.Model], members: set[Any], *, hard_only: bool) -> set[Any]:
     found: set[Any] = set()
     for relation in model._meta.concrete_fields:
@@ -716,7 +739,7 @@ class _Run:
         project = {model for model in _project_models()}
         wiped = [model for model in reversed(plan) if model in project]
         for model in wiped:
-            model._base_manager.all().delete()
+            _wipe(model)
         tables = {model._meta.db_table for model in wiped}
         tables |= {
             m2m.remote_field.through._meta.db_table

@@ -30,7 +30,7 @@ from karni.testing.factories import DEFAULT_PASSWORD, factory_for
 from karni.testing.values import SAFE_DOMAINS, ValueInference
 from tests.perfapp.models import Chapter, Genre, Loop, Novel, Publisher, Specimen, Writer
 from tests.perfapp.seeds import PublisherSeeder, WriterSeeder
-from tests.testapp.models import Event, Part, Reading, Shelf, Tag, Venue
+from tests.testapp.models import Event, Part, Reading, Region, Shelf, Tag, Venue
 
 pytestmark = pytest.mark.django_db
 
@@ -289,3 +289,12 @@ def test_occupied_and_planned_rows() -> None:
     assert occupied([Venue, Tag, get_user_model()]) == {"testapp.Tag": 1}
     assert planned_rows(Tag, 7) == 7 and planned_rows(get_user_model(), 20) == 5
     assert planned_rows(Publisher, 7) == PublisherSeeder.Meta.count
+
+
+def test_reset_wipes_a_tree_whose_parent_protects_its_children() -> None:
+    """--reset deletes a tree leaves first: a node's children are PROTECTed by `parent`."""
+    seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
+    assert Region.objects.filter(parent__isnull=False).exists()
+    report = seed(models=["testapp.Region"], count=12, seed=5, now=NOW, reset=True)
+    assert report.reset == ["testapp.Region"]
+    assert Region.objects.count() == 12

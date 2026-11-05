@@ -1,0 +1,62 @@
+# The web front of medintel's production stack (docker-compose.prod.yml).
+# `karni make deploy compose` wrote it, and it is yours to edit. The release step
+# publishes it with the image into /srv/data/web/, next to the built staff app and
+# karni-headers.caddy: the security headers Django sends, from the project's
+# settings, for the files caddy serves itself.
+#
+# Caddy gets a TLS certificate for {$DOMAIN} by itself (Let's Encrypt or ZeroSSL)
+# once DNS points at the server and ports 80 and 443 reach it. A local name such
+# as localhost gets a certificate from Caddy's own local authority instead.
+{
+	# Inside a container Caddy cannot add its local authority to a trust store.
+	skip_install_trust
+	# An address for the certificate authority's expiry notices:
+	# email ops@example.com
+}
+
+import /srv/data/web/karni-headers.caddy
+
+# Django: gunicorn in the django service. While it restarts, caddy retries for up
+# to 30 seconds instead of answering 502, so a quick update drops no request.
+(django) {
+	reverse_proxy django:8000 {
+		lb_try_duration 30s
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Static files (collectstatic) and uploads, straight from the shared volume.
+	handle /static/* {
+		root * /srv/data
+		import karni_headers
+		file_server
+	}
+	handle /media/* {
+		root * /srv/data
+		# Uploads are served as files and never run as a page's script.
+		header X-Content-Type-Options "nosniff"
+		header Content-Security-Policy "script-src 'none'"
+		file_server
+	}
+
+	# The staff app (frontend/), built into the image for /app/.
+	redir /app /app/ 308
+	handle /app/* {
+		root * /srv/data/web
+		import karni_headers
+		@assets path /app/assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /app/assets/*
+		header @pages Cache-Control "no-cache"
+		# A route of the app (a reload, a link) answers with its index.html.
+		try_files {path} /app/index.html
+		file_server
+	}
+
+	# Everything else is Django: the API, the admin, /health/ and a public site.
+	handle {
+		import django
+	}
+}
