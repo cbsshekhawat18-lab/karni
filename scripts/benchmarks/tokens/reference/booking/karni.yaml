@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=https://cbsshekhawat18-lab.github.io/karni/assets/karni-spec.schema.json
+version: 1
+app:
+  name: Bench App
+  kind: app
+modules:
+  payments: {provider: test, currency: usd}
+roles:
+  staff: {name: Staff, system: true, grants: {"*": all}}
+  member: {name: Member, default: true, grants: {bookings.booking: own}}
+apps:
+  bookings:
+    entities:
+      Resource:
+        fields:
+          name: "str:120"
+          description: "text?"
+          price: "money:USD"
+        search: [name]
+        order: name
+        access: {read: authenticated, write: "role:staff"}
+      Slot:
+        fields:
+          resource: fk:Resource
+          starts_at: datetime
+          ends_at: datetime
+          capacity: int
+          remaining: "capacity:capacity"
+        order: starts_at
+        access: {read: authenticated, write: "role:staff"}
+      Booking:
+        fields:
+          slot: fk:Slot
+          member: fk:User
+          status: "state:pending>confirmed|pending>cancelled|confirmed>cancelled"
+          note: "text?"
+          payment: "fk:karni_payments.Payment?"
+        owner: member
+        audit: [status]
+        order: -created_at
+        access:
+          read: ["owned:member", "role:staff"]
+          write: ["owned:member", "role:staff"]
+          create: "role:member"
+pages:
+  - home: dashboard
+  - Resource: [list, detail, form]
+  - Slot: [list, form]
+  - Booking: [list, detail]
+seed: {Resource: 3, Slot: 10, Booking: 0}
