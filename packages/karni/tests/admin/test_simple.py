@@ -158,9 +158,7 @@ def test_a_deleted_row_has_restore_not_delete_and_the_deleted_filter_exists() ->
 def test_row_restore_needs_the_change_permission() -> None:
     note = _notes(1)[0]
     note.delete()
-    response = _client(_staff("viewer@example.com", "viewer")).post(
-        _url(Note, "restore", note.pk)
-    )
+    response = _client(_staff("viewer@example.com", "viewer")).post(_url(Note, "restore", note.pk))
     assert response.status_code in (302, 403, 404)
     assert not Note.objects.filter(pk=note.pk).exists()
 
@@ -191,7 +189,10 @@ def test_bulk_delete_confirms_with_count_and_sample_then_soft_deletes() -> None:
         _url(Note, "changelist"),
         {"action": "delete_selected", "_selected_action": ids, "post": "yes"},
     )
-    assert Note.objects.count() == 0 and Note.objects.without("soft_delete", reason="test").count() == 12
+    assert (
+        Note.objects.count() == 0
+        and Note.objects.without("soft_delete", reason="test").count() == 12
+    )
     assert LogEntry.objects.count() == before + 12  # audited
 
 

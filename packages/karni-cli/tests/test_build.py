@@ -666,7 +666,7 @@ def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
         "  ~ classes.Session column_sets: none -> default title, starts_at, money title, price"
         in plan
     )
-    assert '  ~ classes.Session help: none -> One class on the timetable.' in plan
+    assert "  ~ classes.Session help: none -> One class on the timetable." in plan
     code, out = _build()
     assert code == 0, out
     models = (copy / "classes" / "karni" / "models.py").read_text()

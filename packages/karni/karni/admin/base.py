@@ -493,7 +493,7 @@ class KarniAdminMixin(admin.ModelAdmin):
         return super().render_change_form(request, context, add, change, form_url, obj)
 
     def row_actions_column(self, request: HttpRequest) -> Any:
-        """The *Actions* column: Edit and Delete (or Restore) on each row, as the user's rights allow.
+        """The *Actions* column: Edit and Delete (or Restore) on each row, as rights allow.
 
         ``None`` (no column) when ``karni_row_actions`` is off, in a popup, or the
         user may do none of it. A user who can only view gets *View*. Rights are
@@ -525,15 +525,16 @@ class KarniAdminMixin(admin.ModelAdmin):
             if deleted and can_change:
                 buttons.append(("button", reverse(f"{stem}_restore", args=[key]), "", _("Restore")))
             elif can_delete and not deleted:
-                buttons.append(
-                    ("a", reverse(f"{stem}_delete", args=[key]), "danger", _("Delete"))
-                )
+                buttons.append(("a", reverse(f"{stem}_delete", args=[key]), "danger", _("Delete")))
             return format_html(
                 '<span class="karni-row-actions">{}</span>',
                 format_html_join(
                     "",
                     "{}",
-                    ((_row_button(tag, url, kind, text, name),) for tag, url, kind, text in buttons),
+                    (
+                        (_row_button(tag, url, kind, text, name),)
+                        for tag, url, kind, text in buttons
+                    ),
                 ),
             )
 
@@ -934,7 +935,7 @@ def build_model_admin(
 
 
 def _row_button(tag: str, url: str, kind: str, text: str, name: str) -> Any:
-    """One button of the *Actions* column, named for its row so a screen reader can tell them apart."""
+    """One button of the *Actions* column, named for its row for screen readers."""
     classes = "karni-button karni-button-sm " + (
         "karni-button-danger" if kind == "danger" else "karni-button-secondary"
     )
@@ -942,7 +943,8 @@ def _row_button(tag: str, url: str, kind: str, text: str, name: str) -> Any:
     if tag == "button":
         # A POST to the row's own URL from inside the changelist form (it carries the CSRF token).
         return format_html(
-            '<button type="submit" class="{}" formaction="{}" formmethod="post" aria-label="{}">{}</button>',
+            '<button type="submit" class="{}" formaction="{}" formmethod="post"'
+            ' aria-label="{}">{}</button>',
             classes,
             url,
             label,

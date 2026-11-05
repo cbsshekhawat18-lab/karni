@@ -900,12 +900,29 @@ apply codemods and list the manual steps. This file is the human summary.
   generate a distinct value per row, and the role sync after `migrate` skips
   a database the role tables are not routed to.
   [docs/models.md](docs/models.md#external-tables-views-and-a-second-database).
-- **The admin is light only by default.** `KARNI_ADMIN_THEME` (default
-  `"light"`) pins unfold's light palette and hides its light / dark / system
-  switch, read on every request. `"auto"` brings the switch back and
-  `"dark"` pins the dark palette. See
+- **The admin is light only.** Unfold's `THEME` is `"light"`: no light / dark
+  / system switch on any page, and a browser in dark mode still gets the
+  light admin. There is no setting for it. See
   [docs/admin.md](docs/admin.md#theming) and the
   [migration note](docs/migrations/0.5.md#the-admin-is-light-only).
+- **The admin is simple to use.** Every list has a labelled **Add** button and
+  **Edit**, **Delete** (or **Restore**) buttons on each row, shown only when
+  the user's permissions allow them. Bulk actions on every list: delete
+  selected (soft where the model has it, with a count and a sample on the
+  confirmation), restore selected, **edit selected** (set chosen fields to one
+  value on every selected row, saved row by row in one transaction, field
+  permissions respected, `KARNI_ADMIN_BULK_EDIT_MAX` rows at most, default
+  500) and export selected. Every form has a fixed bar (Save first, Save and
+  add another, Save and continue editing, Cancel, Delete). Technical fields
+  move to a collapsed read-only **Details** section, lists show at most six
+  columns (name first, updated time last), and an empty list says "No
+  \<models\> yet." with an Add button. The home page has a **Getting started**
+  panel a user can dismiss and bring back from the user menu
+  (`KARNI_ADMIN_GUIDE`), and each list and form shows one line of help from
+  `class Karni: help`, else the model's docstring. `karni.yaml` takes `help:`
+  per entity. Run `migrate` (one new table, `karni_admin_guidedismissal`).
+  See [docs/admin.md](docs/admin.md#the-screens) and the
+  [migration note](docs/migrations/0.5.md#the-admin-is-simple-to-use).
 - **Everything a client sees on a public site is edited in the admin.**
   The karni-site module now holds the site's own details (`SiteSettings`:
   name, tagline, logo, favicon, the default share image, address, phone,

@@ -453,7 +453,7 @@ def test_text_and_markdown_swap_safely_and_the_layout_keys(base: Project) -> Non
     assert note.detail == "text? -> markdown?" and not note.risky  # the same text column
     assert _only(plan, "shop.Supplier groups").detail == "none -> Main name"
     assert _only(plan, "shop.Supplier column_sets").detail == "none -> default name, codes id, name"
-    assert _only(plan, "shop.Supplier help").detail == 'none -> Who we buy from.'
+    assert _only(plan, "shop.Supplier help").detail == "none -> Who we buy from."
     assert not plan.risky
     required = _only(
         _plan(_edit(("          note: text?\n", "          note: markdown\n")), base),
