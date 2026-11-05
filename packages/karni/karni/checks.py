@@ -783,3 +783,20 @@ from karni import guard_checks as _guard_checks  # noqa: E402,F401
 # External tables, SQL views and a second database, E270-E276 / W541 / W542 (karni.db.checks).
 from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401
+
+
+@checks.register(checks.Tags.urls)
+def check_api_versions(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E590 / E591 / W660: the API version settings (experimental).
+
+    E590 is a bad ``KARNI_API_VERSION`` or ``KARNI_API_VERSIONS``, E591 a bad
+    ``KARNI_API_UNVERSIONED``, and W660 a version past its sunset date.
+    """
+    from karni.api.versions import problems
+
+    return [
+        check_error(code, message, hint=hint, obj="settings")
+        if code.startswith("E")
+        else check_warning(code, message, hint=hint, obj="settings")
+        for code, message, hint in problems()
+    ]

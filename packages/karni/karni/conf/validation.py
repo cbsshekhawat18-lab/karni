@@ -113,6 +113,12 @@ class KarniSettingsModel(BaseModel):
     KARNI_ADMIN_SEARCH_MAX: int = 5
     KARNI_HEALTH_CHECKS: list[str] = Field(default_factory=list)
     KARNI_HEALTH_CELERY_TIMEOUT: float = 1.0
+    KARNI_READYZ_CHECKS: list[str] = Field(default_factory=list)
+    KARNI_HEALTH_TIMEOUT: float = 3.0
+    KARNI_LOG_QUIET_PATHS: list[str] = Field(default_factory=list)
+    KARNI_API_VERSION: str = ""
+    KARNI_API_VERSIONS: Any = Field(default_factory=dict)
+    KARNI_API_UNVERSIONED: str = "keep"
     KARNI_THUMBNAILER: str = "karni.storage.thumbnails.make_thumbnail"
     KARNI_AUDIT_ASYNC: bool = False
     KARNI_AUDIT_RETENTION_DAYS: int | None = None
@@ -667,6 +673,13 @@ class KarniSettingsModel(BaseModel):
         for path in self.KARNI_HEALTH_CHECKS:
             if "." not in path:
                 errors.append(f"KARNI_HEALTH_CHECKS entry {path!r} is not a dotted import path")
+        for path in self.KARNI_READYZ_CHECKS:
+            if "." not in path:
+                errors.append(f"KARNI_READYZ_CHECKS entry {path!r} is not a dotted import path")
+        if self.KARNI_HEALTH_TIMEOUT <= 0:
+            errors.append(
+                f"KARNI_HEALTH_TIMEOUT = {self.KARNI_HEALTH_TIMEOUT!r} must be greater than 0"
+            )
         if self.KARNI_HEALTH_CELERY_TIMEOUT <= 0:
             errors.append(
                 f"KARNI_HEALTH_CELERY_TIMEOUT = {self.KARNI_HEALTH_CELERY_TIMEOUT!r} "

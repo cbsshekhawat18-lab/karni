@@ -219,6 +219,9 @@ BASE: dict[str, Any] = {
         # Backs AuditedModel.created_by/updated_by; resolves the user lazily,
         # so JWT users authenticated later inside DRF views are seen too.
         "karni.middleware.CurrentUserMiddleware",
+        # Deprecation / Sunset / Link on a deprecated API version (experimental); removed
+        # from the chain at startup while no version is deprecated.
+        "karni.api.versions.ApiVersionHeadersMiddleware",
         # The terms gate (experimental): 403 E245 under KARNI_TERMS["paths"] until a
         # signed-in user accepts the current version. Removed from the chain at
         # startup unless KARNI_TERMS requires acceptance. After authentication.
@@ -393,6 +396,9 @@ BASE: dict[str, Any] = {
         # Split request/response components so file-upload fields keep their
         # binary format on the request side (frontend codegen relies on it).
         "COMPONENT_SPLIT_REQUEST": True,
+        # One document per API version when versions are mounted; spectacular's own
+        # generator otherwise (karni.api.versions, experimental).
+        "DEFAULT_GENERATOR_CLASS": "karni.api.versions.VersionedSchemaGenerator",
         # spectacular's enum postprocessing, with colliding enums named by
         # model and field (BookingStatusEnum, not Status469Enum), then the root
         # x-karni-auth-mode extension @karni/ui's AuthProvider defaults from.
@@ -628,6 +634,28 @@ BASE: dict[str, Any] = {
         ],
     ),
     "KARNI_HEALTH_CELERY_TIMEOUT": 1.0,
+    # /readyz: the database, the cache and the Celery broker (no worker needed), each
+    # given KARNI_HEALTH_TIMEOUT seconds. Comma-separated in the environment.
+    "KARNI_READYZ_CHECKS": env.list(
+        "KARNI_READYZ_CHECKS",
+        default=[
+            "karni.health.checks.check_database",
+            "karni.health.checks.check_cache",
+            "karni.health.checks.check_broker",
+        ],
+    ),
+    "KARNI_HEALTH_TIMEOUT": env.float("KARNI_HEALTH_TIMEOUT", default=3.0),
+    # Paths whose healthy requests the request log skips (a probe asked every few seconds).
+    "KARNI_LOG_QUIET_PATHS": env.list(
+        "KARNI_LOG_QUIET_PATHS", default=["/healthz", "/readyz", "/health/"]
+    ),
+    # --- API versions (karni.api.versions, experimental) --------------------
+    # "v1" mounts the API at /api/v1/ (karni.api.versions.api_urls in config/urls.py).
+    "KARNI_API_VERSION": env.str("KARNI_API_VERSION", default=""),
+    # {"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://..."}}
+    "KARNI_API_VERSIONS": env.json("KARNI_API_VERSIONS", default={}),
+    # What /api/ without a version does: "keep", "redirect" (308) or "remove".
+    "KARNI_API_UNVERSIONED": env.str("KARNI_API_UNVERSIONED", default="keep"),
     "KARNI_THUMBNAILER": "karni.storage.thumbnails.make_thumbnail",
     "KARNI_VALIDATE": True,
     # --- Import and export (karni.transfer) ---------------------------------

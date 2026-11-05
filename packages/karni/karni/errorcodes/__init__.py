@@ -1557,6 +1557,40 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
         "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
     ),
+    # E590-E599 / W660-W669 production proof: API versions (karni.api.versions, experimental)
+    _e(
+        "E590",
+        "The API version settings cannot work",
+        "check",
+        "karni.checks.check_api_versions",
+        "KARNI_API_VERSION is a URL segment (lower case letters, digits and -, at most 16 "
+        "characters), and KARNI_API_VERSIONS is a dict of version name to a dict with the keys "
+        "router, deprecated, sunset and notes. A sunset or deprecated date is written "
+        "'YYYY-MM-DD', and a router is a dotted path to a zero-argument factory. One of them is "
+        "not, so the versions cannot be mounted.",
+        "Fix the setting the message names. Example: KARNI_API_VERSION = 'v1' and "
+        "KARNI_API_VERSIONS = {'v0': {'deprecated': '2026-06-01', 'sunset': '2027-01-31'}}.",
+    ),
+    _e(
+        "E591",
+        "KARNI_API_UNVERSIONED is not usable",
+        "check",
+        "karni.checks.check_api_versions",
+        "KARNI_API_UNVERSIONED says what /api/ without a version does once versions exist: "
+        "'keep', 'redirect' or 'remove'. 'redirect' sends clients to the current version, so it "
+        "needs KARNI_API_VERSION.",
+        "Use 'keep', 'redirect' or 'remove', and set KARNI_API_VERSION when you redirect.",
+    ),
+    _e(
+        "W660",
+        "An API version is past its sunset date",
+        "warning",
+        "karni.checks.check_api_versions (karni check)",
+        "A version's Sunset header promised the day it would go. That day has passed and the "
+        "version is still mounted, so clients that read the header were told something untrue.",
+        "Remove the version from KARNI_API_VERSIONS once its clients have moved, or move its "
+        "sunset date. Add 'karni.W660' to SILENCED_SYSTEM_CHECKS to keep it mounted.",
+    ),
     # E6xx testing and seeding
     _e(
         "E601",
