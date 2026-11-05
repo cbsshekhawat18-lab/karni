@@ -239,14 +239,27 @@ migration = "migrations/0.5.md#a-procedure-from-a-design-to-content-run-karni-ru
 [[change]]
 id = "admin-light-only"
 kind = "behaviour"
-symbol = "KARNI_ADMIN_THEME"
+symbol = "UNFOLD[\"THEME\"]"
 summary = """\
-The admin is light only by default: KARNI_ADMIN_THEME (default "light") sets \
-UNFOLD["THEME"], which pins unfold's light palette and hides its light / dark / \
-system switch. Set KARNI_ADMIN_THEME = "auto" for the switch, or "dark". A \
-project that sets UNFOLD["THEME"] itself keeps its value."""
+The admin is light only: UNFOLD["THEME"] is "light", which pins unfold's light \
+palette and hides its light / dark / system switch, and a browser in dark mode \
+still gets the light admin. There is no setting for it. A project that sets \
+UNFOLD["THEME"] itself keeps its value."""
 mechanical = false
 migration = "migrations/0.5.md#the-admin-is-light-only"
+
+[[change]]
+id = "admin-simple"
+kind = "behaviour"
+symbol = "karni.admin"
+summary = """\
+The admin has labelled Add, Edit, Delete and Restore buttons, bulk actions (delete, \
+restore, edit selected, export), a fixed save bar, a collapsed Details section for \
+technical fields, at most six list columns, an empty state, a one-line help from \
+class Karni: help, and a Getting started panel. Run migrate: the panel's dismissal is \
+one new table, karni_admin_guidedismissal."""
+mechanical = false
+migration = "migrations/0.5.md#the-admin-is-simple-to-use"
 
 [[change]]
 id = "project-kind"

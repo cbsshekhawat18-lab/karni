@@ -39,16 +39,16 @@ from tests.adminapp.models import (
 
 
 class TestListDisplay:
-    def test_scalarish_fields_in_declaration_order_capped_at_six(self) -> None:
+    def test_name_first_key_fields_then_the_updated_time_capped_at_six(self) -> None:
         # char, slug, email and url are all CharField family; blurb (Text)
-        # never qualifies; the cap (6) truncates everything after price.
+        # never qualifies; the cap (6) keeps one place for updated_at.
         assert derive_list_display(KitchenSink) == [
             "name",
             "slug",
             "email",
             "url",
             "count",
-            "price",
+            "updated_at",
         ]
 
     def test_text_json_file_image_duration_uuid_and_m2m_never_qualify(self) -> None:
@@ -68,6 +68,7 @@ class TestListDisplay:
             "released_at",
             "status",
             "category",
+            "updated_at",
         ]
         # ...and the excluded shapes are demonstrably absent.
         for name in ("blurb", "payload", "attachment", "cover", "runtime", "token", "tags"):
@@ -75,7 +76,7 @@ class TestListDisplay:
 
     @override_settings(KARNI_ADMIN_LIST_DISPLAY_MAX=3)
     def test_cap_is_read_from_settings_per_call(self) -> None:
-        assert derive_list_display(KitchenSink) == ["name", "slug", "email"]
+        assert derive_list_display(KitchenSink) == ["name", "slug", "updated_at"]
 
     def test_falls_back_to_str_when_nothing_qualifies(self) -> None:
         # Hidden has only audit fields and a TextField.

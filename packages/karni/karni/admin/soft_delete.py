@@ -29,8 +29,9 @@ from django.contrib.admin import helpers
 from django.contrib.admin.utils import model_ngettext
 from django.core.exceptions import PermissionDenied
 from django.db.models import QuerySet
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
+from django.urls import path, reverse
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
@@ -79,7 +80,7 @@ class SoftDeleteListFilter(admin.SimpleListFilter):
     ``AdminMeta.list_filter`` (or ``AdminMeta.extra``) on the model.
     """
 
-    title = gettext_lazy("deleted")
+    title = gettext_lazy("Deleted")
     parameter_name = "deleted"
 
     def lookups(self, request: HttpRequest, model_admin: admin.ModelAdmin) -> list[tuple[str, str]]:
@@ -262,6 +263,38 @@ class SoftDeleteAdminMixin(admin.ModelAdmin):
         if _is_autocomplete_request(request):
             queryset = queryset.filter(deleted_at__isnull=True)
         return queryset, may_have_duplicates
+
+    def get_urls(self) -> Any:
+        """The row's *Restore* button posts to ``<id>/restore/``."""
+        opts = self.model._meta
+        wrap = self.admin_site.admin_view
+        return [
+            path(
+                "<path:object_id>/restore/",
+                wrap(self.restore_view),
+                name=f"{opts.app_label}_{opts.model_name}_restore",
+            ),
+            *super().get_urls(),
+        ]
+
+    def restore_view(self, request: HttpRequest, object_id: str) -> HttpResponse:
+        """Restore one row (POST), then back to the list: what the row's *Restore* button does."""
+        from django.contrib.admin.utils import unquote
+
+        opts = self.model._meta
+        back = reverse(f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}_changelist")
+        if request.method != "POST":
+            return HttpResponseRedirect(back)
+        obj = self.get_object(request, unquote(object_id))
+        if obj is None:
+            raise Http404
+        if not self.has_change_permission(request, obj):
+            raise PermissionDenied
+        from karni.api.caching import invalidation_batch
+
+        with invalidation_batch():
+            self.restore_selected(request, self.get_queryset(request).filter(pk=obj.pk))
+        return HttpResponseRedirect(back)
 
     def has_hard_delete_permission(self, request: HttpRequest) -> bool:
         """Gate ``hard_delete_selected``: superusers only.

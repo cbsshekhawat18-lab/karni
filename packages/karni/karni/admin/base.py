@@ -36,23 +36,29 @@ from typing import Any, ClassVar
 
 from django.conf import settings
 from django.contrib import admin, messages
-from django.contrib.admin.utils import flatten, flatten_fieldsets
+from django.contrib.admin.utils import flatten, flatten_fieldsets, quote
 from django.db import models
 from django.db.models import Q
 from django.forms import ModelForm
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import reverse
+from django.utils.html import format_html, format_html_join
 from django.utils.module_loading import import_string
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _lazy
 
+from karni.admin.bulk import BulkEditAdminMixin
 from karni.admin.derive import (
     admin_meta,
     derive_date_hierarchy,
+    derive_help,
     derive_list_display,
     derive_list_filter,
     derive_list_select_related,
     derive_readonly_fields,
     derive_search_fields,
     password_field_names,
+    technical_fields,
 )
 from karni.admin.scope import scope_queryset, scoped_choices, within_scope
 from karni.admin.soft_delete import SoftDeleteAdminMixin, lift_soft_delete
@@ -201,6 +207,22 @@ class KarniAdminMixin(admin.ModelAdmin):
     """``AdminMeta.read_only`` entries, appended to the *derived*
     ``readonly_fields`` (an explicit ``readonly_fields`` wins outright)."""
 
+    karni_help: ClassVar[str | None] = None
+    """The one line shown at the top of the list and form. ``None`` derives it
+    (:func:`karni.admin.derive.derive_help`: ``class Karni: help``, else the
+    docstring's first line), ``""`` shows none."""
+
+    karni_row_actions: ClassVar[bool] = True
+    """``False`` removes the *Actions* column (Edit, Delete, Restore) from the list."""
+
+    karni_details: ClassVar[bool] = True
+    """``False`` keeps technical fields (ids, timestamps, internal keys) in the
+    form's own fieldsets instead of a collapsed, read-only *Details* section."""
+
+    change_list_template = "karni_admin/change_list.html"
+    change_form_template = "karni_admin/change_form.html"
+    delete_selected_confirmation_template = "karni_admin/delete_selected_confirmation.html"
+
     def __init__(self, model: type[models.Model], admin_site: admin.AdminSite) -> None:
         """Instantiate and fill underived attributes from the ``derive_*`` hooks.
 
@@ -232,6 +254,9 @@ class KarniAdminMixin(admin.ModelAdmin):
                 *derived,
                 *(name for name in self.karni_read_only if name not in derived),
             ]
+        current = list(getattr(self, "actions", None) or ())
+        if "delete_selected" not in current:
+            self.actions = ["delete_selected", *current]
         if self._karni_derivable("list_select_related"):
             display = [name for name in self.list_display if isinstance(name, str)]
             related = cls.derive_list_select_related(model, display)
@@ -244,6 +269,11 @@ class KarniAdminMixin(admin.ModelAdmin):
     def derive_list_display(cls, model: type[models.Model]) -> list[str]:
         """Hook for :func:`karni.admin.derive.derive_list_display`."""
         return derive_list_display(model)
+
+    @classmethod
+    def derive_help(cls, model: type[models.Model]) -> str:
+        """Hook for :func:`karni.admin.derive.derive_help`."""
+        return derive_help(model)
 
     @classmethod
     def derive_list_filter(cls, model: type[models.Model]) -> list[Any]:
@@ -372,6 +402,25 @@ class KarniAdminMixin(admin.ModelAdmin):
             )
         )
 
+    @admin.action(
+        description=_lazy("Delete selected %(verbose_name_plural)s"),
+        permissions=["delete"],
+    )
+    def delete_selected(self, request: HttpRequest, queryset: models.QuerySet[Any]) -> Any:
+        """Django's "delete selected" with Karni's confirmation page (count and a sample).
+
+        A soft-delete model's rows are soft-deleted (:meth:`delete_queryset`), and the
+        page says they can be restored. Permission, the admin log and the response
+        cache work as in Django's action.
+        """
+        from django.contrib.admin.actions import delete_selected
+
+        response = delete_selected(self, request, queryset)
+        context = getattr(response, "context_data", None)
+        if isinstance(context, dict):
+            context["karni_soft"] = issubclass(self.model, SoftDeleteModel)
+        return response
+
     def get_actions(self, request: HttpRequest) -> Any:
         """Django's actions minus the ones a veto refuses (``delete_selected``, ``export_csv``)."""
         found = super().get_actions(request)
@@ -413,7 +462,85 @@ class KarniAdminMixin(admin.ModelAdmin):
     def get_list_display(self, request: HttpRequest) -> Any:
         hidden = self.hidden_fields(request)
         shown = [n for n in super().get_list_display(request) if self._head(n) not in hidden]
-        return shown or ["__str__"]
+        column = self.row_actions_column(request)
+        return [*(shown or ["__str__"]), *([column] if column is not None else [])]
+
+    # -- the simple screens: a line of help, buttons on each row ----------------
+
+    def model_help(self, request: HttpRequest | None = None) -> str:
+        """The one line shown at the top of this model's list and form (``karni_help``)."""
+        if self.karni_help is not None:
+            return str(self.karni_help)
+        return type(self).derive_help(self.model)
+
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> Any:
+        extra = dict(extra_context or {})
+        extra.setdefault("karni_help", self.model_help(request))
+        return super().changelist_view(request, extra)
+
+    def render_change_form(
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: models.Model | None = None,
+    ) -> Any:
+        context.setdefault("karni_help", self.model_help(request))
+        return super().render_change_form(request, context, add, change, form_url, obj)
+
+    def row_actions_column(self, request: HttpRequest) -> Any:
+        """The *Actions* column: Edit and Delete (or Restore) on each row, as rights allow.
+
+        ``None`` (no column) when ``karni_row_actions`` is off, in a popup, or the
+        user may do none of it. A user who can only view gets *View*. Rights are
+        checked once for the model here, and again by the page each button opens.
+
+        Override / escape hatch: ``karni_row_actions = False`` removes the column,
+        or override this method to draw other buttons.
+        """
+        if not self.karni_row_actions or "_popup" in request.GET:
+            return None
+        can_change = self.has_change_permission(request)
+        can_delete = self.has_delete_permission(request)
+        can_view = self.has_view_permission(request)
+        if not (can_change or can_delete or can_view):
+            return None
+        opts = self.model._meta
+        stem = f"{self.admin_site.name}:{opts.app_label}_{opts.model_name}"
+        soft = issubclass(self.model, SoftDeleteModel)
+
+        def karni_row_actions(obj: models.Model) -> Any:
+            key = quote(obj.pk)
+            deleted = soft and getattr(obj, "deleted_at", None) is not None
+            name = str(obj)
+            buttons: list[tuple[str, str, str, str]] = []  # (tag, url, kind, text)
+            if can_change:
+                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("Edit")))
+            elif can_view:
+                buttons.append(("a", reverse(f"{stem}_change", args=[key]), "", _("View")))
+            if deleted and can_change:
+                buttons.append(("button", reverse(f"{stem}_restore", args=[key]), "", _("Restore")))
+            elif can_delete and not deleted:
+                buttons.append(("a", reverse(f"{stem}_delete", args=[key]), "danger", _("Delete")))
+            return format_html(
+                '<span class="karni-row-actions">{}</span>',
+                format_html_join(
+                    "",
+                    "{}",
+                    (
+                        (_row_button(tag, url, kind, text, name),)
+                        for tag, url, kind, text in buttons
+                    ),
+                ),
+            )
+
+        karni_row_actions.short_description = _("Actions")  # type: ignore[attr-defined]
+        karni_row_actions.admin_order_field = None  # type: ignore[attr-defined]
+        return karni_row_actions
 
     def get_list_filter(self, request: HttpRequest) -> Any:
         hidden = self.hidden_fields(request)
@@ -444,13 +571,21 @@ class KarniAdminMixin(admin.ModelAdmin):
         in no group the last one, "Other" (:func:`karni.layout.fieldsets`).
         A field the user may not read is left out of every fieldset.
         """
+        fieldsets = self._base_fieldsets(request, obj)
+        if self.karni_details and not self.fieldsets:
+            return self._with_details(request, obj, fieldsets)
+        return fieldsets
+
+    def _base_fieldsets(
+        self, request: HttpRequest, obj: models.Model | None = None
+    ) -> list[tuple[str | None, dict[str, Any]]]:
         if not self.fieldsets:
             grouped = self.derive_fieldsets(request, obj)
             if grouped is not None:
                 return grouped
         hidden = self.hidden_fields(request)
         if not hidden:
-            return super().get_fieldsets(request, obj)
+            return list(super().get_fieldsets(request, obj))
         kept = []
         for title, options in super().get_fieldsets(request, obj):
             fields = [
@@ -459,6 +594,37 @@ class KarniAdminMixin(admin.ModelAdmin):
                 if not (isinstance(n, str) and self._head(n) in hidden)
             ]
             kept.append((title, {**options, "fields": fields}))
+        return kept
+
+    def _with_details(
+        self,
+        request: HttpRequest,
+        obj: models.Model | None,
+        fieldsets: list[tuple[str | None, dict[str, Any]]],
+    ) -> list[tuple[str | None, dict[str, Any]]]:
+        """Move the technical read-only fields into a collapsed *Details* fieldset.
+
+        Ids, timestamps, who changed the row and internal keys
+        (:func:`karni.admin.derive.technical_fields`) are not what a person edits.
+        They leave the form's own fieldsets and, on an existing row, come last in
+        *Details*, read-only and collapsed. A new row shows no *Details*.
+        """
+        shown = [n for _title, options in fieldsets for n in options.get("fields", ())]
+        names = [n for n in shown if isinstance(n, str)]
+        technical = [
+            n
+            for n in technical_fields(self.model, names)
+            if n in set(self.get_readonly_fields(request, obj))
+        ]
+        if not technical:
+            return fieldsets
+        kept: list[tuple[str | None, dict[str, Any]]] = []
+        for title, options in fieldsets:
+            fields = [n for n in options.get("fields", ()) if n not in technical]
+            if fields:
+                kept.append((title, {**options, "fields": fields}))
+        if obj is not None:
+            kept.append((_("Details"), {"fields": technical, "classes": ["collapse"]}))
         return kept
 
     def derive_fieldsets(
@@ -695,7 +861,7 @@ class KarniAdminMixin(admin.ModelAdmin):
 _AdminBase: type[admin.ModelAdmin] = resolve_admin_base()
 
 
-class KarniModelAdmin(KarniAdminMixin, TransferAdminMixin, _AdminBase):  # type: ignore[valid-type, misc]
+class KarniModelAdmin(KarniAdminMixin, BulkEditAdminMixin, TransferAdminMixin, _AdminBase):  # type: ignore[valid-type, misc]
     """:class:`KarniAdminMixin` (and the import/export mixin) on the ``KARNI_ADMIN_BASE`` class.
 
     The class :func:`karni.admin.autodiscover` derives every generated admin
@@ -766,6 +932,25 @@ def build_model_admin(
     else:
         bases = (KarniModelAdmin,)
     return type(f"{model.__name__}Admin", bases, attrs)
+
+
+def _row_button(tag: str, url: str, kind: str, text: str, name: str) -> Any:
+    """One button of the *Actions* column, named for its row for screen readers."""
+    classes = "karni-button karni-button-sm " + (
+        "karni-button-danger" if kind == "danger" else "karni-button-secondary"
+    )
+    label = f"{text} {name}"
+    if tag == "button":
+        # A POST to the row's own URL from inside the changelist form (it carries the CSRF token).
+        return format_html(
+            '<button type="submit" class="{}" formaction="{}" formmethod="post"'
+            ' aria-label="{}">{}</button>',
+            classes,
+            url,
+            label,
+            text,
+        )
+    return format_html('<a class="{}" href="{}" aria-label="{}">{}</a>', classes, url, label, text)
 
 
 # lifecycle columns (karni.fields.StateField)

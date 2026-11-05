@@ -132,6 +132,7 @@ _OPTIONS: Final = (
     "tree",
     "taxonomies",
     "key",
+    "help",
     "search",
     "owner",
     "audit",

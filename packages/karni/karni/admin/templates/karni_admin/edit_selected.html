@@ -1,0 +1,56 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls static %}{% comment %}
+"Edit selected": tick Change beside each field to set, give it one value, and
+confirm. Every selected row is saved one by one in one transaction. Override
+this template, or set bulk_edit_template on the admin class.
+{% endcomment %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% url 'admin:jsi18n' %}"></script>
+{{ media }}
+<script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} bulk-edit{% endblock %}
+
+{% block content %}
+<div class="karni-page">
+  <p>
+    {% blocktranslate count counter=count with name=opts.verbose_name plural=opts.verbose_name_plural %}The change applies to {{ counter }} selected {{ name }}.{% plural %}The change applies to {{ counter }} selected {{ plural }}.{% endblocktranslate %}
+    {% for name in sample %}{{ name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if more %} {% blocktranslate %}and {{ more }} more{% endblocktranslate %}{% endif %}.
+  </p>
+  <p class="karni-note">{% blocktranslate with limit=limit %}Each row is saved on its own, so history and signals work as for a single edit. If one row fails, none changes. At most {{ limit }} rows at a time.{% endblocktranslate %}</p>
+  {% if problems %}<div class="karni-problem" role="alert"><p>{% translate "Nothing was changed." %}</p><ul>{% for line in problems %}<li>{{ line }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if form.non_field_errors %}<div class="karni-problem" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    {% for pk in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk|unlocalize }}">{% endfor %}
+    <input type="hidden" name="action" value="edit_selected">
+    <input type="hidden" name="post" value="yes">
+    <div class="karni-scroll"><table class="karni-table">
+      <thead><tr><th scope="col">{% translate "Change" %}</th><th scope="col">{% translate "New value" %}</th></tr></thead>
+      <tbody>
+      {% for apply, value in form_rows %}
+        <tr>
+          <td>{{ apply }} <label for="{{ apply.id_for_label }}">{{ apply.label }}</label></td>
+          <td>
+            <span class="karni-sr-only"><label for="{{ value.id_for_label }}">{{ value.label }}</label></span>
+            {{ value }}
+            {% if value.errors %}<div class="karni-problem" role="alert">{{ value.errors }}</div>{% endif %}
+            {% if value.help_text %}<div class="karni-note">{{ value.help_text }}</div>{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <div class="karni-toolbar">
+      <button type="submit" class="karni-button">{% translate "Change the selected rows" %}</button>
+      <a href="#" class="karni-button karni-button-secondary cancel-link">{% translate "Cancel" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

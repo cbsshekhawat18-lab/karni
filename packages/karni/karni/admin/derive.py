@@ -14,10 +14,13 @@ Caps are read from settings on every call (``KARNI_ADMIN_LIST_DISPLAY_MAX``,
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Iterable
 from typing import Any
 
 from django.conf import settings
 from django.contrib import admin
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 
 from karni.admin.soft_delete import SoftDeleteListFilter
@@ -89,18 +92,28 @@ def _skip_always(field: models.Field) -> bool:
     return field.name in AUDIT_FIELDS or is_password_field(field)
 
 
-def derive_list_display(model: type[models.Model]) -> list[str]:
-    """Derive ``list_display``: scalar-ish concrete fields in declaration order.
+#: Names that say what a row is, shown first by :func:`derive_list_display`.
+NAME_FIELDS = ("name", "title", "label", "display_name", "full_name", "subject")
 
-    Includes Char/Slug/Email/URL, integer family, Decimal, Float, Boolean,
-    Date/DateTime and FK fields (choices are fine); never Text, JSON, File,
-    Image, M2M, binary or UUID fields, audit fields, or password-ish fields.
-    Capped at ``KARNI_ADMIN_LIST_DISPLAY_MAX`` (default 6); falls back to
-    ``["__str__"]`` when nothing qualifies.
+
+def derive_list_display(model: type[models.Model]) -> list[str]:
+    """Derive ``list_display``: the name first, the key fields, then the updated time.
+
+    Candidates are the scalar-ish concrete fields in declaration order:
+    Char/Slug/Email/URL, integer family, Decimal, Float, Boolean, Date/DateTime
+    and FK fields (choices are fine), never Text, JSON, File, Image, M2M,
+    binary or UUID fields, audit fields, or password-ish fields. A field named
+    ``name``, ``title``, ``label``, ``display_name``, ``full_name`` or
+    ``subject`` goes first. A model with ``updated_at`` ends with it. The list
+    is capped at ``KARNI_ADMIN_LIST_DISPLAY_MAX`` (default 6, the updated time
+    included) and falls back to ``["__str__"]`` when nothing qualifies.
     """
     max_items = _int_setting("KARNI_ADMIN_LIST_DISPLAY_MAX", DEFAULT_LIST_DISPLAY_MAX)
     names: list[str] = []
+    has_updated = False
     for field in model._meta.fields:
+        if field.name == "updated_at":
+            has_updated = True
         if _skip_always(field):
             continue
         if field.primary_key and isinstance(field, models.UUIDField):
@@ -109,9 +122,53 @@ def derive_list_display(model: type[models.Model]) -> list[str]:
             continue
         if isinstance(field, _DISPLAY_INCLUDED_TYPES):
             names.append(field.name)
-        if len(names) >= max_items:
-            break
+    first = next((n for n in NAME_FIELDS if n in names), None)
+    if first is not None:
+        names.remove(first)
+        names.insert(0, first)
+    room = max_items - (1 if has_updated and max_items > 1 else 0)
+    names = names[:room]
+    if has_updated and max_items > 1 and names:
+        names.append("updated_at")
     return names or ["__str__"]
+
+
+def derive_help(model: type[models.Model]) -> str:
+    """The line that says what ``model`` is for: ``Karni.help``, else its docstring's first line.
+
+    Django gives a model without a docstring a generated one (``Name(id, name)``),
+    which is not help, so it is skipped. Returns ``""`` when there is none.
+    """
+    from karni.meta import karni_option
+
+    declared = karni_option(model, "help", None)
+    if declared:
+        return str(declared).strip().replace("``", "")
+    doc = model.__dict__.get("__doc__") or ""
+    if not doc or doc.startswith(f"{model.__name__}("):
+        return ""
+    for line in inspect.cleandoc(doc).splitlines():
+        if line.strip():
+            return line.strip().replace("``", "")
+    return ""
+
+
+def technical_fields(model: type[models.Model], names: Iterable[str]) -> list[str]:
+    """The names among ``names`` that are technical (ids, timestamps, internal keys).
+
+    The audit fields (:data:`AUDIT_FIELDS`), any other field the form cannot
+    edit (``editable=False``: a generated token, a counter) and the primary
+    key. The admin shows them read-only in a collapsed *Details* section.
+    """
+    technical: list[str] = []
+    for name in names:
+        try:
+            field = model._meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if name in AUDIT_FIELDS or not getattr(field, "editable", True) or field.primary_key:
+            technical.append(name)
+    return technical
 
 
 def derive_list_filter(model: type[models.Model]) -> list[FilterSpec]:

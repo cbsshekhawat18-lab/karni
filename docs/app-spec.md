@@ -227,6 +227,7 @@ model on `BaseModel` (PascalCase), with its viewset.
 |---|---|---|
 | `fields` | name to type, or to `{type, was}` | `karni make model <Entity> name:type ...` |
 | `key` | a field | `karni make model --key` (`Karni.import_key`) |
+| `help` | a sentence | `Karni.help`: the line the admin shows at the top of the model's list and form. `karni plan` shows it and `karni spec export` reads it back |
 | `search` | a field or a list | `karni make model --search` (the viewset's `search_fields`) |
 | `global_search` | `true`, or `{fields, title, subtitle, weight}` | `Karni.search`, [search across models](global-search.md) (experimental). `fields` defaults to `search` |
 | `owner` | a relation to the user, or a path (`workspace__members`) | `Karni.owner_field`, the `own` scope's field |

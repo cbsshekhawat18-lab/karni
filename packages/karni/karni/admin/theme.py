@@ -52,11 +52,13 @@ from django.contrib.staticfiles.finders import BaseFinder
 from django.core.files.storage import FileSystemStorage
 
 __all__ = [
+    "A11Y_JS",
     "ADMIN_PAGES_CSS",
     "DEFAULT_THEME_CSS",
     "PROJECT_THEME_CSS",
     "TOKENS_CSS",
     "UNFOLD_THEME_CSS",
+    "a11y_script",
     "ProjectThemeFinder",
     "project_theme_path",
     "project_theme_stylesheet",
@@ -70,6 +72,9 @@ TOKENS_CSS: Final = "karni/tokens.css"
 
 UNFOLD_THEME_CSS: Final = "karni/unfold-theme.css"
 """Static path of the stylesheet that maps unfold onto the tokens."""
+
+A11Y_JS: Final = "karni/admin-a11y.js"
+"""Static path of the script that adds landmarks and names to unfold's pages."""
 
 ADMIN_PAGES_CSS: Final = "karni/admin-pages.css"
 """Static path of the stylesheet Karni's own admin pages share."""
@@ -93,6 +98,11 @@ def _static_url(path: str) -> str:
 def tokens_stylesheet(request: Any) -> str:
     """``UNFOLD["STYLES"]`` entry: the URL of ``karni/tokens.css``."""
     return _static_url(TOKENS_CSS)
+
+
+def a11y_script(request: Any) -> str:
+    """``UNFOLD["SCRIPTS"]`` entry: the URL of ``karni/admin-a11y.js``."""
+    return _static_url(A11Y_JS)
 
 
 def unfold_theme_stylesheet(request: Any) -> str:

@@ -704,6 +704,7 @@ def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
                 '          price: "money:EUR"\n          notes: "markdown?"\n'
                 "        groups: {Class: [studio, title, starts_at], Details: [notes, price]}\n"
                 "        column_sets: {default: [title, starts_at], money: [title, price]}\n"
+                '        help: "One class on the timetable."\n'
                 "        owner: instructor\n"
             ),
         ),
@@ -718,11 +719,13 @@ def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
         "  ~ classes.Session column_sets: none -> default title, starts_at, money title, price"
         in plan
     )
+    assert "  ~ classes.Session help: none -> One class on the timetable." in plan
     code, out = _build()
     assert code == 0, out
     models = (copy / "classes" / "karni" / "models.py").read_text()
     assert "    notes = MarkdownField(blank=True)\n" in models
     assert "from karni.fields import MarkdownField, MoneyField" in models
+    assert '        help = "One class on the timetable."\n' in models
     assert (
         '        field_groups = {\n            "Class": ["studio", "title", "starts_at"],\n'
         '            "Details": ["notes", "price"],\n        }\n'

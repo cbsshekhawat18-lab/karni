@@ -15,7 +15,7 @@ from __future__ import annotations
 import importlib.util
 import re
 from collections.abc import Mapping
-from typing import Any, Literal
+from typing import Any
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
@@ -107,7 +107,6 @@ class KarniSettingsModel(BaseModel):
     KARNI_IMPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_EXPORT_MAX_ROWS: int = Field(default=100_000, ge=1)
     KARNI_ADMIN_LOGO: Any = None
-    KARNI_ADMIN_THEME: Literal["light", "dark", "auto"] = "light"
     KARNI_GENERATOR: str | None = "Karni"
     KARNI_THEME_CSS: str | None = "frontend/src/karni-theme.css"
     KARNI_ADMIN_PATH: str = "admin/"
@@ -117,6 +116,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_CSP: Any = Field(default_factory=dict)
     KARNI_CSP_REPORT_ONLY: bool | None = None
     KARNI_PERMISSIONS_POLICY: Any = Field(default_factory=dict)
+    KARNI_ADMIN_BULK_EDIT_MAX: int = Field(default=500, ge=1)
+    KARNI_ADMIN_GUIDE: bool = True
     KARNI_ADMIN_LIST_DISPLAY_MAX: int = 6
     KARNI_ADMIN_LIST_FILTER_MAX: int = 6
     KARNI_ADMIN_SEARCH_MAX: int = 5

@@ -1,0 +1,4 @@
+{% load i18n admin_urls %}{% comment %}
+The primary "Add <model>" button of a list and of a form, shown only when the
+user may add rows. Override this template to change it.
+{% endcomment %}{% if has_add_permission %}{% url opts|admin_urlname:"add" as karni_add_url %}<a class="karni-button karni-add" href="{% add_preserved_filters karni_add_url is_popup to_field %}"><span class="material-symbols-outlined" aria-hidden="true">add</span>{% blocktranslate with name=opts.verbose_name %}Add {{ name }}{% endblocktranslate %}</a>{% endif %}

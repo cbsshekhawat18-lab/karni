@@ -107,10 +107,10 @@ def test_the_import_page_needs_add_or_change() -> None:
     )
     viewer.user_permissions.add(DjangoPermission.objects.get(codename="view_venue"))
     assert _client(viewer).get(reverse("admin:testapp_venue_import")).status_code == 403
-    assert (
-        "export_csv"
-        in _client(viewer).get(reverse("admin:testapp_venue_changelist")).content.decode()
-    )
+    # A viewer without a row grant sees an empty list: no actions, no Add and no Import button.
+    page = _client(viewer).get(reverse("admin:testapp_venue_changelist")).content.decode()
+    assert "No venues yet." in page
+    assert "karni-add" not in page and "import/" not in page
 
 
 def test_an_admin_can_opt_out() -> None:

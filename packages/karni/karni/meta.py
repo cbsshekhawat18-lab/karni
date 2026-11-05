@@ -134,6 +134,13 @@ OPTIONS: Final[tuple[Option, ...]] = (
         'natural_key = "sku"',
     ),
     Option(
+        "help",
+        "the first line of the docstring",
+        "One line that says what the model is for. The admin shows it at the top of the "
+        "model's list and form. Without it the first line of the model's docstring is shown.",
+        'help = "Products you sell. Prices are per unit."',
+    ),
+    Option(
         "import_key",
         "`natural_key`",
         "The column an import matches existing rows on, so a row with a known key is "

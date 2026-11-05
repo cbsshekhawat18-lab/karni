@@ -158,6 +158,7 @@ _SET_NULL: Final = "django.db.models.deletion.SET_NULL"
 #: ``class Karni`` options the spec writes, by spec key.
 KARNI_KEYS: Final = {
     "import_key": "key",
+    "help": "help",
     "owner_field": "owner",
     "audit": "audit",
     "scope_paths": "scope_paths",
