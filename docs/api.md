@@ -841,6 +841,109 @@ def get_router():
 KARNI_API_ROUTER = "myproject.api.get_router"
 ```
 
+## API versions
+
+!!! warning "Experimental"
+    API versions are in the [experimental tier](stability.md#experimental-names).
+    The settings and `karni.api.versions` can change in a minor release, with a
+    CHANGELOG entry.
+
+A web app ships with its API, so the two change together. A mobile app does
+not: the build a user installed last year still calls the API. A version prefix
+lets the API change for new builds while old ones keep a URL that does not
+move. Nothing changes until you set a version.
+
+```python
+# config/settings.py, above karni_settings(globals())
+KARNI_API_VERSION = "v1"        # the current version, mounted at /api/v1/
+KARNI_API_UNVERSIONED = "keep"  # what /api/ without a version does
+KARNI_API_VERSIONS = {          # more versions, and what to say about them
+    "v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31",
+           "notes": "https://example.com/api-v0-to-v1"},
+}
+```
+
+Each is also an environment variable (`KARNI_API_VERSIONS` as JSON). A new
+project's `config/urls.py` mounts the API with `*api_urls()`. In an older
+project replace `path("api/", include("karni.api.urls"))` with it:
+
+```python
+from karni.api.versions import api_urls
+
+urlpatterns = [
+    path("api/auth/", include("karni.accounts.urls")),
+    *api_urls(),
+]
+```
+
+`karni check` warns (`karni.W661`) when a version is set and the URLconf does
+not use `api_urls()`.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `KARNI_API_VERSION` | `""` | The current version's name. Lower case letters, digits and `-`, at most 16 characters. Empty leaves the API unversioned. |
+| `KARNI_API_VERSIONS` | `{}` | Name to options. Keys of an option dict: `router`, `deprecated`, `sunset`, `notes`. The current version needs no entry. |
+| `KARNI_API_UNVERSIONED` | `"keep"` | `"keep"`: `/api/` still serves the current version. `"redirect"`: `/api/x/` answers `308` with `Location: /api/v1/x/`, query string included, and POST stays POST. `"remove"`: `/api/` is a 404. |
+
+The options of a version:
+
+- `router`: a dotted path to a zero-argument router factory (see the
+  [auto-router](#auto-router)), so a version can serve other viewsets. Default:
+  the `KARNI_API_ROUTER` router, shared by every version.
+- `deprecated`: `True`, or the day it was deprecated (`"2026-06-01"`).
+- `sunset`: the day the version goes (`"2027-01-31"`). Karni never switches a
+  version off on that day. Remove it from `KARNI_API_VERSIONS` when you do.
+  `karni check` warns (`karni.W660`) about a version still mounted after its
+  sunset date.
+- `notes`: the URL of the migration notes.
+
+`/api/auth/`, `/api/schema/` and `/api/docs/` are not versioned.
+
+### Deprecation headers
+
+A response from a deprecated version carries the headers below, whatever its
+status. The middleware `karni.api.versions.ApiVersionHeadersMiddleware` sends
+them, and `karni_settings()` lists it. It is left out of the chain while no
+version is deprecated.
+
+```text
+Deprecation: @1780272000
+Sunset: Sun, 31 Jan 2027 00:00:00 GMT
+Link: <https://example.com/api-v0-to-v1>; rel="deprecation"; type="text/html"
+```
+
+`Deprecation` is the structured date of [RFC 9745](https://www.rfc-editor.org/rfc/rfc9745)
+(`true` when `deprecated` has no day), `Sunset` is [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594)'s
+HTTP date, and `Link` points at `notes`. A header the view already set is kept.
+The headers follow the route, not the prefix: a route whose URL has a `version`
+keyword is covered.
+
+### In views, URLs and tests
+
+DRF's `URLPathVersioning` is the versioning class, so a view reads
+`request.version`. With `KARNI_API_VERSION` set, a request to `/api/` has the
+current version as `request.version`. DRF's `reverse(name, request=request)`
+adds the version to the URL it builds. Django's `reverse("product-list")`
+needs `kwargs={"version": "v1"}` once `KARNI_API_UNVERSIONED` is `"redirect"` or
+`"remove"`, because there is no unversioned route left. A project with its own
+`REST_FRAMEWORK` sets `DEFAULT_VERSIONING_CLASS` to
+`rest_framework.versioning.URLPathVersioning` and `DEFAULT_VERSION` to the
+current version.
+
+### One document and one client per version
+
+Each version has its own OpenAPI document at `/api/<version>/schema/`, with
+Swagger UI at `/api/<version>/docs/`. `/api/schema/` describes the current
+version. Every document lists `x-karni-api-versions` (each version with
+`current`, `deprecated`, `sunset` and `notes`) and `x-karni-api-version`, the
+one it describes. `manage.py spectacular --api-version v0` prints one.
+
+`karni types` writes the schema, `types.ts` and `hooks.ts` of the current
+version as before, then the same three files for each version in
+`frontend/src/api/<version>/`. A mobile team takes the `types.ts` of the
+version it targets. The staff app talks to the version its `createKarniClient`
+`baseUrl` names.
+
 ## The staff dashboard
 
 The staff app's home page (the scaffold's `frontend/src/pages/home.tsx`) is

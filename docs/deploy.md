@@ -25,14 +25,16 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 ```
 
 The rest of this page goes through a first deployment step by step, then
-updates, rollback, logs, backups and restore.
+updates, rollback, logs, backups and restore, and then health checks, Celery
+and beat, static and media files, API versions for mobile clients and
+scaling.
 
 ## What runs
 
 | Service | What it does | Health check |
 |---|---|---|
 | `release` | Runs once per start, before the others: the deploy checks, `migrate`, `collectstatic`, then `karni_publish_web`, which copies the Caddyfile, the built staff app and the security headers into the shared volume. If it fails, nothing else starts. | none: the others wait for it to exit with 0 |
-| `django` | gunicorn with uvicorn workers (`WEB_CONCURRENCY`, default 2). It serves the API, the admin, `/health/` and a public site app. | `/health/`, asked as Caddy asks it |
+| `django` | gunicorn with uvicorn workers (`WEB_CONCURRENCY`, default 2). It serves the API, the admin, `/healthz`, `/readyz`, `/health/` and a public site app. | `/readyz`, asked as Caddy asks it ([health checks](#12-health-checks)) |
 | `worker` | The Celery worker (`KARNI_WORKER_CONCURRENCY`, default 2). | `celery inspect ping` |
 | `beat` | Celery beat. Run exactly one. | its process has passed the deploy checks |
 | `caddy` | TLS for `DOMAIN`, `/static/` and `/media/` from the shared volume, the staff app, and everything else proxied to `django`. Publishes ports 80 and 443. | its admin API |
@@ -169,6 +171,30 @@ the server:
 prod() { docker compose -f docker-compose.prod.yml --env-file .env.prod "$@"; }
 ```
 
+### The variables that matter
+
+`.env.prod.example` lists every value. These are the ones that change how the
+site behaves, grouped by what they do:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `SECRET_KEY` | none | Signs sessions and tokens. 50 or more random characters. Changing it signs everyone out. |
+| `DJANGO_ENV`, `DEBUG` | `prod`, off | The production profile. `karni check --deploy` refuses `DEBUG` on. |
+| `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | the domain | The hosts Django answers and the origins whose forms it trusts. |
+| `KARNI_ADMIN_PATH` | none | Where the admin is. |
+| `DATABASE_URL`, `REDIS_URL` | the stack's | Where PostgreSQL and Redis are. A managed service is a different URL. |
+| `WEB_CONCURRENCY`, `KARNI_WORKER_CONCURRENCY` | `2`, `2` | Gunicorn workers and Celery processes ([scaling](#16-scaling)). |
+| `KARNI_READYZ_CHECKS`, `KARNI_HEALTH_CHECKS`, `KARNI_HEALTH_TIMEOUT` | database, cache, broker, plus Celery, 3 seconds | What `/readyz` and `/health/ready/` check and how long each check may take ([health checks](#12-health-checks)). |
+| `KARNI_LOG_QUIET_PATHS` | the probe paths | Paths whose successful requests the request log skips. |
+| `KARNI_API_VERSION`, `KARNI_API_VERSIONS`, `KARNI_API_UNVERSIONED` | unversioned | The API's version prefix and deprecations ([API versions](#15-api-versions-for-mobile-clients)). |
+| `KARNI_STORAGE`, `MEDIA_ROOT`, `STATIC_ROOT` | local, `/data/...` | Where uploads and static files live ([files](#14-static-and-media-files)). |
+| `KARNI_BACKUP_*`, `POSTGRES_VERSION` | see [backups](#10-backups) | Backup retention, interval and the bucket. |
+| `SENTRY_DSN` | empty | Error reports. |
+
+A variable in `.env.prod` reaches the containers through Compose's `env_file`.
+A JSON value is written in single quotes, such as
+`KARNI_API_VERSIONS='{"v0": {"deprecated": true}}'`.
+
 ## 5. First start
 
 ```sh
@@ -179,11 +205,14 @@ prod ps
 The build takes a few minutes the first time. Then `release` runs and exits,
 and the other services start. Within a minute or two `prod ps` shows each of
 them `healthy`. Check the whole stack, including the database, the cache and
-Celery:
+the Celery broker:
 
 ```sh
-curl https://example.com/health/ready/
+curl https://example.com/readyz
 ```
+
+`/health/ready/` also needs a Celery worker to answer. Ask it to know the
+worker runs ([health checks](#12-health-checks)).
 
 If a service does not become healthy, its log says why:
 
@@ -251,6 +280,16 @@ docker tag your_project-backup:latest "your_project-backup:$tag"
 ```
 
 (The image is named after the project, `KARNI_IMAGE` in `.env.prod`.)
+
+### Migrations on deploy
+
+Migrations run in the `release` step, once per deployment, before any new
+container serves a request. `django`, `worker` and `beat` never migrate, so
+two replicas cannot race, and a migration that fails stops the deployment with
+the old containers still serving. Run them by hand with `prod run --rm release`
+(the whole step) or `prod exec django python manage.py migrate --check` to
+see whether any are pending. Take a backup first when a migration changes or
+drops data: `prod exec backup karni-backup run`.
 
 ### Migrations that the old code cannot run with
 
@@ -387,6 +426,152 @@ keep working. Drop the check database when you no longer need it:
 prod exec db sh -c 'dropdb -U "$POSTGRES_USER" restore_check'
 ```
 
+## 12. Health checks
+
+Karni answers four URLs. None needs a login, none is cached, and none is
+asked of the terms gate, so a proxy, an orchestrator or a monitor can call
+them at any time. The request log skips the successful ones
+(`KARNI_LOG_QUIET_PATHS`), so a probe every few seconds does not fill it.
+
+| URL | Means | Touches |
+|---|---|---|
+| `/healthz` | The process answers. Liveness: restart the container when this fails. | nothing |
+| `/readyz` | The process can serve: the database, the cache and the Celery broker respond. Readiness: send no traffic when this fails. | database, cache, broker |
+| `/health/` | The older liveness URL. Same answer as `/healthz`. | nothing |
+| `/health/ready/` | The older readiness URL, which also needs a Celery worker to answer. | database, cache, a worker |
+
+```sh
+curl -i https://example.com/readyz
+```
+
+```json
+{"status": "ok", "failing": [],
+ "checks": {"database": {"ok": true, "detail": "database responding"},
+            "cache": {"ok": true, "detail": "cache responding"},
+            "broker": {"ok": true, "detail": "broker responding"}}}
+```
+
+When a check fails the status is 503, `status` is `fail` and `failing` names
+it, such as `"failing": ["cache"]`, with the error in that check's `detail`.
+Each check gets `KARNI_HEALTH_TIMEOUT` seconds (default 3). One that does not
+answer in time fails with `no answer within 3s`, so a database that accepts the
+connection and then stalls cannot hold the probe.
+
+`/readyz` leaves the Celery workers out on purpose. A web container is ready
+when it can enqueue a task, whether or not a worker is up this second. Ask
+`/health/ready/` when you want to know a worker answers, as the CI job does.
+
+The checks are settings. `KARNI_READYZ_CHECKS` and `KARNI_HEALTH_CHECKS` list
+dotted paths to functions that return `(ok, detail)`, comma-separated in the
+environment, so a project adds its own check (an object store, a mail relay)
+or removes one:
+
+```sh
+KARNI_READYZ_CHECKS=karni.health.checks.check_database,karni.health.checks.check_cache
+```
+
+The compose files' health check for `django` asks `/readyz`, and Caddy
+forwards `/healthz` and `/readyz` so an outside monitor can ask too. A project
+created before these URLs keeps asking `/health/`. Add them with
+`from karni.health.probe_urls import urlpatterns as probe_urls` and
+`*probe_urls` in `config/urls.py`, then run `karni make deploy compose --force`.
+
+## 13. Celery and beat
+
+`worker` runs the Celery worker with `KARNI_WORKER_CONCURRENCY` processes and
+`beat` runs the scheduler. Both take their broker from `REDIS_URL`.
+
+- Run exactly one `beat`. Two would enqueue every scheduled task twice. The
+  schedule is in the database (`django-celery-beat`), so a restart loses
+  nothing.
+- A worker finishes the task it is running for up to 60 seconds when it is
+  stopped. Queued tasks wait in Redis for the new worker. Redis is set to drop
+  cache keys under memory pressure and never a queued task.
+- A task that takes longer than the time limits (`CELERY_TASK_TIME_LIMIT`, 300
+  seconds, and `CELERY_TASK_SOFT_TIME_LIMIT`, 240) is stopped. Raise them for
+  a long job, or split it.
+- Without tasks to run, `karni make deploy compose --no-celery` leaves both
+  out, and `/health/ready/` stops asking for a worker.
+- `/readyz` fails when the broker does not answer. A worker that is down shows
+  in `prod ps` (its health check is `celery inspect ping`) and in
+  `/health/ready/`.
+
+## 14. Static and media files
+
+The `release` step runs `collectstatic` into the `app_data` volume and
+`karni_publish_web` copies the staff app next to it. Caddy reads the volume
+and serves `/static/`, `/media/` and the staff app with long cache lifetimes
+on the hashed files, so Django never serves a file in production.
+
+- Static files are written on every release. Nothing to back up.
+- Uploads are written by Django to `MEDIA_ROOT` (`/data/media`) in the same
+  volume, and Caddy serves them from there. The backup service archives that
+  folder with the database ([backups](#10-backups)).
+- On more than one server, or to keep uploads out of a volume, set
+  `KARNI_STORAGE=s3` with the bucket's settings. Django then writes to the
+  bucket and the media folder stays empty. See [settings](settings.md).
+- The volume is a Docker named volume. `prod down -v` deletes it, so never run
+  that on a server that matters.
+
+## 15. API versions for mobile clients
+
+A browser app is replaced on the next page load. A mobile app is not: the
+build a user installed last year still calls your API. A version prefix lets
+the API change for new builds while old ones keep a URL that does not move.
+It is off until you set it, and an unversioned project is unchanged.
+Experimental, see [API versions](api.md#api-versions) for the whole
+reference.
+
+```sh
+KARNI_API_VERSION=v1                      # /api/v1/products/
+KARNI_API_UNVERSIONED=keep                # /api/products/ still works
+KARNI_API_VERSIONS='{"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://example.com/api-v0-to-v1"}}'
+```
+
+A response from `/api/v0/` then carries these headers:
+
+```text
+Deprecation: @1780272000
+Sunset: Sun, 31 Jan 2027 00:00:00 GMT
+Link: <https://example.com/api-v0-to-v1>; rel="deprecation"; type="text/html"
+```
+
+Ship a new version in three steps: add `v2` and make it current, mark `v1`
+deprecated with a sunset date, and read the logs for `/api/v1/` until no
+client calls it. Then remove `v1` from `KARNI_API_VERSIONS`. `karni check`
+warns (`karni.W660`) about a version still mounted after its sunset date.
+`/api/auth/`, `/api/schema/` and `/api/docs/` are not versioned.
+
+Each version has its own OpenAPI document at `/api/<version>/schema/`, and
+`karni types` writes a typed client for each into `frontend/src/api/<version>/`.
+Hand a mobile team the document of the version they target.
+
+## 16. Scaling
+
+The stack is one server. Most of what limits it is memory, and each service
+has a limit in `.env.prod` (`KARNI_DJANGO_MEMORY` and the others).
+
+- **More requests:** raise `WEB_CONCURRENCY`, about two gunicorn workers per
+  CPU core, and the memory limit with it. Each worker holds the application
+  once. If that is not enough, start a second `django` container
+  (`prod up -d --scale django=2`) and Caddy sends requests to both.
+- **More background work:** raise `KARNI_WORKER_CONCURRENCY`, or run a second
+  `worker` service on its own queue. Leave `beat` at one.
+- **The database:** it is the first thing to outgrow the server. Move it to a
+  managed PostgreSQL (`--no-db`, `DATABASE_URL` pointing at it, and
+  `POSTGRES_VERSION` equal to its major version), which also gives you its
+  backups and failover. Keep the `backup` service for a copy you control.
+- **Redis:** one instance serves the cache and the queue. Point `REDIS_URL` at
+  a managed Redis (`--no-redis`) when the server's memory is the limit.
+- **Files:** past one server, use `KARNI_STORAGE=s3` so every container sees
+  the same uploads.
+- **Running more than one `django` container:** nothing is stored in the
+  container, so any request can go to any of them. The cache, the sessions'
+  throttle counters and the queue are in Redis, which all of them share.
+- **Where to look first:** `karni queries` and the
+  [performance](api.md#performance) section name the slow query, and
+  `docker stats` shows which service is at its memory limit.
+
 ## An existing project
 
 A project created before Karni 0.4.1 has a `Dockerfile` without the
@@ -418,8 +603,16 @@ KARNI_SRC=.karni-src
 KARNI_UI_TARBALL=.karni-ui/karni-ui-0.4.0.tgz
 ```
 
-Karni's CI does exactly this in its "Production stack (compose, smoke)" job:
-it creates a project with `karni new`, builds both images, starts the stack
-with generated production values, and checks health, a public page, the admin
-login, static files, the staff app, the security headers, the deploy gate and
-a backup restored into a second database.
+Karni's CI does exactly this in its "Production stack (compose, smoke)" job.
+It creates a project with `karni new` (with a site, and one model with its
+list page), builds both images, starts the stack with generated production
+values and migrates. It seeds demo rows (`karni_seed`) and runs
+`.github/ci/prod_smoke.py check`, which reads `/readyz` and `/healthz`, signs
+in through the API, reads a list endpoint at `/api/` and at `/api/v1/`,
+checks that a deprecated version sends its headers, opens a public page, the
+admin login, a static file and the staff app, and checks the security headers.
+Then one Playwright test (`.github/ci/prod_e2e/signin.spec.ts`) signs in to the
+built staff app and sees a table of the seeded rows. The job ends with the
+deploy gate and a backup restored into a second database. The smoke script
+and the Playwright test run by hand against any running stack, `runserver`
+included, as their files say.

@@ -137,6 +137,7 @@ published file differs from the code: regenerate it with
 | `name` | text, required | `karni new "<name>"` |
 | `kind` | `site`, `app` (default) or `site+app` | `karni new --kind` |
 | `recipe` | text | the recipe the spec started from, for the record only |
+| `api_version` | a version name such as `v1` (lower case letters, digits and `-`, at most 16 characters). Experimental | `KARNI_API_VERSION`: the API is mounted at `/api/v1/`, with a document and a client per version ([API versions](api.md#api-versions)) |
 
 ### `modules`
 
@@ -376,6 +377,7 @@ means. `karni explain <code>` prints any code's entry.
 | [C252](errors.md#c252) | `database` names an alias the project does not have |
 | [C253](errors.md#c253) | a relation joins two databases |
 | [C254](errors.md#c254) | a rename (`was`) that is not valid |
+| [C740](errors.md#c740) | `app.api_version` is not a version name |
 | [C324](errors.md#c324) | a module or feature without one it requires, or next to one it conflicts with |
 | [C245](errors.md#c245) | `karni spec export` cannot read the project |
 | [C246](errors.md#c246) | the export's output file exists |
@@ -781,8 +783,9 @@ one option with `class Karni(karni.Session.Karni)`.
 The settings block sits right above `karni_settings(globals())`, where every
 setting takes effect, `KARNI_2FA` included. It sets every feature of the
 spec (`KARNI_2FA`, `KARNI_EMAIL_OTP`, `KARNI_SOCIAL_TOKEN_PROVIDERS`,
-`KARNI_TERMS`), `KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the
-spec has roles, and each module option. A social provider's client ids come
+`KARNI_TERMS`), `KARNI_API_VERSION` when the spec has `app.api_version`,
+`KARNI_ROLES` and `KARNI_ACCOUNTS_DEFAULT_ROLES` when the spec has roles, and
+each module option. A social provider's client ids come
 from the environment: `KARNI_SOCIAL_GOOGLE_CLIENT_IDS` (comma-separated) for
 `google`, and so on. A setting assigned again below the call wins over the
 block, so leave the spec's settings to the spec.

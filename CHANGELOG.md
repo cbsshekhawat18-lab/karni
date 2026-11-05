@@ -11,6 +11,33 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **Production proof (experimental): `/healthz` and `/readyz`, API versions
+  and a deploy guide.** `/healthz` is liveness and `/readyz` is readiness over
+  `KARNI_READYZ_CHECKS` (the database, the cache and the Celery broker,
+  `check_broker`), each check bounded by `KARNI_HEALTH_TIMEOUT` seconds. A
+  failure is 503 and `failing` names the check. The health views (these and
+  `/health/`, `/health/ready/`) are never cached, open before the terms are
+  accepted and left out of the request log while they answer below 400
+  (`KARNI_LOG_QUIET_PATHS`). The scaffold mounts them with `*probe_urls`, its
+  dev and production compose files ask `/readyz`, and Caddy forwards both. A
+  project without them keeps asking `/health/` until you add the two lines
+  (`karni make deploy compose` picks the URL from `config/urls.py`).
+  `KARNI_API_VERSION=v1` mounts the API at `/api/v1/` through
+  `karni.api.versions.api_urls()` (the scaffold uses it), `KARNI_API_UNVERSIONED`
+  keeps, redirects (308) or removes `/api/`, and `KARNI_API_VERSIONS` marks a
+  version deprecated, with a sunset date and migration notes: its responses
+  carry `Deprecation`, `Sunset` and `Link` headers. Each version has its own
+  OpenAPI document and Swagger UI, and `karni types` writes `types.ts` and
+  `hooks.ts` for each into `frontend/src/api/<version>/`. `app.api_version` in
+  `karni.yaml` is shown by `karni plan` and written by `karni build` as
+  `KARNI_API_VERSION`. New codes: `E590`, `E591`, `W660`, `W661` and `C740`.
+  The "Production stack (compose, smoke)" CI job now migrates, seeds, runs a
+  smoke script that signs in, reads a list at `/api/` and `/api/v1/` and
+  checks a deprecated version's headers, and a Playwright test that signs in
+  to the built staff app and sees a ResourceTable page. The deploy guide gains
+  the variables that matter, migrations on deploy, health checks, Celery and
+  beat, static and media files, API versions and scaling. See
+  [docs/deploy.md](docs/deploy.md) and [docs/api.md](docs/api.md#api-versions).
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5
