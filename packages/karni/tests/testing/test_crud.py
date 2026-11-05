@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import warnings
+from datetime import timedelta
 from collections.abc import Iterator
 from typing import Any
 
@@ -11,6 +12,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.utils import timezone
 
 from karni.accounts.permissions import user_roles
 from karni.testing import APITestCase, assert_crud, client_as, user_with_roles
@@ -89,6 +91,14 @@ class ClientAsTests(APITestCase):
 def test_the_full_crud_surface_of_an_owned_resource() -> None:
     report = assert_crud(crud_urls.EventViewSet, "organizer")
     assert report.passed == list(CHECKS) and not report.failures
+
+
+def test_the_list_check_finds_the_row_on_a_later_page_of_a_table_that_already_holds_rows() -> None:
+    # A seeded database: more venues than one page, so the new row is not on page one.
+    Venue.objects.bulk_create([Venue(name=f"Seeded {n}", city="Oslo") for n in range(120)])
+    Venue.objects.update(created_at=timezone.now() + timedelta(days=1))  # listed before a new row
+    report = assert_crud(crud_urls.VenueViewSet, "staff")
+    assert "list" in report.passed and not report.failures
 
 
 def test_a_read_only_role_gets_exactly_the_promised_denials() -> None:

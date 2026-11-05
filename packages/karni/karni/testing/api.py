@@ -918,7 +918,13 @@ class _Crud:
         if not self.status("list", response, expected, f"GET {url}") or not expected.allowed:
             return
         self.contract("GET", url, response)
-        if str(row.pk) not in _ids(response.json()):
+        body = response.json()
+        # On a table that already holds rows (a seeded database) the row may be on a later page.
+        for _page in range(50):
+            if str(row.pk) in _ids(body) or not (isinstance(body, dict) and body.get("next")):
+                break
+            body = self.call("list", self.user, "GET", body["next"]).json()
+        if str(row.pk) not in _ids(body):
             self.fail(
                 f"list: GET {url} does not include the requester's row {row.pk} "
                 f"(read={self.resource.viewset.access!r}). {self.why_empty_hint()}"
