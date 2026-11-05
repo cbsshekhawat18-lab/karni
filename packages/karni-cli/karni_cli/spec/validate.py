@@ -1321,3 +1321,4 @@ def iter_codes() -> Iterator[str]:
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
     yield "C324"
+    yield "C740"
