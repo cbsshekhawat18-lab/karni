@@ -477,8 +477,8 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C220",
         "A page entry is not valid",
         "karni spec validate (karni_cli.spec.validate)",
-        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).",
-        "Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.",
+        "Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (blank, login, code, or dashboard: the scaffold's home at /, or a page of charts at /<name>).",
+        "Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.",
     ),
     _c(
         "C221",
@@ -505,7 +505,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C224",
         "A key reserved for a later release",
         "karni spec validate (karni_cli.spec.validate)",
-        "Some keys are reserved for features Karni adds later (trees, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so is taxonomies.",
+        "Some keys are reserved for features Karni adds later (cross-entity search), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so are taxonomies, aggregate and markdown.",
         "Remove the key, and write that part by hand in the project until the feature ships.",
     ),
     _c(
@@ -568,7 +568,7 @@ CODES: Final[tuple[CliCode, ...]] = (
         "C237",
         "A field group names a field the entity does not have",
         "karni spec validate (karni_cli.spec.validate)",
-        "groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.",
+        "groups become Karni.field_groups (the sections of the React form and detail page and the admin's fieldsets), and karni check refuses a name that is not a field or a field in two groups (karni.E551, karni.E552).",
         "Name the entity's fields, each in one group.",
     ),
     _c(
@@ -1288,6 +1288,58 @@ CODES: Final[tuple[CliCode, ...]] = (
         "stale until they expire. karni check refuses the same viewset in the project.",
         "Add cache: <seconds> to the entity (how stale a response may be), or cache: false to "
         "never cache it.",
+    ),
+    # C560-C579 page blocks (large-apps item 11): related tabs on a detail page
+    _c(
+        "C560",
+        "A related tab names no entity",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A detail page's related tabs ({detail: {related: [...]}}) each list the rows of another "
+        "entity that point at the page's entity. The name is not an entity of the spec, or "
+        "several apps define it.",
+        "Name an entity of the spec (app.Entity when two apps define it), or Entity.field.",
+    ),
+    _c(
+        "C561",
+        "A related tab names an entity with no fk to this one",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A related tab is a table of the other entity's rows filtered to this record, and the "
+        "list of that entity filters by its fk fields. The entity has no fk to the page's "
+        "entity, or the field named is not one (a m2m or an o2o cannot back a tab).",
+        "Add a fk field to the page's entity on the other entity, or name the fk it has.",
+    ),
+    _c(
+        "C562",
+        "A related tab could be either of two relations",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The entity named has two or more fks to the page's entity (a deal's company and its "
+        "partner), so the tab must say which rows it lists.",
+        "Write Entity.field, one tab for each relation you want.",
+    ),
+    _c(
+        "C563",
+        "A related tab is listed twice",
+        "karni spec validate (karni_cli.spec.validate)",
+        "Each related tab is one relation. Deal and Deal.company name the same one when Deal has "
+        "one fk to the page's entity.",
+        "List each related tab once.",
+    ),
+    _c(
+        "C680",
+        "A column set names a field the entity does not have, or one twice",
+        "karni spec validate (karni_cli.spec.validate)",
+        "column_sets become Karni.column_sets, the presets of the React table's column set menu, "
+        "and karni check refuses a set that names a field the model does not have (karni.E551) "
+        "or lists one twice (karni.E553).",
+        "Name fields the entity declares (or id, created_at and updated_at), each once per set.",
+    ),
+    _c(
+        "C681",
+        "A column set has no columns, or a name that is not snake_case",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A set's name is what a user's choice is remembered by and its label in the Columns "
+        "menu (financial reads Financial), and a set without columns shows an empty table.",
+        "Name the set in snake_case (default, financial) and list at least one field.",
     ),
 )
 

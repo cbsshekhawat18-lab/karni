@@ -9,7 +9,7 @@ so ``karni build`` and ``karni make`` write the same code.
 
 For one entity, ``Session`` in the app ``classes``::
 
-    classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni, AdminMeta
+    classes/karni/models.py     class Session(BaseModel): the fields, Meta, Karni
                                 (abstract: Django migrates the project's subclass;
                                 tree: true lists TreeModel first, tree: ordered
                                 OrderedTreeModel; taxonomies: class Karni: taxonomies,
@@ -67,7 +67,7 @@ from karni_cli.generators.pysource import (
 )
 from karni_cli.project import CliError
 from karni_cli.spec import catalog, navigation, schema
-from karni_cli.spec.validate import TREE_FIELDS
+from karni_cli.spec.normal import related_tab
 
 __all__ = [
     "BLOCK_END",
@@ -297,21 +297,14 @@ def _model_class(
     searched = _search_option(entity)
     if searched is not None:
         options.append(("search", searched))
+    # wide models (karni.layout): sections and tabs of the forms, presets of the table
+    if entity.groups:
+        options.append(("field_groups", {t: list(names) for t, names in entity.groups.items()}))
+    if entity.column_sets:
+        options.append(("column_sets", {n: list(cols) for n, cols in entity.column_sets.items()}))
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
-    if entity.groups:
-        sets: list[Any] = [
-            (title, {"fields": list(names)}) for title, names in entity.groups.items()
-        ]
-        grouped = {member for names in entity.groups.values() for member in names}
-        own = [s.name for s in specs] + list(TREE_FIELDS.get(entity.tree, ()))
-        own += [key for key in entity.taxonomies if key not in own]
-        rest = [name for name in own if name not in grouped]
-        if rest:
-            sets.append((None, {"fields": rest}))
-        lines += ["", "    class AdminMeta:"]
-        lines.append(_literal({"fieldsets": sets}, "        ", line, "extra = "))
     shown = next((s.name for s in specs if s.is_text), None)
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]
@@ -810,9 +803,11 @@ def _pages(inputs: Inputs) -> list[_Page]:
     """The pages Karni writes, in the spec's navigation order."""
     entities = _entities(inputs.spec)
     by_name = {name: label for label, (_a, name, _e) in entities.items()}
+    apps = inputs.spec.model_dump(mode="json")["apps"]
     found: list[_Page] = []
     for item in inputs.spec.pages:
-        ((name, kinds),) = item.items()
+        ((name, written),) = item.items()
+        kinds = schema.page_kind_names(written)
         if name[:1].isupper():
             label = name if "." in name else by_name.get(name, name)
             _app, entity_name, entity = entities[label]
@@ -832,11 +827,21 @@ def _pages(inputs: Inputs) -> list[_Page]:
                         kind=kind,
                         path=None,
                         expand=expand if kind == "detail" else None,
+                        related=(
+                            [related_tab(ref, label, apps) for ref in schema.page_related(written)]
+                            if kind == "detail"
+                            else None
+                        ),
                     )
                     found.append(_Page(key, spec))
             continue
         kind = kinds[0]
         key = f"{name}:{kind}"
+        if kind == "dashboard" and name != "home" and key in inputs.pages:
+            counted = [default_route(entity_name) for _a, entity_name, _e in entities.values()]
+            spec = page_gen.spec_for(name, resource=None, kind=kind, path=None, counts=counted)
+            found.append(_Page(key, spec))
+            continue
         if key not in inputs.pages or kind not in ("blank", "login"):
             continue
         found.append(
@@ -852,7 +857,7 @@ def _pages(inputs: Inputs) -> list[_Page]:
 
 def _ordered(pages: list[_Page], spec: schema.Spec) -> list[_Page]:
     """``pages`` in navigation order: the spec's entries, and list, detail, form within one."""
-    rank = {"list": 0, "detail": 1, "form": 2, "blank": 0, "login": 0}
+    rank = {"list": 0, "detail": 1, "form": 2, "blank": 0, "login": 0, "dashboard": 0}
     order: dict[str, int] = {}
     for index, item in enumerate(spec.pages):
         ((name, _kinds),) = item.items()

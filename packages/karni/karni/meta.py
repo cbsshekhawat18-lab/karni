@@ -19,6 +19,7 @@ nested class, next to ``Meta``, ``APIMeta`` and ``AdminMeta``::
             import_transform = "shop.imports.clean_order_row"
             after_import = "shop.imports.reindex"
             no_overlap = ("room", "during")     # one live row per room and slot (PostgreSQL)
+            field_groups = {"Order": ["number", "customer"], "Notes": ["note"]}  # karni.layout
             # external = True, writable = True, database = "warehouse": karni.db (experimental)
             # search = {"fields": ["number"]}: karni.global_search (experimental)
 
@@ -183,6 +184,29 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "Each field gets a GIN trigram index "
         "([search across models](global-search.md)).",
         'search = {"fields": ["name", "sku"], "title": "name", "subtitle": "sku"}',
+    ),
+    # wide models: field groups and column sets (karni.layout, experimental)
+    Option(
+        "field_groups",
+        "`{}`",
+        "Experimental. Titled groups of fields: sections (or tabs) in ResourceForm and "
+        "ResourceDetail, fieldsets in the admin. The fields in no group go into a last group, "
+        "Other ([UI: field groups](ui.md#field-groups-and-column-sets-experimental)).",
+        'field_groups = {"Overview": ["name", "summary"], "Financials": ["price", "cost"]}',
+    ),
+    Option(
+        "field_group_layout",
+        '`"sections"`',
+        'Experimental. How ResourceForm and ResourceDetail show `field_groups`: `"sections"` '
+        'or `"tabs"`.',
+        'field_group_layout = "tabs"',
+    ),
+    Option(
+        "column_sets",
+        "`{}`",
+        "Experimental. Named column presets of ResourceTable, with a selector that remembers "
+        "each user's choice. The set named `default` is shown first, else the first set.",
+        'column_sets = {"default": ["name", "price"], "financial": ["name", "price", "cost"]}',
     ),
     # typed field layer (karni.fields)
     Option(

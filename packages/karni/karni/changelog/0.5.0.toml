@@ -493,3 +493,15 @@ Cache(ttl=...) or Uncached(...). A response that differs per user in a way Karni
 see needs get_cache_scope on its viewset."""
 mechanical = false
 migration = "migrations/0.5.md#response-caching-is-stable"
+
+[[change]]
+id = "no-raw-details"
+kind = "behaviour"
+symbol = "@karni/ui ESLint rule karni/no-raw-elements"
+summary = """\
+The rule flags a raw <details> as well (compose Accordion), and its messages name \
+DataTable and ComparisonTable next to ResourceTable for a raw <table>. A page with \
+a raw <details> fails the lint until it uses Accordion or carries \
+`// eslint-disable-next-line karni/no-raw-elements -- <reason>`."""
+mechanical = false
+migration = "migrations/0.5.md#a-raw-details-fails-karnino-raw-elements"

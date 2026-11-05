@@ -1,15 +1,15 @@
 [
   {
     "id": "karni/no-raw-elements",
-    "title": "Raw <table>/<form>/<input>/<select>/<textarea> in project code",
-    "why": "@karni/ui ships these as schema-driven components (sorting, pagination, validation, accessibility). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.",
-    "fix": "Compose the component the message names: ResourceTable for <table>, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."
+    "title": "Raw <table>/<form>/<input>/<select>/<textarea>/<details> in project code",
+    "why": "@karni/ui ships these as components (sorting, pagination, validation, export, keyboard and screen-reader support). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.",
+    "fix": "Compose the component the message names: ResourceTable for a resource's rows, DataTable for rows the page computed, ComparisonTable for entities side by side, Accordion for a <details> disclosure, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`."
   },
   {
     "id": "karni/max-page-lines",
     "title": "A page file is longer than its cap (50 lines by default)",
     "why": "Pages compose @karni/ui components. A long page is rebuilding something Karni ships.",
-    "fix": "Compose Page / ResourceTable / ResourceForm / ResourceDetail and their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`."
+    "fix": "Compose Page / ResourceTable / ResourceForm / ResourceDetail, and on a dashboard DashboardGrid / ChartCard / DataTable / ComparisonTable, with their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`."
   },
   {
     "id": "karni/no-deep-imports",

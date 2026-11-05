@@ -1,6 +1,7 @@
 /**
  * Default per-kind inputs for <ResourceForm> (contract: string → Input,
- * text → Textarea, number/integer → Input[type=number], boolean → Switch,
+ * text → Textarea (markdown → MarkdownEditor: Write and Preview tabs),
+ * number/integer → Input[type=number], boolean → Switch,
  * date/datetime → native inputs, enum → Select, relation → ResourceSelect
  * (multiple for many), or TreeSelect when the relation points at a tree
  * model (`x-karni-tree`), file → FileUpload, json → Textarea with validation).
@@ -20,6 +21,7 @@ import { Input } from "../../primitives/input";
 import { Select } from "../../primitives/select";
 import { Switch } from "../../primitives/switch";
 import { Textarea } from "../../primitives/textarea";
+import { isMarkdownField, MarkdownEditor } from "../markdown-field";
 import { ResourceSelect } from "../select/ResourceSelect";
 import { TreeSelect } from "../tree/TreeSelect";
 import { humanizeValue } from "./prepare";
@@ -136,6 +138,26 @@ function renderControl({
 }: RenderControlInput): React.ReactElement {
   switch (field.kind) {
     case "text":
+      if (isMarkdownField(field)) {
+        return (
+          <MarkdownEditor
+            label={field.label}
+            value={textValue(rhf.value)}
+            onChange={change}
+            registerFocus={rhf.ref}
+            textarea={{
+              id: inputId,
+              name: rhf.name,
+              maxLength: field.maxLength,
+              disabled,
+              onBlur: rhf.onBlur,
+              "aria-required": ariaRequired,
+              ...aria,
+              ...inputProps,
+            }}
+          />
+        );
+      }
       return (
         <Textarea
           ref={rhf.ref}

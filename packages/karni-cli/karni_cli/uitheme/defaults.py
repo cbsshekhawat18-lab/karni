@@ -25,6 +25,15 @@ MAIN_TOKENS: tuple[str, ...] = (
     "--karni-shadow-md",
     "--karni-shadow-lg",
 )
+#: Experimental. The tokens @karni/ui's components read beyond colours and type: each with
+#: the components that read it. ``karni ui detect`` lists them in its report and among the
+#: commented defaults.
+COMPONENT_TOKENS: dict[str, str] = {
+    "--karni-table-max-height": "ResourceTable",
+    "--karni-dashboard-gap": "DashboardGrid",
+    "--karni-data-table-max-height": "DataTable, ComparisonTable",
+    "--karni-data-table-row-height": "DataTable",
+}
 _VAR = re.compile(r"var\((--[\w-]+)\)")
 
 
@@ -62,10 +71,21 @@ def default_values(text: str) -> dict[Scheme, list[tuple[str, str]]]:
         if token in light:
             out["light"].append((token, _resolve(light[token], light)))
             out["dark"].append((token, _resolve(light[token], dark)))
-    for token in MAIN_TOKENS:
+    for token in (*MAIN_TOKENS, *COMPONENT_TOKENS):
         if token in light:
             out["light"].append((token, light[token]))
     return out
+
+
+def component_tokens(frontend: Frontend) -> list[dict[str, str]]:
+    """Experimental. ``[{token, value, used_by}]``: the components' own tokens and their defaults."""
+    found = styles_source(frontend)
+    light = css.parse(found[0]).variables(":root") if found is not None else {}
+    return [
+        {"token": token, "value": light.get(token, ""), "used_by": used_by}
+        for token, used_by in COMPONENT_TOKENS.items()
+        if token in light
+    ]
 
 
 def detect(frontend: Frontend) -> Detection:

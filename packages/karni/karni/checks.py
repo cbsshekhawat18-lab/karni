@@ -613,6 +613,24 @@ def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.Ch
     return messages
 
 
+@checks.register(checks.Tags.models)
+def check_layouts(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E550 to E553: every ``Karni.field_groups`` and ``Karni.column_sets`` (experimental).
+
+    A malformed declaration, a group or column set naming a field the model
+    does not have, and a field in two groups, each reported with the model,
+    the group or set, and the field (:mod:`karni.layout`).
+    """
+    from karni.layout import layout_errors
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            messages.extend(_as_check(exc, model) for exc in layout_errors(model))
+    return messages
+
+
 @checks.register(checks.Tags.urls)
 def check_welcome_route(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E505: the welcome page must be unreachable with ``DEBUG`` off.

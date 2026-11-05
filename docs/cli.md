@@ -771,6 +771,7 @@ Field DSL for `karni make model NAME [FIELD...]`:
 | `email:email[:unique]` | EmailField(), where unique=True is case-insensitive (LOWER index) |
 | `slug:slug[:source]` | SlugField(populate_from="source"), unique among live rows (:len too) |
 | `phone:phone` | PhoneField(): E.164, CHECK format |
+| `notes:markdown` | MarkdownField(): text, edited with a preview and shown formatted in @karni/ui |
 | `country:country / currency:currency` | CountryField() / CurrencyField() with a CHECK against the ISO list |
 | `meta:json[:queried]` | JSONField(default=dict), and queried adds a GIN index |
 | `tags:array:str[:len]` | ArrayField(models.CharField(...)) with a GIN index, PostgreSQL only |
@@ -1067,7 +1068,7 @@ karni make middleware [OPTIONS] NAME
 
 Add frontend/src/pages/NAME.tsx (at most 50 lines) and register its route.
 
-With --resource R --kind list|detail|form the page composes ResourceTable / ResourceDetail / ResourceForm for the API resource R. Without --resource the page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at `<base>/new` and `<base>/$id/edit`, where the base is --path or `/<resource>`.
+With --resource R --kind list|detail|form the page composes ResourceTable / ResourceDetail / ResourceForm for the API resource R (a detail page takes --related tabs). --kind dashboard composes DashboardGrid and ChartCard with the rows of each --count resource. Without --resource the page is a bare `<Page>`. Routes: list at `<base>`, detail at `<base>/$id`, form at `<base>/new` and `<base>/$id/edit`, where the base is --path or `/<resource>`, and a dashboard at `/<name>`.
 
 ```
 karni make page [OPTIONS] NAME
@@ -1077,9 +1078,11 @@ karni make page [OPTIONS] NAME
 | --- | --- | --- |
 | `NAME` (required) |  | Page file name, kebab-case (e.g. events). |
 | `--resource` TEXT |  | API resource (router prefix, e.g. events). |
-| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource. |
+| `--kind` TEXT |  | With --resource: list (default), detail or form. A login page needs no resource, and a dashboard (experimental) counts resources (--count). |
 | `--path` TEXT |  | Route path. For resource pages it is the base (default `/<resource>`). |
 | `--title` TEXT |  | Page title (default: from the name). |
+| `--related` TEXT (repeatable) |  | Experimental. With --kind detail: a related tab (deals, or deals.partner). Repeat it. |
+| `--count` TEXT (repeatable) |  | Experimental. With --kind dashboard: a resource to count. Repeat it (default: every resource the project routes). |
 | `--no-route` |  | Do not register the route in frontend/src/routes.tsx. |
 | `--force` |  | Overwrite / replace existing targets. |
 | `--dry-run` |  | Print the files and diff it would write, but write nothing. |

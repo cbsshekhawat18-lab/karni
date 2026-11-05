@@ -46,6 +46,8 @@ __all__ = [
     "ApiCache",
     "App",
     "AppInfo",
+    "DetailOptions",
+    "DetailPage",
     "Entity",
     "Features",
     "FieldEntry",
@@ -57,6 +59,8 @@ __all__ = [
     "Spec",
     "Terms",
     "json_schema",
+    "page_kind_names",
+    "page_related",
 ]
 
 #: Experimental. The format version this release reads and writes.
@@ -417,7 +421,18 @@ class Entity(_Node):
     )
     groups: dict[str, list[str]] = Field(
         default_factory=dict,
-        description="Field groups: title -> fields (the admin form's fieldsets).",
+        description=(
+            "Field groups: title -> fields (Karni.field_groups): sections of the React form and "
+            "detail page and fieldsets of the admin. The fields in no group come last, in Other."
+        ),
+    )
+    column_sets: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description=(
+            "Column presets of the React table: name -> fields (Karni.column_sets). The set "
+            "named default shows first, else the first set."
+        ),
+        json_schema_extra={"propertyNames": {"pattern": f"^{FIELD_NAME}$"}},
     )
     order: Names = Field(
         default_factory=list, description="Default ordering (Meta.ordering), - for descending."
@@ -469,6 +484,65 @@ class App(_Node):
         description="Entity name (PascalCase) -> entity.",
         json_schema_extra=_names(ENTITY_NAME),
     )
+
+
+class DetailOptions(_Node):
+    """Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``."""
+
+    related: Names = Field(
+        default_factory=list,
+        description=(
+            "A tab per reverse relation, each a table of the related rows filtered to the "
+            "record: an entity with a fk to this one (Deal), or Entity.field when it has two "
+            "(Deal.partner)."
+        ),
+    )
+
+
+class DetailPage(_Node):
+    """Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``."""
+
+    detail: DetailOptions = Field(description="The detail page's options.")
+
+
+def _one_kind_or_many(value: Any) -> Any:
+    return [value] if isinstance(value, str | dict) else value
+
+
+def _kind_member(value: Any) -> str:
+    return "=detail" if isinstance(value, dict | DetailPage) else "=kind"
+
+
+#: A page kind: a name (list, detail, form, dashboard, ...) or a detail page with options.
+PageKind = Annotated[
+    Annotated[str, Tag("=kind")] | Annotated[DetailPage, Tag("=detail")],
+    Discriminator(_kind_member),
+]
+#: One page kind or a list of them: ``dashboard``, or ``[list, {detail: {related: [Deal]}}]``.
+PageKinds = Annotated[list[PageKind], BeforeValidator(_one_kind_or_many)]
+
+
+def page_kind_names(kinds: list[Any]) -> list[str]:
+    """Experimental. The kinds of a page entry by name (``{detail: {...}}`` is ``detail``)."""
+    names: list[str] = []
+    for kind in kinds:
+        if isinstance(kind, str):
+            names.append(kind)
+        elif isinstance(kind, DetailPage):
+            names.append("detail")
+        elif isinstance(kind, dict):
+            names.extend(str(key) for key in kind)
+    return names
+
+
+def page_related(kinds: list[Any]) -> list[str]:
+    """Experimental. The ``related`` of an entry's detail page, as written (``[]`` for none)."""
+    for kind in kinds:
+        if isinstance(kind, DetailPage):
+            return list(kind.detail.related)
+        if isinstance(kind, dict) and isinstance(kind.get("detail"), dict):
+            return list(kind["detail"].get("related") or [])
+    return []
 
 
 ModuleOptions = Annotated[
@@ -559,12 +633,14 @@ class Spec(_Node):
         description="App label -> app.",
         json_schema_extra=_names(APP_LABEL),
     )
-    pages: list[dict[str, Names]] = Field(
+    pages: list[dict[str, PageKinds]] = Field(
         default_factory=list,
         description=(
             "karni make page, in navigation order. Each item is one key: an entity with its "
-            "pages (list, detail, form), or a page name with its kind (dashboard, blank, login, "
-            "or code: a page of the project's own at /<name>, which karni build leaves alone)."
+            "pages (list, detail, form, or {detail: {related: [Deal]}} for related tabs), or a "
+            "page name with its kind (blank, login, dashboard: the scaffold's home page for "
+            "home and a page of charts for any other name, or code: a page of the project's "
+            "own at /<name>, which karni build leaves alone)."
         ),
     )
     navigation: NavigationValue = Field(
@@ -604,7 +680,11 @@ def json_schema() -> dict[str, Any]:
     """Experimental. The JSON Schema of ``karni.yaml``, as published at :data:`SCHEMA_URL`."""
     schema = _tidy(Spec.model_json_schema())
     # Each page entry is one key: an entity with its pages, or a page name with its kind.
-    schema["properties"]["pages"]["items"] |= {"minProperties": 1, "maxProperties": 1}
+    items = schema["properties"]["pages"]["items"]
+    items |= {"minProperties": 1, "maxProperties": 1}
+    # One kind, or a list of them: the file may write `- home: dashboard`.
+    many = items["additionalProperties"]
+    items["additionalProperties"] = {"anyOf": [{"type": "string"}, *many.get("anyOf", [many])]}
     # So is each navigation entry written as a mapping: a page with its options, or a group.
     schema["$defs"]["NavigationEntry"]["oneOf"][1] |= {"minProperties": 1, "maxProperties": 1}
     return {

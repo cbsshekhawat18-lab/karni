@@ -156,7 +156,6 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C221", HEAD + "modules: {payments: {provider: 3}}\n", 3),
     ("C222", HEAD + "roles:\n  staff: {}\n  staff: {}\n", 5),
     ("C223", SHOP + "        fields: {name: str}\nseed: {Product: -1}\n", 8),
-    ("C224", SHOP + "        fields: {body: markdown}\n", 7),
     ("C225", HEAD + "modules: {site: {}}\n", 3),
     ("C230", SHOP + "        fields: {maker: fk:Maker}\n", 7),
     ("C231", HEAD + "apps:\n  a: {entities: {Tag: {}, Post: {fields: {tag: fk:b.Tag}}}}\n"
@@ -167,6 +166,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C235", HEAD + "pages:\n  - Product: list\n", 4),
     ("C236", HEAD + "modules: {chat: {}}\n", 3),
     ("C237", SHOP + "        fields: {name: str}\n        groups: {Main: [name, price]}\n", 8),
+    ("C237", SHOP + "        fields: {name: str}\n        groups: {A: [name], B: [name]}\n", 8),
     ("C238", SHOP + "        fields: {name: str}\n        key: sku\n", 8),
     ("C239", SHOP + "        fields: {name: str}\n        owner: name\n", 8),
     ("C240", SHOP + "        fields: {name: str}\n        access: {read: 'owned:name'}\n", 8),
@@ -220,6 +220,7 @@ INVALID: list[tuple[str, str, int | None]] = [
      8),
     ("C502", SHOP + "        fields: {name: str}\n        aggregate: {group_by: ['name:year']}\n", 8),
     ("C502", SHOP + "        fields: {on: date}\n        aggregate: {group_by: ['on:week']}\n", 8),
+    ("C224", HEAD + "search: {fields: [name]}\n", 3),
     ("C213", HEAD + "features: {api_cache: 60}\n", 3),
     ("C213", SHOP + "        cache: soon\n", 7),
     ("C219", HEAD + "features:\n  api_cache: {ttl: 0}\n", 4),
@@ -242,6 +243,23 @@ INVALID: list[tuple[str, str, int | None]] = [
      "        global_search: {fields: [name], subtitle: maker__name}\n", 8),
     ("C542", SHOP + "        fields: {name: str, sku: str}\n"
      "        global_search: {fields: [name], title: sku__code}\n", 8),
+    # page blocks (experimental): a detail page's related tabs
+    ("C212", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {tabs: [Note]}}]\n", 9),
+    ("C220", SHOP + "        fields: {name: str}\npages:\n  - about: {detail: {related: [Product]}}\n", 9),
+    ("C560", SHOP + "        fields: {name: str}\npages:\n  - Product: [{detail: {related: [Ghost]}}]\n", 9),
+    ("C561", SHOP + "        fields: {name: str}\n      Tag: {fields: {name: str}}\n"
+     "pages:\n  - Product: [{detail: {related: [Tag]}}]\n", 10),
+    ("C561", SHOP + "        fields: {name: str}\n      Tag: {fields: {items: m2m:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Tag.items]}}]\n", 10),
+    ("C562", SHOP + "        fields: {name: str}\n      Swap: {fields: {given: fk:Product, taken: fk:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Swap]}}]\n", 10),
+    ("C563", SHOP + "        fields: {name: str}\n      Review: {fields: {product: fk:Product}}\n"
+     "pages:\n  - Product: [{detail: {related: [Review, Review.product]}}]\n", 10),
+    # wide models (experimental): column sets
+    ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, prcie]}\n", 8),
+    ("C680", SHOP + "        fields: {name: str}\n        column_sets: {default: [name, name]}\n", 8),
+    ("C681", SHOP + "        fields: {name: str}\n        column_sets: {default: []}\n", 8),
+    ("C681", SHOP + "        fields: {name: str}\n        column_sets: {Money: [name]}\n", 8),
 ]  # fmt: skip
 
 
@@ -258,16 +276,16 @@ def test_every_code_is_tested_and_registered() -> None:
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, C324 (the module catalog's requires and conflicts), the trees' C460-C479,
-    # the aggregations' C500-C519, response caching's C520-C539, the tree scope's C620-C639,
-    # navigation's C640-C659, the taxonomies' C700-C719 and global_search's C540-C559.
+    # the aggregations' C500-C519, response caching's C520-C539, global_search's C540-C559, the
+    # page blocks' C560-C579, the tree scope's C620-C639, navigation's C640-C659, wide models'
+    # C680-C699 and the taxonomies' C700-C719.
     assert all(
         200 <= int(code[1:]) <= 269
         or code == "C324"
         or 460 <= int(code[1:]) <= 479
-        or 500 <= int(code[1:]) <= 559
-        or 620 <= int(code[1:]) <= 639
-        or 640 <= int(code[1:]) <= 659
-        or 700 <= int(code[1:]) <= 719
+        or 500 <= int(code[1:]) <= 579
+        or 620 <= int(code[1:]) <= 659
+        or 680 <= int(code[1:]) <= 719
         for code in iter_codes()
     )
 
@@ -701,12 +719,14 @@ apps:
           member: fk:User
           status: state:pending>paid|pending>cancelled|paid>refunded
           note: text?
+          details: markdown?
           payment: fk:karni_payments.Payment?
           helpers: m2m:User?
           currency: currency?
         owner: member
         audit: [note, status]
-        groups: {Booking: [session, member, status], Notes: [note]}
+        groups: {Booking: [session, member, status], Notes: [note, details]}
+        column_sets: {default: [session, status], money: [session, currency, created_at]}
         scope_paths: {studio: session__studio}
         access: {read: authenticated, write: authenticated}
         cache: false
@@ -800,11 +820,12 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
                 options.append(f"scope_paths = {entity.scope_paths!r}")
             if entity.global_search:
                 options.append(f"search = {_search_option(entity)!r}")
+            if entity.groups:
+                options.append(f"field_groups = {entity.groups!r}")
+            if entity.column_sets:
+                options.append(f"column_sets = {entity.column_sets!r}")
             if options:
                 _insert(models, name, "Karni", options)
-            if entity.groups:
-                sets = [(title, {"fields": names}) for title, names in entity.groups.items()]
-                _insert(models, name, "AdminMeta", [f"extra = {{'fieldsets': {sets!r}}}"])
             if entity.cache is not None:
                 viewsets = root / label / "viewsets.py"
                 line = (
@@ -831,7 +852,7 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
         if name[:1].isupper():
             route = default_route(name)
             singular = route.removesuffix("s")
-            for kind in kinds:
+            for kind in schema.page_kind_names(kinds):
                 page = route if kind == "list" else f"{singular}-{kind}"
                 ok("make", "page", page, "--resource", route, "--kind", kind)
         elif kinds == ["login"]:

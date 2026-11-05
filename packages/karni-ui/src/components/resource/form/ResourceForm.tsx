@@ -15,7 +15,12 @@ import { useResourceMutations } from "../../../hooks/useResourceMutations";
 import { useUnsavedChangesGuard } from "../../../hooks/useUnsavedChangesGuard";
 import { cn } from "../../../lib/cn";
 import { registerComponentRole } from "../../../lib/roles";
-import type { FieldDef, ResourceSchema } from "../../../schema/types";
+import type {
+  FieldDef,
+  FieldGroupDef,
+  FieldGroupLayout,
+  ResourceSchema,
+} from "../../../schema/types";
 import { useSchema } from "../../../schema/useSchema";
 import { zodFor } from "../../../schema/zod";
 import { describeError, type KarniErrorContext } from "../../../states/describe-error";
@@ -23,6 +28,7 @@ import type { ErrorSlotProps } from "../../../states/ErrorState";
 import { PendingButton } from "../../../states/PendingButton";
 import { AlertIcon } from "../../primitives/icons";
 import { Label } from "../../primitives/label";
+import { chosenGroups, chosenLayout, groupFields, GroupedFields } from "../field-groups";
 import { resourceNames, type ResourceLabel, type ResourceNames } from "../resource-names";
 import { DefaultFieldControl, withoutAriaRequired } from "./field-inputs";
 import {
@@ -139,6 +145,14 @@ export interface ResourceFormProps {
    * `resource` ("events" → "event").
    */
   resourceLabel?: ResourceLabel;
+  /**
+   * Experimental. The groups the fields show in, as sections or tabs. Default:
+   * the model's `Karni.field_groups` (`x-karni-field-groups`). The fields in no
+   * group come last, under "Other". `false` shows one list.
+   */
+  fieldGroups?: false | readonly FieldGroupDef[];
+  /** Experimental. `"sections"` or `"tabs"`. Default: the model's `field_group_layout`. */
+  groupLayout?: FieldGroupLayout;
 }
 
 /** Field kinds the generic form knows how to render (others need an override). */
@@ -368,6 +382,8 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
     guardUnsavedChanges = true,
     onDirtyChange,
     reloadItem,
+    fieldGroups,
+    groupLayout,
   } = props;
   const mode = id === undefined ? "create" : "update";
   const mutations = useResourceMutations(resource);
@@ -382,10 +398,31 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
     () => writableFields(schema, fieldOverrides),
     [schema, fieldOverrides],
   );
-  const visibleFields = React.useMemo(
-    () => shownFields(formFields, fieldOverrides),
-    [formFields, fieldOverrides],
+  const groupDefs = chosenGroups(fieldGroups, schema);
+  const layout = chosenLayout(groupLayout, schema);
+  // The shown fields in their groups (null: one list), and in the order the form shows them.
+  const grouped = React.useMemo(
+    () => groupFields(shownFields(formFields, fieldOverrides), groupDefs),
+    [formFields, fieldOverrides, groupDefs],
   );
+  const visibleFields = React.useMemo(
+    () => grouped?.flatMap((group) => group.fields) ?? shownFields(formFields, fieldOverrides),
+    [grouped, formFields, fieldOverrides],
+  );
+  const tabbed = grouped !== null && layout === "tabs";
+  const [activeGroup, setActiveGroup] = React.useState<string | undefined>(undefined);
+  const shownGroup = tabbed
+    ? (grouped.find((group) => group.key === activeGroup) ?? grouped[0])?.key
+    : undefined;
+  const groupOf = React.useMemo(
+    () =>
+      new Map(
+        (grouped ?? []).flatMap((group) => group.fields.map((field) => [field.name, group.key])),
+      ),
+    [grouped],
+  );
+  /** A field to focus once its tab is open. */
+  const focusAfterSwitch = React.useRef<string | null>(null);
 
   const initialValues = React.useMemo(
     () => buildFormValues({ fields: formFields, item, defaultValues }),
@@ -503,7 +540,7 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
     [visibleFields],
   );
 
-  const focusField = React.useCallback(
+  const focusNow = React.useCallback(
     (name: string): void => {
       methods.setFocus(name);
       const element = document.getElementById(inputIdOf(name));
@@ -511,6 +548,26 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
     },
     [methods, inputIdOf],
   );
+
+  // A field on a closed tab: open its tab first, then focus it (below).
+  const focusField = React.useCallback(
+    (name: string): void => {
+      const key = tabbed ? groupOf.get(name) : undefined;
+      if (key !== undefined && key !== shownGroup) {
+        focusAfterSwitch.current = name;
+        setActiveGroup(key);
+        return;
+      }
+      focusNow(name);
+    },
+    [tabbed, groupOf, shownGroup, focusNow],
+  );
+  React.useEffect(() => {
+    const name = focusAfterSwitch.current;
+    if (name === null) return;
+    focusAfterSwitch.current = null;
+    focusNow(name);
+  }, [shownGroup, focusNow]);
 
   // Field errors in the order the fields appear, then extra fields.
   const fieldErrors: ResourceFormFieldError[] = [];
@@ -777,6 +834,22 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
 
   const fieldError = (name: string): string | undefined => errorAt(formState.errors, name)?.message;
 
+  const renderRow = (field: FieldDef): React.ReactElement => {
+    // An edit form keeps a stored file unless a new one is chosen: not required there.
+    const shown = keepsStoredFile(field, mode, item) ? { ...field, required: false } : field;
+    return (
+      <FormFieldRow
+        key={field.name}
+        field={shown}
+        inputId={inputIdOf(field.name)}
+        override={fieldOverrides?.[field.name]}
+        control={methods.control}
+        error={fieldError(field.name)}
+        disabled={submitting}
+      />
+    );
+  };
+
   const SubmitErrorSlot = slots.SubmitError;
   const SummarySlot = slots.ErrorSummary;
   const summaryTitle =
@@ -819,27 +892,24 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
           </div>
         ) : null}
         <fieldset disabled={submitting} className="m-0 min-w-0 space-y-5 border-0 p-0">
-          {formFields.map((field) => {
-            const override = fieldOverrides?.[field.name];
-            if (override?.hidden === true) return null;
-            const visible =
-              visibleFields.find((candidate) => candidate.name === field.name) ?? field;
-            // An edit form keeps a stored file unless a new one is chosen: not required there.
-            const shown = keepsStoredFile(visible, mode, item)
-              ? { ...visible, required: false }
-              : visible;
-            return (
-              <FormFieldRow
-                key={field.name}
-                field={shown}
-                inputId={inputIdOf(field.name)}
-                override={override}
-                control={methods.control}
-                error={fieldError(field.name)}
-                disabled={submitting}
-              />
-            );
-          })}
+          {grouped === null ? (
+            visibleFields.map(renderRow)
+          ) : (
+            <GroupedFields
+              layout={layout}
+              as="fieldset"
+              label={`${humanizeValue(names.singular)} fields`}
+              active={shownGroup}
+              onActiveChange={setActiveGroup}
+              panels={grouped.map((group) => ({
+                key: group.key,
+                label: group.label,
+                content: group.fields.map(renderRow),
+                problems: group.fields.filter((field) => fieldError(field.name) !== undefined)
+                  .length,
+              }))}
+            />
+          )}
           {extraFields}
         </fieldset>
         {honeypot !== undefined ? (
@@ -889,9 +959,13 @@ function ResourceFormInner(props: ResourceFormInnerProps): React.ReactElement {
  * focus. A failed submit keeps every typed value, puts DRF's messages on their
  * fields (a summary lists them when more than one fails) and moves focus there.
  * Any other failure (offline, 403, 409, 5xx) is a banner with "Try again" when
- * it can help. Escape hatches: per-field overrides (`fields`), `extraFields`,
- * `transformSubmit`, `actions`, `slots`, `validationMode` / `reValidateMode`
- * and `guardUnsavedChanges` / `onDirtyChange`.
+ * it can help. A model with `Karni.field_groups` shows its fields in those
+ * groups, as sections or tabs (experimental): a tab with an error is marked,
+ * and moving focus to a field opens its tab. A MarkdownField is edited with
+ * Write and Preview tabs. Escape hatches: per-field overrides (`fields`),
+ * `extraFields`, `transformSubmit`, `actions`, `slots`, `validationMode` /
+ * `reValidateMode`, `guardUnsavedChanges` / `onDirtyChange`, and
+ * `fieldGroups` / `groupLayout`.
  */
 export function ResourceForm(props: ResourceFormProps): React.ReactElement {
   const { resource, id, slots: slotOverrides, resourceLabel, className } = props;

@@ -696,7 +696,10 @@ RULES: tuple[Rule, ...] = (
             "`LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees "
             "its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial "
             "or audited models). `karni schema <app>` shows every column, constraint and index "
-            "and why it exists."
+            "and why it exists. Long text a page shows formatted is `MarkdownField` "
+            "(`name:markdown`). A model with many fields declares `class Karni: field_groups` "
+            "(form and detail sections or tabs) and `column_sets` (table presets) instead of "
+            "hand-built screens."
         ),
         rationale=(
             "Float money, free-text codes and case-sensitive unique emails pass every test and "
@@ -821,10 +824,15 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Screens compose `@karni/ui` components (`Page`, `ResourceTable`, "
             "`ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw "
-            "`<table>/<form>/<input>/<select>/<textarea>`."
+            "`<table>/<form>/<input>/<select>/<textarea>/<details>`. Dashboards and reports "
+            "compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), "
+            "`ComparisonTable`, `Accordion` and `MarkdownView`."
         ),
         rationale="The components already handle data, validation, a11y and theming.",
-        fix="Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.",
+        fix=(
+            "Compose ResourceTable / DataTable / ComparisonTable / Accordion / ResourceForm / "
+            "Input / Select from @karni/ui."
+        ),
         enforced_by=("karni/no-raw-elements",),
     ),
     Rule(

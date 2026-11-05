@@ -454,7 +454,7 @@ def _python_optouts(lines: list[str], found: list[tuple[Finding, list[int]]]) ->
 
 # TypeScript / JavaScript
 
-_RAW_ELEMENT = re.compile(r"<(table|form|input|select|textarea)(?=[\s/>])")
+_RAW_ELEMENT = re.compile(r"<(table|form|input|select|textarea|details)(?=[\s/>])")
 _DEEP_IMPORT = re.compile(
     r"""(?:from\s+|import\s*\(\s*|require\s*\(\s*|import\s+)["']@karni/ui/(?:dist|src)(?:/[^"']*)?["']"""
 )
@@ -465,7 +465,8 @@ _NEW_TRANSPORT = re.compile(
     r"(?<![\w$.])new\s+(?:(?:window|globalThis|self)\.)?(XMLHttpRequest|WebSocket)\b"
 )
 _REPLACEMENTS = {
-    "table": "ResourceTable",
+    "table": "ResourceTable (a resource), DataTable (computed rows) or ComparisonTable",
+    "details": "Accordion",
     "form": "ResourceForm",
     "input": "Input (or ResourceForm)",
     "select": "Select / ResourceSelect",

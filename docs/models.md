@@ -312,6 +312,17 @@ so next to its other `class Karni` options: `dashboard = True`, or a dict
 that picks the counts and the columns. The keys, the defaults and what the
 page shows are in [API: the staff dashboard](api.md#the-staff-dashboard).
 
+## Many fields: field groups and column sets
+
+A model with many fields lays out its screens next to its other `class
+Karni` options (experimental): `field_groups` splits the React form, the
+detail page and the admin's change form into titled groups, shown as
+sections or, with `field_group_layout = "tabs"`, tabs, and `column_sets`
+gives the React table named column presets. Long text that a page shows
+formatted is a [`MarkdownField`](fields.md#markdownfield). The keys, the
+checks (`karni.E550` to `E553`) and what each screen does are in
+[UI: field groups and column sets](ui.md#field-groups-and-column-sets-experimental).
+
 ## External tables, views and a second database
 
 !!! warning "Experimental"

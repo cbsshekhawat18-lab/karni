@@ -701,3 +701,21 @@ def test_defaults_come_from_the_ui_package_stylesheet() -> None:
     assert light["--karni-color-background"] == "hsl(0 0% 100%)"
     assert dict(values["dark"])["--karni-color-background"] == "hsl(224 71.4% 4.1%)"
     assert set(MAIN_TOKENS) <= set(light)
+
+
+def test_the_component_tokens_are_listed(tmp_path: Path) -> None:
+    """Experimental: the page blocks' tokens, in the report and among the commented defaults."""
+    from karni_cli.uitheme.defaults import COMPONENT_TOKENS
+
+    root = project(tmp_path, "tailwind4")
+    data = report(root, "--dry-run")
+    assert [entry["token"] for entry in data["components"]] == list(COMPONENT_TOKENS)
+    gap = next(e for e in data["components"] if e["token"] == "--karni-dashboard-gap")
+    assert gap == {"token": "--karni-dashboard-gap", "value": "1rem", "used_by": "DashboardGrid"}
+    output = ok("--frontend", str(root), "--dry-run").output
+    assert "Component tokens (set them in karni-theme.css to resize the components):" in output
+    assert re.search(r"--karni-data-table-row-height +2\.5rem +\(DataTable\)", output)
+    plain = project(tmp_path / "plain", "plain")
+    report(plain)
+    theme = (plain / "src" / "karni-theme.css").read_text()
+    assert "/* --karni-data-table-max-height: var(--karni-table-max-height); */" in theme

@@ -1,6 +1,6 @@
 /**
  * axe-core over every Storybook story of the app shell, the support
- * components and the primitives: each story renders (its args, render
+ * components, the page blocks and the primitives: each story renders (its args, render
  * function and decorators, through composeStories) and axe checks the whole
  * document, portals included, against the WCAG 2.x A and AA rules.
  *
@@ -14,13 +14,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as otpLoginForm from "../src/auth/otp-login-form.stories";
 import * as socialButton from "../src/auth/social-button.stories";
 import * as termsGate from "../src/auth/terms-gate.stories";
+import * as accordion from "../src/components/accordion/accordion.stories";
 import * as karniMark from "../src/components/brand/karni-mark.stories";
 import * as chart from "../src/components/chart/data-chart.stories";
+import * as comparisonTable from "../src/components/comparison-table/comparison-table.stories";
 import * as dashboard from "../src/components/dashboard/dashboard.stories";
+import * as chartCard from "../src/components/dashboard-grid/chart-card.stories";
+import * as dashboardGrid from "../src/components/dashboard-grid/dashboard-grid.stories";
+import * as dataTable from "../src/components/data-table/data-table.stories";
 import * as emptyState from "../src/components/empty-state/empty-state.stories";
 import * as fileUpload from "../src/components/file-upload/file-upload.stories";
 import * as globalSearch from "../src/components/global-search/global-search.stories";
 import * as layout from "../src/components/layout/layout.stories";
+import * as markdownView from "../src/components/markdown/markdown-view.stories";
 import * as modal from "../src/components/modal/modal.stories";
 import * as page from "../src/components/page/page.stories";
 import * as button from "../src/components/primitives/button.stories";
@@ -39,7 +45,13 @@ import * as toast from "../src/components/toast/toaster.stories";
 import * as theme from "../src/theme/theme.stories";
 
 const MODULES = {
+  Accordion: composeStories(accordion),
+  ChartCard: composeStories(chartCard),
+  ComparisonTable: composeStories(comparisonTable),
   Dashboard: composeStories(dashboard),
+  DashboardGrid: composeStories(dashboardGrid),
+  DataTable: composeStories(dataTable),
+  MarkdownView: composeStories(markdownView),
   DataChart: composeStories(chart),
   EmptyState: composeStories(emptyState),
   FileUpload: composeStories(fileUpload),

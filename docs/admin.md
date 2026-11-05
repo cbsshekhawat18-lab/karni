@@ -63,6 +63,7 @@ excluded from forms.
 | `readonly_fields` | audit fields present on the model + `AdminMeta.read_only` | none |
 | `list_select_related` | FKs appearing in the derived `list_display` (no N+1 changelists) | none |
 | `autocomplete_fields` | FK/M2M whose target admin has search fields (second pass) | none |
+| `fieldsets` (experimental) | `Karni.field_groups`: a fieldset per group, the form's fields in no group last under Other ([field groups](ui.md#field-groups-and-column-sets-experimental)). `derive_fieldsets` is the hook | none |
 
 Each rule is a pure function in `karni.admin.derive` and a classmethod hook
 on `KarniModelAdmin`. Override either one per project.

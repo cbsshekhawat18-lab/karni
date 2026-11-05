@@ -192,6 +192,47 @@
       ],
       "type": "object"
     },
+    "DetailOptions": {
+      "additionalProperties": false,
+      "description": "Experimental. What a detail page shows besides the record: ``{related: [Deal, Person]}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "related": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "A tab per reverse relation, each a table of the related rows filtered to the record: an entity with a fk to this one (Deal), or Entity.field when it has two (Deal.partner)."
+        }
+      },
+      "type": "object"
+    },
+    "DetailPage": {
+      "additionalProperties": false,
+      "description": "Experimental. An entity's detail page with options: ``{detail: {related: [Deal]}}``.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "detail": {
+          "$ref": "#/$defs/DetailOptions",
+          "description": "The detail page's options."
+        }
+      },
+      "required": [
+        "detail"
+      ],
+      "type": "object"
+    },
     "Entity": {
       "additionalProperties": false,
       "description": "Experimental. One entity: a model on BaseModel or BigIntBaseModel, its viewset and options.",
@@ -210,7 +251,7 @@
               }
             ]
           },
-          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone country currency json array), a trailing ? for optional. Or {type, was} to rename a field and keep its rows.",
+          "description": "Field name -> type, in karni make model's syntax (types: str text int float decimal bool date datetime url file image uuid choice state daterange datetimerange capacity fk m2m o2o money percent quantity email slug phone markdown country currency json array), a trailing ? for optional. Or {type, was} to rename a field and keep its rows.",
           "propertyNames": {
             "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
           },
@@ -367,7 +408,20 @@
             },
             "type": "array"
           },
-          "description": "Field groups: title -> fields (the admin form's fieldsets).",
+          "description": "Field groups: title -> fields (Karni.field_groups): sections of the React form and detail page and fieldsets of the admin. The fields in no group come last, in Other.",
+          "type": "object"
+        },
+        "column_sets": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Column presets of the React table: name -> fields (Karni.column_sets). The set named default shows first, else the first set.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
           "type": "object"
         },
         "order": {
@@ -837,7 +891,7 @@
       "type": "object"
     },
     "pages": {
-      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form), or a page name with its kind (dashboard, blank, login, or code: a page of the project's own at /<name>, which karni build leaves alone).",
+      "description": "karni make page, in navigation order. Each item is one key: an entity with its pages (list, detail, form, or {detail: {related: [Deal]}} for related tabs), or a page name with its kind (blank, login, dashboard: the scaffold's home page for home and a page of charts for any other name, or code: a page of the project's own at /<name>, which karni build leaves alone).",
       "items": {
         "additionalProperties": {
           "anyOf": [
@@ -846,7 +900,14 @@
             },
             {
               "items": {
-                "type": "string"
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/DetailPage"
+                  }
+                ]
               },
               "type": "array"
             }

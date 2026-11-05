@@ -85,6 +85,9 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # Cross-model search (class Karni: search): a catalog whose viewsets its own
     # URLconf and router serve (tests.searchapp.urls).
     "tests.searchapp",
+    # A 120-field model with markdown sections, field groups and column sets
+    # (karni.layout): viewsets mounted by its own URLconf only.
+    "tests.wideapp",
 ]
 # tests.searchapp's models declare search, and the default router does not serve
 # them (their router is tests.searchapp.urls'), so karni.W591 is expected here.

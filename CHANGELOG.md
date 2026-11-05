@@ -166,6 +166,83 @@ apply codemods and list the manual steps. This file is the human summary.
   `search` list (`C540` to `C542`), and `karni plan`, `karni build` and
   `karni spec export` follow it. Large-apps roadmap item 10.
   [docs/global-search.md](docs/global-search.md).
+
+- **Wide models (experimental), large-apps item 12: `MarkdownField`, field
+  groups and column sets.** `karni.fields.MarkdownField` is a `TextField`
+  whose OpenAPI property says `format: markdown` (`karni.api.formats`: any
+  model field with an `openapi_format` publishes one). `ResourceForm` edits
+  it with Write and Preview tabs, `ResourceDetail` shows it formatted and
+  sanitized through `MarkdownView`, `ResourceTable` leaves it out of its
+  default columns, and it is searched like any text field. `class Karni:
+  field_groups = {"Overview": [...], "Financials": [...]}` lays out
+  `ResourceForm` and `ResourceDetail` as sections, or tabs with
+  `field_group_layout = "tabs"` (a tab with a failing field is marked and
+  opens when focus moves to it), and the admin's change form as fieldsets.
+  The fields in no group come last, under Other. `column_sets = {"default":
+  [...], "financial": [...]}` gives `ResourceTable` a column set menu whose
+  choice is kept per user and table. The schema publishes both as
+  `x-karni-field-groups` and `x-karni-column-sets` on the list operation,
+  limited to the fields the requester may read. `karni check` refuses a
+  malformed declaration, a group or set naming a field the model does not
+  have and a field in two groups (`karni.E550` to `karni.E553`). A 120-field
+  test model keeps a list page of 25 rows under 200,000 bytes and a detail
+  under 8,000, and renders ResourceForm under 1,000 ms and ResourceDetail
+  under 600 ms in the UI suite. New props: `fieldGroups` and `groupLayout`
+  (ResourceForm, ResourceDetail), `columnSets`, `columnSet` and
+  `onColumnSetChange` (ResourceTable). [docs/fields.md](docs/fields.md#markdownfield),
+  [docs/ui.md](docs/ui.md#field-groups-and-column-sets-experimental).
+- **The spec takes `markdown`, `groups` and `column_sets` (experimental).**
+  `karni make model` and the spec take the field type `markdown` (no longer
+  reserved, `C224`). `karni build` writes an entity's `groups` as
+  `Karni.field_groups` in the Karni-owned model base instead of the admin's
+  fieldsets, and the new entity key `column_sets` as `Karni.column_sets`
+  (`C680` and `C681` refuse an unknown or repeated column and a set without
+  columns or a snake_case name). `karni plan` shows both and treats a change
+  between `text` and `markdown` as the same column. `karni spec export`
+  reads them back. The published JSON Schema is regenerated.
+- **`@karni/ui` reads a formatted string that may be blank.** drf-spectacular
+  publishes a blank email, URL or markdown field as `oneOf [{format},
+  {maxLength: 0}]`. The schema parser read it as kind `unknown` and the
+  form had no input for it. It is now that string.
+
+- **Page blocks beyond CRUD in `@karni/ui` (experimental), large-apps item
+  11.** `DashboardGrid` and `DashboardCard` (a responsive grid of titled
+  cards with spans, and loading, empty and error states), `ChartCard` (a
+  card around `DataChart`), `DataTable` (rows a page computed: sorting, a
+  sticky header and first column, CSV and XLSX export, and only the rows in
+  view rendered past 100 rows, so 10,000 rows scroll smoothly),
+  `ComparisonTable` (entities as columns, metrics as rows, the best value
+  marked), `Accordion` (the WAI-ARIA accordion pattern) and `MarkdownView`
+  (sanitized markdown). Each has a component role, stories in the axe suite
+  and tests. MarkdownView loads its parser and sanitizer (`marked` and
+  `DOMPurify`, new dependencies of `@karni/ui`) on first use, and DataTable
+  loads its XLSX writer (written in Karni, no dependency) on the first
+  export, so pages that do not use them pay nothing. `useResourceCounts`
+  counts the rows of each resource for a chart. New tokens:
+  `--karni-dashboard-gap`, `--karni-data-table-max-height` and
+  `--karni-data-table-row-height`, which `karni ui detect` lists.
+  [docs/ui.md](docs/ui.md#page-blocks-experimental).
+- **Related tabs on ResourceDetail (experimental).** `related={["deals",
+  "people"]}` shows a tab per reverse relation, each a ResourceTable
+  filtered to the record. The OpenAPI schema publishes each model's reverse
+  relations as `x-karni-related` on its list operation, with the list
+  parameter that filters each one (`null` when its list has none), so the
+  UI guesses nothing. [docs/api.md](docs/api.md).
+- **The spec takes related tabs and dashboard pages (experimental).** A
+  detail page written `{detail: {related: [Booking]}}` gets the tabs (`C560`
+  to `C563` refuse a tab that names no entity, an entity with no fk to the
+  page's, an ambiguous fk, or a tab listed twice), and a page of kind
+  `dashboard` named anything but `home` is a DashboardGrid with a ChartCard
+  of each entity's rows. `karni plan` shows both, `karni build` writes them,
+  `karni spec export` reads them back, and `karni make page` takes `--kind
+  dashboard` (with `--count`) and `--related`. The published JSON Schema is
+  regenerated. [docs/app-spec.md](docs/app-spec.md#pages).
+- **`karni/no-raw-elements` flags a raw `<details>` too**, and its messages
+  name the page blocks: a `<table>` is a ResourceTable, a DataTable or a
+  ComparisonTable, and a `<details>` an Accordion. `karni rules --check` and
+  rule `K201` say the same. A page that writes a raw `<details>` fails the
+  lint until it uses `Accordion` or carries a disable comment with a reason.
+
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

@@ -18,6 +18,8 @@ ruleTester.run("no-raw-elements", rule, {
   valid: [
     { code: 'const x = <div className="p-2">ok</div>;' },
     { code: 'const x = <ResourceTable resource="events" />;' },
+    { code: 'const x = <DataTable caption="Totals" columns={columns} rows={rows} />;' },
+    { code: "const x = <Accordion items={items} />;" },
     { code: 'const x = <Form onSubmit={go}><Input name="a" /></Form>;' },
     // Member-expression JSX names are component references, never raw tags.
     { code: "const x = <UI.table />;" },
@@ -32,8 +34,20 @@ ruleTester.run("no-raw-elements", rule, {
     {
       code: "const x = <table><tbody /></table>;",
       errors: [
-        { messageId: "rawElement", data: { element: "table", replacement: "ResourceTable" } },
+        {
+          messageId: "rawElement",
+          data: {
+            element: "table",
+            replacement:
+              "ResourceTable (a resource's rows), DataTable (rows the page computed) or ComparisonTable (entities side by side)",
+          },
+        },
       ],
+    },
+    {
+      // A disclosure is an Accordion (the WAI-ARIA pattern, keyboard included).
+      code: "const x = <details><summary>More</summary>text</details>;",
+      errors: [{ messageId: "rawElement", data: { element: "details", replacement: "Accordion" } }],
     },
     {
       code: "const x = <form onSubmit={go} />;",

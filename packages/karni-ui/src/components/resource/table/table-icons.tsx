@@ -84,6 +84,17 @@ export function SlidersIcon(props: IconProps): React.ReactElement {
   );
 }
 
+/** Three columns: the column set selector. */
+export function ColumnsIcon(props: IconProps): React.ReactElement {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+      <line x1="15" y1="4" x2="15" y2="20" />
+    </Icon>
+  );
+}
+
 export function FilterOffIcon(props: IconProps): React.ReactElement {
   return (
     <Icon {...props}>

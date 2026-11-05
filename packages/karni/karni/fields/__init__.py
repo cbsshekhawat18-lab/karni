@@ -24,6 +24,7 @@ Field                  Column, constraint, index                     Backends
 ``EmailField``         unique on LOWER(email), domain lower-cased    all
 ``SlugField``          unique (live rows), generated from a field    all
 ``PhoneField``         E.164, CHECK format                           PG, SQLite
+``MarkdownField``      text, OpenAPI format "markdown"               all
 ``CountryField``       char(2), CHECK IN ISO 3166-1 alpha-2          all
 ``CurrencyField``      char(3), CHECK IN ISO 4217                    all
 ``JSONField``          jsonb; GIN when ``queried=True``              GIN on PG
@@ -78,6 +79,7 @@ from karni.fields.structured import JSONField
 from karni.fields.text import (
     E164Format,
     EmailField,
+    MarkdownField,
     PhoneField,
     PhoneFormField,
     SlugField,
@@ -103,6 +105,7 @@ __all__ = [  # noqa: F822
     "JSONField",
     "KarniField",
     "LiveUniqueConstraint",
+    "MarkdownField",
     "MoneyField",
     "PercentField",
     "PhoneField",

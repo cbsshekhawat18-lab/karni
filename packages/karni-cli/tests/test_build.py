@@ -547,6 +547,85 @@ def test_response_caching_from_the_spec(copy: Path) -> None:
     assert "KARNI_API_CACHE" not in settings
 
 
+def test_related_tabs_and_a_dashboard_page_are_built(copy: Path) -> None:
+    """Experimental (page blocks): related tabs on a detail page, and a dashboard page."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            "  - Session: [list, detail, form]\n",
+            "  - Session: [list, {detail: {related: [Booking]}}, form]\n  - overview: dashboard\n",
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output.splitlines()
+    assert (
+        "  ~ Session: list, detail, form -> list, detail (related classes.Booking.session), form"
+        in plan
+    )
+    assert "  + overview: dashboard (rows per entity: Booking, Session, Studio)" in plan
+    code, out = _build()
+    assert code == 0, out
+    pages = copy / "frontend" / "src" / "pages" / "karni"
+    detail = (pages / "session-detail.tsx").read_text()
+    assert 'related={["bookings"]}' in detail
+    overview = (pages / "overview.tsx").read_text()
+    assert overview.startswith("// Written by karni build")
+    assert '    "studios", "sessions", "bookings",\n' in overview
+    assert "<ChartCard" in overview and overview.count("\n") <= 50
+    routes = (copy / "frontend" / "src" / "routes.tsx").read_text()
+    assert 'path: "/overview", component: OverviewPage' in routes
+    assert "frontend/src/pages/karni/overview.tsx" in record.load(copy).files
+    # The export reads both back: the project matches the spec, and a rebuild writes nothing.
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
+def test_markdown_field_groups_and_column_sets_are_built(copy: Path) -> None:
+    """Experimental (wide models): a markdown field, groups and column sets, in the model base."""
+    _edit(
+        copy / "karni.yaml",
+        (
+            '          price: "money:EUR"\n        owner: instructor\n',
+            (
+                '          price: "money:EUR"\n          notes: "markdown?"\n'
+                "        groups: {Class: [studio, title, starts_at], Details: [notes, price]}\n"
+                "        column_sets: {default: [title, starts_at], money: [title, price]}\n"
+                "        owner: instructor\n"
+            ),
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output.splitlines()
+    assert "  + classes.Session.notes: markdown?" in plan
+    assert (
+        "  ~ classes.Session groups: none -> Class studio, title, starts_at, Details notes, price"
+        in plan
+    )
+    assert (
+        "  ~ classes.Session column_sets: none -> default title, starts_at, money title, price"
+        in plan
+    )
+    code, out = _build()
+    assert code == 0, out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "    notes = MarkdownField(blank=True)\n" in models
+    assert "from karni.fields import MarkdownField, MoneyField" in models
+    assert (
+        '        field_groups = {\n            "Class": ["studio", "title", "starts_at"],\n'
+        '            "Details": ["notes", "price"],\n        }\n'
+    ) in models
+    assert (
+        '        column_sets = {"default": ["title", "starts_at"], "money": ["title", "price"]}\n'
+    ) in models
+    # The fixture's Booking groups are field_groups too: no admin class is written for them.
+    assert '"Notes": ["note"]' in models and "AdminMeta" not in models
+    migration = max((copy / "classes" / "migrations").glob("0*_*.py")).read_text()
+    assert "karni.fields.MarkdownField(blank=True)" in migration
+    # The export reads them back: the project matches the spec, and a rebuild writes nothing.
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
 # escape hatches, projects built by hand, keys and databases -----------------------
 
 
@@ -757,7 +836,8 @@ def test_a_tree_entity_builds_a_tree_model_and_a_switch_back_is_risky(
     assert "class Region(TreeModel, BaseModel):" in karni
     assert "class Category(OrderedTreeModel, BaseModel):" in karni
     assert "parent =" not in karni and "position =" not in karni  # the mixins add them
-    assert '(None, {"fields": ["parent", "position"]})' in karni  # the admin form shows them
+    # no AdminMeta: the fields in no group (parent, position) go into the admin's Other group
+    assert "AdminMeta" not in karni and 'field_groups = {"Main": ["name"]}' in karni
     (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
     text = migration.read_text().replace('"', "'")  # a migration may not be formatted
     assert len(re.findall(r"\('parent',\s+models\.ForeignKey\(", text)) == 2
@@ -799,7 +879,7 @@ def test_taxonomies_build_the_many_to_many_and_a_tree_scope_on_it(
     karni = (root / "geo" / "karni" / "models.py").read_text()
     assert 'taxonomies = {"region": "geo.Region", "category": "geo.Category"}' in karni, karni
     assert "region =" not in karni  # class Karni: taxonomies adds the field
-    assert '(None, {"fields": ["region", "category"]})' in karni  # the admin form shows them
+    assert "AdminMeta" not in karni and 'field_groups = {"Main": ["name"]}' in karni
     (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
     text = migration.read_text().replace('"', "'")
     assert re.search(r"\('region',\s+models\.ManyToManyField\(", text), text

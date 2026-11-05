@@ -109,13 +109,18 @@ describe("package self-registrations", () => {
     // barrel, so its module is imported directly here.
     await import("../components/file-upload/FileUpload");
     expect(getRoleRegistry()).toEqual({
+      accordion: "Accordion",
       "async-select": "ResourceSelect",
       "auth-guard": "AuthGuard",
       "change-history": "ChangeHistory",
       "code-sign-in": "OtpLoginForm",
       "resource-import": "ResourceImport",
       chart: "DataChart",
+      "chart-card": "ChartCard",
+      "comparison-table": "ComparisonTable",
+      "computed-table": "DataTable",
       dashboard: "Dashboard",
+      "dashboard-grid": "DashboardGrid",
       "data-table": "ResourceTable",
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
@@ -125,6 +130,7 @@ describe("package self-registrations", () => {
       "global-search": "GlobalSearch",
       "layout-shell": "Layout",
       "login-form": "LoginForm",
+      markdown: "MarkdownView",
       modal: "Modal",
       "page-shell": "Page",
       "permission-denied": "PermissionDenied",

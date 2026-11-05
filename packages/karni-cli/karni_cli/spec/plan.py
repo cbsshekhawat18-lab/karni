@@ -112,6 +112,8 @@ _FEATURE_SETTINGS: Final = {
     "user_grants": "KARNI_USER_GRANTS",
     "api_cache": "KARNI_API_CACHE",
 }
+#: A text column becoming a markdown one, or back: the same column, only its rendering changes.
+_TEXT_SWAPS: Final = frozenset({("text", "markdown"), ("markdown", "text")})
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
 _MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree", "taxonomies"})
 _OPTIONS: Final = (
@@ -128,6 +130,7 @@ _OPTIONS: Final = (
     "audit",
     "global_search",
     "groups",
+    "column_sets",
     "order",
     "scope_paths",
     "aggregate",
@@ -568,9 +571,10 @@ def _field_risk(
     """``(reason, count kind, count arg)`` for a changed field. ``reason`` ``None``: not risky."""
     a, b = _Field.parse(old), _Field.parse(new)
     if a.kind != b.kind:
-        if (a.kind, b.kind) == ("str", "text"):
+        if (a.kind, b.kind) in (("str", "text"), ("str", "markdown")):
             return None, "set", None
-        return f"its type changes from {a.kind} to {b.kind}", "set", None
+        if (a.kind, b.kind) not in _TEXT_SWAPS:
+            return f"its type changes from {a.kind} to {b.kind}", "set", None
     if a.kind in _RELATIONS and old_target != new_target:
         return f"it points at {new_target} instead of {old_target}", "set", None
     if a.kind in _LENGTHS:
@@ -791,7 +795,7 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             options.append(key)
         elif key == "aggregate":
             options.append(f"aggregate {_aggregate_text(value)}")
-        elif key in ("groups", "scope_paths"):
+        elif key in ("groups", "column_sets", "scope_paths"):
             options.append(f"{key} {', '.join(value)}")
         elif key == "global_search":
             options.append(f"{key} {_search_text(value)}")
@@ -1113,14 +1117,16 @@ def _pages(ctx: _Context) -> None:
         for n, k in e.items()
     }
     new = {ident(n, resolve_new, {}): (n, k) for e in ctx.desired["pages"] for n, k in e.items()}
+    counted = ", ".join(sorted(name for _label, name in _entity_names(ctx.desired)))
     for ident_, (name, kinds) in new.items():
         if ident_ not in old:
-            ctx.add(Change("pages", "add", name, _show(kinds)))
+            ctx.add(Change("pages", "add", name, _show_page(name, kinds, counted)))
         elif old[ident_][1] != kinds:
-            ctx.add(Change("pages", "change", name, f"{_show(old[ident_][1])} -> {_show(kinds)}"))
+            before = _show_page(name, old[ident_][1], "")
+            ctx.add(Change("pages", "change", name, f"{before} -> {_show_page(name, kinds, '')}"))
     for ident_, (name, kinds) in old.items():
         if ident_ not in new:
-            ctx.add(Change("pages", "remove", name, _show(kinds)))
+            ctx.add(Change("pages", "remove", name, _show_page(name, kinds, "")))
     common_old = [i for i in old if i in new]
     common_new = [i for i in new if i in old]
     if common_old != common_new:
@@ -1136,6 +1142,33 @@ def _navigation(ctx: _Context) -> None:
         ctx.add(Change("pages", "remove", MENU, navigation.summary(old)))
     else:
         ctx.add(Change("pages", "add" if old is None else "change", MENU, navigation.summary(new)))
+
+
+def _entity_names(data: dict[str, Any]) -> list[tuple[str, str]]:
+    """``(app.Name, Name)`` of every entity of ``data`` (a normal form)."""
+    return [
+        (f"{app}.{name}", name)
+        for app, application in data.get("apps", {}).items()
+        for name in application.get("entities", {})
+    ]
+
+
+def _show_page(name: str, kinds: list[Any], counted: str) -> str:
+    """A page entry's kinds in words: ``list, detail (related crm.Deal.company), form``.
+
+    A dashboard other than the scaffold's home names what its chart counts (``counted``).
+    """
+    shown: list[str] = []
+    for kind in kinds:
+        if isinstance(kind, dict):
+            for key, options in kind.items():
+                related = ", ".join(options.get("related") or [])
+                shown.append(f"{key} (related {related})" if related else key)
+        elif kind == "dashboard" and name != "home" and counted:
+            shown.append(f"dashboard (rows per entity: {counted})")
+        else:
+            shown.append(str(kind))
+    return ", ".join(shown) or "none"
 
 
 def _seed(ctx: _Context) -> None:
@@ -1244,12 +1277,12 @@ def _page_managed(
     name = change.target
     ident = resolve(name, "") if name[:1].isupper() else name
     before = old_pages.get(ident, [])
-    after: list[str] = next(
-        (k for e in ctx.desired["pages"] for n, k in e.items() if n == name), []
+    after = schema.page_kind_names(
+        next((k for e in ctx.desired["pages"] for n, k in e.items() if n == name), [])
     )
-    if change.action == "add" and set(after) & {"code", "dashboard"}:
+    if change.action == "add" and ("code" in after or ("dashboard" in after and name == "home")):
         return False  # the project's page (code), or the scaffold's home page (dashboard)
-    dropped = [kind for kind in before if kind not in after]
+    dropped = [kind for kind in schema.page_kind_names(before) if kind not in after]
     return all(f"{ident}:{kind}" in managed.pages for kind in dropped)
 
 

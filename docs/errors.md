@@ -1628,6 +1628,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
+<a id="e550"></a>
+
+#### E550: Karni.field_groups or Karni.field_group_layout is malformed
+
+*system check (error)* · from `karni.layout.field_groups; karni.checks.check_layouts`
+
+**Why Karni objects.** The groups are published in the OpenAPI schema as x-karni-field-groups and lay out @karni/ui's ResourceForm and ResourceDetail and the admin's change form. A group without a title or without fields cannot be shown, so the declaration is refused at boot.
+
+**Fix.** Map each group's title to a list of field names, e.g. field_groups = {'Overview': ['name', 'summary'], 'Financials': ['price', 'cost']}, and write field_group_layout = 'sections' (the default) or 'tabs'.
+
+<a id="e551"></a>
+
+#### E551: A field group or a column set names a field the model does not have
+
+*system check (error)* · from `karni.layout.field_groups; karni.layout.column_sets; karni.checks.check_layouts`
+
+**Why Karni objects.** A name with a typo would leave its field out of every form section, or show an empty column, without an error anywhere, so a group or column set must name the model's own fields.
+
+**Fix.** Correct the name to a field of the model (the message names the model, the group or set, and the field), or remove it from the group or set.
+
+<a id="e552"></a>
+
+#### E552: A field is in two field groups
+
+*system check (error)* · from `karni.layout.field_groups; karni.checks.check_layouts`
+
+**Why Karni objects.** A form shows each field once, in one group. A field listed in two groups would be edited in two places at once, so each field belongs to one group.
+
+**Fix.** Keep the field in one group and remove it from the other (the message names both).
+
+<a id="e553"></a>
+
+#### E553: Karni.column_sets is malformed
+
+*system check (error)* · from `karni.layout.column_sets; karni.checks.check_layouts`
+
+**Why Karni objects.** The column sets are published as x-karni-column-sets and ResourceTable offers them in a selector. A set without a name or without columns, or one that lists a column twice, cannot be shown.
+
+**Fix.** Map each set's name to a list of field names, each once, e.g. column_sets = {'default': ['name', 'price'], 'financial': ['name', 'price', 'cost']}.
+
 <a id="e570"></a>
 
 #### E570: class Karni: taxonomies is malformed
@@ -3454,9 +3494,9 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form), or a page name with its kind (dashboard for the scaffold's home, blank, login).
+**Why Karni objects.** Each entry of pages is one key: an entity with the pages karni make page makes for it (list, detail, form, and {detail: {related: [...]}} for a detail page with related tabs), or a page name with its kind (blank, login, code, or dashboard: the scaffold's home at /, or a page of charts at /<name>).
 
-**Fix.** Write e.g. - Session: [list, detail, form], - about: blank or - home: dashboard, each entity or page once.
+**Fix.** Write e.g. - Session: [list, detail, form], - about: blank, - home: dashboard or - overview: dashboard, each entity or page once.
 
 <a id="c221"></a>
 
@@ -3494,7 +3534,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so is taxonomies.
+**Why Karni objects.** Some keys are reserved for features Karni adds later (cross-entity search), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so are taxonomies, aggregate and markdown.
 
 **Fix.** Remove the key, and write that part by hand in the project until the feature ships.
 
@@ -3584,7 +3624,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** groups become the admin form's fieldsets, and a name that is not a field (or a field in two groups) makes that form fail to render.
+**Why Karni objects.** groups become Karni.field_groups (the sections of the React form and detail page and the admin's fieldsets), and karni check refuses a name that is not a field or a field in two groups (karni.E551, karni.E552).
 
 **Fix.** Name the entity's fields, each in one group.
 
@@ -4398,6 +4438,66 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add cache: <seconds> to the entity (how stale a response may be), or cache: false to never cache it.
 
+<a id="c560"></a>
+
+### C560: A related tab names no entity
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A detail page's related tabs ({detail: {related: [...]}}) each list the rows of another entity that point at the page's entity. The name is not an entity of the spec, or several apps define it.
+
+**Fix.** Name an entity of the spec (app.Entity when two apps define it), or Entity.field.
+
+<a id="c561"></a>
+
+### C561: A related tab names an entity with no fk to this one
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A related tab is a table of the other entity's rows filtered to this record, and the list of that entity filters by its fk fields. The entity has no fk to the page's entity, or the field named is not one (a m2m or an o2o cannot back a tab).
+
+**Fix.** Add a fk field to the page's entity on the other entity, or name the fk it has.
+
+<a id="c562"></a>
+
+### C562: A related tab could be either of two relations
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The entity named has two or more fks to the page's entity (a deal's company and its partner), so the tab must say which rows it lists.
+
+**Fix.** Write Entity.field, one tab for each relation you want.
+
+<a id="c563"></a>
+
+### C563: A related tab is listed twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each related tab is one relation. Deal and Deal.company name the same one when Deal has one fk to the page's entity.
+
+**Fix.** List each related tab once.
+
+<a id="c680"></a>
+
+### C680: A column set names a field the entity does not have, or one twice
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** column_sets become Karni.column_sets, the presets of the React table's column set menu, and karni check refuses a set that names a field the model does not have (karni.E551) or lists one twice (karni.E553).
+
+**Fix.** Name fields the entity declares (or id, created_at and updated_at), each once per set.
+
+<a id="c681"></a>
+
+### C681: A column set has no columns, or a name that is not snake_case
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A set's name is what a user's choice is remembered by and its label in the Columns menu (financial reads Financial), and a set without columns shows an empty table.
+
+**Fix.** Name the set in snake_case (default, financial) and list at least one field.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4720,7 +4820,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists.
+**Rule.** Declare what a value is with `karni.fields` so the database enforces it: money is `MoneyField(currency="EUR")` or `currency_field=...` (never FloatField: `karni.E960` fails boot), counts that must never go negative are `QuantityField`, rates `PercentField`, ISO codes `CountryField`/`CurrencyField`, phone numbers `PhoneField`, emails `EmailField(unique=True)` (case-insensitive). Uniqueness on soft-deletable models: `unique=True` on a Karni field, or `LiveUniqueConstraint(fields=[...])` in `Meta.constraints`, so a deleted row frees its value. Pick `on_delete` deliberately (`karni.W965` flags CASCADE on financial or audited models). `karni schema <app>` shows every column, constraint and index and why it exists. Long text a page shows formatted is `MarkdownField` (`name:markdown`). A model with many fields declares `class Karni: field_groups` (form and detail sections or tabs) and `column_sets` (table presets) instead of hand-built screens.
 
 **Why Karni objects.** Float money, free-text codes and case-sensitive unique emails pass every test and fail in production. A database constraint is the one layer raw SQL, bulk updates and other services cannot skip.
 
@@ -4756,11 +4856,11 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `karni/no-raw-elements`
 
-**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw `<table>/<form>/<input>/<select>/<textarea>`.
+**Rule.** Screens compose `@karni/ui` components (`Page`, `ResourceTable`, `ResourceForm`, `ResourceDetail`, ...). Never hand-roll a table or form: no raw `<table>/<form>/<input>/<select>/<textarea>/<details>`. Dashboards and reports compose `DashboardGrid`, `ChartCard`, `DataTable` (computed rows), `ComparisonTable`, `Accordion` and `MarkdownView`.
 
 **Why Karni objects.** The components already handle data, validation, a11y and theming.
 
-**Fix.** Compose ResourceTable / ResourceForm / Input / Select from @karni/ui.
+**Fix.** Compose ResourceTable / DataTable / ComparisonTable / Accordion / ResourceForm / Input / Select from @karni/ui.
 
 <a id="k202"></a>
 
@@ -4984,11 +5084,11 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 <a id="karni-no-raw-elements"></a>
 
-### `karni/no-raw-elements`: Raw <table>/<form>/<input>/<select>/<textarea> in project code
+### `karni/no-raw-elements`: Raw <table>/<form>/<input>/<select>/<textarea>/<details> in project code
 
-**Why Karni objects.** @karni/ui ships these as schema-driven components (sorting, pagination, validation, accessibility). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.
+**Why Karni objects.** @karni/ui ships these as components (sorting, pagination, validation, export, keyboard and screen-reader support). Rebuilding them per page is the boilerplate Karni exists to remove, and the copies drift.
 
-**Fix.** Compose the component the message names: ResourceTable for <table>, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`.
+**Fix.** Compose the component the message names: ResourceTable for a resource's rows, DataTable for rows the page computed, ComparisonTable for entities side by side, Accordion for a <details> disclosure, ResourceForm for <form>, Input / Select / ResourceSelect / Textarea for fields (ResourceForm renders the right field for you). Opt out only with `// eslint-disable-next-line karni/no-raw-elements -- <reason>`.
 
 <a id="karni-max-page-lines"></a>
 
@@ -4996,7 +5096,7 @@ Every rule is an error in `karni.configs.recommended`. An opt-out needs an `esli
 
 **Why Karni objects.** Pages compose @karni/ui components. A long page is rebuilding something Karni ships.
 
-**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail and their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`.
+**Fix.** Compose Page / ResourceTable / ResourceForm / ResourceDetail, and on a dashboard DashboardGrid / ChartCard / DataTable / ComparisonTable, with their props, or move logic into hooks and components. Opt out only with `/* eslint-disable karni/max-page-lines -- <reason> */`.
 
 <a id="karni-no-deep-imports"></a>
 

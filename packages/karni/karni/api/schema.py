@@ -35,6 +35,21 @@ vendor extensions the ``@karni/ui`` frontend consumes:
   on the ``aggregate`` operation of a resource that declares an aggregation
   (:mod:`karni.aggregation`, experimental). Without a declaration the
   operation is left out.
+* ``x-karni-related`` (experimental) on the list operation: the model's
+  reverse relations whose model has a route, each
+  ``{"name", "resource", "field", "param", "key", "label"}``: the relation's
+  name on this model (``deals``, or Django's ``deal_set``), the related
+  resource, its field that points here, the query parameter its list filters
+  that field with (``null`` when the list has no such filter), the field of
+  this model whose value the parameter takes, and the related rows in words.
+  ``@karni/ui``'s ResourceDetail builds its related tabs from it
+  (:meth:`KarniAutoSchema.get_karni_related`).
+* ``x-karni-field-groups`` and ``x-karni-column-sets`` (experimental) on the
+  list operation of a model that declares ``Karni.field_groups`` /
+  ``Karni.column_sets`` (:mod:`karni.layout`): the groups ResourceForm and
+  ResourceDetail show and the column presets ResourceTable offers, limited
+  to the fields the requester's serializer has
+  (:meth:`KarniAutoSchema.get_karni_field_groups`, ``get_karni_column_sets``).
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -63,12 +78,14 @@ import re
 import sys
 from collections import Counter, defaultdict
 from collections.abc import Callable, Iterator, Mapping
+from functools import partial
 from typing import Any, NamedTuple
 
 from django.conf import settings
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.db.models import Model
 from django.utils.module_loading import import_string
+from django.utils.text import capfirst
 from drf_spectacular.extensions import OpenApiSerializerFieldExtension
 from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.utils import OpenApiParameter
@@ -125,6 +142,15 @@ class KarniAutoSchema(AutoSchema):
                 dashboard = self._karni_dashboard()
                 if dashboard is not None:
                     operation["x-karni-dashboard"] = dashboard
+                related = self.get_karni_related()
+                if related:
+                    operation["x-karni-related"] = related
+                groups = self.get_karni_field_groups()
+                if groups is not None:
+                    operation["x-karni-field-groups"] = groups
+                sets = self.get_karni_column_sets()
+                if sets is not None:
+                    operation["x-karni-column-sets"] = sets
         view = self._karni_view()
         if view is not None:
             declaration, predicate = self._karni_access(view)
@@ -171,6 +197,128 @@ class KarniAutoSchema(AutoSchema):
             return dashboard_spec(model)
         except KarniError:
             return None
+
+    def get_karni_related(self) -> list[dict[str, Any]]:
+        """Experimental. The list operation's ``x-karni-related``: the model's reverse relations.
+
+        One entry per reverse foreign key or many-to-many relation whose model
+        has a route, in the model's field order (see the module docstring for
+        the keys). A one-to-one is left out (one row is a detail page, not a
+        table), and so is a hidden relation (``related_name="+"``).
+
+        Override to add, drop or relabel entries. Return ``[]`` to publish none.
+        """
+        view = self._karni_view()
+        if view is None:
+            return []
+        try:
+            model = view.get_model()
+        except ImproperlyConfigured:
+            return []
+        relations = [
+            rel
+            for rel in model._meta.related_objects
+            if (rel.one_to_many or rel.many_to_many) and not rel.hidden
+        ]
+        routed: list[tuple[Any, str, type]] = []
+        for rel in relations:
+            route = _registered_route(partial(_serves, model=rel.related_model))
+            if route is not None:
+                routed.append((rel, *route))
+        per_resource = Counter(prefix for _rel, prefix, _viewset in routed)
+        entries: list[dict[str, Any]] = []
+        for rel, prefix, viewset in routed:
+            field = rel.field
+            label = capfirst(str(rel.related_model._meta.verbose_name_plural))
+            if per_resource[prefix] > 1:
+                label = f"{label} ({field.verbose_name})"
+            key = field.target_field.name if rel.one_to_many else model._meta.pk.name
+            entries.append(
+                {
+                    "name": rel.get_accessor_name(),
+                    "resource": prefix,
+                    "field": field.name,
+                    "param": _filter_param(viewset, rel.related_model, field.name, view),
+                    "key": key,
+                    "label": label,
+                }
+            )
+        return entries
+
+    def get_karni_field_groups(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-field-groups``: ``Karni.field_groups``.
+
+        ``{"layout": "sections" | "tabs", "groups": [{"label", "fields"}]}``,
+        each group limited to the fields this request's serializer has (a
+        field the role may not read is never named), and a group left empty
+        dropped. The fields in no group are the client's last group.
+        ``None`` when the model declares no groups, or a malformed declaration
+        (``karni check`` reports it: E550 to E552). Override to publish other
+        groups.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import field_group_layout, field_groups
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            groups = field_groups(model)
+            layout = field_group_layout(model)
+        except KarniError:
+            return None
+        shown = [
+            {"label": group.label, "fields": [name for name in group.fields if name in names]}
+            for group in groups
+        ]
+        shown = [group for group in shown if group["fields"]]
+        return {"layout": layout, "groups": shown} if shown else None
+
+    def get_karni_column_sets(self) -> dict[str, Any] | None:
+        """Experimental. The list operation's ``x-karni-column-sets``: ``Karni.column_sets``.
+
+        ``{"default": "<name>", "sets": [{"name", "label", "columns"}]}``, each
+        set limited to the fields this request's serializer has and a set
+        left empty dropped. ``default`` is the set named ``default``, else the
+        first. ``None`` when the model declares no sets, or a malformed
+        declaration (E551, E553). Override to publish other sets.
+        """
+        from karni.errorcodes import KarniError
+        from karni.layout import ColumnSet, column_sets, default_column_set
+
+        model, names = self._karni_model_and_fields()
+        if model is None:
+            return None
+        try:
+            declared = column_sets(model)
+        except KarniError:
+            return None
+        kept = [
+            ColumnSet(found.name, found.label, tuple(c for c in found.columns if c in names))
+            for found in declared
+        ]
+        kept = [found for found in kept if found.columns]
+        if not kept:
+            return None
+        return {
+            "default": default_column_set(kept),
+            "sets": [
+                {"name": found.name, "label": found.label, "columns": list(found.columns)}
+                for found in kept
+            ],
+        }
+
+    def _karni_model_and_fields(self) -> tuple[type[Model] | None, set[str]]:
+        """The view's model and the field names its serializer has for this request."""
+        view = self._karni_view()
+        if view is None:
+            return None, set()
+        try:
+            model = view.get_model()
+            serializer = view.get_serializer()
+        except (ImproperlyConfigured, AssertionError):
+            return None, set()
+        return model, set(getattr(serializer, "fields", {}))
 
     #: The detail routes drf-spectacular already names apart from the list.
     _DETAIL_ACTIONS = frozenset({"retrieve", "update", "partial_update", "destroy"})
@@ -646,14 +794,58 @@ def _default_router() -> Any | None:
     return factory()
 
 
-def _registered_prefix(match: Callable[[Any], bool]) -> str | None:
-    """First router prefix whose registered viewset satisfies ``match``."""
+def _registered_route(match: Callable[[Any], bool]) -> tuple[str, type] | None:
+    """``(prefix, viewset)`` of the first registered viewset that satisfies ``match``."""
     router = _default_router()
     if router is None:
         return None
     for prefix, viewset, _basename in getattr(router, "registry", ()):
         if match(viewset):
-            return str(prefix)
+            return str(prefix), viewset
+    return None
+
+
+def _registered_prefix(match: Callable[[Any], bool]) -> str | None:
+    """First router prefix whose registered viewset satisfies ``match``."""
+    route = _registered_route(match)
+    return route[0] if route is not None else None
+
+
+def _serves(viewset: type, model: type[Model]) -> bool:
+    from karni.api.routers import serves_model
+
+    return serves_model(viewset, model)
+
+
+def _filter_param(viewset: type, model: type[Model], field: str, parent_view: Any) -> str | None:
+    """The query parameter ``viewset``'s list filters ``field`` with (exact), else ``None``.
+
+    The filterset is the one the list documents and applies: each filter
+    backend's ``get_filterset_class``, for the requester of the schema (a
+    field ``Karni.field_roles`` hides from them has no filter).
+    """
+    try:
+        view = viewset(
+            request=getattr(parent_view, "request", None),
+            format_kwarg=None,
+            action="list",
+            args=(),
+            kwargs={},
+        )
+    except Exception:  # noqa: BLE001 - a viewset that cannot be built has no filters to read
+        return None
+    queryset = model._default_manager.none()
+    for backend in getattr(view, "filter_backends", ()):
+        get_filterset_class = getattr(backend(), "get_filterset_class", None)
+        if get_filterset_class is None:
+            continue
+        try:
+            filterset = get_filterset_class(view, queryset)
+        except Exception:  # noqa: BLE001 - a misconfigured filterset is reported by its own list
+            continue
+        for name, declared in (getattr(filterset, "base_filters", None) or {}).items():
+            if declared.field_name == field and declared.lookup_expr == "exact":
+                return str(name)
     return None
 
 

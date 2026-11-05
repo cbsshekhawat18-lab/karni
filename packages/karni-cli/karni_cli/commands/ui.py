@@ -360,6 +360,7 @@ def report(outcome: Outcome, actions: list[dict[str, str]], dry_run: bool) -> di
         "not_mapped": [u.as_dict() for u in detection.unmapped],
         "notes": [*detection.notes, *outcome.skipped_sources],
         "primitives": None,
+        "components": defaults.component_tokens(fe),
         "files": [],
         "wiring": [edit.as_dict(fe) for edit in outcome.edits],
         "dry_run": dry_run,
@@ -426,6 +427,12 @@ def _text(data: dict[str, Any], outcome: Outcome) -> str:
                 lines.append(f"      {u['suggestion']}")
     if data["notes"]:
         lines += ["", "Notes:", *(f"  {note}" for note in data["notes"])]
+    components = data.get("components") or []
+    if components:
+        width = max(len(entry["token"]) for entry in components)
+        lines += ["", "Component tokens (set them in karni-theme.css to resize the components):"]
+        for entry in components:
+            lines.append(f"  {entry['token']:<{width}} {entry['value']}  ({entry['used_by']})")
     prims = data["primitives"]
     if prims is not None:
         lines.append("")

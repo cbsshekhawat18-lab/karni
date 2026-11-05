@@ -224,3 +224,14 @@ def test_module_bridge_rejects_bad_overrides(tmp_path: Path) -> None:
     )
     assert proc.returncode == 2
     assert "only literal assignments" in proc.stderr
+
+
+def test_a_raw_table_or_details_names_the_page_blocks() -> None:
+    source = (
+        "export default function Report() {\n"
+        "    return <details><summary>More</summary><table /></details>;\n"
+        "}\n"
+    )
+    messages = [f.message for f in check_source("./frontend/src/pages/report.tsx", source)]
+    assert any("raw <details>: compose Accordion" in message for message in messages)
+    assert any("DataTable (computed rows) or ComparisonTable" in message for message in messages)

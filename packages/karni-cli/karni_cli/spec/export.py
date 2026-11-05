@@ -127,6 +127,7 @@ KINDS: Final = {
     "karni.fields.text.EmailField": "email",
     "karni.fields.text.SlugField": "slug",
     "karni.fields.text.PhoneField": "phone",
+    "karni.fields.text.MarkdownField": "markdown",
     "karni.fields.iso.CountryField": "country",
     "karni.fields.iso.CurrencyField": "currency",
     "karni.fields.structured.JSONField": "json",
@@ -138,7 +139,7 @@ KINDS: Final = {
 }
 _STRINGISH: Final = frozenset(
     {"str", "text", "email", "url", "slug", "file", "image", "choice", "phone", "country"}
-    | {"currency"}
+    | {"currency", "markdown"}
 )
 _ARRAY_BASES: Final = {
     "django.db.models.CharField": "str",
@@ -157,6 +158,8 @@ KARNI_KEYS: Final = {
     "owner_field": "owner",
     "audit": "audit",
     "scope_paths": "scope_paths",
+    "field_groups": "groups",
+    "column_sets": "column_sets",
 }
 _IMPORT: Final = re.compile(
     r"""^import\s+(\w+)\s+from\s+["']\./pages/([\w./-]+)["'];?""", re.MULTILINE
@@ -166,6 +169,8 @@ _RESOURCE: Final = re.compile(
     r"""<(ResourceTable|ResourceDetail|ResourceForm)\b[^>]*?resource=["']([\w-]+)["']"""
 )
 _PAGE_KINDS: Final = {"ResourceTable": "list", "ResourceDetail": "detail", "ResourceForm": "form"}
+#: A detail page's related tabs: ``related={["deals", "deals.partner"]}``.
+_RELATED: Final = re.compile(r"""\brelated=\{\[([^\]]*)\]\}""")
 
 
 @dataclass
@@ -667,7 +672,8 @@ def _entity(
     admin = dict(model["admin_meta"])
     extra = dict(admin.pop("extra", None) or {})
     fieldsets = extra.pop("fieldsets", None)
-    if fieldsets:
+    # Before Karni.field_groups, karni build wrote the groups as the admin's fieldsets.
+    if fieldsets and "groups" not in entity:
         groups = {}
         for title, options in fieldsets:
             if not title:
@@ -676,6 +682,8 @@ def _entity(
             groups[str(title)] = list(options.get("fields", []))
         if groups:
             entity["groups"] = groups
+    elif fieldsets:
+        ctx.left_out.append(f"{label}: AdminMeta fieldsets (the spec's groups are field_groups)")
     for option in sorted([*admin, *extra]):
         ctx.left_out.append(f"{label}: AdminMeta {option}")
     for option in model["api_meta"]:
@@ -812,6 +820,12 @@ def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> No
             entity["groups"].pop(title)
     if entity.get("groups") == {}:
         entity.pop("groups")
+    for name, columns in list(entity.get("column_sets", {}).items()):
+        if any(column not in known for column in columns):
+            left_out.append(f"{label}: the column set {name}, with a field the spec leaves out")
+            entity["column_sets"].pop(name)
+    if entity.get("column_sets") == {}:
+        entity.pop("column_sets")
     aggregate = entity.get("aggregate")
     if aggregate is not None:
         reach = known | {"created_by", "updated_by"}
@@ -953,7 +967,7 @@ def _pages(
         else ""
     )
     files = {component: file for component, file in _IMPORT.findall(text)}
-    pages: dict[str, list[str]] = {}
+    pages: dict[str, list[Any]] = {}
     for path, component in _ROUTE.findall(text):
         file = files.get(component)
         source = ""
@@ -973,9 +987,30 @@ def _pages(
     out = []
     for key, kinds in pages.items():
         if key[:1].isupper():
-            kinds = [kind for kind in ("list", "detail", "form") if kind in kinds]
-        out.append({key: _one(kinds)})
+            kinds = [
+                kind
+                for name in ("list", "detail", "form")
+                for kind in kinds
+                if kind == name or (isinstance(kind, dict) and name in kind)
+            ]
+        out.append({key: kinds[0] if len(kinds) == 1 and isinstance(kinds[0], str) else kinds})
     return out
+
+
+def _related(source: str, routes: dict[str, str], names_count: dict[str, int]) -> list[str]:
+    """A detail page's related tabs as the spec writes them (Deal, Deal.partner)."""
+    found = _RELATED.search(source)
+    if found is None:
+        return []
+    refs: list[str] = []
+    for name in re.findall(r"""["']([\w.-]+)["']""", found.group(1)):
+        resource, _, field = name.partition(".")
+        label = routes.get(resource)
+        if label is None:
+            continue
+        ref = _entity_ref(label, names_count)
+        refs.append(f"{ref}.{field}" if field else ref)
+    return refs
 
 
 def _page_entry(
@@ -984,7 +1019,7 @@ def _page_entry(
     routes: dict[str, str],
     entities: dict[str, Any],
     names_count: dict[str, int],
-) -> tuple[str, str] | None:
+) -> tuple[str, Any] | None:
     if path == "/" and "<Dashboard" in source:
         return "home", "dashboard"
     found = _RESOURCE.search(source)
@@ -1002,6 +1037,9 @@ def _page_entry(
         }
         if path not in expected[kind] or resource != base[1:]:
             return None
+        related = _related(source, routes, names_count) if kind == "detail" else []
+        if related:
+            return _entity_ref(label, names_count), {"detail": {"related": related}}
         return _entity_ref(label, names_count), kind
     name = path.lstrip("/")
     if not re.fullmatch(schema.PAGE_NAME, name):
@@ -1011,4 +1049,6 @@ def _page_entry(
     components = set(re.findall(r"<([A-Z]\w*)", source))
     if components == {"Page"}:
         return name, "blank"
+    if components == {"Page", "DashboardGrid", "ChartCard"} and "useResourceCounts(" in source:
+        return name, "dashboard"  # the dashboard karni make page --kind dashboard writes
     return name, "code"  # a page of the project's own: karni build leaves it alone

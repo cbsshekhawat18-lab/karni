@@ -200,6 +200,27 @@ def test_adding_a_field_an_entity_a_page_and_a_seed(base: Project) -> None:
     assert lines[-1] == f"{len(plan.changes)} changes, 0 risky."
 
 
+def test_related_tabs_and_a_dashboard_page(base: Project) -> None:
+    """Experimental: a detail page's related tabs and a dashboard page other than home."""
+    plan = _plan(
+        _edit(
+            (
+                "  - Product: [list]\n",
+                "  - Product: [list, {detail: {related: [Order]}}]\n  - overview: dashboard\n",
+            ),
+        ),
+        base,
+    )
+    lines = plan.text().splitlines()
+    assert "  ~ Product: list -> list, detail (related shop.Order.product)" in lines
+    assert "  + overview: dashboard (rows per entity: Order, Product, Supplier)" in lines
+    pages = [change for change in plan.changes if change.area == "pages"]
+    assert all(change.managed for change in pages), pages
+    # The scaffold's home page stays the project's: never built, so not managed.
+    home = _plan(_edit(("  - home: dashboard\n", "")), base)
+    assert [c.target for c in home.changes if c.area == "pages"] == ["home"]
+
+
 def test_changing_a_field_safely_and_entity_options(base: Project) -> None:
     plan = _plan(
         _edit(
@@ -410,6 +431,33 @@ def test_only_a_change_of_the_searched_fields_writes_a_migration() -> None:
     assert _search_indexes_change(one, {"global_search": None})  # the indexes go
     assert _search_indexes_change({}, one)
     assert not _search_indexes_change({}, {**one, "external": True})  # no migration touches it
+
+
+def test_text_and_markdown_swap_safely_and_the_layout_keys(base: Project) -> None:
+    """Experimental (wide models): the markdown type, groups and column sets."""
+    plan = _plan(
+        _edit(
+            ("          note: text?\n", "          note: markdown?\n"),
+            (
+                "      Supplier:\n",
+                (
+                    "      Supplier:\n        groups: {Main: [name]}\n"
+                    "        column_sets: {default: [name], codes: [id, name]}\n"
+                ),
+            ),
+        ),
+        base,
+    )
+    note = _only(plan, "shop.Product.note")
+    assert note.detail == "text? -> markdown?" and not note.risky  # the same text column
+    assert _only(plan, "shop.Supplier groups").detail == "none -> Main name"
+    assert _only(plan, "shop.Supplier column_sets").detail == "none -> default name, codes id, name"
+    assert not plan.risky
+    required = _only(
+        _plan(_edit(("          note: text?\n", "          note: markdown\n")), base),
+        "shop.Product.note",
+    )
+    assert required.risky and required.reason == "it becomes required"
 
 
 # risky changes ----------------------------------------------------------------------
