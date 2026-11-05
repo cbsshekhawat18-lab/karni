@@ -69,6 +69,10 @@ PREFIXES = {
         "Saved charts for Karni: charts defined and previewed in the admin, served through each "
         "resource's aggregate action under its access."
     ),
+    "modules/karni-reports/pyproject.toml": (
+        "Reports for Karni: a row printed to PDF from an HTML template in the background, "
+        "cached by template and data, served only to users who may see the row."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -83,6 +87,9 @@ PREFIXES = {
     ),
     "modules/karni-charts/ui/package.json": (
         "React components for the Karni charts module: SavedChart and its hook."
+    ),
+    "modules/karni-reports/ui/package.json": (
+        "React components for the Karni reports module: ReportButton and its useReport hook."
     ),
 }
 

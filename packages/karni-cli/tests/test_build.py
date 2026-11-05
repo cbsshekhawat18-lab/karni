@@ -448,6 +448,37 @@ def test_an_aggregate_and_the_charts_module(copy: Path) -> None:
     assert "aggregate:" in exported.output and "charts:" in exported.output
 
 
+def test_a_module_added_to_the_spec_is_wired_with_its_options(copy: Path) -> None:
+    require_modules("karni-reports")
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        (
+            "modules:\n  payments:\n    provider: stripe\n",
+            "modules:\n  payments:\n    provider: stripe\n  reports:\n    page_size: letter\n",
+        ),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "  + reports: page_size letter" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    steps = {
+        line.split()[0]: line for line in out.splitlines() if line[:1].isalpha() and "  " in line
+    }
+    assert steps["modules"].endswith("karni add reports")
+    settings = (copy / "config" / "settings.py").read_text()
+    apps = settings[settings.index("INSTALLED_APPS") : settings.index("# karni:apps")]
+    assert '"karni_reports"' in apps
+    block = settings[
+        settings.index("# karni:spec start") : settings.index("karni_settings(globals())")
+    ]
+    assert 'KARNI_REPORTS_PAGE_SIZE = "letter"' in block
+    assert "karni-reports" in (copy / "pyproject.toml").read_text()
+    assert (copy / ".karni" / "modules" / "reports.md").is_file()
+    assert _rows(copy, "select count(*) from karni_reports_generatedreport") == [(0,)]
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+
+
 def test_a_key_type_switch_and_a_module_removal_are_refused(copy: Path) -> None:
     spec = copy / "karni.yaml"
     _edit(spec, ("        key: slug\n", "        key: slug\n        pk: bigint\n"))

@@ -211,6 +211,17 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="razorpay_key_secret"></a>`RAZORPAY_KEY_SECRET` | `RAZORPAY_KEY_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | <a id="razorpay_webhook_secret"></a>`RAZORPAY_WEBHOOK_SECRET` | `RAZORPAY_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 
+### karni-reports
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_reports_renderer"></a>`KARNI_REPORTS_RENDERER` | `KARNI_REPORTS_RENDERER` | `"weasyprint"` | Turns HTML into PDF: "weasyprint", "fake" (deterministic bytes, no system libraries: for tests) or the dotted path of a karni_reports.rendering.Renderer subclass. |
+| <a id="karni_reports_storage"></a>`KARNI_REPORTS_STORAGE` | `KARNI_REPORTS_STORAGE` | `"default"` | The STORAGES alias the files are saved to. |
+| <a id="karni_reports_directory"></a>`KARNI_REPORTS_DIRECTORY` | `KARNI_REPORTS_DIRECTORY` | `"karni/reports"` | The folder inside that storage. Each report gets a folder of its own under it. |
+| <a id="karni_reports_page_size"></a>`KARNI_REPORTS_PAGE_SIZE` | `KARNI_REPORTS_PAGE_SIZE` | `"A4"` | The CSS page size the base template prints on: "A4", "letter", "A5 landscape"... |
+| <a id="karni_reports_keep"></a>`KARNI_REPORTS_KEEP` | `KARNI_REPORTS_KEEP` | `1` | Ready files kept per report and row, the newest first. Older files and their rows are deleted after each render. 0 keeps every file. |
+| <a id="karni_reports_render_timeout"></a>`KARNI_REPORTS_RENDER_TIMEOUT` | `KARNI_REPORTS_RENDER_TIMEOUT` | `600` | Seconds after which a report still pending or rendering is queued again by the next request (a worker that died mid-render). |
+
 ### karni-site
 
 | Setting | Env | Default | What it does |

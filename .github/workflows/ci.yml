@@ -18,6 +18,7 @@ permissions:
 jobs:
   # ---------------------------------------------------------------------------
   # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-charts.
+  # Python: packages/karni, packages/karni-cli, modules/karni-payments, modules/karni-approvals, modules/karni-impersonation, modules/karni-site, modules/karni-reports.
   # Every step goes through the root Makefile, so CI and `make` never drift.
   # ---------------------------------------------------------------------------
   python:
@@ -65,6 +66,15 @@ jobs:
             modules/karni-impersonation/pyproject.toml
             modules/karni-site/pyproject.toml
             modules/karni-charts/pyproject.toml
+            modules/karni-reports/pyproject.toml
+
+      # karni-reports draws its PDFs with WeasyPrint, which needs Pango (a
+      # system library) and a font. Without them its real render test skips.
+      - name: System libraries for WeasyPrint (karni-reports)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b fonts-dejavu-core
 
       - name: Install packages (editable) + dev tools
         run: make install-py
@@ -156,11 +166,25 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/.github/ci
         run: |
           rc=0
-          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts; do
+          for d in modules/karni-payments modules/karni-approvals modules/karni-impersonation modules/karni-site modules/karni-charts modules/karni-reports; do
             echo "==> pytest on PostgreSQL ($d)"
             (cd "$d" && python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations) || rc=1
           done
           exit $rc
+
+      # karni-reports keeps a report's row as text, so it serves rows with
+      # either key type: its suite once more with the test app's catalog on
+      # integer keys, on sqlite and on PostgreSQL.
+      - name: Test karni-reports with integer keys (sqlite, then PostgreSQL 16)
+        if: matrix.python == '3.12'
+        working-directory: modules/karni-reports
+        env:
+          KARNI_TEST_PK: bigint
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/karni
+          PYTHONPATH: ${{ github.workspace }}/.github/ci
+        run: |
+          python -m pytest -q -ra
+          python -m pytest -q -ra --ds=karni_postgres_settings --no-migrations
 
       # -----------------------------------------------------------------------
       # Agent adapters vs karni/agent/rules.py (docs/agents.md). Scaffolds a
@@ -210,7 +234,7 @@ jobs:
         run: make install-py CORE_ONLY=1
       - name: No module is installed
         run: |
-          ! python -m pip show karni-payments karni-approvals karni-impersonation karni-site karni-charts 2>/dev/null | grep -q "^Name:"
+          ! python -m pip show karni-payments karni-approvals karni-impersonation karni-site karni-charts karni-reports 2>/dev/null | grep -q "^Name:"
       - name: Test (the module tests skip)
         run: make test-py CORE_ONLY=1
 
@@ -705,6 +729,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui and modules/karni-charts/ui.
+  # UI: packages/karni-ui (@karni/ui), modules/karni-payments/ui, modules/karni-approvals/ui, modules/karni-impersonation/ui and modules/karni-reports/ui.
   # ---------------------------------------------------------------------------
   ui:
     name: UI (Node 24)
@@ -722,6 +747,7 @@ jobs:
             modules/karni-approvals/ui/package-lock.json
             modules/karni-impersonation/ui/package-lock.json
             modules/karni-charts/ui/package-lock.json
+            modules/karni-reports/ui/package-lock.json
 
       # karni-ui first: payments-ui resolves @karni/ui from its source, which
       # imports packages/karni-ui/node_modules.
@@ -773,3 +799,6 @@ jobs:
           cd ../../karni-charts/ui
           node -e "const m = require('@karni/charts-ui'); if (!m.SavedChart) throw new Error('CJS charts-ui missing exports')"
           node --input-type=module -e "const m = await import('@karni/charts-ui'); if (!m.SavedChart) throw new Error('ESM charts-ui missing exports')"
+          cd ../../karni-reports/ui
+          node -e "const m = require('@karni/reports-ui'); if (!m.ReportButton) throw new Error('CJS reports-ui missing exports')"
+          node --input-type=module -e "const m = await import('@karni/reports-ui'); if (!m.ReportButton) throw new Error('ESM reports-ui missing exports')"

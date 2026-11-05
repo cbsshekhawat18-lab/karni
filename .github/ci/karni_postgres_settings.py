@@ -11,7 +11,7 @@ provides, so the same overlay serves every suite:
         python -m pytest --ds=karni_postgres_settings --no-migrations
 
 ``--no-migrations`` is required: ``tests.testapp`` (in packages/karni,
-karni-approvals and karni-impersonation) is an unmigrated app with a
+karni-approvals, karni-impersonation and karni-reports) is an unmigrated app with a
 ForeignKey to the (migrated) user model, which Django only tolerates on
 sqlite. The test database also needs the ``pg_trgm`` extension (the Postgres
 search provider calls ``similarity()``); CI installs it into ``template1``,

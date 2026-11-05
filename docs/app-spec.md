@@ -149,8 +149,8 @@ published file differs from the code: regenerate it with
 
 Each key is a module `karni add <name>` installs, one of the modules of
 [the module catalog](modules.md#the-module-catalog) (`karni modules list`):
-Karni's `approvals`, `charts`, `impersonation`, `payments` and `site`, and any module
-installed next to karni-cli that ships a manifest. The value is a mapping of
+Karni's `approvals`, `charts`, `impersonation`, `payments`, `reports` and `site`, and any
+module installed next to karni-cli that ships a manifest. The value is a mapping of
 the module's options, or nothing. An option is one of the module's own
 settings its manifest lists, lowercased and without its prefix, with the
 type the manifest gives it: `payments: {provider: stripe}` is

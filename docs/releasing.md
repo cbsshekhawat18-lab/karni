@@ -20,11 +20,13 @@ One tag publishes every package at the same version:
 | `karni-impersonation` | PyPI | `modules/karni-impersonation` |
 | `karni-site` | PyPI | `modules/karni-site` |
 | `karni-charts` | PyPI | `modules/karni-charts` |
+| `karni-reports` | PyPI | `modules/karni-reports` |
 | `@karni/ui` | npm | `packages/karni-ui` |
 | `@karni/payments-ui` | npm | `modules/karni-payments/ui` |
 | `@karni/approvals-ui` | npm | `modules/karni-approvals/ui` |
 | `@karni/impersonation-ui` | npm | `modules/karni-impersonation/ui` |
 | `@karni/charts-ui` | npm | `modules/karni-charts/ui` |
+| `@karni/reports-ui` | npm | `modules/karni-reports/ui` |
 
 Lockstep keeps "which @karni/ui goes with karni 0.4?" from ever being a
 question. A module's range on core (`karni>=0.4,<0.5`, `"@karni/ui": "^0.4.0"`)
@@ -73,7 +75,7 @@ The tag runs `.github/workflows/release.yml`:
    `karni --help` and `karni explain E104` must work. Uploaded as the
    `python-dist` artifact.
 5. **build-npm**: `npm ci`, `npm run build` and `npm publish --dry-run` for
-   the four npm packages (the full publish pipeline short of the upload, and
+   the five npm packages (the full publish pipeline short of the upload, and
    it needs no credentials), then `npm pack`. Uploaded as `npm-dist`.
 6. **publish-pypi** (when `KARNI_PUBLISHING` includes `pypi`): trusted
    publishing (OIDC, no stored token), with PEP 740 attestations as
@@ -118,6 +120,7 @@ accepts the same version twice.
   | Field | Value |
   |---|---|
   | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-charts` (one publisher each) |
+  | PyPI Project Name | `karni`, `karni-cli`, `karni-payments`, `karni-approvals`, `karni-impersonation`, `karni-site`, `karni-reports` (one publisher each) |
   | Owner | `cbsshekhawat18-lab` |
   | Repository name | `karni` |
   | Workflow name | `release.yml` |
@@ -133,7 +136,7 @@ accepts the same version twice.
   `.github/workflows/pypi-from-release.yml` ("Run workflow" with a tag)
   uploads an existing GitHub release's Python files to PyPI the same way, for
   a release whose PyPI step never ran or failed part-way.
-- **npm:** for each of the four packages, add a trusted publisher: this
+- **npm:** for each of the five packages, add a trusted publisher: this
   repository, workflow `release.yml`, environment `npm`. The `@karni` scope
   must exist and belong to the maintainers.
 - **npm with a token instead:** an `NPM_TOKEN` repository secret (an npm

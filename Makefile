@@ -31,7 +31,8 @@ PY_PACKAGES := \
 	modules/karni-approvals:karni_approvals \
 	modules/karni-impersonation:karni_impersonation \
 	modules/karni-site:karni_site \
-	modules/karni-charts:karni_charts
+	modules/karni-charts:karni_charts \
+	modules/karni-reports:karni_reports
 
 # Order matters: modules/karni-payments/ui resolves @karni/ui from source,
 # which needs packages/karni-ui/node_modules installed first.
@@ -41,7 +42,7 @@ ifeq ($(CORE_ONLY),1)
 PY_PACKAGES := $(filter packages/%,$(PY_PACKAGES))
 endif
 
-UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui
+UI_PACKAGES := packages/karni-ui modules/karni-payments/ui modules/karni-approvals/ui modules/karni-impersonation/ui modules/karni-charts/ui modules/karni-reports/ui
 
 KARNI_EXTRAS := s3,images,sentry,social,social-token,2fa
 # ruff is pinned to .pre-commit-config.yaml's rev: one version decides the format

@@ -1023,6 +1023,9 @@ PROCEDURES: tuple[Procedure, ...] = (
         steps=(
             "Run `karni modules show <module>`: what it provides, what it needs and the "
             "questions to settle first, each with the setting its answer goes to.",
+            "A PDF of one row (an invoice, a product sheet) is the `reports` module: declare a "
+            "Report in `<app>/reports.py` (model, template, get_context), never a hand-written "
+            "PDF view.",
             "Run `karni add <module>`. It adds the `karni-<module>` dependency to "
             "pyproject.toml, wires `karni_<module>` into the INSTALLED_APPS block marked "
             "`# karni:apps` in config/settings.py (with any middleware its manifest wires), "

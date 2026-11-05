@@ -101,6 +101,7 @@ nav:
       - Enforcement: enforcement.md
       - Modules: modules.md
       - "Saved charts (karni-charts)": charts.md
+      - Reports (PDF): reports.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md

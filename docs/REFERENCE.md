@@ -56,6 +56,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier | `experimental` | Karni's own tests |
 | Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, `facets/` (rows per node under the list's filters and access, rolled up on request) and a tree node's `tagged/` per tagging model. Experimental tier | `experimental` | Karni's own tests |
 | Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier | `experimental` | Karni's own tests |
+| PDF reports of a row (the `reports` module): a template rendered in the background with WeasyPrint, cached by template and data, served only to users who may retrieve the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier | `experimental` | Karni's own tests |
 | TypeScript types and typed hooks from the OpenAPI document (`karni types`) | `stable` | [Makefile](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/eventhub/Makefile) |
 | Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier | `experimental` | Karni's own tests |
 
@@ -1939,6 +1940,17 @@ class Lead(BaseModel):
 | `RAZORPAY_KEY_SECRET` | `RAZORPAY_KEY_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 | `RAZORPAY_WEBHOOK_SECRET` | `RAZORPAY_WEBHOOK_SECRET` | `""` | Provider credentials: blank by default, validated lazily at use. |
 
+### Module: karni-reports
+
+| Setting | Env | Default | What it controls |
+|---|---|---|---|
+| `KARNI_REPORTS_RENDERER` | `KARNI_REPORTS_RENDERER` | `"weasyprint"` | Turns HTML into PDF: "weasyprint", "fake" (deterministic bytes, no system libraries: for tests) or the dotted path of a karni_reports.rendering.Renderer subclass. |
+| `KARNI_REPORTS_STORAGE` | `KARNI_REPORTS_STORAGE` | `"default"` | The STORAGES alias the files are saved to. |
+| `KARNI_REPORTS_DIRECTORY` | `KARNI_REPORTS_DIRECTORY` | `"karni/reports"` | The folder inside that storage. Each report gets a folder of its own under it. |
+| `KARNI_REPORTS_PAGE_SIZE` | `KARNI_REPORTS_PAGE_SIZE` | `"A4"` | The CSS page size the base template prints on: "A4", "letter", "A5 landscape"... |
+| `KARNI_REPORTS_KEEP` | `KARNI_REPORTS_KEEP` | `1` | Ready files kept per report and row, the newest first. Older files and their rows are deleted after each render. 0 keeps every file. |
+| `KARNI_REPORTS_RENDER_TIMEOUT` | `KARNI_REPORTS_RENDER_TIMEOUT` | `600` | Seconds after which a report still pending or rendering is queued again by the next request (a worker that died mid-render). |
+
 ### Module: karni-site
 
 | Setting | Env | Default | What it controls |
@@ -2206,6 +2218,7 @@ Optional apps for anything with a RAM cost or a separate service. `karni add <na
 | [`karni-charts`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-charts) | experimental | `karni add charts` | `@karni/charts-ui` | Charts defined and previewed in the admin, served through each resource's aggregate action under its access. |
 | [`karni-impersonation`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-impersonation) | experimental | `karni add impersonation` | `@karni/impersonation-ui` | Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail. |
 | [`karni-payments`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-payments) | stable | `karni add payments` | `@karni/payments-ui` | Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI. |
+| [`karni-reports`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-reports) | experimental | `karni add reports` | `@karni/reports-ui` | A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row. |
 | [`karni-site`](https://github.com/cbsshekhawat18-lab/karni/tree/main/modules/karni-site) | experimental | `karni add site` | — | Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail. |
 | `karni-tenancy` | planned |  |  | [documented](models.md#scopes-the-filters-every-default-manager-applies) |
 
@@ -2498,6 +2511,17 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`PAY007`](errors.md#pay007) | exception | The currency or amount cannot be charged exactly |
 | [`PAY008`](errors.md#pay008) | api | A checkout redirect URL points at an origin that is not allowed |
 | [`PAY009`](errors.md#pay009) | exception | A webhook event matches no local payment |
+| [`REPORT001`](errors.md#report001) | exception | No report has that name |
+| [`REPORT002`](errors.md#report002) | exception | A report declaration is incomplete |
+| [`REPORT003`](errors.md#report003) | exception | Two reports have the same name |
+| [`REPORT004`](errors.md#report004) | check | No viewset serves the report's model |
+| [`REPORT005`](errors.md#report005) | exception | KARNI_REPORTS_RENDERER cannot be loaded |
+| [`REPORT006`](errors.md#report006) | exception | WeasyPrint or the system libraries it needs are missing |
+| [`REPORT007`](errors.md#report007) | exception | A report failed to render |
+| [`REPORT008`](errors.md#report008) | exception | No file is ready for this report and row yet |
+| [`REPORT009`](errors.md#report009) | exception | A template referenced a URL the renderer does not fetch |
+| [`REPORT010`](errors.md#report010) | check | A report's template does not exist |
+| [`REPORT011`](errors.md#report011) | exception | A report's context holds a value with no stable text |
 | [`SITE001`](errors.md#site001) | check | Templates do not get the request |
 | [`SITE002`](errors.md#site002) | check | {% ifactive %} names a URL the project does not have |
 | [`SITE003`](errors.md#site003) | exception | A karni_site template tag is written wrongly |

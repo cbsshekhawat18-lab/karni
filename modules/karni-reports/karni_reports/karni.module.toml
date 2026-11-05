@@ -1,0 +1,53 @@
+# The catalog entry of karni-reports: what `karni modules show reports` prints,
+# what `karni add reports` wires and `karni remove reports` takes out.
+name = "reports"
+kind = "module"
+title = "Reports (PDF)"
+purpose = "A row printed to PDF from a template, in the background, and cached."
+status = "experimental"
+use_when = [
+    "PDF reports",
+    "a PDF of a record",
+    "printable documents",
+    "an invoice or a certificate as PDF",
+    "export a page to PDF",
+    "WeasyPrint",
+]
+services = [
+    "a Celery worker: reports render as tasks",
+    "Pango, a system library WeasyPrint draws with (in the Docker image)",
+]
+docs = "modules/karni-reports/README.md"
+
+[provides]
+models = ["GeneratedReport"]
+endpoints = [
+    "/api/reports/",
+    "/api/reports/<report>/<id>/",
+    "/api/reports/<report>/<id>/status/",
+    "/api/reports/<report>/<id>/download/",
+]
+pages = [
+    "the base print template karni_reports/base.html",
+    "Generated reports in the admin, with a Regenerate action",
+    "manage.py karni_pregenerate",
+]
+ui = "@karni/reports-ui"
+
+[provides.settings]
+KARNI_REPORTS_RENDERER = "string"
+KARNI_REPORTS_STORAGE = "string"
+KARNI_REPORTS_DIRECTORY = "string"
+KARNI_REPORTS_PAGE_SIZE = "string"
+KARNI_REPORTS_KEEP = "integer"
+KARNI_REPORTS_RENDER_TIMEOUT = "integer"
+
+[[asks]]
+question = "Which page size do the reports print on: A4 or US letter?"
+setting = "KARNI_REPORTS_PAGE_SIZE"
+options = ["A4", "letter"]
+default = "A4"
+
+[wiring]
+apps = ["karni_reports"]
+settings = "karni_reports.conf:DEFAULTS"

@@ -342,6 +342,14 @@ Stable since 0.4.1:
   of `--json` and `KARNI_EXPLAIN_SEQ_SCAN_ROWS`), the seed volume of
   `karni plan` (`karni_cli.spec.plan.seed_time_class`, the `seed_bulk_threshold`
   fact) and `scripts/benchmark/large_project.py` with its baseline.
+- [The `karni-reports` module](modules.md#modules-in-this-repository): the
+  whole of `karni_reports` (`Report`, `register`, `get_report`, the
+  renderers, `GeneratedReport`, `karni_reports.services`), the
+  `KARNI_REPORTS_*` settings, the `/api/reports/` endpoints and their
+  throttle scopes, the base print template `karni_reports/base.html` and its
+  blocks, `manage.py karni_pregenerate`, and `useReport` and `ReportButton`
+  in `@karni/reports-ui`. The six-letter code prefix (`REPORT001`) is not
+  experimental: codes keep their meaning.
 
 ## Supported platforms
 

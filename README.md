@@ -319,6 +319,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier
 - `experimental` Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, `facets/` (rows per node under the list's filters and access, rolled up on request) and a tree node's `tagged/` per tagging model. Experimental tier
 - `experimental` Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier
+- `experimental` PDF reports of a row (the `reports` module): a template rendered in the background with WeasyPrint, cached by template and data, served only to users who may retrieve the row (`/api/reports/<report>/<id>/`, `ReportButton`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
@@ -410,6 +411,7 @@ A module is a separate package for anything with its own service or a real memor
 - `experimental` `karni add charts`: Charts defined and previewed in the admin, served through each resource's aggregate action under its access
 - `experimental` `karni add impersonation`: Safe 'log in as user' for Karni support staff: an explicit permission, no privilege escalation, a banner, a time limit, both identities in the audit trail
 - `stable` `karni add payments`: Hosted checkout, refunds and signature-verified webhooks for Stripe and Razorpay, with a test provider for CI
+- `experimental` `karni add reports`: A row printed to PDF from an HTML template in the background, cached by template and data, served only to users who may see the row
 - `experimental` `karni add site`: Every text, image and menu editable in the admin, public forms, redirects, and error pages that cannot fail
 - `planned` `karni-tenancy`
 <!-- /generated:modules -->
