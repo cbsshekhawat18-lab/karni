@@ -107,20 +107,18 @@ def test_multiedit_and_odd_input_are_counted_safely() -> None:
 
 
 def test_numstat_counts_added_plus_deleted_with_and_without_lockfiles_and_migrations() -> None:
-    text = "\n".join(
-        [
-            "10\t2\tshop/models.py",
-            "500\t0\tfrontend/package-lock.json",
-            "40\t0\tshop/migrations/0001_initial.py",
-            "7\t1\tfrontend/node_modules/x/index.js",
-            "-\t-\tlogo.png",
-            "3\t0\tuv.lock",
-        ]
+    text = (
+        "10\t2\tshop/models.py\n500\t0\tfrontend/package-lock.json\n"
+        "40\t0\tshop/migrations/0001_initial.py\n7\t1\tfrontend/node_modules/x/index.js\n"
+        "-\t-\tlogo.png\n3\t0\tuv.lock"
     )
     size = diffsize.parse_numstat(text)
     assert size.lines_all == 12 + 500 + 40 + 8 + 3
     assert size.lines_code == 12
-    assert (size.files_all, size.files_code) == (6, 2)  # the binary logo is a file with no counted lines
+    assert (size.files_all, size.files_code) == (
+        6,
+        2,
+    )  # the binary logo is a file with no counted lines
 
 
 def test_measure_counts_new_and_changed_files_against_the_start_commit(tmp_path: Path) -> None:
@@ -309,7 +307,10 @@ def test_a_fake_run_makes_the_folder_the_repo_the_database_and_one_recorded_line
     assert (project / "fake_note.txt").read_text().startswith("1st") is False  # the fake wrote it
     assert (project / "acceptance" / "test_mini.py").is_file()  # the checks the agent may run
     log = subprocess.run(
-        ["git", "-C", str(project), "log", "--format=%s"], capture_output=True, text=True
+        ["git", "-C", str(project), "log", "--format=%s"],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     assert log.split() == ["start"]
     assert config.database.calls == [
