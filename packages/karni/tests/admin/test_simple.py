@@ -462,3 +462,9 @@ def test_the_actions_column_can_be_turned_off() -> None:
 
     columns = Quiet(Widget, AdminSite()).get_list_display(_request(_super()))
     assert all(isinstance(c, str) for c in columns)
+
+
+def test_the_guide_links_only_to_screens_the_user_may_open() -> None:
+    html = _client(_staff("viewer@example.com", "viewer")).get("/admin/").content.decode()
+    assert "Set roles" in html and "karni_accounts/role" not in html
+    assert "karni_accounts/role" in _client(_super()).get("/admin/").content.decode()

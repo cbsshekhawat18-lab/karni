@@ -126,7 +126,12 @@ def _steps(site: Any, request: HttpRequest) -> list[dict[str, Any]]:
             "label": str(users._meta.verbose_name_plural).capitalize() if invite else "",
         }
     )
-    roles = _url(site, "karni_accounts_role_changelist")
+    roles = None
+    for model, model_admin in site._registry.items():
+        if model._meta.label_lower == "karni_accounts.role" and model_admin.has_view_permission(
+            request
+        ):
+            roles = _url(site, "karni_accounts_role_changelist")
     steps.append(
         {
             "title": _("Set roles"),
