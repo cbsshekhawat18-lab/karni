@@ -78,6 +78,7 @@ nav:
       - Typed fields: fields.md
       - Lifecycle and capacity: lifecycle-and-capacity.md
       - API: api.md
+      - Aggregations: aggregations.md
       - Accounts: accounts.md
       - Admin: admin.md
       - Navigation from data: navigation.md
@@ -97,6 +98,7 @@ nav:
       - Error codes: errors.md
       - Enforcement: enforcement.md
       - Modules: modules.md
+      - "Saved charts (karni-charts)": charts.md
       - "App spec (karni.yaml)": app-spec.md
       - Recipes:
           - All recipes: recipes/index.md

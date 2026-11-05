@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { AggregateResult } from "../../hooks/useAggregate";
 import { DataChart } from "./data-chart";
 
 const monthly = [
@@ -124,5 +125,58 @@ export const Narrow: Story = {
     data: undefined,
     series: multiSeries,
     className: "max-w-80",
+  },
+};
+
+/** What `useAggregate("products", { groupBy: "launched_on:year", stack: "channel" })` returns. */
+const byYearAndChannel: AggregateResult = {
+  group_by: "launched_on:year",
+  metric: "count",
+  value: null,
+  split: "channel",
+  stacked: true,
+  top: null,
+  categories: [
+    { key: "2023", label: "2023", other: false },
+    { key: "2024", label: "2024", other: false },
+    { key: "2025", label: "2025", other: false },
+  ],
+  series: [
+    { key: "online", label: "Online", values: [12, 18, 25] },
+    { key: "store", label: "Store", values: [9, 7, 4] },
+  ],
+};
+
+/** An aggregate read directly, stacked because the request said `stack`. */
+export const FromAnAggregate: Story = {
+  args: {
+    kind: "bar",
+    title: "Products launched per year, by channel",
+    data: undefined,
+    aggregate: byYearAndChannel,
+  },
+};
+
+/** The largest categories and an "Other" bar (`top=3`), one series. */
+export const TopWithOther: Story = {
+  args: {
+    kind: "bar",
+    title: "Units sold by category",
+    data: undefined,
+    aggregate: {
+      group_by: "category",
+      metric: "sum",
+      value: "units",
+      split: null,
+      stacked: false,
+      top: 3,
+      categories: [
+        { key: "c1", label: "Toys", other: false },
+        { key: "c2", label: "Chairs", other: false },
+        { key: "c3", label: "Lamps", other: false },
+        { key: null, label: "Other", other: true },
+      ],
+      series: [{ key: null, label: "Sum of units", values: [30, 17, 12, 8] }],
+    },
   },
 };

@@ -516,6 +516,32 @@ RULES: tuple[Rule, ...] = (
         fix="Inherit TreeModel first and drop the parent field, or opt out with the reason.",
         enforced_by=("hand-written-tree",),
     ),
+    Rule(
+        code="K314",
+        category="architecture",
+        severity="must",
+        summary="GROUP BY: Karni.aggregate.",
+        rule=(
+            "Grouped counts, sums, averages, top N with Other, and figures per year, quarter or "
+            "month for a chart or a report are `class Karni: aggregate = {...}` on the model "
+            "(`group_by`, `values`, `metrics`, `expressions`) and `GET <resource>/aggregate/` "
+            "with `useAggregate` and `<DataChart aggregate={...} />`. A number stored as text is "
+            "`TextNumber`. A chart people edit in the admin is a saved chart (`karni add "
+            "charts`, `<SavedChart />`). Never write a view, an `@action` or a hook of your own "
+            "that groups rows."
+        ),
+        rationale=(
+            "The aggregate action runs under the list's filters and access, in one query (two "
+            "with Other), and refuses what the model does not declare. A hand-written GROUP BY "
+            "view repeats the filters and the access check and is where hidden rows leak into "
+            "totals."
+        ),
+        fix=(
+            "Declare the groups and values in `class Karni: aggregate`, then call `GET "
+            "<resource>/aggregate/?group_by=...&metric=...&value=...`. Karni's docs page "
+            "aggregations lists every parameter."
+        ),
+    ),
     # backend
     Rule(
         code="K101",

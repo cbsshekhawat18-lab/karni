@@ -238,3 +238,44 @@ def test_scaling_cases_carry_an_expanded_list_case(monkeypatch: pytest.MonkeyPat
     )
     ids = {case.id for case in scaling_cases()}
     assert any(case_id.startswith("EventViewSet.list?expand=") for case_id in ids), ids
+
+
+# the aggregate action (karni.aggregation, experimental)
+
+
+@pytest.mark.django_db
+def test_the_aggregate_action_is_measured_and_flat(monkeypatch: pytest.MonkeyPatch) -> None:
+    from django.test import override_settings
+
+    from tests.aggregateapp.viewsets import ProductViewSet
+
+    assert performance.aggregate_query(ProductViewSet) == {
+        "group_by": "category",
+        "top": "1",
+        "stack": "category__parent",
+    }
+    result = check_scaling(ScalingCase(ProductViewSet, "aggregate"))
+    assert not result.skipped, result.skipped
+    assert not result.grows, result.message()
+    assert result.small == result.large
+
+    real = [django_apps.get_app_config("aggregateapp")]
+    monkeypatch.setattr(_source, "project_app_configs", lambda: real)
+    with override_settings(KARNI_API_ROUTER="tests.aggregateapp.urls.get_router"):
+        ids = {case.id for case in scaling_cases()}
+    assert {"ProductViewSet.aggregate", "NarrowProductViewSet.aggregate"} <= ids
+    assert "CategoryViewSet.aggregate" not in ids
+
+
+@pytest.mark.django_db
+def test_an_aggregate_that_reads_every_row_grows() -> None:
+    from tests.aggregateapp.viewsets import ProductViewSet
+
+    class LeakyAggregate(ProductViewSet):
+        def aggregate(self, request: Any, *args: Any, **kwargs: Any) -> Any:
+            for product in self.get_queryset():
+                str(product.category)  # one query per row
+            return super().aggregate(request, *args, **kwargs)
+
+    result = check_scaling(ScalingCase(LeakyAggregate, "aggregate"))
+    assert result.grows, (result.small, result.large)

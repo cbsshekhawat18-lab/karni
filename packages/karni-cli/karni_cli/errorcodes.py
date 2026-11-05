@@ -945,6 +945,34 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Add what the message says is required (under modules: or features:), or leave one of "
         "the two that conflict out. karni modules show <name> lists both.",
     ),
+    # C500-C519 aggregations in karni.yaml (experimental)
+    _c(
+        "C500",
+        "aggregate names a field or path the entity does not have",
+        "karni spec validate (karni_cli.spec.validate)",
+        "An entity's aggregate: lists what GET <resource>/aggregate/ may group by (group_by) and "
+        "read (values). Each name is a field of the entity, or a path through its relations "
+        "(category__parent), and group_by holds at least one.",
+        "Name a field the entity declares, or follow a relation (fk, o2o, m2m) with __ to a "
+        "field of the entity it points at.",
+    ),
+    _c(
+        "C501",
+        "aggregate names a metric that is not one",
+        "karni spec validate (karni_cli.spec.validate)",
+        "The metrics are count, sum, avg, min, max and distinct_count. aggregate.metrics lists "
+        "the ones a request may name, all of them when it is left out.",
+        "List metrics from count, sum, avg, min, max and distinct_count, or leave metrics out.",
+    ),
+    _c(
+        "C502",
+        "A date bucket in aggregate that does not fit",
+        "karni spec validate (karni_cli.spec.validate)",
+        "A group may take a bucket after a colon (launched_on:year) to group a date or datetime "
+        "field by year, quarter or month. Another bucket, or one on a field that is not a date, "
+        "cannot be grouped.",
+        "Write <date field>:year, :quarter or :month, or the field alone to allow every bucket.",
+    ),
     # C34x debugging: karni explain -, karni queries
     _c(
         "C340",

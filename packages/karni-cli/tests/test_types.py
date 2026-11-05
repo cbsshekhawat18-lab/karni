@@ -87,3 +87,25 @@ def test_the_navigation_endpoint_is_no_resource(schema: dict) -> None:
     }
     assert "navigation" not in resource_components(schema)
     assert "Navigation" not in generate_hooks(schema)
+
+
+def test_a_declared_aggregation_gets_a_typed_hook(schema: dict) -> None:
+    from karni_cli.typegen import aggregate_groups
+
+    assert "useAggregate" not in generate_hooks(schema)
+    list_path = next(
+        path
+        for path, item in schema["paths"].items()
+        if item["get"].get("x-karni-resource") == "events"
+    )
+    schema["paths"][f"{list_path}aggregate/"] = {
+        "get": {"x-karni-aggregate": {"group_by": ["status", "starts_at:year"]}}
+    }
+    assert aggregate_groups(schema) == {"events": ["status", "starts_at:year"]}
+    out = generate_hooks(schema)
+    assert "import { useAggregate, useResourceItem" in out
+    assert "  AggregateParams," in out
+    assert 'export type EventsAggregateGroup = "status" | "starts_at:year";' in out
+    assert "params: AggregateParams & { groupBy: EventsAggregateGroup }," in out
+    assert ') => useAggregate("events", params);' in out
+    assert "useVenuesAggregate" not in out

@@ -2,7 +2,13 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DataChart, defaultDataChartSlots, type DataChartSeries } from "./data-chart";
+import type { AggregateResult } from "../../hooks/useAggregate";
+import {
+  DataChart,
+  aggregateSeries,
+  defaultDataChartSlots,
+  type DataChartSeries,
+} from "./data-chart";
 
 const signups = [
   { label: "Jan", value: 10 },
@@ -366,5 +372,122 @@ describe("DataChart slots", () => {
 
     rerender(<DataChart kind="line" data={signups} title="Compare" loading slots={slots} />);
     expect(screen.getByTestId("loading")).toHaveTextContent("Loading Compare");
+  });
+});
+
+const stackedAggregate: AggregateResult = {
+  group_by: "launched_on:year",
+  metric: "count",
+  value: null,
+  split: "channel",
+  stacked: true,
+  top: null,
+  categories: [
+    { key: "2024", label: "2024", other: false },
+    { key: "2025", label: "2025", other: false },
+    { key: null, label: "(none)", other: false },
+  ],
+  series: [
+    { key: "online", label: "Online", values: [1, 3, 0] },
+    { key: "store", label: "Store", values: [2, null, 1] },
+  ],
+};
+
+describe("DataChart reads an aggregate (experimental)", () => {
+  it("turns categories and series into chart series, skipping null values", () => {
+    expect(aggregateSeries(stackedAggregate)).toEqual([
+      {
+        name: "Online",
+        data: [
+          { label: "2024", value: 1 },
+          { label: "2025", value: 3 },
+          { label: "(none)", value: 0 },
+        ],
+      },
+      {
+        name: "Store",
+        data: [
+          { label: "2024", value: 2 },
+          { label: "(none)", value: 1 },
+        ],
+      },
+    ]);
+  });
+
+  it("keeps two categories that share a label apart", () => {
+    const series = aggregateSeries({
+      ...stackedAggregate,
+      split: null,
+      stacked: false,
+      categories: [
+        { key: 1, label: "Misc", other: false },
+        { key: 2, label: "Misc", other: false },
+      ],
+      series: [{ key: null, label: "Count", values: [4, 5] }],
+    });
+    expect(series[0]?.data.map((point) => point.label)).toEqual(["Misc", "Misc (2)"]);
+  });
+
+  it("renders the aggregate's categories, series and values in the hidden table", () => {
+    const { container } = render(
+      <DataChart kind="bar" title="Launches by year" aggregate={stackedAggregate} />,
+    );
+    const table = q<HTMLTableElement>(container, "table");
+    const headers = within(table)
+      .getAllByRole("columnheader")
+      .map((cell) => cell.textContent);
+    expect(headers).toEqual(["Label", "Online", "Store"]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows.map((row) => row.querySelector("th")?.textContent)).toEqual([
+      "2024",
+      "2025",
+      "(none)",
+    ]);
+    // Two series: the legend names them.
+    expect(screen.getAllByText("Online").length).toBeGreaterThan(1);
+  });
+
+  it("stacks the bars when the aggregate came from a stack request", () => {
+    const { container } = render(
+      <DataChart kind="bar" title="Launches by year" aggregate={stackedAggregate} />,
+    );
+    const online = q<SVGGElement>(container, "g.fill-chart-1");
+    const store = q<SVGGElement>(container, "g.fill-chart-2");
+    const onlineFirst = q<SVGRectElement>(online, "rect");
+    const storeFirst = q<SVGRectElement>(store, "rect");
+    // Stacked: the same x and width, the store bar sits on top of the online one.
+    expect(storeFirst.getAttribute("x")).toBe(onlineFirst.getAttribute("x"));
+    expect(storeFirst.getAttribute("width")).toBe(onlineFirst.getAttribute("width"));
+    const storeBottom =
+      Number(storeFirst.getAttribute("y")) + Number(storeFirst.getAttribute("height"));
+    expect(storeBottom).toBeCloseTo(Number(onlineFirst.getAttribute("y")));
+  });
+
+  it("groups the bars side by side when stacked is false", () => {
+    const { container } = render(
+      <DataChart
+        kind="bar"
+        title="Launches by year"
+        aggregate={stackedAggregate}
+        stacked={false}
+      />,
+    );
+    const onlineFirst = q<SVGRectElement>(q(container, "g.fill-chart-1"), "rect");
+    const storeFirst = q<SVGRectElement>(q(container, "g.fill-chart-2"), "rect");
+    expect(Number(storeFirst.getAttribute("x"))).toBeGreaterThan(
+      Number(onlineFirst.getAttribute("x")),
+    );
+  });
+
+  it("shows the empty state for an aggregate without groups", () => {
+    render(
+      <DataChart
+        kind="bar"
+        title="Nothing yet"
+        emptyLabel="No products"
+        aggregate={{ ...stackedAggregate, categories: [], series: [] }}
+      />,
+    );
+    expect(screen.getByText("No products")).toBeInTheDocument();
   });
 });

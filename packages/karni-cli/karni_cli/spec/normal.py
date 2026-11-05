@@ -9,9 +9,11 @@ entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
 no database, an entity's pages in list, detail, form order, a taxonomy's
 tree entity as ``app.Name`` (experimental), the site module listed whenever
-the kind has a site, and ``navigation`` as the ``KARNI_NAVIGATION`` list it
-gives (``None`` without it). What carries meaning in its order stays in
-order: fields, pages, the menu, search fields and the ordering.
+the kind has a site, ``navigation`` as the ``KARNI_NAVIGATION`` list it
+gives (``None`` without it), and an ``aggregate`` with every metric written
+out when it lists none. What carries meaning in its order stays in order:
+fields, pages, the menu, search fields, the ordering and an aggregate's
+groups (the first is what the query-scaling check groups by).
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -32,7 +34,7 @@ from karni_cli.generators.fields import ALIASES, parse_field
 from karni_cli.generators.lifecycle_fields import _states
 from karni_cli.project import CliError
 from karni_cli.spec import navigation
-from karni_cli.spec.schema import Spec
+from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
 __all__ = ["canonical_field", "normalise", "role_name"]
 
@@ -102,6 +104,15 @@ def _entity_label(name: str, app: str, apps: dict[str, Any]) -> str:
     return f"{owners[0]}.{name}" if len(owners) == 1 else name
 
 
+def _aggregate(declared: dict[str, Any]) -> dict[str, Any]:
+    """``aggregate:`` with its defaults written out: every metric when none is listed."""
+    return {
+        "group_by": list(dict.fromkeys(declared["group_by"])),
+        "values": list(dict.fromkeys(declared["values"])),
+        "metrics": sorted(set(declared["metrics"] or AGGREGATE_METRICS)),
+    }
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -139,6 +150,8 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
                 key: _entity_label(target, label, data["apps"])
                 for key, target in sorted(entity["taxonomies"].items())
             }
+            if entity["aggregate"] is not None:
+                entity["aggregate"] = _aggregate(entity["aggregate"])
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []

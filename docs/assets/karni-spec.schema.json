@@ -59,6 +59,64 @@
       },
       "type": "object"
     },
+    "Aggregate": {
+      "additionalProperties": false,
+      "description": "Experimental. ``aggregate:`` of an entity: ``class Karni: aggregate``.\n\nWhat ``GET <resource>/aggregate/`` may group by and sum (docs/aggregations.md).\nExpressions (``TextNumber`` and your own) stay in the project's code.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "group_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Fields or relation paths (category__parent) a request may group by. A date or datetime field takes :year, :quarter or :month, or allows every bucket without one."
+        },
+        "values": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Fields a metric other than a plain count reads."
+        },
+        "metrics": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The metrics a request may name, of count, sum, avg, min, max, distinct_count (default: all of them)."
+        }
+      },
+      "required": [
+        "group_by"
+      ],
+      "type": "object"
+    },
     "App": {
       "additionalProperties": false,
       "description": "Experimental. One Django app of ``apps:`` and its entities.",
@@ -315,6 +373,17 @@
               "$ref": "#/$defs/Access"
             }
           ]
+        },
+        "aggregate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Aggregate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "What GET <resource>/aggregate/ may group by and sum (Karni.aggregate): group_by, values, metrics."
         }
       },
       "type": "object"
@@ -609,6 +678,7 @@
           {
             "enum": [
               "approvals",
+              "charts",
               "impersonation",
               "payments",
               "site"

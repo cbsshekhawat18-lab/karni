@@ -47,6 +47,10 @@ usual):
 * ``tree_max_nodes`` / ``tree_default_depth`` / ``tree_max_depth`` /
   ``tree_top_level()`` (experimental) — the tree endpoints a viewset gets
   when its model is a ``TreeModel`` (:mod:`karni.api.tree`).
+* ``aggregation`` / ``get_aggregation()`` / ``aggregate_queryset()``
+  (experimental): what ``GET <resource>/aggregate/`` may group and sum
+  (:mod:`karni.aggregation`). The model's ``class Karni: aggregate`` is the
+  default.
 
 Performance (ADR 0001, Decision 3) — every hatch is a declaration, never
 silence:
@@ -90,6 +94,8 @@ from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
 from karni.accounts.permissions import ObjectPermissionsMixin
+from karni.aggregation import PARAMETERS as AGGREGATE_PARAMETERS
+from karni.aggregation import Aggregation, AggregationError, aggregation_of
 from karni.api.access import (
     Access,
     AccessPermission,
@@ -275,6 +281,10 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     action_throttle_class: ClassVar[type[ActionRateThrottle]] = ActionRateThrottle
     scope_exempt: ClassVar[bool] = False
     scope_exempt_reason: ClassVar[str] = ""
+    #: Experimental. What ``GET <resource>/aggregate/`` may group by and sum: an
+    #: ``Aggregation(...)`` or its dict (:mod:`karni.aggregation`). ``None`` uses the
+    #: model's ``class Karni: aggregate``. Override / escape hatch: :meth:`get_aggregation`.
+    aggregation: ClassVar[Aggregation | Mapping[str, Any] | None] = None
 
     #: Experimental. The actions a viewset answers with 405 while :meth:`is_read_only` (a
     #: model with ``class Karni: external = True`` and no ``writable = True``): the writes
@@ -737,6 +747,82 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
                 "`class Karni: audit = True` on the model."
             )
         return self.paginated_response(history_for(self.get_object()), ChangeLogSerializer)
+
+    # aggregations (experimental, karni.aggregation)
+
+    def get_aggregation(self) -> Aggregation | None:
+        """Experimental. What this resource may be aggregated by, or ``None``.
+
+        The viewset's ``aggregation`` when declared, else the model's ``class
+        Karni: aggregate``. Override / escape hatch: return a declaration
+        computed per request (``self.request`` is set), or ``None`` to turn the
+        action off.
+        """
+        declared = type(self).aggregation
+        if declared is not None:
+            return Aggregation.coerce(declared, f"{type(self).__name__}.aggregation")
+        try:
+            model = self.get_model()
+        except ImproperlyConfigured:
+            return None
+        return aggregation_of(model)
+
+    def aggregate_queryset(self) -> QuerySet[Any]:
+        """Experimental. The rows an aggregate counts: the list's, with the request's filters.
+
+        :meth:`get_queryset` (the access read scope, model scopes) then
+        :meth:`filter_queryset` (filters and ``?search=``), with the aggregate's
+        own parameters (``group_by``, ``metric``, ``value``, ``top``, ``stack``,
+        ``series``) kept from the filter backends. Override / escape hatch:
+        narrow or replace the rows.
+        """
+        queryset = self.get_queryset()
+        django_request = self.request._request
+        original = django_request.GET
+        stripped = original.copy()
+        for name in AGGREGATE_PARAMETERS:
+            stripped.pop(name, None)
+        django_request.GET = stripped
+        try:
+            filtered: QuerySet[Any] = self.filter_queryset(queryset)
+        finally:
+            django_request.GET = original
+        return filtered
+
+    @action(detail=False, methods=["get"], url_path="aggregate")
+    def aggregate(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """Experimental. Grouped counts, sums, averages, minimums and maximums of the list's rows.
+
+        ``group_by`` names a declared field, relation path or expression (a date
+        takes ``:year``, ``:quarter`` or ``:month``), ``metric`` one of count, sum,
+        avg, min, max and distinct_count, ``value`` the declared field it reads,
+        ``top`` keeps the largest groups and puts the rest in Other, and ``stack``
+        or ``series`` adds a second dimension. Every list filter and ``search``
+        apply, after access.
+        """
+        from karni.aggregation import parse_query, run_aggregate
+
+        declaration = self.get_aggregation()
+        model = self.get_model()
+        if declaration is None:
+            return Response(
+                {
+                    "code": "E381",
+                    "detail": (
+                        f"{model.__name__} declares no aggregation: add `class Karni: aggregate "
+                        "= {'group_by': [...], 'values': [...]}` to the model."
+                    ),
+                },
+                status=404,
+            )
+        try:
+            query = parse_query(
+                declaration, model, request.query_params, user=getattr(request, "user", None)
+            )
+            result = run_aggregate(self.aggregate_queryset(), query)
+        except AggregationError as exc:
+            return self._refused(exc)
+        return Response(result)
 
     # import and export (ADR 0002, P6)
 
@@ -1361,6 +1447,9 @@ def _validate_performance(cls: type[BaseViewSet]) -> None:
                 f"Known: {', '.join(sorted(known - {'*'}))}.",
                 code="E132",
             )
+    aggregation = cls.__dict__.get("aggregation")
+    if aggregation is not None:
+        cls.aggregation = Aggregation.coerce(aggregation, f"{name}.aggregation")
     for hint in ("select_related", "prefetch_related"):
         if hint in cls.__dict__:
             validate_hints(name, hint, cls.__dict__[hint])

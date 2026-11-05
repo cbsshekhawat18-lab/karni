@@ -31,6 +31,10 @@ vendor extensions the ``@karni/ui`` frontend consumes:
 * ``x-karni-taxonomy: "<key>"`` (experimental) on the relation field of a
   ``class Karni: taxonomies`` key, so a client knows the field has list
   filters and ``facets/`` counts (:mod:`karni.api.taxonomy`).
+* ``x-karni-aggregate: {"group_by": [...], "values": [...], "metrics": [...]}``
+  on the ``aggregate`` operation of a resource that declares an aggregation
+  (:mod:`karni.aggregation`, experimental). Without a declaration the
+  operation is left out.
 
 Operations whose access predicate can admit anonymous callers (``Public``,
 ``Where``, or a combination containing them) list the empty security
@@ -106,6 +110,8 @@ class KarniAutoSchema(AutoSchema):
         """Stock operation plus the ``x-karni-resource``/``-access``/``-throttle``/``-honeypot``."""
         if self._karni_action() == "history" and not self._karni_audited():
             return None  # no history is kept for this resource: no operation to document
+        if self._karni_action() == "aggregate" and self._karni_aggregation() is None:
+            return None  # nothing declared to aggregate: the action answers 404
         view = self._karni_view()
         if view is not None and view.refuses_read_only(self._karni_action()):
             return None  # a read-only external model: its writes answer 405, so none is documented
@@ -130,7 +136,22 @@ class KarniAutoSchema(AutoSchema):
                 honeypot = view.get_honeypot_field()
                 if honeypot:
                     operation["x-karni-honeypot"] = honeypot
+            aggregation = self._karni_aggregation()
+            if self._karni_action() == "aggregate" and aggregation is not None:
+                operation["x-karni-aggregate"] = aggregation.describe(view.get_model())
         return operation
+
+    def _karni_aggregation(self) -> Any:
+        """The view's aggregation declaration (``None`` when it has none or it is malformed)."""
+        from karni.errorcodes import KarniError
+
+        view = self._karni_view()
+        if view is None:
+            return None
+        try:
+            return view.get_aggregation()
+        except (KarniError, ImproperlyConfigured):
+            return None  # karni check reports a malformed declaration (E380)
 
     def _karni_dashboard(self) -> dict[str, Any] | None:
         """The model's ``Karni.dashboard`` (:mod:`karni.dashboard`), when it opts in.
@@ -222,6 +243,10 @@ class KarniAutoSchema(AutoSchema):
             from karni.audit.serializers import ChangeLogSerializer
 
             return ChangeLogSerializer
+        if action == "aggregate":
+            from karni.api.aggregate import AggregateResultSerializer
+
+            return AggregateResultSerializer
         if action in ("export", "import_template"):
             from drf_spectacular.types import OpenApiTypes
 
@@ -244,6 +269,8 @@ class KarniAutoSchema(AutoSchema):
             from karni.api.tree import tree_move_serializer
 
             return tree_move_serializer(view.get_model())
+        if action == "aggregate":
+            return None
         if action == "import_data" and self.method == "POST":
             from karni.transfer.serializers import ImportUploadSerializer
 
@@ -264,6 +291,11 @@ class KarniAutoSchema(AutoSchema):
             parameters.append(expand)
         parameters.extend(self._karni_tree_parameters())
         parameters.extend(self._karni_taxonomy_parameters())
+        aggregation = self._karni_aggregation()
+        if self._karni_action() == "aggregate" and aggregation is not None:
+            from karni.api.aggregate import aggregate_parameters
+
+            parameters += aggregate_parameters(aggregation, self.view.get_model())
         if self._karni_action() in ("export", "import_template"):
             parameters.append(
                 OpenApiParameter(
@@ -379,18 +411,18 @@ class KarniAutoSchema(AutoSchema):
         """Stock, except ``children/``, ``ancestors/`` and ``access/``: no list filters there.
 
         ``facets/`` counts the list's rows, so it takes the list's filters and
-        search (not its ordering).
+        search (not its ordering), and so does ``aggregate/``.
         """
         action = self._karni_action()
         if action in ("children", "ancestors", "access_forest", "tagged"):
             return []
-        if action == "facets":
+        if action in ("facets", "aggregate"):
             from rest_framework.filters import OrderingFilter
 
             return [
                 backend
-                for backend in getattr(self.view, "filter_backends", [])
-                if not issubclass(backend, OrderingFilter)
+                for backend in getattr(self.view, "filter_backends", None) or []
+                if not (isinstance(backend, type) and issubclass(backend, OrderingFilter))
             ]
         return list(super().get_filter_backends())
 

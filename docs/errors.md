@@ -1064,6 +1064,86 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Pass only permission, scope, targets, expires_at or reason. To move access to another user, revoke() this grant and grant() a new one.
 
+<a id="e380"></a>
+
+#### E380: An aggregation declaration is not valid
+
+*system check (error)* · from `karni.aggregation.Aggregation (karni.checks.check_aggregations)`
+
+**Why Karni objects.** class Karni: aggregate on a model, or aggregation on a viewset, says what GET <resource>/aggregate/ may group by and sum. Each name must be a field, a relation path or a declared expression of the model, a bucket (:year, :quarter, :month) needs a date field, and the metrics are count, sum, avg, min, max and distinct_count.
+
+**Fix.** Fix the name the message quotes: {'group_by': ['category', 'launched_on:year'], 'values': ['price'], 'metrics': ['count', 'sum'], 'expressions': {'revenue': TextNumber('revenue_text')}}. Every key but group_by is optional.
+
+<a id="e381"></a>
+
+#### E381: The resource declares no aggregation
+
+*API 400 response* · from `karni.api.viewsets.BaseViewSet.aggregate`
+
+**Why Karni objects.** Nothing is aggregatable unless declared, so GET <resource>/aggregate/ answers 404 for a model without class Karni: aggregate (and a viewset without aggregation).
+
+**Fix.** Declare what may be grouped and summed on the model: class Karni: aggregate = {'group_by': ['region'], 'values': ['price']}.
+
+<a id="e382"></a>
+
+#### E382: group_by, stack or series names something not declared
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** A request may group only by the fields, relation paths and expressions the declaration lists, and never by a field hidden from the requester (Karni.field_roles, APIMeta.write_only). group_by is required.
+
+**Fix.** Use one of the values the message lists (the OpenAPI document lists them too, in x-karni-aggregate), or add the field to the declaration's group_by.
+
+<a id="e383"></a>
+
+#### E383: The metric is not allowed
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** The declaration's metrics list what may be computed: count, sum, avg, min, max, distinct_count, or fewer.
+
+**Fix.** Send one of the metrics the message lists, or add it to the declaration's metrics.
+
+<a id="e384"></a>
+
+#### E384: The value is missing, not declared, or not a number
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** Every metric but count reads a value, which must be in the declaration's values and visible to the requester. sum, avg, min and max need a number field or a numeric expression.
+
+**Fix.** Send value=<one of the declared values>. For a number stored as text, declare an expression: 'expressions': {'revenue': TextNumber('revenue_text')}.
+
+<a id="e385"></a>
+
+#### E385: The date bucket does not fit
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** A bucket (:year, :quarter, :month) groups a date or datetime field. Another bucket, or a bucket on another kind of field, cannot be computed.
+
+**Fix.** Send group_by=<date field>:year, :quarter or :month, or group by the field without a bucket.
+
+<a id="e386"></a>
+
+#### E386: An aggregate parameter is not valid
+
+*API 400 response* · from `karni.aggregation.parse_query`
+
+**Why Karni objects.** top must be a whole number from 1 to KARNI_AGGREGATE_MAX_GROUPS, only one of stack and series names the second dimension, and it must differ from group_by.
+
+**Fix.** Fix the parameter the message names.
+
+<a id="e387"></a>
+
+#### E387: The aggregate makes too many groups
+
+*API 400 response* · from `karni.aggregation.run_aggregate`
+
+**Why Karni objects.** A response holds at most KARNI_AGGREGATE_MAX_GROUPS groups (default 1000), so grouping by a field with a value per row cannot fill a chart or the server's memory.
+
+**Fix.** Send top=<n> to keep the largest groups and put the rest in Other, narrow the rows with filters, group by a coarser bucket, or raise KARNI_AGGREGATE_MAX_GROUPS.
+
 ### 4xx · Events, listeners, schedules and Celery
 
 <a id="e401"></a>
@@ -1517,6 +1597,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** taxonomies maps each key to a tree model. The key becomes a many-to-many field of that name and the list parameters ?<key>= and ?<key>_descendants=, so it must be a field name: no leading underscore, no double underscore, not ending in _descendants. The value names the tree model as 'app_label.Model' or the model class.
 
 **Fix.** Write taxonomies = {"region": "geo.Region", "category": "catalog.Category"}, with keys that are field names and values that name tree models.
+
+<a id="w570"></a>
+
+#### W570: An aggregation expression is never used
+
+*system check (warning)* · from `karni.checks.check_aggregations`
+
+**Why Karni objects.** An expression in the declaration's expressions is only reachable through group_by or values. One that neither lists does nothing.
+
+**Fix.** Add its name to group_by or values, or remove it.
 
 <a id="e571"></a>
 
@@ -2337,6 +2427,48 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** requires_approval, approvals_required, approver_roles, approval_timeout and approval_on_timeout are read at boot. A typo would silently hold or release changes.
 
 **Fix.** Set requires_approval to True or a list of field names, approvals_required to a positive int, approver_roles / approval_escalation_roles to lists of KARNI_ROLES slugs, approval_timeout to a timedelta or hours, and approval_on_timeout to 'expire' or 'escalate'.
+
+## CHART (`CHART`)
+
+<a id="chart001"></a>
+
+### CHART001: The chart's source is not a resource with an aggregation
+
+*exception* · from `karni_charts.services.source_viewset`
+
+**Why Karni objects.** A chart reads its data through the source resource's aggregate action, so the source must be a routed resource whose model declares class Karni: aggregate (or whose viewset declares aggregation).
+
+**Fix.** Pick one of the sources the admin offers, or declare an aggregation on the model the chart should read: class Karni: aggregate = {'group_by': [...], 'values': [...]}.
+
+<a id="chart002"></a>
+
+### CHART002: A filter the chart does not allow
+
+*API 400 response* · from `karni_charts.services.chart_filters`
+
+**Why Karni objects.** A viewer may narrow a saved chart only with the filters its allowed_filters lists. The default_filters always apply.
+
+**Fix.** Send only the filters the chart allows, or add the filter's name to the chart's allowed_filters in the admin.
+
+<a id="chart003"></a>
+
+### CHART003: The chart's filters are not valid
+
+*exception* · from `karni_charts.models.Chart.clean`
+
+**Why Karni objects.** default_filters maps a list filter to a value or a list of values, and allowed_filters lists the names of list filters. The aggregate's own parameters (group_by, metric, value, top, stack, series) are the chart's axes, never filters.
+
+**Fix.** Write default_filters as {"channel": "online"} and allowed_filters as ["channel", "launched_on__gte"].
+
+<a id="chart004"></a>
+
+### CHART004: The chart's axes do not fit the source's aggregation
+
+*exception* · from `karni_charts.models.Chart.clean`
+
+**Why Karni objects.** The x axis, the metric and value of the y axis and the z axis must be ones the source's aggregation declares (karni.aggregation). The message quotes the source's own refusal, with its E38x code.
+
+**Fix.** Choose a group, metric and value the source declares, or add them to the source model's class Karni: aggregate.
 
 ## IMP (`IMP`)
 
@@ -3856,6 +3988,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add what the message says is required (under modules: or features:), or leave one of the two that conflict out. karni modules show <name> lists both.
 
+<a id="c500"></a>
+
+### C500: aggregate names a field or path the entity does not have
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entity's aggregate: lists what GET <resource>/aggregate/ may group by (group_by) and read (values). Each name is a field of the entity, or a path through its relations (category__parent), and group_by holds at least one.
+
+**Fix.** Name a field the entity declares, or follow a relation (fk, o2o, m2m) with __ to a field of the entity it points at.
+
+<a id="c501"></a>
+
+### C501: aggregate names a metric that is not one
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** The metrics are count, sum, avg, min, max and distinct_count. aggregate.metrics lists the ones a request may name, all of them when it is left out.
+
+**Fix.** List metrics from count, sum, avg, min, max and distinct_count, or leave metrics out.
+
+<a id="c502"></a>
+
+### C502: A date bucket in aggregate that does not fit
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** A group may take a bucket after a colon (launched_on:year) to group a date or datetime field by year, quarter or month. Another bucket, or one on a field that is not a date, cannot be grouped.
+
+**Fix.** Write <date field>:year, :quarter or :month, or the field alone to allow every bucket.
+
 <a id="c340"></a>
 
 ### C340: Nothing to explain
@@ -4683,6 +4845,18 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** Hand-written trees loop on cyclic data, cost one query per level and repeat the same endpoints and widgets in every project. TreeModel's walks are one cycle-safe query each.
 
 **Fix.** Inherit TreeModel first and drop the parent field, or opt out with the reason.
+
+<a id="k314"></a>
+
+### K314: GROUP BY: Karni.aggregate.
+
+*agent rule, must* · enforced by `review`
+
+**Rule.** Grouped counts, sums, averages, top N with Other, and figures per year, quarter or month for a chart or a report are `class Karni: aggregate = {...}` on the model (`group_by`, `values`, `metrics`, `expressions`) and `GET <resource>/aggregate/` with `useAggregate` and `<DataChart aggregate={...} />`. A number stored as text is `TextNumber`. A chart people edit in the admin is a saved chart (`karni add charts`, `<SavedChart />`). Never write a view, an `@action` or a hook of your own that groups rows.
+
+**Why Karni objects.** The aggregate action runs under the list's filters and access, in one query (two with Other), and refuses what the model does not declare. A hand-written GROUP BY view repeats the filters and the access check and is where hidden rows leak into totals.
+
+**Fix.** Declare the groups and values in `class Karni: aggregate`, then call `GET <resource>/aggregate/?group_by=...&metric=...&value=...`. Karni's docs page aggregations lists every parameter.
 
 ## ESLint rules (`@karni/ui/eslint-plugin`)
 

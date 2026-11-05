@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TEMPLATE = REPO_ROOT / "templates" / "project"
-MODULES = ("karni-payments", "karni-approvals", "karni-impersonation", "karni-site")
+MODULES = ("karni-payments", "karni-approvals", "karni-impersonation", "karni-site", "karni-charts")
 #: Set where every module is installed (CI's Python jobs): a test that needs a
 #: module fails without it instead of skipping, so the coverage cannot drop out.
 REQUIRE_MODULES = os.environ.get("KARNI_REQUIRE_MODULES") == "1"
@@ -223,9 +223,3 @@ def _no_history_provider_subprocess(
     monkeypatch.setattr(subprocess, "run", guarded)
     for cls in _chronicle_classes():
         monkeypatch.setattr(cls, "_run", no_run)
-
-
-@pytest.fixture(autouse=True)
-def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
-    # venv_python prefers VIRTUAL_ENV, so the suite must not depend on the developer's active venv.
-    monkeypatch.delenv("VIRTUAL_ENV", raising=False)

@@ -33,7 +33,7 @@ carries it, and `pytest
 | `viewset-access` | a `BaseViewSet` serving a model (`model`/`queryset` set, or routed) has no `access` (inherited declarations and an overridden `get_access()` count) | add `access = Access(read=..., write=...)`, or `Unscoped(reason=...)` |
 | `access-override` | a class overrides `filter_queryset_for_user` | express the row rule in `access` (`Where(...)`), or opt out with the reason |
 | `unpaginated-action` | an `@action` (or a view's `list`) serialises `many=True` (without `data=`) and never calls `paginate_queryset` / `paginated_response` / `get_paginated_response` | `return self.paginated_response(queryset)` |
-| `query-scaling` | a routed project `BaseViewSet`'s `list` or `retrieve` runs more queries with 12 rows than with 2 (an N+1). Needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
+| `query-scaling` | a routed project `BaseViewSet`'s `list`, `retrieve` or `aggregate` (with an [aggregation](aggregations.md), experimental) runs more queries with 12 rows than with 2 (an N+1). Needs a test database | let the serializer show the relation, or hint it with `select_related` / `prefetch_related` |
 | `admin-convention` | a registered admin for a project model isn't a `KarniModelAdmin` | use `AdminMeta` on the model, or subclass `KarniModelAdmin` |
 | `raw-sql` | `.raw()`, `cursor.execute()`, `RawSQL` outside `sql_allowed` dirs | move it under `*/sql/*`, or opt out |
 | `http-client` | `requests`/`httpx`/`urllib.request` imported outside `http_allowed` | call providers from a `*/services/*` module |

@@ -1,5 +1,6 @@
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import * as React from "react";
+import type { AggregateResult } from "../../hooks/useAggregate";
 import { cn } from "../../lib/cn";
 import { registerComponentRole } from "../../lib/roles";
 import { Skeleton } from "../primitives/skeleton";
@@ -86,6 +87,17 @@ export interface DataChartProps {
   data?: readonly DataChartPoint[];
   /** Multi-series data. Series cycle through --karni-chart-1..5. */
   series?: readonly DataChartSeries[];
+  /**
+   * Experimental. The response of `useAggregate` (`GET <resource>/aggregate/`), read
+   * directly: its categories are the x axis and its series the series. Wins over
+   * `data` and `series`.
+   */
+  aggregate?: AggregateResult;
+  /**
+   * Experimental. Stack the series' bars on top of each other (bars only). Default:
+   * the aggregate's `stacked` (a `stack=` request), else false.
+   */
+  stacked?: boolean;
   /** Chart title: SVG <title>, aria-label and the hidden table's caption. */
   title: string;
   /** Longer description for the SVG <desc>. */
@@ -222,6 +234,27 @@ function normalize(
   return { categories, seriesNames: resolved.map((s) => s.name), matrix };
 }
 
+/**
+ * Experimental. An aggregate response as DataChart series: one per series of the
+ * response, a point per category. A label two categories share gets " (2)", " (3)"
+ * so each stays its own point.
+ */
+export function aggregateSeries(result: AggregateResult): DataChartSeries[] {
+  const seen = new Map<string, number>();
+  const labels = result.categories.map((category) => {
+    const count = (seen.get(category.label) ?? 0) + 1;
+    seen.set(category.label, count);
+    return count === 1 ? category.label : `${category.label} (${String(count)})`;
+  });
+  return result.series.map((entry) => ({
+    name: entry.label,
+    data: labels.flatMap((label, index) => {
+      const value = entry.values[index] ?? null;
+      return value === null ? [] : [{ label, value }];
+    }),
+  }));
+}
+
 function defaultValueFormatter(value: number): string {
   return value.toLocaleString();
 }
@@ -317,6 +350,25 @@ export const defaultDataChartSlots: DataChartSlots = {
   Loading: DefaultLoading,
 };
 
+/**
+ * Where each bar of a stack starts: per series and category, the sum of the earlier
+ * series' values of the same sign (positive values stack up, negative ones down).
+ */
+function stackBases(matrix: ReadonlyArray<ReadonlyArray<number | null>>): number[][] {
+  const width = matrix[0]?.length ?? 0;
+  const up = new Array<number>(width).fill(0);
+  const down = new Array<number>(width).fill(0);
+  return matrix.map((row) =>
+    row.map((value, index) => {
+      if (value === null) return 0;
+      const stack = value >= 0 ? up : down;
+      const base = stack[index] ?? 0;
+      stack[index] = base + value;
+      return base;
+    }),
+  );
+}
+
 /** The rendered width of an element, tracked as it resizes (null before the first measure). */
 function useRenderedWidth(ref: React.RefObject<Element | null>, active: boolean): number | null {
   const [width, setWidth] = React.useState<number | null>(null);
@@ -334,7 +386,8 @@ function useRenderedWidth(ref: React.RefObject<Element | null>, active: boolean)
 }
 
 /**
- * Minimal line/bar chart driven by `{label, value}` points or named series.
+ * Minimal line/bar chart driven by `{label, value}` points, named series, or the
+ * response of `useAggregate` (`aggregate`), with stacked bars (`stacked`).
  *
  * Keyboard and screen readers: the chart is an image named by `title`,
  * described by `description` and a generated summary, with every value in a
@@ -351,6 +404,8 @@ export function DataChart({
   kind,
   data,
   series,
+  aggregate,
+  stacked,
   title,
   description,
   summary,
@@ -383,8 +438,13 @@ export function DataChart({
   const [announcement, setAnnouncement] = React.useState("");
   const svgRef = React.useRef<SVGSVGElement>(null);
 
-  const chart = React.useMemo(() => normalize(data, series), [data, series]);
+  const resolvedSeries = React.useMemo(
+    () => (aggregate !== undefined ? aggregateSeries(aggregate) : series),
+    [aggregate, series],
+  );
+  const chart = React.useMemo(() => normalize(data, resolvedSeries), [data, resolvedSeries]);
   const { categories, seriesNames, matrix } = chart;
+  const stacks = kind === "bar" && (stacked ?? aggregate?.stacked ?? false) && matrix.length > 1;
 
   const values = matrix.flat().filter((value): value is number => value !== null);
   const plottable = !loading && categories.length > 0 && values.length > 0;
@@ -413,9 +473,17 @@ export function DataChart({
   const strokeWidth = Math.max(2, 1.5 / scale);
   const pointRadius = Math.max(3, 2.5 / scale);
 
-  // scales
-  const rawMin = Math.min(0, ...values);
-  const rawMax = Math.max(0, ...values);
+  // scales (a stack reaches the sum of its positive values, and of its negative ones)
+  const bases = stackBases(matrix);
+  const extents = stacks
+    ? matrix.flatMap((row, seriesIndex) =>
+        row.map((value, categoryIndex) =>
+          value === null ? 0 : (bases[seriesIndex]?.[categoryIndex] ?? 0) + value,
+        ),
+      )
+    : values;
+  const rawMin = Math.min(0, ...extents);
+  const rawMax = Math.max(0, ...extents);
   const ticks = niceTicks(rawMin, rawMax, yTickCount);
   const domainMin = ticks[0] ?? rawMin;
   const domainMax = ticks[ticks.length - 1] ?? rawMax;
@@ -440,7 +508,7 @@ export function DataChart({
   // marks
   const seriesCount = Math.max(1, matrix.length);
   const groupWidth = bandWidth * 0.7;
-  const barWidth = groupWidth / seriesCount;
+  const barWidth = stacks ? groupWidth : groupWidth / seriesCount;
 
   const marks = matrix.map((row, seriesIndex) => {
     if (kind === "bar") {
@@ -450,9 +518,12 @@ export function DataChart({
             if (value === null) {
               return null;
             }
-            const x = bandCenter(categoryIndex) - groupWidth / 2 + seriesIndex * barWidth;
-            const y = Math.min(yScale(value), zeroY);
-            const barHeight = Math.abs(yScale(value) - zeroY);
+            const base = stacks ? (bases[seriesIndex]?.[categoryIndex] ?? 0) : 0;
+            const offset = stacks ? 0 : seriesIndex * barWidth;
+            const x = bandCenter(categoryIndex) - groupWidth / 2 + offset;
+            const from = stacks ? yScale(base) : zeroY;
+            const y = Math.min(yScale(base + value), from);
+            const barHeight = Math.abs(yScale(base + value) - from);
             return (
               <rect
                 key={categoryIndex}
@@ -460,7 +531,7 @@ export function DataChart({
                 y={y}
                 width={Math.max(1, barWidth - 2)}
                 height={barHeight}
-                rx={2}
+                rx={stacks ? 0 : 2}
               />
             );
           })}

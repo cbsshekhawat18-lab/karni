@@ -262,6 +262,46 @@ def test_navigation_is_planned_as_the_setting_it_writes(base: Project) -> None:
     assert "  - KARNI_NAVIGATION: Home /, Products /products" in gone.text()
 
 
+def test_an_aggregate_is_an_option_without_a_migration(base: Project) -> None:
+    plan = _plan(
+        _edit(
+            (
+                "        search: name\n",
+                (
+                    "        search: name\n        aggregate:\n          group_by: [tag, kind]\n"
+                    "          values: [name]\n          metrics: [count, distinct_count]\n"
+                ),
+            ),
+            (
+                "pages:\n",
+                (
+                    "      Invoice:\n        fields: {total: money:EUR}\n"
+                    "        aggregate: {group_by: [created_at:month]}\npages:\n"
+                ),
+            ),
+        ),
+        base,
+    )
+    change = _only(plan, "shop.Product aggregate")
+    assert change.detail == "none -> by tag, kind of name (count, distinct_count)"
+    assert not change.risky
+    assert "aggregate by created_at:month" in _only(plan, "shop.Invoice").detail
+    assert [c.target for c in plan.changes if c.area == "migrations"] == ["shop"]  # Invoice only
+    same = _plan(
+        _edit(
+            (
+                "        search: name\n",
+                (
+                    "        search: name\n        aggregate: {group_by: tag, metrics: "
+                    "[sum, avg, min, max, count, distinct_count]}\n"
+                ),
+            )
+        ),
+        base,
+    )
+    assert _only(same, "shop.Product aggregate").detail == "none -> by tag"
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

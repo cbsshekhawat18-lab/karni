@@ -65,6 +65,10 @@ PREFIXES = {
         "Public websites for Karni: every text, image and menu editable in the admin, "
         "public forms, redirects, and error pages that cannot fail."
     ),
+    "modules/karni-charts/pyproject.toml": (
+        "Saved charts for Karni: charts defined and previewed in the admin, served through each "
+        "resource's aggregate action under its access."
+    ),
     "packages/karni-ui/package.json": (
         "React components for Karni: schema-driven tables, forms, detail views and auth."
     ),
@@ -76,6 +80,9 @@ PREFIXES = {
     ),
     "modules/karni-impersonation/ui/package.json": (
         "React components for the Karni impersonation module: ImpersonationBanner and its hook."
+    ),
+    "modules/karni-charts/ui/package.json": (
+        "React components for the Karni charts module: SavedChart and its hook."
     ),
 }
 

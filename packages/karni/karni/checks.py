@@ -437,6 +437,54 @@ def check_dashboards(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
 
 
 @checks.register(checks.Tags.urls)
+def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E380 / W570: every aggregation declaration (experimental) fits its model.
+
+    A model's ``class Karni: aggregate`` and a routed viewset's ``aggregation``
+    must name fields, relation paths or declared expressions, with buckets
+    only on dates (E380). An expression neither list uses is a warning (W570).
+    """
+    from karni.aggregation import Aggregation, aggregation_of
+    from karni.api.routers import resolve_router
+    from karni.api.viewsets import BaseViewSet
+
+    found: list[tuple[str, Any, Any, Any]] = []
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            try:
+                declared = aggregation_of(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+                continue
+            if declared is not None:
+                found.append((f"{model.__name__}.Karni.aggregate", declared, model, model))
+    seen: set[type[Any]] = set()
+    for _prefix, viewset, _basename in getattr(resolve_router(), "registry", ()):
+        if viewset in seen or not (isinstance(viewset, type) and issubclass(viewset, BaseViewSet)):
+            continue
+        seen.add(viewset)
+        declared = viewset.__dict__.get("aggregation")
+        model = viewset.model or getattr(viewset.queryset, "model", None)
+        if isinstance(declared, Aggregation) and model is not None:
+            found.append((f"{viewset.__name__}.aggregation", declared, model, viewset))
+    for owner, declared, model, obj in found:
+        for problem in declared.problems(model):
+            messages.append(check_error("E380", f"{owner}: {problem}.", hint=_fix("E380"), obj=obj))
+        for name in declared.unused_expressions():
+            messages.append(
+                check_warning(
+                    "W570",
+                    f"{owner}: the expression {name!r} is in neither group_by nor values.",
+                    hint=_fix("W570"),
+                    obj=obj,
+                )
+            )
+    return messages
+
+
+@checks.register(checks.Tags.urls)
 def check_welcome_route(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E505: the welcome page must be unreachable with ``DEBUG`` off.
 

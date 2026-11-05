@@ -59,6 +59,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 
 ## Hooks
 
+- `useAggregate`: Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.
 - `useAuth`: `{ user, status, login(email, password), logout, refresh }` from `AuthProvider`, and (experimental) `{ terms, termsRequired, acceptTerms(client) }` for terms acceptance.
 - `useChangeHistory`: One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).
 - `useDelayedFlag`: See the package README.

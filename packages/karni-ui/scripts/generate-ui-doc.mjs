@@ -91,6 +91,8 @@ const HOOKS = {
     "Experimental. Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.",
   useChangeHistory:
     "One row's field-level change history (`GET /<resource>/<id>/history/`, audited models).",
+  useAggregate:
+    "Experimental. Grouped counts and sums of a resource (`GET /<resource>/aggregate/`): `{ groupBy, metric, value, top, stack, series, filters, search }` → `{ categories, series }`, which `<DataChart aggregate>` reads directly.",
   useImportDescribe:
     "The importable fields of a resource and the user's remembered column mapping.",
   useImportJob: "One import job's state. It polls while the backend previews or commits it.",

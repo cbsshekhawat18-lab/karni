@@ -370,6 +370,38 @@ def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
     assert "note" not in (copy / "classes/karni/models.py").read_text()
 
 
+def test_an_aggregate_and_the_charts_module(copy: Path) -> None:
+    require_modules("karni-charts")
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        ("modules:\n  payments:\n", "modules:\n  charts: {read: public}\n  payments:\n"),
+        (
+            "        owner: instructor\n",
+            (
+                "        owner: instructor\n        aggregate:\n"
+                '          group_by: [studio, studio__name, "starts_at:month"]\n'
+                "          values: [price, capacity]\n          metrics: [count, sum, avg]\n"
+            ),
+        ),
+    )
+    code, out = _build()
+    assert code == 0, out
+    assert "  + charts: read public" in out
+    assert "  ~ classes.Session aggregate: none -> by studio, studio__name, starts_at:month" in out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert "        aggregate = {\n" in models
+    assert '"group_by": ["studio", "studio__name", "starts_at:month"]' in models
+    assert '"metrics": ["count", "sum", "avg"]' in models
+    settings = (copy / "config" / "settings.py").read_text()
+    assert '"karni_charts",' in settings and 'KARNI_CHARTS_READ = "public"' in settings
+    assert _rows(copy, "select count(*) from karni_charts_chart") == [(0,)]
+    assert _build() == (0, "Nothing to build: the project matches karni.yaml.\n")
+    exported = CliRunner().invoke(app, ["spec", "export"])
+    assert exported.exit_code == 0, exported.output
+    assert "aggregate:" in exported.output and "charts:" in exported.output
+
+
 def test_a_key_type_switch_and_a_module_removal_are_refused(copy: Path) -> None:
     spec = copy / "karni.yaml"
     _edit(spec, ("        key: slug\n", "        key: slug\n        pk: bigint\n"))

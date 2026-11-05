@@ -95,6 +95,7 @@ reads it on every request.
 | <a id="karni_api_cache"></a>`KARNI_API_CACHE` | `KARNI_API_CACHE` | `False` | Cache `BaseViewSet` list and retrieve responses (`karni.api.caching`). |
 | <a id="karni_api_cache_ttl"></a>`KARNI_API_CACHE_TTL` | `KARNI_API_CACHE_TTL` | `300` | Seconds a cached response lives. |
 | <a id="karni_api_cache_alias"></a>`KARNI_API_CACHE_ALIAS` | `KARNI_API_CACHE_ALIAS` | `"default"` | The Django cache alias responses are stored in. |
+| <a id="karni_aggregate_max_groups"></a>`KARNI_AGGREGATE_MAX_GROUPS` | `KARNI_AGGREGATE_MAX_GROUPS` | `1000` | Experimental. The most groups one `GET <resource>/aggregate/` returns. A request that makes more is refused (`E387`): send `top` or narrow it with filters. See [aggregations](aggregations.md). |
 | **Admin (karni.admin + django-unfold)** | | | |
 | <a id="karni_admin_autodiscover"></a>`KARNI_ADMIN_AUTODISCOVER` | `KARNI_ADMIN_AUTODISCOVER` | `True` | Register every unregistered model in the admin at startup (`karni.admin`). |
 | <a id="karni_admin_grants_open_pages"></a>`KARNI_ADMIN_GRANTS_OPEN_PAGES` | `KARNI_ADMIN_GRANTS_OPEN_PAGES` | `True` | A role's grant (`app.model:<action>`) opens that model's admin page for that action, inside the grant's scope. `False` restores the 0.4.0 rule: only Django's model permissions open pages. Signing in to the admin still needs `is_staff`. See [admin](admin.md#who-may-open-a-page). |
@@ -164,6 +165,12 @@ Assign them in `config/settings.py`. A module's README says more about each.
 | <a id="karni_approvals_escalation_roles"></a>`KARNI_APPROVALS_ESCALATION_ROLES` | `KARNI_APPROVALS_ESCALATION_ROLES` | `[]` | Roles notified on escalation (per model: approval_escalation_roles). |
 | <a id="karni_approvals_notify"></a>`KARNI_APPROVALS_NOTIFY` | `KARNI_APPROVALS_NOTIFY` | `"karni_approvals.notify.email_checkers"` | Dotted path called as fn(pending_change) from the Celery task to notify the checkers. The default emails them. "" turns notification off. |
 | <a id="karni_approvals_from_email"></a>`KARNI_APPROVALS_FROM_EMAIL` | `KARNI_APPROVALS_FROM_EMAIL` | `""` | Sender address for the default notifier, or "" to use DEFAULT_FROM_EMAIL. |
+
+### karni-charts
+
+| Setting | Env | Default | What it does |
+|---|---|---|---|
+| <a id="karni_charts_read"></a>`KARNI_CHARTS_READ` | `KARNI_CHARTS_READ` | `"authenticated"` | Who may read the chart definitions (/api/charts/): "authenticated" (the default), "public" (anyone, for charts on a public page) or "granted" (the roles' grants on karni_charts.chart). The data always follows the source resource's own access, whoever reads the definition. |
 
 ### karni-impersonation
 

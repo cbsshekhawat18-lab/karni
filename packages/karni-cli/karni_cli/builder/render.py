@@ -287,6 +287,13 @@ def _model_class(
         options.append(("scope_paths", dict(entity.scope_paths)))
     if entity.taxonomies:
         options.append(("taxonomies", _taxonomies(spec, app, entity)))
+    if entity.aggregate is not None:
+        declared: dict[str, Any] = {"group_by": list(entity.aggregate.group_by)}
+        if entity.aggregate.values:
+            declared["values"] = list(entity.aggregate.values)
+        if entity.aggregate.metrics is not None:
+            declared["metrics"] = list(entity.aggregate.metrics)
+        options.append(("aggregate", declared))
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]

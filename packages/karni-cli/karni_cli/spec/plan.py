@@ -128,6 +128,7 @@ _OPTIONS: Final = (
     "groups",
     "order",
     "scope_paths",
+    "aggregate",
 )
 
 
@@ -473,6 +474,18 @@ def _show(value: Any) -> str:
     return str(value)
 
 
+def _aggregate_text(value: Any) -> str:
+    """``by category, launched_on:year of price (count, sum)``: an aggregate in one line."""
+    if not value:
+        return "none"
+    text = "by " + ", ".join(value["group_by"])
+    if value["values"]:
+        text += " of " + ", ".join(value["values"])
+    if set(value["metrics"]) != set(schema.AGGREGATE_METRICS):
+        text += " (" + ", ".join(value["metrics"]) + ")"
+    return text
+
+
 def _rule(access: Any) -> str:
     if access == "code":
         return "code"
@@ -737,6 +750,8 @@ def _entity_line(label: str, entity: dict[str, Any], pk: str) -> str:
             continue
         if value is True:
             options.append(key)
+        elif key == "aggregate":
+            options.append(f"aggregate {_aggregate_text(value)}")
         elif key in ("groups", "scope_paths"):
             options.append(f"{key} {', '.join(value)}")
         else:
@@ -890,12 +905,13 @@ def _options(
         elif key == "database" and not after.get("external") and not before.get("external"):
             risky = True
             reason = f"the rows stay on {old or 'default'}, karni build does not move them"
+        shown = _aggregate_text if key == "aggregate" else _show
         ctx.add(
             Change(
                 "entities",
                 "change",
                 f"{label} {key}",
-                f"{_show(old)} -> {_show(new)}",
+                f"{shown(old)} -> {shown(new)}",
                 risky=risky,
                 reason=reason,
                 counts=counts or ((Count(old_label),) if risky else ()),

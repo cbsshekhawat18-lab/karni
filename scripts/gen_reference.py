@@ -216,6 +216,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
+    Capability(
+        "api",
+        "Grouped counts and sums under the list's filters and access: `GET "
+        "<resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and "
+        "Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier",
+    ),
     # admin
     Capability(
         "admin",
@@ -260,6 +266,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         ((f"{EH}/frontend/src/pages/event-dashboard.tsx", "<Stat"),),
     ),
     Capability("ui", "`ChangeHistory`, `DataChart` and `FileUpload`"),
+    Capability(
+        "ui",
+        "`useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, "
+        "read directly. Experimental tier",
+    ),
     Capability(
         "ui",
         "`SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own "

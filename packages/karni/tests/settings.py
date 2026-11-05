@@ -76,6 +76,9 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     "karni.navigation",
     # Taxonomy tagging (class Karni: taxonomies): viewsets mounted by tests.taxonomy.urls.
     "tests.taxoapp",
+    # Aggregations (karni.aggregation): a product catalog, viewsets mounted by
+    # its own URLconf only.
+    "tests.aggregateapp",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that

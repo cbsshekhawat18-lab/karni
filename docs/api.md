@@ -51,6 +51,7 @@ Declarative attributes (all optional except `model` and `access`):
 | `query_budget` | `None` (`KARNI_QUERY_BUDGET`) | `Budget(list=25, reason=...)` |
 | `pagination` | `None` (`pagination_class`) | `Unpaginated(max_rows=N, reason=...)`, the only way to return plain lists |
 | `cache` | `None` (`KARNI_API_CACHE`) | `Uncached(reason=...)` or `Cache(ttl=..., depends_on=[...])` |
+| `aggregation` | `None` (`class Karni: aggregate`) | Experimental. What `GET <resource>/aggregate/` may group and sum. See [aggregations](aggregations.md) |
 
 Default ordering: model `Meta.ordering`, else `-created_at` when the field
 exists, else `-pk`. Every normal DRF hook (`get_queryset`,
@@ -966,7 +967,10 @@ nullable, required from blank/default) and adds:
   and `x-karni-initial` are on a `StateField`'s property
   ([lifecycle](lifecycle-and-capacity.md#the-api-the-admin-and-the-schema)),
   and `x-karni-dashboard` on the list operation of a model that declares
-  [`Karni.dashboard`](#the-staff-dashboard).
+  [`Karni.dashboard`](#the-staff-dashboard). `x-karni-aggregate` is on the
+  `aggregate` operation of a resource that declares an
+  [aggregation](aggregations.md) (experimental): the groups, values and
+  metrics it takes.
 - Operations whose access can admit anonymous callers (`Public`, `Where`)
   list the empty security requirement `{}`.
 - `SPECTACULAR_SETTINGS["COMPONENT_SPLIT_REQUEST"] = True` so file-upload

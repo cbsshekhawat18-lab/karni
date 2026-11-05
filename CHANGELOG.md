@@ -342,6 +342,54 @@ apply codemods and list the manual steps. This file is the human summary.
   or below them, kept in the URL. `useResourceFacets` is the hook, and the
   parsed schema marks a taxonomy's field (`taxonomy`) and the `facets`
   operation. `ResourceForm` keeps editing the tags with `TreeSelect`.
+
+- **Aggregations (experimental): grouped counts and sums under the list's
+  filters and access.** A model declares what may be aggregated in `class
+  Karni: aggregate` (`group_by`, `values`, `metrics`, `expressions`), or a
+  viewset in `aggregation`, and `GET <resource>/aggregate/` takes
+  `group_by` (a field, a relation path, an expression, or a date bucket
+  `:year`, `:quarter`, `:month`), `metric` (count, sum, avg, min, max,
+  distinct_count), `value`, `top` (the rest in "Other"), `stack` or
+  `series`, and every list filter and `search`. Access applies first,
+  through the list's queryset. It is one query, two with "Other". A field,
+  metric or path that is not declared, or hidden from the requester, is a
+  400 with its code (`E382` to `E387`), a resource without a declaration a
+  404 (`E381`), and `karni check` checks the declarations (`E380`,
+  `W570`). `karni.aggregation.TextNumber` reads numbers stored as text
+  (`"$1.2B"`, `"450K"`) in SQL on PostgreSQL and SQLite. The OpenAPI
+  document has the `AggregateResult` response, the parameters with the
+  declared values as enums, and `x-karni-aggregate`. The query-scaling
+  check measures the action, `KARNI_AGGREGATE_MAX_GROUPS` (default 1000)
+  caps the groups, and `get_aggregation()` and `aggregate_queryset()` are
+  the escape hatches. In `@karni/ui`, `useAggregate` fetches it and
+  `DataChart` reads it through `aggregate`, with stacked bars (`stacked`),
+  and `karni types` writes `use<Resource>Aggregate` with the declared
+  groups as a union type. [docs/aggregations.md](docs/aggregations.md).
+- **Saved charts: the karni-charts module (experimental).** `karni add
+  charts` adds a `Chart` model edited in the admin: a source resource (any
+  routed resource whose model declares an aggregation), the x axis (a group
+  with a date bucket), the y axis (a metric and a value), an optional z axis
+  (stacked or as series), `top`, `default_filters` and `allowed_filters`.
+  Saving checks the axes against the source's declaration (`CHART001`,
+  `CHART003`, `CHART004`), and the change form previews the data as the
+  signed-in user. `GET /api/charts/<slug>/data/` returns the definition and
+  the data, read through the source's own aggregate action as the viewer,
+  so the access is the source's, and a viewer's filter the chart does not
+  allow is a 400 (`CHART002`). `KARNI_CHARTS_READ` chooses who reads the
+  definitions. `@karni/charts-ui` draws one with `<SavedChart chart="..."
+  />` on `@karni/ui`'s `DataChart`. [docs/charts.md](docs/charts.md).
+- **`aggregate:` in karni.yaml (experimental).** An entity's `aggregate:
+  {group_by, values, metrics}` is validated against its fields and
+  relations (`C500` a field or path it does not have, `C501` a metric,
+  `C502` a date bucket), shown by `karni plan` (an option, no migration),
+  written by `karni build` into `class Karni: aggregate` of the Karni-owned
+  model base, and read back by `karni spec export` (an aggregate with
+  expressions stays in code). `charts` is a module of the catalog, so
+  `modules: {charts: {read: public}}` adds it. The published JSON Schema
+  is regenerated, and `aggregate:` is no longer a reserved key (`C224`).
+- **Rule K314 (agents): grouped counts and sums are `class Karni:
+  aggregate` and the aggregate action, never a hand-written GROUP BY view.**
+  `karni rules` lists 45 conventions in 576 tokens.
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]
