@@ -521,6 +521,12 @@ jobs:
           cd "$RUNNER_TEMP/prod_smoke"
           test -f docker-compose.prod.yml && test -f Caddyfile && test -f .env.prod.example
           karni make site website
+          # A resource with a list page: the API test and the browser test read it.
+          # The host has no database, so makemigrations runs against a throwaway SQLite file.
+          export DATABASE_URL="sqlite:///$RUNNER_TEMP/make.sqlite3"
+          karni make app catalog
+          karni make model Product name:str price:decimal --with viewset,page --app catalog --migrate
+          test -f catalog/migrations/0001_initial.py
           cp -r "$GITHUB_WORKSPACE/packages/karni" .karni-src
           mkdir -p .karni-ui && cp "$RUNNER_TEMP"/karni-ui/*.tgz .karni-ui/karni-ui.tgz
           echo "PROJECT=$PWD" >> "$GITHUB_ENV"
@@ -530,7 +536,10 @@ jobs:
         run: |
           set -euo pipefail
           python "$SMOKE" env .env.prod.example \
-            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz > .env.prod
+            --set KARNI_SRC=.karni-src --set KARNI_UI_TARBALL=.karni-ui/karni-ui.tgz \
+            --set KARNI_API_VERSION=v1 \
+            --set "KARNI_API_VERSIONS='{\"v0\": {\"deprecated\": true, \"sunset\": \"2999-01-01\"}}'" \
+            > .env.prod
           grep -E "^(DJANGO_ENV|DOMAIN|ALLOWED_HOSTS|CSRF_TRUSTED_ORIGINS)=" .env.prod
           echo "ADMIN_PATH=$(grep '^KARNI_ADMIN_PATH=' .env.prod | cut -d= -f2)" >> "$GITHUB_ENV"
           $COMPOSE config --quiet
@@ -572,22 +581,50 @@ jobs:
         working-directory: ${{ env.PROJECT }}
         run: python "$SMOKE" wait --timeout 300
 
-      - name: Migrations applied, a superuser created
+      - name: Migrate, then seed demo rows and a demo login
         working-directory: ${{ env.PROJECT }}
         run: |
           set -euo pipefail
+          $COMPOSE exec -T django python manage.py migrate --noinput
           $COMPOSE exec -T django python manage.py migrate --check
-          $COMPOSE exec -T -e DJANGO_SUPERUSER_PASSWORD="$(python -c 'import secrets; print(secrets.token_urlsafe(16))')" \
-            django python manage.py createsuperuser --noinput --email owner@example.com
+          # --force: seeding refuses DEBUG=False without it, and this stack is thrown away.
+          $COMPOSE exec -T django python manage.py karni_seed --force --seed 42 | tee "$RUNNER_TEMP/seed.log"
+          login=$(grep -oE 'Log in as [^ ]+ / [^ ]+' "$RUNNER_TEMP/seed.log" | head -1)
+          echo "E2E_USER=$(echo "$login" | awk '{print $4}')" >> "$GITHUB_ENV"
+          echo "E2E_PASSWORD=$(echo "$login" | awk '{print $6}')" >> "$GITHUB_ENV"
 
-      - name: HTTPS through Caddy (health, pages, admin, static, staff app, headers)
+      - name: Smoke script (readyz, sign in, list, versions, admin login, staff app, headers)
         working-directory: ${{ env.PROJECT }}
         run: |
           set -euo pipefail
           $COMPOSE cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
           python "$SMOKE" check --base-url https://localhost --cafile "$RUNNER_TEMP/caddy-root.crt" \
             --admin-path "$ADMIN_PATH" --app-path /app/ --http-url http://localhost/ \
-            --expect-check database --expect-check cache --expect-check celery
+            --expect-check database --expect-check cache --expect-check broker --worker-check \
+            --user "$E2E_USER" --password "$E2E_PASSWORD" --list-path /api/products/ \
+            --api-version v1 --deprecated-version v0
+
+      - name: Install Playwright for the browser test
+        working-directory: .github/ci/prod_e2e
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Browser test (sign in to the built staff app, see a ResourceTable page)
+        working-directory: .github/ci/prod_e2e
+        env:
+          E2E_BASE_URL: https://localhost/app/
+          E2E_PAGE: products
+          E2E_HEADING: Products
+        run: npx playwright test
+
+      - name: Browser test traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-stack-e2e
+          path: .github/ci/prod_e2e/test-results
+          if-no-files-found: ignore
 
       - name: The deploy gate refuses DEBUG=True in the image, and the escape hatch says so
         working-directory: ${{ env.PROJECT }}

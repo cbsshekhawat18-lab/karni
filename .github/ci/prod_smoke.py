@@ -270,6 +270,21 @@ def api_checks(smoke: Smoke, args: argparse.Namespace) -> None:
             f"{path} lists at least {args.min_rows} row(s)",
             f"{listed.status} {len(rows) if isinstance(rows, list) else listed.body[:200]}",
         )
+    for version in args.deprecated_version:
+        path = args.list_path.replace("/api/", f"/api/{version}/", 1)
+        old = smoke.get(path, headers=bearer)
+        smoke.check(
+            old.status == 200 and bool(old.headers.get("Deprecation")),
+            f"{path} answers with a Deprecation header",
+            f"{old.status} Deprecation={old.headers.get('Deprecation')!r} "
+            f"Sunset={old.headers.get('Sunset')!r}",
+        )
+        current = smoke.get(paths[-1], headers=bearer)
+        smoke.check(
+            not current.headers.get("Deprecation"),
+            f"{paths[-1]} is not deprecated",
+            str(current.headers.get("Deprecation")),
+        )
 
 
 # env: .env.prod from the example
@@ -408,6 +423,13 @@ def main(argv: list[str] | None = None) -> int:
         dest="headers",
         action="store_false",
         help="skip the security headers (a development server sends the development ones)",
+    )
+    check.add_argument(
+        "--deprecated-version",
+        action="append",
+        default=[],
+        metavar="VERSION",
+        help="a deprecated API version: its responses must carry Deprecation (and Sunset)",
     )
     check.add_argument("--min-rows", type=int, default=1)
     check.add_argument("--cafile", help="the CA that signed the server's certificate")
