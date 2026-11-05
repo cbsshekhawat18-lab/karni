@@ -21,7 +21,7 @@ follow what they return.
 | `karni context --summary` / `--app LABEL` / `--model NAME` | One area of a large project at a time: a line per app, one app in full, one model in depth. `--max-tokens N` cuts at whole sections (experimental, [below](#large-projects-one-area-at-a-time)) |
 | `karni modules list` / `show NAME` | The module catalog: every module and feature with its options and the questions to ask (experimental) |
 | `karni recipes list --match "<request>"` / `show NAME` | The recipes a new app starts from, ranked for a one-line request, and the blank start ([the /new-app flow](#agents-the-new-app-flow), experimental) |
-| `karni rules` | Every convention as `CODE summary` (about 600 tokens for Karni's own rules, measured) |
+| `karni rules` | Every convention as `CODE summary` (about 620 tokens for Karni's own rules, measured) |
 | `karni rules --explain K101` | One rule in full: statement, why, fix, enforcing rule id |
 | `karni rules --procedure new-model` | The steps of a standard procedure |
 | `karni rules --check FILE [--check FILE…]` | Static violations with code, line, message and fix. Exit 1 if any |

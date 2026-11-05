@@ -116,7 +116,8 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
                     "list",
                 )
                 continue
-            kind = kinds[0] if kinds else "blank"
+            first = kinds[0] if kinds else "blank"
+            kind = first if isinstance(first, str) else "blank"  # a detail page with options
             found[key] = Page(
                 key,
                 "/" if kind == "dashboard" else f"/{key}",

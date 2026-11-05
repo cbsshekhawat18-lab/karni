@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "karni-ai"
-version = "0.4.0"
+version = "0.5.0"
 description = "Structured extraction for Karni: rows for any resource read from text, a web page or a PDF by a language model, always through the import preview. Karni is an open-source Django + React framework for building with AI coding agents. Your agent writes only your domain. The API, admin, permissions and React screens come from a package you upgrade, not code it rewrites in each project. One rule set covers Claude Code, Cursor and Copilot. The build fails when an agent hand-writes what Karni ships."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -31,7 +31,7 @@ classifiers = [
 # Range-pinned per the module contract (docs/modules.md): karni 0.x minors may
 # break, so a module pins the minor it was built against. pypdf reads a PDF's
 # text (pure Python); jsonschema validates answers (drf-spectacular needs it too).
-dependencies = ["karni>=0.4,<0.5", "pypdf>=5", "jsonschema>=4.18"]
+dependencies = ["karni>=0.5,<0.6", "pypdf>=5", "jsonschema>=4.18"]
 
 [project.urls]
 Homepage = "https://github.com/cbsshekhawat18-lab/karni"
