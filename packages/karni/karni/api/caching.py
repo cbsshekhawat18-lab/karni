@@ -775,7 +775,7 @@ class ResponseCache:
         backend().set(self.key, {"data": _plain(response.data), "headers": headers}, self.ttl)
 
 
-_LEGACY_NOTE = "migrations/0.4.1.md#response-caching-is-stable"
+_LEGACY_NOTE = "migrations/0.5.md#response-caching-is-stable"
 _legacy_warned = False
 
 

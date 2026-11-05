@@ -30,8 +30,8 @@ def test_summary_has_one_line_per_app_with_counts() -> None:
     lines = summary_context().split("\n")
     assert lines[0].startswith("SUMMARY: ") and "karni context --app <label>" in lines[0]
     testapp = next(line for line in lines if line.startswith("APP testapp: "))
-    assert "Event" in testapp and "Venue" in testapp
-    assert ", 4 viewsets, 0 pages" in testapp
+    assert "Event" in testapp and " models (" in testapp  # the names are cut off after 20
+    assert ", 7 viewsets, 0 pages" in testapp
     assert all(line.startswith("APP ") for line in lines[1:])
 
 
