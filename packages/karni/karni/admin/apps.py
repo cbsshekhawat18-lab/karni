@@ -51,6 +51,9 @@ class KarniAdminConfig(AppConfig):
         from karni.admin.cache import install
 
         install(admin_site())  # the API cache screen (karni.admin.cache)
+        from karni.admin.guide import install as install_guide
+
+        install_guide(admin_site())  # the Getting started panel (karni.admin.guide)
         if not getattr(settings, "KARNI_ADMIN_AUTODISCOVER", True):
             return
 

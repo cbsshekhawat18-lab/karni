@@ -110,6 +110,7 @@ DEFAULT_MATRIX_EXCLUDE: tuple[str, ...] = (
     "otp_static",
     "account",
     "socialaccount",
+    "karni_admin",
     "karni_audit",
     "karni_accounts.OneTimeToken",
     "karni_accounts.Permission",

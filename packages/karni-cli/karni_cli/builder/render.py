@@ -277,7 +277,7 @@ def _model_class(
         options.append(("writable", True))
     if entity.database not in (None, "default"):
         options.append(("database", entity.database))
-    for key, option in (("key", "import_key"), ("owner", "owner_field")):
+    for key, option in (("key", "import_key"), ("help", "help"), ("owner", "owner_field")):
         value = getattr(entity, key)
         if value:
             options.append((option, value))

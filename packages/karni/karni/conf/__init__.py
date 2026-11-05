@@ -574,6 +574,8 @@ def karni_settings(
         unfold.setdefault("SITE_ICON", site_icon)
         # The admin is light only: a project's own UNFOLD dict gets it too.
         unfold.setdefault("THEME", "light")
+        # The user menu: Change password and "Show the getting started guide".
+        unfold.setdefault("ACCOUNT", {"navigation": "karni.admin.guide.account_links"})
 
     _ensure_sqlite_dir(namespace.get("DATABASES"))
     _record_consumed(namespace, used)

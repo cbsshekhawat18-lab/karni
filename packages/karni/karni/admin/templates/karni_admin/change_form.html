@@ -1,0 +1,16 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}{% comment %}
+Every Karni change form: one line of help above the form and a fixed bar of
+buttons below it (karni_admin/includes/submit_bar.html). Set
+change_form_template on the admin class to use another page.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+{% include "karni_admin/includes/page_styles.html" %}
+{% endblock %}
+
+{% block nav-global-side %}{% if not is_popup %}{% include "karni_admin/includes/add_button.html" %}{% endif %}{% endblock %}
+
+{% block form_before %}{% include "karni_admin/includes/model_help.html" %}{% endblock %}
+
+{% block submit_buttons_bottom %}{% include "karni_admin/includes/submit_bar.html" %}{% endblock %}

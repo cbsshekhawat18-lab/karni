@@ -633,6 +633,10 @@ BASE: dict[str, Any] = {
             "django_celery_results.ChordCounter",
         ],
     ),
+    # Most rows "Edit selected" changes at once (karni.admin.bulk), and whether the
+    # admin home page shows its "Getting started" panel (karni.admin.guide).
+    "KARNI_ADMIN_BULK_EDIT_MAX": env.int("KARNI_ADMIN_BULK_EDIT_MAX", default=500),
+    "KARNI_ADMIN_GUIDE": env.bool("KARNI_ADMIN_GUIDE", default=True),
     "KARNI_ADMIN_LIST_DISPLAY_MAX": 6,
     "KARNI_ADMIN_LIST_FILTER_MAX": 6,
     "KARNI_ADMIN_SEARCH_MAX": 5,
@@ -656,6 +660,7 @@ BASE: dict[str, Any] = {
             "otp_static",
             "account",
             "socialaccount",
+            "karni_admin",
             "karni_audit",
             "karni_transfer",
             "karni_accounts.OneTimeToken",

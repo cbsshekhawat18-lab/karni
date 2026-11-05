@@ -119,7 +119,7 @@ class TestHandRegisteredDerivation:
             "email",
             "url",
             "count",
-            "price",
+            "updated_at",
         ]
         assert list(model_admin.search_fields) == ["name", "slug", "email", "url", "blurb"]
         assert model_admin.date_hierarchy == "published_on"

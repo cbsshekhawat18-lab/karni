@@ -120,6 +120,8 @@ DESCRIPTIONS: Final[dict[str, str]] = {
     "KARNI_IMPORT_MAX_ROWS": "An upload with more rows than this is refused (`E803`). Split the file.",
     "KARNI_EXPORT_MAX_ROWS": "An [export](import-export.md) with more rows than this is refused (`E803`). Narrow the filters.",
     "KARNI_MATRIX_EXCLUDE": "App labels or `app_label.ModelName` entries the [permission matrix](accounts.md#permission-matrix) leaves out (framework internals by default).",
+    "KARNI_ADMIN_BULK_EDIT_MAX": "The most rows the admin's *Edit selected* action changes at once. A larger selection gets a message and nothing changes. See [admin](admin.md#bulk-actions).",
+    "KARNI_ADMIN_GUIDE": "Show the *Getting started* panel on the admin home page, and its entry in the user menu. A user can dismiss it. See [admin](admin.md#the-guide).",
     "KARNI_ADMIN_LIST_DISPLAY_MAX": "Columns a derived admin changelist shows at most.",
     "KARNI_ADMIN_LIST_FILTER_MAX": "Sidebar filters a derived admin shows at most.",
     "KARNI_ADMIN_SEARCH_MAX": "Fields a derived admin searches at most.",
