@@ -3032,7 +3032,9 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "suggestion",
         "karni_cli.suggest.module_suggestions",
         "A phrase of a module's use_when list (payments, PDF reports, a public website) "
-        "appears in karni.yaml or the README, and the module is not added.",
+        "appears in karni.yaml or the README, and the module is not added. In the README only a "
+        "phrase of two words or more counts, because single words (checkout, payments) mean "
+        "other things there.",
         "Run karni modules show <name> to read what it does, then karni add <name>. Silence it "
         "with # karni: allow(suggest-add-module): <reason> on the line (in the README inside "
         "<!-- ... -->).",

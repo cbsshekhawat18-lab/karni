@@ -2607,7 +2607,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *suggestion* · from `karni_cli.suggest.module_suggestions`
 
-**Why Karni objects.** A phrase of a module's use_when list (payments, PDF reports, a public website) appears in karni.yaml or the README, and the module is not added.
+**Why Karni objects.** A phrase of a module's use_when list (payments, PDF reports, a public website) appears in karni.yaml or the README, and the module is not added. In the README only a phrase of two words or more counts, because single words (checkout, payments) mean other things there.
 
 **Fix.** Run karni modules show <name> to read what it does, then karni add <name>. Silence it with # karni: allow(suggest-add-module): <reason> on the line (in the README inside <!-- ... -->).
 

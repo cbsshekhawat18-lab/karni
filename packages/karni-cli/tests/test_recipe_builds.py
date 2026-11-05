@@ -66,6 +66,7 @@ def test_a_recipe_builds_from_scratch_with_its_tests_and_check_green(
     assert record.load(root).recipe == ""  # written: the next build leaves them to the project
 
     # A fresh recipe follows Karni's patterns, so karni suggest has nothing to say.
+    monkeypatch.chdir(root)
     suggested = CliRunner().invoke(
         app, ["suggest", "--json", "--no-docker"], catch_exceptions=False
     )

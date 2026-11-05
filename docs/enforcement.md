@@ -221,7 +221,7 @@ letters because a single letter is the registry's error or warning.
 | `SUG003` | `suggest-aggregate` | two or more raw SQL queries with `GROUP BY` that opt out of the `raw-sql` rule | declare `class Karni: aggregate = {...}` on the model (see [aggregations](aggregations.md)) |
 | `SUG004` | `suggest-taxonomy` | three or more models have a many-to-many to the same tree model and declare no taxonomy for it | declare `class Karni: taxonomies = {"region": "geo.Region"}` on each (see [taxonomies](models.md#taxonomies)) |
 | `SUG005` | `suggest-unused-module` | an added module that no project file imports or renders, whose URLs only `karni add` wrote and none of whose settings differs from its default. A module another added module requires is left out | `karni remove <name>`. It never drops data |
-| `SUG006` | `suggest-add-module` | a phrase of a module's `use_when` list appears in `karni.yaml` or the README while the module is not added, and `karni.yaml` does not list it | `karni modules show <name>`, then `karni add <name>` |
+| `SUG006` | `suggest-add-module` | a phrase of a module's `use_when` list appears in `karni.yaml` or the README while the module is not added (not in `config/settings.py` or `pyproject.toml`) and `karni.yaml` does not list it. In the README only a phrase of two words or more counts, and a line that already says `karni add <name>` or names `karni-<name>` is left out | `karni modules show <name>`, then `karni add <name>` |
 | `SUG007` | `suggest-sync-spec` | `karni plan` is not empty: the project drifted from `karni.yaml` | `karni build` to bring the project to the spec, or `karni spec export -o karni.yaml --force` to take the code's side |
 
 Thresholds: SUG003 needs two queries, SUG004 three models. A suggestion that

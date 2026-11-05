@@ -67,7 +67,7 @@ def test_a_use_when_phrase_in_the_readme_suggests_adding_the_module(project: Pat
     assert found["code"] == "SUG006" and found["rule"] == "suggest-add-module"
     assert (found["file"], found["line"]) == ("README.md", 3)
     assert found["command"] == "karni add payments"
-    assert "karni add payments" in found["fix"] and "'payments'" in found["message"]
+    assert "karni add payments" in found["fix"] and "'taking card payments'" in found["message"]
 
 
 def test_a_phrase_in_karni_yaml_suggests_adding_the_module(project: Path) -> None:
@@ -87,7 +87,7 @@ def test_no_phrase_a_listed_module_or_an_added_one_suggests_nothing(project: Pat
     assert suggest_mod.module_suggestions(project) == []
     # the module is added: its app is in the karni:apps block
     (project / "karni.yaml").unlink()
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     (project / "config" / "settings.py").write_text(
         'INSTALLED_APPS += [\n    "karni_payments",\n]  # karni:apps\n'
     )
@@ -95,15 +95,21 @@ def test_no_phrase_a_listed_module_or_an_added_one_suggests_nothing(project: Pat
     # a phrase inside a longer word is not a match
     (project / "README.md").write_text("Our prepayments page.\n")
     assert suggest_mod.module_suggestions(project) == []
+    # a single word is no signal in a README (checkout, payments), only in karni.yaml
+    (project / "README.md").write_text("Update the local checkout, then payments.\n")
+    assert suggest_mod.module_suggestions(project) == []
+    (project / "config" / "settings.py").write_text("DEBUG = True\n")
+    (project / "karni.yaml").write_text("version: 1\napp: {name: Shop, purpose: payments}\n")
+    assert [i["file"] for i in suggest_mod.module_suggestions(project)] == ["karni.yaml"]
 
 
 def test_a_module_suggestion_is_silenced_with_a_reason_only(project: Path) -> None:
     readme = project / "README.md"
     readme.write_text(
-        "<!-- karni: allow(suggest-add-module): handled by the host app -->\nWe take payments.\n"
+        "<!-- karni: allow(suggest-add-module): handled by the host app -->\nWe start taking card payments.\n"
     )
     assert suggest_mod.module_suggestions(project) == []
-    readme.write_text("We take payments.  # karni: allow(suggest-add-module):\n")
+    readme.write_text("We start taking card payments.  # karni: allow(suggest-add-module):\n")
     (found,) = suggest_mod.module_suggestions(project)
     assert "without a reason" in found["message"]
     (project / "karni.yaml").write_text(
@@ -111,6 +117,25 @@ def test_a_module_suggestion_is_silenced_with_a_reason_only(project: Path) -> No
         "app: {name: Shop, purpose: a public website}\n"
     )
     readme.write_text("# Shop\n")
+    assert suggest_mod.module_suggestions(project) == []
+
+
+def test_a_text_that_already_names_the_module_or_a_project_that_has_it_is_left_alone(
+    project: Path,
+) -> None:
+    readme = project / "README.md"
+    # the scaffold's own README: it names the module and the command
+    readme.write_text("A public website: `karni add site` adds it, on [karni-site](https://x).\n")
+    assert suggest_mod.module_suggestions(project) == []
+    # a site project has the module from the scaffold, outside the karni:apps block
+    readme.write_text("A public website for the studio.\n")
+    assert [item["command"] for item in suggest_mod.module_suggestions(project)] == [
+        "karni add site"
+    ]
+    (project / "config" / "settings.py").write_text('INSTALLED_APPS = ["karni_site"]\n')
+    assert suggest_mod.module_suggestions(project) == []
+    (project / "config" / "settings.py").write_text("DEBUG = True\n")
+    (project / "pyproject.toml").write_text('dependencies = ["karni-site>=0.5"]\n')
     assert suggest_mod.module_suggestions(project) == []
 
 
@@ -174,7 +199,7 @@ def test_a_spec_with_problems_or_an_unreadable_project_suggests_nothing(
 def test_the_project_setting_turns_every_suggestion_off(
     project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     assert rules_of(suggest_mod.collect(project, (True, [CORE_ITEM]))) == ["SUG001", "SUG006"]
     settings = project / "config" / "settings.py"
     settings.write_text("DEBUG = True\nKARNI_SUGGESTIONS = False\n")
@@ -193,7 +218,7 @@ def test_karni_suggest_prints_the_block_and_exits_zero(
     runner: Any, project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(project_mod, "run_manage", core_answer([CORE_ITEM]))
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     result = runner.invoke(app, ["suggest"])
     assert result.exit_code == 0, result.output
     lines = result.stdout.splitlines()
@@ -217,7 +242,7 @@ def test_karni_suggest_json_follows_the_published_schema(
 ) -> None:
     jsonschema = pytest.importorskip("jsonschema")
     monkeypatch.setattr(project_mod, "run_manage", core_answer([CORE_ITEM]))
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     result = runner.invoke(app, ["suggest", "--json"])
     assert result.exit_code == 0, result.output
     data = json.loads(result.stdout)
@@ -255,7 +280,7 @@ def test_a_karni_without_the_command_is_c780_and_the_rest_still_runs(
             [], 1, stdout="", stderr="Unknown command: 'karni_suggest'"
         ),
     )
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     result = runner.invoke(app, ["suggest"])
     assert result.exit_code == 0
     assert "C780" in result.output and "[SUG006]" in result.output
@@ -302,7 +327,7 @@ def quiet_frontend(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_karni_check_prints_the_suggestions_after_the_verdict_and_keeps_its_exit_code(
     runner: Any, project: Path, quiet_frontend: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     seen: dict[str, Any] = {}
     monkeypatch.setattr(project_mod, "run_manage", fake_backend(0, [CORE_ITEM], seen))
     result = runner.invoke(app, ["check", "-q"])
@@ -334,7 +359,7 @@ def test_karni_check_without_suggestions_prints_nothing_more(
 def test_a_karni_that_predates_suggestions_still_gets_the_cli_suggestions(
     runner: Any, project: Path, quiet_frontend: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     monkeypatch.setattr(project_mod, "run_manage", fake_backend(0, None))  # no file written
     result = runner.invoke(app, ["check", "-q"])
     assert result.exit_code == 0
@@ -345,7 +370,7 @@ def test_the_project_setting_stops_check_from_asking_for_suggestions(
     runner: Any, project: Path, quiet_frontend: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (project / "config" / "settings.py").write_text("KARNI_SUGGESTIONS = False\n")
-    (project / "README.md").write_text("We take payments.\n")
+    (project / "README.md").write_text("We start taking card payments.\n")
     seen: dict[str, Any] = {}
     monkeypatch.setattr(project_mod, "run_manage", fake_backend(0, [CORE_ITEM], seen))
     result = runner.invoke(app, ["check", "-q"])

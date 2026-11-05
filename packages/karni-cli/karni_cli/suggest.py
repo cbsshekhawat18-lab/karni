@@ -9,7 +9,9 @@ two that need no Django:
 
 * ``SUG006``: a phrase of a module's ``use_when`` list appears in
   ``karni.yaml`` or the README while the module is not added, so
-  ``karni add <name>``.
+  ``karni add <name>``. In the README only a phrase of two words or more counts,
+  and a line that already names the module (``karni add site``, ``karni-site``)
+  is left out.
 * ``SUG007``: ``karni plan`` is not empty, so ``karni build`` (the project
   follows the spec) or ``karni spec export -o karni.yaml`` (the spec follows
   the code).
@@ -120,6 +122,19 @@ def _spec_modules(spec_lines: list[str]) -> set[str]:
     return set()
 
 
+def _present(project: Path, manifest: Any) -> bool:
+    """Whether the project already names the module: its app or package in settings or pyproject.
+
+    Broader than the ``karni:apps`` block: a site project has ``karni_site`` from the scaffold.
+    """
+    names = {manifest.app or f"karni_{manifest.name}", f"karni-{manifest.name}"}
+    for relative in (Path("config") / "settings.py", Path("pyproject.toml")):
+        text = "\n".join(_lines(project / relative))
+        if any(name in text for name in names):
+            return True
+    return False
+
+
 def module_suggestions(project: Path) -> list[dict[str, Any]]:
     """SUG006: a module's ``use_when`` phrase in karni.yaml or the README, the module not added."""
     from karni_cli import catalog
@@ -136,9 +151,9 @@ def module_suggestions(project: Path) -> list[dict[str, Any]]:
     listed = _spec_modules(spec_lines)
     found: list[dict[str, Any]] = []
     for manifest in cat.modules:
-        if manifest.name in cat.added or manifest.name in listed:
+        if manifest.name in cat.added or manifest.name in listed or _present(project, manifest):
             continue
-        hit = _first_phrase(manifest.use_when, texts)
+        hit = _first_phrase(manifest.use_when, texts, manifest.name)
         if hit is None:
             continue
         file, number, phrase, lines = hit
@@ -162,17 +177,31 @@ def module_suggestions(project: Path) -> list[dict[str, Any]]:
 
 
 def _first_phrase(
-    phrases: tuple[str, ...], texts: list[tuple[str, list[str]]]
+    phrases: tuple[str, ...], texts: list[tuple[str, list[str]]], name: str
 ) -> tuple[str, int, str, list[str]] | None:
-    """The first line of the first text that holds one of ``phrases`` as whole words."""
+    """The first line of the first text that holds one of ``phrases`` as whole words.
+
+    A line that already names the module (``karni add <name>``, ``karni-<name>``) is left out:
+    the text knows about it.
+    """
+    named = re.compile(rf"karni[ _-](?:add )?{re.escape(name)}\b", re.IGNORECASE)
     patterns = [
         (phrase, re.compile(rf"(?<!\w){re.escape(phrase)}(?!\w)", re.IGNORECASE))
         for phrase in phrases
         if phrase.strip()
     ]
     for file, lines in texts:
+        # A README uses single words (checkout, payments) in many senses, karni.yaml states
+        # intent: only a phrase of two words or more counts in a README.
+        usable = [
+            (phrase, pattern)
+            for phrase, pattern in patterns
+            if file == _SPEC_FILE or len(phrase.split()) > 1
+        ]
         for number, line in enumerate(lines, start=1):
-            for phrase, pattern in patterns:
+            if named.search(line):
+                continue
+            for phrase, pattern in usable:
                 if pattern.search(line):
                     return file, number, phrase, lines
     return None
