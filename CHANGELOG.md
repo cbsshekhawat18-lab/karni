@@ -11,6 +11,14 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## Unreleased
 
+- **A token benchmark harness (experimental).** `scripts/benchmarks/tokens/` measures the
+  same three apps (booking with payments, a CRM with three roles and CSV import, a shop with
+  orders and refunds) built by Claude Code with and without Karni: a contract and black-box
+  acceptance tests per task, a reference solution built with Karni for each, two starting
+  projects made by script, `run.py` for the runs (interleaved, a fresh folder and PostgreSQL
+  database each, a time limit, the harness's own checks after the agent stops) and
+  `report.py` for the median and spread per task and condition. The method, the commands, the
+  limits and the raw data are in `docs/benchmarks/tokens.md`. No runs are published yet.
 - **Five recipes, and `karni new --recipe` (experimental).** `shop`,
   `booking`, `crm`, `lms` and `marketplace` ship in karni-cli. Each is a
   `karni.yaml` that leaves no question open, with the modules and features

@@ -36,7 +36,7 @@ class Cart(karni.Cart):
 
     @transaction.atomic
     def checkout(self) -> "Order":
-        """An order with an item per cart item at today's price. Stock goes down, the cart empties."""
+        """An order at today's prices. Stock goes down and the cart empties."""
         items = list(self.cartitem_set.select_related("product").order_by("created_at"))
         if not items:
             raise ValidationError({"cart": ["The cart is empty."]})
