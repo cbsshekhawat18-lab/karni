@@ -160,6 +160,7 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C254", SHOP + "        was: Product\n", 7),
     ("C254", SHOP + "        fields: {title: {type: str, was: name}, name: str}\n", 7),
     ("C254", SHOP + "        fields: {a: {type: str, was: x}, b: {type: str, was: x}}\n", 7),
+    ("C740", "version: 1\napp: {name: X, api_version: V1}\n", 2),
 ]  # fmt: skip
 
 
@@ -175,8 +176,9 @@ def test_every_code_is_tested_and_registered() -> None:
     assert set(iter_codes()) == tested
     registered = {entry.code for entry in CODES}
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
-    # The spec's own codes, and C324, the module catalog's code for requires and conflicts.
-    assert all(200 <= int(code[1:]) <= 269 or code == "C324" for code in iter_codes())
+    # The spec's own codes, C324 (the module catalog's code for requires and conflicts) and
+    # C740 (app.api_version, production proof).
+    assert all(200 <= int(code[1:]) <= 269 or code in {"C324", "C740"} for code in iter_codes())
 
 
 def test_issues_name_the_fix_and_the_path() -> None:
