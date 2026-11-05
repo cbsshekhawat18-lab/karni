@@ -1390,6 +1390,25 @@ CODES: Final[tuple[CliCode, ...]] = (
         "letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.",
         "Write a name like v1 or 2026-11, or leave the key out for an unversioned API.",
     ),
+    # C780-C799 suggestions from code (experimental)
+    _c(
+        "C780",
+        "The project's karni predates suggestions",
+        "karni_cli.suggest.core_suggestions",
+        "karni suggest and karni doctor ask the project's interpreter for its suggestions "
+        "(manage.py karni_suggest), and the project's karni does not have that command.",
+        "Upgrade karni in the project (pip install -U karni). karni check and karni doctor "
+        "still run and print the suggestions that read karni.yaml and the README.",
+    ),
+    _c(
+        "C781",
+        "manage.py karni_suggest failed",
+        "karni_cli.suggest.core_suggestions",
+        "The project could not be started, or something in it prints to stdout at startup, so "
+        "the command's JSON did not come back.",
+        "Run python manage.py karni_suggest --json in the project to see the error. "
+        "karni check shows the same startup problem.",
+    ),
 )
 
 

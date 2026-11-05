@@ -134,7 +134,8 @@ RULES: tuple[Rule, ...] = (
         summary="karni rules --check FILE, then karni check pre-commit.",
         rule=(
             "Run `karni rules --check <file>` on files you write and `karni check` before "
-            "committing. Every enforced rule fails the build, and nothing only warns."
+            "committing. Every enforced rule fails the build, and nothing only warns. It ends with "
+            "suggestions (`SUG`): read each and apply its fix."
         ),
         rationale="Enforced rules fail CI anyway, so catching them while editing is cheaper.",
     ),

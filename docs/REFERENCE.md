@@ -454,6 +454,20 @@ karni check [OPTIONS] [REF]
 | `--changed` |  | Only the files git reports as changed: the working tree and the index against HEAD (or REF), and untracked files. The checks that read the whole project still run. Experimental. |
 | `--no-cache` |  | Check every file again: do not read or write the check cache (.karni/local/check-cache.json) or ESLint's. Experimental. |
 
+#### `karni suggest`
+
+What Karni could do that the project does by hand, with the fix of each
+
+```
+karni suggest [OPTIONS]
+```
+
+| Argument / option | Default | Description |
+| --- | --- | --- |
+| `--json` |  | Print {version, enabled, suggestions: [{code, rule, file, line, message, fix, command}]} (docs/assets/karni-suggestions.schema.json). |
+| `--docker/--no-docker` |  |  |
+| `--service` TEXT | `django` | Env: `KARNI_COMPOSE_SERVICE`. |
+
 #### `karni explain`
 
 Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix
@@ -1903,6 +1917,7 @@ class Lead(BaseModel):
 | `KARNI_PK` |  | `"uuid"` | Experimental. The primary key `karni make model` writes: `uuid` (`BaseModel`) or `bigint` (`BigIntBaseModel`). The CLI reads it from a plain `KARNI_PK = "bigint"` line in `config/settings.py`, and `--pk` overrides it per model. Nothing else reads it: each model's class line decides its key. See [choosing the key type](models.md#choosing-the-key-type). |
 | `KARNI_ARCHITECTURE` |  | `{ "skip_apps": [], "sql_allowed": ["*/sql/*", "*/migrations/*"], "http_allowed": ["*/services/*", "*/providers/*", "*/tests/*", "conftest.py"], "dup": {"min_statements": 8, "exclude": ["*/migrations/*"]}}` | Configuration of the architecture rules: `skip_apps`, `sql_allowed`, `http_allowed`, `dup`. See [enforcement](enforcement.md). |
 | `KARNI_CHECK_CACHE` |  | `True` | Experimental. `karni check` keeps each file check's results under the file's hash in `.karni/local/check-cache.json`, so an unchanged file is not checked again. `False` turns it off, a path (relative to the project root) moves it. See [the check cache](enforcement.md#the-check-cache). |
+| `KARNI_SUGGESTIONS` |  | `True` | Experimental. `karni check` and `karni doctor` print suggestions after the errors and warnings: what Karni could do that the project does by hand, with the file, line and fix (`SUG001` to `SUG007`). They never fail a run. `False` turns them off for the project. The CLI reads a plain `KARNI_SUGGESTIONS = False` line in `config/settings.py`. See [suggestions](enforcement.md#suggestions). |
 | `KARNI_SCALING_ROWS` |  | `[2, 12]` | Experimental. The two row counts the scaling check compares, small then large. A viewset's `query_scaling = Scaling(rows=..., seconds=...)` overrides them and sets a time budget. See [the scaling check](testing.md#3-the-scaling-check). |
 | `KARNI_SEED_BULK_THRESHOLD` |  | `1000` | Experimental. Rows per model from which `karni seed` inserts in bulk (a large `seed` count of `karni.yaml`). `karni seed --volume` always does. See [volume seeding](seeding.md#volume-seeding). |
 | `KARNI_SEED_BATCH_SIZE` |  | `2000` | Experimental. Rows per bulk insert of `karni seed` (`--batch-size` overrides it). |
@@ -2543,6 +2558,13 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E986`](errors.md#e986) | exception | A capacity counter is used the wrong way |
 | [`E987`](errors.md#e987) | check | A no_overlap declaration is invalid |
 | [`E988`](errors.md#e988) | check | A guarded field on a model without GuardedModel |
+| [`SUG001`](errors.md#sug001) | suggestion | A foreign key to itself, named like a parent, is a hand-written tree |
+| [`SUG002`](errors.md#sug002) | suggestion | A text field that holds markdown is not a MarkdownField |
+| [`SUG003`](errors.md#sug003) | suggestion | Raw SQL with GROUP BY, opted out of the raw-sql rule, is an aggregate |
+| [`SUG004`](errors.md#sug004) | suggestion | Three models with a many-to-many to one tree model need a taxonomy |
+| [`SUG005`](errors.md#sug005) | suggestion | An added module nothing in the project uses |
+| [`SUG006`](errors.md#sug006) | suggestion | A module the spec or the README describes is not added |
+| [`SUG007`](errors.md#sug007) | suggestion | The project drifted from karni.yaml |
 
 ### Modules
 
@@ -2804,6 +2826,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C582`](errors.md#c582) | cli | The project's karni has no check cache |
 | [`C720`](errors.md#c720) | cli | A protected file field needs the storage module |
 | [`C740`](errors.md#c740) | cli | app.api_version is not a version name |
+| [`C780`](errors.md#c780) | cli | The project's karni predates suggestions |
+| [`C781`](errors.md#c781) | cli | manage.py karni_suggest failed |
 
 ### Agent rules (`K`)
 

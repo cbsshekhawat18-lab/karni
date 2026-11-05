@@ -40,6 +40,8 @@ migrations and routing, jscpd's duplication) still run.
 
 from __future__ import annotations
 
+import json
+import os
 import re
 import subprocess
 import sys
@@ -49,6 +51,7 @@ import typer
 
 from karni_cli import local_state, tips, toolchain
 from karni_cli import project as project_mod
+from karni_cli import suggest as suggest_mod
 from karni_cli.environment import is_ci
 from karni_cli.project import CliError, require_project
 
@@ -223,6 +226,28 @@ def _run_backend(project: Path, args: list[str], *, docker: bool | None, service
     return proc.returncode
 
 
+def _suggestions_block(project: Path, file: Path, *, docker: bool | None, service: str) -> str:
+    """The suggestions block for the end of a run (``""`` for none): never raises.
+
+    The project's own suggestions come from ``file``, which ``manage.py karni_check`` wrote.
+    Without it (docker, or a karni that predates suggestions) the backend printed its own.
+    """
+    core = None
+    try:
+        data = json.loads(file.read_text(encoding="utf-8"))
+        core = (bool(data["enabled"]), list(data["suggestions"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        core = None
+    finally:
+        file.unlink(missing_ok=True)
+    try:
+        return suggest_mod.render(
+            suggest_mod.collect(project, core, docker=docker, service=service)
+        )
+    except Exception:  # noqa: BLE001 - a suggestion must never break karni check
+        return ""
+
+
 def run_checks(
     project: Path, *, docker: bool | None = None, service: str = "django"
 ) -> tuple[bool, str]:
@@ -310,6 +335,13 @@ def check(
             raise typer.Exit(1) from None
         args += ["--changed", *files]
         typer.echo(f"karni check --changed: {len(files)} changed file(s)", err=True)
+    suggestions_file = project / suggest_mod.SUGGESTIONS_FILE
+    suggesting = not suggest_mod.turned_off(project)
+    if suggesting:
+        local_state.ensure_dir(project)
+        suggestions_file.unlink(missing_ok=True)
+        # An environment variable, not an option: a karni that predates suggestions ignores it.
+        os.environ["KARNI_SUGGESTIONS_FILE"] = str(suggest_mod.SUGGESTIONS_FILE)
     try:
         backend = _run_backend(project, args, docker=docker, service=service)
     except CliError as exc:
@@ -345,10 +377,20 @@ def check(
             else None
         )
         lint = _frontend_lint(project, cache=not no_cache, files=lint_files)
+    os.environ.pop("KARNI_SUGGESTIONS_FILE", None)
+    block = (
+        _suggestions_block(project, suggestions_file, docker=docker, service=service)
+        if suggesting
+        else ""
+    )
     if backend or dup or lint:
         sys.stderr.write("karni check: FAILED\n")
+        if block:
+            typer.echo(block)
     else:
         typer.echo("karni check: ok")
+        if block:
+            typer.echo(block)
         # Only after a clean run (failures deserve the attention), never in CI,
         # and on stderr so stdout stays exactly the checks' output.
         tip = tips.history_tip(project, quiet=quiet)

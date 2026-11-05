@@ -337,6 +337,13 @@ def _router_for(version: ApiVersion) -> Any:
     return import_string(version.router)()
 
 
+def _routes(router: Any) -> list[URLPattern | URLResolver]:
+    """A router's routes behind Karni's own (``search/``, and ``navigation/`` when it is on)."""
+    from karni.api.urls import extra_urlpatterns
+
+    return [*extra_urlpatterns, *router.urls]
+
+
 def _version_patterns(version: ApiVersion, router: Any) -> list[URLPattern | URLResolver]:
     from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
 
@@ -352,7 +359,7 @@ def _version_patterns(version: ApiVersion, router: Any) -> list[URLPattern | URL
                     SpectacularSwaggerSplitView.as_view(url_name=schema_name),
                     name=f"swagger-ui-{name}",
                 ),
-                path("", include(router.urls)),
+                path("", include(_routes(router))),
             ]
         ),
     )
@@ -411,7 +418,7 @@ def api_urls(names: Iterable[str] | None = None) -> list[URLPattern | URLResolve
     if names is not None:
         served = {name: served[name] for name in names if name in served}
     if not versions():
-        return [path("api/", include(router.urls))]
+        return [path("api/", include(_routes(router)))]
     urls: list[URLPattern | URLResolver] = []
     for version in served.values():
         urls += _version_patterns(version, _router_for(version))
@@ -419,7 +426,7 @@ def api_urls(names: Iterable[str] | None = None) -> list[URLPattern | URLResolve
     current = versions().get(current_version())
     legacy: URLPattern | URLResolver | None = None
     if mode == "keep":
-        legacy = path("api/", include(_router_for(current).urls if current else router.urls))
+        legacy = path("api/", include(_routes(_router_for(current) if current else router)))
     elif mode == "redirect" and current is not None:
         other = "|".join(re.escape(name) for name in versions())
         legacy = re_path(rf"^api/(?!(?:{other})/)(?P<rest>.*)$", _redirect)

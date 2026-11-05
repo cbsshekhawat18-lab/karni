@@ -84,7 +84,7 @@ class NavigationView(APIView):
 
     permission_classes: ClassVar[list[type]] = [AllowAny]
 
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, **kwargs: Any) -> Response:
         if navigation.source() is None:
             return turned_off()
         return Response(self.get_menu(request))

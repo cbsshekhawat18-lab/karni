@@ -239,6 +239,7 @@ Each command links to its full entry in the [reference](docs/REFERENCE.md#comman
 | [`karni context`](docs/REFERENCE.md#karni-context) | Print a compact machine-readable project inventory |
 | [`karni rules`](docs/REFERENCE.md#karni-rules) | Karni's conventions for humans and AI agents (no Django needed): [sync](docs/REFERENCE.md#karni-rules-sync) |
 | [`karni check`](docs/REFERENCE.md#karni-check) | Run architecture and system checks |
+| [`karni suggest`](docs/REFERENCE.md#karni-suggest) | What Karni could do that the project does by hand, with the fix of each |
 | [`karni explain`](docs/REFERENCE.md#karni-explain) | Explain an error code (E104, C101, PAY004, K106), or a pasted traceback or log line (karni explain -): class, cause, where, fix |
 | [`karni types`](docs/REFERENCE.md#karni-types) | Generate TS types and typed hooks from the backend OpenAPI |
 | [`karni mcp`](docs/REFERENCE.md#karni-mcp) | Serve context, rules, check, the debugging tools and the app-builder flow (recipes, questions, answer, plan, build) as MCP tools (needs karni-cli[mcp]) |

@@ -325,6 +325,11 @@ Stable since 0.4.1:
   the transitional setting `KARNI_API_CACHE_LEGACY_HEADER`. The spec's keys
   for it (`features: api_cache`, an entity's `cache:`) follow the app spec,
   which is experimental.
+- [Suggestions from code](enforcement.md#suggestions) (the `SUG001` to `SUG007`
+  codes and their silencing rules `suggest-*`, `karni suggest` and `--json`
+  with `karni-suggestions.schema.json`, `karni.suggestions`, `manage.py
+  karni_suggest`, `karni_check --no-suggestions` and `--suggestions-file`,
+  `.karni/local/suggestions.json`, `KARNI_SUGGESTIONS`, and `C780` and `C781`),
 - Tooling for large projects:
   [context slices](agents.md#large-projects-one-area-at-a-time)
   (`karni context --summary`, `--app`, `--model` and `--max-tokens`, the

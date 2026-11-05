@@ -33,7 +33,7 @@ from karni.api.routers import KarniRouter
 from karni.imports import import_setting
 from karni.navigation.api import build_urlpatterns as navigation_urlpatterns
 
-__all__ = ["router", "urlpatterns"]
+__all__ = ["extra_urlpatterns", "router", "urlpatterns"]
 
 DEFAULT_ROUTER_FACTORY = "karni.api.routers.get_default_router"
 """Factory used when the ``KARNI_API_ROUTER`` setting is absent."""
@@ -42,8 +42,11 @@ router: KarniRouter = import_setting(
     "KARNI_API_ROUTER", getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY)
 )()
 
-urlpatterns = [
+#: What Karni mounts before the router's routes: ``navigation/`` while ``KARNI_NAVIGATION``
+#: is set, and ``search/``. :func:`karni.api.versions.api_urls` mounts them in each version.
+extra_urlpatterns = [
     *navigation_urlpatterns(),
     path("search/", GlobalSearchView.as_view(), name="karni-global-search"),
-    *router.urls,
 ]
+
+urlpatterns = [*extra_urlpatterns, *router.urls]

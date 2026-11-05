@@ -51,7 +51,7 @@ the item it names is done.
 | Item | Goal | Depends on | Status |
 |---|---|---|---|
 | A6 | Recipes: ready-made specs for common apps (shop, booking, crm, lms, marketplace, data-portal), built in CI. | A3 | done |
-| A7 | Suggestions from code in `karni check` and `karni doctor`: what Karni could do that the project does by hand. | none | planned |
+| A7 | Suggestions from code in `karni check` and `karni doctor`: what Karni could do that the project does by hand. | none | done |
 
 ### Phase E: proof
 

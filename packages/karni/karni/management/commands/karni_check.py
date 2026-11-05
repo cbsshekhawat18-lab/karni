@@ -34,6 +34,13 @@ fail, ``karni.W540`` (a database that does not answer) is printed. Not with
 place it prints ``karni.W590`` for a field ``class Karni: search`` searches
 whose table has no trigram index on PostgreSQL (experimental).
 
+Suggestions (experimental, :mod:`karni.suggestions`) print last, after the errors
+and warnings: what Karni could do that the project does by hand, each with its
+file, line and fix. They never fail the run. ``--no-suggestions`` leaves them out,
+``--suggestions-file PATH`` (or the ``KARNI_SUGGESTIONS_FILE`` variable) writes them there
+as JSON instead of printing them (``karni check`` merges them with its own), and
+``KARNI_SUGGESTIONS = False`` turns them off for the project.
+
 While ``KARNI_NAVIGATION`` is set (experimental), it compares the menu with
 the frontend's pages and the project's permissions
 (:func:`karni.navigation.checks.check_navigation`): ``karni.E533`` and
@@ -43,6 +50,7 @@ either.
 
 from __future__ import annotations
 
+import os
 from importlib.metadata import entry_points
 from typing import Any
 
@@ -93,6 +101,16 @@ class Command(BaseCommand):
             help="Check every file again: do not read or write the check cache. Experimental.",
         )
         parser.add_argument(
+            "--no-suggestions",
+            action="store_true",
+            help="Do not print suggestions (karni.suggestions). Experimental.",
+        )
+        parser.add_argument(
+            "--suggestions-file",
+            metavar="PATH",
+            help="Write the suggestions to PATH as JSON instead of printing them. Experimental.",
+        )
+        parser.add_argument(
             "--changed",
             nargs="*",
             default=None,
@@ -109,9 +127,46 @@ class Command(BaseCommand):
             project_root(), no_cache=bool(options.get("no_cache")), changed=options.get("changed")
         )
         with checkcache.using(cache):
-            self._run(bool(options.get("deploy")), cache, seo=bool(options.get("seo")))
+            self._run(
+                bool(options.get("deploy")),
+                cache,
+                seo=bool(options.get("seo")),
+                suggestions=not options.get("no_suggestions"),
+                suggestions_file=options.get("suggestions_file")
+                or os.environ.get("KARNI_SUGGESTIONS_FILE"),
+            )
 
-    def _run(self, deploy: bool, cache: Any, *, seo: bool = False) -> None:
+    def _suggest(self, to_file: str | None) -> None:
+        """Experimental. Print the suggestions, or write them to ``to_file``. Never fails."""
+        import json
+        from pathlib import Path
+
+        from karni import suggestions
+
+        found = [item.as_dict() for item in suggestions.detect()]
+        if to_file:
+            data = {
+                "version": suggestions.VERSION,
+                "enabled": suggestions.enabled(),
+                "suggestions": found,
+            }
+            try:
+                Path(to_file).parent.mkdir(parents=True, exist_ok=True)
+                Path(to_file).write_text(json.dumps(data, indent=2), encoding="utf-8")
+            except OSError as exc:
+                self.stderr.write(f"warning: could not write the suggestions to {to_file}: {exc}")
+        elif found:
+            self.stdout.write(suggestions.render(found))
+
+    def _run(
+        self,
+        deploy: bool,
+        cache: Any,
+        *,
+        seo: bool = False,
+        suggestions: bool = True,
+        suggestions_file: str | None = None,
+    ) -> None:
         failures: list[str] = []
         # Django's check writes warnings to these streams and raises the
         # failing findings without printing them, so they are printed below.
@@ -184,6 +239,8 @@ class Command(BaseCommand):
         if failures:
             for failure in failures:
                 self.stderr.write(failure)
+            if suggestions or suggestions_file:
+                self._suggest(suggestions_file)
             raise KarniCommandError(
                 f"karni check found {len(failures)} problem(s), listed above. Fix each one. "
                 "Each names its code (K, E or W), and `karni explain <code>` explains it.",
@@ -196,3 +253,5 @@ class Command(BaseCommand):
             "backend checks: ok"
             + (f" ({' and '.join(included)} checks included)" if included else "")
         )
+        if suggestions or suggestions_file:
+            self._suggest(suggestions_file)

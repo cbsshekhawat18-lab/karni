@@ -85,6 +85,7 @@ def test_doctor_reports_the_environment(runner, project: Path) -> None:
         "ui",
         "adapters",
         "history",
+        "suggestions",
     ]
     assert "node-9.9.9 (npm npm-9.9.9)" in result.stdout
     assert "manifest absent" in result.stdout

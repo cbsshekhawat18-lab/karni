@@ -71,6 +71,15 @@ def test_without_settings_the_api_is_mounted_as_before() -> None:
     assert str(patterns[0].pattern) == "api/"
 
 
+def test_every_mount_keeps_the_search_route(setup: Setup, client: Client) -> None:
+    """``api_urls()`` replaces ``include("karni.api.urls")``, so it must carry ``search/`` too."""
+    names = {getattr(p, "name", "") for p in api_urls()[0].url_patterns}
+    assert "karni-global-search" in names
+    setup()
+    assert client.get("/api/search/?q=x").status_code != 404
+    assert client.get("/api/v1/search/?q=x").status_code != 404
+
+
 def test_the_version_prefix_mounts_the_api_and_the_unversioned_api_is_kept(
     setup: Setup, client: Client
 ) -> None:
@@ -194,7 +203,8 @@ def test_each_version_has_its_own_openapi_document(setup: Setup, client: Client)
     v2 = client.get("/api/v2/schema/?format=json").json()
     served = {p for p in v1["paths"] if p.startswith("/api/v")}
     assert {"/api/v1/venues/", "/api/v1/venues/{id}/"} <= served
-    assert all(p.startswith("/api/v1/venues/") for p in served)
+    # search/ is Karni's own route, mounted in every version beside the router's
+    assert all(p.startswith("/api/v1/venues/") or p == "/api/v1/search/" for p in served)
     assert "/api/auth/login/" in v1["paths"]  # the auth routes are not versioned
     assert "/api/v2/events/" in v2["paths"]
     assert not any(p.startswith("/api/v1/") for p in v2["paths"])

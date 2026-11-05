@@ -120,7 +120,9 @@ def pages(spec: schema.Spec) -> dict[str, Page]:
             kind = first if isinstance(first, str) else "blank"  # a detail page with options
             found[key] = Page(
                 key,
-                "/" if kind == "dashboard" else f"/{key}",
+                "/"
+                if kind == "dashboard" and key == "home"
+                else f"/{key}",  # a named dashboard is /<name>
                 humanize(key),
                 PUBLIC if kind == "login" else AUTHENTICATED,
                 kind,

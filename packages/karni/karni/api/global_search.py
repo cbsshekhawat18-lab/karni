@@ -366,7 +366,7 @@ class GlobalSearchView(APIView):
     models_param: ClassVar[str] = "models"
     limit_param: ClassVar[str] = "limit"
 
-    def get(self, request: Request) -> Response:
+    def get(self, request: Request, **kwargs: Any) -> Response:
         query = self.get_query(request)
         targets = self.get_targets()
         known = {target.resource: target for target in targets}
