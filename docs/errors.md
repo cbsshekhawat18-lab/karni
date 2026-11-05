@@ -1408,6 +1408,76 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Give the model a UUID key (inherit BaseModel) or look rows up by a slug (lookup_field = "slug" on the viewset). When the ids may be public, write `# karni: allow(public-integer-key): <reason>` above the viewset class, or add 'karni.W530' to SILENCED_SYSTEM_CHECKS for the whole project.
 
+<a id="e530"></a>
+
+#### E530: KARNI_NAVIGATION is not valid
+
+*exception* · from `karni.navigation.settings_problems (startup validation), karni.navigation.models.NavItem`
+
+**Why Karni objects.** KARNI_NAVIGATION is a list of items and groups, 'db' or None. An item is a dict with a label and a route (an app path that starts with /), and may have an icon name, an integer order and what it requires. A group is a dict with a label and children, and no route. A menu Karni cannot read would answer every request with an error.
+
+**Fix.** Fix the entry the message names, e.g. {'label': 'Products', 'route': '/products', 'icon': 'box', 'requires': 'catalog.product:view'}, or {'label': 'Catalog', 'children': [...]} for a group.
+
+<a id="e531"></a>
+
+#### E531: KARNI_NAVIGATION = 'db' without the karni.navigation app
+
+*exception* · from `karni.navigation.settings_problems (startup validation)`
+
+**Why Karni objects.** The database menu lives in the NavItem table, which comes with the karni.navigation app. Karni does not install the app for every project, so a project that keeps its menu in the settings gains no table.
+
+**Fix.** Add 'karni.navigation' to INSTALLED_APPS and run migrate, or set KARNI_NAVIGATION to a list of items.
+
+<a id="e532"></a>
+
+#### E532: A navigation entry's requirement is not valid
+
+*exception* · from `karni.navigation.requirement_problem (startup validation, NavItem.requires)`
+
+**Why Karni objects.** An entry requires 'public' (everyone), 'authenticated' (every signed-in user) or a permission pattern written as in KARNI_ROLES grants, so role grants and per-user grants open it the way they open the API.
+
+**Fix.** Write 'public', 'authenticated', or a pattern such as 'catalog.product:view', 'catalog.*:view' or '*'.
+
+<a id="e533"></a>
+
+#### E533: A navigation item links to a route no page serves
+
+*system check (error)* · from `karni.navigation.checks.check_navigation (karni check)`
+
+**Why Karni objects.** karni check compares each item's route with the pages of the frontend: the path: entries of the KARNI_NAVIGATION_PAGES files (frontend/src/routes.tsx, where karni make page and karni build register each page). A menu entry that leads to no page is a dead link for every user who sees it.
+
+**Fix.** Fix the route (the message names the closest one), add the page with karni make page, or remove the item. Add 'karni.E533' to SILENCED_SYSTEM_CHECKS if the page is registered somewhere karni check does not read, or list that file in KARNI_NAVIGATION_PAGES.
+
+<a id="e534"></a>
+
+#### E534: A navigation entry requires a permission the project does not have
+
+*system check (error)* · from `karni.navigation.checks.check_navigation (karni check)`
+
+**Why Karni objects.** A permission pattern opens an entry for users who hold a grant for a permission it names. A pattern that names no permission of the project (a typo, a model that was renamed) opens it for nobody but a superuser.
+
+**Fix.** Name an existing permission as karni context or GET permissions/matrix/ lists it (app_label.model:action, lowercase), or write 'authenticated' or 'public'.
+
+<a id="e535"></a>
+
+#### E535: Navigation is turned off
+
+*API 400 response* · from `karni.navigation.api.NavigationView`
+
+**Why Karni objects.** GET /api/navigation/ is mounted only while KARNI_NAVIGATION is set. A URLconf built while it was set answers 404 with this code once it is unset.
+
+**Fix.** Set KARNI_NAVIGATION to a list of items, or to 'db' with the karni.navigation app installed (or navigation: in karni.yaml, then karni build).
+
+<a id="e536"></a>
+
+#### E536: A navigation entry has both a route and entries
+
+*exception* · from `karni.navigation.models.NavItem.clean (the admin form)`
+
+**Why Karni objects.** An entry with a route is a link. A group is an entry without a route that holds other entries. One entry cannot be both: the menu shows a link with no entries under it.
+
+**Fix.** Give the group no route and put the link inside it as an entry of its own, or choose a group as the parent.
+
 <a id="w540"></a>
 
 #### W540: The database of an external model cannot be reached
@@ -1639,6 +1709,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** A role grant of tree:<path> reaches the rows under the node the user holds in the attribute named after the path's last step (tree:region and tree:store__region read user.region), as related:<key> compares user.<key>. The user model has no such attribute, so the role gives each member no node and no row. A tree grant never falls back to every row.
 
 **Fix.** Give the user model the attribute (a field or a property holding a node of the tree, e.g. region), or give each user their nodes with user grants of the same scope (features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the nodes on purpose.
+
+<a id="w630"></a>
+
+#### W630: The database menu could not be read
+
+*system check (warning)* · from `karni.navigation.checks.check_navigation (karni check)`
+
+**Why Karni objects.** With KARNI_NAVIGATION = 'db', karni check reads the NavItem rows to compare their routes and requirements. The database did not answer, or the karni.navigation migration has not run, so nothing was compared. That is not an error: the database may be outside this machine's reach.
+
+**Fix.** Run migrate, check DATABASES, and run karni check again where the database answers. Add 'karni.W630' to SILENCED_SYSTEM_CHECKS where it never does.
+
+<a id="w631"></a>
+
+#### W631: No frontend pages file to compare the menu with
+
+*system check (warning)* · from `karni.navigation.checks.check_navigation (karni check)`
+
+**Why Karni objects.** karni check reads the pages from the KARNI_NAVIGATION_PAGES files (default frontend/src/routes.tsx). None of them exists, so the menu's routes were not compared.
+
+**Fix.** List the file that registers the frontend's routes in KARNI_NAVIGATION_PAGES, or set it to [] when the menu serves a client whose pages Karni cannot read (a mobile app).
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
@@ -3916,6 +4006,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Name the entity's relation to the tree, through relations when needed: tree:region, tree:product__categories. Add tree: true to the entity the path ends at, or grant another scope.
 
+<a id="c640"></a>
+
+### C640: A navigation entry names a page the spec does not have
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each menu entry links to the route of a page of pages: an entity's list page, or a named page. An entity whose pages all take an id (detail, form) has no route a menu can link to.
+
+**Fix.** Name a page of pages by its key (Product, shop.Product, home), add the page to pages, or add list to the entity's pages.
+
+<a id="c641"></a>
+
+### C641: A navigation entry is not valid
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** An entry is a page's key, a page with its options ({label, icon, requires}), or a group: a label that names no page, with its entries (a list, or {items, icon, requires}). Each page is listed once, a group has entries, and an icon is a name such as home.
+
+**Fix.** Write e.g. - home, - Catalog: [Product, Category] or - Region: {icon: map}.
+
+<a id="c642"></a>
+
+### C642: A navigation requirement is not valid
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** requires is public, authenticated or a permission pattern as in grants (app.entity:action, with * for a part), so role grants and per-user grants open the entry the way they open the API. A pattern that names an entity the spec does not have opens it for nobody.
+
+**Fix.** Write public, authenticated, or a pattern such as shop.product:view, or leave requires out: each page takes its requirement from its access.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4406,7 +4526,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** App screens (the React frontend) live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages. Public server-rendered pages do not go there (K309).
+**Rule.** App screens (the React frontend) live in `frontend/src/pages/`, one file per page, with the route registered alongside the existing pages. Public server-rendered pages do not go there (K309). A menu that differs per user is data, not code: `KARNI_NAVIGATION` (or `navigation:` in karni.yaml) with `<Layout navSource="server">`, never a menu a component filters by role.
 
 **Why Karni objects.** The page cap (K202) and the inventory (`karni context` PAGES) rely on it.
 

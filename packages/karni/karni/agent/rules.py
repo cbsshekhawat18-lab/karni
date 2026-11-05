@@ -357,7 +357,9 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "App screens (the React frontend) live in `frontend/src/pages/`, one file per page, "
             "with the route registered alongside the existing pages. Public server-rendered "
-            "pages do not go there (K309)."
+            "pages do not go there (K309). A menu that differs per user is data, not code: "
+            "`KARNI_NAVIGATION` (or `navigation:` in karni.yaml) with `<Layout "
+            'navSource="server">`, never a menu a component filters by role.'
         ),
         rationale="The page cap (K202) and the inventory (`karni context` PAGES) rely on it.",
     ),

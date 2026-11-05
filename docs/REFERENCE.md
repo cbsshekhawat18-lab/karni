@@ -78,6 +78,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier | `experimental` | Karni's own tests |
 | `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier | `experimental` | Karni's own tests |
 | `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier | `experimental` | Karni's own tests |
+| `Layout`'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, icons by name and the current page marked. Experimental tier | `experimental` | Karni's own tests |
 | `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives | `experimental` | Karni's own tests |
 | `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions | `experimental` | Karni's own tests |
 
@@ -92,6 +93,7 @@ Generated from the source of this commit by `scripts/gen_reference.py`. CI regen
 | Scope paths that do not resolve fail `karni check` (`E214`) instead of answering 500 | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
 | Per-user grants next to the role grants: a pattern and a scope for one user, with targets and an expiry, in the admin and an API (`UserGrant`, `KARNI_USER_GRANTS`). Experimental tier | `experimental` | Karni's own tests |
 | The tree scope: a grant on a node of a tree reaches every row under it (`tree:<path>` in `KARNI_ROLES` and user grants, one subtree subquery, the `access/` forest, `TreeView`'s `access`). Experimental tier | `experimental` | Karni's own tests |
+| Navigation from data: each user's menu from `KARNI_NAVIGATION` or a `NavItem` tree edited in the admin, opened by the same role and per-user grants as the API (`GET /api/navigation/`). Experimental tier | `experimental` | Karni's own tests |
 | Field visibility per role (`class Karni: field_roles`) | `experimental` | Karni's own tests |
 | Row scope in the admin, from the same grants as the API | `experimental` | Karni's own tests |
 | Change history: who changed which field, when, from what to what | `stable` | [models.py](https://github.com/cbsshekhawat18-lab/karni/blob/main/examples/social-leads/crm/models.py) |
@@ -1715,6 +1717,8 @@ class Lead(BaseModel):
 | `KARNI_ROLES` |  | `{ "staff": {"name": "Staff", "system": True, "grants": {"*": "all"}}, "user": {"name": "User", "grants": {"*": "own"}}, "customer": {"name": "Customer", "grants": {"*": "own"}}}` | The project's roles and grants: `{slug: {name, description, system, grants: {"app.model:action": scope}}}`. Grant patterns take `*` wildcards, and the scopes are `all` / `own` / `related:<key>` / `custom:<name>` / `tree:<path>`. See [roles](accounts.md#roles-as-data). |
 | `KARNI_ROLES_AUTOSYNC` | `KARNI_ROLES_AUTOSYNC` | `True` | Reconcile the role tables with `KARNI_ROLES` after every `migrate` (`karni sync-roles` does the same by hand). |
 | `KARNI_USER_GRANTS` | `KARNI_USER_GRANTS` | `False` | Experimental. Per-user grants: while `True`, each user's `UserGrant` rows (a pattern and a scope as in `KARNI_ROLES`, with targets and an expiry) join the grants of their roles, for one more query per request. `False` (the default) reads no row. See [per-user grants](accounts.md#per-user-grants). |
+| `KARNI_NAVIGATION` |  | `None` | Experimental. The menu `GET /api/navigation/` gives each user: a list of items (`{"label", "route", "icon", "order", "requires"}`) and groups (`{"label", "children": [...]}`), or `"db"` for the `NavItem` table edited in the admin (add `karni.navigation` to `INSTALLED_APPS`). `requires` is `public`, `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`, so role grants and per-user grants open an item. `None` (the default) mounts no route. See [navigation](navigation.md). |
+| `KARNI_NAVIGATION_PAGES` |  | `["frontend/src/routes.tsx"]` | Experimental. The frontend files whose `path:` entries are the app's pages. `karni check` reports a menu item whose route none of them serves (`E533`). `[]` turns that comparison off. |
 | `KARNI_ACCOUNTS_TOKEN_TTL` |  | `{ "verify_email": 86400, "reset_password": 3600, "change_email": 86400}` | Lifetime per one-time token purpose (`verify_email`, `reset_password`, ...), as timedeltas. |
 | `KARNI_ACCOUNTS_LINKS` |  | `{ "verify_email": "{frontend}/auth/verify-email?token={token}", "reset_password": "{frontend}/auth/reset-password?token={token}", "change_email": "{frontend}/auth/confirm-email-change?token={token}"}` | Frontend URL template per token purpose, with `{frontend}` and `{token}` placeholders. |
 | `KARNI_AUTH_THROTTLE_RATES` |  | `computed (_auth_throttle_rates(env))` | Per-scope auth throttle overrides as a JSON object. `null` disables a scope. |
@@ -2024,6 +2028,7 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `usePermission` |  | `isAuthenticated` and `hasRole(...names)` for the signed-in user. | [usePermission.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/usePermission.ts) |
 | `useSocialLogin` | `provider: string` | Experimental. Sign in with a provider's ID token: `{ signIn, status, error, reset }`. | [useSocialLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useSocialLogin.ts) |
 | `useOtpLogin` | `options?: UseOtpLoginOptions` | Experimental. Sign in with a code sent by email: `{ step, send, verify, resend, back, status }`. | [useOtpLogin.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/useOtpLogin.ts) |
+| `useNavigation` | `options?: Omit<UseQueryOptions<NavigationMenu, Error, NavigationMenu, readonly unknown[]>, "queryKey" \| "queryFn"> \| undefined` | Experimental. The menu for the signed-in user (`GET /navigation/`), cached per user. | [useNavigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useNavigation.ts) |
 | `useToast` |  | Imperative toast API + the live toast list. | [use-toast.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/use-toast.ts) |
 
 ### Functions and constants
@@ -2074,9 +2079,15 @@ Every value `@karni/ui` exports, read from its barrel (`src/index.ts`) with the 
 | `defaultTermsGateSlots` | constant | Experimental. Karni's own slots, exported so a project can wrap one instead of rewriting it. | [TermsGate.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/auth/TermsGate.tsx) |
 | `defaultPageSlots` | constant | The default pieces of the page chrome, for wrapping one. | [page.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/page/page.tsx) |
 | `defaultLayoutSlots` | constant | The default pieces of the shell, which you spread to wrap one (`{ ...defaultLayoutSlots }`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
+| `isNavGroup` | function | Experimental. Whether a nav entry is a group (it has `children`). | [layout.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/layout.tsx) |
 | `isSignInRoute` | function | A sign-in page: a path whose last segment is `login` or `sign-in` (`/login`, `/staff/login`). | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
 | `routeLabel` | function | `/orders/line-items` → "Line items", `/` → "Home". | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
 | `routeNavItems` | function | Layout `navItems` for a router's route paths (TanStack Router: `Object.keys(router.routesByPath)`), with the active one marked. | [route-nav.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/route-nav.ts) |
+| `activeRoute` | function | Experimental. The route of the current page among `items`, or null: exact first, then the longest prefix. | [navigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/navigation.ts) |
+| `navigationEntries` | function | Experimental. Layout entries for the server's menu, with the current page marked. | [navigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/navigation.ts) |
+| `defaultNavIcons` | constant | Experimental. The icons Layout knows by name. | [nav-icons.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/nav-icons.tsx) |
+| `navIcon` | function | Experimental. The icon for `name`: from `icons`, else `defaultNavIcons`, else none. | [nav-icons.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/layout/nav-icons.tsx) |
+| `NAVIGATION_PATH` | constant | Experimental. Where the menu comes from, relative to the client's `baseUrl`. | [useNavigation.ts](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/hooks/useNavigation.ts) |
 | `defaultModalSlots` | constant | The default pieces of the dialog, for wrapping one. | [modal.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/modal/modal.tsx) |
 | `toastVariants` | function | Per-variant toast styling, with colors that resolve through --karni-* tokens only (success leans on primary, error on destructive, info on muted). | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
 | `defaultToasterSlots` | constant | The default pieces of a toast, for wrapping one. | [toaster.tsx](https://github.com/cbsshekhawat18-lab/karni/blob/main/packages/karni-ui/src/components/toast/toaster.tsx) |
@@ -2243,6 +2254,13 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E520`](errors.md#e520) | exception | The deploy checks failed when the container started |
 | [`E521`](errors.md#e521) | exception | A backup failed |
 | [`W530`](errors.md#w530) | warning | Anyone may read a resource whose ids can be guessed |
+| [`E530`](errors.md#e530) | exception | KARNI_NAVIGATION is not valid |
+| [`E531`](errors.md#e531) | exception | KARNI_NAVIGATION = 'db' without the karni.navigation app |
+| [`E532`](errors.md#e532) | exception | A navigation entry's requirement is not valid |
+| [`E533`](errors.md#e533) | check | A navigation item links to a route no page serves |
+| [`E534`](errors.md#e534) | check | A navigation entry requires a permission the project does not have |
+| [`E535`](errors.md#e535) | api | Navigation is turned off |
+| [`E536`](errors.md#e536) | exception | A navigation entry has both a route and entries |
 | [`W540`](errors.md#w540) | warning | The database of an external model cannot be reached |
 | [`W541`](errors.md#w541) | warning | Karni.writable on a model that is not external |
 | [`W542`](errors.md#w542) | warning | Karni.database is declared but Karni's database router is not installed |
@@ -2266,6 +2284,8 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`E618`](errors.md#e618) | test | A public page fails the page checks |
 | [`E619`](errors.md#e619) | exception | assert_pages was given no URLs |
 | [`W620`](errors.md#w620) | warning | A role grant of a tree scope gives its members no node |
+| [`W630`](errors.md#w630) | warning | The database menu could not be read |
+| [`W631`](errors.md#w631) | warning | No frontend pages file to compare the menu with |
 | [`E701`](errors.md#e701) | exception | karni.rules.py is invalid |
 | [`E702`](errors.md#e702) | exception | karni check found violations |
 | [`E703`](errors.md#e703) | exception | A source file cannot be parsed |
@@ -2502,6 +2522,9 @@ Every code Karni, its modules, the CLI, the agent rules and the ESLint plugin ca
 | [`C441`](errors.md#c441) | cli | A recipe's file would replace code of the project's |
 | [`C460`](errors.md#c460) | cli | A tree entity's keys do not fit |
 | [`C620`](errors.md#c620) | cli | A role grant's tree:&lt;path&gt; does not lead to a tree entity |
+| [`C640`](errors.md#c640) | cli | A navigation entry names a page the spec does not have |
+| [`C641`](errors.md#c641) | cli | A navigation entry is not valid |
+| [`C642`](errors.md#c642) | cli | A navigation requirement is not valid |
 
 ### Agent rules (`K`)
 

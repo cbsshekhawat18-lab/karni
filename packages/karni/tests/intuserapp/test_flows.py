@@ -5,7 +5,7 @@ with ``KARNI_TEST_USER_PK=bigint``. Each flow is the one its own test module
 covers in depth, here once end to end with a user whose ``id`` is a
 ``BigAutoField``: login and refresh in JWT and session mode, ``me/``, roles,
 the 2FA login gate, sign-in with an ID token, sign-in with a code sent by
-email, and the terms gate.
+email, the terms gate, per-user grants and the menu from data.
 """
 
 from __future__ import annotations
@@ -250,3 +250,38 @@ def test_per_user_grants_with_integer_users(settings: Settings) -> None:
     mine = _bearer(_login(APIClient()).json()["access"]).get("/api/auth/permissions/effective/")
     entry = next(e for e in mine.json()["permissions"] if e["permission"] == "intuserapp.user:view")
     assert [source["origin"] for source in entry["sources"]] == ["user_grant"]
+
+
+def test_the_menu_with_integer_users(settings: Settings) -> None:
+    """Navigation (experimental): a user grant opens an item, and the admin previews by id."""
+    from django.contrib.auth.models import Permission
+    from django.test import Client
+
+    from karni.accounts import grants
+    from karni.navigation.api import build_urlpatterns as build_navigation_urls
+    from karni.navigation.models import NavItem
+
+    settings.KARNI_USER_GRANTS = True
+    settings.KARNI_NAVIGATION = "db"
+    urls = _urlconf()  # karni.api.urls was imported while the menu was off: mount it here
+    urls.urlpatterns.insert(0, path("api/", include(build_navigation_urls())))
+    settings.ROOT_URLCONF = urls
+    people = NavItem.objects.create(label="People", requires="authenticated")
+    NavItem.objects.create(
+        label="Users", route="/users", requires="intuserapp.user:view", parent=people
+    )
+    NavItem.objects.create(label="Home", route="/", requires="public")
+    member = _user()
+    client = _bearer(_login(APIClient()).json()["access"])
+    assert client.get("/api/navigation/").json()["items"] == [
+        {"label": "Home", "icon": None, "route": "/", "children": []}
+    ]
+    grants.grant(None, member, "intuserapp.user:view")
+    labels = [item["label"] for item in client.get("/api/navigation/").json()["items"]]
+    assert labels == ["People", "Home"]
+    staff = _user("staff@example.com", is_staff=True, is_superuser=True)
+    staff.user_permissions.add(Permission.objects.get(codename="view_navitem"))
+    browser = Client()
+    browser.force_login(staff)
+    page = browser.get("/admin/karni_navigation/navitem/preview/", {"user": str(member.pk)})
+    assert page.status_code == 200 and "<code>/users</code>" in page.content.decode()

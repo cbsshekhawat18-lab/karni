@@ -66,6 +66,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useImportJob`: One import job's state. It polls while the backend previews or commits it.
 - `useKarniClient`: The `KarniClient` behind every hook, with `client.request(path, { method, body, query })` for custom actions.
 - `useKarniPrimitives`: See the package README.
+- `useNavigation`: Experimental. The menu the signed-in user gets (`GET /navigation/`, Django's `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.
 - `useOnlineStatus`: See the package README.
 - `useOtpLogin`: Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).
 - `usePermission`: `{ hasRole(...names), isAuthenticated }` for gating UI on roles.

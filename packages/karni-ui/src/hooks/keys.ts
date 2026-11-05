@@ -5,6 +5,7 @@
  * - `["karni", "$schema"]`: the parsed OpenAPI schema (staleTime Infinity).
  * - `["karni", resource]`: the invalidation root for one resource.
  * - `["karni", resource, "list", normalizedParams]`: one list page.
+ * - `["karni", "$navigation", user]`: the menu one user gets (experimental).
  * - `["karni", resource, "detail", String(id)]`: one item. When the item was
  *   fetched with params (e.g. `expand`), the normalized params are appended as
  *   a fifth element so differently-shaped payloads never share a cache entry.
@@ -89,6 +90,19 @@ export const karniKeys = {
       "children",
       String(id),
       normalizeParams({ page: params?.page, page_size: params?.pageSize }),
+    ] as const;
+  },
+
+  /**
+   * Experimental. Key of the navigation menu (`GET /navigation/`) for one
+   * user (`null`: nobody signed in). Each user has their own entry, so a
+   * sign-in or sign-out reads the menu again.
+   */
+  navigation(user?: string | number | null): readonly unknown[] {
+    return [
+      "karni",
+      "$navigation",
+      user === undefined || user === null ? null : String(user),
     ] as const;
   },
 

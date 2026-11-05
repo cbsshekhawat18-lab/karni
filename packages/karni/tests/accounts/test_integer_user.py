@@ -2,9 +2,9 @@
 
 ``AUTH_USER_MODEL`` cannot change inside one test process, so this runs
 ``tests/intuserapp/`` (login, JWT, ``me/``, roles, the 2FA gate, sign-in with
-an ID token or a code, the terms gate, per-user grants) in a subprocess with
-``KARNI_TEST_USER_PK=bigint``, on the same database engine and settings module
-as this run. On PostgreSQL the subprocess gets its own test database.
+an ID token or a code, the terms gate, per-user grants, the menu) in a
+subprocess with ``KARNI_TEST_USER_PK=bigint``, on the same database engine and
+settings module as this run. On PostgreSQL the subprocess gets its own test database.
 """
 
 from __future__ import annotations

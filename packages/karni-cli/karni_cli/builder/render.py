@@ -65,7 +65,7 @@ from karni_cli.generators.pysource import (
     tuple_literal,
 )
 from karni_cli.project import CliError
-from karni_cli.spec import catalog, schema
+from karni_cli.spec import catalog, navigation, schema
 from karni_cli.spec.validate import TREE_FIELDS
 
 __all__ = [
@@ -611,7 +611,7 @@ def _project_file(
 
 
 def settings_block(spec: schema.Spec, line: int) -> str:
-    """Experimental. The ``# karni:spec`` block: roles, features and module options."""
+    """Experimental. The ``# karni:spec`` block: roles, features, module options and the menu."""
     rows: list[str] = [
         "# Roles, features and module options from karni.yaml. Change them there and run",
         "# karni build: it rewrites the lines between the markers.",
@@ -653,6 +653,9 @@ def settings_block(spec: schema.Spec, line: int) -> str:
         terms.pop("required")
     rows.append(_literal(terms, "", line, "KARNI_TERMS = "))
     rows.append(f"KARNI_USER_GRANTS = {features.user_grants!r}")
+    menu = navigation.menu(spec)
+    if menu is not None:
+        rows.append(_literal(menu, "", line, "KARNI_NAVIGATION = "))
     for module, options in spec.modules.items():
         for option, value in (options or {}).items():
             rows.append(_literal(value, "", line, f"{catalog.module_setting(module, option)} = "))

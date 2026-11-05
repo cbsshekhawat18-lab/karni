@@ -54,7 +54,7 @@ from karni_cli import project as project_mod
 from karni_cli.builder import layout
 from karni_cli.generators.fields import is_user_target
 from karni_cli.project import CliError
-from karni_cli.spec import export, schema
+from karni_cli.spec import export, navigation, schema
 from karni_cli.spec.catalog import MODULES, module_setting
 from karni_cli.spec.normal import normalise, role_name
 from karni_cli.spec.validate import validate_text
@@ -97,6 +97,8 @@ AREAS: Final[tuple[str, ...]] = get_args(Area)
 #: Experimental. What a change does, and its mark in the text output.
 ACTIONS: Final = {"add": "+", "change": "~", "rename": "~", "remove": "-"}
 RowStatus = Literal["counted", "offline", "unreachable", "not needed"]
+#: Experimental. The target of the menu's change in the pages area: the setting it writes.
+MENU: Final = "KARNI_NAVIGATION"
 
 _RELATIONS: Final = ("fk", "o2o", "m2m")
 #: Field kinds whose length argument a shorter value must fit, with the default length.
@@ -1042,6 +1044,17 @@ def _pages(ctx: _Context) -> None:
         ctx.add(Change("pages", "change", "navigation", ", ".join(new[i][0] for i in new)))
 
 
+def _navigation(ctx: _Context) -> None:
+    """The menu (experimental): ``KARNI_NAVIGATION`` as ``navigation:`` gives it, in the settings block."""
+    old, new = ctx.current.get("navigation"), ctx.desired.get("navigation")
+    if old == new:
+        return
+    if new is None:
+        ctx.add(Change("pages", "remove", MENU, navigation.summary(old)))
+    else:
+        ctx.add(Change("pages", "add" if old is None else "change", MENU, navigation.summary(new)))
+
+
 def _seed(ctx: _Context) -> None:
     resolve_new = _resolver(_entities(ctx.desired))
     renamed_back = {old: new for new, old in ctx.entity_renames.items()}
@@ -1128,6 +1141,8 @@ def _own(ctx: _Context, managed: Managed) -> None:
             label = renamed_back.get(label, label) if action == "remove" else label
             app = label.split(".", 1)[0]
             change.managed = (new(label) or known(label)) and free(layout.seeds_file(app))
+        elif area == "pages" and target == MENU:
+            change.managed = free(layout.SETTINGS_BLOCK)
         elif area == "pages":
             change.managed = _page_managed(change, ctx, managed, resolve_new, old_pages)
 
@@ -1200,6 +1215,7 @@ def plan_project(
     _apps(ctx)
     _entities_and_fields(ctx)
     _pages(ctx)
+    _navigation(ctx)
     for app in ctx.migrations:
         ctx.add(Change("migrations", "add", app))
     _seed(ctx)

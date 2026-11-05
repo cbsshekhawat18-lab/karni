@@ -71,6 +71,9 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # External tables, a SQL view and a second database (karni.db): viewsets
     # mounted by its own URLconf only.
     "tests.externalapp",
+    # The NavItem table of the database menu (experimental). KARNI_NAVIGATION stays
+    # unset, so no navigation/ route exists unless a test sets it.
+    "karni.navigation",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that

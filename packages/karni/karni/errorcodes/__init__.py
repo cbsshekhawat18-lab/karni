@@ -25,7 +25,8 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 (``StateField``, capacity, ``no_overlap``) · ``E27x``/``W54x`` external
 tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
 tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
-(``karni.accounts.tree_scope``).
+(``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
+(``karni.navigation``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1763,6 +1764,109 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "database's major version (the backup image's POSTGRES_VERSION), the free space in "
         "KARNI_BACKUP_DIR and, with KARNI_BACKUP_S3_BUCKET, the AWS_* credentials. Then run "
         "`docker compose -f docker-compose.prod.yml exec backup karni-backup run`.",
+    ),
+    # E530-E549 / W630-W639 navigation from data (karni.navigation, experimental)
+    _e(
+        "E530",
+        "KARNI_NAVIGATION is not valid",
+        "exception",
+        "karni.navigation.settings_problems (startup validation), karni.navigation.models.NavItem",
+        "KARNI_NAVIGATION is a list of items and groups, 'db' or None. An item is a dict with "
+        "a label and a route (an app path that starts with /), and may have an icon name, an "
+        "integer order and what it requires. A group is a dict with a label and children, and "
+        "no route. A menu Karni cannot read would answer every request with an error.",
+        "Fix the entry the message names, e.g. {'label': 'Products', 'route': '/products', "
+        "'icon': 'box', 'requires': 'catalog.product:view'}, or {'label': 'Catalog', "
+        "'children': [...]} for a group.",
+    ),
+    _e(
+        "E531",
+        "KARNI_NAVIGATION = 'db' without the karni.navigation app",
+        "exception",
+        "karni.navigation.settings_problems (startup validation)",
+        "The database menu lives in the NavItem table, which comes with the karni.navigation "
+        "app. Karni does not install the app for every project, so a project that keeps its "
+        "menu in the settings gains no table.",
+        "Add 'karni.navigation' to INSTALLED_APPS and run migrate, or set KARNI_NAVIGATION to a "
+        "list of items.",
+    ),
+    _e(
+        "E532",
+        "A navigation entry's requirement is not valid",
+        "exception",
+        "karni.navigation.requirement_problem (startup validation, NavItem.requires)",
+        "An entry requires 'public' (everyone), 'authenticated' (every signed-in user) or a "
+        "permission pattern written as in KARNI_ROLES grants, so role grants and per-user "
+        "grants open it the way they open the API.",
+        "Write 'public', 'authenticated', or a pattern such as 'catalog.product:view', "
+        "'catalog.*:view' or '*'.",
+    ),
+    _e(
+        "E533",
+        "A navigation item links to a route no page serves",
+        "check",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "karni check compares each item's route with the pages of the frontend: the path: "
+        "entries of the KARNI_NAVIGATION_PAGES files (frontend/src/routes.tsx, where karni "
+        "make page and karni build register each page). A menu entry that leads to no page "
+        "is a dead link for every user who sees it.",
+        "Fix the route (the message names the closest one), add the page with karni make page, "
+        "or remove the item. Add 'karni.E533' to SILENCED_SYSTEM_CHECKS if the page is "
+        "registered somewhere karni check does not read, or list that file in "
+        "KARNI_NAVIGATION_PAGES.",
+    ),
+    _e(
+        "E534",
+        "A navigation entry requires a permission the project does not have",
+        "check",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "A permission pattern opens an entry for users who hold a grant for a permission it "
+        "names. A pattern that names no permission of the project (a typo, a model that was "
+        "renamed) opens it for nobody but a superuser.",
+        "Name an existing permission as karni context or GET permissions/matrix/ lists it "
+        "(app_label.model:action, lowercase), or write 'authenticated' or 'public'.",
+    ),
+    _e(
+        "E535",
+        "Navigation is turned off",
+        "api",
+        "karni.navigation.api.NavigationView",
+        "GET /api/navigation/ is mounted only while KARNI_NAVIGATION is set. A URLconf built "
+        "while it was set answers 404 with this code once it is unset.",
+        "Set KARNI_NAVIGATION to a list of items, or to 'db' with the karni.navigation app "
+        "installed (or navigation: in karni.yaml, then karni build).",
+    ),
+    _e(
+        "E536",
+        "A navigation entry has both a route and entries",
+        "exception",
+        "karni.navigation.models.NavItem.clean (the admin form)",
+        "An entry with a route is a link. A group is an entry without a route that holds other "
+        "entries. One entry cannot be both: the menu shows a link with no entries under it.",
+        "Give the group no route and put the link inside it as an entry of its own, or choose "
+        "a group as the parent.",
+    ),
+    _e(
+        "W630",
+        "The database menu could not be read",
+        "warning",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "With KARNI_NAVIGATION = 'db', karni check reads the NavItem rows to compare their "
+        "routes and requirements. The database did not answer, or the karni.navigation "
+        "migration has not run, so nothing was compared. That is not an error: the database "
+        "may be outside this machine's reach.",
+        "Run migrate, check DATABASES, and run karni check again where the database answers. "
+        "Add 'karni.W630' to SILENCED_SYSTEM_CHECKS where it never does.",
+    ),
+    _e(
+        "W631",
+        "No frontend pages file to compare the menu with",
+        "warning",
+        "karni.navigation.checks.check_navigation (karni check)",
+        "karni check reads the pages from the KARNI_NAVIGATION_PAGES files (default "
+        "frontend/src/routes.tsx). None of them exists, so the menu's routes were not compared.",
+        "List the file that registers the frontend's routes in KARNI_NAVIGATION_PAGES, or set "
+        "it to [] when the menu serves a client whose pages Karni cannot read (a mobile app).",
     ),
     # E6xx testing and seeding
     _e(

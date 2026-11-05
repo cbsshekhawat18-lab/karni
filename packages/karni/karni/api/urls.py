@@ -9,6 +9,9 @@ loaded) the factory named by the ``KARNI_API_ROUTER`` setting — default
 :func:`karni.api.routers.get_default_router` — is called once; it owns
 autodiscovery and returns the router whose URLs are exposed here.
 
+While ``KARNI_NAVIGATION`` is set (experimental), ``navigation/`` comes first:
+the requesting user's menu (:mod:`karni.navigation.api`).
+
 Override / escape hatch: point ``KARNI_API_ROUTER`` at your own zero-argument
 factory to pre-register explicit routes before autodiscovery (see
 :mod:`karni.api.routers`). The setting is consumed at first URLconf import;
@@ -22,6 +25,7 @@ from django.conf import settings
 
 from karni.api.routers import KarniRouter
 from karni.imports import import_setting
+from karni.navigation.api import build_urlpatterns as navigation_urlpatterns
 
 __all__ = ["router", "urlpatterns"]
 
@@ -32,4 +36,4 @@ router: KarniRouter = import_setting(
     "KARNI_API_ROUTER", getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY)
 )()
 
-urlpatterns = router.urls
+urlpatterns = [*navigation_urlpatterns(), *router.urls]

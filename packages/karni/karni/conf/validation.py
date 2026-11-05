@@ -140,6 +140,8 @@ class KarniSettingsModel(BaseModel):
     KARNI_EMAIL_OTP_SIGNUP: Any = None
     KARNI_TERMS: Any = None
     KARNI_USER_GRANTS: Any = False
+    KARNI_NAVIGATION: Any = None
+    KARNI_NAVIGATION_PAGES: Any = Field(default_factory=lambda: ["frontend/src/routes.tsx"])
     KARNI_PK: Any = "uuid"
 
     @model_validator(mode="after")
@@ -167,6 +169,7 @@ class KarniSettingsModel(BaseModel):
         errors.extend(self._check_email_otp())
         errors.extend(self._check_terms())
         errors.extend(self._check_user_grants())
+        errors.extend(self._check_navigation())
         errors.extend(self._check_pk())
         errors.extend(self._check_api())
         errors.extend(self._check_admin())
@@ -492,6 +495,19 @@ class KarniSettingsModel(BaseModel):
         if not isinstance(self.KARNI_USER_GRANTS, bool):
             return [f"KARNI_USER_GRANTS = {self.KARNI_USER_GRANTS!r} must be True or False"]
         return []
+
+    def _check_navigation(self) -> list[str]:
+        """Navigation from data (experimental): the menu's items, and the app for ``"db"``."""
+        from karni.navigation import settings_problems
+
+        errors = settings_problems(self.KARNI_NAVIGATION, self.INSTALLED_APPS)
+        pages = self.KARNI_NAVIGATION_PAGES
+        if not isinstance(pages, list | tuple) or not all(isinstance(p, str) for p in pages):
+            errors.append(
+                f"KARNI_NAVIGATION_PAGES = {pages!r} must be a list of file paths, e.g. "
+                "['frontend/src/routes.tsx'], or [] (E530)"
+            )
+        return errors
 
     def _check_email_otp(self) -> list[str]:
         """Sign-in with a code sent by email (experimental): the switch, the code and the policy."""

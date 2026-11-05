@@ -227,6 +227,41 @@ def test_turning_on_per_user_grants_plans_its_setting(base: Project) -> None:
     assert "  + user_grants: KARNI_USER_GRANTS" in plan.text().splitlines()
 
 
+def test_navigation_is_planned_as_the_setting_it_writes(base: Project) -> None:
+    """The menu (experimental): a change in the pages area, named after KARNI_NAVIGATION."""
+    import copy
+
+    text = _edit(("seed: {Product: 5}\n", "navigation: true\nseed: {Product: 5}\n"))
+    plan = _plan(text, base)
+    change = _only(plan, "KARNI_NAVIGATION")
+    assert (change.area, change.action, change.detail) == (
+        "pages",
+        "add",
+        "Home /, Products /products",
+    )
+    assert not change.risky and change.managed
+    assert "  + KARNI_NAVIGATION: Home /, Products /products" in plan.text().splitlines()
+    report = validate_text(text)
+    assert report.spec is not None
+    facts = copy.deepcopy(base.facts)
+    facts["settings"]["KARNI_NAVIGATION"] = [
+        {"label": "Home", "route": "/", "requires": "authenticated"},
+        {"label": "Products", "route": "/products", "requires": "shop.product:view"},
+    ]
+    same = plan_project(report.spec, facts, base.root, file="karni.yaml")
+    assert [c for c in same.changes if c.target == "KARNI_NAVIGATION"] == [], same.text()
+    assert build(facts, base.root).data["navigation"] == ["home", "Product"]
+    regrouped = _edit(
+        ("seed: {Product: 5}\n", "navigation: [home, {Shop: [Product]}]\nseed: {Product: 5}\n")
+    )
+    report = validate_text(regrouped)
+    assert report.spec is not None
+    changed = plan_project(report.spec, facts, base.root, file="karni.yaml")
+    assert "  ~ KARNI_NAVIGATION: Home /, Shop (Products /products)" in changed.text()
+    gone = plan_project(validate_text(BASE).spec, facts, base.root, file="karni.yaml")  # type: ignore[arg-type]
+    assert "  - KARNI_NAVIGATION: Home /, Products /products" in gone.text()
+
+
 # risky changes ----------------------------------------------------------------------
 
 #: (edit, target, reason fragment, rows counted from ROWS)

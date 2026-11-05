@@ -633,6 +633,10 @@ grants   testapp.event:view  scope own  (role 'organizer', KARNI_ROLES)  → org
 `targets` and `reaches_row` for each grant. When no grant reaches the row,
 one fix names the user grant to widen.
 
+The menu reads the same grants: an entry of [navigation from
+data](navigation.md) that requires a permission opens for a user who holds
+it from a role or a live user grant, and closes when the grant expires.
+
 ### Switching it off
 
 `KARNI_USER_GRANTS = False` stops reading the rows. Nothing is deleted, and

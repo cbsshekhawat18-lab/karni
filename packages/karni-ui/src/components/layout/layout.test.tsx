@@ -1,12 +1,20 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import type { NavigationMenu } from "../../hooks/useNavigation";
+import { createKarniClient, type KarniClient } from "../../schema/client";
+import { KarniProvider } from "../../schema/provider";
 import {
   Layout,
   defaultLayoutSlots,
+  isNavGroup,
+  type LayoutNavEntry,
+  type LayoutNavGroupProps,
   type LayoutNavItem,
   type LayoutNavLinkProps,
+  type LayoutProps,
   type LayoutSlots,
 } from "./layout";
 
@@ -277,5 +285,184 @@ describe("Layout escape hatches", () => {
       </Layout>,
     );
     expect(within(screen.getByTestId("wrapper")).getByRole("banner")).toHaveTextContent("Acme");
+  });
+});
+
+const groupItems: readonly LayoutNavEntry[] = [
+  { label: "Home", href: "#home" },
+  {
+    label: "Catalog",
+    key: "catalog",
+    children: [
+      { label: "Products", href: "#products" },
+      { label: "Categories", href: "#categories" },
+    ],
+  },
+];
+
+describe("Layout nav groups (experimental)", () => {
+  it("renders a group as a button that controls its entries, closed by default", () => {
+    render(<Layout navItems={groupItems}>content</Layout>);
+    const nav = screen.getByRole("navigation", { name: "Main" });
+    const button = within(nav).getByRole("button", { name: "Catalog" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    const region = document.getElementById(button.getAttribute("aria-controls") ?? "");
+    expect(region).not.toBeNull();
+    expect(region).not.toBeVisible();
+    expect(within(nav).queryByRole("link", { name: "Products" })).toBeNull();
+  });
+
+  it("opens and closes from the keyboard (Enter and Space)", async () => {
+    const user = userEvent.setup();
+    render(<Layout navItems={groupItems}>content</Layout>);
+    const button = screen.getByRole("button", { name: "Catalog" });
+    button.focus();
+    await user.keyboard("{Enter}");
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    const group = screen.getByRole("group", { name: "Catalog" });
+    expect(within(group).getByRole("link", { name: "Products" })).toBeVisible();
+    await user.tab();
+    expect(screen.getByRole("link", { name: "Products" })).toHaveFocus();
+    button.focus();
+    await user.keyboard(" ");
+    expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens the group that holds the current page", () => {
+    const entries: readonly LayoutNavEntry[] = [
+      { label: "Catalog", children: [{ label: "Products", href: "#products", active: true }] },
+    ];
+    render(<Layout navItems={entries}>content</Layout>);
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Products" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("nests groups, and defaultOpen opens one", () => {
+    const entries: readonly LayoutNavEntry[] = [
+      {
+        label: "Setup",
+        defaultOpen: true,
+        children: [{ label: "Places", children: [{ label: "Regions", href: "#regions" }] }],
+      },
+    ];
+    render(<Layout navItems={entries}>content</Layout>);
+    expect(screen.getByRole("button", { name: "Setup" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Places" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("the NavGroup slot replaces each group", () => {
+    function PlainGroup(props: LayoutNavGroupProps): React.ReactElement {
+      return (
+        <section aria-label={String(props.group.label)} data-open={String(props.open)}>
+          {props.children}
+        </section>
+      );
+    }
+    render(
+      <Layout navItems={groupItems} slots={{ NavGroup: PlainGroup }}>
+        content
+      </Layout>,
+    );
+    const section = screen.getByRole("region", { name: "Catalog" });
+    expect(section).toHaveAttribute("data-open", "false");
+    expect(within(section).getByRole("link", { name: "Products" })).toBeInTheDocument();
+    expect(isNavGroup(groupItems[1] as LayoutNavEntry)).toBe(true);
+  });
+});
+
+function serverMenu(menu: NavigationMenu | Error): KarniClient {
+  const base = createKarniClient({ baseUrl: "http://karni.test/api" });
+  return {
+    ...base,
+    request: <T,>(path: string): Promise<T> => {
+      if (path !== "/navigation/") return Promise.reject(new Error(path));
+      return menu instanceof Error ? Promise.reject(menu) : Promise.resolve(menu as T);
+    },
+  };
+}
+
+function renderServer(menu: NavigationMenu | Error, props: Partial<LayoutProps> = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <KarniProvider client={serverMenu(menu)} queryClient={queryClient}>
+      <Layout navSource="server" {...props}>
+        content
+      </Layout>
+    </KarniProvider>,
+  );
+}
+
+const SERVER_MENU: NavigationMenu = {
+  items: [
+    { label: "Home", icon: "home", route: "/", children: [] },
+    {
+      label: "Catalog",
+      icon: "box",
+      route: null,
+      children: [
+        { label: "Products", icon: null, route: "/products", children: [] },
+        { label: "Categories", icon: "own-icon", route: "/categories", children: [] },
+      ],
+    },
+  ],
+};
+
+describe("Layout server menu (experimental)", () => {
+  it("renders the server's menu with the current page from pathname", async () => {
+    renderServer(SERVER_MENU, { pathname: "/products/42" });
+    const products = await screen.findByRole("link", { name: "Products" });
+    expect(products).toHaveAttribute("href", "/products");
+    expect(products).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Catalog" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("shows icons by name, the app's own over the defaults", async () => {
+    renderServer(SERVER_MENU, {
+      pathname: "/categories",
+      icons: { "own-icon": <svg data-testid="own-icon" /> },
+    });
+    const home = await screen.findByRole("link", { name: "Home" });
+    expect(home.querySelector('svg[data-icon="home"]')).not.toBeNull();
+    expect(screen.getByTestId("own-icon")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Products" }).querySelector("svg")).toBeNull();
+  });
+
+  it("is busy while loading and falls back to navItems when the request fails", async () => {
+    renderServer(new Error("offline"), { navItems: [{ label: "Static", href: "#static" }] });
+    expect(screen.getByRole("navigation", { name: "Main" })).toHaveAttribute("aria-busy", "true");
+    expect(await screen.findByRole("link", { name: "Static" })).toBeInTheDocument();
+  });
+
+  it("follows the window's path without a pathname prop", async () => {
+    window.history.pushState({}, "", "/categories");
+    try {
+      renderServer(SERVER_MENU);
+      expect(await screen.findByRole("link", { name: "Categories" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    } finally {
+      window.history.pushState({}, "", "/");
+    }
+  });
+
+  it("passes server links through renderNavItem like static ones", async () => {
+    renderServer(SERVER_MENU, {
+      pathname: "/",
+      renderNavItem: (item, { defaultNode }) => (
+        <span data-testid={`wrapped-${item.href}`}>{defaultNode}</span>
+      ),
+    });
+    expect(await screen.findByTestId("wrapped-/")).toBeInTheDocument();
   });
 });

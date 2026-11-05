@@ -157,6 +157,41 @@ apply codemods and list the manual steps. This file is the human summary.
   tells agents to ask only these questions before `karni build`.
   [docs/app-spec.md](docs/app-spec.md#questions).
 
+- **Navigation from data (experimental): each user's menu, opened by the
+  same grants as the API.** `KARNI_NAVIGATION` is a list of items and groups
+  (`{"label", "route", "icon", "order", "requires"}`, a group with
+  `children` and no route), or `"db"` for the `NavItem` tree (an
+  `OrderedTreeModel`) of the new `karni.navigation` app, which a project adds
+  to `INSTALLED_APPS` only for that source. An entry requires `public`,
+  `authenticated` (the default) or a permission pattern as in `KARNI_ROLES`,
+  read through `grants_for`: role grants and live per-user grants. `GET
+  /api/navigation/` answers the requesting user's menu in order, a group
+  whose entries are all hidden left out, in at most three queries (role
+  grants, user grants, the rows), with the `Navigation` and `NavigationItem`
+  schema components. The admin lists `NavItem` as a tree and has a *Menu
+  preview* per user. `karni check` reports an item whose route no frontend
+  page serves (`E533`, naming the closest route, from the `path:` entries of
+  `KARNI_NAVIGATION_PAGES`) and a requirement that names no permission
+  (`E534`), reading the database menu where the database answers (`W630`,
+  `W631`). New codes `E530` to `E536`, `W630` and `W631`.
+  [docs/navigation.md](docs/navigation.md).
+- **@karni/ui: the menu from the server (experimental).** `<Layout
+  navSource="server" pathname={pathname}>` renders `useNavigation()` (`GET
+  /navigation/`, cached per signed-in user): groups collapse behind a button
+  (Enter or Space) and open while they hold the current page, the current
+  page is the exact route or the longest route the path is under, and icons
+  come by name from `defaultNavIcons` or the `icons` prop. `navItems` takes
+  groups (`LayoutNavGroup`) too, with a `NavGroup` slot, and
+  `navigationEntries` converts the server's items on its own.
+- **`karni.yaml`: `navigation` (experimental).** `navigation: true` is every
+  page with a route of its own, in `pages` order, and a list gives the order
+  and the groups (`- Catalog: [Product, Category]`), each page with optional
+  `label`, `icon` and `requires`. Each page's requirement comes from its
+  access. `karni build` writes `KARNI_NAVIGATION` in the settings block,
+  `karni plan` shows it (`+ KARNI_NAVIGATION: Home /, Catalog (...)`), and
+  `karni spec export` writes it back from the setting. New codes `C640` to
+  `C642`. `manage.py karni_facts` reports `KARNI_NAVIGATION`.
+  [docs/app-spec.md](docs/app-spec.md#navigation).
 - **Tree models (experimental): a hierarchy is one declaration.**
   `class Region(TreeModel, BaseModel)` adds `parent` (a nullable foreign
   key to the model itself, `PROTECT`, `related_name="children"`), and

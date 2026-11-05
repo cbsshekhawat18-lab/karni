@@ -103,6 +103,8 @@ const HOOKS = {
     "Experimental. `{ step, send(email), verify(code), resend, back, status, error, cooldown, length }`: sign in with a code sent by email (`POST <authBasePath>/otp/send/`, then `otp/verify/`).",
   useSocialLogin:
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
+  useNavigation:
+    'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.',
   useToast: "Show a toast through the mounted `Toaster`.",
   useUnsavedChangesGuard:
     "`{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",

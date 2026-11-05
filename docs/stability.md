@@ -237,6 +237,15 @@ Experimental now:
   the `tree:<field>` options of the permission matrix, the `tree` entry of a
   `karni why` grant in `--json`, `tree:<path>` in a `karni.yaml` role grant,
   and `useResourceAccessForest` and `TreeView`'s `access` in `@karni/ui`.
+- [Navigation from data](navigation.md): the `KARNI_NAVIGATION` and
+  `KARNI_NAVIGATION_PAGES` settings, `karni.navigation` (with
+  `karni.navigation.api`, `karni.navigation.checks` and
+  `karni.navigation.admin`), the `karni.navigation` app and its `NavItem`
+  model, the `navigation/` endpoint, the `navigation` key of `karni.yaml` and
+  `karni_cli.spec.navigation`, and `useNavigation`, `karniKeys.navigation`,
+  `navigationEntries`, `activeRoute`, `defaultNavIcons`, `navIcon`,
+  `isNavGroup`, `LayoutNavGroup`, the `NavGroup` slot and `Layout`'s
+  `navSource`, `pathname` and `icons` in `@karni/ui`.
 
 ## Supported platforms
 

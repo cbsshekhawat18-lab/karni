@@ -5,6 +5,9 @@
 // Every page but a sign-in page sits behind <AuthGuard explain>: a visitor
 // who is not signed in gets the sign-in prompt in place, never a page of
 // errors, and the page appears once they sign in.
+// A menu from data (KARNI_NAVIGATION in config/settings.py, or `navigation:` in
+// karni.yaml): pass navSource="server" and pathname={pathname} to <Layout>,
+// and it shows each user the entries their grants open (docs/navigation.md).
 import {
     AuthGuard,
     Button,
