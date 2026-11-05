@@ -1288,6 +1288,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
+<a id="e590"></a>
+
+#### E590: The API version settings cannot work
+
+*system check (error)* · from `karni.checks.check_api_versions`
+
+**Why Karni objects.** KARNI_API_VERSION is a URL segment (lower case letters, digits and -, at most 16 characters), and KARNI_API_VERSIONS is a dict of version name to a dict with the keys router, deprecated, sunset and notes. A sunset or deprecated date is written 'YYYY-MM-DD', and a router is a dotted path to a zero-argument factory. One of them is not, so the versions cannot be mounted.
+
+**Fix.** Fix the setting the message names. Example: KARNI_API_VERSION = 'v1' and KARNI_API_VERSIONS = {'v0': {'deprecated': '2026-06-01', 'sunset': '2027-01-31'}}.
+
+<a id="e591"></a>
+
+#### E591: KARNI_API_UNVERSIONED is not usable
+
+*system check (error)* · from `karni.checks.check_api_versions`
+
+**Why Karni objects.** KARNI_API_UNVERSIONED says what /api/ without a version does once versions exist: 'keep', 'redirect' or 'remove'. 'redirect' sends clients to the current version, so it needs KARNI_API_VERSION.
+
+**Fix.** Use 'keep', 'redirect' or 'remove', and set KARNI_API_VERSION when you redirect.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>
@@ -1479,6 +1499,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** With no page to request, every check would pass without checking anything.
 
 **Fix.** Pass the site's pages, for example assert_pages(client, ["/", "/about/"]).
+
+<a id="w660"></a>
+
+#### W660: An API version is past its sunset date
+
+*system check (warning)* · from `karni.checks.check_api_versions (karni check)`
+
+**Why Karni objects.** A version's Sunset header promised the day it would go. That day has passed and the version is still mounted, so clients that read the header were told something untrue.
+
+**Fix.** Remove the version from KARNI_API_VERSIONS once its clients have moved, or move its sunset date. Add 'karni.W660' to SILENCED_SYSTEM_CHECKS to keep it mounted.
+
+<a id="w661"></a>
+
+#### W661: API versions are set, but the URLconf does not mount them
+
+*system check (warning)* · from `karni.checks.check_api_versions (karni check)`
+
+**Why Karni objects.** KARNI_API_VERSION or KARNI_API_VERSIONS names versions, and the API is mounted at /api/<version>/ only by karni.api.versions.api_urls(). The URLconf still includes karni.api.urls at api/, so every /api/<version>/ answers 404.
+
+**Fix.** In config/urls.py, import api_urls from karni.api.versions and use *api_urls() in place of path("api/", include("karni.api.urls")). A new project already does.
 
 ### 7xx · Agent tooling: karni check, karni.rules.py, changelog
 
@@ -3556,6 +3596,16 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Set the key the message names in karni.yaml by hand, then run karni spec validate and karni plan --questions.
 
+<a id="c740"></a>
+
+### C740: app.api_version is not a version name
+
+*karni command* · from `karni spec validate (karni_cli.spec.validate)`
+
+**Why Karni objects.** app.api_version is the API's current version. karni build writes it as KARNI_API_VERSION, and the API is then mounted at /api/<version>/. The name is a URL segment: lower case letters, digits and -, starting with a letter or digit, at most 16 characters, such as v1.
+
+**Fix.** Write a name like v1 or 2026-11, or leave the key out for an unversioned API.
+
 ## Agent rules (`K`)
 
 `karni rules` lists them in one screen. `karni check` and the architecture tests (`pytest --pyargs karni.testing.architecture`) enforce them.
@@ -4058,7 +4108,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, should* · enforced by `review`
 
-**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables.
+**Rule.** Anything reusable across projects belongs in a Karni module (a `karni_<name>` package), not in this project. Say so instead of building it. Read the catalog first: the CATALOG lines of `karni context`, `karni modules list` and `karni modules show <name>` list every module and built-in feature (payments, approvals, login as a user, a public site, two-factor sign-in, sign-in with a code or with Google, Microsoft or Apple, terms acceptance, response caching), whether the project has it, its options and the questions to ask. Add a module with `karni add <name>` (or `modules:` in karni.yaml), turn a feature on with its setting (or `features:`), and take a module out with `karni remove <name>`, which never drops its tables. A mobile client needs a URL that does not move: set `api_version:` under `app:` in karni.yaml (`KARNI_API_VERSION`) for `/api/v1/`, deprecation headers and a client per version, and never write `/v1/` routes by hand.
 
 **Why Karni objects.** Code that would be written more than once belongs in Karni, never per project. Each catalog entry is tested, and rebuilding one costs more tokens than adding it.
 

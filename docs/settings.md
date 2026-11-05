@@ -112,6 +112,13 @@ reads it on every request.
 | **Karni knobs** | | | |
 | `KARNI_HEALTH_CHECKS` | `KARNI_HEALTH_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_celery"]` | Dotted paths of the checks `/health/ready/` runs (database, cache, Celery by default), comma-separated in the environment. A deployment without a Celery worker leaves `karni.health.checks.check_celery` out. |
 | `KARNI_HEALTH_CELERY_TIMEOUT` |  | `1.0` | Seconds the readiness check waits for a Celery worker to answer. |
+| `KARNI_READYZ_CHECKS` | `KARNI_READYZ_CHECKS` | `[ "karni.health.checks.check_database", "karni.health.checks.check_cache", "karni.health.checks.check_broker"]` | Dotted paths of the checks `/readyz` runs: the database, the cache and the Celery broker by default, comma-separated in the environment. Experimental. See [deploy](deploy.md#health-checks). |
+| `KARNI_HEALTH_TIMEOUT` | `KARNI_HEALTH_TIMEOUT` | `3.0` | Seconds each readiness check may take before it counts as failed (`/readyz` and `/health/ready/`). Experimental. |
+| `KARNI_LOG_QUIET_PATHS` | `KARNI_LOG_QUIET_PATHS` | `["/healthz", "/readyz", "/health/"]` | Paths whose healthy requests the request log skips, comma-separated in the environment (`/healthz`, `/readyz` and `/health/` by default). A request that answers 400 or more is still logged. Empty logs all. Experimental. |
+| **API versions (karni.api.versions, experimental)** | | | |
+| `KARNI_API_VERSION` | `KARNI_API_VERSION` | `""` | The current API version, such as `v1`: the API is mounted at `/api/v1/` when `config/urls.py` uses `karni.api.versions.api_urls()`. Empty (the default) leaves the API unversioned. Experimental. See [API versions](api.md#api-versions). |
+| `KARNI_API_VERSIONS` | `KARNI_API_VERSIONS` | `{}` | More versions and what to say about them, as a dict (JSON in the environment): `{"v0": {"deprecated": "2026-06-01", "sunset": "2027-01-31", "notes": "https://..."}, "v2": {"router": "myproject.api.v2_router"}}`. A deprecated version sends `Deprecation`, `Sunset` and `Link` headers. Experimental. See [API versions](api.md#api-versions). |
+| `KARNI_API_UNVERSIONED` | `KARNI_API_UNVERSIONED` | `"keep"` | What `/api/` without a version does once a version is set: `keep` (the default, it serves the current version), `redirect` (308 to the current version) or `remove` (404). Experimental. See [API versions](api.md#api-versions). |
 | `KARNI_THUMBNAILER` |  | `"karni.storage.thumbnails.make_thumbnail"` | Dotted path of the function `karni.storage.thumbnails` renders thumbnails with. |
 | `KARNI_VALIDATE` |  | `True` | Validate the merged settings at startup (`karni.conf.validation`). `False` skips it. |
 | **Import and export (karni.transfer)** | | | |
