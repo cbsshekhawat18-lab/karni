@@ -11,6 +11,23 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Suggestions from code (experimental).** `karni check`, `karni doctor` and
+  the new `karni suggest` end with a compact block of what Karni could do that
+  the project does by hand, each with its file, line and the exact command or
+  change, and never fail a run. Seven codes in a new `SUG` series
+  (`karni explain SUG001`): a self-referencing foreign key named like a parent
+  (use `TreeModel`), a text field that holds markdown (use `MarkdownField`),
+  raw SQL opt-outs with `GROUP BY` (use the aggregate declaration), three
+  models tagged to one tree (declare a taxonomy), an added module nothing uses
+  (`karni remove <name>`), a module the spec or README describes that is not
+  added (`karni add <name>`) and a project that drifted from `karni.yaml`
+  (`karni build` or `karni spec export`). Silence one per line with
+  `# karni: allow(<rule>): <reason>`, the form of the architecture rules, or
+  all of them with `KARNI_SUGGESTIONS = False`. `karni suggest --json` has a
+  versioned schema, [karni-suggestions.schema.json](docs/assets/karni-suggestions.schema.json),
+  and the agent rule K004 tells agents to read them. `manage.py karni_check`
+  gains `--no-suggestions` and `--suggestions-file`, and `manage.py
+  karni_suggest` is new. See [suggestions](docs/enforcement.md#suggestions).
 - **Production email is set up, or the deploy check says so.** `karni_settings()`
   reads the mail server from `EMAIL_URL` (`smtp+tls://user:password@host:587`)
   and `DEFAULT_FROM_EMAIL` and `SERVER_EMAIL` from the environment, and

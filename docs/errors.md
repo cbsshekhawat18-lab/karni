@@ -5023,7 +5023,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Run `karni rules --check <file>` on files you write and `karni check` before committing. Every enforced rule fails the build, and nothing only warns.
+**Rule.** Run `karni rules --check <file>` on files you write and `karni check` before committing. Every enforced rule fails the build, and nothing only warns. It ends with suggestions (`SUG`): read each and apply its fix.
 
 **Why Karni objects.** Enforced rules fail CI anyway, so catching them while editing is cheaper.
 
