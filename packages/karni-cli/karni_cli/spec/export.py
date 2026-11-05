@@ -22,8 +22,10 @@ spec has no key for, hand-written pages and grants the spec cannot name. The
 list is printed, and written as comments at the top of the file.
 
 An entity is a model on ``BaseModel`` or ``BigIntBaseModel`` (its ``pk``
-written when it differs from the project's ``KARNI_PK``, and ``tree`` when
-it inherits ``TreeModel`` or ``OrderedTreeModel``), an external model
+written when it differs from the project's ``KARNI_PK``, ``tree`` when
+it inherits ``TreeModel`` or ``OrderedTreeModel``, and ``taxonomies`` from
+``class Karni: taxonomies``, a generated many-to-many left out of the
+fields), an external model
 (``external``, ``table``, ``writable``, ``database``), or a model Karni
 manages on another database (``database``, on ``UUIDModel`` or
 ``IntegerKeyModel``).
@@ -623,6 +625,10 @@ def _entity(
     tree = model.get("tree")  # the facts leave parent (and position) out of the fields
     if tree in ("tree", "ordered"):
         entity["tree"] = True if tree == "tree" else "ordered"
+    karni.pop("taxonomies", None)  # read from the facts' own taxonomies, targets resolved
+    taxonomies = _taxonomies(model, ctx)
+    if taxonomies:
+        entity["taxonomies"] = taxonomies
     for option, key in KARNI_KEYS.items():
         if option in karni:
             value = karni.pop(option)
@@ -660,9 +666,25 @@ def _entity(
     return entity
 
 
+def _taxonomies(model: dict[str, Any], ctx: _Ctx) -> dict[str, str]:
+    """Experimental. The facts' taxonomies as the spec's: key -> how the spec names the tree.
+
+    A tree model the spec does not know is left out with a note.
+    """
+    found: dict[str, str] = {}
+    for key, fact in (model.get("taxonomies") or {}).items():
+        name = ctx.names.get(str(fact.get("to")))
+        if name is None:
+            ctx.left_out.append(f"{model['label']}: the taxonomy {key} on {fact.get('to')}")
+            continue
+        found[str(key)] = name
+    return found
+
+
 def _drop_unknown(entity: dict[str, Any], label: str, left_out: list[str]) -> None:
     """Drop what names a field the spec left out, so the export always validates."""
     fields = set(entity["fields"]) | set(TREE_FIELDS.get(entity.get("tree", False), ()))
+    fields |= set(entity.get("taxonomies", {}))
     known = fields | {"id", "created_at", "updated_at"}
 
     def keep(value: str, names: set[str]) -> bool:

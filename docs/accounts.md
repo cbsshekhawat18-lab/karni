@@ -681,7 +681,9 @@ startup ([`E490`](errors.md#e490)), and a wildcard pattern skips the models
 that have no such path, as it does for `related:<key>`. The scope works
 wherever a scope does: `Granted()`, `Can(...)`, `user.can(...)`,
 `@requires(...)`, the admin's row scope, exports, and the relation lookups
-of an import.
+of an import. A key of [`class Karni: taxonomies`](models.md#taxonomies) is
+such a many-to-many, so `tree:region` scopes a model tagged with
+`taxonomies = {"region": ...}`.
 
 ### Where the nodes come from
 

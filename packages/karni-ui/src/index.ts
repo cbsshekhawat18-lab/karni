@@ -216,6 +216,16 @@ export type {
   TreeMutations,
 } from "./hooks/useResourceTree";
 
+// taxonomies (experimental)
+export { FacetPanel, defaultFacetPanelSlots } from "./components/resource/facets/FacetPanel";
+export type {
+  FacetPanelProps,
+  FacetPanelSlots,
+  FacetPanelEmptyProps,
+} from "./components/resource/facets/FacetPanel";
+export { useResourceFacets } from "./hooks/useResourceFacets";
+export type { FacetNode, FacetsResponse, ResourceFacetsParams } from "./hooks/useResourceFacets";
+
 export {
   ChangeHistory,
   defaultChangeHistorySlots,

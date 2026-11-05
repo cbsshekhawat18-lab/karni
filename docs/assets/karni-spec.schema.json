@@ -212,6 +212,16 @@
             }
           ]
         },
+        "taxonomies": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Experimental. Tag the entity to tree entities: key -> tree entity (Name or app.Name). Each key is a many-to-many of that name, with the list filters ?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope (class Karni: taxonomies).",
+          "propertyNames": {
+            "pattern": "^(?:x-.*|[a-z][a-z0-9_]*)$"
+          },
+          "type": "object"
+        },
         "key": {
           "anyOf": [
             {

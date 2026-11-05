@@ -74,6 +74,8 @@ INSTALLED_APPS += [  # type: ignore[name-defined]  # noqa: F821
     # The NavItem table of the database menu (experimental). KARNI_NAVIGATION stays
     # unset, so no navigation/ route exists unless a test sets it.
     "karni.navigation",
+    # Taxonomy tagging (class Karni: taxonomies): viewsets mounted by tests.taxonomy.urls.
+    "tests.taxoapp",
 ]
 
 # An integer-keyed user model (tests/intuserapp), for the accounts flows that

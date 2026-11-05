@@ -5,7 +5,9 @@
 code declares, with no opinion on the spec format: each field's class and
 its ``deconstruct()`` arguments, each model's key type, table and whether
 Django manages it, whether it is a tree (``tree``: ``None``, ``"tree"`` for a
-``TreeModel`` or ``"ordered"`` for an ``OrderedTreeModel``), each viewset's
+``TreeModel`` or ``"ordered"`` for an ``OrderedTreeModel``), its taxonomies
+(``taxonomies``: key to ``{"to", "generated"}``, a generated many-to-many
+left out of the fields), each viewset's
 route and ``describe()``d access, the settings the spec's features and roles
 come from, the database aliases, and every installed module's settings next
 to the module's defaults. Every value is JSON-safe: a function or class
@@ -142,6 +144,21 @@ def _tree_kind(model: type[models.Model]) -> str | None:
     return None
 
 
+def _taxonomies(model: type[models.Model]) -> dict[str, dict[str, Any]]:
+    """``class Karni: taxonomies`` as key -> ``{"to": <tree label>, "generated": bool}``."""
+    from karni.taxonomy import taxonomies
+
+    found: dict[str, dict[str, Any]] = {}
+    for key, taxonomy in taxonomies(model).items():
+        try:
+            label = str(taxonomy.tree._meta.label)
+            generated = taxonomy.generated
+        except Exception:  # noqa: BLE001 - a broken taxonomy (karni check says why)
+            label, generated = taxonomy.target, False
+        found[key] = {"to": label, "generated": generated}
+    return found
+
+
 def _key_type(model: type[models.Model]) -> str | None:
     """``bigint`` for a ``BigAutoField`` key, ``uuid`` for a ``UUIDField`` one, else ``None``."""
     key = model._meta.pk
@@ -188,13 +205,15 @@ def _model(model: type[models.Model], user: type) -> dict[str, Any]:
     from karni.models import BaseModel, BigIntBaseModel
 
     inherited = _mixin_fields(model)
+    tagged = _taxonomies(model)
+    generated = {key for key, fact in tagged.items() if fact["generated"]}
     fields = [
         _field(field, user)
         for field in sorted(
             [*model._meta.local_fields, *model._meta.local_many_to_many],
             key=lambda field: field.creation_counter,
         )
-        if field.name not in inherited
+        if field.name not in inherited and field.name not in generated
     ]
     admin_meta = _declared(getattr(model, "AdminMeta", None))
     return {
@@ -205,6 +224,8 @@ def _model(model: type[models.Model], user: type) -> dict[str, Any]:
         "pk": _key_type(model),
         # TreeModel's parent (and OrderedTreeModel's position) are left out of "fields" too
         "tree": _tree_kind(model),
+        # class Karni: taxonomies, key -> {to, generated}: a generated field is not in "fields"
+        "taxonomies": tagged,
         "managed": bool(model._meta.managed),
         "db_table": model._meta.db_table,
         "proxy": bool(model._meta.proxy),

@@ -14,8 +14,9 @@ Three passes, each reporting every problem it finds:
    grants, features, pages, modules and seed counts, and every reference
    between them (``C230`` to ``C242``), then the keys of external tables and
    other databases (``C251`` to ``C253``), the renames written with
-   ``was`` (``C254``), the keys of a tree (``C460``) and the menu
-   (``navigation``, ``C640`` to ``C642``). Whether a ``database`` is one of the project's
+   ``was`` (``C254``), the keys of a tree (``C460``), the menu
+   (``navigation``, ``C640`` to ``C642``) and the taxonomies
+   (``C700`` to ``C703``). Whether a ``database`` is one of the project's
    aliases is checked when the caller knows them (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
@@ -39,6 +40,7 @@ from typing import Any, Final
 from pydantic import ValidationError
 
 from karni_cli.generators.fields import (
+    ALIASES,
     FieldSpec,
     RelationTarget,
     Rendered,
@@ -71,7 +73,6 @@ MODULE_ROLES: Final = {"site": ("editor",)}
 RESERVED: Final[dict[str, dict[str, str]]] = {
     "spec": {"search": "a search block for search across entities"},
     "entity": {
-        "taxonomies": "taxonomies (large-apps roadmap)",
         "aggregate": "aggregation endpoints (large-apps item 8)",
     },
 }
@@ -81,6 +82,8 @@ ACCESS_WORDS: Final = ("public", "authenticated", "granted")
 STANDARD_ACTIONS: Final = ("view", "add", "change", "delete")
 ENTITY_PAGES: Final = ("list", "detail", "form")
 NAMED_PAGES: Final = ("dashboard", "blank", "login", "code")
+#: The audit fields of BaseModel's mixins, which a taxonomy key may not take.
+_MIXIN_FIELDS: Final = ("created_by", "updated_by", "deleted_at")
 #: Fields every BaseModel has, which key, order and search may name.
 BASE_FIELDS: Final = ("id", "created_at", "updated_at")
 #: Experimental. The fields ``tree: true`` (TreeModel) and ``tree: ordered`` add.
@@ -347,6 +350,8 @@ class _Entity:
     fields: dict[str, FieldSpec]
     #: relation field -> target ("app.Name", _USER_TARGET, or a module/other model label).
     targets: dict[str, str]
+    #: Experimental. taxonomy key -> its tree entity ("app.Name"), once checked.
+    taxonomy_targets: dict[str, str] = field(default_factory=dict)
 
     @property
     def label(self) -> str:
@@ -383,6 +388,8 @@ class _Meaning:
             self.storage(entity)
             self.renames(entity)
             self.tree(entity)
+        for entity in self.entities.values():
+            self.taxonomies(entity)
         self.roles()
         self.features()
         self.modules_()
@@ -826,6 +833,71 @@ class _Meaning:
                     key=True,
                 )
 
+    def taxonomies(self, entity: _Entity) -> None:
+        """Experimental. ``taxonomies`` on an entity (``C700`` to ``C703``)."""
+        e, path = entity.entity, entity.path
+        if not e.taxonomies:
+            return
+        if e.external:
+            self.add(
+                "C703",
+                (*path, "taxonomies"),
+                f"{entity.name} is external, so it cannot declare taxonomies: each one adds a "
+                "table of tags, and Karni never writes tables for a table another system owns.",
+                "Remove taxonomies, or remove external and let Karni own the table.",
+                key=True,
+            )
+            return
+        given = set(TREE_FIELDS.get(e.tree, ())) | set(BASE_FIELDS) | set(_MIXIN_FIELDS)
+        for key, raw in e.taxonomies.items():
+            where: Loc = (*path, "taxonomies", key)
+            if (
+                not re.fullmatch(schema.FIELD_NAME, key)
+                or keyword.iskeyword(key)
+                or "__" in key
+                or key.endswith("_descendants")
+                or key in given
+            ):
+                self.add(
+                    "C700",
+                    where,
+                    f"{entity.name}.taxonomies has the key {key!r}, which the entity cannot take "
+                    "as a field name: a lowercase name, no __, not ending in _descendants, and "
+                    "not a field Karni already gives it.",
+                    "Rename the key, e.g. taxonomies: {region: Region}.",
+                    key=True,
+                )
+                continue
+            target = self.resolve(entity, raw, where)
+            if target is None:
+                continue
+            tree = self.entities.get(target)
+            if tree is None or not tree.entity.tree:
+                self.add(
+                    "C701",
+                    where,
+                    f"{entity.name}.taxonomies.{key} points at {raw}, which is not an entity "
+                    "with tree: true: a taxonomy tags rows with the nodes of a tree.",
+                    f"Add tree: true to {raw}, or point {key} at a tree entity of the spec.",
+                )
+                continue
+            self.same_database(entity, target, where)
+            declared = entity.fields.get(key)
+            if declared is not None and not (
+                ALIASES.get(declared.kind, declared.kind) == "m2m"
+                and entity.targets.get(key) == target
+            ):
+                self.add(
+                    "C702",
+                    where,
+                    f"{entity.name}.taxonomies.{key} adopts the field {entity.name}.{key}, which "
+                    f"is not an m2m to {tree.name}.",
+                    f"Remove the field {key} and let the taxonomy add it, or declare it as "
+                    f"m2m:{tree.name}.",
+                )
+                continue
+            entity.taxonomy_targets[key] = target
+
     def renames(self, entity: _Entity) -> None:
         """``was`` on the entity and its fields (``C254``)."""
         e, path = entity.entity, entity.path
@@ -1051,7 +1123,11 @@ class _Meaning:
                 return None
             spec = current.fields.get(part)
             if spec is None or not spec.is_relation:
-                return None
+                tagged = current.taxonomy_targets.get(part)  # a taxonomy key (experimental)
+                if tagged is None:
+                    return None
+                current = self.entities.get(tagged)
+                continue
             current = self.entities.get(current.targets.get(part) or "")
         if current is None or not current.entity.tree:
             return None
@@ -1554,3 +1630,4 @@ def iter_codes() -> Iterator[str]:
     yield "C460"
     yield "C620"
     yield from ("C640", "C641", "C642")
+    yield from ("C700", "C701", "C702", "C703")

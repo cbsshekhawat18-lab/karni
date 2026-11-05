@@ -7,11 +7,11 @@ written out, ``own:<field>`` read as ``own``, access rules sorted and their
 its explicit moves), a field written as ``{type, was}`` as its type, an
 entity's key type written out (``pk``: the project's ``KARNI_PK`` when the
 spec does not say, none for an external entity), ``database: default`` as
-no database, an entity's pages in list, detail, form order, and the site
-module listed whenever the kind has a site, and ``navigation`` as the
-``KARNI_NAVIGATION`` list it gives (``None`` without it). What carries
-meaning in its order stays in order: fields, pages, the menu, search fields
-and the ordering.
+no database, an entity's pages in list, detail, form order, a taxonomy's
+tree entity as ``app.Name`` (experimental), the site module listed whenever
+the kind has a site, and ``navigation`` as the ``KARNI_NAVIGATION`` list it
+gives (``None`` without it). What carries meaning in its order stays in
+order: fields, pages, the menu, search fields and the ordering.
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -92,6 +92,16 @@ def _access(rule: Any) -> Any:
     return out
 
 
+def _entity_label(name: str, app: str, apps: dict[str, Any]) -> str:
+    """``Name`` as ``app.Name``: the entity of ``app``, else the one app that has it."""
+    if "." in name:
+        return name
+    if name in apps.get(app, {}).get("entities", {}):
+        return f"{app}.{name}"
+    owners = [label for label, other in apps.items() if name in other.get("entities", {})]
+    return f"{owners[0]}.{name}" if len(owners) == 1 else name
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -111,7 +121,7 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             for pattern, scope in sorted(role["grants"].items())
         }
     data["roles"] = dict(sorted(data["roles"].items()))
-    for app in data["apps"].values():
+    for label, app in data["apps"].items():
         for entity in app["entities"].values():
             entity["fields"] = {
                 name: canonical_field(name, value if isinstance(value, str) else value["type"])
@@ -125,6 +135,10 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             if isinstance(entity["audit"], list):
                 entity["audit"] = sorted(entity["audit"])
             entity["scope_paths"] = dict(sorted(entity["scope_paths"].items()))
+            entity["taxonomies"] = {
+                key: _entity_label(target, label, data["apps"])
+                for key, target in sorted(entity["taxonomies"].items())
+            }
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []

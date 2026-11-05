@@ -6,7 +6,10 @@
  * `x-karni-tree`, the list (with `?search=`, `?parent=` and
  * `?descendants_of=`), `tree/`, `children/`, `ancestors/`, `move/`,
  * `access/` (the requester's access forest) and the delete rules of a tree
- * model, plus failures and delays on demand. Every request is logged.
+ * model, plus failures and delays on demand. Every request is logged. With
+ * `taxonomy: true`, `regions` is a taxonomy of `products` (`class Karni:
+ * taxonomies`): `x-karni-taxonomy`, the list filters `?regions=` and
+ * `?regions_descendants=` and `facets/` (with `?rollup=`).
  *
  * Test and story support only: never imported by shipped component code.
  */
@@ -116,6 +119,10 @@ export interface TreeBackendOptions {
   granted?: Partial<Record<"regions" | "categories", number[]>>;
   /** `access/` answers `all: true`: the requester reaches every node. */
   accessAll?: boolean;
+  /** `regions` is a taxonomy of `products`: its filters and `facets/`. Default false. */
+  taxonomy?: boolean;
+  /** Fail every facets/ request. */
+  facetsFailure?: Failure;
 }
 
 export interface TreeBackend {
@@ -302,8 +309,8 @@ function paginated(component: string): Record<string, unknown> {
 }
 
 /** The OpenAPI document of the simulated backend (drf-spectacular dialect). */
-export function treeOpenApi(options: Pick<TreeBackendOptions, "search"> = {}) {
-  const { search = true } = options;
+export function treeOpenApi(options: Pick<TreeBackendOptions, "search" | "taxonomy"> = {}) {
+  const { search = true, taxonomy = false } = options;
   const product = {
     type: "object",
     required: ["id", "name"],
@@ -321,9 +328,29 @@ export function treeOpenApi(options: Pick<TreeBackendOptions, "search"> = {}) {
         items: { type: "integer" },
         "x-karni-relation": { resource: "regions", many: true },
         "x-karni-tree": { parent: "parent", ordered: false },
+        ...(taxonomy ? { "x-karni-taxonomy": "regions" } : {}),
       },
     },
   };
+  const taxonomyParams = taxonomy
+    ? [query("regions", "string"), query("regions_descendants", "boolean")]
+    : [];
+  const facetsPath = taxonomy
+    ? {
+        "/api/products/facets/": {
+          get: {
+            operationId: "products_facets_retrieve",
+            parameters: [
+              { ...query("taxonomy", "string"), schema: { type: "string", enum: ["regions"] } },
+              query("rollup", "boolean"),
+              ...taxonomyParams,
+              query("search", "string"),
+            ],
+            responses: ok("ProductFacets"),
+          },
+        },
+      }
+    : {};
   const productRequest = {
     type: "object",
     required: ["name"],
@@ -344,7 +371,7 @@ export function treeOpenApi(options: Pick<TreeBackendOptions, "search"> = {}) {
         get: {
           operationId: "products_list",
           "x-karni-resource": "products",
-          parameters: [query("page", "integer"), query("search", "string")],
+          parameters: [query("page", "integer"), ...taxonomyParams, query("search", "string")],
           responses: ok("PaginatedProductList"),
         },
         post: {
@@ -362,6 +389,7 @@ export function treeOpenApi(options: Pick<TreeBackendOptions, "search"> = {}) {
           responses: ok("Product"),
         },
       },
+      ...facetsPath,
     },
     components: {
       schemas: {
@@ -371,6 +399,14 @@ export function treeOpenApi(options: Pick<TreeBackendOptions, "search"> = {}) {
         ProductRequest: productRequest,
         PatchedProductRequest: { ...productRequest, required: [] },
         PaginatedProductList: paginated("Product"),
+        ProductFacets: {
+          type: "object",
+          properties: {
+            taxonomy: { type: "string" },
+            rollup: { type: "boolean" },
+            results: { type: "array", items: { type: "object" } },
+          },
+        },
       },
     },
   };
@@ -582,6 +618,8 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
     search = true,
     granted = {},
     accessAll = false,
+    taxonomy = false,
+    facetsFailure,
   } = options;
   const regions = options.regions ?? makeRegions();
   const categories = options.categories ?? makeCategories();
@@ -592,7 +630,65 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
   };
   const requests: URL[] = [];
   const bodies: Array<{ url: URL; body: unknown }> = [];
-  const schema = treeOpenApi({ search });
+  const schema = treeOpenApi({ search, taxonomy });
+
+  /** The products the list (and the facets) read: `?regions=`, `?regions_descendants=`, `?search=`. */
+  const filteredProducts = (url: URL): ProductRow[] => {
+    let rows = products;
+    const term = (url.searchParams.get("search") ?? "").trim().toLowerCase();
+    if (term !== "") rows = rows.filter((row) => row.name.toLowerCase().includes(term));
+    const wanted = url.searchParams
+      .getAll("regions")
+      .flatMap((value) => value.split(","))
+      .filter((value) => value !== "")
+      .map(Number);
+    if (taxonomy && wanted.length > 0) {
+      const store = stores.regions as Store;
+      const nodes = new Set(wanted);
+      if (url.searchParams.get("regions_descendants") === "true") {
+        for (const id of wanted) for (const under of below(store, id)) nodes.add(under);
+      }
+      rows = rows.filter((row) => row.regions.some((id) => nodes.has(id)));
+    }
+    return rows;
+  };
+
+  /** facets/: rows per region, rolled up to the ancestors with `?rollup=true`. */
+  const facetsAnswer = (url: URL) => {
+    const store = stores.regions as Store;
+    const rollup = url.searchParams.get("rollup") === "true";
+    const counted = new Map<number, Set<number>>();
+    for (const row of filteredProducts(url)) {
+      for (const id of row.regions) {
+        const tagged = findRow(store, id);
+        if (tagged === undefined) continue;
+        const reached = rollup ? [...ancestorsOf(store, tagged), tagged] : [tagged];
+        for (const each of reached) {
+          const rows = counted.get(each.id) ?? new Set<number>();
+          rows.add(row.id);
+          counted.set(each.id, rows);
+        }
+      }
+    }
+    const order: TreeRow[] = [];
+    const visit = (parent: number | null): void => {
+      for (const kid of childrenOf(store, parent)) {
+        if (counted.has(kid.id)) order.push(kid);
+        visit(kid.id);
+      }
+    };
+    visit(null);
+    return {
+      taxonomy: "regions",
+      rollup,
+      results: order.map((row) => ({
+        id: row.id,
+        label: row.name,
+        parent: row.parent,
+        count: counted.get(row.id)?.size ?? 0,
+      })),
+    };
+  };
 
   const findRow = (store: Store, id: unknown): TreeRow | undefined =>
     live(store).find((row) => String(row.id) === String(id));
@@ -762,10 +858,17 @@ export function treeBackend(options: TreeBackendOptions = {}): TreeBackend {
     http.get("*/api/schema/", () => HttpResponse.json(schema)),
     ...treeHandlers("regions"),
     ...treeHandlers("categories"),
+    http.get("*/api/products/facets/", async ({ request }) => {
+      const url = new URL(request.url);
+      requests.push(url);
+      await wait(treeDelay);
+      if (facetsFailure !== undefined) return failWith(facetsFailure);
+      return taxonomy ? HttpResponse.json(facetsAnswer(url)) : missing();
+    }),
     http.get("*/api/products/", ({ request }) => {
       const url = new URL(request.url);
       requests.push(url);
-      return HttpResponse.json(pageOf(url, products));
+      return HttpResponse.json(pageOf(url, filteredProducts(url)));
     }),
     http.post("*/api/products/", async ({ request }) => {
       const url = new URL(request.url);

@@ -695,3 +695,157 @@ list sorted by a column is flat, and so is one longer than
 | [E343](errors.md#e343) | a tree method got an argument it cannot use |
 | [E344](errors.md#e344) | the default manager has no walks (the base listed first) |
 | [E345](errors.md#e345) | `parent` is not a nullable foreign key to the model |
+
+## Taxonomies
+
+!!! warning "Experimental"
+    Everything in this section is [experimental](stability.md#experimental-names):
+    `class Karni: taxonomies`, `karni.taxonomy`, `karni.api.taxonomy` (the
+    list filters, `facets/` and `tagged/`, `BaseViewSet.facet_queryset()`,
+    `taxonomy_actions`, `serves_facets()` and `serves_tagged()`), the
+    `x-karni-taxonomy` extension, `origin` of `karni.tree.walk_sql`, the
+    `taxonomies` fact, the `taxonomies` key of `karni.yaml`, and
+    `FacetPanel`, `useResourceFacets` and `ResourceTable`'s `facets` in
+    `@karni/ui`. They may change in a minor release.
+
+Many models are tagged to the same hierarchies: products, suppliers and
+articles to a region tree and a category tree. One declaration tags a model
+to one or more [tree models](#tree-models):
+
+```python
+from django.db import models
+from karni.models import BaseModel
+
+class Product(BaseModel):
+    name = models.CharField(max_length=100)
+
+    class Karni:
+        taxonomies = {"region": "geo.Region", "category": "catalog.Category"}
+```
+
+Each key names a tree model, as `"app_label.Model"` or the class. For each
+one the model gets:
+
+- a many-to-many named after the key (`product.region`);
+- the list filters `?region=<key>,<key>` and `?region_descendants=true`;
+- `GET products/facets/?taxonomy=region`: how many rows each node counts;
+- on the tree's resource, `GET regions/<key>/tagged/`: the rows tagged with
+  the node, per tagging model;
+- the `tree:region` scope, import and export columns, and a `TreeSelect` in
+  `ResourceForm`.
+
+In `karni.yaml` the entity key `taxonomies: {region: Region}` builds the
+same declaration (see [the app spec](app-spec.md#taxonomies)).
+
+### The field
+
+Karni adds the many-to-many when the model class is prepared (Django's
+`class_prepared` signal), before `makemigrations` or any other code reads
+the model, so `makemigrations` writes it like a field of the class body:
+
+```python
+("region", models.ManyToManyField(blank=True, related_name="+", to="geo.region", verbose_name="region"))
+```
+
+It is a plain `ManyToManyField`, so the migration needs nothing from Karni.
+`related_name="+"` leaves the tree model without a reverse accessor, so two
+taxonomies of one model on the same tree never clash. Query the other way
+with `Product.objects.filter(region=node)`. Its auto-created through table
+already holds the two indexes the queries use: the unique pair of row and
+node, which the facet counts read, and the index on the node column, where
+the filters and the node counts start. Karni adds no other index.
+
+The escape hatch is to declare the field yourself under the key's name:
+Karni adopts it, with your own `through` model, related name and indexes.
+
+```python
+class Supplier(BaseModel):
+    region = models.ManyToManyField("geo.Region", blank=True, related_name="suppliers")
+
+    class Karni:
+        taxonomies = {"region": "geo.Region"}
+```
+
+The key is a field name: no leading underscore, no `__`, and not ending in
+`_descendants` (`E570` when the class is built). An abstract base may
+declare the taxonomies: each concrete subclass gets its own field.
+
+### Filters
+
+The list of a tagged model takes, for each key:
+
+| Parameter | Rows |
+|---|---|
+| `?region=3,7` (or `?region=3&region=7`) | tagged with any of those nodes |
+| `?region=3&region_descendants=true` | tagged with node 3 or any node below it |
+
+The nodes and the walk are the nodes of the tree the requester may read: a
+node out of their read scope matches nothing and hides its branch, as in the
+tree endpoints. The filter is one subquery, the cycle-safe walk inside the
+subquery of tagged keys, so its query count does not grow with the tree.
+It combines with every other filter and with `?search=`. A bad key or flag
+is a 400 with `E573`. In code, `karni.taxonomy.tagged_rows(taxonomy, nodes,
+descendants=True)` is the same `Q`.
+
+### Facets
+
+`GET products/facets/?taxonomy=region&rollup=true` counts the rows per node
+under the list's filters, search and access: the rows the list shows for
+the same request. `taxonomy` may be left out when the model has one.
+
+```json
+{
+  "taxonomy": "region",
+  "rollup": true,
+  "results": [
+    {"id": 1, "label": "World", "parent": null, "count": 4},
+    {"id": 2, "label": "Europe", "parent": 1, "count": 3},
+    {"id": 3, "label": "France", "parent": 2, "count": 2}
+  ]
+}
+```
+
+Without `rollup` a node counts the rows tagged with it. With `rollup=true`
+it counts the rows tagged with it or with any node below it, each row once:
+a row tagged with France and Lyon counts once for Europe. Only nodes the
+requester may read count, and a node without a row is left out. The nodes
+come depth first, each after its parent when the parent is counted. Two
+queries answer it whatever the number of nodes: the counts (one walk up
+from every tagged node at once), then the counted nodes. Override
+`facet_queryset()` on the viewset to count other rows, for example the list
+without one of its filters.
+
+### Node counts
+
+A tree resource that a taxonomy points at answers `GET regions/<key>/tagged/`
+(`?descendants=true` for the node's whole branch):
+
+```json
+{"id": 2, "descendants": true, "results": [
+  {"model": "catalog.product", "resource": "products", "taxonomy": "region", "count": 3},
+  {"model": "catalog.supplier", "resource": "suppliers", "taxonomy": "region", "count": 1}
+]}
+```
+
+Each count is under that model's own access (its routed viewset's read
+scope), one query per tagging model. A model without a routed viewset is
+left out.
+
+### Access, imports and exports
+
+The key is a path of [the tree scope](accounts.md#the-tree-scope):
+`"catalog.product:view": "tree:region"` reaches the products tagged with a
+granted node or a node below it. Imports and exports name the tags by the
+tree's natural key, several in one cell with `|` between them
+(`fr|jp`). The import preview reports an unknown node (or one the user
+cannot read) as a problem of that row. `FacetPanel` and `ResourceTable`'s
+`facets` show the counts in `@karni/ui` (see [the UI](ui.md)).
+
+### Taxonomy codes
+
+| Code | When |
+|---|---|
+| [E570](errors.md#e570) | `class Karni: taxonomies` is malformed (raised when the class is built) |
+| [E571](errors.md#e571) | a taxonomy points at a model that is not a tree model (`karni check`) |
+| [E572](errors.md#e572) | the field a taxonomy adopts is not a many-to-many to its tree (`karni check`) |
+| [E573](errors.md#e573) | a filter, `facets/` or `tagged/` got a parameter it cannot use (400) |

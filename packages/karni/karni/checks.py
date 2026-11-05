@@ -894,3 +894,28 @@ from karni import guard_checks as _guard_checks  # noqa: E402,F401
 # External tables, SQL views and a second database, E270-E276 / W541 / W542 (karni.db.checks).
 from karni.db import checks as _db_checks  # noqa: E402,F401
 from karni.fields import checks as _field_checks  # noqa: E402,F401
+
+
+@checks.register(checks.Tags.models)
+def check_taxonomies(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E571 / E572: a taxonomy whose target is not a tree, or whose field does not fit.
+
+    E571 is a ``class Karni: taxonomies`` key whose many-to-many points at a
+    model that is not a :class:`karni.models.TreeModel`. E572 is a key the
+    model adopts (it declares a field of that name) whose field is not a
+    many-to-many to the declared target (experimental, :mod:`karni.taxonomy`).
+    """
+    from karni.taxonomy import taxonomies
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            if model._meta.proxy:
+                continue
+            for taxonomy in taxonomies(model).values():
+                found = taxonomy.problem()
+                if found is not None:
+                    code, message = found
+                    messages.append(check_error(code, message, hint=_fix(code), obj=model))
+    return messages

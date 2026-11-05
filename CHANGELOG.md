@@ -303,6 +303,45 @@ apply codemods and list the manual steps. This file is the human summary.
   `useResourceAccessForest`, and `TreeView` takes `access` to show the
   forest, granted nodes selectable and their ancestors greyed.
   [docs/accounts.md](docs/accounts.md#the-tree-scope).
+- **Taxonomy tagging (experimental): one declaration tags a model to tree
+  models.** `class Karni: taxonomies = {"region": "geo.Region"}` gives the
+  model a many-to-many named after each key, added when the class is
+  prepared so `makemigrations` writes it (a plain `ManyToManyField`, blank,
+  `related_name="+"`, whose auto-created through table already holds the
+  unique row and node pair and the node index the queries use), or adopts
+  the many-to-many the model declares under that name. The list takes
+  `?region=<id>,<id>` and `?region_descendants=true`, one subquery over the
+  cycle-safe walk through the nodes the requester may read. `GET
+  <resource>/facets/?taxonomy=region&rollup=true` counts the rows per node
+  under the list's filters, search and access, rolled up to the ancestors
+  with each row once, in two queries whatever the number of nodes
+  (`facet_queryset()` is the escape hatch). A tree resource that a taxonomy
+  points at serves `GET <id>/tagged/?descendants=true`: the rows tagged with
+  the node per tagging model, each under its own access. The key is a
+  `tree:<key>` scope path, imports and exports name tags by natural key with
+  `|` between several, and the relation carries `x-karni-taxonomy` in the
+  OpenAPI document. `karni.taxonomy` holds `taxonomies`, `tagging`,
+  `tagged_rows`, `facet_counts` and `facets`, and `karni.tree.walk_sql`
+  takes `origin=True`. New codes `E570` (a malformed declaration), `E571`
+  and `E572` (`karni check`: a target that is not a tree, an adopted field
+  that does not point at it) and `E573` (a bad parameter, 400).
+  `manage.py karni_facts` gives each model's `taxonomies` and leaves a
+  generated field out of `fields`. [docs/models.md](docs/models.md#taxonomies).
+- **`karni.yaml`: an entity takes `taxonomies: {region: Region}`
+  (experimental),** checked against the spec's tree entities (`C700` to
+  `C703`). `karni plan` shows it and writes a migration when it changes (a
+  taxonomy removed or pointed at another tree is risky), `karni build` writes
+  `class Karni: taxonomies` into the model base, `karni spec export` reads it
+  back, and a role grant's `tree:<path>` may follow a taxonomy key. The key is
+  no longer reserved (`C224`). [docs/app-spec.md](docs/app-spec.md#taxonomies).
+- **@karni/ui: `FacetPanel` and `ResourceTable`'s `facets` (experimental).**
+  `FacetPanel` shows each node of a taxonomy with its count from `facets/`,
+  nested by parent, with a checkbox per node. `<ResourceTable facets />`
+  shows one per taxonomy, counted under the table's other filters and
+  search, and choosing nodes filters the table to the rows tagged with them
+  or below them, kept in the URL. `useResourceFacets` is the hook, and the
+  parsed schema marks a taxonomy's field (`taxonomy`) and the `facets`
+  operation. `ResourceForm` keeps editing the tags with `TreeSelect`.
 - **`karni build` (experimental): the spec applied in one command,
   idempotently, without touching hand-written code.** `karni build
   [--spec karni.yaml] [--dry-run] [--allow-destructive] [--json] [--force]

@@ -40,6 +40,7 @@ from django.utils import timezone
 import karni.fields.base  # noqa: E402,F401,I001
 from karni import constraints as _constraints  # noqa: F401 - connects class Karni: no_overlap
 from karni import guards
+from karni import taxonomy as _taxonomy  # noqa: F401 - connects class Karni: taxonomies
 from karni.managers import (
     AuditedQuerySet,
     BaseManager,

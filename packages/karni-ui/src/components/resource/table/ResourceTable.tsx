@@ -67,6 +67,7 @@ import { useDelayedFlag, useOnlineStatus } from "../../../states/hooks";
 import { Button } from "../../primitives/button";
 import { isAuditField, partitionAuditFields } from "../audit-fields";
 import { displayLabel } from "../displayLabel";
+import { FacetPanel } from "../facets/FacetPanel";
 import { evaluateAccess, type AccessIdentity } from "./access";
 import type { BulkAction, BulkOutcome, BulkResult } from "./BulkActionsBar";
 import { CardList } from "./CardList";
@@ -177,6 +178,15 @@ export interface ResourceTableProps<T = Record<string, unknown>> {
    */
   filters?: readonly string[] | false;
   /**
+   * Experimental. Facet panels for the resource's taxonomies (`class Karni:
+   * taxonomies`, fields with `x-karni-taxonomy`): `true` for each one, or the
+   * keys to show. Each panel counts the rows per node under the table's other
+   * filters and search, and choosing nodes filters the table to the rows
+   * tagged with them or below them (`?<key>=` and `?<key>_descendants=true`,
+   * kept in the URL like the other filters). Default: none.
+   */
+  facets?: readonly string[] | boolean;
+  /**
    * Fixed filters sent with every request and hidden from the filter bar,
    * e.g. `{ event: eventId }` for "the bookings of this event". A user filter
    * on the same field never overrides them. Never written to the URL.
@@ -282,6 +292,43 @@ function filterWords(field: FieldDef, value: FilterValue): string {
   return String(value);
 }
 
+/** The list parameter that adds the rows tagged below a facet's nodes (`region_descendants`). */
+function descendantsName(field: FieldDef): string {
+  return `${field.taxonomy ?? field.name}_descendants`;
+}
+
+/** The descendants flag of a facet, as a boolean filter the URL state keeps. */
+function descendantsField(field: FieldDef): FieldDef {
+  return {
+    name: descendantsName(field),
+    label: `${field.label} and below`,
+    kind: "boolean",
+    required: false,
+    readOnly: false,
+    writeOnly: false,
+    nullable: false,
+    order: field.order,
+  };
+}
+
+/** A facet's chosen nodes from its filter value (an id list in the URL state). */
+function facetValue(value: FilterValue): Array<string | number> {
+  if (value === null || value === undefined || typeof value === "boolean") return [];
+  const items: ReadonlyArray<string | number | boolean> =
+    typeof value === "object" ? value : [value];
+  return items.filter((id): id is string | number => typeof id !== "boolean");
+}
+
+/** The list's query without the facet's own parameters: each node counts every row it could add. */
+function facetQuery(params: ResourceListParams, field: FieldDef): Record<string, KarniQueryValue> {
+  const own = new Set([field.name, descendantsName(field)]);
+  const query: Record<string, KarniQueryValue> = Object.fromEntries(
+    Object.entries(params.filters ?? {}).filter(([name]) => !own.has(name)),
+  );
+  if (params.search !== undefined) query.search = params.search;
+  return query;
+}
+
 /** The delete question for one row. Its mutation lives here so tables without deletes never create it. */
 function RowDeleteDialog<T>(props: {
   resource: string;
@@ -358,6 +405,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     pageSize,
     pageSizeOptions,
     filters,
+    facets,
     params,
     exportFormats,
     toolbar,
@@ -438,6 +486,31 @@ export function ResourceTable<T = Record<string, unknown>>(
     ].slice(0, MAX_DERIVED_FILTERS);
   }, [filters, pinned, schema, showAuditFields]);
 
+  // facet panels (experimental): one per taxonomy the table shows
+  const facetFields = React.useMemo<readonly FieldDef[]>(() => {
+    if (facets === undefined || facets === false || schema?.operations.facets === undefined) {
+      return [];
+    }
+    const tagged = schema.fields.filter(
+      (field) => field.taxonomy !== undefined && !pinned.has(field.name),
+    );
+    if (facets === true) return tagged;
+    return facets
+      .map((key) => tagged.find((field) => field.taxonomy === key))
+      .filter((field): field is FieldDef => field !== undefined);
+  }, [facets, pinned, schema]);
+  // The URL keeps the bar's filters, each facet's nodes and its descendants flag.
+  const urlFields = React.useMemo<readonly FieldDef[]>(() => {
+    if (facetFields.length === 0) return filterFields;
+    const names = new Set(filterFields.map((field) => field.name));
+    const extra: FieldDef[] = [];
+    for (const field of facetFields) {
+      if (!names.has(field.name)) extra.push(field);
+      extra.push(descendantsField(field));
+    }
+    return [...filterFields, ...extra];
+  }, [filterFields, facetFields]);
+
   // view state: the URL (or component state with syncUrl={false})
   const defaultPageSize = pageSize ?? DEFAULT_PAGE_SIZE;
   const sizesKey = (pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS).join(",");
@@ -457,7 +530,7 @@ export function ResourceTable<T = Record<string, unknown>>(
     store: stateStore,
     namespace,
     defaults,
-    filterFields,
+    filterFields: urlFields,
   });
   const viewRef = React.useRef(view);
   viewRef.current = view;
@@ -496,6 +569,24 @@ export function ResourceTable<T = Record<string, unknown>>(
       intent.current = "results";
       setView(
         { filters: { ...viewRef.current.filters, [field.name]: value }, page: 1 },
+        { push: true },
+      );
+    },
+    [setView],
+  );
+
+  const handleFacetChange = React.useCallback(
+    (field: FieldDef, ids: Array<string | number>) => {
+      intent.current = "results";
+      setView(
+        {
+          filters: {
+            ...viewRef.current.filters,
+            [field.name]: ids.length > 0 ? ids : undefined,
+            [descendantsName(field)]: ids.length > 0 ? true : undefined,
+          },
+          page: 1,
+        },
         { push: true },
       );
     },
@@ -914,12 +1005,14 @@ export function ResourceTable<T = Record<string, unknown>>(
   const activeFilters = React.useMemo<ResourceTableActiveFilter[]>(
     () =>
       Object.entries(view.filters).flatMap(([name, value]) => {
-        const field = filterFields.find((candidate) => candidate.name === name);
+        const field =
+          filterFields.find((candidate) => candidate.name === name) ??
+          facetFields.find((candidate) => candidate.name === name);
         return field === undefined
           ? []
           : [{ field: name, label: field.label, value: filterWords(field, value) }];
       }),
-    [view.filters, filterFields],
+    [view.filters, filterFields, facetFields],
   );
 
   // render
@@ -1119,6 +1212,21 @@ export function ResourceTable<T = Record<string, unknown>>(
               </Button>
             )}
           </div>
+        </div>
+      )}
+      {facetFields.length > 0 && schema !== undefined && !blocking && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {facetFields.map((field) => (
+            <FacetPanel
+              key={field.name}
+              resource={resource}
+              taxonomy={field.taxonomy ?? field.name}
+              label={field.label}
+              value={facetValue(view.filters[field.name])}
+              onChange={(ids) => handleFacetChange(field, ids)}
+              query={facetQuery(listParams, field)}
+            />
+          ))}
         </div>
       )}
       {!online && shownData !== undefined && (

@@ -26,7 +26,8 @@ why``, request ids, the development capture, ``karni trace``, ``karni replay``,
 tables, SQL views and a second database (``karni.db``) · ``E34x``/``W55x``
 tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
-(``karni.navigation``).
+(``karni.navigation``) · ``E57x``/``E58x``/``W65x`` taxonomy tagging
+(``karni.taxonomy``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -1395,6 +1396,56 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "(features: user_grants, then karni.accounts.grants.grant(..., targets=[...])). "
         "Silence it with SILENCED_SYSTEM_CHECKS = ['karni.W620'] when user grants give the "
         "nodes on purpose.",
+    ),
+    # E570-E589 / W650-W659 taxonomy tagging (karni.taxonomy, experimental)
+    _e(
+        "E570",
+        "class Karni: taxonomies is malformed",
+        "exception",
+        "karni.taxonomy.declared_taxonomies (raised when the model class is built)",
+        "taxonomies maps each key to a tree model. The key becomes a many-to-many field of "
+        "that name and the list parameters ?<key>= and ?<key>_descendants=, so it must be a "
+        "field name: no leading underscore, no double underscore, not ending in _descendants. "
+        "The value names the tree model as 'app_label.Model' or the model class.",
+        'Write taxonomies = {"region": "geo.Region", "category": "catalog.Category"}, with '
+        "keys that are field names and values that name tree models.",
+    ),
+    _e(
+        "E571",
+        "A taxonomy points at a model that is not a tree model",
+        "check",
+        "karni.checks.check_taxonomies (karni check)",
+        "A taxonomy tags rows with the nodes of a hierarchy: ?<key>_descendants=, the facets "
+        "rolled up to the ancestors, the node counts and the tree:<key> scope all walk the "
+        "tree from a node to the nodes below it. A model that is not on "
+        "karni.models.TreeModel has no parent to walk.",
+        "Make the target a tree model (class Region(TreeModel, BaseModel), or tree: true in "
+        "karni.yaml), or point the key at the tree model you meant. For tags without a "
+        "hierarchy, declare a plain many-to-many instead of a taxonomy.",
+    ),
+    _e(
+        "E572",
+        "The field a taxonomy adopts is not a many-to-many to its tree",
+        "check",
+        "karni.checks.check_taxonomies (karni check); karni.taxonomy.Taxonomy.field",
+        "When the model already has an attribute named after a taxonomy key, Karni adopts it "
+        "instead of generating the many-to-many. Adopting works only for a ManyToManyField to "
+        "the tree model the key names: the filters, the facets and the scope read its through "
+        "table.",
+        "Declare the field as models.ManyToManyField(<the tree model>, blank=True, ...) under "
+        "the key's name, rename the other attribute, or remove the field and let Karni "
+        "generate it.",
+    ),
+    _e(
+        "E573",
+        "A taxonomy filter or endpoint got a parameter it cannot use",
+        "api",
+        "karni.api.taxonomy (?<key>=, ?<key>_descendants=, facets/, <key>/tagged/)",
+        "?<key>= takes keys of the tree's nodes separated by commas. ?<key>_descendants=, "
+        "?rollup= and ?descendants= take true or false. facets/ counts one taxonomy: "
+        "?taxonomy= names it, and may be left out only when the model has one.",
+        "Send node keys (?region=3,7), true or false for the flags, and one of the keys the "
+        "message lists as ?taxonomy=.",
     ),
     # E4xx events, listeners, schedules, Celery
     _e(

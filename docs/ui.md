@@ -24,6 +24,7 @@ is a few lines that compose them (see the [tutorial](tutorial.md)).
 - `TreeView` (role `tree-view`, experimental)
 - `TreeSelect` (role `tree-select`, experimental)
 - `TreeBreadcrumb` (role `tree-breadcrumb`, experimental)
+- `FacetPanel` (role `facet-panel`, experimental)
 
 ## App shell and pages
 
@@ -73,6 +74,7 @@ Styled Radix parts and basics. Each one always merges `className` and forwards r
 - `useResourceAccessForest`: Experimental. The requester's access forest of a tree resource (`GET /<resource>/access/?permission=`): `{ results, all, truncated }`, the granted nodes with their ancestors and every other root, each with `granted`. `TreeView`'s `access` shows it.
 - `useResourceAncestors`: Experimental. The nodes above a tree node, root first (`GET /<resource>/<id>/ancestors/`).
 - `useResourceChildren`: Experimental. One page of a tree node's children (`GET /<resource>/<id>/children/`).
+- `useResourceFacets`: Experimental. Rows per node of one taxonomy under the list's filters (`GET /<resource>/facets/?taxonomy=&rollup=`): `{ taxonomy, rollup, results }`, each node `{ id, label, parent, count }`. `FacetPanel` shows it.
 - `useResourceItem`: One row by id, optionally expanded.
 - `useResourceList`: A page of a resource: `{ page, pageSize, ordering, search, filters, expand }` → DRF's `{ count, next, previous, results }`.
 - `useResourceMutations`: `create`, `update` and `remove` for a resource. On success they invalidate the resource's queries.
@@ -101,6 +103,7 @@ role that another component holds (compose it instead), and `karni context` list
 | `detail-view` | `ResourceDetail` |
 | `empty-state` | `EmptyState` |
 | `error-state` | `ErrorState` |
+| `facet-panel` | `FacetPanel` |
 | `file-upload` | `FileUpload` |
 | `layout-shell` | `Layout` |
 | `login-form` | `LoginForm` |

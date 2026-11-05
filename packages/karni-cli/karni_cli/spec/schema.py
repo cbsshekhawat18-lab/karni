@@ -282,6 +282,16 @@ class Entity(_Node):
             "endpoints), ordered inherits OrderedTreeModel (also a position among siblings)."
         ),
     )
+    taxonomies: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Experimental. Tag the entity to tree entities: key -> tree entity (Name or "
+            "app.Name). Each key is a many-to-many of that name, with the list filters "
+            "?<key>= and ?<key>_descendants=, the facets/ counts and the tree:<key> scope "
+            "(class Karni: taxonomies)."
+        ),
+        json_schema_extra=_names(FIELD_NAME),
+    )
     key: str | None = Field(
         None, description="The natural key imports match rows on (Karni.import_key)."
     )

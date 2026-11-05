@@ -502,7 +502,11 @@ RULES: tuple[Rule, ...] = (
             "`.parent`, and never write a tree endpoint or a tree component. "
             "`Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the "
             "API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView "
-            "and TreeSelect."
+            "and TreeSelect. Tag a model to a tree with `class Karni: taxonomies = "
+            '{"region": "geo.Region"}` (`taxonomies:` in karni.yaml), never a hand-written '
+            "many-to-many with its own subtree filter or counts: the list filters "
+            "`?region=` and `?region_descendants=`, facets/ and the tree:region scope come "
+            "with it."
         ),
         rationale=(
             "Hand-written trees loop on cyclic data, cost one query per level and repeat the "

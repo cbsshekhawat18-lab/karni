@@ -73,6 +73,21 @@ def test_facts_name_the_tree_kind_and_leave_the_tree_fields_out() -> None:
     assert [field["name"] for field in category["fields"]] == ["name"]
     product = [field["name"] for field in models["testapp.Product"]["fields"]]
     assert product == ["name", "category", "regions"]  # a relation to a tree is a plain field
+    assert models["testapp.Product"]["taxonomies"] == {}
+
+
+@override_settings(KARNI_FACTS_APPS=["taxoapp"])
+def test_facts_name_the_taxonomies_and_leave_the_generated_fields_out() -> None:
+    facts = project_facts()
+    models = {model["label"]: model for app in facts["apps"] for model in app["models"]}
+    product, supplier = models["taxoapp.Product"], models["taxoapp.Supplier"]
+    assert product["taxonomies"] == {
+        "region": {"to": "taxoapp.Region", "generated": True},
+        "category": {"to": "taxoapp.Category", "generated": True},
+    }
+    assert [field["name"] for field in product["fields"]] == ["name", "price"]
+    assert supplier["taxonomies"] == {"region": {"to": "taxoapp.Region", "generated": False}}
+    assert [field["name"] for field in supplier["fields"]] == ["name", "region"]  # adopted
 
 
 @pytest.mark.django_db

@@ -214,6 +214,7 @@ def walk_sql(
     where: str = "",
     where_params: Sequence[Any] = (),
     order_limit: str = "",
+    origin: bool = False,
 ) -> tuple[str, list[Any]]:
     """Experimental. One cycle-safe recursive walk over ``model``'s table, as SQL and params.
 
@@ -224,6 +225,9 @@ def walk_sql(
     row). Each row of the walk has ``node_id``, ``parent_id`` and ``depth``
     (0 for the start rows, which ``include_self=False`` leaves out);
     ``select``, ``where`` and ``order_limit`` shape the final ``SELECT``.
+    ``origin=True`` adds an ``origin`` column: the start row each row was
+    reached from, so one walk up from many nodes pairs each with its
+    ancestors (:mod:`karni.taxonomy` counts rows per ancestor this way).
     """
     quote = connection.ops.quote_name
     table = quote(model._meta.db_table)
@@ -281,12 +285,16 @@ def walk_sql(
     if where:
         final += f" AND ({where})"
     params += [*where_params]
+    base_origin = step_origin = ""
+    if origin:
+        columns = f"origin, {columns}"
+        base_origin, step_origin = f"{pk}, ", "w.origin, "
     sql = (
         f"WITH RECURSIVE {cte}({columns}) AS ("
-        f"SELECT {pk}, {parent}, 0{base_extra} FROM {table} "
+        f"SELECT {base_origin}{pk}, {parent}, 0{base_extra} FROM {table} "
         f"WHERE {start_clause}{restrict_sql} "
         "UNION ALL "
-        f"SELECT {pk}, {parent}, w.depth + 1{step_extra} FROM {step_from} "
+        f"SELECT {step_origin}{pk}, {parent}, w.depth + 1{step_extra} FROM {step_from} "
         f"WHERE {guard}{step_join}{depth_sql}{restrict_sql}"
         f"){tail} "
         f"SELECT {select} FROM {cte} WHERE {final}"

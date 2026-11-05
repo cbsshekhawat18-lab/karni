@@ -176,7 +176,10 @@ class KarniFilterBackend(DjangoFilterBackend):
       :func:`_api_filterable_names`);
     * a tree model (experimental) gets ``?parent=<key>`` / ``?parent=null``
       and ``?descendants_of=<key>`` instead of the plain ``parent`` filter
-      (:mod:`karni.api.tree`).
+      (:mod:`karni.api.tree`);
+    * each key of ``class Karni: taxonomies`` (experimental) gets
+      ``?<key>=<node>,<node>`` and ``?<key>_descendants=true``
+      (:mod:`karni.api.taxonomy`).
 
     On every other view this backend behaves exactly like the stock
     ``DjangoFilterBackend``, and an explicit ``filterset_class`` or
@@ -318,6 +321,9 @@ class KarniFilterBackend(DjangoFilterBackend):
             from karni.api.tree import tree_filters
 
             declared.update(tree_filters(model))
+        from karni.api.taxonomy import taxonomy_filters
+
+        declared.update(taxonomy_filters(model, allowed))
         meta = type("Meta", (), {"model": model, "fields": meta_fields})
         return type(
             f"{model.__name__}AutoFilterSet",

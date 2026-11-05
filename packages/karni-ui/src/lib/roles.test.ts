@@ -120,6 +120,7 @@ describe("package self-registrations", () => {
       "detail-view": "ResourceDetail",
       "empty-state": "EmptyState",
       "error-state": "ErrorState",
+      "facet-panel": "FacetPanel",
       "file-upload": "FileUpload",
       "layout-shell": "Layout",
       "login-form": "LoginForm",

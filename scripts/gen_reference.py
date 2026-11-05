@@ -145,6 +145,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "models",
+        "Taxonomy tagging: one declaration tags a model to tree models (`class Karni: "
+        "taxonomies`), a generated or adopted many-to-many per key, import and export columns "
+        "by natural key, and the `tree:<key>` scope. Experimental tier",
+    ),
+    Capability(
+        "models",
         "A tenant scope on every model (the `karni-tenancy` module)",
         planned="docs/models.md#scopes-the-filters-every-default-manager-applies",
     ),
@@ -198,6 +204,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, "
         "`?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the "
         "OpenAPI document. Experimental tier",
+    ),
+    Capability(
+        "api",
+        "Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, "
+        "`facets/` (rows per node under the list's filters and access, rolled up on request) "
+        "and a tree node's `tagged/` per tagging model. Experimental tier",
     ),
     Capability(
         "api",
@@ -273,6 +285,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`Layout`'s server menu (`navSource=\"server\"`, `useNavigation`): collapsible groups, "
         "icons by name and the current page marked. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`FacetPanel` and `ResourceTable`'s `facets`: rows per node of a taxonomy, and choosing "
+        "nodes filters the table, with `useResourceFacets`. Experimental tier",
     ),
     Capability(
         "ui",

@@ -190,6 +190,7 @@ interface PropertyInfo {
   transitions?: Readonly<Record<string, readonly string[]>>;
   initial?: readonly string[];
   tree?: TreeRef;
+  taxonomy?: string;
 }
 
 function normalizeType(schema: SchemaObject): { type: string | undefined; nullable: boolean } {
@@ -353,6 +354,8 @@ function analyzeProperty(doc: OpenApiDocument, raw: SchemaObject): PropertyInfo 
   };
   const tree = parseTreeExtension(resolved["x-karni-tree"] ?? raw["x-karni-tree"]);
   if (tree !== undefined) info.tree = tree;
+  const taxonomy = resolved["x-karni-taxonomy"] ?? raw["x-karni-taxonomy"];
+  if (typeof taxonomy === "string" && taxonomy !== "") info.taxonomy = taxonomy;
 
   // drf-spectacular nullable/blank enums: oneOf [XEnum, BlankEnum?, NullEnum?].
   const composition = resolved.oneOf ?? resolved.anyOf;
@@ -511,6 +514,8 @@ function mergeField(
   if (initial !== undefined) field.initial = initial;
   const tree = requestInfo?.tree ?? responseInfo?.tree;
   if (tree !== undefined && relation !== undefined) field.tree = tree;
+  const taxonomy = responseInfo?.taxonomy ?? requestInfo?.taxonomy;
+  if (taxonomy !== undefined && relation !== undefined) field.taxonomy = taxonomy;
 
   return field;
 }
@@ -689,6 +694,11 @@ export function parseOpenApi(input: unknown): ParsedSchema {
     const accessItem = paths[`${path}access/`];
     if (isRecord(accessItem) && isRecord(accessItem.get)) {
       operations.access = operationDef(doc, `${path}access/`, "get", accessItem.get);
+    }
+    // Taxonomies (experimental): facets/ under the list path.
+    const facetsItem = paths[`${path}facets/`];
+    if (isRecord(facetsItem) && isRecord(facetsItem.get)) {
+      operations.facets = operationDef(doc, `${path}facets/`, "get", facetsItem.get);
     }
     if (itemPath !== undefined) {
       const base = itemPath.endsWith("/") ? itemPath : `${itemPath}/`;

@@ -1508,6 +1508,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Add 'karni.db.DatabaseRouter' to DATABASE_ROUTERS, after your own routers (the first router with an answer wins). If your own router routes these models, add 'karni.W542' to SILENCED_SYSTEM_CHECKS.
 
+<a id="e570"></a>
+
+#### E570: class Karni: taxonomies is malformed
+
+*exception* · from `karni.taxonomy.declared_taxonomies (raised when the model class is built)`
+
+**Why Karni objects.** taxonomies maps each key to a tree model. The key becomes a many-to-many field of that name and the list parameters ?<key>= and ?<key>_descendants=, so it must be a field name: no leading underscore, no double underscore, not ending in _descendants. The value names the tree model as 'app_label.Model' or the model class.
+
+**Fix.** Write taxonomies = {"region": "geo.Region", "category": "catalog.Category"}, with keys that are field names and values that name tree models.
+
+<a id="e571"></a>
+
+#### E571: A taxonomy points at a model that is not a tree model
+
+*system check (error)* · from `karni.checks.check_taxonomies (karni check)`
+
+**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy: ?<key>_descendants=, the facets rolled up to the ancestors, the node counts and the tree:<key> scope all walk the tree from a node to the nodes below it. A model that is not on karni.models.TreeModel has no parent to walk.
+
+**Fix.** Make the target a tree model (class Region(TreeModel, BaseModel), or tree: true in karni.yaml), or point the key at the tree model you meant. For tags without a hierarchy, declare a plain many-to-many instead of a taxonomy.
+
+<a id="e572"></a>
+
+#### E572: The field a taxonomy adopts is not a many-to-many to its tree
+
+*system check (error)* · from `karni.checks.check_taxonomies (karni check); karni.taxonomy.Taxonomy.field`
+
+**Why Karni objects.** When the model already has an attribute named after a taxonomy key, Karni adopts it instead of generating the many-to-many. Adopting works only for a ManyToManyField to the tree model the key names: the filters, the facets and the scope read its through table.
+
+**Fix.** Declare the field as models.ManyToManyField(<the tree model>, blank=True, ...) under the key's name, rename the other attribute, or remove the field and let Karni generate it.
+
+<a id="e573"></a>
+
+#### E573: A taxonomy filter or endpoint got a parameter it cannot use
+
+*API 400 response* · from `karni.api.taxonomy (?<key>=, ?<key>_descendants=, facets/, <key>/tagged/)`
+
+**Why Karni objects.** ?<key>= takes keys of the tree's nodes separated by commas. ?<key>_descendants=, ?rollup= and ?descendants= take true or false. facets/ counts one taxonomy: ?taxonomy= names it, and may be left out only when the model has one.
+
+**Fix.** Send node keys (?region=3,7), true or false for the flags, and one of the keys the message lists as ?taxonomy=.
+
 ### 6xx · Testing and seeding
 
 <a id="e601"></a>
@@ -3252,7 +3292,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate (karni_cli.spec.validate)`
 
-**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, taxonomies, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now.
+**Why Karni objects.** Some keys are reserved for features Karni adds later (trees, aggregation, cross-entity search, markdown fields), so a spec written today keeps its meaning. pk, external and database were reserved before karni plan and are keys now, and so is taxonomies.
 
 **Fix.** Remove the key, and write that part by hand in the project until the feature ships.
 
@@ -4002,7 +4042,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
 
-**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o), each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
+**Why Karni objects.** tree:<path> reaches the rows whose <path> is a node the user holds or a node below it. The path follows the entity's relation fields (fk, m2m, o2o) and taxonomies, each to an entity of the spec, and the last one must point at an entity with tree: true or tree: ordered. Karni refuses any other path at startup (E490).
 
 **Fix.** Name the entity's relation to the tree, through relations when needed: tree:region, tree:product__categories. Add tree: true to the entity the path ends at, or grant another scope.
 
@@ -4035,6 +4075,46 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** requires is public, authenticated or a permission pattern as in grants (app.entity:action, with * for a part), so role grants and per-user grants open the entry the way they open the API. A pattern that names an entity the spec does not have opens it for nobody.
 
 **Fix.** Write public, authenticated, or a pattern such as shop.product:view, or leave requires out: each page takes its requirement from its access.
+
+<a id="c700"></a>
+
+### C700: A taxonomy key is not a field name the entity can take
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each key of taxonomies becomes a many-to-many field of that name and the list parameters ?<key>= and ?<key>_descendants=, so it is a lowercase field name that does not end in _descendants, and it is not a field a mixin or the tree already gives the entity.
+
+**Fix.** Rename the key, e.g. taxonomies: {region: Region}.
+
+<a id="c701"></a>
+
+### C701: A taxonomy does not point at a tree entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** A taxonomy tags rows with the nodes of a hierarchy, and its filters, facets and the tree:<key> scope walk the tree below a node. The target must be an entity of the spec with tree: true or tree: ordered. Karni refuses another target at startup (E571).
+
+**Fix.** Point the key at a tree entity (Name or app.Name), or add tree: true to the entity it names. For tags without a hierarchy, declare a plain m2m field instead.
+
+<a id="c702"></a>
+
+### C702: A taxonomy key names a field that is not a many-to-many to its tree
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** When the entity declares a field under a taxonomy's key, Karni adopts that field instead of generating one. Only an m2m to the same tree entity can be adopted (E572).
+
+**Fix.** Remove the field and let the taxonomy generate it, declare it as m2m:<the tree entity>, or rename one of them.
+
+<a id="c703"></a>
+
+### C703: An external entity declares taxonomies
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** A taxonomy adds a table of tags next to the entity's table and joins them. An external entity's table belongs to another system, and Karni never writes tables for it.
+
+**Fix.** Remove taxonomies from the external entity, or remove external and let Karni own the table.
 
 ## Agent rules (`K`)
 
@@ -4598,7 +4678,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, error* · enforced by `hand-written-tree`
 
-**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect.
+**Rule.** A hierarchy (categories, regions, organisation units, a menu) is a tree model: `class Region(TreeModel, BaseModel)`, or `OrderedTreeModel` when siblings have an order, or `tree: true` / `tree: ordered` in karni.yaml. Never declare a `parent` foreign key to the model itself, never write recursive SQL or a loop over `.parent`, and never write a tree endpoint or a tree component. `Model.objects.descendants()`, `ancestors()` and `subtree_ids()` walk it, the API serves tree/, children/, ancestors/ and move/, and @karni/ui shows TreeView and TreeSelect. Tag a model to a tree with `class Karni: taxonomies = {"region": "geo.Region"}` (`taxonomies:` in karni.yaml), never a hand-written many-to-many with its own subtree filter or counts: the list filters `?region=` and `?region_descendants=`, facets/ and the tree:region scope come with it.
 
 **Why Karni objects.** Hand-written trees loop on cyclic data, cost one query per level and repeat the same endpoints and widgets in every project. TreeModel's walks are one cycle-safe query each.
 

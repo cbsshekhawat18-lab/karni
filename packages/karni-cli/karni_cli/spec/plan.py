@@ -13,7 +13,8 @@ field that becomes required, a choice or state dropped, another kind), a
 relation pointed at another entity, a module removed, an entity's key type
 switched (out of scope for ``karni build``), an entity moved to another
 database, an entity made a tree or flat again or its siblings' order dropped
-(``tree``, experimental), and access widened (writes from a role to every signed-in user or
+(``tree``, experimental), a taxonomy removed or pointed at another tree (its
+tags go, experimental), and access widened (writes from a role to every signed-in user or
 to everyone, reads to everyone, a role's grant from its own rows to all).
 ``karni build`` (app-builder item A3) refuses them without
 ``--allow-destructive``. Each risky change names the rows it affects, as a
@@ -111,7 +112,7 @@ _FEATURE_SETTINGS: Final = {
     "user_grants": "KARNI_USER_GRANTS",
 }
 #: Entity options whose change writes a migration (the others live in class Karni or the viewset).
-_MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree"})
+_MIGRATED: Final = frozenset({"order", "pk", "external", "table", "database", "tree", "taxonomies"})
 _OPTIONS: Final = (
     "pk",
     "external",
@@ -119,6 +120,7 @@ _OPTIONS: Final = (
     "writable",
     "database",
     "tree",
+    "taxonomies",
     "key",
     "search",
     "owner",
@@ -832,6 +834,19 @@ def _entities_and_fields(ctx: _Context) -> None:
         ctx.migrate(old_label)
 
 
+def _taxonomy_risk(old: Any, new: Any) -> str | None:
+    """Experimental. Why a ``taxonomies`` change loses tags, or ``None`` when it only adds keys.
+
+    A key that goes away, or points at another tree, drops its many-to-many
+    and every tag it holds.
+    """
+    before, after = dict(old or {}), dict(new or {})
+    lost = sorted(key for key, tree in before.items() if after.get(key) != tree)
+    if not lost:
+        return None
+    return f"the tags under {', '.join(lost)} are dropped with their table"
+
+
 def _tree_risk(old: Any, new: Any, label: str) -> tuple[str | None, tuple[Count, ...]]:
     """Experimental. ``(reason, counts)`` for a ``tree`` change. ``reason`` ``None``: not risky.
 
@@ -862,6 +877,9 @@ def _options(
         counts: tuple[Count, ...] = ()
         if key == "tree":
             reason, counts = _tree_risk(old, new, old_label)
+            risky = reason is not None
+        elif key == "taxonomies":
+            reason = _taxonomy_risk(old, new)
             risky = reason is not None
         elif key == "pk" and old is not None and new is not None:
             risky = True

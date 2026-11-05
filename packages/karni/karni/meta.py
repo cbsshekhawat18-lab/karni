@@ -225,6 +225,16 @@ OPTIONS: Final[tuple[Option, ...]] = (
         "(`karni.db.DatabaseRouter`).",
         'database = "warehouse"',
     ),
+    # taxonomy tagging (karni.taxonomy, experimental)
+    Option(
+        "taxonomies",
+        "`{}`",
+        "Experimental. Tag the model to tree models: key -> tree model. Each key is a "
+        "many-to-many of that name (generated, or yours adopted), the list filters "
+        "`?<key>=` and `?<key>_descendants=`, the `facets/` counts and the `tree:<key>` scope "
+        "([models: taxonomies](models.md#taxonomies)).",
+        'taxonomies = {"region": "geo.Region", "category": "catalog.Category"}',
+    ),
 )
 
 

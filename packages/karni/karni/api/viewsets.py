@@ -307,6 +307,11 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
     #: Experimental. The most levels ``?depth=`` may ask for.
     tree_max_depth: ClassVar[int] = 10
 
+    #: Experimental. The taxonomy actions (:mod:`karni.api.taxonomy`): ``facets`` is served
+    #: when the model declares ``class Karni: taxonomies``, ``tagged`` when a taxonomy of
+    #: another model points at this tree model.
+    taxonomy_actions: ClassVar[frozenset[str]] = frozenset({"facets", "tagged"})
+
     #: Actions governed by ``access.create`` **or** ``access.write`` (an
     #: import creates some rows and changes others); the action decides per
     #: row. ``import_data = False`` on a subclass removes the import routes.
@@ -363,23 +368,55 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
 
     @classmethod
     def get_extra_actions(cls) -> list[Any]:
-        """DRF's extra actions, without the tree actions unless the model is a tree model."""
+        """DRF's extra actions, without the tree and taxonomy actions the model does not use.
+
+        The tree actions need a tree model, ``facets`` a model with taxonomies
+        and ``tagged`` a tree model a taxonomy points at.
+        """
         actions: list[Any] = list(super().get_extra_actions())
-        if cls.serves_tree():
-            return actions
-        return [extra for extra in actions if extra.__name__ not in cls.tree_actions]
+        hidden: set[str] = set()
+        if not cls.serves_tree():
+            hidden |= cls.tree_actions
+        if not cls.serves_facets():
+            hidden.add("facets")
+        if not cls.serves_tagged():
+            hidden.add("tagged")
+        return [extra for extra in actions if extra.__name__ not in hidden]
+
+    @classmethod
+    def _served_model(cls) -> type[Model] | None:
+        model = cls.model
+        if model is None and cls.queryset is not None:
+            model = cls.queryset.model
+        return model
 
     @classmethod
     def serves_tree(cls) -> bool:
         """Experimental. Whether the viewset's model is a :class:`karni.models.TreeModel`."""
-        model = cls.model
-        if model is None and cls.queryset is not None:
-            model = cls.queryset.model
+        model = cls._served_model()
         if model is None:
             return False
         from karni.tree import is_tree_model
 
         return is_tree_model(model)
+
+    @classmethod
+    def serves_facets(cls) -> bool:
+        """Experimental. Whether the model declares taxonomies, so ``facets/`` is routed."""
+        if "facets" not in cls.taxonomy_actions:
+            return False
+        from karni.api.taxonomy import serves_facets
+
+        return serves_facets(cls._served_model())
+
+    @classmethod
+    def serves_tagged(cls) -> bool:
+        """Experimental. Whether a taxonomy points at the model, so ``<key>/tagged/`` is routed."""
+        if "tagged" not in cls.taxonomy_actions:
+            return False
+        from karni.api.taxonomy import serves_tagged
+
+        return serves_tagged(cls._served_model())
 
     # model & access
 
@@ -935,6 +972,40 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
         from karni.api.tree import tree_node_serializer
 
         return tree_node_serializer(self._row_serializer_class())
+
+    # taxonomies (experimental, karni.api.taxonomy): routed only when the model uses them
+
+    @action(detail=False, methods=["get"], url_path="facets")
+    def facets(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/facets/?taxonomy=&rollup=``: rows per node, under the list's filters.
+
+        Experimental. How many of the rows the list shows for this request are
+        tagged with each node of one taxonomy (class Karni: taxonomies),
+        rolled up to the ancestors with rollup=true (karni.api.taxonomy).
+        """
+        from karni.api.taxonomy import facets_response
+
+        return facets_response(self, request)
+
+    @action(detail=True, methods=["get"], url_path="tagged")
+    def tagged(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """``GET /<resource>/<id>/tagged/?descendants=``: the rows tagged with the node, per model.
+
+        Experimental. For each model whose taxonomy points at this tree, how
+        many of its rows the requester may read are tagged with the node
+        (or, with descendants=true, with the node or a node below it).
+        """
+        from karni.api.taxonomy import tagged_response
+
+        return tagged_response(self, request)
+
+    def facet_queryset(self) -> QuerySet[Any]:
+        """Experimental. The rows ``facets/`` counts: the list's, filters and search applied.
+
+        Override / escape hatch: return another queryset of the model (for
+        example without one filter, so a facet keeps counting its own options).
+        """
+        return self.filter_queryset(self.get_queryset())
 
     # writes & serializers
 

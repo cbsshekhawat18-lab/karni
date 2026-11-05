@@ -667,6 +667,56 @@ def test_a_tree_entity_builds_a_tree_model_and_a_switch_back_is_risky(
     assert code == 1 and "error C270" in out, out
 
 
+def test_taxonomies_build_the_many_to_many_and_a_tree_scope_on_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = GEO.replace(
+        '          Product: {fields: {name: str, category: "fk:Category?", regions: "m2m:Region?"}}\n',
+        "          Product:\n"
+        "            fields: {name: str}\n"
+        "            taxonomies: {region: Region, category: Category}\n"
+        "            groups: {Main: [name]}\n",
+    ).replace(
+        "    apps:\n",
+        "    roles:\n"
+        '      staff: {name: Staff, system: true, grants: {"*": all}}\n'
+        "      buyer: {grants: {geo.product:view: 'tree:region'}}\n"
+        "    apps:\n",
+    )
+    root = _project(tmp_path, monkeypatch, "Geo Shop", spec)
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "taxonomies category geo.Category, region geo.Region" in plan, plan
+    code, out = _build()
+    assert code == 0, out
+    karni = (root / "geo" / "karni" / "models.py").read_text()
+    assert 'taxonomies = {"region": "geo.Region", "category": "geo.Category"}' in karni, karni
+    assert "region =" not in karni  # class Karni: taxonomies adds the field
+    assert '(None, {"fields": ["region", "category"]})' in karni  # the admin form shows them
+    (migration,) = (root / "geo" / "migrations").glob("0001_*.py")
+    text = migration.read_text().replace('"', "'")
+    assert re.search(r"\('region',\s+models\.ManyToManyField\(", text), text
+    assert "to='geo.region'" in text and "related_name='+'" in text
+    tables = "select name from sqlite_master where type = 'table' and name like 'geo_product_%'"
+    assert sorted(_rows(root, tables)) == [("geo_product_category",), ("geo_product_region",)]
+    # the sync after migrate resolved tree:region through the taxonomy (E490 otherwise)
+    assert _rows(
+        root,
+        "select scope, scope_path from karni_accounts_rolepermission r "
+        "join karni_accounts_role o on o.id = r.role_id where o.slug = 'buyer'",
+    ) == [("tree", "region")]
+    # the project reads back as the spec: the taxonomies come back from the facts
+    again = CliRunner().invoke(app, ["plan", "--offline"])
+    assert again.output == "No changes: the project matches karni.yaml.\n", again.output
+    _edit(
+        root / "karni.yaml",
+        ("taxonomies: {region: Region, category: Category}", "taxonomies: {region: Region}"),
+    )
+    plan = CliRunner().invoke(app, ["plan", "--offline"]).output
+    assert "geo.Product taxonomies" in plan and "the tags under category are dropped" in plan, plan
+    code, out = _build()
+    assert code == 1 and "error C270" in out, out
+
+
 # the output -----------------------------------------------------------------------
 
 
