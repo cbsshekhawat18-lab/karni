@@ -548,9 +548,9 @@ BASE: dict[str, Any] = {
         # The admin wears @karni/ui's brand (see karni.admin.theme): the token
         # stylesheet and the unfold bridge load first, and the colours below
         # read the tokens, so they follow the light/dark theme and a project's
-        # token overrides. THEME comes from KARNI_ADMIN_THEME (light by
-        # default, so the light/dark/system switch is hidden): karni_settings()
-        # wires it in, see karni.conf.admin_theme.
+        # token overrides. The admin is light only: THEME pins unfold's
+        # light palette and hides its light/dark/system switch.
+        "THEME": "light",
         "BORDER_RADIUS": "var(--karni-radius-md)",
         "STYLES": [
             "karni.admin.theme.tokens_stylesheet",
@@ -610,10 +610,6 @@ BASE: dict[str, Any] = {
     # follow the grant's scope). False: only Django's model permissions open
     # pages, as in 0.4.0 (karni.admin.base.KarniAdminMixin.granted).
     "KARNI_ADMIN_GRANTS_OPEN_PAGES": env.bool("KARNI_ADMIN_GRANTS_OPEN_PAGES", default=True),
-    # The admin's colour scheme: "light" (the default: light only, no switch),
-    # "dark", or "auto" (unfold's light/dark/system switch). Wired into
-    # UNFOLD["THEME"] by karni_settings(), read per request.
-    "KARNI_ADMIN_THEME": env("KARNI_ADMIN_THEME", default="light"),
     # <meta name="generator"> on Karni's public pages ({% karni_seo %}), so tools
     # that list a site's technologies see Karni. No version on purpose. "" turns it off.
     "KARNI_GENERATOR": env("KARNI_GENERATOR", default="Karni"),
