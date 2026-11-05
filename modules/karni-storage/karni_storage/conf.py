@@ -60,6 +60,13 @@ DEFAULTS: dict[str, Any] = {
     ),
     # The format thumbnails are written in (Pillow's name).
     "KARNI_STORAGE_THUMBNAIL_FORMAT": env("KARNI_STORAGE_THUMBNAIL_FORMAT", default="WEBP"),
+    # The rate limits of the three endpoints, per caller: download, upload and
+    # confirm (scopes storage.download, ...). A rate under the scope in
+    # REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] wins. None turns a limit off.
+    "KARNI_STORAGE_THROTTLE_RATES": env.json(
+        "KARNI_STORAGE_THROTTLE_RATES",
+        default={"download": "1000/hour", "upload": "120/hour", "confirm": "120/hour"},
+    ),
     # The STORAGES alias that, when the project defines it, replaces the
     # module's storage (an escape hatch: any backend).
     "KARNI_STORAGE_ALIAS": env("KARNI_STORAGE_ALIAS", default="protected"),

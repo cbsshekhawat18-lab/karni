@@ -269,6 +269,31 @@ import { ProtectedFileInput, ProtectedFileLink, ProtectedImage } from "@karni/st
   `transport` replaces the request to the bucket (the default is
   XMLHttpRequest, for its progress events).
 
+## Rate limits
+
+Each endpoint is limited per caller (the user, else the client IP) under a
+throttle scope of its own, with Karni's action throttle. Past the limit it
+answers 429 with `Retry-After`. A signed download link counts against the IP
+that opens it. The project-wide `anon` and `user` throttles still apply.
+
+| Scope | Endpoint | Default |
+|---|---|---|
+| `storage.download` | `GET <resource>/<id>/files/<field>/` (a thumbnail too) | `1000/hour` |
+| `storage.upload` | `POST <resource>/files/<field>/upload/` | `120/hour` |
+| `storage.confirm` | `POST <resource>/files/<field>/confirm/` | `120/hour` |
+
+`KARNI_STORAGE_THROTTLE_RATES` sets the module's rates:
+
+```python
+KARNI_STORAGE_THROTTLE_RATES = {"download": "3000/hour", "upload": "60/hour", "confirm": "60/hour"}
+```
+
+A rate under the scope in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` wins
+over it, as for Karni's viewset throttles, and `None` in either turns that
+limit off. A list page that shows many thumbnails asks for one link each, so
+raise `download` for such pages rather than turning it off. A rate the
+setting does not take fails `karni check` (`STORE005`).
+
 ## karni.yaml, karni plan and karni build
 
 ```yaml
@@ -282,7 +307,7 @@ apps:
 ```
 
 The module's options are its `KARNI_STORAGE_*` settings without the prefix
-(`provider`, `url_expiry`, `thumbnail_sizes`, ...). `karni plan --questions`
+(`provider`, `url_expiry`, `thumbnail_sizes`, `throttle_rates`, ...). `karni plan --questions`
 asks the provider until the spec names one. `karni plan` shows `+ storage:
 provider r2` and the fields. `karni build` runs `karni add storage`, writes
 `KARNI_STORAGE_PROVIDER` into the `karni:spec` block of `config/settings.py`,
@@ -318,6 +343,7 @@ The API's answers are `STORE010` to `STORE020` ([error codes](errors.md)).
 | `KARNI_STORAGE_MAX_SIZE` | `10485760` | The size limit of a field without `max_size` |
 | `KARNI_STORAGE_THUMBNAIL_SIZES` | `{"small": [160, 160], "medium": [640, 640]}` | Thumbnail names and bounding boxes |
 | `KARNI_STORAGE_THUMBNAIL_FORMAT` | `WEBP` | The thumbnails' format |
+| `KARNI_STORAGE_THROTTLE_RATES` | `{"download": "1000/hour", "upload": "120/hour", "confirm": "120/hour"}` | The endpoints' rate limits, per caller (scopes `storage.download`, `storage.upload`, `storage.confirm`) |
 | `KARNI_STORAGE_ALIAS` | `protected` | A `STORAGES` alias that replaces the module's storage |
 | `R2_ACCOUNT_ID` | `""` | Cloudflare R2's account id |
 

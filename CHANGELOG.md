@@ -30,9 +30,12 @@ apply codemods and list the manual steps. This file is the human summary.
   presigned PUT where the service takes no POST policy), the browser sends
   the file to the bucket, and `POST .../confirm/` checks the object's
   existence, size and type before a row may point at it, through a token
-  only that user may use for that field. Thumbnails of protected images are
-  made by a Celery task with core's thumbnailer and served through the same
-  path (`?size=small`). `karni check` fails for an unknown preset
+  only that user may use for that field. The three endpoints are limited
+  per caller under their own throttle scopes (`storage.download`,
+  `storage.upload`, `storage.confirm`, rates in
+  `KARNI_STORAGE_THROTTLE_RATES`) and answer 429 past the limit.
+  Thumbnails of protected images are made by a Celery task with core's
+  thumbnailer and served through the same path (`?size=small`). `karni check` fails for an unknown preset
   (`STORE001`), missing credentials (`STORE002`), a missing region, account
   id, endpoint or bucket (`STORE003`) and a missing URL include
   (`STORE004`). Codes `STORE001` to `STORE020`, and `C720` for a protected

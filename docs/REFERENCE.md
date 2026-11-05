@@ -1844,6 +1844,7 @@ class Lead(BaseModel):
 | `KARNI_STORAGE_MAX_SIZE` | `KARNI_STORAGE_MAX_SIZE` | `10 * 1024 * 1024` | The size limit of a protected field without max_size, in bytes (10 MiB). |
 | `KARNI_STORAGE_THUMBNAIL_SIZES` | `KARNI_STORAGE_THUMBNAIL_SIZES` | `{"small": [160, 160], "medium": [640, 640]}` | Thumbnails of protected images: name -&gt; [width, height] (a bounding box). |
 | `KARNI_STORAGE_THUMBNAIL_FORMAT` | `KARNI_STORAGE_THUMBNAIL_FORMAT` | `"WEBP"` | The format thumbnails are written in (Pillow's name). |
+| `KARNI_STORAGE_THROTTLE_RATES` | `KARNI_STORAGE_THROTTLE_RATES` | `{"download": "1000/hour", "upload": "120/hour", "confirm": "120/hour"}` | The rate limits of the three endpoints, per caller: download, upload and confirm (scopes storage.download, ...). A rate under the scope in REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] wins. None turns a limit off. |
 | `KARNI_STORAGE_ALIAS` | `KARNI_STORAGE_ALIAS` | `"protected"` | The STORAGES alias that, when the project defines it, replaces the module's storage (an escape hatch: any backend). |
 | `R2_ACCOUNT_ID` | `R2_ACCOUNT_ID` | `""` | Cloudflare R2's account id: the r2 preset's endpoint is built from it. |
 

@@ -26,8 +26,14 @@ Files are served inline only for types a browser shows safely (images other
 than SVG, PDF, plain text, audio and video), else as an attachment, always
 with ``X-Content-Type-Options: nosniff``.
 
-Override / escape hatch: the row's viewset decides who may do what. Put your
-own ``path()`` before the include to replace one endpoint.
+Each endpoint is limited per caller under its own throttle scope,
+``storage.download``, ``storage.upload`` and ``storage.confirm``
+(:mod:`karni_storage.throttling`): past the limit it answers 429.
+
+Override / escape hatch: the row's viewset decides who may do what,
+``KARNI_STORAGE_THROTTLE_RATES`` (or the scope in
+``REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]``) sets each limit. Put your own
+``path()`` before the include to replace one endpoint.
 """
 
 from __future__ import annotations
@@ -54,6 +60,7 @@ from karni_storage.access import Target, may_upload, resolve, retrieve
 from karni_storage.errorcodes import coded
 from karni_storage.serializers import content_type_of, limit_problem
 from karni_storage.storage import is_s3, object_key, protected_storage, s3_client
+from karni_storage.throttling import StorageRateThrottle
 from karni_storage.tokens import (
     TokenError,
     Upload,
@@ -95,11 +102,23 @@ _PATH = [
 ]
 
 
-class FileView(APIView):
-    """Experimental. ``GET <resource>/<id>/files/<field>/``: one row's protected file."""
+class _Limited(APIView):
+    """The module's views: the row's viewset is the gate, the module's throttle the limit."""
 
     #: The row's own viewset is the gate (karni_storage.access.retrieve).
     permission_classes: ClassVar[list[Any]] = []
+    #: The endpoint's throttle scope is ``storage.<throttle_action>``.
+    throttle_action: ClassVar[str] = ""
+
+    def get_throttles(self) -> list[Any]:
+        """The project's throttles, then :class:`StorageRateThrottle` (429 past the limit)."""
+        return [*super().get_throttles(), StorageRateThrottle()]
+
+
+class FileView(_Limited):
+    """Experimental. ``GET <resource>/<id>/files/<field>/``: one row's protected file."""
+
+    throttle_action = "download"
 
     def _name(self, target: Target, row: Any, size: str) -> str:
         value = getattr(row, target.field.attname, None)
@@ -263,10 +282,10 @@ def _storage_name(target: Target, filename: str) -> str:
     return posixpath.join(directory, secrets.token_hex(8), f"{stem}{dot}{extension}")
 
 
-class UploadView(APIView):
+class UploadView(_Limited):
     """Experimental. ``POST <resource>/files/<field>/upload/``: where the browser sends a file."""
 
-    permission_classes: ClassVar[list[Any]] = []
+    throttle_action = "upload"
 
     @extend_schema(
         parameters=_PATH, request=StorageUploadSerializer, responses={200: OpenApiTypes.OBJECT}
@@ -330,10 +349,10 @@ class UploadView(APIView):
         return Response(answer)
 
 
-class ConfirmView(APIView):
+class ConfirmView(_Limited):
     """Experimental. ``POST <resource>/files/<field>/confirm/``: check a direct upload."""
 
-    permission_classes: ClassVar[list[Any]] = []
+    throttle_action = "confirm"
 
     @extend_schema(
         parameters=_PATH, request=StorageConfirmSerializer, responses={200: OpenApiTypes.OBJECT}

@@ -29,6 +29,16 @@ celery_app = create_celery_app("karni-storage-tests")
 ProductFactory = Callable[..., Product]
 
 
+@pytest.fixture(autouse=True)
+def _fresh_throttle_history() -> Iterator[None]:
+    """Throttle history lives in the cache: every test starts with none."""
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
 @pytest.fixture
 def owner(db: None) -> Any:
     return get_user_model().objects.create_user(email="owner@example.com", password="pw")

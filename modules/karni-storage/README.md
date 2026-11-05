@@ -59,6 +59,7 @@ file (`KARNI_STORAGE=local`). `?size=small` serves a thumbnail of an image.
 | `KARNI_STORAGE_MAX_SIZE` | same | `10485760` | The size limit of a field without `max_size` |
 | `KARNI_STORAGE_THUMBNAIL_SIZES` | same (JSON) | `{"small": [160, 160], "medium": [640, 640]}` | Thumbnail names and bounding boxes |
 | `KARNI_STORAGE_THUMBNAIL_FORMAT` | same | `WEBP` | The thumbnails' format |
+| `KARNI_STORAGE_THROTTLE_RATES` | same (JSON) | `{"download": "1000/hour", "upload": "120/hour", "confirm": "120/hour"}` | Rate limits per caller, scopes `storage.download`, `storage.upload`, `storage.confirm`. A rate under the scope in `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` wins |
 | `KARNI_STORAGE_ALIAS` | same | `protected` | A `STORAGES` alias that, when defined, replaces the module's storage |
 | `R2_ACCOUNT_ID` | same | `""` | Cloudflare R2's account id (the `r2` preset builds its endpoint from it) |
 

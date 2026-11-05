@@ -2404,7 +2404,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Why Karni objects.** The module would fail on the first upload or the first thumbnail.
 
-**Fix.** KARNI_STORAGE_UPLOAD_METHOD takes post, put or nothing. KARNI_STORAGE_CREDENTIALS takes keys or chain. KARNI_STORAGE_THUMBNAIL_SIZES maps a name to [width, height] in pixels, e.g. {"small": [160, 160]}.
+**Fix.** KARNI_STORAGE_UPLOAD_METHOD takes post, put or nothing. KARNI_STORAGE_CREDENTIALS takes keys or chain. KARNI_STORAGE_THUMBNAIL_SIZES maps a name to [width, height] in pixels, e.g. {"small": [160, 160]}. KARNI_STORAGE_THROTTLE_RATES maps download, upload or confirm to a rate such as "120/hour", or None.
 
 <a id="store006"></a>
 

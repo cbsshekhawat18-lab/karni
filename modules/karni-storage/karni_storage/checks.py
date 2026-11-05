@@ -40,9 +40,10 @@ def run_checks() -> list[str]:
         return []
     from karni_storage.access import route_for_model
     from karni_storage.presets import problems
+    from karni_storage.throttling import rate_problems
     from karni_storage.thumbnails import size_problems
 
-    found = [*problems(), *size_problems()]
+    found = [*problems(), *size_problems(), *rate_problems()]
     models = _models_with_protected_fields()
     if not models:
         return found

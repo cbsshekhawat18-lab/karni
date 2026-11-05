@@ -93,7 +93,8 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         fix=(
             "KARNI_STORAGE_UPLOAD_METHOD takes post, put or nothing. KARNI_STORAGE_CREDENTIALS "
             "takes keys or chain. KARNI_STORAGE_THUMBNAIL_SIZES maps a name to [width, height] "
-            'in pixels, e.g. {"small": [160, 160]}.'
+            'in pixels, e.g. {"small": [160, 160]}. KARNI_STORAGE_THROTTLE_RATES maps download, '
+            'upload or confirm to a rate such as "120/hour", or None.'
         ),
     ),
     ErrorCode(
