@@ -17,23 +17,40 @@ from . import acceptance, execute, paths, records, starts
 from .database import Postgres, database_name
 
 
-def build_reference(task: str, project: Path, python: Path, env: dict[str, str]) -> float:
-    """Copy the task's reference files over the project and run ``karni build``. Returns seconds."""
-    source = paths.REFERENCE_DIR / task
-    if not source.is_dir():
-        raise SystemExit(f"There is no reference solution for {task!r} in {source}")
-    for file in sorted(source.rglob("*")):
-        if file.is_file() and "__pycache__" not in file.parts:
-            target = project / file.relative_to(source)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(file, target)
-    started = time.monotonic()
+def _karni_build(project: Path, python: Path, env: dict[str, str]) -> None:
     done = subprocess.run(
         [str(python.parent / "karni"), "build"], cwd=project, env=env, capture_output=True,
         text=True, timeout=1800, check=False,
     )  # fmt: skip
     if done.returncode != 0:
-        raise SystemExit(f"karni build failed for {task}:\n{(done.stdout + done.stderr)[-2500:]}")
+        raise SystemExit(f"karni build failed:\n{(done.stdout + done.stderr)[-2500:]}")
+
+
+def build_reference(task: str, project: Path, python: Path, env: dict[str, str]) -> float:
+    """Build the task's reference in two steps, as an agent does. Returns the seconds.
+
+    First ``karni.yaml`` alone and ``karni build``, which adds the modules and writes the apps
+    with their stubs. Then the project's own files (domain code, urls, commands) over those,
+    and ``karni build`` again for the migrations, the seed, the tests and ``karni check``.
+    """
+    source = paths.REFERENCE_DIR / task
+    if not source.is_dir():
+        raise SystemExit(f"There is no reference solution for {task!r} in {source}")
+    started = time.monotonic()
+    shutil.copyfile(source / "karni.yaml", project / "karni.yaml")
+    _karni_build(project, python, env)
+    for file in sorted(source.rglob("*")):
+        if file.is_file() and "__pycache__" not in file.parts and file.name != "karni.yaml":
+            target = project / file.relative_to(source)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(file, target)
+    _karni_build(project, python, env)
+    done = subprocess.run(
+        [str(python.parent / "karni"), "check"], cwd=project, env=env, capture_output=True,
+        text=True, timeout=900, check=False,
+    )  # fmt: skip
+    if done.returncode != 0:
+        raise SystemExit(f"karni check failed:\n{(done.stdout + done.stderr)[-2500:]}")
     return round(time.monotonic() - started, 1)
 
 
