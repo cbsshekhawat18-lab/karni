@@ -11,6 +11,16 @@ apply codemods and list the manual steps. This file is the human summary.
 
 ## 0.5.0 (unreleased)
 
+- **Medintel, the large-app reference.** `examples/medintel` is a
+  medical-intelligence portal on synthetic data, built from `karni.yaml` with
+  `karni build`: two trees, taxonomies, per-user grants on tree nodes,
+  aggregates and saved charts, cross-model search, markdown fields, a menu
+  from data, both sign-in methods with the terms gate, and import and export,
+  in 486 lines of project code. Its tests and a CI job (`medintel`) run it,
+  and the [friction log](docs/friction/medintel.md) lists what it had to work
+  around. Two fixes came out of it: `karni seed --reset` now wipes a tree
+  leaves first, and `assert_crud`'s list check follows the pages, so a seeded
+  table no longer hides the new row.
 - **Production email is set up, or the deploy check says so.** `karni_settings()`
   reads the mail server from `EMAIL_URL` (`smtp+tls://user:password@host:587`)
   and `DEFAULT_FROM_EMAIL` and `SERVER_EMAIL` from the environment, and

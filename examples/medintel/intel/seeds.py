@@ -38,16 +38,51 @@ CONDITIONS = {
 }
 # Five categories, two groups and two invented products each: 35 nodes.
 INTERVENTIONS = {
-    "Biologics": {"Antibody drug": ["Veltrimab", "Orlanumab"], "Protein drug": ["Pellaceptor", "Kestrelase"]},
-    "Small molecules": {"Kinase blocker": ["Doranib", "Sablenib"], "Enzyme blocker": ["Quintostat", "Marrinostat"]},
-    "Cell and gene": {"Cell therapy": ["Veltra-T", "Orlund-NK"], "Gene therapy": ["Pellavec", "Kestrelgene"]},
-    "Vaccines": {"Protein vaccine": ["Doravax", "Sablevax"], "Nucleic acid": ["Quintvax", "Marrinvax"]},
-    "Devices": {"Implant device": ["Veltra stent", "Orlund valve"], "Monitor device": ["Pellan patch", "Kestrel sensor"]},
+    "Biologics": {
+        "Antibody drug": ["Veltrimab", "Orlanumab"],
+        "Protein drug": ["Pellaceptor", "Kestrelase"],
+    },
+    "Small molecules": {
+        "Kinase blocker": ["Doranib", "Sablenib"],
+        "Enzyme blocker": ["Quintostat", "Marrinostat"],
+    },
+    "Cell and gene": {
+        "Cell therapy": ["Veltra-T", "Orlund-NK"],
+        "Gene therapy": ["Pellavec", "Kestrelgene"],
+    },
+    "Vaccines": {
+        "Protein vaccine": ["Doravax", "Sablevax"],
+        "Nucleic acid": ["Quintvax", "Marrinvax"],
+    },
+    "Devices": {
+        "Implant device": ["Veltra stent", "Orlund valve"],
+        "Monitor device": ["Pellan patch", "Kestrel sensor"],
+    },
 }
-_PREFIXES = ["Alder", "Brook", "Cinder", "Dawn", "Ember", "Fenn", "Garnet", "Heron", "Iris", "Juniper"]
+_PREFIXES = [
+    "Alder",
+    "Brook",
+    "Cinder",
+    "Dawn",
+    "Ember",
+    "Fenn",
+    "Garnet",
+    "Heron",
+    "Iris",
+    "Juniper",
+]
 _SUFFIXES = ["Therapeutics", "Biosciences", "Pharma", "Medical"]
 _GIVEN = ["Asha", "Bruno", "Cleo", "Dario", "Esme", "Farid", "Greta", "Hugo", "Ines", "Jonas"]
-_FAMILY = ["Ashdown", "Bellweather", "Corrigan", "Dunmore", "Eastwick", "Fairbairn", "Grafton", "Hollis"]
+_FAMILY = [
+    "Ashdown",
+    "Bellweather",
+    "Corrigan",
+    "Dunmore",
+    "Eastwick",
+    "Fairbairn",
+    "Grafton",
+    "Hollis",
+]
 _ENDINGS = ["ra", "ex", "on", "ix", "al", "um", "is", "or"]
 #: Customer logins (KARNI_SEED_LOGINS): the nodes of each tree they are granted.
 CUSTOMERS = {
@@ -67,7 +102,9 @@ def _plant(context: SeedContext, code: str, spec: Any, parent: Any = None) -> li
     A node's code is its prefix and its place (C1.2.1): the codes stay unique and short.
     """
     rows: list[Any] = []
-    for place, (name, below) in enumerate(spec.items() if isinstance(spec, dict) else ((n, []) for n in spec), 1):
+    for place, (name, below) in enumerate(
+        spec.items() if isinstance(spec, dict) else ((n, []) for n in spec), 1
+    ):
         row = context.create(1, code=f"{code}{place}", name=name, parent=parent)[0]
         rows += [row, *_plant(context, f"{row.code}.", below, row)]
     return rows
@@ -94,7 +131,9 @@ class CompanySeeder(karni.CompanySeeder):
 
 class PersonSeeder(karni.PersonSeeder):
     name = factory.Sequence(lambda n: f"{_GIVEN[n % 10]} {_FAMILY[n // 10 % 8]}")
-    email = factory.Sequence(lambda n: f"{_GIVEN[n % 10]}.{_FAMILY[n // 10 % 8]}{n}@example.com".lower())
+    email = factory.Sequence(
+        lambda n: f"{_GIVEN[n % 10]}.{_FAMILY[n // 10 % 8]}{n}@example.com".lower()
+    )
 
 
 class BrandSeeder(karni.BrandSeeder):
@@ -126,7 +165,11 @@ class TrialSeeder(karni.TrialSeeder):
 
 class DealSeeder(karni.DealSeeder):
     def seed(self, context: SeedContext) -> list[Any]:
-        rng, companies, interventions = context.random, list(Company.objects.order_by("name")), _leaves(Intervention)
+        rng, companies, interventions = (
+            context.random,
+            list(Company.objects.order_by("name")),
+            _leaves(Intervention),
+        )
         rows = []
         for n in range(context.count):
             buyer, seller = rng.sample(companies, 2)
@@ -159,8 +202,15 @@ class UserGrantSeeder(Seeder):
                 ("tree:interventions", Intervention, ["intel.*:view"]),
                 ("tree:company__interventions", Intervention, ["intel.person:view"]),
             ):
-                targets = [tree.objects.get(name=name).pk for name in nodes.get(scope.split(":")[1].split("__")[-1], [])]
-                rows += [grants.grant(None, user, p, scope, targets=targets, reason=REASON) for p in patterns if targets]
+                targets = [
+                    tree.objects.get(name=name).pk
+                    for name in nodes.get(scope.split(":")[1].split("__")[-1], [])
+                ]
+                rows += [
+                    grants.grant(None, user, p, scope, targets=targets, reason=REASON)
+                    for p in patterns
+                    if targets
+                ]
         return rows
 
 
@@ -175,11 +225,24 @@ class ChartSeeder(Seeder):
         count = 1
 
     def seed(self, context: SeedContext) -> list[Any]:
-        sum_by_year = {"kind": "bar", "y_metric": "sum", "y_value": "value", "y_label": "Value (USD)"}
+        sum_by_year = {
+            "kind": "bar",
+            "y_metric": "sum",
+            "y_value": "value",
+            "y_label": "Value (USD)",
+        }
         count_by_year = {"kind": "line", "y_metric": "count", "y_label": "Deals"}
         return [
             Chart.objects.update_or_create(
-                slug=slug, defaults={"name": name, "source": "deals", "x_field": "year", "x_label": "Year", "allowed_filters": FILTERS, **fields}
+                slug=slug,
+                defaults={
+                    "name": name,
+                    "source": "deals",
+                    "x_field": "year",
+                    "x_label": "Year",
+                    "allowed_filters": FILTERS,
+                    **fields,
+                },
             )[0]
             for slug, name, fields in (
                 ("deal-value-by-year", "Deal value by year", sum_by_year),

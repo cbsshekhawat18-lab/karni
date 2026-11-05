@@ -45,38 +45,57 @@ def test_a_code_signs_in_and_the_terms_gate_comes_next(api, django_capture_on_co
     refused = api.get("/api/trials/")
     assert refused.status_code == 403 and refused.json()["code"] == "E245"
     version = settings.KARNI_TERMS["version"]
-    assert api.post("/api/auth/terms/accept/", {"version": version}, format="json").status_code in (200, 201)
+    assert api.post("/api/auth/terms/accept/", {"version": version}, format="json").status_code in (
+        200,
+        201,
+    )
     assert api.get("/api/trials/").status_code == 200
 
 
 def test_a_wrong_code_is_refused(api, django_capture_on_commit_callbacks):
     send_code(api, CUSTOMER, django_capture_on_commit_callbacks)
-    response = api.post("/api/auth/otp/verify/", {"email": CUSTOMER, "code": "000000"}, format="json")
+    response = api.post(
+        "/api/auth/otp/verify/", {"email": CUSTOMER, "code": "000000"}, format="json"
+    )
     assert response.status_code == 401 and response.json()["code"] == "E235"
 
 
 def test_a_new_address_waits_for_approval_and_sees_nothing(api, django_capture_on_commit_callbacks):
     code = send_code(api, "newcomer@example.com", django_capture_on_commit_callbacks)
-    response = api.post("/api/auth/otp/verify/", {"email": "newcomer@example.com", "code": code}, format="json")
+    response = api.post(
+        "/api/auth/otp/verify/", {"email": "newcomer@example.com", "code": code}, format="json"
+    )
     assert response.status_code == 202 and response.json()["awaiting_approval"] is True
     assert not get_user_model().objects.get(email="newcomer@example.com").is_active
 
 
 def test_a_google_id_token_signs_in_an_existing_customer(api):
-    response = api.post("/api/auth/social/google/", {"id_token": mint(client_id(), CUSTOMER)}, format="json")
+    response = api.post(
+        "/api/auth/social/google/", {"id_token": mint(client_id(), CUSTOMER)}, format="json"
+    )
     assert response.status_code == 200, response.content
-    assert response.json()["user"]["email"] == CUSTOMER and {"access", "refresh"} <= set(response.json())
+    assert response.json()["user"]["email"] == CUSTOMER and {"access", "refresh"} <= set(
+        response.json()
+    )
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {response.json()['access']}")
     assert api.get("/api/trials/").status_code == 403  # the terms gate again
 
 
 def test_a_new_google_account_waits_for_approval(api):
-    response = api.post("/api/auth/social/google/", {"id_token": mint(client_id(), "scout@example.com")}, format="json")
+    response = api.post(
+        "/api/auth/social/google/",
+        {"id_token": mint(client_id(), "scout@example.com")},
+        format="json",
+    )
     assert response.status_code == 202 and response.json()["code"] == "E224"
 
 
 def test_a_token_for_another_client_is_refused(api):
-    response = api.post("/api/auth/social/google/", {"id_token": mint("someone-elses-client", CUSTOMER)}, format="json")
+    response = api.post(
+        "/api/auth/social/google/",
+        {"id_token": mint("someone-elses-client", CUSTOMER)},
+        format="json",
+    )
     assert response.status_code == 401
     assert "access" not in response.json()
 

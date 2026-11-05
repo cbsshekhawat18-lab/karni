@@ -1,13 +1,13 @@
-"""Count EventHub's project code — the number the README reports.
+"""Count Medintel's project code — the number the README reports.
 
     python scripts/loc.py [--pristine DIR]
 
-Counted: non-blank, non-comment lines of the files EventHub wrote or
-generated-and-kept, grouped as models / viewsets / pages / other. Left out:
+Counted: non-blank, non-comment lines of the files Medintel wrote or
+generated-and-kept, grouped as spec / models / seeds / pages. Left out:
 tests, migrations, lockfiles, node_modules, the e2e suite, this script, and
-the scaffold `karni new` produced. A scaffold file EventHub edited
+the scaffold `karni new` produced. A scaffold file Medintel edited
 (config/settings.py, config/urls.py, frontend/src/routes.tsx) counts only the
-lines it added, measured against a pristine `karni new "EventHub"` output
+lines it added, measured against a pristine `karni new "Medintel"` output
 when ``--pristine`` points at one; without it those files count whole, which
 overstates.
 """
@@ -22,32 +22,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 GROUPS: dict[str, tuple[str, ...]] = {
-    "models": ("events/models.py",),
-    "viewsets": ("events/viewsets.py",),
+    "spec": ("karni.yaml",),
+    "models": ("intel/models.py",),
+    "seeds": ("intel/seeds.py",),
     "pages": (
+        "frontend/src/pages/insights.tsx",
+        "frontend/src/pages/players.tsx",
+        "frontend/src/pages/deals-chart.tsx",
+        "frontend/src/pages/search.tsx",
         "frontend/src/pages/login.tsx",
-        "frontend/src/pages/events.tsx",
-        "frontend/src/pages/event-detail.tsx",
-        "frontend/src/pages/event-form.tsx",
-        "frontend/src/pages/event-dashboard.tsx",
-        "frontend/src/pages/bookings.tsx",
-        "frontend/src/pages/booking-detail.tsx",
-        "frontend/src/pages/booking-form.tsx",
-        "frontend/src/components/TierList.tsx",
-    ),
-    "other": (
-        "events/apps.py",
-        "events/listeners.py",
-        "events/payments.py",
-        "events/seeds.py",
-        "events/factories.py",
+        "frontend/src/components/CategoryTree.tsx",
+        "frontend/src/google.ts",
     ),
 }
-#: Scaffold files EventHub edited: only added lines count.
+#: Scaffold files Medintel edited by hand: only added lines count. The settings
+#: block, intel/karni/, the generated pages and tests are written by `karni build`
+#: and not counted, nor is intel/viewsets.py, which stays the stub build wrote.
 EDITED_SCAFFOLD: dict[str, str] = {
-    "config/settings.py": "other",
-    "config/urls.py": "other",
     "frontend/src/routes.tsx": "pages",
+    "frontend/src/App.tsx": "pages",
+    "frontend/src/layout.tsx": "pages",
 }
 
 
@@ -61,8 +55,19 @@ def code_lines(text: str) -> list[str]:
     return kept
 
 
+def without_spec_blocks(text: str) -> str:
+    """Drop what `karni build` writes between its `karni:spec ... start` and `end` markers."""
+    kept, skipping = [], False
+    for line in text.splitlines():
+        skipping = skipping or ("karni:spec" in line and line.rstrip().endswith("start"))
+        if not skipping:
+            kept.append(line)
+        skipping = skipping and not ("karni:spec" in line and line.rstrip().endswith("end"))
+    return "\n".join(kept)
+
+
 def added_lines(path: str, pristine: Path | None) -> int:
-    ours = code_lines((ROOT / path).read_text(encoding="utf-8"))
+    ours = code_lines(without_spec_blocks((ROOT / path).read_text(encoding="utf-8")))
     if pristine is None or not (pristine / path).is_file():
         return len(ours)
     theirs = code_lines((pristine / path).read_text(encoding="utf-8"))
@@ -71,7 +76,7 @@ def added_lines(path: str, pristine: Path | None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--pristine", type=Path, help="an untouched `karni new EventHub` output")
+    parser.add_argument("--pristine", type=Path, help="an untouched `karni new Medintel` output")
     args = parser.parse_args(argv)
     totals: dict[str, int] = {group: 0 for group in GROUPS}
     rows: list[tuple[str, str, int]] = []

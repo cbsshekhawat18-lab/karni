@@ -11,7 +11,6 @@ class Condition(karni.Condition):
     class Karni(karni.Condition.Karni):
         natural_key = "code"  # files name a row by it (the spec's `key` is only the import key)
 
-
     def __str__(self) -> str:
         return self.name  # the generated __str__ is the first field, the code
 
@@ -21,7 +20,6 @@ class Intervention(karni.Intervention):
 
     class Karni(karni.Intervention.Karni):
         natural_key = "code"  # files name a row by it (the spec's `key` is only the import key)
-
 
     def __str__(self) -> str:
         return self.name  # the generated __str__ is the first field, the code

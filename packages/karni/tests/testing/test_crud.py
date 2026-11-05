@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sys
 import warnings
-from datetime import timedelta
 from collections.abc import Iterator
+from datetime import timedelta
 from typing import Any
 
 import pytest

@@ -2,7 +2,6 @@
 
 import pytest
 from django.db.models import Q
-
 from intel.models import Brand, Company, Condition, Deal, Intervention, Person, Trial
 
 pytestmark = pytest.mark.django_db
@@ -32,7 +31,10 @@ def pks(queryset) -> set[str]:
 
 def test_the_seed_is_large_enough_to_mean_something():
     assert Condition.objects.count() == 90 and Intervention.objects.count() == 35
-    depth = max(len(list(Condition.objects.ancestors(node))) for node in Condition.objects.filter(children=None))
+    depth = max(
+        len(list(Condition.objects.ancestors(node)))
+        for node in Condition.objects.filter(children=None)
+    )
     assert depth >= 3 and Trial.objects.count() == 300 and Deal.objects.count() == 120
 
 
@@ -46,15 +48,21 @@ def test_an_intervention_grant_shows_the_rows_tagged_under_that_node(client_for)
     node = under(Intervention, "Vaccines")
     client = client_for(VACCINES)
     assert ids(client, "trials") == pks(Trial.objects.filter(interventions__in=node).distinct())
-    assert ids(client, "companies") == pks(Company.objects.filter(interventions__in=node).distinct())
+    assert ids(client, "companies") == pks(
+        Company.objects.filter(interventions__in=node).distinct()
+    )
     assert ids(client, "brands") == pks(Brand.objects.filter(interventions__in=node).distinct())
     assert ids(client, "deals") == pks(Deal.objects.filter(interventions__in=node).distinct())
-    assert ids(client, "persons") == pks(Person.objects.filter(company__interventions__in=node).distinct())
+    assert ids(client, "persons") == pks(
+        Person.objects.filter(company__interventions__in=node).distinct()
+    )
 
 
 def test_two_grants_of_one_user_are_a_union(client_for):
     oncology, biologics = under(Condition, "Oncology"), under(Intervention, "Biologics")
-    expected = Trial.objects.filter(Q(conditions__in=oncology) | Q(interventions__in=biologics)).distinct()
+    expected = Trial.objects.filter(
+        Q(conditions__in=oncology) | Q(interventions__in=biologics)
+    ).distinct()
     assert ids(client_for(ANALYST), "trials") == pks(expected)
 
 
@@ -79,7 +87,9 @@ def test_search_returns_only_visible_rows(client_for):
     assert {"trials", "brands"} <= set(found)
     for resource, hits in found.items():
         assert hits <= ids(client, resource)
-    assert search(client_for("demo@example.com"), "Veltra")["trials"] - ids(client, "trials")  # staff finds more
+    assert search(client_for("demo@example.com"), "Veltra")["trials"] - ids(
+        client, "trials"
+    )  # staff finds more
 
 
 def test_search_skips_a_model_the_user_may_not_read(client_for):
@@ -96,14 +106,21 @@ def test_the_cache_never_mixes_two_users_scopes(client_for):
 
 
 def test_facets_count_only_visible_rows(client_for):
-    response = client_for(ONCOLOGY).get("/api/trials/facets/", {"taxonomy": "conditions", "rollup": "true"})
+    response = client_for(ONCOLOGY).get(
+        "/api/trials/facets/", {"taxonomy": "conditions", "rollup": "true"}
+    )
     assert response.status_code == 200
     root = next(node for node in response.json()["results"] if node["label"] == "Oncology")
-    assert root["count"] == Trial.objects.filter(conditions__in=under(Condition, "Oncology")).distinct().count()
+    assert (
+        root["count"]
+        == Trial.objects.filter(conditions__in=under(Condition, "Oncology")).distinct().count()
+    )
 
 
 def test_the_access_forest_marks_the_granted_node(client_for):
-    response = client_for(ONCOLOGY).get("/api/conditions/access/", {"permission": "intel.trial:view"})
+    response = client_for(ONCOLOGY).get(
+        "/api/conditions/access/", {"permission": "intel.trial:view"}
+    )
     granted = [node["label"] for node in response.json()["results"] if node["granted"]]
     assert granted == ["Oncology"]
 

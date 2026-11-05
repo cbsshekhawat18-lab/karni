@@ -5,7 +5,6 @@ import io
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-
 from intel.models import Company, Trial
 
 pytestmark = pytest.mark.django_db
@@ -37,7 +36,11 @@ def run_import(client, resource: str, rows: list[dict[str, str]]) -> dict:
     assert preview.status_code == 200, preview.content
     committed = client.post(f"{base}/commit/", {}, format="json")
     assert committed.status_code == 200, committed.content
-    return {"preview": preview.json()["result"], "commit": committed.json()["result"], "problems": committed.json()["problems"]}
+    return {
+        "preview": preview.json()["result"],
+        "commit": committed.json()["result"],
+        "problems": committed.json()["problems"],
+    }
 
 
 def test_a_customers_export_holds_only_their_rows(client_for):
@@ -76,14 +79,20 @@ def test_a_changed_row_updates_and_a_new_row_creates(client_for):
     assert changed.title == "Retitled by import"
     assert {c.code for c in changed.conditions.all()} == set(rows[1]["conditions"].split("|"))
     made = Trial.objects.get(code="MT-9001")
-    assert made.sponsor.name == new["sponsor"] and made.interventions.count() == len(new["interventions"].split("|"))
+    assert made.sponsor.name == new["sponsor"] and made.interventions.count() == len(
+        new["interventions"].split("|")
+    )
 
 
 def test_a_row_naming_an_unknown_tag_is_reported_not_imported(client_for):
     client = client_for("demo@example.com")
-    row = dict(export(client, "trials", search="MT-0002")[0], conditions="C99.9", code="MT-9002", id="")
+    row = dict(
+        export(client, "trials", search="MT-0002")[0], conditions="C99.9", code="MT-9002", id=""
+    )
     result = run_import(client, "trials", [row])
-    assert result["commit"]["created"] == 0 and result["commit"]["errors"] == 1 and result["problems"]
+    assert (
+        result["commit"]["created"] == 0 and result["commit"]["errors"] == 1 and result["problems"]
+    )
     assert not Trial.objects.filter(code="MT-9002").exists()
 
 
@@ -91,7 +100,11 @@ def test_a_customer_cannot_import(client_for):
     row = export(client_for("demo@example.com"), "companies", search="Alder")[0]
     response = client_for("vaccines@example.com").post(
         "/api/companies/import/",
-        {"file": SimpleUploadedFile("rows.csv", f"name\n{row['name']}\n".encode(), content_type="text/csv")},
+        {
+            "file": SimpleUploadedFile(
+                "rows.csv", f"name\n{row['name']}\n".encode(), content_type="text/csv"
+            )
+        },
         format="multipart",
     )
     assert response.status_code == 403

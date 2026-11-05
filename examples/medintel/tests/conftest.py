@@ -5,11 +5,10 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
+from intel.seeds import CUSTOMERS
 from karni.seeding import seed
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
-
-from intel.seeds import CUSTOMERS
 
 
 @pytest.fixture(scope="session")
@@ -31,7 +30,9 @@ def client_for(db):
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(user)}")
         if accept_terms:
             version = settings.KARNI_TERMS["version"]
-            assert client.post("/api/auth/terms/accept/", {"version": version}, format="json").status_code in (200, 201)
+            assert client.post(
+                "/api/auth/terms/accept/", {"version": version}, format="json"
+            ).status_code in (200, 201)
         return client
 
     return make
