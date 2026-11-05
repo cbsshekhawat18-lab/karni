@@ -223,3 +223,9 @@ def _no_history_provider_subprocess(
     monkeypatch.setattr(subprocess, "run", guarded)
     for cls in _chronicle_classes():
         monkeypatch.setattr(cls, "_run", no_run)
+
+
+@pytest.fixture(autouse=True)
+def _no_active_virtualenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    # venv_python prefers VIRTUAL_ENV, so the suite must not depend on the developer's active venv.
+    monkeypatch.delenv("VIRTUAL_ENV", raising=False)
