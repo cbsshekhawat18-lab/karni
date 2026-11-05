@@ -512,6 +512,59 @@ def check_dashboards(app_configs: Any = None, **kwargs: Any) -> list[checks.Chec
     return messages
 
 
+@checks.register(checks.Tags.models)
+def check_global_search(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.E430: every ``Karni.search`` declaration names text fields and a real title."""
+    from karni.global_search import search_declaration
+
+    configs = app_configs if app_configs is not None else apps.get_app_configs()
+    messages: list[checks.CheckMessage] = []
+    for config in configs:
+        for model in config.get_models():
+            try:
+                search_declaration(model)
+            except KarniError as exc:
+                messages.append(_as_check(exc, model))
+    return messages
+
+
+@checks.register(checks.Tags.urls)
+def check_global_search_routes(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
+    """karni.W591: a model declares ``Karni.search`` but no routed ``BaseViewSet`` serves it.
+
+    Search reaches a model through its list endpoint (the access) and links
+    each hit to its resource, so such a model never appears in it.
+    """
+    from karni.api.global_search import search_targets
+    from karni.global_search import search_declaration, searchable_models
+
+    try:
+        served = {target.model for target in search_targets()}
+    except Exception:  # noqa: BLE001 - router problems are karni.E128's to report
+        return []
+    labels = {config.label for config in app_configs} if app_configs is not None else None
+    messages: list[checks.CheckMessage] = []
+    for model in searchable_models():
+        if model in served or (labels is not None and model._meta.app_label not in labels):
+            continue
+        try:
+            if search_declaration(model) is None:
+                continue
+        except KarniError:
+            continue  # E430's to report
+        messages.append(
+            check_warning(
+                "W591",
+                f"{model.__name__} declares Karni.search, but no routed BaseViewSet serves it, "
+                "so cross-model search never finds it: search reads a model through its list "
+                "endpoint and links each hit to it.",
+                hint=_fix("W591"),
+                obj=model,
+            )
+        )
+    return messages
+
+
 @checks.register(checks.Tags.urls)
 def check_aggregations(app_configs: Any = None, **kwargs: Any) -> list[checks.CheckMessage]:
     """karni.E380 / W570: every aggregation declaration (experimental) fits its model.

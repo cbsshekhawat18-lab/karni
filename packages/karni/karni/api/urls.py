@@ -11,18 +11,24 @@ autodiscovery and returns the router whose URLs are exposed here.
 
 While ``KARNI_NAVIGATION`` is set (experimental), ``navigation/`` comes first:
 the requesting user's menu (:mod:`karni.navigation.api`).
+It also mounts ``search/``, cross-model search
+(:class:`karni.api.global_search.GlobalSearchView`, experimental), before the
+routes, so it answers ``GET /api/search/`` whatever the router registers.
 
 Override / escape hatch: point ``KARNI_API_ROUTER`` at your own zero-argument
 factory to pre-register explicit routes before autodiscovery (see
 :mod:`karni.api.routers`). The setting is consumed at first URLconf import;
 changing it afterwards (e.g. with ``override_settings``) is a no-op — router
-tests should build fresh ``KarniRouter`` instances instead.
+tests should build fresh ``KarniRouter`` instances instead. Declare your own
+``path("api/search/", ...)`` before the include to replace the search endpoint.
 """
 
 from __future__ import annotations
 
 from django.conf import settings
+from django.urls import path
 
+from karni.api.global_search import GlobalSearchView
 from karni.api.routers import KarniRouter
 from karni.imports import import_setting
 from karni.navigation.api import build_urlpatterns as navigation_urlpatterns
@@ -36,4 +42,8 @@ router: KarniRouter = import_setting(
     "KARNI_API_ROUTER", getattr(settings, "KARNI_API_ROUTER", DEFAULT_ROUTER_FACTORY)
 )()
 
-urlpatterns = [*navigation_urlpatterns(), *router.urls]
+urlpatterns = [
+    *navigation_urlpatterns(),
+    path("search/", GlobalSearchView.as_view(), name="karni-global-search"),
+    *router.urls,
+]

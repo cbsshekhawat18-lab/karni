@@ -261,6 +261,11 @@ newest first.
 `django.contrib.postgres` indexes with one difference: on another database
 creating them is a commented no-op instead of a syntax error, so one
 migration runs everywhere.
+`TrigramIndex` (experimental) is a `GinIndex` with `gin_trgm_ops` on every
+field, which serves `ILIKE '%...%'` and pg_trgm's `%`. It creates `pg_trgm`
+first when the database lacks it, and it names itself when added with
+`contribute_index`. `class Karni: search` adds one per searched field
+([search across models](global-search.md#the-indexes)).
 
 ## karni schema
 

@@ -16,9 +16,9 @@ Three passes, each reporting every problem it finds:
    other databases (``C251`` to ``C253``), the renames written with
    ``was`` (``C254``), the keys of a tree (``C460``), the menu
    (``navigation``, ``C640`` to ``C642``), the taxonomies (``C700`` to
-   ``C703``) and response caching (``C520``, ``C521``). Whether a ``database``
-   is one of the project's aliases is checked when the caller knows them
-   (``karni plan`` does).
+   ``C703``), response caching (``C520``, ``C521``) and ``global_search``
+   (``C540`` to ``C542``). Whether a ``database`` is one of the project's
+   aliases is checked when the caller knows them (``karni plan`` does).
 
 An issue carries the code, the 1-based line (the YAML parser's), the dotted
 path of the key, the message and the fix. ``karni explain <code>`` prints
@@ -83,6 +83,10 @@ ENTITY_PAGES: Final = ("list", "detail", "form")
 NAMED_PAGES: Final = ("dashboard", "blank", "login", "code")
 #: The audit fields of BaseModel's mixins, which a taxonomy key may not take.
 _MIXIN_FIELDS: Final = ("created_by", "updated_by", "deleted_at")
+#: Field types global_search may search: text columns (CharField and TextField in Django).
+SEARCHABLE_KINDS: Final = frozenset(
+    {"str", "text", "email", "url", "slug", "choice", "phone", "country", "currency", "state"}
+)
 #: Fields every BaseModel has, which key, order and search may name.
 BASE_FIELDS: Final = ("id", "created_at", "updated_at")
 #: Experimental. The fields ``tree: true`` (TreeModel) and ``tree: ordered`` add.
@@ -630,6 +634,7 @@ class _Meaning:
             for name in e.audit:
                 if name not in names:
                     missing("audit", name)
+        self.global_search(entity)
         for key, path in e.scope_paths.items():
             if not key.isidentifier():
                 self.add(
@@ -769,6 +774,64 @@ class _Meaning:
             target = current.targets.get(part)
             current = None if target == _USER_TARGET else self.entities.get(target or "")
         return None
+
+    def global_search(self, entity: _Entity) -> None:
+        """``global_search``: text fields of the entity's own, a title and subtitle it has."""
+        value = entity.entity.global_search
+        if value is False:
+            return
+        where: Loc = (*entity.path, "global_search")
+        mapping = value if isinstance(value, schema.GlobalSearch) else None
+        explicit = mapping is not None and mapping.fields is not None
+        given = mapping.fields if mapping is not None else None
+        fields = list(given) if given is not None else list(entity.entity.search)
+        source = "global_search.fields" if explicit else "search (global_search's default)"
+        texts = sorted(
+            name
+            for name, spec in entity.fields.items()
+            if ALIASES.get(spec.kind, spec.kind) in SEARCHABLE_KINDS
+        )
+        if not fields:
+            self.add(
+                "C541",
+                where,
+                f"{entity.name}.global_search has no fields to search: it takes them from "
+                "global_search.fields, else from search, and both are empty.",
+                f"Name text fields of {entity.name}, e.g. global_search: {{fields: "
+                f"[{texts[0] if texts else 'name'}]}}, or list them under search.",
+            )
+            return
+        for name in fields:
+            spec = entity.fields.get(name)
+            if spec is None or ALIASES.get(spec.kind, spec.kind) not in SEARCHABLE_KINDS:
+                self.add(
+                    "C540",
+                    (*where, "fields") if explicit else where,
+                    f"{entity.name}.global_search searches {name!r} (from {source}), which is "
+                    f"not a text field of {entity.name}: search across entities matches and "
+                    f"indexes the entity's own text fields (its text fields: "
+                    f"{', '.join(texts) or 'none'}).",
+                    "List text fields of the entity under global_search.fields, e.g. "
+                    f"global_search: {{fields: [{texts[0] if texts else 'name'}]}}.",
+                )
+        for key in ("title", "subtitle"):
+            shown = getattr(mapping, key) if mapping is not None else None
+            if shown is None:
+                continue
+            first = shown.split("__", 1)[0]
+            spec = entity.fields.get(first)
+            if first not in entity.fields and first not in BASE_FIELDS:
+                problem = f"{first!r} is not a field of {entity.name}"
+            elif "__" in shown and (spec is None or not spec.is_relation or spec.kind == "m2m"):
+                problem = f"{first!r} is not a foreign key for __ to follow"
+            else:
+                continue
+            self.add(
+                "C542",
+                (*where, key),
+                f"{entity.name}.global_search.{key} is {shown!r}, but {problem}.",
+                "Name a field of the entity, or a path through a foreign key, e.g. supplier__name.",
+            )
 
     def leads_to_user(self, entity: _Entity, path: str) -> bool:
         """Whether ``path`` (``a__b``) follows relations from ``entity`` to the user."""
@@ -1790,6 +1853,7 @@ def iter_codes() -> Iterator[str]:
     yield from ("C220", "C221", "C222", "C223", "C224", "C225")
     yield from (f"C{n}" for n in range(230, 243))
     yield from ("C251", "C252", "C253", "C254")
+    yield from ("C540", "C541", "C542")
     yield "C324"
     yield "C460"
     yield "C620"

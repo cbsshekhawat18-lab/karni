@@ -344,6 +344,52 @@ def test_an_entity_added_and_fields_changed_and_renamed_keep_the_data(copy: Path
     assert not (copy / "classes/tests/karni/test_review.py").exists()
 
 
+def _karni_option(source: str, model: str, name: str) -> Any:
+    """The literal ``class Karni: <name> = ...`` of ``model`` in ``source``."""
+    import ast
+
+    tree = ast.parse(source)
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == model)
+    karni = next(n for n in cls.body if isinstance(n, ast.ClassDef) and n.name == "Karni")
+    for statement in karni.body:
+        if isinstance(statement, ast.Assign) and getattr(statement.targets[0], "id", "") == name:
+            return ast.literal_eval(statement.value)
+    raise AssertionError(f"{model}.Karni has no {name}")
+
+
+def test_global_search_is_written_into_class_karni_with_its_index_migration(copy: Path) -> None:
+    spec = copy / "karni.yaml"
+    _edit(
+        spec,
+        ("        search: [name]\n", "        search: [name]\n        global_search: true\n"),
+        (
+            "        owner: instructor\n",
+            (
+                "        global_search: {fields: [title], subtitle: studio__name, weight: 2}\n"
+                "        owner: instructor\n"
+            ),
+        ),
+    )
+    code, out = _build()
+    assert code == 0, out
+    assert "  ~ classes.Studio global_search: none -> name" in out
+    models = (copy / "classes" / "karni" / "models.py").read_text()
+    assert 'search = {"fields": ["name"], "title": "name"}' in models
+    assert _karni_option(models, "Session", "search") == {
+        "fields": ["title"],
+        "title": "title",
+        "subtitle": "studio__name",
+        "weight": 2,
+    }
+    migrations = "".join(
+        path.read_text() for path in (copy / "classes" / "migrations").glob("0*.py")
+    )
+    assert "karni.fields.TrigramIndex(fields=['name']" in migrations
+    assert "karni.fields.TrigramIndex(fields=['title']" in migrations
+    code, out = _build()
+    assert code == 0 and "Nothing to build" in out, out  # the export reads it back
+
+
 def test_the_destructive_guard_and_a_removal(copy: Path) -> None:
     spec = copy / "karni.yaml"
     _edit(spec, ("pages:\n", "      Review:\n        fields: {stars: int}\npages:\n"))

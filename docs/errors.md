@@ -1246,6 +1246,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write 'HH:MM' (24-hour), optionally followed by an IANA timezone: '03:30' or '03:30 Europe/Paris'. Leave it unset (None) for no scheduled flush.
 
+<a id="e430"></a>
+
+#### E430: Karni.search is malformed or names a field the model does not have
+
+*system check (error)* · from `karni.global_search.search_declaration; karni.checks.check_global_search`
+
+**Why Karni objects.** GET /api/search/ matches the query against the declared fields, shows each hit's title and subtitle, and makemigrations adds a trigram index per field. A field that is not text, a title that is not a column or a weight that is not a positive number would fail at query time, so the declaration is refused at boot.
+
+**Fix.** Write search = {'fields': [...], 'title': ..., 'subtitle': ..., 'weight': ...}: fields lists text fields of the model (CharField, TextField), title and subtitle name a field or a path through foreign keys (title defaults to the first field), weight is a number above 0 (default 1). For example search = {'fields': ['name', 'sku'], 'title': 'name'}.
+
+<a id="e431"></a>
+
+#### E431: ?models= names a resource cross-model search does not cover
+
+*API 400 response* · from `karni.api.global_search.GlobalSearchView`
+
+**Why Karni objects.** GET /api/search/?models= picks the resources to search by their router prefix. A name that is not one of them is a typo or a model without class Karni: search, and searching nothing for it would hide the mistake, so the request answers 400 with the resources it covers.
+
+**Fix.** Name resources from the response's resources list (the router prefixes, e.g. products), or declare class Karni: search on the model and route a BaseViewSet for it.
+
 <a id="e490"></a>
 
 #### E490: A tree:<path> scope does not end at a tree model
@@ -1667,6 +1687,26 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 **Why Karni objects.** KARNI_API_CACHE keeps responses and their version tokens in KARNI_API_CACHE_ALIAS. A per-process backend (LocMemCache) keeps them in each worker, so a write handled by one worker leaves the other workers serving the old response until the TTL ends.
 
 **Fix.** Point KARNI_API_CACHE_ALIAS at a cache every process shares (Redis, the database cache) in production, or silence karni.W580 for a single-process deployment.
+
+<a id="w590"></a>
+
+#### W590: A field cross-model search searches has no trigram index
+
+*system check (warning)* · from `karni.global_search.check_search_indexes (karni check)`
+
+**Why Karni objects.** On PostgreSQL every searched field needs a GIN trigram index, or each search reads the whole table. Karni adds the index to the model's Meta.indexes, so it exists once the migration that creates it is written and applied.
+
+**Fix.** Run python manage.py makemigrations <app> and python manage.py migrate (karni build writes the migration for an app built from karni.yaml). For a table another system owns, run the CREATE INDEX the message prints in its database. For a table small enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].
+
+<a id="w591"></a>
+
+#### W591: A model declares Karni.search but no routed viewset serves it
+
+*system check (warning)* · from `karni.checks.check_global_search_routes`
+
+**Why Karni objects.** Cross-model search reads each model through its list endpoint, so the access rules hold, and links each hit to the resource's page. A model no routed BaseViewSet serves has neither, so search never finds it.
+
+**Fix.** Declare a BaseViewSet for the model in the app's viewsets.py (karni make viewset), or remove search from its class Karni.
 
 ### 6xx · Testing and seeding
 
@@ -3668,6 +3708,36 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 **Fix.** Write the old name once, on the field or entity that takes over the data, and remove the old declaration.
 
+<a id="c540"></a>
+
+### C540: global_search names a field that is not a text field of the entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Search across entities (class Karni: search) matches the query against the entity's own text fields and gives each a trigram index. Its fields come from global_search.fields, else from the entity's search list, which may name a related path (venue__name) or a non-text field that it cannot search.
+
+**Fix.** List the entity's own text fields (str, text, email, url, slug, choice, phone, country, currency, state) under global_search.fields, e.g. global_search: {fields: [name, sku]}.
+
+<a id="c541"></a>
+
+### C541: global_search has no fields to search
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** global_search takes its fields from global_search.fields, else from the entity's search list. With both empty there is nothing to match the query against.
+
+**Fix.** Name the text fields under global_search.fields, or list them under search.
+
+<a id="c542"></a>
+
+### C542: global_search's title or subtitle is not a field of the entity
+
+*karni command* · from `karni spec validate and karni plan (karni_cli.spec.validate)`
+
+**Why Karni objects.** Each hit of search across entities shows its title and subtitle, read from the entity's fields. A name the entity does not have, or a __ path through something that is not a foreign key, cannot be read.
+
+**Fix.** Name a field of the entity, or a path through one of its foreign keys (supplier__name). Leave title out to use the first searched field.
+
 <a id="c270"></a>
 
 ### C270: A risky change without --allow-destructive
@@ -4770,7 +4840,7 @@ tokens, an invalid 2FA code, a declined payment, a 404 for a row outside your
 
 *agent rule, must* · enforced by `review`
 
-**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views. Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
+**Rule.** Never write auth flows, user models, admin registration, serializers, routers, settings, Docker/Compose config, Celery config, HTML tables, forms, or detail views, nor a search over several models (declare `class Karni: search` on each model: `GET /api/search/` and `<GlobalSearch>` serve it). Karni provides all of these. Never write a table of per-user permissions either: access given to one user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which Granted() already reads. If you think you need one, you need an override on an existing Karni base instead. The tables, forms and detail views meant here are app screens. A public server-rendered site (K309) is the one place for hand-written HTML pages, and its forms still post to a BaseViewSet.
 
 **Why Karni objects.** Each of these ships in Karni with tested defaults and override points. A public site is the client's own markup, so it has its own rule.
 

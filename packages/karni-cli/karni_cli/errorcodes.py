@@ -656,6 +656,27 @@ CODES: Final[tuple[CliCode, ...]] = (
         "Write the old name once, on the field or entity that takes over the data, and remove the old declaration.",
     ),
     _c(
+        "C540",
+        "global_search names a field that is not a text field of the entity",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Search across entities (class Karni: search) matches the query against the entity's own text fields and gives each a trigram index. Its fields come from global_search.fields, else from the entity's search list, which may name a related path (venue__name) or a non-text field that it cannot search.",
+        "List the entity's own text fields (str, text, email, url, slug, choice, phone, country, currency, state) under global_search.fields, e.g. global_search: {fields: [name, sku]}.",
+    ),
+    _c(
+        "C541",
+        "global_search has no fields to search",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "global_search takes its fields from global_search.fields, else from the entity's search list. With both empty there is nothing to match the query against.",
+        "Name the text fields under global_search.fields, or list them under search.",
+    ),
+    _c(
+        "C542",
+        "global_search's title or subtitle is not a field of the entity",
+        "karni spec validate and karni plan (karni_cli.spec.validate)",
+        "Each hit of search across entities shows its title and subtitle, read from the entity's fields. A name the entity does not have, or a __ path through something that is not a foreign key, cannot be read.",
+        "Name a field of the entity, or a path through one of its foreign keys (supplier__name). Leave title out to use the first searched field.",
+    ),
+    _c(
         "C270",
         "A risky change without --allow-destructive",
         "karni build (karni_cli.builder)",

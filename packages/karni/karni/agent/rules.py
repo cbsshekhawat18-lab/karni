@@ -297,13 +297,14 @@ RULES: tuple[Rule, ...] = (
         rule=(
             "Never write auth flows, user models, admin registration, serializers, routers, "
             "settings, Docker/Compose config, Celery config, HTML tables, forms, or detail "
-            "views. Karni provides all of these. Never write a table of per-user permissions "
-            "either: access given to one user is a per-user grant (`features: user_grants`, "
-            "`karni.accounts.grants`), which Granted() already reads. If you think you need one, "
-            "you need an override on an existing Karni base instead. The tables, forms and "
-            "detail views meant here are app screens. A public server-rendered site (K309) is "
-            "the one place for hand-written HTML pages, and its forms still post to a "
-            "BaseViewSet."
+            "views, nor a search over several models (declare `class Karni: search` on each "
+            "model: `GET /api/search/` and `<GlobalSearch>` serve it). Karni provides all of "
+            "these. Never write a table of per-user permissions either: access given to one "
+            "user is a per-user grant (`features: user_grants`, `karni.accounts.grants`), which "
+            "Granted() already reads. If you think you need one, you need an override on an "
+            "existing Karni base instead. The tables, forms and detail views meant here are app "
+            "screens. A public server-rendered site (K309) is the one place for hand-written "
+            "HTML pages, and its forms still post to a BaseViewSet."
         ),
         rationale=(
             "Each of these ships in Karni with tested defaults and override points. A public "

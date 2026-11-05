@@ -286,6 +286,7 @@ def _prepare(sender: type[models.Model], **kwargs: Any) -> None:
         return
     from karni.fields.constraints import name_pending_constraints
     from karni.fields.indexes import append_only_indexes
+    from karni.global_search import search_indexes
 
     name_pending_constraints(sender)
     for model_field in meta.local_fields:
@@ -296,6 +297,7 @@ def _prepare(sender: type[models.Model], **kwargs: Any) -> None:
         for index, why in model_field.karni_indexes(sender):
             contribute_index(sender, index, why)
     append_only_indexes(sender)
+    search_indexes(sender)
 
 
 class_prepared.connect(_prepare, dispatch_uid="karni.fields.prepare")

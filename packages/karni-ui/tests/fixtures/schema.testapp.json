@@ -34,6 +34,112 @@
         ],
         "type": "object"
       },
+      "GlobalSearchError": {
+        "description": "Experimental. A refused request: E431 and the resources search covers.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "resources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "code",
+          "detail",
+          "resources"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchGroup": {
+        "description": "Experimental. The hits of one resource, best first.",
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchHit"
+            },
+            "type": "array"
+          },
+          "label": {
+            "description": "The model's plural name, for a heading.",
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hits",
+          "label",
+          "resource"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchHit": {
+        "description": "Experimental. One hit: a row of one resource, ready to link to its page.",
+        "properties": {
+          "id": {
+            "description": "The row's primary key: its page is /<resource>/<id>.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "resource": {
+            "description": "The resource (router prefix) of the row.",
+            "type": "string"
+          },
+          "score": {
+            "description": "Higher is better, the model's weight included.",
+            "format": "double",
+            "type": "number"
+          },
+          "subtitle": {
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource",
+          "score",
+          "subtitle",
+          "title"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResult": {
+        "description": "Experimental. The answer of GET /api/search/: groups ordered by their best hit.",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchGroup"
+            },
+            "type": "array"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "groups",
+          "query"
+        ],
+        "type": "object"
+      },
       "ImportColumn": {
         "properties": {
           "choices": {
@@ -7781,6 +7887,80 @@
         ],
         "x-karni-access": {
           "authenticated": true
+        }
+      }
+    },
+    "/api/search/": {
+      "get": {
+        "description": "Experimental. Search every model that declares class Karni: search, each through its list endpoint's access for this request. Results are grouped per resource, best first.",
+        "operationId": "global_search",
+        "parameters": [
+          {
+            "description": "Hits per resource (KARNI_GLOBAL_SEARCH_LIMIT, at most KARNI_GLOBAL_SEARCH_MAX_LIMIT).",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma-separated resources to search (default: every one search covers).",
+            "explode": false,
+            "in": "query",
+            "name": "models",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "description": "The query. Shorter than KARNI_GLOBAL_SEARCH_MIN_LENGTH (2) answers no groups.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSearchResult"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSearchError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "jwtAuth": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {}
+        ],
+        "tags": [
+          "search"
+        ],
+        "x-karni-search": {
+          "resources": []
         }
       }
     },

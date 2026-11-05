@@ -137,6 +137,35 @@ apply codemods and list the manual steps. This file is the human summary.
   `docs/assets/karni-mcp.schema.json`. `build` never forces or adopts a
   Karni-owned file edited by hand: it returns `C273` with the three ways
   on, for the user to choose. [docs/app-spec.md](docs/app-spec.md#mcp-tools).
+
+- **Search across models (experimental): `class Karni: search` and
+  `GET /api/search/`.** A model opts in with `search = {"fields": [...],
+  "title": ..., "subtitle": ..., "weight": ...}`. `GET
+  /api/search/?q=&models=&limit=` searches every declared model through the
+  queryset its routed viewset's list uses for the request, so a model or a
+  row the caller cannot list never appears, in one query per model. The
+  answer is grouped per resource, each hit with its `resource`, `id`,
+  `title`, `subtitle` and `score`, so a client links it to its
+  `ResourceDetail` page. PostgreSQL ranks by trigram similarity (`ILIKE` or
+  pg_trgm's `%`, then `KARNI_GLOBAL_SEARCH_THRESHOLD`), SQLite matches by
+  `icontains`, and the weight orders models against each other. A query
+  under `KARNI_GLOBAL_SEARCH_MIN_LENGTH` answers no groups, and an unknown
+  `?models=` name is 400 `E431`. Each searched field gets a
+  `karni.fields.TrigramIndex` in `Meta.indexes`, so `makemigrations` and
+  `karni build` write it, and `karni check` names a searched field without
+  its index on PostgreSQL with the command that adds it (`W590`).
+  `BaseViewSet.global_search_queryset` is the escape hatch. `E430` refuses a
+  malformed declaration and `W591` warns about a declared model no viewset
+  serves. The OpenAPI document carries the operation and `x-karni-search`,
+  `karni types` exports `SearchResource` and a typed `useGlobalSearch`, and
+  `@karni/ui` adds `GlobalSearch` (a Cmd or Ctrl+K command palette, the
+  WAI-ARIA combobox pattern, role `global-search`, tokens
+  `--karni-search-width` and `--karni-search-max-height`), `useGlobalSearch`
+  and `<Layout search>`. In `karni.yaml` an entity takes `global_search:
+  true` or `{fields, title, subtitle, weight}`, whose fields default to its
+  `search` list (`C540` to `C542`), and `karni plan`, `karni build` and
+  `karni spec export` follow it. Large-apps roadmap item 10.
+  [docs/global-search.md](docs/global-search.md).
 - **Clarifying questions (experimental): `karni plan --questions` and
   `karni spec answer`.** Before `karni build`, `karni plan --questions
   [--json] [--max N]` lists the few questions to ask the user, at most 5

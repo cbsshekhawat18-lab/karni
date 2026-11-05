@@ -11,11 +11,12 @@ no database, an entity's pages in list, detail, form order, a taxonomy's
 tree entity as ``app.Name`` (experimental), the site module listed whenever
 the kind has a site, ``navigation`` as the ``KARNI_NAVIGATION`` list it
 gives (``None`` without it), an ``aggregate`` with every metric written out
-when it lists none, and ``api_cache`` either ``false`` or ``{ttl: <seconds>}``
-(``true`` is ``{ttl: 300}``, the default lifetime). What carries meaning in
-its order stays in order: fields, pages, the menu, search fields, the
-ordering and an aggregate's groups (the first is what the query-scaling check
-groups by).
+when it lists none, ``global_search`` as its full mapping (fields from
+``search``, the title, the subtitle, the weight) or none, and ``api_cache``
+either ``false`` or ``{ttl: <seconds>}`` (``true`` is ``{ttl: 300}``, the
+default lifetime). What carries meaning in its order stays in order: fields,
+pages, the menu, search fields, the ordering and an aggregate's groups (the
+first is what the query-scaling check groups by).
 
 ``was`` is dropped: it says how the project gets to the spec (a rename),
 not what the spec describes. ``karni plan`` reads it from the
@@ -39,7 +40,7 @@ from karni_cli.spec import navigation
 from karni_cli.spec.catalog import DEFAULT_CACHE_TTL
 from karni_cli.spec.schema import AGGREGATE_METRICS, Spec
 
-__all__ = ["canonical_field", "normalise", "role_name"]
+__all__ = ["canonical_field", "global_search", "normalise", "role_name"]
 
 _ENTITY_PAGES = ("list", "detail", "form")
 
@@ -116,6 +117,24 @@ def _aggregate(declared: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def global_search(value: Any, search: list[str]) -> dict[str, Any] | None:
+    """Experimental. ``global_search`` with every default written out, or ``None`` when off.
+
+    ``value`` is the dumped key (``False``, ``True`` or its mapping) and
+    ``search`` the entity's ``search`` list, where the fields default to.
+    """
+    if value is False or value is None:
+        return None
+    mapping: dict[str, Any] = value if isinstance(value, dict) else {}
+    fields = list(mapping.get("fields") or search)
+    return {
+        "fields": fields,
+        "title": mapping.get("title") or (fields[0] if fields else None),
+        "subtitle": mapping.get("subtitle"),
+        "weight": float(mapping.get("weight", 1)),
+    }
+
+
 def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     """Experimental. The canonical data of ``spec`` (see the module docstring).
 
@@ -155,6 +174,7 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
             }
             if entity["aggregate"] is not None:
                 entity["aggregate"] = _aggregate(entity["aggregate"])
+            entity["global_search"] = global_search(entity["global_search"], entity["search"])
         app["entities"] = dict(sorted(app["entities"].items()))
     data["apps"] = dict(sorted(data["apps"].items()))
     pages = []

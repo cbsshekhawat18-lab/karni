@@ -854,6 +854,10 @@ on: rows a test wrote roll back, the cache would keep them.
 
 ## Search
 
+This is the search of one list. One search over every model that opts in,
+`GET /api/search/`, is [search across models](global-search.md)
+(experimental).
+
 `?search=` delegates to the provider named by `KARNI_SEARCH_PROVIDER`:
 
 - `karni.api.search.postgres.PostgresSearchProvider` (default): Postgres

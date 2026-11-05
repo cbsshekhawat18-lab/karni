@@ -35,6 +35,7 @@ const GROUPS = [
     "App shell and pages",
     [
       "Layout",
+      "GlobalSearch",
       "Page",
       "EmptyState",
       "Modal",
@@ -71,6 +72,7 @@ const EXPERIMENTAL = new Set([
   "TreeSelect",
   "TreeBreadcrumb",
   "FacetPanel",
+  "GlobalSearch",
 ]);
 
 const HOOKS = {
@@ -111,6 +113,8 @@ const HOOKS = {
     "Experimental. `{ signIn(idToken, { nonce, name }), status, error, reset }`: sign in with a Google, Microsoft or Apple ID token the app got from the provider's SDK (`POST <authBasePath>/social/<provider>/`).",
   useNavigation:
     'Experimental. The menu the signed-in user gets (`GET /navigation/`, Django\'s `KARNI_NAVIGATION`): `{ items }`, each `{ label, icon, route, children }`, cached per user. `<Layout navSource="server">` renders it.',
+  useGlobalSearch:
+    "Experimental. `{ q, models, limit }` → `{ query, groups: [{ resource, label, hits: [{ resource, id, title, subtitle, score }] }] }`: cross-model search (`GET /search/`), each model under its own list access. A query under `minLength` (2) sends nothing.",
   useToast: "Show a toast through the mounted `Toaster`.",
   useUnsavedChangesGuard:
     "`{ dirty, setDirty, isDirty, shouldBlock }` for warning before leaving a dirty form. Give `shouldBlock` to your router's blocker and `setDirty` to ResourceForm's `onDirtyChange`.",

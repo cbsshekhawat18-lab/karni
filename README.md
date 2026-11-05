@@ -318,6 +318,7 @@ A viewset declares `model` and `access`. Everything else has a default you can o
 - `experimental` A versioned terms acceptance gate: 403 `E245` under `/api/` until a signed-in user accepts the current version (`terms/`, `terms/accept/`, `KARNI_TERMS`). Experimental tier
 - `experimental` Tree endpoints on a tree model's viewset (`tree/`, `children/`, `ancestors/`, `move/`, `?parent=`, `?descendants_of=`, `DELETE ?branch=true`) and `x-karni-tree` in the OpenAPI document. Experimental tier
 - `experimental` Taxonomy filters and counts: `?<key>=` and `?<key>_descendants=` on the list, `facets/` (rows per node under the list's filters and access, rolled up on request) and a tree node's `tagged/` per tagging model. Experimental tier
+- `experimental` Search across models: one ranked `GET /api/search/` over every model that declares `class Karni: search`, each under its own list access, one query per model, with the trigram indexes in its migrations (`karni.W590`). Experimental tier
 - `stable` TypeScript types and typed hooks from the OpenAPI document (`karni types`)
 - `experimental` Grouped counts and sums under the list's filters and access: `GET <resource>/aggregate/` from `class Karni: aggregate`, with date buckets, top N and Other, a second dimension and numbers stored as text (`TextNumber`). Experimental tier
 
@@ -357,6 +358,7 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `experimental` `useAggregate` and `DataChart`'s `aggregate` and `stacked`: a resource's aggregate, read directly. Experimental tier
 - `experimental` `SocialButton` and `useSocialLogin`: sign-in with an ID token from the provider's own SDK. Experimental tier
 - `experimental` `OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as `LoginForm`'s `codeSignIn` switch. Experimental tier
+- `experimental` `GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search across models, grouped per resource, each hit linking to its ResourceDetail page (`<Layout search>`). Experimental tier
 - `experimental` `TermsGate` and `useAuth()`'s `termsRequired` and `acceptTerms`: the app renders once the user accepts the current terms. Experimental tier
 - `experimental` `TreeView`, `TreeSelect` (used by `ResourceForm` for a relation to a tree) and `TreeBreadcrumb` (on `ResourceDetail` of a tree), with `useResourceTree`. Experimental tier
 - `experimental` `Layout`'s server menu (`navSource="server"`, `useNavigation`): collapsible groups, icons by name and the current page marked. Experimental tier
@@ -364,7 +366,7 @@ Full reference: [karni.admin](docs/REFERENCE.md#karniadmin).
 - `experimental` `karni ui detect`: the project's shadcn/ui, Tailwind, Material UI, Chakra UI or Mantine theme, or any stylesheet (`--css`), as Karni's tokens, and shadcn/ui components as Karni's primitives
 - `experimental` `Dashboard` (the staff app's home page from `Karni.dashboard`) and `ResourceDetail`'s buttons for a `StateField`'s transitions
 
-66 components and 27 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useResourceTree`, `useResourceChildren`, `useResourceAncestors`, `useResourceAccessForest`, `useTreeMutations`, `useResourceFacets`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useAggregate`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useNavigation`, `useToast`.
+67 components and 28 hooks, among them `ResourceTable`, `ResourceForm`, `ResourceDetail`, `ResourceSelect`, `ResourceImport`, `AuthProvider`, `AuthGuard`, `LoginForm`, `Page`, `Layout`. The hooks are `useDelayedFlag`, `useOnlineStatus`, `useTheme`, `useKarniPrimitives`, `useUnsavedChangesGuard`, `useResourceTree`, `useResourceChildren`, `useResourceAncestors`, `useResourceAccessForest`, `useTreeMutations`, `useResourceFacets`, `useChangeHistory`, `useImportDescribe`, `useImportJob`, `useImportActions`, `useResourceList`, `useResourceItem`, `useResourceMutations`, `useAggregate`, `useGlobalSearch`, `useKarniClient`, `useSchema`, `useAuth`, `usePermission`, `useSocialLogin`, `useOtpLogin`, `useNavigation`, `useToast`.
 <!-- /generated:ui -->
 
 Full reference: [components and hooks](docs/REFERENCE.md#components-and-hooks).

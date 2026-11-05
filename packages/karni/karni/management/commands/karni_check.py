@@ -21,7 +21,9 @@ It also compares every external model (``class Karni: external = True``,
 experimental) with its table or view where the database answers
 (:func:`karni.db.checks.check_external_tables`): ``karni.E272`` to ``E274``
 fail, ``karni.W540`` (a database that does not answer) is printed. Not with
-``--deploy``, which the production image runs before ``migrate``.
+``--deploy``, which the production image runs before ``migrate``. In the same
+place it prints ``karni.W590`` for a field ``class Karni: search`` searches
+whose table has no trigram index on PostgreSQL (experimental).
 
 While ``KARNI_NAVIGATION`` is set (experimental), it compares the menu with
 the frontend's pages and the project's permissions
@@ -118,6 +120,13 @@ class Command(BaseCommand):
             for warning in warnings:
                 self.stdout.write(f"navigation: {warning}")
             failures.extend(f"navigation: {error}" for error in errors)
+
+            # Experimental: a field Karni.search searches whose table lacks its
+            # trigram index on PostgreSQL (karni.W590). Printed, not failed.
+            from karni.global_search import search_index_failures
+
+            for warning in search_index_failures():
+                self.stdout.write(f"search indexes: {warning}")
 
         groups = ["karni.checks", *(["karni.checks.seo"] if options.get("seo") else [])]
         for group in groups:

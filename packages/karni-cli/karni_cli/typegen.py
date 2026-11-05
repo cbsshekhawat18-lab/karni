@@ -12,6 +12,11 @@ experimental) also gets a ``use<Name>Tree`` hook over ``@karni/ui``'s
 A resource whose aggregate operation carries ``x-karni-aggregate``
 (experimental) also gets ``use<Resource>Aggregate``, whose ``groupBy`` is
 the union of the groups it declares.
+
+When the schema has cross-model search (the operation marked
+``x-karni-search``, experimental), ``hooks.ts`` also exports
+``SearchResource``, the union of the resources it covers, and a
+``useGlobalSearch`` typed with it (``@karni/ui``'s hook, narrowed).
 """
 
 from __future__ import annotations
@@ -96,6 +101,29 @@ def aggregate_groups(doc: dict[str, Any]) -> dict[str, list[str]]:
     return found
 
 
+def search_resources(doc: dict[str, Any]) -> list[str] | None:
+    """Experimental. The resources ``GET /api/search/`` covers, or ``None`` without the endpoint."""
+    for _path, item in sorted(doc.get("paths", {}).items()):
+        op = item.get("get") if isinstance(item, dict) else None
+        marker = op.get("x-karni-search") if isinstance(op, dict) else None
+        if isinstance(marker, dict):
+            return sorted(str(name) for name in marker.get("resources") or [])
+    return None
+
+
+def _search_lines(resources: list[str]) -> list[str]:
+    union = " | ".join(json.dumps(name) for name in resources) or "never"
+    return [
+        "/** The resources cross-model search covers (GET /api/search/). */",
+        f"export type SearchResource = {union};",
+        "export const useGlobalSearch = (",
+        "  params: GlobalSearchParams<SearchResource>,",
+        "  options?: UseGlobalSearchOptions<SearchResource>,",
+        ") => useKarniGlobalSearch<SearchResource>(params, options);",
+        "",
+    ]
+
+
 def _pascal(resource: str) -> str:
     return "".join(part.capitalize() for part in resource.replace("-", "_").split("_"))
 
@@ -106,15 +134,20 @@ def generate_hooks(doc: dict[str, Any]) -> str:
         raise CliError("No x-karni-resource list operations found in the schema.", code="C206")
     trees = tree_resources(doc, resources)
     aggregates = {name: groups for name, groups in aggregate_groups(doc).items() if groups}
+    searched = search_resources(doc)
     hook_names = ["useResourceItem", "useResourceList", "useResourceMutations"]
     type_names = ["ResourceItemParams", "ResourceListParams", "ResourceMutationsOptions"]
     if trees:
         hook_names.append("useResourceTree")
         type_names.append("ResourceTreeParams")
+    if searched is not None:
+        hook_names.insert(0, "useGlobalSearch as useKarniGlobalSearch")
+        type_names.insert(0, "GlobalSearchParams")
+        type_names.append("UseGlobalSearchOptions")
     if aggregates:
         hook_names.insert(0, "useAggregate")
         type_names.insert(0, "AggregateParams")
-    if trees:
+    if trees or searched is not None:
         hooks = ["import {", *(f"  {name}," for name in hook_names), '} from "@karni/ui";']
     else:
         hooks = [f'import {{ {", ".join(hook_names)} }} from "@karni/ui";']
@@ -156,6 +189,8 @@ def generate_hooks(doc: dict[str, Any]) -> str:
                 f') => useAggregate("{resource}", params);',
                 "",
             ]
+    if searched is not None:
+        lines += _search_lines(searched)
     return "\n".join(lines)
 
 

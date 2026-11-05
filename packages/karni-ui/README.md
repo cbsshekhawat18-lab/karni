@@ -68,7 +68,7 @@ property defined in `@karni/ui/styles.css`:
 | `--karni-radius-*` | `sm`, `md`, `lg`, `xl`, `full` (derived from `--karni-radius`)                                                                                                                                                                                                                     |
 | `--karni-font-*`   | `sans`, `mono`, `size-xs` … `size-2xl` with `leading-*`, `weight-*`, `tracking-*`                                                                                                                                                                                                  |
 | `--karni-shadow-*` | `sm`, `md`, `lg` (and bare `--karni-shadow`)                                                                                                                                                                                                                                       |
-| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView) |
+| other              | `--karni-z-*`, `--karni-opacity-*`, `--karni-duration` and `--karni-ease` (0ms under `prefers-reduced-motion`), `--karni-border-width*`, `--karni-ring-*`, `--karni-table-max-height` (ResourceTable's scroll box), `--karni-tree-indent` and `--karni-tree-max-height` (TreeView), and `--karni-search-*` (GlobalSearch) |
 
 The Tailwind preset maps its scales onto these properties, so `bg-primary`,
 `p-4` or `rounded-md`, in a component or in your own code, reads them. Import
@@ -989,6 +989,7 @@ function NavLink({ item, href, onClick, ...props }: LayoutNavLinkProps) {
 | `Dashboard`  | `Section`, `Counts`, `Count`, `Recent`, `Empty`, `Loading`, `Error`    |
 | `DataChart`  | `Tooltip`, `Legend`, `Empty`, `Loading`                                |
 | `FileUpload` | `Dropzone`, `FileRow`                                                  |
+| `GlobalSearch` | `Trigger`, `ResultLink` |
 
 Where a slot does what an older prop did, the prop keeps working and the slot
 is preferred: `Layout`'s `renderNavItem` (use `NavLink`), `Page`'s `header`
@@ -1018,6 +1019,39 @@ filtered by the same grants as the API: icons come by name from
 the request fails. `navigationEntries(items, { pathname, icons })` is the
 conversion on its own. See
 [navigation](https://cbsshekhawat18-lab.github.io/karni/navigation/).
+
+### GlobalSearch: one search box over every model (experimental)
+
+`<GlobalSearch />` is a command palette over cross-model search
+(`GET /api/search/`, every model with `class Karni: search`). Cmd+K on macOS,
+Ctrl+K elsewhere, or its button opens it. Typing searches after a 200 ms pause
+(`debounceMs`) once the query has `minLength` (2) characters, and the hits come
+grouped per resource, best first. Each hit links to its ResourceDetail page,
+`/<resource>/<id>` (`hrefFor` changes it). The server applies each model's own
+list access, so a user never sees a model or a row they cannot list.
+
+It follows the WAI-ARIA combobox pattern: the input is a combobox that owns a
+listbox of grouped options, Arrow Down and Arrow Up move the active option
+while focus stays in the input, Enter opens it, Escape closes the palette and
+a polite live region says how many hits there are. `<Layout search>` mounts it
+in the top bar (`search={{ onSelect, models }}` passes its props).
+
+```tsx
+import { GlobalSearch, type GlobalSearchResultLinkProps } from "@karni/ui";
+import { Link } from "@tanstack/react-router";
+
+function ResultLink({ hit, href, ...props }: GlobalSearchResultLinkProps) {
+  return <Link to={href} {...props} />;
+}
+
+<GlobalSearch models={["products", "suppliers"]} slots={{ ResultLink }} />;
+```
+
+`useGlobalSearch({ q, models, limit })` is the data underneath, for a search
+page of your own. `karni types` generates a `useGlobalSearch` typed with the
+project's `SearchResource` names. The palette's width and the height its list
+grows to are the `--karni-search-width` (40rem) and `--karni-search-max-height`
+(60vh) tokens.
 
 Other additions: `Layout` takes `mobileNavOpen`, `defaultMobileNavOpen` and
 `onMobileNavOpenChange` to control the drawer. `Stat` and `DataChart` take

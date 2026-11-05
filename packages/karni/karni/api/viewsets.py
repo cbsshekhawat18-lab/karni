@@ -122,6 +122,7 @@ from karni.api.serializers import build_serializer
 from karni.api.throttling import ActionRateThrottle, Throttle
 from karni.deprecation import warn_deprecated
 from karni.exceptions import KarniImproperlyConfigured, KarniValueError, KarniWriteDeferred
+from karni.global_search import SearchDeclaration
 from karni.pagination import Unpaginated, check_pagination_class
 from karni.performance import (
     Budget,
@@ -703,6 +704,26 @@ class BaseViewSet(ObjectPermissionsMixin, ModelViewSet):
             queryset = self.filter_queryset_for_user(queryset)
             filtered = True
         return queryset, filtered
+
+    def global_search_queryset(
+        self, queryset: QuerySet[Any], query: str, declaration: SearchDeclaration
+    ) -> QuerySet[Any]:
+        """Experimental. The rows of this model that cross-model search finds for ``query``.
+
+        ``queryset`` is this viewset's ``list`` queryset for the request
+        (access applied); ``declaration`` is the model's ``Karni.search``.
+        ``GET /api/search/`` slices the result and reads the primary key and
+        the annotations :data:`karni.api.global_search.TITLE`, ``SUBTITLE``
+        and ``SCORE``, best first, in one query.
+
+        Override / escape hatch: return another ranking or match (a full-text
+        rank, a title built from two fields), starting from
+        :func:`karni.api.global_search.search_queryset` or from ``queryset``.
+        Keep the result narrowed from ``queryset`` so access still holds.
+        """
+        from karni.api.global_search import search_queryset
+
+        return search_queryset(queryset, query, declaration)
 
     def get_object(self) -> Any:
         """DRF lookup over the read scope: out of scope → 404, not writable → 403.

@@ -186,6 +186,16 @@ Experimental now:
   `GrantSource` and of the effective permissions, the `permissions/grants/`
   endpoints, the grants inline and admin (`karni.accounts.admin.grant_form`),
   and `features: user_grants` in `karni.yaml`.
+- [Search across models](global-search.md): the `class Karni` option
+  `search`, `karni.global_search`, `karni.api.global_search` (with
+  `GlobalSearchView`, `search_queryset`, `search_targets` and the `TITLE`,
+  `SUBTITLE` and `SCORE` annotations), the `GET /api/search/` endpoint and
+  its response, `BaseViewSet.global_search_queryset`,
+  `karni.fields.TrigramIndex`, the `KARNI_GLOBAL_SEARCH_*` settings, the
+  `x-karni-search` schema extension, the entity key `global_search` of
+  `karni.yaml`, `SearchResource` and the typed `useGlobalSearch` of `karni
+  types`, and `GlobalSearch`, `useGlobalSearch`, `karniKeys.search` and
+  `Layout`'s `search` in `@karni/ui`.
 - [The app spec](app-spec.md): the `karni.yaml` format and its JSON Schema,
   `karni spec validate`, `karni spec export`, `manage.py karni_facts`,
   `karni.facts` and the `karni_cli.spec` package.

@@ -83,6 +83,10 @@ class KarniSettingsModel(BaseModel):
     KARNI_AUTH_THROTTLE_RATES: dict[str, Any] = Field(default_factory=dict)
     KARNI_API_MAX_EXPAND_DEPTH: int = 2
     KARNI_SEARCH_PROVIDER: str = "karni.api.search.postgres.PostgresSearchProvider"
+    KARNI_GLOBAL_SEARCH_MIN_LENGTH: int = Field(default=2, ge=1)
+    KARNI_GLOBAL_SEARCH_LIMIT: int = Field(default=5, ge=1)
+    KARNI_GLOBAL_SEARCH_MAX_LIMIT: int = Field(default=20, ge=1)
+    KARNI_GLOBAL_SEARCH_THRESHOLD: float = Field(default=0.3, ge=0, le=1)
     KARNI_API_ROUTER: str = "karni.api.routers.get_default_router"
     KARNI_MAX_PAGE_SIZE: Any = 100
     KARNI_MAX_PAGE_SIZE_FLOOR: Any = 25

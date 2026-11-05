@@ -294,6 +294,9 @@ def _model_class(
         if entity.aggregate.metrics is not None:
             declared["metrics"] = list(entity.aggregate.metrics)
         options.append(("aggregate", declared))
+    searched = _search_option(entity)
+    if searched is not None:
+        options.append(("search", searched))
     if options:
         lines += ["", "    class Karni:"]
         lines += [_literal(value, "        ", line, f"{key} = ") for key, value in options]
@@ -313,6 +316,23 @@ def _model_class(
     if shown is not None:
         lines += ["", "    def __str__(self) -> str:", f"        return self.{shown}"]
     return lines, imports, body.notes
+
+
+def _search_option(entity: schema.Entity) -> dict[str, Any] | None:
+    """``class Karni: search`` from ``global_search`` (fields from ``search`` by default)."""
+    value = entity.global_search
+    if value is False:
+        return None
+    mapping = (
+        value if isinstance(value, schema.GlobalSearch) else schema.GlobalSearch.model_validate({})
+    )
+    fields = list(mapping.fields) if mapping.fields else list(entity.search)
+    option: dict[str, Any] = {"fields": fields, "title": mapping.title or fields[0]}
+    if mapping.subtitle:
+        option["subtitle"] = mapping.subtitle
+    if mapping.weight != 1:
+        option["weight"] = mapping.weight
+    return option
 
 
 def _header(purpose: str, line: int) -> str:

@@ -28,7 +28,8 @@ tree models (``karni.tree``) · ``E49x``/``W62x`` the tree scope
 (``karni.accounts.tree_scope``) · ``E53x``/``W63x`` navigation from data
 (``karni.navigation``) · ``E57x``/``E58x``/``W65x`` taxonomy tagging
 (``karni.taxonomy``) · ``E38x``/``W57x``
-aggregations (``karni.aggregation``).
+aggregations (``karni.aggregation``) · ``E43x``/``W59x`` cross-model search
+(``karni.global_search``).
 ``E`` codes are errors, ``W`` codes warnings. A system check's id is
 ``karni.<code>`` (silence a warning with ``SILENCED_SYSTEM_CHECKS``).
 
@@ -2778,6 +2779,57 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "StateField and CapacityField CHECK constraints do work on SQLite.",
         "Use PostgreSQL wherever overlaps matter (production, CI). Silence karni.W980 only for a "
         "development database where accepting overlaps is fine.",
+    ),
+    # E430-E449 / W590-W599 cross-model search (karni.global_search, experimental)
+    _e(
+        "E430",
+        "Karni.search is malformed or names a field the model does not have",
+        "check",
+        "karni.global_search.search_declaration; karni.checks.check_global_search",
+        "GET /api/search/ matches the query against the declared fields, shows each hit's "
+        "title and subtitle, and makemigrations adds a trigram index per field. A field that "
+        "is not text, a title that is not a column or a weight that is not a positive number "
+        "would fail at query time, so the declaration is refused at boot.",
+        "Write search = {'fields': [...], 'title': ..., 'subtitle': ..., 'weight': ...}: fields "
+        "lists text fields of the model (CharField, TextField), title and subtitle name a field "
+        "or a path through foreign keys (title defaults to the first field), weight is a number "
+        "above 0 (default 1). For example search = {'fields': ['name', 'sku'], 'title': 'name'}.",
+    ),
+    _e(
+        "E431",
+        "?models= names a resource cross-model search does not cover",
+        "api",
+        "karni.api.global_search.GlobalSearchView",
+        "GET /api/search/?models= picks the resources to search by their router prefix. A name "
+        "that is not one of them is a typo or a model without class Karni: search, and "
+        "searching nothing for it would hide the mistake, so the request answers 400 with the "
+        "resources it covers.",
+        "Name resources from the response's resources list (the router prefixes, e.g. "
+        "products), or declare class Karni: search on the model and route a BaseViewSet for it.",
+    ),
+    _e(
+        "W590",
+        "A field cross-model search searches has no trigram index",
+        "warning",
+        "karni.global_search.check_search_indexes (karni check)",
+        "On PostgreSQL every searched field needs a GIN trigram index, or each search reads "
+        "the whole table. Karni adds the index to the model's Meta.indexes, so it exists once "
+        "the migration that creates it is written and applied.",
+        "Run python manage.py makemigrations <app> and python manage.py migrate (karni build "
+        "writes the migration for an app built from karni.yaml). For a table another system "
+        "owns, run the CREATE INDEX the message prints in its database. For a table small "
+        'enough to scan, silence it: SILENCED_SYSTEM_CHECKS = ["karni.W590"].',
+    ),
+    _e(
+        "W591",
+        "A model declares Karni.search but no routed viewset serves it",
+        "warning",
+        "karni.checks.check_global_search_routes",
+        "Cross-model search reads each model through its list endpoint, so the access rules "
+        "hold, and links each hit to the resource's page. A model no routed BaseViewSet serves "
+        "has neither, so search never finds it.",
+        "Declare a BaseViewSet for the model in the app's viewsets.py (karni make viewset), or "
+        "remove search from its class Karni.",
     ),
 )
 

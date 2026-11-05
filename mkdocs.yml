@@ -79,6 +79,7 @@ nav:
       - Lifecycle and capacity: lifecycle-and-capacity.md
       - API: api.md
       - Aggregations: aggregations.md
+      - Search across models: global-search.md
       - Accounts: accounts.md
       - Admin: admin.md
       - Navigation from data: navigation.md

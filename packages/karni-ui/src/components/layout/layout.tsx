@@ -6,6 +6,7 @@ import { useNavigation } from "../../hooks/useNavigation";
 import { KarniMark } from "../brand/karni-mark";
 import { Skeleton } from "../primitives/skeleton";
 import { navigationEntries } from "./navigation";
+import { GlobalSearch, type GlobalSearchProps } from "../global-search/global-search";
 import { useRouteFocus, type LayoutRouteFocusOptions } from "./route-focus";
 
 export type { LayoutRouteFocusOptions } from "./route-focus";
@@ -233,6 +234,12 @@ export interface LayoutProps extends React.HTMLAttributes<HTMLDivElement> {
   sidebarFooter?: React.ReactNode;
   /** Header slot, rendered in the top bar next to the mobile menu button. */
   header?: React.ReactNode;
+  /**
+   * Experimental. Mounts the GlobalSearch command palette in the top bar,
+   * before `header`: `true` with its defaults (Cmd or Ctrl+K opens it), or
+   * its props (`{ onSelect, hrefFor, models }`). Default: none.
+   */
+  search?: boolean | GlobalSearchProps;
   /** Accessible name of the sidebar navigation (default "Main"). */
   navLabel?: string;
   /** Controlled open state of the mobile drawer (pair with onMobileNavOpenChange). */
@@ -508,6 +515,9 @@ export const defaultLayoutSlots: LayoutSlots = {
  * collapse with a button (Enter or Space), icons come by name (`icons`
  * over `defaultNavIcons`) and the current page is marked from `pathname`.
  *
+ * `search` mounts the GlobalSearch command palette in the top bar
+ * (experimental).
+ *
  * Escape hatches: `slots` replaces the Header, Sidebar, NavLink, NavGroup,
  * MobileDrawer or SkipLink. `renderNavItem` wraps each derived link.
  * `sidebar` replaces the derived nav wholesale. `sidebarHeader`,
@@ -527,6 +537,7 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
       sidebarHeader = <KarniMark className="mx-3" />,
       sidebarFooter,
       header,
+      search,
       navLabel = "Main",
       mobileNavOpen,
       defaultMobileNavOpen = false,
@@ -675,7 +686,14 @@ export const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <Header menuButton={menuButton} className={headerClassName}>
-            {header}
+            {search === undefined || search === false ? (
+              header
+            ) : (
+              <>
+                <GlobalSearch {...(search === true ? {} : search)} />
+                {header}
+              </>
+            )}
           </Header>
           <main
             ref={mainRef}

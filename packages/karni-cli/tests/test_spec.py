@@ -19,6 +19,7 @@ import yaml
 from typer.testing import CliRunner
 
 from karni_cli import project as project_mod
+from karni_cli.builder.render import _search_option
 from karni_cli.errorcodes import CODES
 from karni_cli.generators.naming import default_route
 from karni_cli.main import app
@@ -231,6 +232,16 @@ INVALID: list[tuple[str, str, int | None]] = [
     ("C521", HEAD + "features: {api_cache: true}\napps:\n  shop:\n    entities:\n"
      "      Sale: {external: true, table: sales, cache: 30}\n"
      "      Line: {fields: {sale: fk:Sale}}\n", 8),
+    ("C213", SHOP + "        fields: {name: str}\n        global_search: {weight: 0}\n", 8),
+    ("C540", SHOP + "        fields: {name: str, stock: int}\n"
+     "        global_search: {fields: [stock]}\n", 8),
+    ("C540", SHOP + "        fields: {name: str, maker: fk:User}\n        search: [maker__email]\n"
+     "        global_search: true\n", 9),
+    ("C541", SHOP + "        fields: {name: str}\n        global_search: true\n", 8),
+    ("C542", SHOP + "        fields: {name: str}\n"
+     "        global_search: {fields: [name], subtitle: maker__name}\n", 8),
+    ("C542", SHOP + "        fields: {name: str, sku: str}\n"
+     "        global_search: {fields: [name], title: sku__code}\n", 8),
 ]  # fmt: skip
 
 
@@ -248,12 +259,12 @@ def test_every_code_is_tested_and_registered() -> None:
     assert {*iter_codes(), "C210", "C245", "C246"} <= registered
     # The spec's own codes, C324 (the module catalog's requires and conflicts), the trees' C460-C479,
     # the aggregations' C500-C519, response caching's C520-C539, the tree scope's C620-C639,
-    # navigation's C640-C659 and the taxonomies' C700-C719.
+    # navigation's C640-C659, the taxonomies' C700-C719 and global_search's C540-C559.
     assert all(
         200 <= int(code[1:]) <= 269
         or code == "C324"
         or 460 <= int(code[1:]) <= 479
-        or 500 <= int(code[1:]) <= 539
+        or 500 <= int(code[1:]) <= 559
         or 620 <= int(code[1:]) <= 639
         or 640 <= int(code[1:]) <= 659
         or 700 <= int(code[1:]) <= 719
@@ -652,6 +663,7 @@ apps:
           meta: json:queried?
         key: slug
         search: name
+        global_search: true
         access: {read: public, write: "role:staff"}
         cache: 600
       Session:
@@ -681,6 +693,7 @@ apps:
         order: starts_at
         audit: true
         search: [title, level]
+        global_search: {fields: [title], subtitle: studio__name, weight: 2}
         access: {read: "owned:instructor", write: "owned:instructor"}
       Booking:
         fields:
@@ -785,6 +798,8 @@ def _build_from_spec(root: Path, spec: schema.Spec) -> None:
                 options.append(f"audit = {entity.audit!r}")
             if entity.scope_paths:
                 options.append(f"scope_paths = {entity.scope_paths!r}")
+            if entity.global_search:
+                options.append(f"search = {_search_option(entity)!r}")
             if options:
                 _insert(models, name, "Karni", options)
             if entity.groups:

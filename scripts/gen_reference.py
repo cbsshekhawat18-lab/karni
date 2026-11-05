@@ -218,6 +218,12 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         "api",
+        "Search across models: one ranked `GET /api/search/` over every model that declares "
+        "`class Karni: search`, each under its own list access, one query per model, with "
+        "the trigram indexes in its migrations (`karni.W590`). Experimental tier",
+    ),
+    Capability(
+        "api",
         "TypeScript types and typed hooks from the OpenAPI document (`karni types`)",
         ((f"{EH}/Makefile", "karni types"),),
     ),
@@ -285,6 +291,12 @@ CAPABILITIES: tuple[Capability, ...] = (
         "ui",
         "`OtpLoginForm` and `useOtpLogin`: sign-in with a code sent by email, also as "
         "`LoginForm`'s `codeSignIn` switch. Experimental tier",
+    ),
+    Capability(
+        "ui",
+        "`GlobalSearch` and `useGlobalSearch`: a Cmd or Ctrl+K command palette over search "
+        "across models, grouped per resource, each hit linking to its ResourceDetail page "
+        "(`<Layout search>`). Experimental tier",
     ),
     Capability(
         "ui",

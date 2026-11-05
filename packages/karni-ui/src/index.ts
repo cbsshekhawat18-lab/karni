@@ -303,6 +303,14 @@ export type {
   AggregateResult,
   AggregateSeries,
 } from "./hooks/useAggregate";
+export { useGlobalSearch, globalSearchQuery, GLOBAL_SEARCH_PATH } from "./hooks/useGlobalSearch";
+export type {
+  GlobalSearchParams,
+  GlobalSearchHit,
+  GlobalSearchGroup,
+  GlobalSearchResult,
+  UseGlobalSearchOptions,
+} from "./hooks/useGlobalSearch";
 export type {
   Paginated,
   FilterValue,
@@ -414,6 +422,17 @@ export type {
   PageSlotContentProps,
 } from "./components/page/page";
 
+export {
+  GlobalSearch,
+  defaultGlobalSearchSlots,
+  defaultHitHref,
+} from "./components/global-search/global-search";
+export type {
+  GlobalSearchProps,
+  GlobalSearchSlots,
+  GlobalSearchTriggerProps,
+  GlobalSearchResultLinkProps,
+} from "./components/global-search/global-search";
 export { Layout, defaultLayoutSlots, isNavGroup } from "./components/layout/layout";
 export type {
   LayoutProps,

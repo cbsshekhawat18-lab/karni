@@ -49,6 +49,7 @@ __all__ = [
     "Entity",
     "Features",
     "FieldEntry",
+    "GlobalSearch",
     "NavigationEntry",
     "NavigationOptions",
     "NavigationValue",
@@ -256,6 +257,37 @@ TreeValue = Annotated[
 ]
 
 
+class GlobalSearch(_Node):
+    """Experimental. ``global_search:`` of an entity as a mapping: ``class Karni: search``.
+
+    Every key is optional. ``fields`` defaults to the entity's ``search``
+    list, ``title`` to the first field, ``weight`` to 1.
+    """
+
+    fields: Names | None = Field(
+        None, description="The text fields the query is matched with (default: search)."
+    )
+    title: str | None = Field(
+        None, description="The field a hit shows as its title (default: the first field)."
+    )
+    subtitle: str | None = Field(
+        None, description="A field shown under the title, or a path through a relation."
+    )
+    weight: int | float = Field(
+        1, gt=0, description="Multiplies the entity's scores across entities (default 1)."
+    )
+
+
+def _global_search_member(value: Any) -> str:
+    return "=bool" if isinstance(value, bool) else "=mapping"
+
+
+GlobalSearchValue = Annotated[
+    Annotated[bool, Tag("=bool")] | Annotated[GlobalSearch, Tag("=mapping")],
+    Discriminator(_global_search_member),
+]
+
+
 class FieldEntry(_Node):
     """Experimental. A field written as a mapping, to say what it was called before.
 
@@ -370,6 +402,13 @@ class Entity(_Node):
         None, description="The natural key imports match rows on (Karni.import_key)."
     )
     search: Names = Field(default_factory=list, description="The viewset's search_fields.")
+    global_search: GlobalSearchValue = Field(
+        False,
+        description=(
+            "Cross-model search (class Karni: search, GET /api/search/): true, or a mapping "
+            "{fields, title, subtitle, weight}. The fields default to search."
+        ),
+    )
     owner: str | None = Field(
         None, description="The owner field the own scope uses (Karni.owner_field)."
     )
