@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
     const proxy = {
         "/api": { target, changeOrigin: true },
         "/health": { target, changeOrigin: true },
+        "/readyz": { target, changeOrigin: true },
     };
     return {
         // karniTheme() applies the user's light/dark choice before the first paint.

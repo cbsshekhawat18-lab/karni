@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpResponse
 from django.test import Client
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView
 from rest_framework.versioning import URLPathVersioning
 from rest_framework.views import APIView
 
@@ -56,6 +57,7 @@ def setup(settings: Any, monkeypatch: pytest.MonkeyPatch) -> Setup:
         module = ModuleType("versioned_urls")
         module.__dict__["urlpatterns"] = [
             path("api/auth/", include("karni.accounts.urls")),
+            path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
             *api_urls(),
         ]
         settings.ROOT_URLCONF = module
@@ -237,7 +239,18 @@ def test_the_check_reports_each_problem(settings: Any, changes: dict[str, Any], 
     assert code in _ids(check_api_versions())
 
 
-def test_the_check_is_quiet_for_good_settings(settings: Any) -> None:
+def test_the_check_warns_when_the_urlconf_does_not_mount_the_versions(
+    settings: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(api_versions, "mounted", False)
+    settings.KARNI_API_VERSION = "v1"
+    assert "karni.W661" in _ids(check_api_versions())  # tests.urls includes karni.api.urls
+
+
+def test_the_check_is_quiet_for_good_settings(
+    settings: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(api_versions, "mounted", True)
     settings.KARNI_API_VERSION = "v2"
     settings.KARNI_API_VERSIONS = {
         "v1": {"deprecated": "2026-06-01", "sunset": "2999-01-31", "notes": "/migrate/"},
@@ -255,3 +268,33 @@ def test_a_bad_setting_stops_the_urls_with_its_code(settings: Any) -> None:
 
 def test_the_default_router_is_the_one_karni_api_urls_built() -> None:
     assert router is api_versions._router_for(ApiVersion("v1"))
+
+
+def test_the_document_lists_the_versions(setup: Setup, client: Client) -> None:
+    setup(
+        version="v2",
+        versions={"v1": {"deprecated": True, "sunset": "2027-01-31", "notes": "/migrate/"}},
+    )
+    v1 = client.get("/api/v1/schema/?format=json").json()
+    current = client.get("/api/schema/?format=json").json()
+    assert current["x-karni-api-version"] == "v2"  # the unversioned document is the current one
+    assert "/api/v2/events/" in current["paths"]
+    assert not any(p.startswith("/api/v1/") for p in current["paths"])
+    assert v1["x-karni-api-version"] == "v1"
+    assert v1["x-karni-api-versions"] == [
+        {
+            "name": "v1",
+            "current": False,
+            "deprecated": True,
+            "sunset": "2027-01-31",
+            "notes": "/migrate/",
+        },
+        {"name": "v2", "current": True, "deprecated": False},
+    ]
+
+
+def test_an_unversioned_document_has_no_version_keys() -> None:
+    from drf_spectacular.generators import SchemaGenerator
+
+    document = SchemaGenerator().get_schema(request=None, public=True)
+    assert "x-karni-api-versions" not in document

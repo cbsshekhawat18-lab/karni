@@ -406,6 +406,7 @@ BASE: dict[str, Any] = {
         "POSTPROCESSING_HOOKS": [
             "karni.api.schema.postprocess_schema_enums",
             "karni.api.schema.add_auth_mode",
+            "karni.api.schema.add_api_versions",
         ],
     },
     # --- Celery (django namespace, read by karni.celery.create_celery_app) -

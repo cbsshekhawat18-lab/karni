@@ -668,3 +668,32 @@ def test_was_pk_and_database_in_the_normal_form() -> None:
     assert check(SHOP + "        {database: warehouse}\n").ok  # validate alone cannot tell
     found = validate_text(SHOP + "        database: warehouse\n", databases=["default"]).issues
     assert [issue.code for issue in found] == ["C252"]
+
+
+# app.api_version (experimental): the API's current version
+
+
+def test_api_version_is_valid_for_a_version_name_and_refused_otherwise() -> None:
+    ok = validate_text("version: 1\napp: {name: X, api_version: v1}\n")
+    assert ok.ok and ok.spec is not None and ok.spec.app.api_version == "v1"
+    assert validate_text("version: 1\napp: {name: X}\n").spec.app.api_version is None  # type: ignore[union-attr]
+    for bad in ("V1", "api v1", "v1/", "a" * 17, '""'):
+        report = validate_text(f"version: 1\napp: {{name: X, api_version: {bad}}}\n")
+        assert [i.code for i in report.issues] == ["C740"], bad
+    wrong_type = validate_text("version: 1\napp: {name: X, api_version: 1}\n")
+    assert [i.code for i in wrong_type.issues] == ["C213"]
+
+
+def test_api_version_is_in_the_published_schema_with_its_pattern() -> None:
+    node = schema.json_schema()["$defs"]["AppInfo"]["properties"]["api_version"]
+    assert node["pattern"] == "^[a-z0-9][a-z0-9-]{0,15}$"
+    assert "KARNI_API_VERSION" in node["description"]
+
+
+def test_api_version_is_normalised_and_left_out_when_unset() -> None:
+    spec = validate_text("version: 1\napp: {name: X, api_version: v1}\n").spec
+    assert spec is not None
+    assert normalise(spec)["app"]["api_version"] == "v1"
+    bare = validate_text("version: 1\napp: {name: X}\n").spec
+    assert bare is not None
+    assert "api_version" not in normalise(bare)["app"]

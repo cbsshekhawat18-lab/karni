@@ -95,8 +95,9 @@ def normalise(spec: Spec, *, pk: str = "uuid") -> dict[str, Any]:
     ``pk``: the key type of an entity that does not say (the project's ``KARNI_PK``).
     """
     data = spec.model_dump(mode="json")
-    if data["app"].get("recipe") is None:
-        data["app"].pop("recipe", None)
+    for key in ("recipe", "api_version"):
+        if data["app"].get(key) is None:
+            data["app"].pop(key, None)
     modules = {name: dict(options or {}) for name, options in data["modules"].items()}
     if data["app"]["kind"] in ("site", "site+app"):
         modules.setdefault("site", {})

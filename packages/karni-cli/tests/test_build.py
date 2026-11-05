@@ -590,3 +590,16 @@ def test_seeding_skips_a_table_that_holds_rows(copy: Path) -> None:
     assert (
         run._seed(copy, state, run.Options()) == "skipped: the tables it created hold rows already"
     )
+
+
+def test_the_settings_block_writes_the_api_version_only_when_set() -> None:
+    from karni_cli.builder import render
+    from karni_cli.spec.validate import validate_text
+
+    def block(text: str) -> str:
+        spec = validate_text(text).spec
+        assert spec is not None
+        return render.settings_block(spec, 100)
+
+    assert "KARNI_API_VERSION" not in block("version: 1\napp: {name: X}\n")
+    assert 'KARNI_API_VERSION = "v1"' in block("version: 1\napp: {name: X, api_version: v1}\n")

@@ -123,7 +123,14 @@ def test_a_new_project_gets_the_production_stack(project: Path) -> None:
     }
     django = services["django"]
     assert "uvicorn_worker.UvicornWorker" in django["command"]
-    assert django["healthcheck"]["test"][:4] == ["CMD", "python", "-m", "karni.deploy.healthcheck"]
+    assert django["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-m",
+        "karni.deploy.healthcheck",
+        "http://127.0.0.1:8000/readyz",
+        "--quiet",
+    ]
     assert services["backup"]["build"]["target"] == "backup"
     assert services["backup"]["volumes"] == ["app_data:/data", "backups:/backups"]
     assert data["x-app"]["build"]["args"]["KARNI_APP_PATH"] == "/app/"
@@ -202,7 +209,7 @@ def test_the_staff_app_at_the_root(project: Path) -> None:
     services = check_stack(project)
     assert "KARNI_ADMIN_PATH" in services["caddy"]["environment"]
     caddyfile = (project / "Caddyfile").read_text()
-    assert "@django path /api/* /health/* /{$KARNI_ADMIN_PATH}*" in caddyfile
+    assert "@django path /api/* /health/* /healthz /readyz /{$KARNI_ADMIN_PATH}*" in caddyfile
     assert f"root * {deploy.WEB_ROOT}/app" in caddyfile
     assert load(project)["x-app"]["build"]["args"]["KARNI_APP_PATH"] == "/"
 
@@ -369,3 +376,19 @@ def test_the_smoke_helpers() -> None:
     lines = '{"Service": "db", "State": "running", "Health": "healthy"}\n{"Service": "release", "State": "exited", "ExitCode": 0}\n'
     assert [s["Service"] for s in smoke.compose_states(lines)] == ["db", "release"]
     assert smoke.compose_states('[{"Service": "db"}]') == [{"Service": "db"}]
+
+
+def test_a_project_without_the_probe_urls_keeps_asking_health(project: Path) -> None:
+    """``karni make deploy compose`` in an older project: ``/readyz`` would be a 404 there."""
+    urls = project / "config" / "urls.py"
+    urls.write_text(urls.read_text().replace("karni.health.probe_urls", "karni.health.urls"))
+    result = make("compose", "--force")
+    assert result.exit_code == 0, result.output
+    django = load(project)["services"]["django"]
+    assert django["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-m",
+        "karni.deploy.healthcheck",
+        "--quiet",
+    ]

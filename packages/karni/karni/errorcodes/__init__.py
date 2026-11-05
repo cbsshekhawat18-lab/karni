@@ -1591,6 +1591,17 @@ CODES: Final[tuple[ErrorCode, ...]] = (
         "Remove the version from KARNI_API_VERSIONS once its clients have moved, or move its "
         "sunset date. Add 'karni.W660' to SILENCED_SYSTEM_CHECKS to keep it mounted.",
     ),
+    _e(
+        "W661",
+        "API versions are set, but the URLconf does not mount them",
+        "warning",
+        "karni.checks.check_api_versions (karni check)",
+        "KARNI_API_VERSION or KARNI_API_VERSIONS names versions, and the API is mounted at "
+        "/api/<version>/ only by karni.api.versions.api_urls(). The URLconf still includes "
+        "karni.api.urls at api/, so every /api/<version>/ answers 404.",
+        "In config/urls.py, import api_urls from karni.api.versions and use *api_urls() in "
+        'place of path("api/", include("karni.api.urls")). A new project already does.',
+    ),
     # E6xx testing and seeding
     _e(
         "E601",

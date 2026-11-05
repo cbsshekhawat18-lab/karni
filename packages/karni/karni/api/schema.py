@@ -447,6 +447,37 @@ def add_auth_mode(result: dict, generator: object, request: object, public: bool
     return result
 
 
+def add_api_versions(result: dict, generator: object, request: object, public: bool) -> dict:
+    """Experimental. drf-spectacular postprocessing hook: list the API versions.
+
+    While versions are mounted the document gets a root-level ``x-karni-api-versions``, a list
+    of ``{"name", "current", "deprecated", "sunset", "notes"}`` (the last two when set), and
+    ``x-karni-api-version``, the version this document describes. ``karni types`` reads the
+    list to write a client per version. Nothing is added while the API is unversioned.
+    """
+    from karni.api.versions import current_version, versions
+
+    mounted = versions()
+    if not mounted:
+        return result
+    current = current_version()
+    entries = []
+    for version in mounted.values():
+        entry: dict[str, object] = {
+            "name": version.name,
+            "current": version.name == current,
+            "deprecated": version.deprecated,
+        }
+        if version.sunset is not None:
+            entry["sunset"] = version.sunset.isoformat()
+        if version.notes:
+            entry["notes"] = version.notes
+        entries.append(entry)
+    result["x-karni-api-versions"] = entries
+    result["x-karni-api-version"] = getattr(generator, "api_version", None) or current
+    return result
+
+
 _SCHEMA_REF = "#/components/schemas/"
 
 

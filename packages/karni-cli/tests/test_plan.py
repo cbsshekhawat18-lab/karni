@@ -667,3 +667,42 @@ def test_the_fixture_plan_fits_the_token_budget(empty: tuple[str, dict[str, Any]
     except Exception:  # noqa: BLE001 - encodings download on first use
         pytest.skip("tiktoken encodings unavailable offline")
     assert len(encoding.encode(text)) < TOKEN_BUDGET
+
+
+# app.api_version -------------------------------------------------------------------
+
+
+def _with_api_version(project: Project, value: str | None) -> Project:
+    """The project's facts as they would be with ``KARNI_API_VERSION`` set to ``value``."""
+    settings = {**project.facts["settings"], "KARNI_API_VERSION": value}
+    return Project(project.root, project.database, {**project.facts, "settings": settings})
+
+
+def test_api_version_is_added_changed_and_removed(base: Project) -> None:
+    added = _plan(
+        _edit(("app: {name: Plan Base}", "app: {name: Plan Base, api_version: v1}")), base
+    )
+    change = _only(added, "api_version")
+    assert (change.area, change.action) == ("app", "add")
+    assert change.detail == "KARNI_API_VERSION v1"
+    assert "KARNI_API_VERSION v1" in added.text()
+
+    at_v1 = _with_api_version(base, "v1")
+    assert (
+        _plan(
+            BASE.replace("app: {name: Plan Base}", "app: {name: Plan Base, api_version: v1}"), at_v1
+        ).changes
+        == []
+    )
+    changed = _plan(
+        BASE.replace("app: {name: Plan Base}", "app: {name: Plan Base, api_version: v2}"), at_v1
+    )
+    assert _only(changed, "api_version").detail == "KARNI_API_VERSION v1 -> v2"
+    removed = _only(_plan(BASE, at_v1), "api_version")
+    assert (removed.action, removed.detail) == ("remove", "KARNI_API_VERSION")
+
+
+def test_the_export_writes_the_current_version_back(base: Project) -> None:
+    exported = build(_with_api_version(base, "v1").facts, base.root)
+    assert exported.data["app"]["api_version"] == "v1"
+    assert "api_version" not in build(base.facts, base.root).data["app"]

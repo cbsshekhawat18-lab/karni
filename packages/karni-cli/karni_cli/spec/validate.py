@@ -377,6 +377,7 @@ class _Meaning:
             self.storage(entity)
             self.renames(entity)
         self.roles()
+        self.api_version()
         self.features()
         self.modules_()
         self.requirements()
@@ -1024,6 +1025,16 @@ class _Meaning:
                         f"terms.{key} has {prefix!r}, which is not a URL path prefix.",
                         "Start each prefix with /, e.g. /api/.",
                     )
+
+    def api_version(self) -> None:
+        version = self.spec.app.api_version
+        if version is not None and not re.fullmatch(schema.API_VERSION, version):
+            self.add(
+                "C740",
+                ("app", "api_version"),
+                f"app.api_version {version!r} is not a version name.",
+                "Use lower case letters, digits and -, at most 16 characters, such as v1.",
+            )
 
     def modules_(self) -> None:
         for name, options in self.spec.modules.items():

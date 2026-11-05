@@ -75,6 +75,10 @@ UNVERSIONED_MODES: Final = ("keep", "redirect", "remove")
 _KEYS: Final = frozenset({"router", "deprecated", "sunset", "notes"})
 
 
+#: Set by :func:`api_urls`, so the check can tell that the URLconf mounts the versions.
+mounted: bool = False
+
+
 class _PermanentRedirect(HttpResponseRedirect):
     status_code = 308  # keeps the method and the body: a POST to /api/x/ is not turned into a GET
 
@@ -194,6 +198,16 @@ def problems() -> list[tuple[str, str, str]]:
                 "Set KARNI_API_VERSION to the version /api/ should redirect to.",
             )
         )
+    if (current or declared) and not _urlconf_mounts_versions():
+        rows.append(
+            (
+                "W661",
+                "KARNI_API_VERSION or KARNI_API_VERSIONS is set, but the URLconf does not mount "
+                "the versions: /api/<version>/ answers 404.",
+                "In config/urls.py use *api_urls() (from karni.api.versions import api_urls) "
+                'in place of path("api/", include("karni.api.urls")).',
+            )
+        )
     today = datetime.now(UTC).date()
     for version in versions().values():
         if version.sunset is not None and version.sunset < today:
@@ -206,6 +220,17 @@ def problems() -> list[tuple[str, str, str]]:
                 )
             )
     return rows
+
+
+def _urlconf_mounts_versions() -> bool:
+    """Whether the root URLconf has been loaded and called :func:`api_urls` (it imports it)."""
+    urlconf = getattr(settings, "ROOT_URLCONF", None)
+    if isinstance(urlconf, str):
+        try:
+            import_module(urlconf)
+        except ImportError:
+            return True  # another check reports an unloadable URLconf
+    return mounted
 
 
 def _entry_problems(name: Any, entry: Any, name_rule: str) -> list[tuple[str, str, str]]:
@@ -379,14 +404,16 @@ def api_urls(names: Iterable[str] | None = None) -> list[URLPattern | URLResolve
     """
     from karni.api.urls import router
 
+    global mounted  # noqa: PLW0603 - the flag the check reads
     check_settings()
-    mounted = versions()
+    mounted = True
+    served = versions()
     if names is not None:
-        mounted = {name: mounted[name] for name in names if name in mounted}
+        served = {name: served[name] for name in names if name in served}
     if not versions():
         return [path("api/", include(router.urls))]
     urls: list[URLPattern | URLResolver] = []
-    for version in mounted.values():
+    for version in served.values():
         urls += _version_patterns(version, _router_for(version))
     mode = unversioned_mode()
     current = versions().get(current_version())
